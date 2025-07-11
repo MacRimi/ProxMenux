@@ -80,6 +80,7 @@ function run_uupdump_creator() {
         apt-get update -qq >/dev/null 2>&1
         if ! apt-get install -y "${MISSING[@]}" >/dev/null 2>&1; then
             msg_error "$(translate "Failed to install: ${MISSING[*]}")"
+            sleep 2
             exit 1
         fi
     fi
@@ -96,13 +97,16 @@ function run_uupdump_creator() {
     else
         show_proxmenux_logo
         msg_error "$(translate "Missing commands after installation: ${FAILED[*]}")"
+        sleep 2
         exit 1
     fi
 
 
 ISO_DIR=$(detect_iso_dir)
 if [[ -z "$ISO_DIR" ]]; then
+  show_proxmenux_logo
   msg_error "$(translate "Could not determine a valid ISO storage directory.")"
+  sleep 2
   exit 1
 fi
 
@@ -124,12 +128,16 @@ BASE_CLEAN="$(echo "$BASE_INPUT" | sed 's:[[:space:]]*$::' | sed 's:/*$::')"
 
 if [[ ! -d "$BASE_CLEAN" ]]; then
   if ! mkdir -p "$BASE_CLEAN"; then
+    show_proxmenux_logo
     msg_error "$(translate "The selected base folder does not exist and could not be created:") $BASE_CLEAN"
+    sleep 2
     exit 1
   fi
 fi
 if [[ ! -w "$BASE_CLEAN" ]]; then
+  show_proxmenux_logo
   msg_error "$(translate "No write permissions on:") $BASE_CLEAN"
+  sleep 2
   exit 1
 fi
 
@@ -138,12 +146,16 @@ TMP_DIR="$BASE_CLEAN/uup-temp"
 CONVERTER="$BASE_CLEAN/uup-converter"
 
 if ! mkdir -p "$TMP_DIR"; then
+  show_proxmenux_logo
   msg_error "$(translate "Could not create temporary directory:") $TMP_DIR"
+  sleep 2
   exit 1
 fi
 
 if ! mkdir -p "$CONVERTER"; then
+  show_proxmenux_logo
   msg_error "$(translate "Could not create converter directory:") $CONVERTER"
+  sleep 2
   exit 1
 fi
 
@@ -153,11 +165,12 @@ cd "$TMP_DIR" || { msg_error "$(translate "Failed to access:") $TMP_DIR"; exit 1
 
 UUP_URL=$(whiptail --inputbox "$(translate "Paste the UUP Dump URL here")" 10 90 3>&1 1>&2 2>&3)
 if [[ $? -ne 0 || -z "$UUP_URL" ]]; then
-  msg_warn "$(translate "Cancelled by user or empty URL.")"
+  #msg_warn "$(translate "Cancelled by user or empty URL.")"
   return 1  
 fi
 
 if [[ ! "$UUP_URL" =~ id=.+\&pack=.+\&edition=.+ ]]; then
+  show_proxmenux_logo
   msg_error "$(translate "The URL does not contain the required parameters (id, pack, edition).")"
   sleep 2
   return 1 
