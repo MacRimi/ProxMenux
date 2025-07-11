@@ -83,6 +83,7 @@ function run_uupdump_creator() {
             sleep 2
             exit 1
         fi
+        msg_ok "$(translate "All dependencies installed and verified.")"
     fi
 
     for i in "${!CMDS[@]}"; do
@@ -91,15 +92,13 @@ function run_uupdump_creator() {
         fi
     done
 
-    if [[ ${#FAILED[@]} -eq 0 ]]; then
+    if [[ ${#FAILED[@]} -gt 0 ]]; then
         show_proxmenux_logo
-        msg_ok "$(translate "All dependencies installed and verified.")"
-    else
-        show_proxmenux_logo
-        msg_error "$(translate "Missing commands after installation: ${FAILED[*]}")"
+        msg_error "$(translate "Missing commands after installation:") ${FAILED[*]}"
         sleep 2
         exit 1
     fi
+
 
 
 ISO_DIR=$(detect_iso_dir)
