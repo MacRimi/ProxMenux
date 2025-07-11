@@ -142,6 +142,7 @@ fi
 
 
 TMP_DIR="$BASE_CLEAN/uup-temp"
+OUT_DIR="$ISO_DIR"
 CONVERTER="$BASE_CLEAN/uup-converter"
 
 if ! mkdir -p "$TMP_DIR"; then
@@ -164,7 +165,6 @@ cd "$TMP_DIR" || { msg_error "$(translate "Failed to access:") $TMP_DIR"; exit 1
 
 UUP_URL=$(whiptail --inputbox "$(translate "Paste the UUP Dump URL here")" 10 90 3>&1 1>&2 2>&3)
 if [[ $? -ne 0 || -z "$UUP_URL" ]]; then
-  #msg_warn "$(translate "Cancelled by user or empty URL.")"
   return 1  
 fi
 
