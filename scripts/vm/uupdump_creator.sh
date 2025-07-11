@@ -36,9 +36,6 @@ fi
 load_language
 initialize_cache
 
-clear
-show_proxmenux_logo
-
 # ==========================================================
 
 
@@ -78,6 +75,7 @@ function run_uupdump_creator() {
     done
 
     if [[ ${#MISSING[@]} -gt 0 ]]; then
+        show_proxmenux_logo
         msg_info "$(translate "Installing dependencies: ${MISSING[*]}")"
         apt-get update -qq >/dev/null 2>&1
         if ! apt-get install -y "${MISSING[@]}" >/dev/null 2>&1; then
@@ -110,31 +108,45 @@ fi
 mkdir -p "$ISO_DIR"
 
 
-DEFAULT_TMP="/root/uup-temp"
-USER_INPUT=$(dialog --inputbox "Enter temporary folder path (default: $DEFAULT_TMP):" 10 60 "$DEFAULT_TMP" 3>&1 1>&2 2>&3)
-if [[ $? -ne 0 || -z "$USER_INPUT" ]]; then
-  USER_INPUT="$DEFAULT_TMP"
+
+DEFAULT_BASE="/root/uup-temp"
+BASE_INPUT=$(dialog --clear --inputbox "$(translate "Enter base folder for temporary files and converter (default:") $DEFAULT_BASE):" 10 60 "$DEFAULT_BASE" 3>&1 1>&2 2>&3)
+
+if [[ $? -ne 0 || -z "$BASE_INPUT" ]]; then
+  BASE_INPUT="$DEFAULT_BASE"
 fi
 
-# 
-if [[ "$USER_INPUT" == "$DEFAULT_TMP" ]]; then
-  TMP_DIR="$USER_INPUT"
-  CLEAN_ALL=true
-else
-  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-  RANDOM_ID=$(head /dev/urandom | tr -dc a-z0-9 | head -c 4)
-  TMP_DIR="${USER_INPUT%/}/uup-session-${TIMESTAMP}-${RANDOM_ID}"
-  CLEAN_ALL=false
-fi
 
-mkdir -p "$TMP_DIR" || {
-  msg_error "$(translate "Failed to create temporary directory:") $TMP_DIR"
+BASE_CLEAN="$(echo "$BASE_INPUT" | sed 's:[[:space:]]*$::' | sed 's:/*$::')"
+
+
+if [[ ! -d "$BASE_CLEAN" ]]; then
+  if ! mkdir -p "$BASE_CLEAN"; then
+    msg_error "$(translate "The selected base folder does not exist and could not be created:") $BASE_CLEAN"
+    exit 1
+  fi
+fi
+if [[ ! -w "$BASE_CLEAN" ]]; then
+  msg_error "$(translate "No write permissions on:") $BASE_CLEAN"
   exit 1
-}
+fi
 
-OUT_DIR=$(detect_iso_dir)
-[[ -z "$OUT_DIR" ]] && msg_error "$(translate "Could not determine a valid ISO directory.")" && exit 1
-mkdir -p "$OUT_DIR"
+
+TMP_DIR="$BASE_CLEAN/uup-temp"
+CONVERTER="$BASE_CLEAN/uup-converter"
+
+if ! mkdir -p "$TMP_DIR"; then
+  msg_error "$(translate "Could not create temporary directory:") $TMP_DIR"
+  exit 1
+fi
+
+if ! mkdir -p "$CONVERTER"; then
+  msg_error "$(translate "Could not create converter directory:") $CONVERTER"
+  exit 1
+fi
+
+cd "$TMP_DIR" || { msg_error "$(translate "Failed to access:") $TMP_DIR"; exit 1; }
+
 
 
 UUP_URL=$(whiptail --inputbox "$(translate "Paste the UUP Dump URL here")" 10 90 3>&1 1>&2 2>&3)
@@ -156,7 +168,6 @@ EDITION=$(echo "$UUP_URL" | grep -oP 'edition=\K[^&]+')
 ARCH="amd64"
 
 show_proxmenux_logo
-echo -e
 echo -e
 echo -e "\n${BGN}=============== UUP Dump Creator ===============${CL}"
 echo -e "    ${BGN}🆔 ID:${CL} ${DGN}$BUILD_ID${CL}"
