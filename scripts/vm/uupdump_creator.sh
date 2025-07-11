@@ -91,8 +91,10 @@ function run_uupdump_creator() {
     done
 
     if [[ ${#FAILED[@]} -eq 0 ]]; then
+        show_proxmenux_logo
         msg_ok "$(translate "All dependencies installed and verified.")"
     else
+        show_proxmenux_logo
         msg_error "$(translate "Missing commands after installation: ${FAILED[*]}")"
         exit 1
     fi
