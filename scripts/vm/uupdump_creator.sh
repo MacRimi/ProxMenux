@@ -155,6 +155,9 @@ LANG=$(echo "$UUP_URL" | grep -oP 'pack=\K[^&]+')
 EDITION=$(echo "$UUP_URL" | grep -oP 'edition=\K[^&]+')
 ARCH="amd64"
 
+show_proxmenux_logo
+echo -e
+echo -e
 echo -e "\n${BGN}=============== UUP Dump Creator ===============${CL}"
 echo -e "    ${BGN}🆔 ID:${CL} ${DGN}$BUILD_ID${CL}"
 echo -e "    ${BGN}🌐 Language:${CL} ${DGN}$LANG${CL}"
