@@ -72,8 +72,8 @@ validate_container_id() {
     fi
 }
 
-# Añadir regla udev para Coral USB para persistencia de permisos
-add_udev_rule_for_coral_usb() {
+
+add_udev_rule_for_coral_usb_() {
     RULE_FILE="/etc/udev/rules.d/99-coral-usb.rules"
     RULE_CONTENT='SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", MODE="0666", TAG+="uaccess"'
 
@@ -86,6 +86,22 @@ add_udev_rule_for_coral_usb() {
     fi
 }
 
+
+add_udev_rule_for_coral_usb() {
+    RULE_FILE="/etc/udev/rules.d/99-coral-usb.rules"
+    RULE_CONTENT='# Coral USB Accelerator
+SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", MODE="0666", TAG+="uaccess", SYMLINK+="coral"
+# Coral Dev Board / Mini PCIe
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1a6e", ATTRS{idProduct}=="089a", MODE="0666", TAG+="uaccess", SYMLINK+="coral"'
+
+    if [[ ! -f "$RULE_FILE" ]] || ! grep -q "18d1.*9302\|1a6e.*089a" "$RULE_FILE"; then
+        echo "$RULE_CONTENT" > "$RULE_FILE"
+        udevadm control --reload-rules && udevadm trigger
+        msg_ok "$(translate 'Udev rules for Coral USB devices added and rules reloaded.')"
+    else
+        msg_ok "$(translate 'Udev rules for Coral USB devices already exist.')"
+    fi
+}
 
 
 add_mount_if_needed() {
