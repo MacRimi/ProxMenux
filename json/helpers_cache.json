@@ -414,6 +414,18 @@
     }
   },
   {
+    "name": "Bar-Assistant",
+    "slug": "bar-assistant",
+    "desc": "Bar Assistant is all-in-one solution for managing your home bar. Compared to other recipe management software that usually tries to be more for general use, Bar Assistant is made specifically for managing cocktail recipes. This means that there are a lot of cocktail-oriented features, like ingredient substitutes, first-class ingredients, ABV calculations, unit switching and more..",
+    "script": "ct/bar-assistant.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/bar-assistant.sh",
+    "categories": [
+      24
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Barcode Buddy",
     "slug": "barcode-buddy",
     "desc": "Barcode Buddy for Grocy is an extension for Grocy, allowing to pass barcodes to Grocy. It supports barcodes for products and chores. If you own a physical barcode scanner, it can be integrated, so that all barcodes scanned are automatically pushed to BarcodeBuddy/Grocy.",
