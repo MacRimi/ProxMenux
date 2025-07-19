@@ -556,6 +556,8 @@ show_uninstall_menu() {
             network_optimization) desc="Network Optimizations";;
             disable_rpc) desc="RPC/rpcbind Disable";;
             bashrc_custom) desc="Bashrc Customization";;
+            figurine) desc="Figurine";;
+            fastfetch) desc="Fastfetch";;
             log2ram) desc="Log2ram (SSD Protection)";;
             *) desc="$tool";;
         esac
