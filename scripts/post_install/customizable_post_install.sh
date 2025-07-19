@@ -2120,7 +2120,7 @@ enable_vfio_iommu() {
 
 
 
-customize_bashrc() {
+customize_bashrc_() {
    msg_info2 "$(translate "Customizing bashrc for root user...")"
 
     local bashrc="/root/.bashrc"
@@ -2159,6 +2159,59 @@ customize_bashrc() {
 
     msg_success "$(translate "Bashrc customization completed")"
 }
+
+
+
+
+
+
+
+customize_bashrc() {
+    msg_info2 "$(translate "Customizing bashrc for root user...")"
+   
+    set -euo pipefail
+    
+    msg_info "$(translate "Customizing bashrc for root user...")"
+    local bashrc="/root/.bashrc"
+    local bash_profile="/root/.bash_profile"
+    local marker_begin="# BEGIN PMX_CORE_BASHRC"
+    local marker_end="# END PMX_CORE_BASHRC"
+    
+ 
+    [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1
+    
+
+    if grep -q "^${marker_begin}$" "$bashrc" 2>/dev/null; then
+        sed -i "/^${marker_begin}$/,/^${marker_end}$/d" "$bashrc"  
+    fi
+    
+ 
+    cat >> "$bashrc" << 'EOF'
+${marker_begin}
+# ProxMenux core customizations
+export HISTTIMEFORMAT="%d/%m/%y %T "
+export PS1="\[\e[31m\][\[\e[m\]\[\e[38;5;172m\]\u\[\e[m\]@\[\e[38;5;153m\]\h\[\e[m\] \[\e[38;5;214m\]\W\[\e[m\]\[\e[31m\]]\[\e[m\]\\$ "
+alias l='ls -CF'
+alias la='ls -A'
+alias ll='ls -alF'
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+source /etc/profile.d/bash_completion.sh
+${marker_end}
+EOF
+    
+
+    if ! grep -q "source /root/.bashrc" "$bash_profile" 2>/dev/null; then
+        echo "source /root/.bashrc" >> "$bash_profile" 2>/dev/null
+    fi
+    
+    msg_ok "$(translate "Bashrc customization completed")"
+    register_tool "bashrc_custom" true
+}
+
+
 
 
 
@@ -2718,7 +2771,7 @@ add_repo_test() {
 
 
 
-configure_figurine() {
+configure_figurine_() {
     msg_info2 "$(translate "Installing and configuring Figurine...")"
 
     # Variables
@@ -2804,6 +2857,94 @@ EOF
     rm -rf "$temp_dir" > /dev/null 2>&1
     msg_ok "$(translate "Cleanup completed")"
 
+    msg_success "$(translate "Figurine installation and configuration completed successfully.")"
+}
+
+
+
+
+
+
+
+configure_figurine() {
+    set -euo pipefail
+    
+    msg_info2 "$(translate "Installing and configuring Figurine...")"
+    local version="1.3.0"
+    local file="figurine_linux_amd64_v${version}.tar.gz"
+    local url="https://github.com/arsham/figurine/releases/download/v${version}/${file}"
+    local temp_dir
+    temp_dir=$(mktemp -d)
+    local install_dir="/usr/local/bin"
+    local profile_script="/etc/profile.d/figurine.sh"
+    local bin_path="${install_dir}/figurine"
+    local bashrc="/root/.bashrc"
+    local marker_begin="# BEGIN PMX_FIGURINE"
+    local marker_end="# END PMX_FIGURINE"
+    
+ 
+    cleanup() { 
+        rm -rf "$temp_dir" 2>/dev/null || true
+    }
+    trap cleanup EXIT
+    
+  
+    if command -v figurine &>/dev/null; then
+        msg_info "$(translate "Updating Figurine binary...")"
+    else
+        msg_info "$(translate "Downloading Figurine v${version}...")"
+    fi
+    
+    if ! wget -qO "${temp_dir}/${file}" "$url" > /dev/null 2>&1; then
+        msg_error "$(translate "Failed to download Figurine")"
+        return 1
+    fi
+
+    
+    if ! tar -xf "${temp_dir}/${file}" -C "${temp_dir}" > /dev/null 2>&1; then
+        msg_error "$(translate "Failed to extract package")"
+        return 1
+    fi
+    msg_ok "$(translate "Extraction successful")"
+    
+    if [[ ! -f "${temp_dir}/deploy/figurine" ]]; then
+        msg_error "$(translate "Binary not found in extracted content.")"
+        return 1
+    fi
+    
+    msg_info "$(translate "Installing binary to ${install_dir}...")"
+
+    install -m 0755 -o root -g root "${temp_dir}/deploy/figurine" "$bin_path" > /dev/null 2>&1
+
+    cat > "$profile_script" << 'EOF'
+/usr/local/bin/figurine -f "3d.flf" $(hostname)
+EOF
+    chmod +x "$profile_script" > /dev/null 2>&1
+
+    
+   
+    if grep -q "^${marker_begin}$" "$bashrc" 2>/dev/null; then
+        sed -i "/^${marker_begin}$/,/^${marker_end}$/d" "$bashrc"  
+    fi
+    
+ 
+    cat >> "$bashrc" << 'EOF'
+${marker_begin}
+# ProxMenux Figurine aliases and tools
+alias aptup='apt update && apt dist-upgrade'
+alias lxcclean='bash -c '\''$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/clean-lxcs.sh)'\'''
+alias lxcupdate='bash -c '\''$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/update-lxcs.sh)'\'''
+alias kernelclean='bash -c '\''$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/kernel-clean.sh)'\'''
+alias cpugov='bash -c '\''$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/scaling-governor.sh)'\'''
+alias updatecerts='pvecm updatecerts'
+alias seqwrite='sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4M --size=32G --readwrite=write --ramp_time=4'
+alias seqread='sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4M --size=32G --readwrite=read --ramp_time=4'
+alias ranwrite='sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4k --size=4G --readwrite=randwrite --ramp_time=4'
+alias ranread='sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4k --size=4G --readwrite=randread --ramp_time=4'
+${marker_end}
+EOF
+    msg_ok "$(translate "Aliases added to .bashrc")"
+    
     msg_success "$(translate "Figurine installation and configuration completed successfully.")"
 }
 
