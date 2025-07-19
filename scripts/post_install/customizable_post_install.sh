@@ -2735,6 +2735,7 @@ configure_fastfetch() {
     msg_ok "$(translate "Fastfetch will start automatically in the console")"
 
     msg_success "$(translate "Fastfetch installation and configuration completed")"
+    register_tool "fastfetch" true
 
 }
 
@@ -2946,6 +2947,7 @@ EOF
     msg_ok "$(translate "Aliases added to .bashrc")"
     
     msg_success "$(translate "Figurine installation and configuration completed successfully.")"
+    register_tool "figurine" true
 }
 
 
