@@ -795,7 +795,7 @@ EOF
 
 # ==========================================================
 
-install_log2ram_auto_() {
+install_log2ram_auto() {
     msg_info "$(translate "Checking if system disk is SSD or M.2...")"
 
     ROOT_PART=$(lsblk -no NAME,MOUNTPOINT | grep ' /$' | awk '{print $1}')
@@ -883,7 +883,7 @@ EOF
 
 
 
-install_log2ram_auto() {
+install_log2ram_auto_() {
     set -euo pipefail
     
     msg_info "$(translate "Checking if system disk is SSD or M.2...")"
