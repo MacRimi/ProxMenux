@@ -713,7 +713,7 @@ disable_rpc() {
 }
 
 # ==========================================================
-customize_bashrc() {
+customize_bashrc_() {
     msg_info "$(translate "Customizing bashrc for root user...")"
     local bashrc="/root/.bashrc"
     local bash_profile="/root/.bash_profile"
@@ -746,9 +746,56 @@ EOF
     register_tool "bashrc_custom" true
 }
 
+
+
+customize_bashrc() {
+    set -euo pipefail
+    
+    msg_info "$(translate "Customizing bashrc for root user...")"
+    local bashrc="/root/.bashrc"
+    local bash_profile="/root/.bash_profile"
+    local marker_begin="# BEGIN PMX_CORE_BASHRC"
+    local marker_end="# END PMX_CORE_BASHRC"
+    
+ 
+    [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1
+    
+
+    if grep -q "^${marker_begin}$" "$bashrc" 2>/dev/null; then
+        sed -i "/^${marker_begin}$/,/^${marker_end}$/d" "$bashrc"  
+    fi
+    
+ 
+    cat >> "$bashrc" << 'EOF'
+${marker_begin}
+# ProxMenux core customizations
+export HISTTIMEFORMAT="%d/%m/%y %T "
+export PS1="\[\e[31m\][\[\e[m\]\[\e[38;5;172m\]\u\[\e[m\]@\[\e[38;5;153m\]\h\[\e[m\] \[\e[38;5;214m\]\W\[\e[m\]\[\e[31m\]]\[\e[m\]\\$ "
+alias l='ls -CF'
+alias la='ls -A'
+alias ll='ls -alF'
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+source /etc/profile.d/bash_completion.sh
+${marker_end}
+EOF
+    
+
+    if ! grep -q "source /root/.bashrc" "$bash_profile" 2>/dev/null; then
+        echo "source /root/.bashrc" >> "$bash_profile" 2>/dev/null
+    fi
+    
+    msg_ok "$(translate "Bashrc customization completed")"
+    register_tool "bashrc_custom" true
+}
+
+
+
 # ==========================================================
 
-install_log2ram_auto() {
+install_log2ram_auto_() {
     msg_info "$(translate "Checking if system disk is SSD or M.2...")"
 
     ROOT_PART=$(lsblk -no NAME,MOUNTPOINT | grep ' /$' | awk '{print $1}')
@@ -832,6 +879,132 @@ EOF
 
     register_tool "log2ram" true
 }
+
+
+
+
+install_log2ram_auto() {
+    set -euo pipefail
+    
+    msg_info "$(translate "Checking if system disk is SSD or M.2...")"
+    ROOT_PART=$(lsblk -no NAME,MOUNTPOINT | grep ' /$' | awk '{print $1}')
+    SYSTEM_DISK=$(lsblk -no PKNAME /dev/$ROOT_PART 2>/dev/null)
+    SYSTEM_DISK=${SYSTEM_DISK:-sda}
+    
+    if [[ "$SYSTEM_DISK" == nvme* || "$(cat /sys/block/$SYSTEM_DISK/queue/rotational 2>/dev/null)" == "0" ]]; then
+        msg_ok "$(translate "System disk ($SYSTEM_DISK) is SSD or M.2. Proceeding with Log2RAM setup.")"
+    else
+        msg_warn "$(translate "System disk ($SYSTEM_DISK) is not SSD/M.2. Skipping Log2RAM installation.")"
+        return 0
+    fi
+    
+
+    if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1 && systemctl list-units --all | grep -q log2ram; then
+        msg_ok "$(translate "Log2RAM is already installed and configured correctly.")"
+        register_tool "log2ram" true
+        return 0
+    fi
+    
+    msg_info "$(translate "Log2RAM not found. Proceeding with installation...")"
+    
+
+    if [[ -d /tmp/log2ram ]]; then
+        rm -rf /tmp/log2ram
+    fi
+    
+
+    [[ -f /etc/systemd/system/log2ram.service ]] && rm -f /etc/systemd/system/log2ram*
+    [[ -f /etc/systemd/system/log2ram-daily.service ]] && rm -f /etc/systemd/system/log2ram-daily.*
+    [[ -f /etc/cron.d/log2ram ]] && rm -f /etc/cron.d/log2ram*
+    [[ -f /usr/sbin/log2ram ]] && rm -f /usr/sbin/log2ram
+    [[ -f /etc/log2ram.conf ]] && rm -f /etc/log2ram.conf
+    [[ -f /usr/local/bin/log2ram-check.sh ]] && rm -f /usr/local/bin/log2ram-check.sh
+    [[ -d /var/log.hdd ]] && rm -rf /var/log.hdd
+    
+    systemctl daemon-reexec >/dev/null 2>&1 || true
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    
+    msg_info "$(translate "Installing log2ram from GitHub...")"
+    
+
+    if ! command -v git >/dev/null 2>&1; then
+        msg_info "$(translate "Installing git dependency...")"
+        apt-get update -qq >/dev/null 2>&1
+        apt-get install -y git >/dev/null 2>&1
+        msg_ok "$(translate "Git installed successfully")"
+    fi
+    
+    if ! git clone https://github.com/azlux/log2ram.git /tmp/log2ram >/dev/null 2>>/tmp/log2ram_install.log; then
+        msg_error "$(translate "Failed to clone log2ram repository. Check /tmp/log2ram_install.log")"
+        return 1
+    fi
+    
+    cd /tmp/log2ram || {
+        msg_error "$(translate "Failed to access log2ram directory")"
+        return 1
+    }
+    
+    if ! bash install.sh >>/tmp/log2ram_install.log 2>&1; then
+        msg_error "$(translate "Failed to run log2ram installer. Check /tmp/log2ram_install.log")"
+        return 1
+    fi
+    
+
+    if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1; then
+        msg_ok "$(translate "Log2RAM installed successfully")"
+    else
+        msg_error "$(translate "Log2RAM installation verification failed. Check /tmp/log2ram_install.log")"
+        return 1
+    fi
+    
+
+    RAM_SIZE_GB=$(free -g | awk '/^Mem:/{print $2}')
+    [[ -z "$RAM_SIZE_GB" || "$RAM_SIZE_GB" -eq 0 ]] && RAM_SIZE_GB=4
+    
+    if (( RAM_SIZE_GB <= 8 )); then
+        LOG2RAM_SIZE="128M"
+        CRON_HOURS=1
+    elif (( RAM_SIZE_GB <= 16 )); then
+        LOG2RAM_SIZE="256M"
+        CRON_HOURS=3
+    else
+        LOG2RAM_SIZE="512M"
+        CRON_HOURS=6
+    fi
+    
+    msg_ok "$(translate "Detected RAM:") $RAM_SIZE_GB GB — $(translate "Log2RAM size set to:") $LOG2RAM_SIZE"
+    
+
+    sed -i "s/^SIZE=.*/SIZE=$LOG2RAM_SIZE/" /etc/log2ram.conf
+    
+
+    rm -f /etc/cron.hourly/log2ram
+    echo "0 */$CRON_HOURS * * * root /usr/sbin/log2ram write" > /etc/cron.d/log2ram
+    msg_ok "$(translate "log2ram write scheduled every") $CRON_HOURS $(translate "hour(s)")"
+    
+
+    cat << 'EOF' > /usr/local/bin/log2ram-check.sh
+#!/bin/bash
+CONF_FILE="/etc/log2ram.conf"
+LIMIT_KB=$(grep '^SIZE=' "$CONF_FILE" | cut -d'=' -f2 | tr -d 'M')000
+USED_KB=$(df /var/log --output=used | tail -1)
+THRESHOLD=$(( LIMIT_KB * 90 / 100 ))
+
+if (( USED_KB > THRESHOLD )); then
+    /usr/sbin/log2ram write
+fi
+EOF
+    
+    chmod +x /usr/local/bin/log2ram-check.sh
+    echo "*/5 * * * * root /usr/local/bin/log2ram-check.sh" > /etc/cron.d/log2ram-auto-sync
+    msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 90% of") $LOG2RAM_SIZE"
+    
+    register_tool "log2ram" true
+}
+
+
+
+
 
 # ==========================================================
 
