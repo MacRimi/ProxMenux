@@ -748,9 +748,7 @@ EOF
 
 
 
-customize_bashrc() {
-    set -euo pipefail
-    
+customize_bashrc() {    
     msg_info "$(translate "Customizing bashrc for root user...")"
     local bashrc="/root/.bashrc"
     local bash_profile="/root/.bash_profile"
