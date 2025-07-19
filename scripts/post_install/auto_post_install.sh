@@ -905,7 +905,7 @@ install_log2ram_auto() {
         return 0
     fi
     
-    msg_info "$(translate "Log2RAM not found. Proceeding with installation...")"
+    msg_info "$(translate "Log2RAM proceeding with installation...")"
     
 
     if [[ -d /tmp/log2ram ]]; then
@@ -924,7 +924,6 @@ install_log2ram_auto() {
     systemctl daemon-reexec >/dev/null 2>&1 || true
     systemctl daemon-reload >/dev/null 2>&1 || true
     
-    msg_info "$(translate "Installing log2ram from GitHub...")"
     
 
     if ! command -v git >/dev/null 2>&1; then
