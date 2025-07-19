@@ -2168,8 +2168,6 @@ customize_bashrc_() {
 
 customize_bashrc() {
     msg_info2 "$(translate "Customizing bashrc for root user...")"
-   
-    set -euo pipefail
     
     msg_info "$(translate "Customizing bashrc for root user...")"
     local bashrc="/root/.bashrc"
@@ -2868,7 +2866,6 @@ EOF
 
 
 configure_figurine() {
-    set -euo pipefail
     
     msg_info2 "$(translate "Installing and configuring Figurine...")"
     local version="1.3.0"
@@ -2983,6 +2980,13 @@ configure_log2ram() {
 
     msg_info2 "$(translate "Preparing Log2RAM configuration")"
     sleep 2
+
+
+    if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1 && systemctl list-units --all | grep -q log2ram; then
+        msg_ok "$(translate "Log2RAM is already installed and configured correctly.")"
+        register_tool "log2ram" true
+        return 0
+    fi
 
     RAM_SIZE_GB=$(free -g | awk '/^Mem:/{print $2}')
     [[ -z "$RAM_SIZE_GB" || "$RAM_SIZE_GB" -eq 0 ]] && RAM_SIZE_GB=4
