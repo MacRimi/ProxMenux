@@ -795,7 +795,7 @@ EOF
 
 # ==========================================================
 
-install_log2ram_auto() {
+install_log2ram_auto_() {
     msg_info "$(translate "Checking if system disk is SSD or M.2...")"
 
     ROOT_PART=$(lsblk -no NAME,MOUNTPOINT | grep ' /$' | awk '{print $1}')
@@ -883,21 +883,20 @@ EOF
 
 
 
-install_log2ram_auto_() {
-    set -euo pipefail
-    
+install_log2ram_auto() {
     msg_info "$(translate "Checking if system disk is SSD or M.2...")"
+
     ROOT_PART=$(lsblk -no NAME,MOUNTPOINT | grep ' /$' | awk '{print $1}')
     SYSTEM_DISK=$(lsblk -no PKNAME /dev/$ROOT_PART 2>/dev/null)
     SYSTEM_DISK=${SYSTEM_DISK:-sda}
-    
+
     if [[ "$SYSTEM_DISK" == nvme* || "$(cat /sys/block/$SYSTEM_DISK/queue/rotational 2>/dev/null)" == "0" ]]; then
         msg_ok "$(translate "System disk ($SYSTEM_DISK) is SSD or M.2. Proceeding with Log2RAM setup.")"
     else
         msg_warn "$(translate "System disk ($SYSTEM_DISK) is not SSD/M.2. Skipping Log2RAM installation.")"
         return 0
     fi
-    
+
 
     if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1 && systemctl list-units --all | grep -q log2ram; then
         msg_ok "$(translate "Log2RAM is already installed and configured correctly.")"
