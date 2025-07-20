@@ -1,3 +1,39 @@
+## 2025-07-20
+
+### Changed
+
+- **Subscription Banner Removal (Proxmox 8.4.5+)**  
+  Improved the `remove_subscription_banner` function to ensure compatibility with Proxmox 8.4.5, where the banner removal method was failing after clean installations.
+
+- **Improved Log2RAM Detection**  
+  In both the automatic and customizable post-install scripts, the logic for Log2RAM installation has been improved.  
+  Now it correctly detects if Log2RAM is already configured and avoids triggering errors or reconfiguration.
+
+- **Optimized Figurine Installation**  
+  The `install_figurine` function now avoids duplicating `.bashrc` entries if the customization for the root prompt already exists.
+
+
+### Added
+
+- **New Function: Persistent Network Interface Naming**  
+  Added a new function `setup_persistent_network` to create stable network interface names using `.link` files based on MAC addresses.  
+  This avoids unpredictable renaming (e.g., `enp2s0` becoming `enp3s0`) when hardware changes, PCI topology shifts, or passthrough configurations are applied.
+
+  **Why use `.link` files?**  
+  Because predictable interface names in `systemd` can change with hardware reordering or replacement. Using static `.link` files bound to MAC addresses ensures consistency, especially on systems with multiple NICs or passthrough setups.
+
+  Special thanks to [@Andres_Eduardo_Rojas_Moya] for contributing the persistent  
+  network naming function and for the original idea.
+
+```bash
+[Match]
+MACAddress=XX:XX:XX:XX:XX:XX
+
+[Link]
+Name=eth0
+```
+
+
 ## 2025-07-01
 
 ### New version v1.1.3
