@@ -359,7 +359,6 @@ EOF
 }
 
 
-
 remove_subscription_banner() {
     local JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
     local GZ_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz"
@@ -378,25 +377,14 @@ remove_subscription_banner() {
         [[ -e "$f" ]] && rm -f "$f"
     done
 
+
     msg_info "Applying patches to remove subscription banner..."
 
-    if [[ $(echo "$PVE_VERSION" | cut -d'.' -f1-2) == "8.4" ]] && [[ $(echo "$PVE_VERSION" | cut -d'.' -f3) -ge 5 ]]; then
-        
-        sed -i "s/res\.data\.status\.toLowerCase() !== 'NoMoreNagging'/false/g" "$JS_FILE"
-        sed -i "s/res\.data\.status\.toLowerCase() !== \"NoMoreNagging\"/false/g" "$JS_FILE"        
-        sed -i '/check_subscription: function/,/},$/c\
-        check_subscription: function () {\
-            let me = this;\
-            let vm = me.getViewModel();\
-            vm.set("subscriptionActive", true);\
-            me.getController().updateState();\
-        },' "$JS_FILE"
-    else
-
-        sed -i "s/res\.data\.status\.toLowerCase()[^']*'active'/false/g" "$JS_FILE"
-        sed -i "s/res\.data\.status[^']*'Active'/false/g" "$JS_FILE"
-    fi
-
+    sed -i "s/res\.data\.status\.toLowerCase() !== 'NoMoreNagging'/false/g" "$JS_FILE"
+    sed -i "s/res\.data\.status\.toLowerCase() !== \"NoMoreNagging\"/false/g" "$JS_FILE"
+    sed -i "s/res\.data\.status\.toLowerCase() !== 'active'/false/g" "$JS_FILE"
+    sed -i "s/res\.data\.status !== 'Active'/false/g" "$JS_FILE"
+    sed -i "s/subscription = !(/subscription = false \&\& (/g" "$JS_FILE"
     sed -i '/checked_command: function/,/},$/c\
         checked_command: function (orig_cmd) {\
             orig_cmd();\
@@ -404,31 +392,29 @@ remove_subscription_banner() {
 
     sed -i "s/title: gettext('No valid subscription')/title: gettext('Subscription Active')/g" "$JS_FILE"
     sed -i "s/icon: Ext\.Msg\.WARNING/icon: Ext.Msg.INFO/g" "$JS_FILE"
+    sed -i '/check_subscription: function/,/},$/c\
+        check_subscription: function () {\
+            let me = this;\
+            let vm = me.getViewModel();\
+            vm.set("subscriptionActive", true);\
+            me.getController().updateState();\
+        },' "$JS_FILE"
 
     [[ -f "$GZ_FILE" ]] && rm -f "$GZ_FILE"
 
     find /var/cache/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
     find /var/lib/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
 
-    if [[ $(echo "$PVE_VERSION" | cut -d'.' -f1-2) == "8.4" ]] && [[ $(echo "$PVE_VERSION" | cut -d'.' -f3) -ge 5 ]]; then
-
-        cat > "$APT_HOOK" << 'EOF'
+    cat > "$APT_HOOK" << 'EOF'
 DPkg::Post-Invoke {
     "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\.data\.status\.toLowerCase() !== '\''NoMoreNagging'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
     "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\.data\.status\.toLowerCase() !== \"NoMoreNagging\"/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
+    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\.data\.status\.toLowerCase() !== '\''active'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
+    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\.data\.status !== '\''Active'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
+    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/subscription = !(/subscription = false \&\& (/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
     "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz && rm -f /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz";
 };
 EOF
-    else
-
-        cat > "$APT_HOOK" << 'EOF'
-DPkg::Post-Invoke {
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\.data\.status\.toLowerCase()[^'\'']*'\''active'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\.data\.status[^'\'']*'\''Active'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz && rm -f /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz";
-};
-EOF
-    fi
 
     chmod 644 "$APT_HOOK"
 
@@ -437,6 +423,8 @@ EOF
     register_tool "subscription_banner" true
 }
 
+
+   
 
 # ==========================================================
 
