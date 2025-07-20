@@ -1056,6 +1056,58 @@ EOF
 
 
 
+# ==========================================================
+
+
+setup_persistent_network() {
+    local LINK_DIR="/etc/systemd/network"
+    local BACKUP_DIR="/etc/systemd/network/backup-$(date +%Y%m%d-%H%M%S)"
+    
+    if ! dialog --title "$(translate "Network Interface Setup")" \
+         --yesno "$(translate "Create persistent network interface names?")" 8 60; then
+        return 1
+    fi
+ 
+    msg_info "$(translate "Setting up persistent network interfaces")"
+    sleep 2
+
+    mkdir -p "$LINK_DIR"
+    
+    if ls "$LINK_DIR"/*.link >/dev/null 2>&1; then
+        mkdir -p "$BACKUP_DIR"
+        cp "$LINK_DIR"/*.link "$BACKUP_DIR"/ 2>/dev/null || true
+    fi
+    
+    local count=0
+    for iface in $(ls /sys/class/net/ | grep -vE "lo|docker|veth|br-|vmbr|tap|fwpr|fwln|virbr|bond|cilium|zt|wg"); do
+        if [[ -e "/sys/class/net/$iface/device" ]] || [[ -e "/sys/class/net/$iface/phy80211" ]]; then
+            local MAC=$(cat /sys/class/net/$iface/address 2>/dev/null)
+            
+            if [[ "$MAC" =~ ^([a-fA-F0-9]{2}:){5}[a-fA-F0-9]{2}$ ]]; then
+                local LINK_FILE="$LINK_DIR/10-$iface.link"
+                
+                cat > "$LINK_FILE" <<EOF
+[Match]
+MACAddress=$MAC
+
+[Link]
+Name=$iface
+EOF
+                chmod 644 "$LINK_FILE"
+                ((count++))
+            fi
+        fi
+    done
+    
+    if [[ $count -gt 0 ]]; then
+        msg_ok "$(translate "Created persistent names for") $count $(translate "interfaces")"
+        msg_ok "$(translate "Changes will apply after reboot.")"
+    else
+        msg_warn "$(translate "No physical interfaces found")"
+    fi
+    register_tool "persistent_network" true
+
+}
 
 
 # ==========================================================
@@ -1082,6 +1134,7 @@ run_complete_optimization() {
     disable_rpc
     customize_bashrc
     install_log2ram_auto
+    setup_persistent_network
     
 
     echo -e
