@@ -445,6 +445,29 @@ uninstall_log2ram() {
     register_tool "log2ram" false
 }
 
+
+################################################################
+
+remove_persistent_network_names() {
+    local LINK_DIR="/etc/systemd/network"
+    
+    msg_info "$(translate "Removing all .link files from") $LINK_DIR"
+    sleep 2
+    
+    if ! ls "$LINK_DIR"/*.link >/dev/null 2>&1; then
+        msg_warn "$(translate "No .link files found in") $LINK_DIR"
+        return 0
+    fi
+
+    rm -f "$LINK_DIR"/*.link
+
+    msg_ok "$(translate "Removed all .link files from") $LINK_DIR"
+    msg_info "$(translate "Interface names will return to default systemd behavior.")"
+    register_tool "persistent_network" false
+}
+
+
+
 ################################################################
 
 migrate_installed_tools() {
@@ -559,6 +582,7 @@ show_uninstall_menu() {
             figurine) desc="Figurine";;
             fastfetch) desc="Fastfetch";;
             log2ram) desc="Log2ram (SSD Protection)";;
+            persistent_network) desc="Setting persistent network interfaces";;
             *) desc="$tool";;
         esac
         menu_options+=("$tool" "$desc" "off")
