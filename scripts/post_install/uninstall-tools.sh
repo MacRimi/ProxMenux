@@ -448,7 +448,7 @@ uninstall_log2ram() {
 
 ################################################################
 
-remove_persistent_network_names() {
+uninstall_persistent_network() {
     local LINK_DIR="/etc/systemd/network"
     
     msg_info "$(translate "Removing all .link files from") $LINK_DIR"
@@ -576,6 +576,7 @@ show_uninstall_menu() {
             memory_settings) desc="Memory Settings Optimization";;
             kernel_panic) desc="Kernel Panic Configuration";;
             apt_ipv4) desc="APT IPv4 Force";;
+            kexec) desc="kexec for quick reboots";;
             network_optimization) desc="Network Optimizations";;
             disable_rpc) desc="RPC/rpcbind Disable";;
             bashrc_custom) desc="Bashrc Customization";;

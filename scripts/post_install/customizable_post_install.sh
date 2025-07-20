@@ -146,6 +146,7 @@ EOF
     fi
 
     msg_success "$(translate "kexec configured successfully. Use the command: reboot-quick")"
+    register_tool "kexec" true
 }
 
 
