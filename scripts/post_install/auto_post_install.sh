@@ -1063,10 +1063,7 @@ setup_persistent_network() {
     local LINK_DIR="/etc/systemd/network"
     local BACKUP_DIR="/etc/systemd/network/backup-$(date +%Y%m%d-%H%M%S)"
     
-    if ! dialog --title "$(translate "Network Interface Setup")" \
-         --yesno "$(translate "Create persistent network interface names?")" 8 60; then
-        return 1
-    fi
+
  
     msg_info "$(translate "Setting up persistent network interfaces")"
     sleep 2
