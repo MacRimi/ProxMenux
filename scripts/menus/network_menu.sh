@@ -21,6 +21,7 @@ BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
 BACKUP_DIR="/var/backups/proxmenux"
+TOOLS_JSON="/usr/local/share/proxmenux/installed_tools.json"
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
