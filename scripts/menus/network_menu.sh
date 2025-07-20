@@ -42,7 +42,17 @@ backup_network_config() {
     cp /etc/network/interfaces "$backup_file"
     echo "$backup_file"
 }
+# Tool registration system
+ensure_tools_json() {
+    [ -f "$TOOLS_JSON" ] || echo "{}" > "$TOOLS_JSON"
+}
 
+register_tool() {
+    local tool="$1"
+    local state="$2"
+    ensure_tools_json
+    jq --arg t "$tool" --argjson v "$state" '.[$t]=$v' "$TOOLS_JSON" > "$TOOLS_JSON.tmp" && mv "$TOOLS_JSON.tmp" "$TOOLS_JSON"
+}
 # ==========================================================
 # Network Detection Functions
 detect_network_method() {
@@ -737,9 +747,10 @@ setup_persistent_network() {
     local BACKUP_DIR="/etc/systemd/network/backup-$(date +%Y%m%d-%H%M%S)"
     
     if ! dialog --title "$(translate "Network Interface Setup")" \
-         --yesno "$(translate "Create persistent network interface names?")" 8 60; then
+         --yesno "\n$(translate "Create persistent network interface names?")" 8 60; then
         return 1
     fi
+    ensure_tools_json
     show_proxmenux_logo    
     msg_info "$(translate "Setting up persistent network interfaces")"
     sleep 2
