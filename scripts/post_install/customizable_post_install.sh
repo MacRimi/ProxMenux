@@ -3373,7 +3373,7 @@ main_menu() {
     "Network|Apply network optimizations|NET"
     "Network|Install Open vSwitch|OPENVSWITCH"
     "Network|Enable TCP BBR/Fast Open control|TCPFASTOPEN"
-    "Network|Setting persistent network interfaces|PERSISNET"
+    "Network|Interface Names (persistent)|PERSISNET"
     "Storage|Optimize ZFS ARC size|ZFSARC"
     "Storage|Install ZFS auto-snapshot|ZFSAUTOSNAPSHOT"
     "Storage|Increase vzdump backup speed|VZDUMP"
