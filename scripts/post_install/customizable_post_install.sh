@@ -2514,6 +2514,7 @@ EOF
 
     msg_ok "$(translate "Memory settings optimized successfully")"
     msg_success "$(translate "Memory optimization completed.")"
+    register_tool "memory_settings" true
 }
 
 
