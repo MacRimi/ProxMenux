@@ -751,7 +751,6 @@ setup_persistent_network() {
          --yesno "\n$(translate "Create persistent network interface names?")" 8 60; then
         return 1
     fi
-    ensure_tools_json
     show_proxmenux_logo    
     msg_info "$(translate "Setting up persistent network interfaces")"
     sleep 2
