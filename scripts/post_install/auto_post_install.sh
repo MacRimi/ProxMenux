@@ -363,9 +363,7 @@ remove_subscription_banner() {
     local JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
     local GZ_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz"
     local APT_HOOK="/etc/apt/apt.conf.d/no-nag-script"
-    local BACKUP_FILE="${JS_FILE}.bak.$(date +%Y-%m-%d_%H:%M:%S)"
 
-    local PVE_VERSION=$(pveversion | grep "pve-manager" | cut -d'/' -f2)
 
     if ! whiptail --title "Proxmox Subscription Banner" \
         --yesno "Do you want to remove the Proxmox subscription banner from the web interface?" 10 60; then
@@ -385,6 +383,7 @@ remove_subscription_banner() {
     sed -i "s/res\.data\.status\.toLowerCase() !== 'active'/false/g" "$JS_FILE"
     sed -i "s/res\.data\.status !== 'Active'/false/g" "$JS_FILE"
     sed -i "s/subscription = !(/subscription = false \&\& (/g" "$JS_FILE"
+    
     sed -i '/checked_command: function/,/},$/c\
         checked_command: function (orig_cmd) {\
             orig_cmd();\
@@ -392,6 +391,7 @@ remove_subscription_banner() {
 
     sed -i "s/title: gettext('No valid subscription')/title: gettext('Subscription Active')/g" "$JS_FILE"
     sed -i "s/icon: Ext\.Msg\.WARNING/icon: Ext.Msg.INFO/g" "$JS_FILE"
+    
     sed -i '/check_subscription: function/,/},$/c\
         check_subscription: function () {\
             let me = this;\
@@ -408,9 +408,7 @@ remove_subscription_banner() {
     cat > "$APT_HOOK" << 'EOF'
 DPkg::Post-Invoke {
     "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\.data\.status\.toLowerCase() !== '\''NoMoreNagging'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\.data\.status\.toLowerCase() !== \"NoMoreNagging\"/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
     "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\.data\.status\.toLowerCase() !== '\''active'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\.data\.status !== '\''Active'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
     "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/subscription = !(/subscription = false \&\& (/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
     "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz && rm -f /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz";
 };
@@ -419,7 +417,21 @@ EOF
     chmod 644 "$APT_HOOK"
 
     apt --reinstall install proxmox-widget-toolkit -y > /dev/null 2>&1
-    msg_ok "Subscription banner patches applied successfully for Proxmox $PVE_VERSION. Clear your browser cache."
+
+    local changes_applied=0
+    if ! grep -q "res\.data\.status\.toLowerCase() !== 'NoMoreNagging'" "$JS_FILE"; then
+        ((changes_applied++))
+    fi
+    if ! grep -q "title: gettext('No valid subscription')" "$JS_FILE"; then
+        ((changes_applied++))
+    fi
+
+    if [[ $changes_applied -gt 0 ]]; then
+        msg_ok "Subscription banner removed successfully."
+    else
+        msg_warn "Patches may not have been applied correctly. Please verify manually."
+    fi
+
     register_tool "subscription_banner" true
 }
 
