@@ -2788,16 +2788,23 @@ configure_fastfetch() {
     msg_ok "$(translate "Fastfetch configuration updated")"
 
 
-    sed -i '/fastfetch/d' ~/.bashrc ~/.profile /etc/profile
+
+    sed -i '/fastfetch/d' ~/.bashrc ~/.profile /etc/profile 2>/dev/null
     rm -f /etc/update-motd.d/99-fastfetch
 
+
+if ! grep -q '# BEGIN FASTFETCH' ~/.bashrc; then
     cat << 'EOF' >> ~/.bashrc
+
+# BEGIN FASTFETCH
 # Run Fastfetch only in interactive sessions
 if [[ $- == *i* ]] && command -v fastfetch &>/dev/null; then
     clear
     fastfetch
 fi
+# END FASTFETCH
 EOF
+fi
 
     msg_ok "$(translate "Fastfetch will start automatically in the console")"
     msg_success "$(translate "Fastfetch installation and configuration completed")"

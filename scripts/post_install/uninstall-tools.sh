@@ -59,6 +59,7 @@ uninstall_fastfetch() {
     rm -rf "$HOME/.config/fastfetch"
     rm -rf /usr/local/share/fastfetch
     sed -i '/fastfetch/d' "$HOME/.bashrc" "$HOME/.profile" /etc/profile 2>/dev/null
+    sed -i '/# BEGIN FASTFETCH/,/# END FASTFETCH/d' "$HOME/.bashrc"
     rm -f /etc/profile.d/fastfetch.sh /etc/update-motd.d/99-fastfetch
     dpkg -r fastfetch &>/dev/null
 
