@@ -114,6 +114,7 @@ function select_linux_iso_official() {
     "Debian 12 Netinst|CLI|ProxMenux|https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-12.10.0-amd64-netinst.iso"
     "Debian 11 Netinst|CLI|ProxMenux|https://cdimage.debian.org/cdimage/archive/11.11.0/amd64/iso-cd/debian-11.11.0-amd64-netinst.iso"
     "Fedora Workstation 42|Desktop|ProxMenux|https://download.fedoraproject.org/pub/fedora/linux/releases/42/Workstation/x86_64/iso/Fedora-Workstation-Live-42-1.1.x86_64.iso"
+    "Arch Linux|Desktop|ProxMenux|https://geo.mirror.pkgbuild.com/iso/2025.07.01/archlinux-2025.07.01-x86_64.iso"
     "Rocky Linux 9.5|Desktop|ProxMenux|https://download.rockylinux.org/pub/rocky/9/isos/x86_64/Rocky-9.5-x86_64-dvd.iso"
     "Linux Mint 22.1|Desktop|ProxMenux|https://mirrors.edge.kernel.org/linuxmint/stable/22.1/linuxmint-22.1-cinnamon-64bit.iso"
     "openSUSE Leap 15.6|Desktop|ProxMenux|https://download.opensuse.org/distribution/leap/15.6/iso/openSUSE-Leap-15.6-DVD-x86_64-Media.iso"
