@@ -2618,7 +2618,7 @@ enable_ha() {
 
 configure_fastfetch() {
     msg_info2 "$(translate "Installing and configuring Fastfetch...")"
-    register_tool "fastfetch" true
+
 
     # Define paths
     local fastfetch_bin="/usr/local/bin/fastfetch"
@@ -2787,12 +2787,19 @@ configure_fastfetch() {
     fastfetch --gen-config > /dev/null 2>&1
     msg_ok "$(translate "Fastfetch configuration updated")"
 
+
     sed -i '/fastfetch/d' ~/.bashrc ~/.profile /etc/profile
-    rm -f /etc/update-motd.d/99-fastfetch  
+    rm -f /etc/update-motd.d/99-fastfetch
 
-    echo "clear && fastfetch" >> ~/.bashrc
+    cat << 'EOF' >> ~/.bashrc
+# Run Fastfetch only in interactive sessions
+if [[ $- == *i* ]] && command -v fastfetch &>/dev/null; then
+    clear
+    fastfetch
+fi
+EOF
+
     msg_ok "$(translate "Fastfetch will start automatically in the console")"
-
     msg_success "$(translate "Fastfetch installation and configuration completed")"
     register_tool "fastfetch" true
 
