@@ -2791,7 +2791,7 @@ configure_fastfetch() {
     sed -i '/fastfetch/d' ~/.profile /etc/profile 2>/dev/null
     rm -f /etc/update-motd.d/99-fastfetch
 
-sed -i '/# BEGIN FASTFETCH/,/# END FASTFETCH/d' "$HOME/.bashrc" 2>/dev/null
+    sed -i '/# BEGIN FASTFETCH/,/# END FASTFETCH/d' "$HOME/.bashrc" 2>/dev/null
 
 if ! grep -q '# BEGIN FASTFETCH' "$HOME/.bashrc"; then
     cat << 'EOF' >> "$HOME/.bashrc"
@@ -2810,8 +2810,8 @@ msg_ok "$(translate "Fastfetch will start automatically in the console")"
 msg_success "$(translate "Fastfetch installation and configuration completed")"
 register_tool "fastfetch" true
 
-
 }
+
 
 
 
