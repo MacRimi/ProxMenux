@@ -980,6 +980,8 @@ install_log2ram_auto() {
     
 
     if ! command -v git >/dev/null 2>&1; then
+        cleanup
+        sleep 1
         msg_info "$(translate "Installing git dependency...")"
         apt-get update -qq >/dev/null 2>&1
         apt-get install -y git >/dev/null 2>&1
