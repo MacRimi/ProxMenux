@@ -49,7 +49,7 @@ register_tool() {
 ################################################################
 
 uninstall_fastfetch() {
-    if ! command -v fastfetch &>/dev/null; then
+    if ! command -v fastfetch &>/dev/null && [[ ! -f /usr/local/bin/fastfetch ]]; then
         msg_warn "$(translate "Fastfetch is not installed.")"
         return 0
     fi
@@ -58,7 +58,7 @@ uninstall_fastfetch() {
     rm -f /usr/local/bin/fastfetch /usr/bin/fastfetch
     rm -rf "$HOME/.config/fastfetch"
     rm -rf /usr/local/share/fastfetch
-    sed -i '/fastfetch/d' "$HOME/.bashrc" "$HOME/.profile" 2>/dev/null
+    sed -i '/fastfetch/d' "$HOME/.bashrc" "$HOME/.profile" /etc/profile 2>/dev/null
     rm -f /etc/profile.d/fastfetch.sh /etc/update-motd.d/99-fastfetch
     dpkg -r fastfetch &>/dev/null
 
