@@ -2249,6 +2249,21 @@
     "type": "ct"
   },
   {
+    "name": "LinkStack",
+    "slug": "linkstack",
+    "desc": "LinkStack is an open-source, self-hosted alternative to Linktree, allowing users to create a customizable profile page to share multiple links, hosted on their own server.",
+    "script": "ct/linkstack.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/linkstack.sh",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "LinkStack can be updated via the user interface.",
+      "Complete setup via the web interface at http://<container-ip>/. Check installation logs: `cat ~/linkstack-install.log`"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Linkwarden",
     "slug": "linkwarden",
     "desc": "Linkwarden is a fully self-hostable, open-source collaborative bookmark manager to collect, organize and archive webpages.",
