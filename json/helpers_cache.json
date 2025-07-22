@@ -4111,6 +4111,18 @@
     "type": "ct"
   },
   {
+    "name": "Salt",
+    "slug": "salt",
+    "desc": "SaltStack Salt is a software for automating the management and configuration of IT infrastructure and applications. It is an event-driven automation tool and framework used to deploy, configure, and manage complex IT systems. Its primary functions include configuration management, where it ensures consistent configurations and manages operating system deployment and software installation. It also automates and orchestrates routine IT processes and can create self-aware, self-healing systems.",
+    "script": "ct/salt.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/salt.sh",
+    "categories": [
+      19
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Proxmox VE CPU Scaling Governor",
     "slug": "scaling-governor",
     "desc": "The CPU scaling governor determines how the CPU frequency is adjusted based on the workload, with the goal of either conserving power or improving performance. By scaling the frequency up or down, the operating system can optimize the CPU usage and conserve energy when possible. Generic Scaling Governors",
