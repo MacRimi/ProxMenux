@@ -4424,7 +4424,8 @@
       24
     ],
     "notes": [
-      "Use `journalctl -u teamspeak-server.service` inside LXC console to check for admin credentials!"
+      "Use `journalctl -u teamspeak-server.service` inside Debian LXC console to check for admin credentials!",
+      "Use `cat /var/log/teamspeak.err.log` inside Alpine LXC console to check for admin credentials!"
     ],
     "type": "ct"
   },
