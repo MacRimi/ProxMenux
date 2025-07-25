@@ -1644,7 +1644,8 @@
       4
     ],
     "notes": [
-      "Configuration settings: `/etc/headscale/config.yaml`"
+      "Configuration settings: `/etc/headscale/config.yaml`",
+      "Access headscale-admin UI via `http://<LXC-IP>/admin/`"
     ],
     "type": "ct"
   },
