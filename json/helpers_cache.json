@@ -663,6 +663,18 @@
     "type": "pve"
   },
   {
+    "name": "Cleanuparr",
+    "slug": "cleanuparr",
+    "desc": "Cleanuparr is a tool for automating the cleanup of unwanted or blocked files in Sonarr, Radarr, and supported download clients like qBittorrent, Transmission, and Deluge. It removes incomplete, blocked, or malicious downloads and can trigger replacement searches to ensure your media library stays complete and up-to-date.",
+    "script": "ct/cleanuparr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/cleanuparr.sh",
+    "categories": [
+      14
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Cloudflare-DDNS",
     "slug": "cloudflare-ddns",
     "desc": "A feature-rich and robust Cloudflare DDNS updater with a small footprint. The program will detect your machine\u2019s public IP addresses and update DNS records using the Cloudflare API",
@@ -3903,7 +3915,7 @@
       9
     ],
     "notes": [
-      "Create Proxmox-API-Token first: `https://github.com/rcourtman/Pulse?tab=readme-ov-file#creating-a-proxmox-api-token`",
+      "Create Proxmox-API-Token first: `https://github.com/rcourtman/Pulse?tab=readme-ov-file#creating-api-token`",
       "After installation, access the web interface to configure your Proxmox connection details through the built-in setup wizard"
     ],
     "type": "ct"
