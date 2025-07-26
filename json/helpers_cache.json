@@ -562,24 +562,6 @@
     "type": "ct"
   },
   {
-    "name": "Calibre-Web",
-    "slug": "calibre-web",
-    "desc": "Calibre-Web is a web app for browsing, reading and downloading eBooks stored in a Calibre database.",
-    "script": "ct/calibre-web.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/calibre-web.sh",
-    "categories": [
-      11
-    ],
-    "notes": [
-      "Add Calibre-Web Extras via `update`"
-    ],
-    "type": "ct",
-    "default_credentials": {
-      "username": "admin",
-      "password": "admin123"
-    }
-  },
-  {
     "name": "CasaOS",
     "slug": "casaos",
     "desc": "CasaOS is a software that aims to make it easy for users to create a personal cloud system at home. It uses the Docker ecosystem to provide a simple, user-friendly experience for managing various applications and services.",
@@ -3114,7 +3096,7 @@
     "script": "ct/onlyoffice.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/onlyoffice.sh",
     "categories": [
-      9
+      12
     ],
     "notes": [
       "Database / RabbitMQ Credentials: `cat ~/onlyoffice.creds`"
