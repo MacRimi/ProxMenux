@@ -69,7 +69,7 @@ uninstall_fastfetch() {
 
 ################################################################
 
-uninstall_figurine() {
+uninstall_figurine_() {
     if ! command -v figurine &>/dev/null; then
         msg_warn "$(translate "Figurine is not installed.")"
         return 0
@@ -83,6 +83,26 @@ uninstall_figurine() {
     msg_ok "$(translate "Figurine removed from system")"
     register_tool "figurine" false
 }
+
+
+uninstall_figurine() {
+    if ! command -v figurine &>/dev/null; then
+        msg_warn "$(translate "Figurine is not installed.")"
+        return 0
+    fi
+
+    msg_info2 "$(translate "Uninstalling Figurine...")"
+    rm -f /usr/local/bin/figurine
+    rm -f /etc/profile.d/figurine.sh
+
+    sed -i '/lxcclean/d;/lxcupdate/d;/kernelclean/d;/cpugov/d;/updatecerts/d;/seqwrite/d;/seqread/d;/ranwrite/d;/ranread/d' "$HOME/.bashrc" "$HOME/.profile" 2>/dev/null
+    sed -i '/# ProxMenux Figurine aliases and tools/,+20d' "$HOME/.bashrc" "$HOME/.profile" 2>/dev/null
+    sed -i '/# BEGIN PROXMENUX ALIASES/,/# END PROXMENUX ALIASES/d' "$HOME/.bashrc" "$HOME/.profile" 2>/dev/null
+
+    msg_ok "$(translate "Figurine removed from system")"
+    register_tool "figurine" false
+}
+
 
 ################################################################
 
