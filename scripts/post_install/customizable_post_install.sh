@@ -3010,10 +3010,10 @@ EOF
 ${marker_begin}
 # ProxMenux Figurine aliases and tools
 alias aptup='apt update && apt dist-upgrade'
-alias lxcclean='bash -c '\''$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/clean-lxcs.sh)'\'''
-alias lxcupdate='bash -c '\''$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/update-lxcs.sh)'\'''
-alias kernelclean='bash -c '\''$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/kernel-clean.sh)'\'''
-alias cpugov='bash -c '\''$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/scaling-governor.sh)'\'''
+alias lxcclean='curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/clean-lxcs.sh | bash'
+alias lxcupdate='curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/update-lxcs.sh | bash'
+alias kernelclean='curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/kernel-clean.sh | bash'
+alias cpugov='curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/scaling-governor.sh | bash'
 alias updatecerts='pvecm updatecerts'
 alias seqwrite='sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4M --size=32G --readwrite=write --ramp_time=4'
 alias seqread='sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4M --size=32G --readwrite=read --ramp_time=4'
@@ -3022,6 +3022,7 @@ alias ranread='sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test
 ${marker_end}
 EOF
     msg_ok "$(translate "Aliases added to .bashrc")"
+    sed -i '/\${marker_begin}/d;/\${marker_end}/d' .bashrc
     
     msg_success "$(translate "Figurine installation and configuration completed successfully.")"
     register_tool "figurine" true
