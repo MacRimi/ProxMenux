@@ -1739,9 +1739,7 @@
     "categories": [
       24
     ],
-    "notes": [
-      ".env file location: `/opt/.env`"
-    ],
+    "notes": [],
     "type": "ct"
   },
   {
@@ -1957,6 +1955,25 @@
     ],
     "notes": [],
     "type": "ct"
+  },
+  {
+    "name": "Jeedom",
+    "slug": "jeedom",
+    "desc": "Jeedom is a home automation system that is free, open, and cloudless. It allows users to manage and automate various aspects of their homes by creating objects, installing plugins for added functionalities, and connecting to a Market account for services. It also supports direct access URLs and user management.",
+    "script": "ct/jeedom.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/jeedom.sh",
+    "categories": [
+      16
+    ],
+    "notes": [
+      "WARNING: Installation sources scripts outside of Community Scripts repo. Please check the source before installing.",
+      "Only OS packages are updateable. To update Jeedom, please use the web interface."
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin"
+    }
   },
   {
     "name": "Jellyfin Media Server",
