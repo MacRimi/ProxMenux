@@ -2895,18 +2895,19 @@ EOF
     msg_ok "$(translate "Welcome message script created")"
 
 
-    local bashrc="$HOME/.bashrc"
+local bashrc="$HOME/.bashrc"
+
     if ! grep -q "alias aptup=" "$bashrc"; then
         msg_info "$(translate "Adding useful aliases to ~/.bashrc...")"
-        cat << 'EOF' >> "$bashrc"
+        cat <<EOF >> "$bashrc"
 
-# Aliases personalizados
+# ProxMenux Figurine aliases and tools
 alias aptup='apt update && apt dist-upgrade'
 
-alias lxcclean='bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/clean-lxcs.sh)"'
-alias lxcupdate='bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/update-lxcs.sh)"'
-alias kernelclean='bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/kernel-clean.sh)"'
-alias cpugov='bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/scaling-governor.sh)"'
+alias lxcclean='curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/clean-lxcs.sh | bash'
+alias lxcupdate='curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/update-lxcs.sh | bash'
+alias kernelclean='curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/kernel-clean.sh | bash'
+alias cpugov='curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/scaling-governor.sh | bash'
 
 alias updatecerts='pvecm updatecerts'
 alias seqwrite='sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4M --size=32G --readwrite=write --ramp_time=4'
@@ -2922,10 +2923,13 @@ alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
 EOF
         msg_ok "$(translate "Aliases added to .bashrc")"
+        sed -i '/\${marker_begin}/d;/\${marker_end}/d' .bashrc
+
     else
         msg_info "$(translate "Aliases already present. Skipping addition.")"
         msg_ok "$(translate "Aliases added to .bashrc")"
     fi
+
 
 
     msg_info "$(translate "Cleaning up temporary files...")"
