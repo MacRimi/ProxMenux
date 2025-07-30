@@ -684,44 +684,54 @@ configure_time_sync() {
 
 
 
-install_system_utils() {
 
+install_system_utils() {
     command_exists() {
         command -v "$1" >/dev/null 2>&1
     }
-    
-  
+
+    ensure_repositories() {
+        local sources_file="/etc/apt/sources.list"
+        local need_update=false
+        
+
+        if ! grep -q "deb.*${OS_CODENAME}.*main" "$sources_file"; then
+            echo "deb http://deb.debian.org/debian ${OS_CODENAME} main contrib non-free non-free-firmware" >> "$sources_file"
+            need_update=true
+        fi
+        
+        if [ "$need_update" = true ] || ! apt list --installed >/dev/null 2>&1; then
+            apt update >/dev/null 2>&1
+        fi
+        
+        return 0
+    }
+
     install_single_package() {
         local package="$1"
         local command_name="${2:-$package}"
         local description="$3"
         
         msg_info "$(translate "Installing") $package ($description)..."
-        
-
         local install_success=false
         
         if command_exists apt; then
-
-            if apt update >/dev/null 2>&1 && apt install -y "$package" >/dev/null 2>&1; then
+            # Ya no necesitamos apt update aquí porque se hizo en ensure_repositories
+            if apt install -y "$package" >/dev/null 2>&1; then
                 install_success=true
             fi
-            
         elif command_exists yum; then
             if yum install -y "$package" >/dev/null 2>&1; then
                 install_success=true
             fi
-            
         elif command_exists dnf; then
             if dnf install -y "$package" >/dev/null 2>&1; then
                 install_success=true
             fi
-            
         elif command_exists pacman; then
             if pacman -S --noconfirm "$package" >/dev/null 2>&1; then
                 install_success=true
             fi
-            
         elif command_exists zypper; then
             if zypper install -y "$package" >/dev/null 2>&1; then
                 install_success=true
@@ -734,12 +744,9 @@ install_system_utils() {
         
         cleanup
         
-
         if [ "$install_success" = true ]; then
-
             hash -r 2>/dev/null
             sleep 1
-            
             if command_exists "$command_name"; then
                 msg_ok "$package $(translate "installed correctly and available")"
                 return 0
@@ -753,7 +760,6 @@ install_system_utils() {
             return 1
         fi
     }
-    
 
     show_utilities_selection() {
         local utilities=(
@@ -784,38 +790,40 @@ install_system_utils() {
         
         local selected
         selected=$(dialog --clear --backtitle "ProxMenu - $(translate "System Utilities")" \
-                         --title "$(translate "Select utilities to install")" \
-                         --checklist "$(translate "Use SPACE to select/deselect, ENTER to confirm")" \
-                         20 70 12 "${utilities[@]}" 2>&1 >/dev/tty)
+            --title "$(translate "Select utilities to install")" \
+            --checklist "$(translate "Use SPACE to select/deselect, ENTER to confirm")" \
+            20 70 12 "${utilities[@]}" 2>&1 >/dev/tty)
         
         echo "$selected"
     }
-    
 
     install_selected_utilities() {
         local selected="$1"
         
         if [ -z "$selected" ]; then
             dialog --clear --backtitle "ProxMenu" \
-                   --title "$(translate "No Selection")" \
-                   --msgbox "$(translate "No utilities were selected")" 8 40
+                --title "$(translate "No Selection")" \
+                --msgbox "$(translate "No utilities were selected")" 8 40
             return
         fi
-
+        
         clear
         show_proxmenux_logo
         msg_title "$SCRIPT_TITLE"
         msg_info2 "$(translate "Installing selected utilities")"
         
+
+        if ! ensure_repositories; then
+            msg_error "$(translate "Failed to configure repositories. Installation aborted.")"
+            return 1
+        fi
+        
         local failed=0
         local success=0
         local warning=0
-        
-
         local selected_array
         IFS=' ' read -ra selected_array <<< "$selected"
         
-
         declare -A package_to_command=(
             ["mlocate"]="locate"
             ["msr-tools"]="rdmsr"
@@ -826,142 +834,41 @@ install_system_utils() {
         )
         
         for util in "${selected_array[@]}"; do
-
             util=$(echo "$util" | tr -d '"')
-            
-
             local verify_command="${package_to_command[$util]:-$util}"
-            
-            
             install_single_package "$util" "$verify_command" "$util"
             local install_result=$?
             
             case $install_result in
-                0) 
-                    success=$((success + 1))
-                    ;;
-                1) 
-                    failed=$((failed + 1))
-                    ;;
-                2) 
-                    warning=$((warning + 1))
-                    ;;
+                0) success=$((success + 1)) ;;
+                1) failed=$((failed + 1)) ;;
+                2) warning=$((warning + 1)) ;;
             esac
         done
-
-
+        
         if [ -f ~/.bashrc ]; then
             source ~/.bashrc >/dev/null 2>&1
         fi
+        
         hash -r 2>/dev/null
-
         echo
         msg_info2 "$(translate "Installation summary"):"
         msg_ok "$(translate "Successful"): $success"
+        if [ $warning -gt 0 ]; then
+            msg_warn "$(translate "Warnings"): $warning"
+        fi
+        if [ $failed -gt 0 ]; then
+            msg_error "$(translate "Failed"): $failed"
+        fi
         msg_success "$(translate "Common system utilities installation completed")"
-
     }
 
 
     local selected_utilities
     selected_utilities=$(show_utilities_selection)
-
     if [ -n "$selected_utilities" ]; then
         install_selected_utilities "$selected_utilities"
     fi
-
-
-}
-
-
-
-
-install_system_utils_() {
-
-    msg_info2 "$(translate "Installing common system utilities...")"
-    
-    if [[ "$LANGUAGE" != "en" ]]; then
-    msg_lang "$(translate "Generating automatic translations...")"
-    fi
-
-packages_list=(
-    axel "$(translate "Download accelerator")" OFF
-    dialog "$(translate "Console GUI dialogs")" OFF
-    dos2unix "$(translate "Convert DOS/Unix text files")" OFF
-    grc "$(translate "Generic log/command colorizer")" OFF
-    htop "$(translate "Interactive process viewer")" OFF
-    btop "$(translate "Modern resource monitor")" OFF
-    iftop "$(translate "Real-time network usage")" OFF
-    iotop "$(translate "Monitor disk I/O usage")" OFF
-    iperf3 "$(translate "Network performance testing")" OFF
-    ipset "$(translate "Manage IP sets")" OFF
-    iptraf-ng "$(translate "Network monitoring tool")" OFF
-    mlocate "$(translate "Locate files quickly")" OFF
-    msr-tools "$(translate "Access CPU MSRs")" OFF
-    net-tools "$(translate "Legacy networking tools")" OFF
-    sshpass "$(translate "Non-interactive SSH login")" OFF
-    tmux "$(translate "Terminal multiplexer")" OFF
-    unzip "$(translate "Extract ZIP files")" OFF
-    zip "$(translate "Create ZIP files")" OFF
-    libguestfs-tools "$(translate "VM disk utilities")" OFF
-    aria2c "$(translate "Multi-source downloader")" OFF
-    cabextract "$(translate "Extract CAB files")" OFF
-    wimlib-imagex "$(translate "Manage WIM images")" OFF
-    genisoimage "$(translate "Create ISO images")" OFF
-    chntpw "$(translate "Edit Windows registry/passwords")" OFF
-)
-
-
-    cleanup
-
-    choices=$(whiptail --title "System Utilities" \
-        --checklist "$(translate "Select the system utilities to install:")" 20 70 12 \
-        "${packages_list[@]}" 3>&1 1>&2 2>&3)
-
-    if [ $? -ne 0 ]; then
-        msg_warn "$(translate "Installation cancelled by user")"
-        return
-    fi
-
-    selected_packages=($choices)
-
-    if [ ${#selected_packages[@]} -eq 0 ]; then
-        msg_warn "$(translate "No packages selected for installation")"
-        return
-    fi
-
-    tput civis
-    tput sc
-
-    for package in "${selected_packages[@]}"; do
-        if dpkg -s "$package" >/dev/null 2>&1; then
-            continue
-        fi
-
-        tput rc
-        tput ed
-
-        row=$(( $(tput lines) - 6 ))
-        tput cup $row 0; echo "$(translate "Installing system utilities...")"
-        tput cup $((row + 1)) 0; echo "──────────────────────────────────────────────"
-        tput cup $((row + 2)) 0; echo "Package: $package"
-        tput cup $((row + 3)) 0; echo "Progress: [                                                  ] 0%"
-        tput cup $((row + 4)) 0; echo "──────────────────────────────────────────────"
-
-        for i in $(seq 1 10); do
-            progress=$((i * 10))
-            tput cup $((row + 3)) 9
-            printf "[%-50s] %3d%%" "$(printf "#%.0s" $(seq 1 $((progress/2))))" "$progress"
-        done
-
-        /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install "$package" > /dev/null 2>&1
-    done
-
-    tput rc
-    tput ed
-    tput cnorm
-    msg_ok "$(translate "System utilities installed successfully")"
-    msg_success "$(translate "Common system utilities installation completed")"
 }
 
 
