@@ -196,29 +196,29 @@ apt_upgrade() {
     sources_file="/etc/apt/sources.list"
     need_update=false
 
-    # Reemplazar ftp.es.debian.org por deb.debian.org si existe
+
     sed -i 's|ftp.es.debian.org|deb.debian.org|g' "$sources_file"
 
-    # Reemplazar línea incompleta de seguridad por la completa
+
     if grep -q "^deb http://security.debian.org ${OS_CODENAME}-security main contrib" "$sources_file"; then
         sed -i "s|^deb http://security.debian.org ${OS_CODENAME}-security main contrib|deb http://security.debian.org/debian-security ${OS_CODENAME}-security main contrib non-free non-free-firmware|" "$sources_file"
         msg_ok "$(translate "Replaced security repository with full version")"
         need_update=true
     fi
 
-    # Check and add security repository (completa)
+
     if ! grep -q "deb http://security.debian.org/debian-security ${OS_CODENAME}-security" "$sources_file"; then
         echo "deb http://security.debian.org/debian-security ${OS_CODENAME}-security main contrib non-free non-free-firmware" >> "$sources_file"
         need_update=true
     fi
 
-    # Check and add main repository
+
     if ! grep -q "deb http://deb.debian.org/debian ${OS_CODENAME} " "$sources_file"; then
         echo "deb http://deb.debian.org/debian ${OS_CODENAME} main contrib non-free non-free-firmware" >> "$sources_file"
         need_update=true
     fi
 
-    # Check and add updates repository
+
     if ! grep -q "deb http://deb.debian.org/debian ${OS_CODENAME}-updates" "$sources_file"; then
         echo "deb http://deb.debian.org/debian ${OS_CODENAME}-updates main contrib non-free non-free-firmware" >> "$sources_file"
         need_update=true
@@ -690,24 +690,6 @@ install_system_utils() {
         command -v "$1" >/dev/null 2>&1
     }
     
-
-    ensure_repositories() {
-    local sources_file="/etc/apt/sources.list"
-    local need_update=false
-    
-        if ! grep -q "deb.*${OS_CODENAME}.*main" "$sources_file"; then
-            echo "deb http://deb.debian.org/debian ${OS_CODENAME} main contrib non-free non-free-firmware" >> "$sources_file"
-            need_update=true
-        fi
-        
-        if [ "$need_update" = true ] || ! apt list --installed >/dev/null 2>&1; then
-            msg_info "$(translate "Updating package lists")..."
-            apt update >/dev/null 2>&1
-        fi
-    
-        return 0
-    }
-
   
     install_single_package() {
         local package="$1"
@@ -824,18 +806,12 @@ install_system_utils() {
         show_proxmenux_logo
         msg_title "$SCRIPT_TITLE"
         msg_info2 "$(translate "Installing selected utilities")"
-
-        if ! ensure_repositories; then
-            msg_error "$(translate "Failed to configure repositories. Installation aborted.")"
-            return 1
-        fi
-
-        msg_ok "$(translate "Update package list successful")"
         
         local failed=0
         local success=0
         local warning=0
         
+
         local selected_array
         IFS=' ' read -ra selected_array <<< "$selected"
         
@@ -896,8 +872,6 @@ install_system_utils() {
 
 
 }
-
-
 
 
 
