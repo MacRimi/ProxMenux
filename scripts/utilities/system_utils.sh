@@ -1,13 +1,12 @@
 #!/bin/bash
-
 # ==========================================================
 # ProxMenux - A menu-driven script for Proxmox VE management
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
 # License     : MIT (https://raw.githubusercontent.com/MacRimi/ProxMenux/main/LICENSE)
-# Version     : 1.0
-# Last Updated: 30/06/2025
+# Version     : 1.1
+# Last Updated: 30/07/2025
 # ==========================================================
 # Description:
 # This script provides an interactive system utilities installer with a 
@@ -34,8 +33,8 @@
 # It includes built-in troubleshooting for common PATH and command availability
 # issues that may occur after package installation.
 #
-# Configuration ============================================
 
+# Configuration ============================================
 REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
@@ -44,21 +43,35 @@ VENV_PATH="/opt/googletrans-env"
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
+
 load_language
 initialize_cache
 
+OS_CODENAME="$(grep "VERSION_CODENAME=" /etc/os-release | cut -d"=" -f 2 | xargs )"
+
 # ==========================================================
-
-
-
 install_system_utils() {
-    
-    
-
     command_exists() {
         command -v "$1" >/dev/null 2>&1
     }
-    
+
+
+    ensure_repositories() {
+        local sources_file="/etc/apt/sources.list"
+        local need_update=false
+        
+
+        if ! grep -q "deb.*${OS_CODENAME}.*main" "$sources_file"; then
+            echo "deb http://deb.debian.org/debian ${OS_CODENAME} main contrib non-free non-free-firmware" >> "$sources_file"
+            need_update=true
+        fi
+        
+        if [ "$need_update" = true ] || ! apt list --installed >/dev/null 2>&1; then
+            apt update >/dev/null 2>&1
+        fi
+        
+        return 0
+    }
 
     install_single_package() {
         local package="$1"
@@ -66,12 +79,11 @@ install_system_utils() {
         local description="$3"
         
         msg_info "$(translate "Installing") $package ($description)..."
-        
-
         local install_success=false
         
         if command_exists apt; then
-            if apt update >/dev/null 2>&1 && apt install -y "$package" >/dev/null 2>&1; then
+            # No need for apt update here because it's done in ensure_repositories
+            if apt install -y "$package" >/dev/null 2>&1; then
                 install_success=true
             fi
         elif command_exists yum; then
@@ -98,12 +110,9 @@ install_system_utils() {
         
         cleanup
         
-
         if [ "$install_success" = true ]; then
-
             hash -r 2>/dev/null
             sleep 1
-            
             if command_exists "$command_name"; then
                 msg_ok "$package $(translate "installed correctly and available")"
                 return 0
@@ -117,27 +126,25 @@ install_system_utils() {
             return 1
         fi
     }
-    
 
     show_main_utilities_menu() {
         local choice
         choice=$(dialog --clear --backtitle "ProxMenux" \
-                       --title "$(translate "Utilities Installation Menu")" \
-                       --menu "$(translate "Select an option"):" 20 70 12 \
-                       "1" "$(translate "Custom selection")" \
-                       "2" "$(translate "Install ALL utilities")" \
-                       "3" "$(translate "Install basic utilities") (grc, htop, tree, curl, wget)" \
-                       "4" "$(translate "Install development tools") (git, vim, nano)" \
-                       "5" "$(translate "Install compression tools") (zip, unzip, rsync)" \
-                       "6" "$(translate "Install terminal multiplexers") (screen, tmux)" \
-                       "7" "$(translate "Install analysis tools") (jq, ncdu, iotop)" \
-                       "8" "$(translate "Install network tools") (nethogs, nmap, tcpdump, lsof)" \
-                       "9" "$(translate "Verify installations")" \
-                       "0" "$(translate "Return to main menu")" 2>&1 >/dev/tty)
+            --title "$(translate "Utilities Installation Menu")" \
+            --menu "$(translate "Select an option"):" 20 70 12 \
+            "1" "$(translate "Custom selection")" \
+            "2" "$(translate "Install ALL utilities")" \
+            "3" "$(translate "Install basic utilities") (grc, htop, tree, curl, wget)" \
+            "4" "$(translate "Install development tools") (git, vim, nano)" \
+            "5" "$(translate "Install compression tools") (zip, unzip, rsync)" \
+            "6" "$(translate "Install terminal multiplexers") (screen, tmux)" \
+            "7" "$(translate "Install analysis tools") (jq, ncdu, iotop)" \
+            "8" "$(translate "Install network tools") (nethogs, nmap, tcpdump, lsof)" \
+            "9" "$(translate "Verify installations")" \
+            "0" "$(translate "Return to main menu")" 2>&1 >/dev/tty)
         
         echo "$choice"
     }
-    
 
     show_custom_selection() {
         local utilities=(
@@ -168,28 +175,32 @@ install_system_utils() {
         
         local selected
         selected=$(dialog --clear --backtitle "ProxMenux" \
-                         --title "$(translate "Select utilities to install")" \
-                         --checklist "$(translate "Use SPACE to select/deselect, ENTER to confirm")" \
-                         25 80 20 "${utilities[@]}" 2>&1 >/dev/tty)
+            --title "$(translate "Select utilities to install")" \
+            --checklist "$(translate "Use SPACE to select/deselect, ENTER to confirm")" \
+            25 80 20 "${utilities[@]}" 2>&1 >/dev/tty)
         
         echo "$selected"
     }
-    
 
     install_utility_group() {
         local group_name="$1"
         shift
         local utilities=("$@")
-       
+        
         clear
-        show_proxmenux_logo        
+        show_proxmenux_logo
         msg_title "$(translate "Installing group"): $group_name"
+        
+        # Ensure repositories are configured before installing
+        if ! ensure_repositories; then
+            msg_error "$(translate "Failed to configure repositories. Installation aborted.")"
+            return 1
+        fi
         
         local failed=0
         local success=0
         local warning=0
         
-
         declare -A package_to_command=(
             ["mlocate"]="locate"
             ["msr-tools"]="rdmsr"
@@ -201,11 +212,7 @@ install_system_utils() {
         
         for util_info in "${utilities[@]}"; do
             IFS=':' read -r package command description <<< "$util_info"
-            
-
             local verify_command="${package_to_command[$package]:-$command}"
-            
-
             install_single_package "$package" "$verify_command" "$description"
             local install_result=$?
             
@@ -223,34 +230,36 @@ install_system_utils() {
         [ $failed -gt 0 ] && msg_error "$(translate "Failed"): $failed"
         
         dialog --clear --backtitle "ProxMenux" \
-               --title "$(translate "Installation Complete")" \
-               --msgbox "$(translate "Group"): $group_name\n$(translate "Successful"): $success\n$(translate "With warnings"): $warning\n$(translate "Failed"): $failed" 10 50
+            --title "$(translate "Installation Complete")" \
+            --msgbox "$(translate "Group"): $group_name\n$(translate "Successful"): $success\n$(translate "With warnings"): $warning\n$(translate "Failed"): $failed" 10 50
     }
-    
 
     install_selected_utilities() {
         local selected="$1"
         
         if [ -z "$selected" ]; then
             dialog --clear --backtitle "ProxMenux" \
-                   --title "$(translate "No Selection")" \
-                   --msgbox "$(translate "No utilities were selected")" 8 40
+                --title "$(translate "No Selection")" \
+                --msgbox "$(translate "No utilities were selected")" 8 40
             return
         fi
-
+        
         clear
-        show_proxmenux_logo        
+        show_proxmenux_logo
         msg_title "$(translate "Installing selected utilities")"
+        
+        # Ensure repositories are configured before installing
+        if ! ensure_repositories; then
+            msg_error "$(translate "Failed to configure repositories. Installation aborted.")"
+            return 1
+        fi
         
         local failed=0
         local success=0
         local warning=0
-        
-
         local selected_array
         IFS=' ' read -ra selected_array <<< "$selected"
         
-
         declare -A package_to_command=(
             ["mlocate"]="locate"
             ["msr-tools"]="rdmsr"
@@ -261,13 +270,8 @@ install_system_utils() {
         )
         
         for util in "${selected_array[@]}"; do
-
             util=$(echo "$util" | tr -d '"')
-            
-
             local verify_command="${package_to_command[$util]:-$util}"
-            
-
             install_single_package "$util" "$verify_command" "$util"
             local install_result=$?
             
@@ -278,12 +282,11 @@ install_system_utils() {
             esac
         done
         
-
         if [ -f ~/.bashrc ]; then
             source ~/.bashrc >/dev/null 2>&1
         fi
-        hash -r 2>/dev/null
         
+        hash -r 2>/dev/null
         echo
         msg_info2 "$(translate "Installation summary"):"
         msg_ok "$(translate "Successful"): $success"
@@ -291,10 +294,9 @@ install_system_utils() {
         [ $failed -gt 0 ] && msg_error "$(translate "Failed"): $failed"
         
         dialog --clear --backtitle "ProxMenux" \
-               --title "$(translate "Installation Complete")" \
-               --msgbox "$(translate "Selected utilities installation completed")\n$(translate "Successful"): $success\n$(translate "With warnings"): $warning\n$(translate "Failed"): $failed" 12 60
+            --title "$(translate "Installation Complete")" \
+            --msgbox "$(translate "Selected utilities installation completed")\n$(translate "Successful"): $success\n$(translate "With warnings"): $warning\n$(translate "Failed"): $failed" 12 60
     }
-    
 
     verify_installations() {
         clear
@@ -348,24 +350,19 @@ install_system_utils() {
         local summary="$(translate "Total"): $((available + missing))\n$(translate "Available"): $available\n$(translate "Missing"): $missing"
         
         dialog --clear --backtitle "ProxMenux" \
-               --title "$(translate "Utilities Verification")" \
-               --msgbox "$summary$status_text" 25 80
+            --title "$(translate "Utilities Verification")" \
+            --msgbox "$summary$status_text" 25 80
     }
-    
 
-    
-
+    # Main menu loop
     while true; do
         choice=$(show_main_utilities_menu)
-        
         case $choice in
             1)
-
                 selected=$(show_custom_selection)
                 install_selected_utilities "$selected"
                 ;;
             2)
-
                 all_utils=(
                     "axel:axel:Download accelerator"
                     "dos2unix:dos2unix:Convert DOS/Unix text files"
@@ -392,9 +389,8 @@ install_system_utils() {
                     "chntpw:chntpw:Edit Windows registry/passwords"
                 )
                 install_utility_group "$(translate "ALL Utilities")" "${all_utils[@]}"
-                ;;    
+                ;;
             3)
-
                 basic_utils=(
                     "grc:grc:Generic Colouriser"
                     "htop:htop:Process monitor"
@@ -405,7 +401,6 @@ install_system_utils() {
                 install_utility_group "$(translate "Basic Utilities")" "${basic_utils[@]}"
                 ;;
             4)
-
                 dev_utils=(
                     "git:git:Version control"
                     "vim:vim:Advanced editor"
@@ -414,7 +409,6 @@ install_system_utils() {
                 install_utility_group "$(translate "Development Tools")" "${dev_utils[@]}"
                 ;;
             5)
-
                 compress_utils=(
                     "zip:zip:ZIP compressor"
                     "unzip:unzip:ZIP extractor"
@@ -423,7 +417,6 @@ install_system_utils() {
                 install_utility_group "$(translate "Compression Tools")" "${compress_utils[@]}"
                 ;;
             6)
-
                 multiplex_utils=(
                     "screen:screen:Terminal multiplexer"
                     "tmux:tmux:Advanced multiplexer"
@@ -431,7 +424,6 @@ install_system_utils() {
                 install_utility_group "$(translate "Terminal Multiplexers")" "${multiplex_utils[@]}"
                 ;;
             7)
-
                 analysis_utils=(
                     "jq:jq:JSON processor"
                     "ncdu:ncdu:Disk analyzer"
@@ -440,7 +432,6 @@ install_system_utils() {
                 install_utility_group "$(translate "Analysis Tools")" "${analysis_utils[@]}"
                 ;;
             8)
-
                 network_utils=(
                     "nethogs:nethogs:Network monitor"
                     "nmap:nmap:Network scanner"
@@ -457,14 +448,13 @@ install_system_utils() {
                 ;;
             *)
                 dialog --clear --backtitle "ProxMenux" \
-                       --title "$(translate "Invalid Option")" \
-                       --msgbox "$(translate "Please select a valid option")" 8 40
+                    --title "$(translate "Invalid Option")" \
+                    --msgbox "$(translate "Please select a valid option")" 8 40
                 ;;
         esac
     done
     
     clear
 }
-
 
 install_system_utils
