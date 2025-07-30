@@ -60,24 +60,6 @@ install_system_utils() {
     }
     
 
-    ensure_repositories() {
-        local sources_file="/etc/apt/sources.list"
-        local need_update=false
-
-        if ! grep -q "deb.*${OS_CODENAME}.*main" "$sources_file"; then
-            echo "deb http://deb.debian.org/debian ${OS_CODENAME} main contrib non-free non-free-firmware" >> "$sources_file"
-            need_update=true
-        fi
-        
-        if [ "$need_update" = true ] || ! apt list --installed >/dev/null 2>&1; then
-            msg_info "$(translate "Updating package lists")..."
-            apt update >/dev/null 2>&1
-        fi
-        
-        return 0
-    }
-
-
     install_single_package() {
         local package="$1"
         local command_name="${2:-$package}"
@@ -202,13 +184,6 @@ install_system_utils() {
         clear
         show_proxmenux_logo        
         msg_title "$(translate "Installing group"): $group_name"
-
-        if ! ensure_repositories; then
-            msg_error "$(translate "Failed to configure repositories. Installation aborted.")"
-            return 1
-        fi
-
-        msg_ok "$(translate "Update package list successful")"
         
         local failed=0
         local success=0
@@ -266,13 +241,6 @@ install_system_utils() {
         clear
         show_proxmenux_logo        
         msg_title "$(translate "Installing selected utilities")"
-
-        if ! ensure_repositories; then
-            msg_error "$(translate "Failed to configure repositories. Installation aborted.")"
-            return 1
-        fi
-
-        msg_ok "$(translate "Update package list successful")"
         
         local failed=0
         local success=0
@@ -332,7 +300,6 @@ install_system_utils() {
         clear
         show_proxmenux_logo
         msg_info "$(translate "Verifying all utilities status")..."
-
         
         local utilities=(
             "axel:Download accelerator"
