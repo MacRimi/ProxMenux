@@ -129,5 +129,7 @@ EOF'
     pct exec "$CTID" -- systemctl start jdownloader
 fi
 
+pct exec "$CTID" -- reboot
+
 echo -e "\n\033[1;32m✅ JDownloader se ha instalado correctamente en el CT $CTID y está funcionando como servicio.\033[0m"
 echo -e "\n➡️ Accede a \033[1;34mhttps://my.jdownloader.org\033[0m con tu cuenta para gestionarlo.\n"
