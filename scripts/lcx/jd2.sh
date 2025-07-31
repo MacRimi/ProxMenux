@@ -75,14 +75,15 @@ pct exec "$CTID" -- mkdir -p /opt/jdownloader
 pct exec "$CTID" -- bash -c 'cd /opt/jdownloader && curl -O https://installer.jdownloader.org/JDownloader.jar'
 
 
-# Crear archivo de configuración MyJDownloader
-pct exec "$CTID" -- bash -c "cat > /opt/jdownloader/cfg/org.jdownloader.api.myjdownloader.MyJDownloaderSettings.json" <<EOF
+# Crear archivo de configuración JSON para My JDownloader
+pct exec "$CTID" -- bash -c "mkdir -p /opt/jdownloader/cfg && cat > /opt/jdownloader/cfg/org.jdownloader.api.myjdownloader.MyJDownloaderSettings.json" <<EOF
 {
   "email" : "$EMAIL",
   "password" : "$PASSWORD",
   "enabled" : true
 }
 EOF
+
 
 # Crear servicio según sistema
 if [[ "$OS_ID" == "alpine" ]]; then
