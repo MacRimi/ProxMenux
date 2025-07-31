@@ -70,41 +70,53 @@ case "$OS_ID" in
     ;;
 esac
 
-# Descargar JDownloader
-pct exec "$CTID" -- mkdir -p /root/jdownloader/cfg
-pct exec "$CTID" -- bash -c "cd /root/jdownloader && wget -q http://installer.jdownloader.org/JDownloader.jar"
+# Crear carpeta de instalación
+pct exec "$CTID" -- mkdir -p /opt/jdownloader
+pct exec "$CTID" -- bash -c 'cd /opt/jdownloader && curl -O https://installer.jdownloader.org/JDownloader.jar'
 
-# Crear archivo de configuración MyJDownloader
-pct exec "$CTID" -- bash -c "cat > /root/jdownloader/cfg/org.jdownloader.api.myjdownloader.MyJDownloaderSettings.json" <<EOF
-{
-  "email" : "$EMAIL",
-  "password" : "$PASSWORD",
-  "enabled" : true
+# Crear servicio según sistema
+if [[ "$OS_TYPE" == "alpine" ]]; then
+    # Servicio OpenRC para Alpine
+    pct exec "$CTID" -- bash -c 'cat > /etc/init.d/jdownloader <<EOF
+#!/sbin/openrc-run
+
+command="/usr/bin/java"
+command_args="-jar /opt/jdownloader/JDownloader.jar -norestart"
+pidfile="/var/run/jdownloader.pid"
+name="JDownloader"
+
+depend() {
+    need net
 }
-EOF
+EOF'
 
-# Crear servicio systemd
-pct exec "$CTID" -- bash -c "cat > /etc/systemd/system/jdownloader.service <<EOF
+    pct exec "$CTID" -- chmod +x /etc/init.d/jdownloader
+    pct exec "$CTID" -- rc-update add jdownloader default
+    pct exec "$CTID" -- rc-service jdownloader start
+
+else
+    # Servicio systemd para Debian/Ubuntu
+    pct exec "$CTID" -- bash -c 'cat > /etc/systemd/system/jdownloader.service <<EOF
 [Unit]
-Description=JDownloader Headless
+Description=JDownloader
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/root/jdownloader
-ExecStart=$JAVA_PATH -jar JDownloader.jar -norestart
-Restart=always
 User=root
+WorkingDirectory=/opt/jdownloader
+ExecStart=/usr/bin/java -jar JDownloader.jar -norestart
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
-EOF"
+EOF'
 
-# Habilitar y arrancar servicio
-pct exec "$CTID" -- systemctl daemon-reexec
-pct exec "$CTID" -- systemctl daemon-reload
-pct exec "$CTID" -- systemctl enable jdownloader
-pct exec "$CTID" -- systemctl start jdownloader
+    pct exec "$CTID" -- systemctl daemon-reexec
+    pct exec "$CTID" -- systemctl daemon-reload
+    pct exec "$CTID" -- systemctl enable jdownloader
+    pct exec "$CTID" -- systemctl start jdownloader
+fi
 
 echo -e "\n\033[1;32m✅ JDownloader se ha instalado correctamente en el CT $CTID y está funcionando como servicio.\033[0m"
 echo -e "\n➡️ Accede a \033[1;34mhttps://my.jdownloader.org\033[0m con tu cuenta para gestionarlo.\n"
