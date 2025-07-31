@@ -75,7 +75,7 @@ pct exec "$CTID" -- mkdir -p /opt/jdownloader
 pct exec "$CTID" -- bash -c 'cd /opt/jdownloader && curl -O https://installer.jdownloader.org/JDownloader.jar'
 
 # Crear servicio según sistema
-if [[ "$OS_TYPE" == "alpine" ]]; then
+if [[ "$OS_ID" == "alpine" ]]; then
     # Servicio OpenRC para Alpine
     pct exec "$CTID" -- bash -c 'cat > /etc/init.d/jdownloader <<EOF
 #!/sbin/openrc-run
