@@ -3057,11 +3057,12 @@ EOF
         rm -f /usr/local/bin/log2ram-check.sh /etc/cron.d/log2ram-auto-sync
         msg_info2 "$(translate "Auto-sync was not enabled")"
     fi
-    
-    msg_success "$(translate "Log2RAM installation and configuration completed successfully.")"
 
+    sleep 1
+    systemctl restart log2ram
+    msg_success "$(translate "Log2RAM installation and configuration completed successfully.")"
     register_tool "log2ram" true
-    NECESSARY_REBOOT=1
+    # NECESSARY_REBOOT=1
 }
 
 
