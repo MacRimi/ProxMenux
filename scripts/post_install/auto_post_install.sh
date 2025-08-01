@@ -1042,7 +1042,7 @@ USED_KB=$(df /var/log --output=used | tail -1)
 THRESHOLD=$(( LIMIT_KB * 90 / 100 ))
 
 if (( USED_KB > THRESHOLD )); then
-    /usr/sbin/log2ram write
+    $(command -v log2ram) write
 fi
 EOF
     
