@@ -4353,18 +4353,6 @@
     "type": "ct"
   },
   {
-    "name": "Tandoor Recipes",
-    "slug": "tandoor",
-    "desc": "Tandoor Recipes is an application for managing recipes, planning meals, building shopping lists and much much more!",
-    "script": "ct/tandoor.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/tandoor.sh",
-    "categories": [
-      24
-    ],
-    "notes": [],
-    "type": "ct"
-  },
-  {
     "name": "TasmoAdmin",
     "slug": "tasmoadmin",
     "desc": "TasmoAdmin is an administrative platform for devices flashed with Tasmota.",
