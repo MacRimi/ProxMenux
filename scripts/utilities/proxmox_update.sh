@@ -168,12 +168,18 @@ apt_upgrade() {
     local available_space=$(df /var/cache/apt/archives | awk 'NR==2 {print int($4/1024)}')
     if [ "$available_space" -lt 1024 ]; then
         msg_error "$(translate "Insufficient disk space. Available: ${available_space}MB")"
+        echo -e
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
         return 1
     fi
     
     # Check connectivity
     if ! ping -c 1 download.proxmox.com >/dev/null 2>&1; then
         msg_error "$(translate "Cannot reach Proxmox repositories")"
+        echo -e
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
         return 1
     fi
     
@@ -295,6 +301,9 @@ EOF
 
         echo "$(translate "Repository errors found:")"
         grep -E "Err:|E:" "$log_file" | head -5
+        echo -e
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
         return 1
     fi
     
@@ -317,6 +326,9 @@ EOF
                 msg_info "$(translate "Performing system upgrade. This process may take several minutes...")"
             else
                 msg_info2 "$(translate "Update cancelled by user")"
+                echo -e
+                msg_success "$(translate "Press Enter to return to menu...")"
+                read -r
                 return 0
             fi
         fi
@@ -341,6 +353,9 @@ EOF
         msg_ok "$(translate "System upgrade completed successfully")"
     else
         msg_error "$(translate "System upgrade failed. Check log: $log_file")"
+        echo -e
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
         return 1
     fi
     
