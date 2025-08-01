@@ -3047,7 +3047,7 @@ LIMIT_KB=$(grep '^SIZE=' "$CONF_FILE" | cut -d'=' -f2 | tr -d 'M')000
 USED_KB=$(df /var/log --output=used | tail -1)
 THRESHOLD=$(( LIMIT_KB * 90 / 100 ))
 if (( USED_KB > THRESHOLD )); then
-    /usr/sbin/log2ram write
+    $(command -v log2ram) write
 fi
 EOF
         chmod +x /usr/local/bin/log2ram-check.sh
