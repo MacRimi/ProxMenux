@@ -54,7 +54,7 @@ show_menu() {
         if [[ $EXIT_STATUS -ne 0 ]]; then
             # ESC pressed or Cancel
             clear
-            msg_ok "$(translate "Thank you for using ProxMenu. Goodbye!")"
+            msg_ok "$(translate "Thank you for using ProxMenux. Goodbye!")"
             rm -f "$TEMP_FILE"
             exit 0
         fi
