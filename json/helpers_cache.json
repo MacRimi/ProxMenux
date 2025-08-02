@@ -4341,6 +4341,20 @@
     }
   },
   {
+    "name": "Suwayomi-Server",
+    "slug": "suwayomi-server",
+    "desc": "A free and open source manga reader server that runs extensions built for Mihon (Tachiyomi).",
+    "script": "ct/suwayomiserver.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/suwayomiserver.sh",
+    "categories": [
+      13
+    ],
+    "notes": [
+      "This application can be conflicting with Kaspersky products. You maybe need to disable Kaspersky in order to use this application."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Syncthing",
     "slug": "syncthing",
     "desc": "Syncthing is an open-source file syncing tool that allows users to keep their files in sync across multiple devices by using peer-to-peer synchronization. It doesn't rely on any central server, so all data transfers are directly between devices.",
