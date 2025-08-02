@@ -4815,7 +4815,9 @@
     "categories": [
       8
     ],
-    "notes": [],
+    "notes": [
+      "Included option to install VictoriaLogs."
+    ],
     "type": "ct"
   },
   {
