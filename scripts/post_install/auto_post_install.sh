@@ -407,10 +407,10 @@ remove_subscription_banner() {
 
     cat > "$APT_HOOK" << 'EOF'
 DPkg::Post-Invoke {
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\.data\.status\.toLowerCase() !== '\''NoMoreNagging'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\.data\.status\.toLowerCase() !== '\''active'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/subscription = !(/subscription = false \&\& (/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz && rm -f /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz";
+    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\\.data\\.status\\.toLowerCase() !== \\'NoMoreNagging\\'/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
+    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\\.data\\.status\\.toLowerCase() !== \\'active\\'/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
+    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/subscription = !(/subscription = false \\&\\& (/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
+    "rm -f /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz || true";
 };
 EOF
 
