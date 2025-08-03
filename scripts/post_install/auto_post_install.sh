@@ -405,6 +405,7 @@ remove_subscription_banner() {
     find /var/cache/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
     find /var/lib/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
 
+    [[ -f "$APT_HOOK" ]] && rm -f "$APT_HOOK"
     cat > "$APT_HOOK" << 'EOF'
 DPkg::Post-Invoke {
     "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\\.data\\.status\\.toLowerCase() !== \\'NoMoreNagging\\'/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
