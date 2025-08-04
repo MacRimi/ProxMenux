@@ -68,6 +68,30 @@ register_tool() {
     jq --arg t "$tool" --argjson v "$state" '.[$t]=$v' "$TOOLS_JSON" > "$TOOLS_JSON.tmp" && mv "$TOOLS_JSON.tmp" "$TOOLS_JSON"
 }
 
+
+
+check_extremeshok_warning() {
+    local marker_file="/etc/extremeshok"
+
+    if [[ -f "$marker_file" ]]; then
+        dialog --backtitle --title "Extremeshok Post-Install Detected" \
+        --yesno "$(translate "It appears that you have already executed the 'xshok-proxmox' post-install script on this system.")\n\n\
+$(translate "If you continue, some adjustments may be duplicated or conflict with those already made by xshok.")\n\n\
+$(translate "Do you want to continue anyway?")" 13 70
+
+        local response=$?
+        if [[ $response -ne 0 ]]; then
+            show_proxmenux_logo
+            msg_warn "$(translate "Action cancelled due to previous xshok-proxmox modifications.")"
+            echo -e
+            msg_success "$(translate "Press Enter to return to menu...")"
+            read -r
+            exit 1
+        fi
+    fi
+}
+
+
 # ==========================================================
 lvm_repair_check() {
     msg_info "$(translate "Checking and repairing old LVM PV headers (if needed)...")"
@@ -1163,7 +1187,7 @@ run_complete_optimization() {
 
 }
 
-
+check_extremeshok_warning
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     run_complete_optimization
 fi
