@@ -3670,6 +3670,6 @@ done
 
 
 
-check_extremeshok_warning
+#check_extremeshok_warning
 main_menu
 
