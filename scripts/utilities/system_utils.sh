@@ -81,33 +81,9 @@ install_system_utils() {
         msg_info "$(translate "Installing") $package ($description)..."
         local install_success=false
         
-        if command_exists apt; then
-            # No need for apt update here because it's done in ensure_repositories
-            if apt install -y "$package" >/dev/null 2>&1; then
-                install_success=true
-            fi
-        elif command_exists yum; then
-            if yum install -y "$package" >/dev/null 2>&1; then
-                install_success=true
-            fi
-        elif command_exists dnf; then
-            if dnf install -y "$package" >/dev/null 2>&1; then
-                install_success=true
-            fi
-        elif command_exists pacman; then
-            if pacman -S --noconfirm "$package" >/dev/null 2>&1; then
-                install_success=true
-            fi
-        elif command_exists zypper; then
-            if zypper install -y "$package" >/dev/null 2>&1; then
-                install_success=true
-            fi
-        else
-            cleanup
-            msg_error "$(translate "No compatible package manager detected")"
-            return 1
+        if apt install -y "$package" >/dev/null 2>&1; then
+            install_success=true
         fi
-        
         cleanup
         
         if [ "$install_success" = true ]; then
@@ -221,6 +197,7 @@ install_system_utils() {
                 1) failed=$((failed + 1)) ;;
                 2) warning=$((warning + 1)) ;;
             esac
+            sleep 2
         done
         
         echo
@@ -280,6 +257,7 @@ install_system_utils() {
                 1) failed=$((failed + 1)) ;;
                 2) warning=$((warning + 1)) ;;
             esac
+            sleep 2
         done
         
         if [ -f ~/.bashrc ]; then
