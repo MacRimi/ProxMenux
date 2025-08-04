@@ -3240,6 +3240,20 @@
     "type": "ct"
   },
   {
+    "name": "OTS",
+    "slug": "ots",
+    "desc": "One-Time-Secret sharing platform with a symmetric 256bit AES encryption in the browser.",
+    "script": "ct/ots.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/ots.sh",
+    "categories": [
+      6
+    ],
+    "notes": [
+      "When it is in used external please use it behind reverse proxy or create your own certificates"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Outline",
     "slug": "outline",
     "desc": "The fastest knowledge base for growing teams. Beautiful, realtime collaborative, feature packed, and markdown compatible. It\u2019s time to get your team\u2019s knowledge organized.",
@@ -4550,6 +4564,21 @@
       12
     ],
     "notes": [],
+    "type": "ct"
+  },
+  {
+    "name": "Tududi",
+    "slug": "tududi",
+    "desc": "Self-hosted task management with functional programming architecture, hierarchical organization, and multi-language support.",
+    "script": "ct/tududi.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/tududi.sh",
+    "categories": [
+      12
+    ],
+    "notes": [
+      "Create users like this: `cd /opt/tududi` => `npm run user:create <email> <password>`",
+      "Database location: `/opt/tududi-db`. Uploads: `/opt/tududi-uploads`"
+    ],
     "type": "ct"
   },
   {
