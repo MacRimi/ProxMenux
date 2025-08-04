@@ -4622,20 +4622,6 @@
     "type": "vm"
   },
   {
-    "name": "Ubuntu 24.10",
-    "slug": "ubuntu2410-vm",
-    "desc": "Ubuntu is a distribution based on Debian, designed to have regular releases and a consistent user experience.",
-    "script": "vm/ubuntu2410-vm.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2410-vm.sh",
-    "categories": [
-      2
-    ],
-    "notes": [
-      "after installation, checkout: \u00b4https://github.com/community-scripts/ProxmoxVE/discussions/272\u00b4"
-    ],
-    "type": "vm"
-  },
-  {
     "name": "Ubuntu 25.04",
     "slug": "ubuntu2504-vm",
     "desc": "Ubuntu is a distribution based on Debian, designed to have regular releases and a consistent user experience.",
