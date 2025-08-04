@@ -87,8 +87,8 @@ check_extremeshok_warning() {
     local marker_file="/etc/extremeshok"
 
     if [[ -f "$marker_file" ]]; then
-        dialog --backtitle "ProxMenux" --title "Extremeshok Post-Install Detected" \
-        --yesno "$(translate "It appears that you have already executed the xshok-proxmox post-install script on this system.")\n\n\
+        dialog --backtitle "ProxMenux" --title "xshok-proxmox Post-Install Detected" \
+        --yesno "\n$(translate "It appears that you have already executed the xshok-proxmox post-install script on this system.")\n\n\
 $(translate "If you continue, some adjustments may be duplicated or conflict with those already made by xshok.")\n\n\
 $(translate "Do you want to continue anyway?")" 13 70
 
