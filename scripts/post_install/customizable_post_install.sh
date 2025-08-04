@@ -1912,7 +1912,7 @@ enable_vfio_iommu_() {
 
 
 
-enable_vfio_iommu() {
+enable_vfio_iommu__() {
     msg_info2 "$(translate "Enabling IOMMU and configuring VFIO for PCI passthrough...")"
     NECESSARY_REBOOT=1
 
@@ -1996,6 +1996,158 @@ enable_vfio_iommu() {
 }
 
 
+
+
+
+enable_vfio_iommu() {
+    msg_info2 "$(translate "Enabling IOMMU and configuring VFIO for PCI passthrough...")"
+    NECESSARY_REBOOT=1
+    
+    # Detect if system uses ZFS/systemd-boot (Proxmox)
+    local uses_zfs=false
+    local cmdline_file="/etc/kernel/cmdline"
+    if [[ -f "$cmdline_file" ]] && grep -qE 'root=ZFS=|root=ZFS/' "$cmdline_file"; then
+        uses_zfs=true
+    fi
+
+    if [[ "$uses_zfs" == true ]] && [[ -f "$cmdline_file" ]]; then
+        msg_info "$(translate "Cleaning up duplicate parameters...")"
+        cp "$cmdline_file" "${cmdline_file}.cleanup.bak"
+        
+        sed -i 's/intel_iommu=on[[:space:]]*intel_iommu=on/intel_iommu=on/g' "$cmdline_file"
+        sed -i 's/amd_iommu=on[[:space:]]*amd_iommu=on/amd_iommu=on/g' "$cmdline_file"
+        sed -i 's/iommu=pt[[:space:]]*iommu=pt/iommu=pt/g' "$cmdline_file"
+        
+        msg_ok "$(translate "Duplicate parameters cleaned")"
+    fi
+    
+    # Detect CPU type and set IOMMU parameter
+    local cpu_info=$(cat /proc/cpuinfo)
+    local iommu_param=""
+    local grub_file="/etc/default/grub"
+    local additional_params="pcie_acs_override=downstream,multifunction"
+    
+    if [[ "$cpu_info" == *"GenuineIntel"* ]]; then
+        msg_info "$(translate "Detected Intel CPU")"
+        iommu_param="intel_iommu=on"
+    elif [[ "$cpu_info" == *"AuthenticAMD"* ]]; then
+        msg_info "$(translate "Detected AMD CPU")"
+        iommu_param="amd_iommu=on"
+    else
+        msg_warning "$(translate "Unknown CPU type. IOMMU might not be properly enabled.")"
+        return 1
+    fi
+    
+    # Configure /etc/kernel/cmdline or GRUB
+    if [[ "$uses_zfs" == true ]]; then
+        # SYSTEMD-BOOT - Verificación mejorada
+        local needs_iommu_param=false
+        local needs_iommu_pt=false
+        local needs_additional=false
+        
+        # Verificar qué parámetros faltan
+        if ! grep -q "$iommu_param" "$cmdline_file"; then
+            needs_iommu_param=true
+        fi
+        
+        if ! grep -q "iommu=pt" "$cmdline_file"; then
+            needs_iommu_pt=true
+        fi
+        
+        if ! grep -q "pcie_acs_override=" "$cmdline_file"; then
+            needs_additional=true
+        fi
+        
+        # Solo agregar lo que falta
+        if [[ "$needs_iommu_param" == true ]] || [[ "$needs_iommu_pt" == true ]] || [[ "$needs_additional" == true ]]; then
+            cp "$cmdline_file" "${cmdline_file}.bak"
+            
+            local params_to_add=""
+            [[ "$needs_iommu_param" == true ]] && params_to_add+=" $iommu_param"
+            [[ "$needs_iommu_pt" == true ]] && params_to_add+=" iommu=pt"
+            [[ "$needs_additional" == true ]] && params_to_add+=" $additional_params"
+            
+            sed -i "s|\s*$|$params_to_add|" "$cmdline_file"
+            msg_ok "$(translate "IOMMU parameters added to /etc/kernel/cmdline")"
+        else
+            msg_ok "$(translate "IOMMU already configured in /etc/kernel/cmdline")"
+        fi
+        
+    else
+        # GRUB - Verificación mejorada
+        local needs_update=false
+        
+        if ! grep -q "$iommu_param" "$grub_file" || ! grep -q "iommu=pt" "$grub_file"; then
+            needs_update=true
+        fi
+        
+        if [[ "$needs_update" == true ]]; then
+            cp "$grub_file" "${grub_file}.bak"
+            
+            # Agregar parámetros que falten
+            local current_line=$(grep "GRUB_CMDLINE_LINUX_DEFAULT=" "$grub_file")
+            local params_to_add=""
+            
+            if ! echo "$current_line" | grep -q "$iommu_param"; then
+                params_to_add+=" $iommu_param"
+            fi
+            
+            if ! echo "$current_line" | grep -q "iommu=pt"; then
+                params_to_add+=" iommu=pt"
+            fi
+            
+            if ! echo "$current_line" | grep -q "pcie_acs_override="; then
+                params_to_add+=" $additional_params"
+            fi
+            
+            sed -i "/GRUB_CMDLINE_LINUX_DEFAULT=/ s|\"$|$params_to_add\"|" "$grub_file"
+            msg_ok "$(translate "IOMMU enabled in GRUB configuration")"
+        else
+            msg_ok "$(translate "IOMMU already enabled in GRUB configuration")"
+        fi
+    fi
+    
+    # Configure VFIO modules (sin cambios)
+    local modules_file="/etc/modules"
+    msg_info "$(translate "Checking VFIO modules...")"
+    local vfio_modules=("vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd")
+    
+    for module in "${vfio_modules[@]}"; do
+        if ! grep -q "^$module" "$modules_file"; then
+            echo "$module" >> "$modules_file"
+        fi
+    done
+    msg_ok "$(translate "VFIO modules configured.")"
+    
+    # Blacklist conflicting drivers (sin cambios)
+    local blacklist_file="/etc/modprobe.d/blacklist.conf"
+    msg_info "$(translate "Checking conflicting drivers blacklist...")"
+    touch "$blacklist_file"
+    
+    local blacklist_drivers=("nouveau" "lbm-nouveau" "amdgpu" "radeon" "nvidia" "nvidiafb")
+    for driver in "${blacklist_drivers[@]}"; do
+        if ! grep -q "^blacklist $driver" "$blacklist_file"; then
+            echo "blacklist $driver" >> "$blacklist_file"
+        fi
+    done
+    
+    if ! grep -q "options nouveau modeset=0" "$blacklist_file"; then
+        echo "options nouveau modeset=0" >> "$blacklist_file"
+    fi
+    msg_ok "$(translate "Conflicting drivers blacklisted successfully.")"
+    
+    # Update initramfs and bootloader
+    msg_info "$(translate "Updating initramfs, GRUB, and EFI boot, patience...")"
+    update-initramfs -u -k all > /dev/null 2>&1
+    
+    if [[ "$uses_zfs" == true ]]; then
+        proxmox-boot-tool refresh > /dev/null 2>&1
+    else
+        update-grub > /dev/null 2>&1
+    fi
+    
+    msg_success "$(translate "IOMMU and VFIO setup completed")"
+}
 
 
 
