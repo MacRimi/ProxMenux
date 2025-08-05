@@ -4151,18 +4151,6 @@
     "type": "pve"
   },
   {
-    "name": "SearXNG",
-    "slug": "searxng",
-    "desc": "SearXNG is a free internet metasearch engine which aggregates results from up to 215 search services. Users are neither tracked nor profiled. Additionally, SearXNG can be used over Tor for online anonymity.",
-    "script": "ct/searxng.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/searxng.sh",
-    "categories": [
-      0
-    ],
-    "notes": [],
-    "type": "ct"
-  },
-  {
     "name": "seelf",
     "slug": "seelf",
     "desc": "seelf is a self-hosted software which makes it easy to deploy your own applications on your own hardware using an easy to use interface.",
