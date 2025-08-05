@@ -249,21 +249,23 @@ translate() {
 from googletrans import Translator
 import sys, json, re
 
-def translate_text(text, dest_lang):
+def translate_text(text, dest_lang, context):
     translator = Translator()
-    context = '$TRANSLATION_CONTEXT'
     try:
         full_text = context + ' ' + text
         result = translator.translate(full_text, dest=dest_lang).text
-        # Remove context and any leading/trailing whitespace
         translated = re.sub(r'^.*?(Translate:|Traducir:|Traduire:|Übersetzen:|Tradurre:|Traduzir:|翻译:|翻訳:)', '', result, flags=re.IGNORECASE | re.DOTALL).strip()
         translated = re.sub(r'^.*?(Context:|Contexto:|Contexte:|Kontext:|Contesto:|上下文：|コンテキスト：).*?:', '', translated, flags=re.IGNORECASE | re.DOTALL).strip()
-        return json.dumps({'success': True, 'text': translated})
+        print(json.dumps({'success': True, 'text': translated}))
     except Exception as e:
-        return json.dumps({'success': False, 'error': str(e)})
+        print(json.dumps({'success': False, 'error': str(e)}))
 
-print(translate_text('$text', '$dest_lang'))
-")
+translate_text(
+    json.loads(sys.argv[1]),
+    sys.argv[2],
+    json.loads(sys.argv[3])
+)
+" "$(jq -Rn --arg t "$text" '$t')" "$dest_lang" "$(jq -Rn --arg ctx "$TRANSLATION_CONTEXT" '$ctx')")
     deactivate
 
     local translation_result=$(echo "$translated" | jq -r '.')
