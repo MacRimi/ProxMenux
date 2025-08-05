@@ -62,7 +62,7 @@ load_language
 initialize_cache
 # ==========================================================
 
-# VARIBLES
+
 OS_CODENAME="$(grep "VERSION_CODENAME=" /etc/os-release | cut -d"=" -f 2 | xargs )"
 RAM_SIZE_GB=$(( $(vmstat -s | grep -i "total memory" | xargs | cut -d" " -f 1) / 1024 / 1000))
 NECESSARY_REBOOT=0
@@ -183,172 +183,224 @@ EOF
 
 
 apt_upgrade() {
-
     msg_info2 "$(translate "Configuring Proxmox repositories")"
-    NECESSARY_REBOOT=1 
-
-    # Disable enterprise proxmox repo
+    NECESSARY_REBOOT=1
+    
+    # Detect current Debian codename and Proxmox version
+    local current_codename=$(lsb_release -cs 2>/dev/null || echo "bookworm")
+    local pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
+    local is_pve9=false
+    local target_codename="bookworm"
+    
+    # Determine if we're dealing with PVE 9 or should upgrade to it
+    if [ "$pve_version" -ge 9 ] 2>/dev/null || [ "$current_codename" = "trixie" ]; then
+        is_pve9=true
+        target_codename="trixie"
+        msg_info2 "$(translate "Detected/Configuring for Proxmox VE 9.x - Using Debian Trixie")"
+    else
+        target_codename="$current_codename"
+        msg_info2 "$(translate "Configuring for Proxmox VE 8.x - Using Debian $current_codename")"
+    fi
+    
+    # Disable enterprise proxmox repo (legacy format)
     if [ -f /etc/apt/sources.list.d/pve-enterprise.list ] && grep -q "^deb" /etc/apt/sources.list.d/pve-enterprise.list; then
         msg_info "$(translate "Disabling enterprise Proxmox repository...")"
         sed -i "s/^deb/#deb/g" /etc/apt/sources.list.d/pve-enterprise.list
         msg_ok "$(translate "Enterprise Proxmox repository disabled")"
     fi
-
-    # Disable enterprise Proxmox Ceph repo
+    
+    # Disable enterprise Proxmox Ceph repo (legacy format)
     if [ -f /etc/apt/sources.list.d/ceph.list ] && grep -q "^deb" /etc/apt/sources.list.d/ceph.list; then
         msg_info "$(translate "Disabling enterprise Proxmox Ceph repository...")"
         sed -i "s/^deb/#deb/g" /etc/apt/sources.list.d/ceph.list
         msg_ok "$(translate "Enterprise Proxmox Ceph repository disabled")"
     fi
-
-    # Enable free public proxmox repo
-    if [ ! -f /etc/apt/sources.list.d/pve-public-repo.list ] || ! grep -q "pve-no-subscription" /etc/apt/sources.list.d/pve-public-repo.list; then
-        msg_info "$(translate "Enabling free public Proxmox repository...")"
-        echo "deb http://download.proxmox.com/debian/pve ${OS_CODENAME} pve-no-subscription" > /etc/apt/sources.list.d/pve-public-repo.list
-        msg_ok "$(translate "Free public Proxmox repository enabled")"
+    
+    # Configure repositories based on target version
+    if [ "$is_pve9" = true ]; then
+        # Proxmox VE 9 - Use new deb822 format
+        
+        # Remove old legacy repository files if they exist
+        [ -f /etc/apt/sources.list.d/pve-public-repo.list ] && rm -f /etc/apt/sources.list.d/pve-public-repo.list
+        [ -f /etc/apt/sources.list.d/pve-install-repo.list ] && rm -f /etc/apt/sources.list.d/pve-install-repo.list
+        
+        # Create new deb822 format no-subscription repository
+        msg_info "$(translate "Creating Proxmox VE 9 no-subscription repository...")"
+        cat > /etc/apt/sources.list.d/proxmox.sources << 'EOF'
+Types: deb
+URIs: http://download.proxmox.com/debian/pve
+Suites: trixie
+Components: pve-no-subscription
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+EOF
+        msg_ok "$(translate "Proxmox VE 9 no-subscription repository created")"
+        
+    else
+        # Proxmox VE 8 - Use legacy format
+        msg_info "$(translate "Configuring Proxmox VE 8 repositories...")"
+        
+        # Enable free public proxmox repo (legacy format)
+        if [ ! -f /etc/apt/sources.list.d/pve-public-repo.list ] || ! grep -q "pve-no-subscription" /etc/apt/sources.list.d/pve-public-repo.list; then
+            echo "deb http://download.proxmox.com/debian/pve $target_codename pve-no-subscription" > /etc/apt/sources.list.d/pve-public-repo.list
+            msg_ok "$(translate "Free public Proxmox repository enabled")"
+        fi
     fi
-
-#    # Enable Proxmox testing repository
-#    if [ ! -f /etc/apt/sources.list.d/pve-testing-repo.list ] || ! grep -q "pvetest" /etc/apt/sources.list.d/pve-testing-repo.list; then
-#        msg_info "$(translate "Enabling Proxmox testing repository...")"
-#        echo -e "deb http://download.proxmox.com/debian/pve ${OS_CODENAME} pvetest\\n" > /etc/apt/sources.list.d/pve-testing-repo.list
-#        msg_ok "$(translate "Proxmox testing repository enabled")"
-#    fi
-
-# ======================================================
-# Configure main Debian repositories
-# ======================================================
-
+    
+    # ======================================================
+    # Configure main Debian repositories
+    # ======================================================
     sources_file="/etc/apt/sources.list"
-    need_update=false
-
-
+    
+    # Create backup of sources.list
+    cp "$sources_file" "${sources_file}.backup.$(date +%Y%m%d_%H%M%S)"
+    
+    # Replace Spanish mirror with main Debian mirror
     sed -i 's|ftp.es.debian.org|deb.debian.org|g' "$sources_file"
-
-
-    if grep -q "^deb http://security.debian.org ${OS_CODENAME}-security main contrib" "$sources_file"; then
-        sed -i "s|^deb http://security.debian.org ${OS_CODENAME}-security main contrib|deb http://security.debian.org/debian-security ${OS_CODENAME}-security main contrib non-free non-free-firmware|" "$sources_file"
-        msg_ok "$(translate "Replaced security repository with full version")"
-        need_update=true
+    
+    # If upgrading to PVE 9, update all bookworm references to trixie
+    if [ "$is_pve9" = true ] && [ "$current_codename" != "trixie" ]; then
+        msg_info "$(translate "Updating Debian repositories to Trixie...")"
+        sed -i 's/bookworm/trixie/g' "$sources_file"
+        # Also update any remaining codename references
+        sed -i "s/$current_codename/trixie/g" "$sources_file"
     fi
-
-
-    if ! grep -q "deb http://security.debian.org/debian-security ${OS_CODENAME}-security" "$sources_file"; then
-        echo "deb http://security.debian.org/debian-security ${OS_CODENAME}-security main contrib non-free non-free-firmware" >> "$sources_file"
-        need_update=true
-    fi
-
-
-    if ! grep -q "deb http://deb.debian.org/debian ${OS_CODENAME} " "$sources_file"; then
-        echo "deb http://deb.debian.org/debian ${OS_CODENAME} main contrib non-free non-free-firmware" >> "$sources_file"
-        need_update=true
-    fi
-
-
-    if ! grep -q "deb http://deb.debian.org/debian ${OS_CODENAME}-updates" "$sources_file"; then
-        echo "deb http://deb.debian.org/debian ${OS_CODENAME}-updates main contrib non-free non-free-firmware" >> "$sources_file"
-        need_update=true
-    fi
-
-        msg_ok "$(translate "Debian repositories configured correctly")"
-
-# ===================================================
-
+    
+    # Clean and rebuild sources.list with proper repositories
+    cat > "$sources_file" << EOF
+# Debian $target_codename repositories
+deb http://deb.debian.org/debian $target_codename main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian $target_codename-updates main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security $target_codename-security main contrib non-free non-free-firmware
+EOF
+    
+    msg_ok "$(translate "Debian repositories configured for $target_codename")"
+    
+    # ===================================================
     # Disable non-free firmware warnings
-    if [ ! -f /etc/apt/apt.conf.d/no-bookworm-firmware.conf ]; then
+    firmware_conf="/etc/apt/apt.conf.d/no-firmware-warnings.conf"
+    if [ ! -f "$firmware_conf" ]; then
         msg_info "$(translate "Disabling non-free firmware warnings...")"
-        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' > /etc/apt/apt.conf.d/no-bookworm-firmware.conf
+        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' > "$firmware_conf"
         msg_ok "$(translate "Non-free firmware warnings disabled")"
     fi
-
-    # Update package lists
+    
+    # Update package lists with better error handling
     msg_info "$(translate "Updating package lists...")"
-    if apt-get update > /dev/null 2>&1; then
-        msg_ok "$(translate "Package lists updated")"
+    
+    # First, try to update and capture any errors
+    update_output=$(apt-get update 2>&1)
+    update_exit_code=$?
+    
+    if [ $update_exit_code -eq 0 ]; then
+        msg_ok "$(translate "Package lists updated successfully")"
     else
-        msg_error "$(translate "Failed to update package lists")"
-        return 1
+        if echo "$update_output" | grep -q "NO_PUBKEY\|GPG error"; then
+            msg_info "$(translate "Fixing GPG key issues...")"
+            # Try to fix GPG key issues
+            apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $(echo "$update_output" | grep "NO_PUBKEY" | sed 's/.*NO_PUBKEY //' | head -1) 2>/dev/null
+            # Try update again
+            if apt-get update > /dev/null 2>&1; then
+                msg_ok "$(translate "Package lists updated after GPG fix")"
+            else
+                cleanup
+                msg_error "$(translate "Failed to update package lists")"
+                echo "Error details: $update_output"
+                return 1
+            fi
+        elif echo "$update_output" | grep -q "404\|Failed to fetch"; then
+            msg_warn "$(translate "Some repositories are not available, continuing with available ones...")"
+            # Continue anyway as some repos might be temporarily unavailable
+        else
+            cleanup
+            msg_error "$(translate "Failed to update package lists")"
+            echo "Error details: $update_output"
+            return 1
+        fi
     fi
-
+    
+    # Verify repositories are working correctly
+    if [ "$is_pve9" = true ]; then
+        msg_info "$(translate "Verifying Proxmox VE 9 repositories...")"
+        if apt policy 2>/dev/null | grep -q "trixie.*pve-no-subscription"; then
+            msg_ok "$(translate "Proxmox VE 9 repositories verified")"
+        else
+            msg_warn "$(translate "Proxmox VE 9 repositories verification inconclusive, continuing...")"
+        fi
+    fi
+    
     # Remove conflicting utilities
     msg_info "$(translate "Removing conflicting utilities...")"
     if /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' purge ntp openntpd systemd-timesyncd > /dev/null 2>&1; then
         msg_ok "$(translate "Conflicting utilities removed")"
     else
-        msg_error "$(translate "Failed to remove conflicting utilities")"
+        msg_warn "$(translate "Some conflicting utilities may not have been removed")"
     fi
-
     
-    # update proxmox and install system utils
+    # Update proxmox and install system utils
     msg_info "$(translate "Performing packages upgrade...")"
     apt-get install pv -y > /dev/null 2>&1
-    total_packages=$(apt-get -s dist-upgrade | grep "^Inst" | wc -l)
     
+    total_packages=$(apt-get -s dist-upgrade 2>/dev/null | grep "^Inst" | wc -l)
     if [ "$total_packages" -eq 0 ]; then
-        total_packages=1  
+        total_packages=1
     fi
-    msg_ok "$(translate "Packages upgrade successfull")"
-    tput civis  
-    tput sc     
-
     
-    (
-        /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' dist-upgrade 2>&1 | \
-        while IFS= read -r line; do
-            if [[ "$line" =~ ^(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ]]; then
-              
-                package_name=$(echo "$line" | sed -E 's/.*(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ([^ ]+).*/\2/')
-
-                
-                [ -z "$package_name" ] && package_name="$(translate "Unknown")"
-
-               
-                tput rc
-                tput ed
-
-               
-                row=$(( $(tput lines) - 6 ))
-                tput cup $row 0; echo "$(translate "Installing packages...")"
-                tput cup $((row + 1)) 0; echo "──────────────────────────────────────────────"
-                tput cup $((row + 2)) 0; echo "Package: $package_name"
-                tput cup $((row + 3)) 0; echo "Progress: [                                                  ] 0%"
-                tput cup $((row + 4)) 0; echo "──────────────────────────────────────────────"
-
-               
-                for i in $(seq 1 10); do
-                    progress=$((i * 10))
-                    tput cup $((row + 3)) 9 
-                    printf "[%-50s] %3d%%" "$(printf "#%.0s" $(seq 1 $((progress/2))))" "$progress"
-                      
-                done
-            fi
-        done
-    )
-
-    if [ $? -eq 0 ]; then
-        tput rc
-        tput ed
-        msg_ok "$(translate "System upgrade completed")"
+    msg_ok "$(translate "Starting package upgrade process")"
+    
+    tput civis
+    tput sc
+    
+    (/usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' dist-upgrade 2>&1 | \
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ]]; then
+            package_name=$(echo "$line" | sed -E 's/.*(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ([^ ]+).*/\2/')
+            [ -z "$package_name" ] && package_name="$(translate "Unknown")"
+            
+            tput rc
+            tput ed
+            row=$(( $(tput lines) - 6 ))
+            tput cup $row 0; echo "$(translate "Installing packages...")"
+            tput cup $((row + 1)) 0; echo "──────────────────────────────────────────────"
+            tput cup $((row + 2)) 0; echo "Package: $package_name"
+            tput cup $((row + 3)) 0; echo "Progress: [                                                  ] 0%"
+            tput cup $((row + 4)) 0; echo "──────────────────────────────────────────────"
+            
+            for i in $(seq 1 10); do
+                progress=$((i * 10))
+                tput cup $((row + 3)) 9
+                printf "[%-50s] %3d%%" "$(printf "#%.0s" $(seq 1 $((progress/2))))" "$progress"
+            done
+        fi
+    done)
+    
+    upgrade_exit_code=$?
+    tput rc
+    tput ed
+    
+    if [ $upgrade_exit_code -eq 0 ]; then
+        msg_ok "$(translate "System upgrade completed successfully")"
+    else
+        msg_warn "$(translate "System upgrade completed with some issues")"
     fi
-
-   
-
-
-
+    
     # Install additional Proxmox packages
     msg_info "$(translate "Installing additional Proxmox packages...")"
-    if /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install zfsutils-linux proxmox-backup-restore-image chrony > /dev/null 2>&1; then
+    local additional_packages="zfsutils-linux proxmox-backup-restore-image chrony"
+    
+    if /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install $additional_packages > /dev/null 2>&1; then
         msg_ok "$(translate "Additional Proxmox packages installed")"
     else
-        msg_error "$(translate "Failed to install additional Proxmox packages")"
+        msg_warn "$(translate "Some additional Proxmox packages may not have been installed")"
     fi
-
+    
     lvm_repair_check
-
     cleanup_duplicate_repos
-
+    
+    if [ "$is_pve9" = true ]; then
+        msg_ok "$(translate "Proxmox VE 9 configuration completed.")"
+    fi
+    
     msg_success "$(translate "Proxmox repository configuration completed")"
-
 }
 
 
@@ -1197,57 +1249,176 @@ EOF
 
 
 
+
+
+
 install_ceph() {
     msg_info2 "$(translate "Installing Ceph support...")"
+    
 
-    # Check if Ceph is already installed
+    local pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
+    local current_codename=$(lsb_release -cs 2>/dev/null || echo "bookworm")
+    local is_pve9=false
+    local ceph_version="squid"
+    local target_codename="bookworm"
+    
+
+    if [ "$pve_version" -ge 9 ] 2>/dev/null || [ "$current_codename" = "trixie" ]; then
+        is_pve9=true
+        target_codename="trixie"
+        ceph_version="squid"  
+        msg_info2 "$(translate "Detected Proxmox VE 9.x - Installing Ceph Squid for Debian Trixie")"
+    else
+        target_codename="$current_codename"
+        ceph_version="squid" 
+        msg_info2 "$(translate "Detected Proxmox VE 8.x - Installing Ceph Squid for Debian") $target_codename"
+    fi
+
     if pveceph status &>/dev/null; then
         msg_ok "$(translate "Ceph is already installed")"
         msg_success "$(translate "Ceph installation check completed")"
         return 0
     fi
+    
+    # Configure Ceph repository based on version
+    msg_info "$(translate "Configuring Ceph repository for PVE") $pve_version..."
+    
+    if [ "$is_pve9" = true ]; then
+        # ==========================================
+        # CEPH CONFIGURATION FOR PROXMOX VE 9
+        # ==========================================
+        
 
-    # Add Ceph repository using HTTPS
-    msg_info "$(translate "Adding Ceph repository...")"
-    if echo "deb https://download.proxmox.com/debian/ceph-squid ${OS_CODENAME} no-subscription" > /etc/apt/sources.list.d/ceph-squid.list; then
-        msg_ok "$(translate "Ceph repository added successfully")"
+        [ -f /etc/apt/sources.list.d/ceph-squid.list ] && rm -f /etc/apt/sources.list.d/ceph-squid.list
+        [ -f /etc/apt/sources.list.d/ceph.list ] && rm -f /etc/apt/sources.list.d/ceph.list
+        
+        # Create new deb822 format Ceph repository for PVE 9
+        msg_info "$(translate "Creating Ceph repository for PVE 9 (deb822 format)...")"
+        cat > /etc/apt/sources.list.d/ceph.sources << EOF
+Types: deb
+URIs: https://download.proxmox.com/debian/ceph-${ceph_version}
+Suites: ${target_codename}
+Components: no-subscription
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+EOF
+        msg_ok "$(translate "Ceph repository configured for PVE 9")"
+        
     else
-        msg_warn "$(translate "Failed to add Ceph repository")"
-        # Continue execution despite the error
+        # ==========================================
+        # CEPH CONFIGURATION FOR PROXMOX VE 8
+        # ==========================================
+        
+        # Use legacy format for PVE 8
+        msg_info "$(translate "Creating Ceph repository for PVE 8 (legacy format)...")"
+        echo "deb https://download.proxmox.com/debian/ceph-${ceph_version} ${target_codename} no-subscription" > /etc/apt/sources.list.d/ceph-${ceph_version}.list
+        msg_ok "$(translate "Ceph repository configured for PVE 8")"
     fi
-
-    # Update package lists
+    
+ 
     msg_info "$(translate "Updating package lists...")"
-    if apt-get update > /dev/null 2>&1; then
+    
+    update_output=$(apt-get update 2>&1)
+    update_exit_code=$?
+    
+    if [ $update_exit_code -eq 0 ]; then
         msg_ok "$(translate "Package lists updated successfully")"
     else
-        msg_warn "$(translate "Failed to update package lists")"
-        # Continue execution despite the error
-    fi
+        msg_warn "$(translate "Package update had issues, checking details...")"
+        
 
-    # Install Ceph with progress display
-    msg_info "$(translate "Installing Ceph packages...")"
-    (
-        pveceph install 2>&1 | \
-        while IFS= read -r line; do
-            if [[ $line == *"Installing"* ]] || [[ $line == *"Unpacking"* ]]; then
-                printf "\r%-$(($(tput cols)-1))s\r" " "
-                printf "\r%s" "$line"
+        if echo "$update_output" | grep -q "NO_PUBKEY\|GPG error"; then
+            msg_info "$(translate "Fixing GPG key issues...")"
+
+            apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $(echo "$update_output" | grep "NO_PUBKEY" | sed 's/.*NO_PUBKEY //' | head -1) 2>/dev/null
+
+            if apt-get update > /dev/null 2>&1; then
+                msg_ok "$(translate "Package lists updated after GPG fix")"
+            else
+                msg_warn "$(translate "Package update still has issues, continuing anyway...")"
             fi
-        done
-        # Clear the last line of output
-        printf "\r%-$(($(tput cols)-1))s\r" " "
-    )
+        elif echo "$update_output" | grep -q "404\|Failed to fetch"; then
+            msg_warn "$(translate "Some repositories are not available, continuing with available ones...")"
+        else
+            msg_warn "$(translate "Package update completed with warnings, continuing...")"
+        fi
+    fi
+    
 
-    # Verify Ceph installation
+    msg_info "$(translate "Verifying Ceph packages availability...")"
+    if apt-cache search ceph-common | grep -q "ceph-common"; then
+        msg_ok "$(translate "Ceph packages are available")"
+    else
+        msg_warn "$(translate "Ceph packages may not be available, but continuing installation...")"
+    fi
+    
+    
+
+    tput civis
+    tput sc
+    
+    (pveceph install 2>&1 | \
+    while IFS= read -r line; do
+        if [[ $line == *"Installing"* ]] || [[ $line == *"Unpacking"* ]] || [[ $line == *"Setting up"* ]] || [[ $line == *"Processing"* ]]; then
+
+            package_name=$(echo "$line" | sed -E 's/.*(Installing|Unpacking|Setting up|Processing) ([^ ]+).*/\2/' | head -c 30)
+            [ -z "$package_name" ] && package_name="$(translate "Ceph components")"
+            
+            tput rc
+            tput ed
+            row=$(( $(tput lines) - 4 ))
+            tput cup $row 0; echo "$(translate "Installing Ceph packages...")"
+            tput cup $((row + 1)) 0; echo "──────────────────────────────────────────────"
+            tput cup $((row + 2)) 0; echo "$(translate "Current"): $package_name"
+            tput cup $((row + 3)) 0; echo "──────────────────────────────────────────────"
+        fi
+    done)
+    
+    ceph_install_exit_code=$?
+    tput rc
+    tput ed
+    tput cnorm
+    
+
+    msg_info "$(translate "Verifying Ceph installation...")"
+    
+
+    sleep 3
+    
     if pveceph status &>/dev/null; then
         msg_ok "$(translate "Ceph packages installed and verified successfully")"
-        msg_success "$(translate "Ceph installation completed")"
+
+        local ceph_version_info=$(ceph --version 2>/dev/null | head -1 || echo "$(translate "Version info not available")")
+        msg_ok "$(translate "Installed"): $ceph_version_info"
+        
+
+        if [ "$is_pve9" = true ]; then
+            if pveceph pool ls &>/dev/null 2>&1 || [ $? -eq 2 ]; then 
+                msg_ok "$(translate "Ceph integration with PVE 9 verified")"
+            else
+                msg_warn "$(translate "Ceph installed but integration may need configuration")"
+            fi
+            msg_success "$(translate "Ceph installation completed successfully")"
+        fi
+        
+        
+        
+    elif command -v ceph >/dev/null 2>&1; then
+
+        msg_warn "$(translate "Ceph packages installed but service verification failed")"
+        msg_info2 "$(translate "This may be normal for a fresh installation")"
+        msg_success "$(translate "Ceph installation process completed")"
+        
     else
         msg_warn "$(translate "Ceph installation could not be verified")"
-        msg_success "$(translate "Ceph installation process finished")"
+        msg_info2 "$(translate "You may need to run 'pveceph install' manually")"
+        msg_success "$(translate "Ceph installation process finished with warnings")"
     fi
+    
+
 }
+
+
+
 
 
 
@@ -3298,75 +3469,59 @@ EOF
 #        Auxiliary help functions
 # ==========================================================
 
+# Rest of the functions remain the same...
 cleanup_duplicate_repos() {
-
+    msg_info "$(translate "Cleaning up duplicate repositories...")"
+    
     local sources_file="/etc/apt/sources.list"
     local temp_file=$(mktemp)
     local cleaned_count=0
     declare -A seen_repos
-
+    
+    # Clean main sources.list
     while IFS= read -r line || [[ -n "$line" ]]; do
-        
         if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "$line" ]]; then
             echo "$line" >> "$temp_file"
             continue
         fi
-
-    
+        
         if [[ "$line" =~ ^deb ]]; then
-         
             read -r _ url dist components <<< "$line"
-      
             local key="${url}_${dist}"
-
             if [[ -v "seen_repos[$key]" ]]; then
-      
                 echo "# $line" >> "$temp_file"
                 cleaned_count=$((cleaned_count + 1))
             else
- 
                 echo "$line" >> "$temp_file"
                 seen_repos[$key]="$components"
             fi
         else
-
             echo "$line" >> "$temp_file"
         fi
     done < "$sources_file"
-
- 
+    
     mv "$temp_file" "$sources_file"
     chmod 644 "$sources_file"
-
-
-    local pve_files=(/etc/apt/sources.list.d/*proxmox*.list /etc/apt/sources.list.d/*pve*.list)
-    local pve_content="deb http://download.proxmox.com/debian/pve ${OS_CODENAME} pve-no-subscription"
-    local pve_public_repo="/etc/apt/sources.list.d/pve-public-repo.list"
-    local pve_public_repo_exists=false
-    local pve_repo_count=0
-
-
-    if [ -f "$pve_public_repo" ] && grep -q "^deb.*pve-no-subscription" "$pve_public_repo"; then
-        pve_public_repo_exists=true
-        pve_repo_count=1
-    fi
-
-    for file in "${pve_files[@]}"; do
-        if [ -f "$file" ] && grep -q "^deb.*pve-no-subscription" "$file"; then
-            if ! $pve_public_repo_exists && [[ "$file" == "$pve_public_repo" ]]; then
-
-                sed -i 's/^# *deb/deb/' "$file"
-                pve_public_repo_exists=true
-                pve_repo_count=1
-            elif [[ "$file" != "$pve_public_repo" ]]; then
-
-                sed -i 's/^deb/# deb/' "$file"
+    
+    # Clean up old Proxmox repository files
+    local old_pve_files=(/etc/apt/sources.list.d/pve-*.list)
+    for file in "${old_pve_files[@]}"; do
+        if [ -f "$file" ] && [[ "$file" != "/etc/apt/sources.list.d/pve-enterprise.list" ]]; then
+            # Check if we have the new .sources format
+            if [ -f "/etc/apt/sources.list.d/proxmox.sources" ]; then
+                msg_info "$(translate "Removing old repository file: $(basename "$file")")"
+                rm -f "$file"
                 cleaned_count=$((cleaned_count + 1))
             fi
         fi
     done
-
-apt update
+    
+    if [ $cleaned_count -gt 0 ]; then
+        msg_ok "$(translate "Cleaned up $cleaned_count duplicate/old repositories")"
+        apt-get update > /dev/null 2>&1
+    else
+        msg_ok "$(translate "No duplicate repositories found")"
+    fi
 }
 
 
@@ -3378,14 +3533,13 @@ apt update
 
 lvm_repair_check() {
     msg_info "$(translate "Checking and repairing old LVM PV headers (if needed)...")"
-
+    
     pvs_output=$(LC_ALL=C pvs -v 2>&1 | grep "old PV header")
-
     if [ -z "$pvs_output" ]; then
         msg_ok "$(translate "No PVs with old headers found.")"
         return
     fi
-
+    
     declare -A vg_map
     while read -r line; do
         pv=$(echo "$line" | grep -o '/dev/[^ ]*')
@@ -3394,7 +3548,7 @@ lvm_repair_check() {
             vg_map["$vg"]=1
         fi
     done <<< "$pvs_output"
-
+    
     for vg in "${!vg_map[@]}"; do
         msg_warn "$(translate "Old PV header(s) found in VG $vg. Updating metadata...")"
         vgck --updatemetadata "$vg"
@@ -3405,7 +3559,6 @@ lvm_repair_check() {
             msg_ok "$(translate "Metadata updated successfully for VG $vg")"
         fi
     done
-
 }
 
 

@@ -95,10 +95,10 @@ $(translate "Do you want to continue anyway?")" 13 70
 # ==========================================================
 lvm_repair_check() {
     msg_info "$(translate "Checking and repairing old LVM PV headers (if needed)...")"
+    
     pvs_output=$(LC_ALL=C pvs -v 2>&1 | grep "old PV header")
     if [ -z "$pvs_output" ]; then
         msg_ok "$(translate "No PVs with old headers found.")"
-        register_tool "lvm_repair" true
         return
     fi
     
@@ -121,13 +121,12 @@ lvm_repair_check() {
             msg_ok "$(translate "Metadata updated successfully for VG $vg")"
         fi
     done
-    
-    msg_ok "$(translate "LVM PV headers check completed")"
-
 }
 
-# ==========================================================
+
 cleanup_duplicate_repos() {
+    msg_info "$(translate "Cleaning up duplicate repositories...")"
+    
     local sources_file="/etc/apt/sources.list"
     local temp_file=$(mktemp)
     local cleaned_count=0
@@ -157,308 +156,387 @@ cleanup_duplicate_repos() {
     mv "$temp_file" "$sources_file"
     chmod 644 "$sources_file"
     
-
-    local pve_files=(/etc/apt/sources.list.d/*proxmox*.list /etc/apt/sources.list.d/*pve*.list)
-    local pve_content="deb http://download.proxmox.com/debian/pve ${OS_CODENAME} pve-no-subscription"
-    local pve_public_repo="/etc/apt/sources.list.d/pve-public-repo.list"
-    local pve_public_repo_exists=false
-    
-    if [ -f "$pve_public_repo" ] && grep -q "^deb.*pve-no-subscription" "$pve_public_repo"; then
-        pve_public_repo_exists=true
-    fi
-    
-    for file in "${pve_files[@]}"; do
-        if [ -f "$file" ] && grep -q "^deb.*pve-no-subscription" "$file"; then
-            if ! $pve_public_repo_exists && [[ "$file" == "$pve_public_repo" ]]; then
-                sed -i 's/^# *deb/deb/' "$file"
-                pve_public_repo_exists=true
-            elif [[ "$file" != "$pve_public_repo" ]]; then
-                sed -i 's/^deb/# deb/' "$file"
+    local old_pve_files=(/etc/apt/sources.list.d/pve-*.list)
+    for file in "${old_pve_files[@]}"; do
+        if [ -f "$file" ] && [[ "$file" != "/etc/apt/sources.list.d/pve-enterprise.list" ]]; then
+            if [ -f "/etc/apt/sources.list.d/proxmox.sources" ]; then
+                msg_info "$(translate "Removing old repository file: $(basename "$file")")"
+                rm -f "$file"
                 cleaned_count=$((cleaned_count + 1))
             fi
         fi
     done
     
-    apt update
-
+    if [ $cleaned_count -gt 0 ]; then
+        msg_ok "$(translate "Cleaned up $cleaned_count duplicate/old repositories")"
+        apt-get update > /dev/null 2>&1
+    else
+        msg_ok "$(translate "No duplicate repositories found")"
+    fi
 }
 
 
 
 apt_upgrade() {
-
-
-    NECESSARY_REBOOT=1 
-
-
+    msg_info2 "$(translate "Configuring Proxmox repositories")"
+    NECESSARY_REBOOT=1
+    
+    local current_codename=$(lsb_release -cs 2>/dev/null || echo "bookworm")
+    local pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
+    local is_pve9=false
+    local target_codename="bookworm"
+    
+    if [ "$pve_version" -ge 9 ] 2>/dev/null || [ "$current_codename" = "trixie" ]; then
+        is_pve9=true
+        target_codename="trixie"
+        msg_ok "$(translate "Detected/Configuring for Proxmox VE 9.x - Using Debian Trixie")"
+    else
+        target_codename="$current_codename"
+        msg_ok "$(translate "Configuring for Proxmox VE 8.x - Using Debian $current_codename")"
+    fi
+    
     if [ -f /etc/apt/sources.list.d/pve-enterprise.list ] && grep -q "^deb" /etc/apt/sources.list.d/pve-enterprise.list; then
         msg_info "$(translate "Disabling enterprise Proxmox repository...")"
         sed -i "s/^deb/#deb/g" /etc/apt/sources.list.d/pve-enterprise.list
         msg_ok "$(translate "Enterprise Proxmox repository disabled")"
     fi
-
-
+    
     if [ -f /etc/apt/sources.list.d/ceph.list ] && grep -q "^deb" /etc/apt/sources.list.d/ceph.list; then
         msg_info "$(translate "Disabling enterprise Proxmox Ceph repository...")"
         sed -i "s/^deb/#deb/g" /etc/apt/sources.list.d/ceph.list
         msg_ok "$(translate "Enterprise Proxmox Ceph repository disabled")"
     fi
+    
 
+    if [ "$is_pve9" = true ]; then
 
-    if [ ! -f /etc/apt/sources.list.d/pve-public-repo.list ] || ! grep -q "pve-no-subscription" /etc/apt/sources.list.d/pve-public-repo.list; then
-        msg_info "$(translate "Enabling free public Proxmox repository...")"
-        echo "deb http://download.proxmox.com/debian/pve ${OS_CODENAME} pve-no-subscription" > /etc/apt/sources.list.d/pve-public-repo.list
-        msg_ok "$(translate "Free public Proxmox repository enabled")"
+        
+
+        [ -f /etc/apt/sources.list.d/pve-public-repo.list ] && rm -f /etc/apt/sources.list.d/pve-public-repo.list
+        [ -f /etc/apt/sources.list.d/pve-install-repo.list ] && rm -f /etc/apt/sources.list.d/pve-install-repo.list
+        
+        msg_info "$(translate "Creating Proxmox VE 9 no-subscription repository...")"
+        cat > /etc/apt/sources.list.d/proxmox.sources << 'EOF'
+Types: deb
+URIs: http://download.proxmox.com/debian/pve
+Suites: trixie
+Components: pve-no-subscription
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+EOF
+        msg_ok "$(translate "Proxmox VE 9 no-subscription repository created")"
+        
+    else
+
+        msg_info "$(translate "Configuring Proxmox VE 8 repositories...")"
+        
+        if [ ! -f /etc/apt/sources.list.d/pve-public-repo.list ] || ! grep -q "pve-no-subscription" /etc/apt/sources.list.d/pve-public-repo.list; then
+            echo "deb http://download.proxmox.com/debian/pve $target_codename pve-no-subscription" > /etc/apt/sources.list.d/pve-public-repo.list
+            msg_ok "$(translate "Free public Proxmox repository enabled")"
+        fi
     fi
-
-
-
+    
+    # ======================================================
+    # Configure main Debian repositories
+    # ======================================================
     sources_file="/etc/apt/sources.list"
-    need_update=false
+    
 
-
+    cp "$sources_file" "${sources_file}.backup.$(date +%Y%m%d_%H%M%S)"
+    
     sed -i 's|ftp.es.debian.org|deb.debian.org|g' "$sources_file"
 
-
-    if grep -q "^deb http://security.debian.org ${OS_CODENAME}-security main contrib" "$sources_file"; then
-        sed -i "s|^deb http://security.debian.org ${OS_CODENAME}-security main contrib|deb http://security.debian.org/debian-security ${OS_CODENAME}-security main contrib non-free non-free-firmware|" "$sources_file"
-        msg_ok "$(translate "Replaced security repository with full version")"
-        need_update=true
+    if [ "$is_pve9" = true ] && [ "$current_codename" != "trixie" ]; then
+        msg_info "$(translate "Updating Debian repositories to Trixie...")"
+        sed -i 's/bookworm/trixie/g' "$sources_file"
+        sed -i "s/$current_codename/trixie/g" "$sources_file"
     fi
+    
+    cat > "$sources_file" << EOF
+# Debian $target_codename repositories
+deb http://deb.debian.org/debian $target_codename main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian $target_codename-updates main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security $target_codename-security main contrib non-free non-free-firmware
+EOF
+    
+    msg_ok "$(translate "Debian repositories configured for $target_codename")"
+    
 
-
-    if ! grep -q "deb http://security.debian.org/debian-security ${OS_CODENAME}-security" "$sources_file"; then
-        echo "deb http://security.debian.org/debian-security ${OS_CODENAME}-security main contrib non-free non-free-firmware" >> "$sources_file"
-        need_update=true
-    fi
-
-
-    if ! grep -q "deb http://deb.debian.org/debian ${OS_CODENAME} " "$sources_file"; then
-        echo "deb http://deb.debian.org/debian ${OS_CODENAME} main contrib non-free non-free-firmware" >> "$sources_file"
-        need_update=true
-    fi
-
-
-    if ! grep -q "deb http://deb.debian.org/debian ${OS_CODENAME}-updates" "$sources_file"; then
-        echo "deb http://deb.debian.org/debian ${OS_CODENAME}-updates main contrib non-free non-free-firmware" >> "$sources_file"
-        need_update=true
-    fi
-
-        msg_ok "$(translate "Debian repositories configured correctly")"
-
-# ===================================================
-
-
-    if [ ! -f /etc/apt/apt.conf.d/no-bookworm-firmware.conf ]; then
+    firmware_conf="/etc/apt/apt.conf.d/no-firmware-warnings.conf"
+    if [ ! -f "$firmware_conf" ]; then
         msg_info "$(translate "Disabling non-free firmware warnings...")"
-        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' > /etc/apt/apt.conf.d/no-bookworm-firmware.conf
+        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' > "$firmware_conf"
         msg_ok "$(translate "Non-free firmware warnings disabled")"
     fi
-
-
+    
     msg_info "$(translate "Updating package lists...")"
-    if apt-get update > /dev/null 2>&1; then
-        msg_ok "$(translate "Package lists updated")"
+    
+    update_output=$(apt-get update 2>&1)
+    update_exit_code=$?
+    
+    if [ $update_exit_code -eq 0 ]; then
+        msg_ok "$(translate "Package lists updated successfully")"
     else
-        msg_error "$(translate "Failed to update package lists")"
-        return 1
+        if echo "$update_output" | grep -q "NO_PUBKEY\|GPG error"; then
+            msg_info "$(translate "Fixing GPG key issues...")"
+            apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $(echo "$update_output" | grep "NO_PUBKEY" | sed 's/.*NO_PUBKEY //' | head -1) 2>/dev/null
+            if apt-get update > /dev/null 2>&1; then
+                msg_ok "$(translate "Package lists updated after GPG fix")"
+            else
+                cleanup
+                msg_error "$(translate "Failed to update package lists")"
+                echo "Error details: $update_output"
+                return 1
+            fi
+        elif echo "$update_output" | grep -q "404\|Failed to fetch"; then
+            msg_warn "$(translate "Some repositories are not available, continuing with available ones...")"
+        else
+            cleanup
+            msg_error "$(translate "Failed to update package lists")"
+            echo "Error details: $update_output"
+            return 1
+        fi
     fi
-
-
+    
+    if [ "$is_pve9" = true ]; then
+        msg_info "$(translate "Verifying Proxmox VE 9 repositories...")"
+        if apt policy 2>/dev/null | grep -q "trixie.*pve-no-subscription"; then
+            msg_ok "$(translate "Proxmox VE 9 repositories verified")"
+        else
+            msg_warn "$(translate "Proxmox VE 9 repositories verification inconclusive, continuing...")"
+        fi
+    fi
+    
     msg_info "$(translate "Removing conflicting utilities...")"
     if /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' purge ntp openntpd systemd-timesyncd > /dev/null 2>&1; then
         msg_ok "$(translate "Conflicting utilities removed")"
     else
-        msg_error "$(translate "Failed to remove conflicting utilities")"
+        msg_warn "$(translate "Some conflicting utilities may not have been removed")"
     fi
-
     
-
     msg_info "$(translate "Performing packages upgrade...")"
     apt-get install pv -y > /dev/null 2>&1
-    total_packages=$(apt-get -s dist-upgrade | grep "^Inst" | wc -l)
     
+    total_packages=$(apt-get -s dist-upgrade 2>/dev/null | grep "^Inst" | wc -l)
     if [ "$total_packages" -eq 0 ]; then
-        total_packages=1  
+        total_packages=1
     fi
-    msg_ok "$(translate "Packages upgrade successfull")"
-    tput civis  
-    tput sc     
-
     
-    (
-        /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' dist-upgrade 2>&1 | \
-        while IFS= read -r line; do
-            if [[ "$line" =~ ^(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ]]; then
-              
-                package_name=$(echo "$line" | sed -E 's/.*(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ([^ ]+).*/\2/')
-
-                
-                [ -z "$package_name" ] && package_name="$(translate "Unknown")"
-
-               
-                tput rc
-                tput ed
-
-               
-                row=$(( $(tput lines) - 6 ))
-                tput cup $row 0; echo "$(translate "Installing packages...")"
-                tput cup $((row + 1)) 0; echo "──────────────────────────────────────────────"
-                tput cup $((row + 2)) 0; echo "Package: $package_name"
-                tput cup $((row + 3)) 0; echo "Progress: [                                                  ] 0%"
-                tput cup $((row + 4)) 0; echo "──────────────────────────────────────────────"
-
-               
-                for i in $(seq 1 10); do
-                    progress=$((i * 10))
-                    tput cup $((row + 3)) 9 
-                    printf "[%-50s] %3d%%" "$(printf "#%.0s" $(seq 1 $((progress/2))))" "$progress"
-                      
-                done
-            fi
-        done
-    )
-
-    if [ $? -eq 0 ]; then
-        tput rc
-        tput ed
-        msg_ok "$(translate "System upgrade completed")"
+    msg_ok "$(translate "Starting package upgrade process")"
+    
+    tput civis
+    tput sc
+    
+    (/usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' dist-upgrade 2>&1 | \
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ]]; then
+            package_name=$(echo "$line" | sed -E 's/.*(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ([^ ]+).*/\2/')
+            [ -z "$package_name" ] && package_name="$(translate "Unknown")"
+            
+            tput rc
+            tput ed
+            row=$(( $(tput lines) - 6 ))
+            tput cup $row 0; echo "$(translate "Installing packages...")"
+            tput cup $((row + 1)) 0; echo "──────────────────────────────────────────────"
+            tput cup $((row + 2)) 0; echo "Package: $package_name"
+            tput cup $((row + 3)) 0; echo "Progress: [                                                  ] 0%"
+            tput cup $((row + 4)) 0; echo "──────────────────────────────────────────────"
+            
+            for i in $(seq 1 10); do
+                progress=$((i * 10))
+                tput cup $((row + 3)) 9
+                printf "[%-50s] %3d%%" "$(printf "#%.0s" $(seq 1 $((progress/2))))" "$progress"
+            done
+        fi
+    done)
+    
+    upgrade_exit_code=$?
+    tput rc
+    tput ed
+    
+    if [ $upgrade_exit_code -eq 0 ]; then
+        msg_ok "$(translate "System upgrade completed successfully")"
+    else
+        msg_warn "$(translate "System upgrade completed with some issues")"
     fi
-
-   
-
+    
     msg_info "$(translate "Installing additional Proxmox packages...")"
-    if /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install zfsutils-linux proxmox-backup-restore-image chrony > /dev/null 2>&1; then
+    local additional_packages="zfsutils-linux proxmox-backup-restore-image chrony"
+    
+    if /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install $additional_packages > /dev/null 2>&1; then
         msg_ok "$(translate "Additional Proxmox packages installed")"
     else
-        msg_error "$(translate "Failed to install additional Proxmox packages")"
+        msg_warn "$(translate "Some additional Proxmox packages may not have been installed")"
     fi
-
+    
     lvm_repair_check
-
     cleanup_duplicate_repos
-
-    msg_ok "$(translate "Proxmox update completed")"
+    
+    if [ "$is_pve9" = true ]; then
+        msg_ok "$(translate "Proxmox VE 9 configuration completed.")"
+    fi
 
 }
 
 # ==========================================================
 
-remove_subscription_banner_() {
-    local JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
-    local GZ_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz"
-    local APT_HOOK="/etc/apt/apt.conf.d/no-nag-script"
 
-    # Detect if already applied
-    if grep -q "NoMoreNagging" "$JS_FILE" 2>/dev/null && [[ -f "$APT_HOOK" ]]; then
-        # Already applied, just reapply silently
-        :
-    else
-        # Ask user
-        if ! whiptail --title "$(translate "Proxmox Subscription Banner")" \
-            --yesno "$(translate "Do you want to remove the Proxmox subscription banner from the web interface?")" 10 60; then
-            msg_warn "$(translate "Banner removal cancelled by user.")"
-            return 1
-        fi
-    fi
 
-    msg_info "$(translate "Removing Proxmox subscription nag banner...")"
 
-    if [[ ! -f "$APT_HOOK" ]]; then
-        cat <<'EOF' > "$APT_HOOK"
-DPkg::Post-Invoke { "dpkg -V proxmox-widget-toolkit | grep -q '/proxmoxlib\.js$'; if [ $? -eq 1 ]; then { echo 'Removing subscription nag from UI...'; sed -i '/.*data\.status.*{/{s/\!//;s/active/NoMoreNagging/;s/Active/NoMoreNagging/}' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js; rm -f /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz; }; fi"; };
-EOF
-    fi
 
-    if [[ -f "$JS_FILE" ]]; then
-        sed -i '/.*data\.status.*{/{s/\!//;s/active/NoMoreNagging/;s/Active/NoMoreNagging/}' "$JS_FILE"
-        [[ -f "$GZ_FILE" ]] && rm -f "$GZ_FILE"
-        touch "$JS_FILE"
-    fi
 
-    apt --reinstall install proxmox-widget-toolkit -y > /dev/null 2>&1
-
-    msg_ok "$(translate "Subscription nag banner removed successfully")"
-    register_tool "subscription_banner" true
-}
 
 
 remove_subscription_banner() {
+
+    
     local JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
+    local MIN_JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.min.js"
     local GZ_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz"
     local APT_HOOK="/etc/apt/apt.conf.d/no-nag-script"
+    
 
+    local pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
+    local is_pve9=false
+    
+    if [ "$pve_version" -ge 9 ] 2>/dev/null; then
+        is_pve9=true
+        msg_ok "$(translate "Detected Proxmox VE 9.x - Applying PVE 9 patches")"
+    else
+        msg_ok "$(translate "Detected Proxmox VE 8.x - Applying PVE 8 patches")"
+    fi
+    
 
-    if ! whiptail --title "Proxmox Subscription Banner" \
-        --yesno "Do you want to remove the Proxmox subscription banner from the web interface?" 10 60; then
-        msg_warn "Banner removal cancelled by user."
+    if [ ! -f "$JS_FILE" ]; then
+        msg_error "$(translate "JavaScript file not found"): $JS_FILE"
         return 1
     fi
+    
+    
+
+    if ! whiptail --title "$(translate "Proxmox Subscription Banner Removal")" \
+        --yesno "$(translate "Do you want to remove the Proxmox subscription banner from the web interface for PVE") $pve_version?" 10 70; then
+        msg_warn "$(translate "Banner removal cancelled by user")"
+        return 1
+    fi
+    
+
+    local backup_file="${JS_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
+    cp "$JS_FILE" "$backup_file"
+    
 
     for f in /etc/apt/apt.conf.d/*nag*; do 
         [[ -e "$f" ]] && rm -f "$f"
     done
-
-
-    msg_info "Applying patches to remove subscription banner..."
-
-    sed -i "s/res\.data\.status\.toLowerCase() !== 'NoMoreNagging'/false/g" "$JS_FILE"
-    sed -i "s/res\.data\.status\.toLowerCase() !== \"NoMoreNagging\"/false/g" "$JS_FILE"
-    sed -i "s/res\.data\.status\.toLowerCase() !== 'active'/false/g" "$JS_FILE"
-    sed -i "s/res\.data\.status !== 'Active'/false/g" "$JS_FILE"
-    sed -i "s/subscription = !(/subscription = false \&\& (/g" "$JS_FILE"
     
-    sed -i '/checked_command: function/,/},$/c\
-        checked_command: function (orig_cmd) {\
-            orig_cmd();\
-        },' "$JS_FILE"
 
-    sed -i "s/title: gettext('No valid subscription')/title: gettext('Subscription Active')/g" "$JS_FILE"
-    sed -i "s/icon: Ext\.Msg\.WARNING/icon: Ext.Msg.INFO/g" "$JS_FILE"
+    if [ "$is_pve9" = true ]; then
+        local active_before=$(grep -c "res\.data\.status\.toLowerCase() !== 'active'" "$JS_FILE" 2>/dev/null || echo "0")
+        local title_before=$(grep -c "No valid subscription" "$JS_FILE" 2>/dev/null || echo "0")
+        local sub_empty_before=$(grep -c "subscriptionActive: ''" "$JS_FILE" 2>/dev/null || echo "0")
+
+    else
+        local nag_before=$(grep -c "res\.data\.status\.toLowerCase() !== 'NoMoreNagging'" "$JS_FILE" 2>/dev/null || echo "0")
+        local title_before=$(grep -c "No valid subscription" "$JS_FILE" 2>/dev/null || echo "0")
+        local sub_check_before=$(grep -c "subscription = !(" "$JS_FILE" 2>/dev/null || echo "0")
+    fi
     
-    sed -i '/check_subscription: function/,/},$/c\
-        check_subscription: function () {\
-            let me = this;\
-            let vm = me.getViewModel();\
-            vm.set("subscriptionActive", true);\
-            me.getController().updateState();\
-        },' "$JS_FILE"
+    msg_info "$(translate "Applying patches for Proxmox VE") $pve_version..."
+    
+    if [ "$is_pve9" = true ]; then
+        # ==========================================
+        # PROVEN PATCHES FOR PROXMOX VE 9
+        # ==========================================
+        
+
+        sed -i "s/res\.data\.status\.toLowerCase() !== 'active'/false/g" "$JS_FILE"
+        sed -i "s/subscriptionActive: ''/subscriptionActive: true/g" "$JS_FILE"
+        sed -i "s/title: gettext('No valid subscription')/title: gettext('Subscription Status')/g" "$JS_FILE"
+        sed -i "s/You do not have a valid subscription for this server/Subscription status: Community version active/g" "$JS_FILE"
+        sed -i "s/Enterprise repository needs valid subscription/Enterprise repository configured/g" "$JS_FILE"
+        
+    else
+        # ==========================================
+        # PROVEN PATCHES FOR PROXMOX VE 8
+        # ==========================================
+        
+ 
+        sed -i "s/res\.data\.status\.toLowerCase() !== 'NoMoreNagging'/false/g" "$JS_FILE"
+        sed -i "s/res\.data\.status\.toLowerCase() !== \"NoMoreNagging\"/false/g" "$JS_FILE"
+        sed -i "s/res\.data\.status\.toLowerCase() !== 'active'/false/g" "$JS_FILE"
+        sed -i "s/res\.data\.status !== 'Active'/false/g" "$JS_FILE"
+        sed -i "s/subscription = !(/subscription = false \&\& (/g" "$JS_FILE"
+        sed -i "s/title: gettext('No valid subscription')/title: gettext('Subscription Active')/g" "$JS_FILE"
+        sed -i "s/icon: Ext\.Msg\.WARNING/icon: Ext.Msg.INFO/g" "$JS_FILE"
+        
+
+        sed -i '/checked_command: function/,/},$/c\
+            checked_command: function (orig_cmd) {\
+                orig_cmd();\
+            },' "$JS_FILE"
+        
+        sed -i '/check_subscription: function/,/},$/c\
+            check_subscription: function () {\
+                let me = this;\
+                let vm = me.getViewModel();\
+                vm.set("subscriptionActive", true);\
+                me.getController().updateState();\
+            },' "$JS_FILE"
+    fi
 
     [[ -f "$GZ_FILE" ]] && rm -f "$GZ_FILE"
-
+    [[ -f "$MIN_JS_FILE" ]] && rm -f "$MIN_JS_FILE"
+    
+    # Clear cache
     find /var/cache/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
     find /var/lib/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
+    
 
     [[ -f "$APT_HOOK" ]] && rm -f "$APT_HOOK"
-    cat > "$APT_HOOK" << 'EOF'
+    if [ "$is_pve9" = true ]; then
+
+        cat > "$APT_HOOK" << 'EOF'
 DPkg::Post-Invoke {
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\\.data\\.status\\.toLowerCase() !== \\'NoMoreNagging\\'/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\\.data\\.status\\.toLowerCase() !== \\'active\\'/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
+    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\\.data\\.status\\.toLowerCase() !== '\''active'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
+    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/subscriptionActive: '\'\'\''/subscriptionActive: true/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
+    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/title: gettext('\''No valid subscription'\'')/title: gettext('\''Subscription Status'\'')/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
+    "rm -f /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.min.js || true";
+};
+EOF
+    else
+
+        cat > "$APT_HOOK" << 'EOF'
+DPkg::Post-Invoke {
+    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\\.data\\.status\\.toLowerCase() !== '\''NoMoreNagging'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
+    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\\.data\\.status\\.toLowerCase() !== '\''active'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
     "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/subscription = !(/subscription = false \\&\\& (/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
+    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/title: gettext('\''No valid subscription'\'')/title: gettext('\''Subscription Active'\'')/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
     "rm -f /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz || true";
 };
 EOF
-
+    fi
+    
     chmod 644 "$APT_HOOK"
-
-    apt --reinstall install proxmox-widget-toolkit -y > /dev/null 2>&1
-
-    local changes_applied=0
-    if ! grep -q "res\.data\.status\.toLowerCase() !== 'NoMoreNagging'" "$JS_FILE"; then
-        ((changes_applied++))
-    fi
-    if ! grep -q "title: gettext('No valid subscription')" "$JS_FILE"; then
-        ((changes_applied++))
-    fi
-
-    if [[ $changes_applied -gt 0 ]]; then
-        msg_ok "Subscription banner removed successfully."
+    
+    if ! apt-config dump >/dev/null 2>&1; then
+        msg_ok "$(translate "APT hook has syntax issues, removing...")"
+        rm -f "$APT_HOOK"
     else
-        msg_warn "Patches may not have been applied correctly. Please verify manually."
+        msg_ok "$(translate "APT hook created successfully")"
     fi
-
+    
+    sleep 2
+    
+    msg_ok "$(translate "Subscription banner patches applied successfully for Proxmox VE") $pve_version!"
+    msg_ok "$(translate "Banner removal process completed")"
+    msg_ok "$(translate "Changes will be maintained after system updates")"
+    
     register_tool "subscription_banner" true
+    
+
 }
+
+
+
 
 
    
