@@ -2,9 +2,18 @@
 # ==========================================================
 # Remove Subscription Banner - Proxmox VE 8.x ONLY
 # ==========================================================
-# This script is specifically designed for PVE 8.x
-# DO NOT use on PVE 9.x - use remove-banner-pve9.sh instead
-# ==========================================================
+REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+BASE_DIR="/usr/local/share/proxmenux"
+UTILS_FILE="$BASE_DIR/utils.sh"
+VENV_PATH="/opt/googletrans-env"
+TOOLS_JSON="/usr/local/share/proxmenux/installed_tools.json"
+
+if [[ -f "$UTILS_FILE" ]]; then
+    source "$UTILS_FILE"
+fi
+
+load_language
+initialize_cache
 
 remove_subscription_banner_pve8() {
     local JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
