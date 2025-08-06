@@ -31,15 +31,9 @@ register_tool() {
 
 
 download_common_functions() {
-    local common_file="$BASE_DIR/scripts/global/common-functions.sh"
-    
-    if [[ ! -f "$common_file" ]]; then
-        if ! curl -s "$REPO_URL/scripts/global/common-functions.sh" -o "$common_file"; then
-            return 1
-        fi
+    if ! source <(curl -s "$REPO_URL/scripts/global/common-functions.sh"); then
+        return 1
     fi
-
-    source "$common_file"
 }
 
 update_pve8() {
@@ -159,9 +153,6 @@ EOF
     if ! show_update_menu "$current_pve_version" "$available_pve_version" "$upgradable" "$security_updates"; then
         msg_info2 "$(translate "Update cancelled by user")"
         perform_final_cleanup
-        echo -e
-        msg_success "$(translate "Press Enter to return to menu...")"
-        read -r
         return 0
     fi
 
