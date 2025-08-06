@@ -118,7 +118,7 @@ cleanup_duplicate_repos() {
         msg_ok "$(translate "Cleaned up $cleaned_count duplicate repositories")"
     fi
     
-    apt update > /dev/null 2>&1
+    apt update
 }
 
 show_update_menu() {
@@ -127,7 +127,7 @@ show_update_menu() {
     local upgradable_count="$3"
     local security_count="$4"
     
-    # Build menu text
+
     local menu_text="$(translate "System Update Information")\n\n"
     menu_text+="$(translate "Current PVE Version"): $current_version\n"
     
