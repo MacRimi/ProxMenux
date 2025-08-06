@@ -213,10 +213,7 @@ EOF
 
     msg_ok "$(translate "Proxmox VE 8 system update completed successfully")"
 
-
-
 }
-
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     update_pve8
