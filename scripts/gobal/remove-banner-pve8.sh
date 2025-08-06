@@ -15,6 +15,18 @@ fi
 load_language
 initialize_cache
 
+# Tool registration system
+ensure_tools_json() {
+    [ -f "$TOOLS_JSON" ] || echo "{}" > "$TOOLS_JSON"
+}
+
+register_tool() {
+    local tool="$1"
+    local state="$2"
+    ensure_tools_json
+    jq --arg t "$tool" --argjson v "$state" '.[$t]=$v' "$TOOLS_JSON" > "$TOOLS_JSON.tmp" && mv "$TOOLS_JSON.tmp" "$TOOLS_JSON"
+}
+
 remove_subscription_banner_pve8() {
     local JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
     local GZ_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz"
