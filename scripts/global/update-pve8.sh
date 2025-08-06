@@ -17,7 +17,6 @@ fi
 load_language
 initialize_cache
 
-
 ensure_tools_json() {
     [ -f "$TOOLS_JSON" ] || echo "{}" > "$TOOLS_JSON"
 }
@@ -28,7 +27,6 @@ register_tool() {
     ensure_tools_json
     jq --arg t "$tool" --argjson v "$state" '.[$t]=$v' "$TOOLS_JSON" > "$TOOLS_JSON.tmp" && mv "$TOOLS_JSON.tmp" "$TOOLS_JSON"
 }
-
 
 download_common_functions() {
     if ! source <(curl -s "$REPO_URL/scripts/global/common-functions.sh"); then
@@ -46,7 +44,6 @@ update_pve8() {
         OS_CODENAME=$(lsb_release -cs 2>/dev/null || echo "bookworm")
     fi
 
-
     download_common_functions
 
     clear
@@ -55,7 +52,6 @@ update_pve8() {
     msg_title "$(translate "Proxmox VE 8.x System Update")"
     msg_info2 "$(translate "Detected: Proxmox VE 8.x (Debian $OS_CODENAME)")"
     echo
-
 
     local available_space=$(df /var/cache/apt/archives | awk 'NR==2 {print int($4/1024)}')
     if [ "$available_space" -lt 1024 ]; then
@@ -73,8 +69,6 @@ update_pve8() {
         read -r
         return 1
     fi
-
-
 
 
     if [ -f /etc/apt/sources.list.d/pve-enterprise.list ] && grep -q "^deb" /etc/apt/sources.list.d/pve-enterprise.list; then
@@ -103,7 +97,6 @@ update_pve8() {
     local sources_file="/etc/apt/sources.list"
     cp "$sources_file" "${sources_file}.backup.$(date +%Y%m%d_%H%M%S)"
 
-
     if grep -q -E "(debian-security -security|debian main$|debian -updates)" "$sources_file"; then
         msg_info "$(translate "Cleaning malformed repository entries...")"
         sed -i '/^deb.*debian-security -security/d' "$sources_file"
@@ -112,9 +105,6 @@ update_pve8() {
         changes_made=true
         msg_ok "$(translate "Malformed repository entries cleaned")"
     fi
-
-
-
 
     cat > "$sources_file" << EOF
 # Debian $OS_CODENAME repositories
@@ -125,15 +115,12 @@ EOF
 
     msg_ok "$(translate "Debian repositories configured for $OS_CODENAME")"
 
-
     local firmware_conf="/etc/apt/apt.conf.d/no-firmware-warnings.conf"
     if [ ! -f "$firmware_conf" ]; then
         echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' > "$firmware_conf"
     fi
 
-
-    cleanup_duplicate_repos "$OS_CODENAME"
-
+    cleanup_duplicate_repos
 
     msg_info "$(translate "Updating package lists...")"
     if apt-get update > "$log_file" 2>&1; then
@@ -143,61 +130,53 @@ EOF
         return 1
     fi
 
-
     local current_pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-    local available_pve_version=$(get_available_pve_version 8 "$OS_CODENAME")
+    local available_pve_version=$(apt-cache policy pve-manager 2>/dev/null | grep -oP 'Candidate: \K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
     local upgradable=$(apt list --upgradable 2>/dev/null | grep -c "upgradable")
     local security_updates=$(apt list --upgradable 2>/dev/null | grep -c "security")
 
-
-
-
     show_update_menu() {
-    local current_version="$1"
-    local target_version="$2"
-    local upgradable_count="$3"
-    local security_count="$4"
+        local current_version="$1"
+        local target_version="$2"
+        local upgradable_count="$3"
+        local security_count="$4"
 
-    local menu_text="$(translate "System Update Information")\n\n"
-    menu_text+="$(translate "Current PVE Version"): $current_version\n"
-
-    if [ -n "$target_version" ] && [ "$target_version" != "$current_version" ]; then
-        menu_text+="$(translate "Available PVE Version"): $target_version\n"
-    fi
-
-    menu_text+="\n$(translate "Package Updates Available"): $upgradable_count\n"
-    menu_text+="$(translate "Security Updates"): $security_count\n\n"
-
-    if [ "$upgradable_count" -eq 0 ]; then
-        menu_text+="$(translate "System is already up to date")"
-        whiptail --title "$(translate "Update Status")" --msgbox "$menu_text" 15 70
-        return 2
-    else
-        menu_text+="$(translate "Do you want to proceed with the system update?")"
-        if whiptail --title "$(translate "Proxmox Update")" --yesno "$menu_text" 18 70; then
-            return 0
-        else
-            return 1
+        local menu_text="$(translate "System Update Information")\n\n"
+        menu_text+="$(translate "Current PVE Version"): $current_version\n"
+        if [ -n "$target_version" ] && [ "$target_version" != "$current_version" ]; then
+            menu_text+="$(translate "Available PVE Version"): $target_version\n"
         fi
+        menu_text+="\n$(translate "Package Updates Available"): $upgradable_count\n"
+        menu_text+="$(translate "Security Updates"): $security_count\n\n"
+
+        if [ "$upgradable_count" -eq 0 ]; then
+            menu_text+="$(translate "System is already up to date")"
+            whiptail --title "$(translate "Update Status")" --msgbox "$menu_text" 15 70
+            return 2
+        else
+            menu_text+="$(translate "Do you want to proceed with the system update?")"
+            if whiptail --title "$(translate "Proxmox Update")" --yesno "$menu_text" 18 70; then
+                return 0
+            else
+                return 1
+            fi
+        fi
+    }
+
+    show_update_menu "$current_pve_version" "$available_pve_version" "$upgradable" "$security_updates"
+    MENU_RESULT=$?
+
+    if [[ $MENU_RESULT -eq 1 ]]; then
+        msg_info2 "$(translate "Update cancelled by user")"
+        apt-get -y autoremove > /dev/null 2>&1 || true
+        apt-get -y autoclean > /dev/null 2>&1 || true
+        return 0
+    elif [[ $MENU_RESULT -eq 2 ]]; then
+        msg_ok "$(translate "System is already up to date. No update needed.")"
+        apt-get -y autoremove > /dev/null 2>&1 || true
+        apt-get -y autoclean > /dev/null 2>&1 || true
+        return 0
     fi
-}
-
-show_update_menu "$current_pve_version" "$available_pve_version" "$upgradable" "$security_updates"
-MENU_RESULT=$?
-
-if [[ $MENU_RESULT -eq 1 ]]; then
-    msg_info2 "$(translate "Update cancelled by user")"
-    perform_final_cleanup
-    return 0
-
-elif [[ $MENU_RESULT -eq 2 ]]; then
-    msg_ok "$(translate "System is already up to date. No update needed.")"
-    perform_final_cleanup
-    return 0
-fi
-
-
-
 
     msg_info "$(translate "Removing conflicting utilities...")"
     local conflicting_packages=$(dpkg -l 2>/dev/null | grep -E "^ii.*(ntp|openntpd|systemd-timesyncd)" | awk '{print $2}')
@@ -205,7 +184,6 @@ fi
         DEBIAN_FRONTEND=noninteractive apt-get -y purge $conflicting_packages >> "$log_file" 2>&1
         msg_ok "$(translate "Conflicting utilities removed")"
     fi
-
 
     msg_info "$(translate "Performing system upgrade...")"
     if DEBIAN_FRONTEND=noninteractive apt-get -y \
@@ -218,11 +196,10 @@ fi
         return 1
     fi
 
-
     msg_info "$(translate "Installing essential Proxmox packages...")"
     local essential_packages=("zfsutils-linux" "proxmox-backup-restore-image" "chrony")
     local missing_packages=()
-     
+    
     for package in "${essential_packages[@]}"; do
         if ! dpkg -l 2>/dev/null | grep -q "^ii  $package "; then
             missing_packages+=("$package")
@@ -233,19 +210,19 @@ fi
         DEBIAN_FRONTEND=noninteractive apt-get -y install "${missing_packages[@]}" >> "$log_file" 2>&1
         msg_ok "$(translate "Essential Proxmox packages installed")"
     fi
-    cleanup
 
     lvm_repair_check
+    cleanup_duplicate_repos
 
-
-    perform_final_cleanup
-
+    msg_info "$(translate "Performing system cleanup...")"
+    apt-get -y autoremove > /dev/null 2>&1 || true
+    apt-get -y autoclean > /dev/null 2>&1 || true
+    msg_ok "$(translate "Cleanup finished")"
 
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
     local minutes=$((duration / 60))
     local seconds=$((duration % 60))
-
 
     echo -e "${TAB}${BGN}$(translate "=== PVE 8 UPDATE COMPLETED ===")${CL}"
     echo -e "${TAB}${GN}$(translate "Duration")${CL}: ${DGN}${minutes}m ${seconds}s${CL}"
@@ -254,7 +231,6 @@ fi
     echo -e "${TAB}${GN}$(translate "Proxmox VE")${CL}: ${DGN}8.x (Debian $OS_CODENAME)${CL}"
 
     msg_ok "$(translate "Proxmox VE 8 system update completed successfully")"
-
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

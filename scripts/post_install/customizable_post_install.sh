@@ -569,22 +569,35 @@ install_system_utils() {
         command -v "$1" >/dev/null 2>&1
     }
 
-    ensure_repositories() {
-        local sources_file="/etc/apt/sources.list"
-        local need_update=false
-        
+ensure_repositories() {
+    local sources_file="/etc/apt/sources.list"
+    local need_update=false
+
+
+    if [[ ! -f "$sources_file" ]]; then
+        msg_warn "$(translate "sources.list not found, creating default Debian repository...")"
+        cat > "$sources_file" << EOF
+# Default Debian ${OS_CODENAME} repository
+deb http://deb.debian.org/debian ${OS_CODENAME} main contrib non-free non-free-firmware
+EOF
+        need_update=true
+    else
 
         if ! grep -q "deb.*${OS_CODENAME}.*main" "$sources_file"; then
             echo "deb http://deb.debian.org/debian ${OS_CODENAME} main contrib non-free non-free-firmware" >> "$sources_file"
             need_update=true
         fi
-        
-        if [ "$need_update" = true ] || ! apt list --installed >/dev/null 2>&1; then
-            apt update >/dev/null 2>&1
-        fi
-        
-        return 0
-    }
+    fi
+
+
+    if [[ "$need_update" == true ]] || ! apt list --installed >/dev/null 2>&1; then
+        msg_info "$(translate "Updating APT package lists...")"
+        apt-get update -o Acquire::AllowInsecureRepositories=true >/dev/null 2>&1
+    fi
+
+    return 0
+}
+
 
     install_single_package() {
         local package="$1"
