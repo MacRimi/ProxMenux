@@ -150,11 +150,53 @@ EOF
     local security_updates=$(apt list --upgradable 2>/dev/null | grep -c "security")
 
 
-    if ! show_update_menu "$current_pve_version" "$available_pve_version" "$upgradable" "$security_updates"; then
-        msg_info2 "$(translate "Update cancelled by user")"
-        perform_final_cleanup
-        return 0
+
+
+    show_update_menu() {
+    local current_version="$1"
+    local target_version="$2"
+    local upgradable_count="$3"
+    local security_count="$4"
+
+    local menu_text="$(translate "System Update Information")\n\n"
+    menu_text+="$(translate "Current PVE Version"): $current_version\n"
+
+    if [ -n "$target_version" ] && [ "$target_version" != "$current_version" ]; then
+        menu_text+="$(translate "Available PVE Version"): $target_version\n"
     fi
+
+    menu_text+="\n$(translate "Package Updates Available"): $upgradable_count\n"
+    menu_text+="$(translate "Security Updates"): $security_count\n\n"
+
+    if [ "$upgradable_count" -eq 0 ]; then
+        menu_text+="$(translate "System is already up to date")"
+        whiptail --title "$(translate "Update Status")" --msgbox "$menu_text" 15 70
+        return 2
+    else
+        menu_text+="$(translate "Do you want to proceed with the system update?")"
+        if whiptail --title "$(translate "Proxmox Update")" --yesno "$menu_text" 18 70; then
+            return 0
+        else
+            return 1
+        fi
+    fi
+}
+
+show_update_menu "$current_pve_version" "$available_pve_version" "$upgradable" "$security_updates"
+MENU_RESULT=$?
+
+if [[ $MENU_RESULT -eq 1 ]]; then
+    msg_info2 "$(translate "Update cancelled by user")"
+    perform_final_cleanup
+    return 0
+
+elif [[ $MENU_RESULT -eq 2 ]]; then
+    msg_ok "$(translate "System is already up to date. No update needed.")"
+    perform_final_cleanup
+    return 0
+fi
+
+
 
 
     msg_info "$(translate "Removing conflicting utilities...")"
