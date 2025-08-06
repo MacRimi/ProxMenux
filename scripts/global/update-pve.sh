@@ -72,14 +72,27 @@ update_pve9() {
     fi
 
 
-    disable_sources_repo() {
-        local file="$1"
-        if [[ -f "$file" ]] && grep -q "^Enabled: *true" "$file"; then
-            sed -i 's/^Enabled: *true/Enabled: false/' "$file"
-            return 0
+disable_sources_repo() {
+    local file="$1"
+    if [[ -f "$file" ]]; then
+        sed -i ':a;/^\n*$/{$d;N;ba}' "$file"
+
+        if grep -q "^Enabled:" "$file"; then
+            sed -i 's/^Enabled:.*$/Enabled: false/' "$file"
+        else
+            echo "Enabled: false" >> "$file"
         fi
-        return 1
-    }
+
+        if ! grep -q "^Types: " "$file"; then
+            msg_warn "$(translate "Malformed .sources file detected, removing: $(basename "$file")")"
+            rm -f "$file"
+        fi
+        return 0
+    fi
+    return 1
+}
+
+
 
 
     if disable_sources_repo "/etc/apt/sources.list.d/pve-enterprise.sources"; then
@@ -91,6 +104,7 @@ update_pve9() {
         msg_ok "$(translate "Enterprise Proxmox Ceph repository disabled")"
         changes_made=true
     fi
+
 
 
     [ -f /etc/apt/sources.list.d/pve-public-repo.list ] && rm -f /etc/apt/sources.list.d/pve-public-repo.list
