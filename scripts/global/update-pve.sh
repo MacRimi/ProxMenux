@@ -31,7 +31,7 @@ register_tool() {
 
 
 download_common_functions() {
-    if ! source <(curl -s "$REPO_URL/global/common-functions.sh"); then
+    if ! source <(curl -s "$REPO_URL/scripts/global/common-functions.sh"); then
         return 1
     fi
 }
