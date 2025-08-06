@@ -84,52 +84,64 @@ lvm_repair_check() {
 
 cleanup_duplicate_repos() {
     msg_info "$(translate "Cleaning up duplicate repositories...")"
-    
-    local sources_file="/etc/apt/sources.list"
-    local temp_file=$(mktemp)
+
     local cleaned_count=0
-    declare -A seen_repos
-    
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "$line" ]]; then
-            echo "$line" >> "$temp_file"
-            continue
-        fi
-        
-        if [[ "$line" =~ ^deb ]]; then
-            read -r _ url dist components <<< "$line"
-            local key="${url}_${dist}"
-            if [[ -v "seen_repos[$key]" ]]; then
-                echo "# $line" >> "$temp_file"
-                cleaned_count=$((cleaned_count + 1))
+    local sources_file="/etc/apt/sources.list"
+
+
+    if [[ -f "$sources_file" ]]; then
+        local temp_file
+        temp_file=$(mktemp)
+        declare -A seen_repos
+
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "$line" ]]; then
+                echo "$line" >> "$temp_file"
+                continue
+            fi
+
+            if [[ "$line" =~ ^[[:space:]]*deb ]]; then
+                read -r _ url dist components <<< "$line"
+                local key="${url}_${dist}"
+                if [[ -v "seen_repos[$key]" ]]; then
+                    echo "# $line" >> "$temp_file"
+                    cleaned_count=$((cleaned_count + 1))
+                else
+                    echo "$line" >> "$temp_file"
+                    seen_repos[$key]="$components"
+                fi
             else
                 echo "$line" >> "$temp_file"
-                seen_repos[$key]="$components"
             fi
-        else
-            echo "$line" >> "$temp_file"
-        fi
-    done < "$sources_file"
-    
-    mv "$temp_file" "$sources_file"
-    chmod 644 "$sources_file"
-    
+        done < "$sources_file"
 
-    local old_pve_files=(/etc/apt/sources.list.d/pve-*.list)
+        mv "$temp_file" "$sources_file"
+        chmod 644 "$sources_file"
+    fi
+
+
+    local old_pve_files=(/etc/apt/sources.list.d/pve-*.list /etc/apt/sources.list.d/proxmox.list)
+
     for file in "${old_pve_files[@]}"; do
-        if [ -f "$file" ] && [[ "$file" != "/etc/apt/sources.list.d/pve-enterprise.list" ]]; then
-            if [ -f "/etc/apt/sources.list.d/proxmox.sources" ]; then
+        if [[ -f "$file" ]]; then
+            local base_name
+            base_name=$(basename "$file" .list)
+            local sources_equiv="/etc/apt/sources.list.d/${base_name}.sources"
+
+            if [[ -f "$sources_equiv" ]] && grep -q "^Enabled: *true" "$sources_equiv"; then
                 msg_info "$(translate "Removing old repository file: $(basename "$file")")"
                 rm -f "$file"
                 cleaned_count=$((cleaned_count + 1))
             fi
         fi
     done
-    
-    if [ $cleaned_count -gt 0 ]; then
+
+
+    if [ "$cleaned_count" -gt 0 ]; then
         msg_ok "$(translate "Cleaned up $cleaned_count duplicate/old repositories")"
         apt-get update > /dev/null 2>&1 || true
     else
         msg_ok "$(translate "No duplicate repositories found")"
     fi
 }
+
