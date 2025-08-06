@@ -28,17 +28,11 @@ remove_subscription_banner_pve8() {
         return 1
     fi
     
-    if ! whiptail --title "Proxmox Subscription Banner" \
-        --yesno "Do you want to remove the Proxmox subscription banner from the web interface?" 10 60; then
-        msg_warn "Banner removal cancelled by user."
-        return 1
-    fi
     
     for f in /etc/apt/apt.conf.d/*nag*; do 
         [[ -e "$f" ]] && rm -f "$f"
     done
     
-    msg_info "Applying patches to remove subscription banner..."
     
     sed -i "s/res\.data\.status\.toLowerCase() !== 'NoMoreNagging'/false/g" "$JS_FILE"
     sed -i "s/res\.data\.status\.toLowerCase() !== \"NoMoreNagging\"/false/g" "$JS_FILE"
