@@ -31,10 +31,10 @@ register_tool() {
 
 
 download_common_functions() {
-    local common_file="$BASE_DIR/common-functions.sh"
+    local common_file="$BASE_DIR/scripts/global/common-functions.sh"
     
     if [[ ! -f "$common_file" ]]; then
-        if ! curl -s "$REPO_URL/global/common-functions.sh" -o "$common_file"; then
+        if ! curl -s "$REPO_URL/scripts/global/common-functions.sh" -o "$common_file"; then
             return 1
         fi
     fi
