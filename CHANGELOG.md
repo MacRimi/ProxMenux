@@ -1,3 +1,57 @@
+## 2025-08-06
+
+### New version v1.1.4
+
+### Added
+
+- **Proxmox 9 Compatibility Preparation**  
+  This version prepares **ProxMenux** for the upcoming **Proxmox VE 9**:
+  - The function to add the official Proxmox repositories now supports the new `.sources` format used in Proxmox 9, while maintaining backward compatibility with Proxmox 8.
+  - Banner removal is now optionally supported for Proxmox 9.
+
+- **xshok-proxmox Detection**  
+  Added a check to detect if the `xshok-proxmox` post-install script has already been executed.  
+  If detected, a warning is shown to avoid conflicting adjustments:
+
+  ```
+  It appears that you have already executed the xshok-proxmox post-install script on this system.
+
+  If you continue, some adjustments may be duplicated or conflict with those already made by xshok.
+
+  Do you want to continue anyway?
+  ```
+
+---
+
+### Improved
+
+- **Banner Removal (Proxmox 8.4.9+)**  
+  Updated the logic for removing the subscription banner in **Proxmox 8.4.9**, due to changes in `proxmoxlib.js`.
+
+- **LXC Disk Passthrough (Persistent UUID)**  
+  The function to add a physical disk to an LXC container now uses **UUID-based persistent paths**.  
+  This ensures that disks remain correctly mounted, even if the `/dev/sdX` order changes due to new hardware.
+
+  ```bash
+  PERSISTENT_DISK=$(get_persistent_path "$DISK")
+  if [[ "$PERSISTENT_DISK" != "$DISK" ]] ...
+  ```
+
+- **System Utilities Installer**  
+  Now checks whether APT sources are available before installing selected tools.  
+  If a new Proxmox installation has no active repos, it will **automatically add the default sources** to avoid installation failure.
+
+- **IOMMU Activation on ZFS Systems**  
+  The function that enables IOMMU for passthrough now verifies existing kernel parameters to avoid duplication if the user has already configured them manually.
+
+---
+
+### Fixed
+
+- Minor code cleanup and improved runtime performance across several modules.
+
+
+
 ## 2025-07-20
 
 ### Changed
