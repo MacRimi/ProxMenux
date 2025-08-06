@@ -387,153 +387,31 @@ EOF
 
 
 remove_subscription_banner() {
+    local pve_version
+    pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
-    
-    local JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
-    local MIN_JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.min.js"
-    local GZ_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz"
-    local APT_HOOK="/etc/apt/apt.conf.d/no-nag-script"
-    
-
-    local pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
-    local is_pve9=false
-    
-    if [ "$pve_version" -ge 9 ] 2>/dev/null; then
-        is_pve9=true
-        msg_ok "$(translate "Detected Proxmox VE 9.x - Applying PVE 9 patches")"
-    else
-        msg_ok "$(translate "Detected Proxmox VE 8.x - Applying PVE 8 patches")"
-    fi
-    
-
-    if [ ! -f "$JS_FILE" ]; then
-        msg_error "$(translate "JavaScript file not found"): $JS_FILE"
+    if [[ -z "$pve_version" ]]; then
+        msg_error "Unable to detect Proxmox version."
         return 1
     fi
-    
-    
 
-    if ! whiptail --title "$(translate "Proxmox Subscription Banner Removal")" \
-        --yesno "$(translate "Do you want to remove the Proxmox subscription banner from the web interface for PVE") $pve_version?" 10 70; then
-        msg_warn "$(translate "Banner removal cancelled by user")"
-        return 1
-    fi
-    
-
-    local backup_file="${JS_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
-    cp "$JS_FILE" "$backup_file"
-    
-
-    for f in /etc/apt/apt.conf.d/*nag*; do 
-        [[ -e "$f" ]] && rm -f "$f"
-    done
-    
-
-    if [ "$is_pve9" = true ]; then
-        local active_before=$(grep -c "res\.data\.status\.toLowerCase() !== 'active'" "$JS_FILE" 2>/dev/null || echo "0")
-        local title_before=$(grep -c "No valid subscription" "$JS_FILE" 2>/dev/null || echo "0")
-        local sub_empty_before=$(grep -c "subscriptionActive: ''" "$JS_FILE" 2>/dev/null || echo "0")
-
+    if [[ "$pve_version" -ge 9 ]]; then
+        if ! whiptail --title "Proxmox VE 9.x Subscription Banner Removal" \
+        --yesno "Do you want to remove the Proxmox subscription banner from the web interface for PVE $pve_version?" 10 70; then
+            msg_warn "Banner removal cancelled by user."
+            return 1
+        fi
+        bash <(curl -fsSL "$REPO_URL/scripts/global/remove-banner-pve9.sh")
     else
-        local nag_before=$(grep -c "res\.data\.status\.toLowerCase() !== 'NoMoreNagging'" "$JS_FILE" 2>/dev/null || echo "0")
-        local title_before=$(grep -c "No valid subscription" "$JS_FILE" 2>/dev/null || echo "0")
-        local sub_check_before=$(grep -c "subscription = !(" "$JS_FILE" 2>/dev/null || echo "0")
+        if ! whiptail --title "Proxmox VE 8.x Subscription Banner Removal" \
+        --yesno "Do you want to remove the Proxmox subscription banner from the web interface for PVE $pve_version?" 10 70; then
+            msg_warn "Banner removal cancelled by user."
+            return 1
+        fi
+        bash <(curl -fsSL "$REPO_URL/scripts/global/remove-banner-pve8.sh")
     fi
-    
-    msg_info "$(translate "Applying patches for Proxmox VE") $pve_version..."
-    
-    if [ "$is_pve9" = true ]; then
-        # ==========================================
-        # PROVEN PATCHES FOR PROXMOX VE 9
-        # ==========================================
-        
-
-        sed -i "s/res\.data\.status\.toLowerCase() !== 'active'/false/g" "$JS_FILE"
-        sed -i "s/subscriptionActive: ''/subscriptionActive: true/g" "$JS_FILE"
-        sed -i "s/title: gettext('No valid subscription')/title: gettext('Subscription Status')/g" "$JS_FILE"
-        sed -i "s/You do not have a valid subscription for this server/Subscription status: Community version active/g" "$JS_FILE"
-        sed -i "s/Enterprise repository needs valid subscription/Enterprise repository configured/g" "$JS_FILE"
-        
-    else
-        # ==========================================
-        # PROVEN PATCHES FOR PROXMOX VE 8
-        # ==========================================
-        
- 
-        sed -i "s/res\.data\.status\.toLowerCase() !== 'NoMoreNagging'/false/g" "$JS_FILE"
-        sed -i "s/res\.data\.status\.toLowerCase() !== \"NoMoreNagging\"/false/g" "$JS_FILE"
-        sed -i "s/res\.data\.status\.toLowerCase() !== 'active'/false/g" "$JS_FILE"
-        sed -i "s/res\.data\.status !== 'Active'/false/g" "$JS_FILE"
-        sed -i "s/subscription = !(/subscription = false \&\& (/g" "$JS_FILE"
-        sed -i "s/title: gettext('No valid subscription')/title: gettext('Subscription Active')/g" "$JS_FILE"
-        sed -i "s/icon: Ext\.Msg\.WARNING/icon: Ext.Msg.INFO/g" "$JS_FILE"
-        
-
-        sed -i '/checked_command: function/,/},$/c\
-            checked_command: function (orig_cmd) {\
-                orig_cmd();\
-            },' "$JS_FILE"
-        
-        sed -i '/check_subscription: function/,/},$/c\
-            check_subscription: function () {\
-                let me = this;\
-                let vm = me.getViewModel();\
-                vm.set("subscriptionActive", true);\
-                me.getController().updateState();\
-            },' "$JS_FILE"
-    fi
-
-    [[ -f "$GZ_FILE" ]] && rm -f "$GZ_FILE"
-    [[ -f "$MIN_JS_FILE" ]] && rm -f "$MIN_JS_FILE"
-    
-    # Clear cache
-    find /var/cache/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
-    find /var/lib/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
-    
-
-    [[ -f "$APT_HOOK" ]] && rm -f "$APT_HOOK"
-    if [ "$is_pve9" = true ]; then
-
-        cat > "$APT_HOOK" << 'EOF'
-DPkg::Post-Invoke {
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\\.data\\.status\\.toLowerCase() !== '\''active'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/subscriptionActive: '\'\'\''/subscriptionActive: true/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/title: gettext('\''No valid subscription'\'')/title: gettext('\''Subscription Status'\'')/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
-    "rm -f /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.min.js || true";
-};
-EOF
-    else
-
-        cat > "$APT_HOOK" << 'EOF'
-DPkg::Post-Invoke {
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\\.data\\.status\\.toLowerCase() !== '\''NoMoreNagging'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/res\\.data\\.status\\.toLowerCase() !== '\''active'\''/false/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/subscription = !(/subscription = false \\&\\& (/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
-    "test -e /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js && sed -i 's/title: gettext('\''No valid subscription'\'')/title: gettext('\''Subscription Active'\'')/g' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js || true";
-    "rm -f /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz || true";
-};
-EOF
-    fi
-    
-    chmod 644 "$APT_HOOK"
-    
-    if ! apt-config dump >/dev/null 2>&1; then
-        msg_ok "$(translate "APT hook has syntax issues, removing...")"
-        rm -f "$APT_HOOK"
-    else
-        msg_ok "$(translate "APT hook created successfully")"
-    fi
-    
-    sleep 2
-    
-    msg_ok "$(translate "Subscription banner patches applied successfully for Proxmox VE") $pve_version!"
-    msg_ok "$(translate "Banner removal process completed")"
-    msg_ok "$(translate "Changes will be maintained after system updates")"
-    
-    register_tool "subscription_banner" true
-    
-
 }
+
 
 
 
