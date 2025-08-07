@@ -105,14 +105,24 @@ disable_sources_repo() {
         changes_made=true
     fi
 
+    for legacy_file in /etc/apt/sources.list.d/pve-public-repo.list \
+                       /etc/apt/sources.list.d/pve-install-repo.list \
+                       /etc/apt/sources.list.d/debian.list; do
+        if [[ -f "$legacy_file" ]]; then
+            rm -f "$legacy_file"
+            msg_warn "$(translate "Removed legacy repository: $(basename "$legacy_file")")"
+        fi
+    done
 
 
-    [ -f /etc/apt/sources.list.d/pve-public-repo.list ] && rm -f /etc/apt/sources.list.d/pve-public-repo.list
-    [ -f /etc/apt/sources.list.d/pve-install-repo.list ] && rm -f /etc/apt/sources.list.d/pve-install-repo.list
+    if [[ -f /etc/apt/sources.list.d/debian.sources ]]; then
+        rm -f /etc/apt/sources.list.d/debian.sources
+        msg_warn "$(translate "Old debian.sources file removed to prevent duplication")"
+    fi
 
 
-msg_info "$(translate "Creating Proxmox VE 9.x no-subscription repository...")"
-cat > /etc/apt/sources.list.d/proxmox.sources << EOF
+    msg_info "$(translate "Creating Proxmox VE 9.x no-subscription repository...")"
+    cat > /etc/apt/sources.list.d/proxmox.sources << EOF
 Enabled: true
 Types: deb
 URIs: http://download.proxmox.com/debian/pve
@@ -124,27 +134,22 @@ EOF
     changes_made=true
 
 
-    local sources_file="/etc/apt/sources.list"
-    cp "$sources_file" "${sources_file}.backup.$(date +%Y%m%d_%H%M%S)"
 
+    msg_info "$(translate "Creating Debian ${TARGET_CODENAME} sources file...")"
+    cat > /etc/apt/sources.list.d/debian.sources << EOF
+Types: deb
+URIs: http://deb.debian.org/debian/
+Suites: ${TARGET_CODENAME} ${TARGET_CODENAME}-updates
+Components: main contrib non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
-    sed -i 's|ftp.es.debian.org|deb.debian.org|g' "$sources_file"
-
-
-    if [ "$OS_CODENAME" != "$TARGET_CODENAME" ]; then
-        msg_info "$(translate "Updating Debian repositories from $OS_CODENAME to $TARGET_CODENAME...")"
-        sed -i 's/bookworm/trixie/g' "$sources_file"
-        sed -i "s/$OS_CODENAME/$TARGET_CODENAME/g" "$sources_file"
-        changes_made=true
-    fi
-
-
-cat > "$sources_file" << EOF
-# Debian ${TARGET_CODENAME} repositories
-deb http://deb.debian.org/debian ${TARGET_CODENAME} main contrib non-free non-free-firmware
-deb http://deb.debian.org/debian ${TARGET_CODENAME}-updates main contrib non-free non-free-firmware
-deb http://security.debian.org/debian-security ${TARGET_CODENAME}-security main contrib non-free non-free-firmware
+Types: deb
+URIs: http://security.debian.org/debian-security/
+Suites: ${TARGET_CODENAME}-security
+Components: main contrib non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
+
 
 
     msg_ok "$(translate "Debian repositories configured for $TARGET_CODENAME")"
