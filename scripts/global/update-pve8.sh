@@ -46,10 +46,6 @@ update_pve8() {
 
     download_common_functions
 
-    clear
-    show_proxmenux_logo
-    echo -e
-    msg_title "$(translate "Proxmox VE 8.x System Update")"
     msg_info2 "$(translate "Detected: Proxmox VE 8.x (Debian $OS_CODENAME)")"
     echo
 
@@ -72,14 +68,12 @@ update_pve8() {
 
 
     if [ -f /etc/apt/sources.list.d/pve-enterprise.list ] && grep -q "^deb" /etc/apt/sources.list.d/pve-enterprise.list; then
-        msg_info "$(translate "Disabling enterprise Proxmox repository...")"
         sed -i "s/^deb/#deb/g" /etc/apt/sources.list.d/pve-enterprise.list
         msg_ok "$(translate "Enterprise Proxmox repository disabled")"
         changes_made=true
     fi
 
     if [ -f /etc/apt/sources.list.d/ceph.list ] && grep -q "^deb" /etc/apt/sources.list.d/ceph.list; then
-        msg_info "$(translate "Disabling enterprise Proxmox Ceph repository...")"
         sed -i "s/^deb/#deb/g" /etc/apt/sources.list.d/ceph.list
         msg_ok "$(translate "Enterprise Proxmox Ceph repository disabled")"
         changes_made=true
@@ -87,7 +81,6 @@ update_pve8() {
 
 
     if [ ! -f /etc/apt/sources.list.d/pve-public-repo.list ] || ! grep -q "pve-no-subscription" /etc/apt/sources.list.d/pve-public-repo.list; then
-        msg_info "$(translate "Enabling free public Proxmox repository...")"
         echo "deb http://download.proxmox.com/debian/pve $OS_CODENAME pve-no-subscription" > /etc/apt/sources.list.d/pve-public-repo.list
         msg_ok "$(translate "Free public Proxmox repository enabled")"
         changes_made=true
@@ -98,7 +91,6 @@ update_pve8() {
     cp "$sources_file" "${sources_file}.backup.$(date +%Y%m%d_%H%M%S)"
 
     if grep -q -E "(debian-security -security|debian main$|debian -updates)" "$sources_file"; then
-        msg_info "$(translate "Cleaning malformed repository entries...")"
         sed -i '/^deb.*debian-security -security/d' "$sources_file"
         sed -i '/^deb.*debian main$/d' "$sources_file"
         sed -i '/^deb.*debian -updates/d' "$sources_file"
@@ -178,9 +170,10 @@ EOF
         return 0
     fi
 
-    msg_info "$(translate "Removing conflicting utilities...")"
+    
     local conflicting_packages=$(dpkg -l 2>/dev/null | grep -E "^ii.*(ntp|openntpd|systemd-timesyncd)" | awk '{print $2}')
     if [ -n "$conflicting_packages" ]; then
+        msg_info "$(translate "Removing conflicting utilities...")"
         DEBIAN_FRONTEND=noninteractive apt-get -y purge $conflicting_packages >> "$log_file" 2>&1
         msg_ok "$(translate "Conflicting utilities removed")"
     fi
@@ -196,7 +189,7 @@ EOF
         return 1
     fi
 
-    msg_info "$(translate "Installing essential Proxmox packages...")"
+    
     local essential_packages=("zfsutils-linux" "proxmox-backup-restore-image" "chrony")
     local missing_packages=()
     
@@ -207,6 +200,7 @@ EOF
     done
 
     if [ ${#missing_packages[@]} -gt 0 ]; then
+        msg_info "$(translate "Installing essential Proxmox packages...")"
         DEBIAN_FRONTEND=noninteractive apt-get -y install "${missing_packages[@]}" >> "$log_file" 2>&1
         msg_ok "$(translate "Essential Proxmox packages installed")"
     fi
