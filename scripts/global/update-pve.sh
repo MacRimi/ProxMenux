@@ -327,11 +327,11 @@ EOF
     local minutes=$((duration / 60))
     local seconds=$((duration % 60))
 
-    echo -e "${TAB}${BGN}$(translate "=== PVE 9 UPDATE COMPLETED ===")${CL}"
-    echo -e "${TAB}${GN}$(translate "Duration")${CL}: ${DGN}${minutes}m ${seconds}s${CL}"
-    echo -e "${TAB}${GN}$(translate "Log file")${CL}: ${DGN}$log_file${CL}"
-    echo -e "${TAB}${GN}$(translate "Packages upgraded")${CL}: ${DGN}$upgradable${CL}"
-    echo -e "${TAB}${GN}$(translate "Proxmox VE")${CL}: ${DGN}9.x (Debian $TARGET_CODENAME)${CL}"
+    echo -e "${TAB}${BGN}$(translate "====== PVE UPDATE COMPLETED ======")${CL}"
+    echo -e "${TAB}${GN}⏱️  $(translate "Duration")${CL}: ${BL}${minutes}m ${seconds}s${CL}"
+    echo -e "${TAB}${GN}📄 $(translate "Log file")${CL}: ${BL}$log_file${CL}"
+    echo -e "${TAB}${GN}📦 $(translate "Packages upgraded")${CL}: ${BL}$upgradable${CL}"
+    echo -e "${TAB}${GN}🖥️  $(translate "Proxmox VE")${CL}: ${BL}$target_version (Debian $OS_CODENAME)${CL}"
 
     msg_ok "$(translate "Proxmox VE 9.x configuration completed.")"
 }
