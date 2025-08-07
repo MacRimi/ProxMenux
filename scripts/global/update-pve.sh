@@ -296,7 +296,9 @@ EOF
             tput cup $((row + i)) 0
             tput el
         done
+        tput cup $row 0
     fi
+
 
     upgrade_exit_code=${PIPESTATUS[0]}
 
