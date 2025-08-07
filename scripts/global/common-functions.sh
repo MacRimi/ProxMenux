@@ -82,7 +82,7 @@ lvm_repair_check() {
 }
 
 
-cleanup_duplicate_repos_pve9() {
+cleanup_duplicate_repos_pve9_() {
     msg_info "$(translate "Cleaning up duplicate repositories...")"
 
     local cleaned_count=0
@@ -167,6 +167,88 @@ cleanup_duplicate_repos_pve9() {
 
 }
         
+
+
+cleanup_duplicate_repos_pve9_() {
+    msg_info "$(translate "Cleaning up duplicate repositories...")"
+    
+    local sources_file="/etc/apt/sources.list"
+    local temp_file=$(mktemp)
+    local cleaned_count=0
+    declare -A seen_repos
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "$line" ]]; then
+            echo "$line" >> "$temp_file"
+            continue
+        fi
+
+        if [[ "$line" =~ ^deb ]]; then
+            read -r _ url dist components <<< "$line"
+            local key="${url}_${dist}"
+            if [[ -v "seen_repos[$key]" ]]; then
+                echo "# $line" >> "$temp_file"
+                cleaned_count=$((cleaned_count + 1))
+            else
+                echo "$line" >> "$temp_file"
+                seen_repos[$key]="$components"
+            fi
+        else
+            echo "$line" >> "$temp_file"
+        fi
+    done < "$sources_file"
+
+    mv "$temp_file" "$sources_file"
+    chmod 644 "$sources_file"
+
+    for src in proxmox debian ceph; do
+        local sources_path="/etc/apt/sources.list.d/${src}.sources"
+        if [ -f "$sources_path" ]; then
+            case "$src" in
+                proxmox)
+                    url_match="download.proxmox.com"
+                    ;;
+                debian)
+                    url_match="deb.debian.org"
+                    ;;
+                ceph)
+                    url_match="download.proxmox.com/ceph"
+                    ;;
+                *)
+                    url_match=""
+                    ;;
+            esac
+
+            if [[ -n "$url_match" ]]; then
+                if grep -q "^deb.*$url_match" "$sources_file"; then
+                    sed -i "/^deb.*$url_match/s/^/# /" "$sources_file"
+                    cleaned_count=$((cleaned_count + 1))
+                    msg_info "$(translate "Commented $src lines in sources.list (using .sources format)")"
+                fi
+            fi
+
+            for list_file in /etc/apt/sources.list.d/*.list; do
+                [[ -f "$list_file" ]] || continue
+                if grep -q "^deb.*$url_match" "$list_file"; then
+                    sed -i "/^deb.*$url_match/s/^/# /" "$list_file"
+                    cleaned_count=$((cleaned_count + 1))
+                    msg_info "$(translate "Commented $src lines in $(basename "$list_file") (using .sources format)")"
+                fi
+            done
+        fi
+    done
+
+    if [ $cleaned_count -gt 0 ]; then
+        msg_ok "$(translate "Cleaned up $cleaned_count duplicate/old repositories")"
+        apt-get update > /dev/null 2>&1 || true
+    else
+        msg_ok "$(translate "No duplicate repositories found")"
+    fi
+}
+
+
+
+
 
 cleanup_duplicate_repos_pve8() {
     msg_info "$(translate "Cleaning up duplicate repositories...")"
