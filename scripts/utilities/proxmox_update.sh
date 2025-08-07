@@ -110,7 +110,7 @@ check_reboot() {
         apt-get -y autoremove >/dev/null 2>&1
         apt-get -y autoclean >/dev/null 2>&1
         msg_ok "$(translate "Cleanup finished")"
-
+        echo -e
         msg_ok "$(translate "All changes applied. No reboot required.")"
         echo -e
         msg_success "$(translate "Press Enter to return to menu...")"
