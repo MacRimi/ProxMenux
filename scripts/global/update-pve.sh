@@ -251,14 +251,21 @@ EOF
         msg_warn "$(translate "Some conflicting utilities may not have been removed")"
     fi
 
+
     msg_info "$(translate "Updating packages...")"
     apt-get install pv -y > /dev/null 2>&1
     msg_ok "$(translate "Packages updated successfully")"
+
     DEBIAN_FRONTEND=noninteractive apt-get -y \
         -o Dpkg::Options::='--force-confdef' \
         -o Dpkg::Options::='--force-confold' \
         dist-upgrade 2>&1 | while IFS= read -r line; do
+
         echo "$line" >> "$log_file"
+
+        if [[ "$line" =~ \[[#=\-]+\]\ *[0-9]{1,3}% ]]; then
+            continue
+        fi
 
         if [[ "$line" =~ ^(Setting\ up|Unpacking|Preparing\ to\ unpack|Processing\ triggers\ for) ]]; then
             package_name=$(echo "$line" | sed -E 's/.*(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ([^ :]+).*/\2/')
@@ -282,7 +289,18 @@ EOF
         fi
     done
 
+
+    if [[ -t 1 ]]; then
+        row=$(( $(tput lines) - 6 ))
+        for i in {0..5}; do
+            tput cup $((row + i)) 0
+            tput el
+        done
+    fi
+
     upgrade_exit_code=${PIPESTATUS[0]}
+
+
 
     if [ $upgrade_exit_code -eq 0 ]; then
         msg_ok "$(translate "System upgrade completed successfully")"
