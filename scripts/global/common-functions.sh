@@ -223,7 +223,6 @@ cleanup_duplicate_repos_pve9() {
                 if grep -q "^deb.*$url_match" "$sources_file"; then
                     sed -i "/^deb.*$url_match/s/^/# /" "$sources_file"
                     cleaned_count=$((cleaned_count + 1))
-                    msg_info "$(translate "Commented $src lines in sources.list (using .sources format)")"
                 fi
             fi
 
@@ -232,7 +231,6 @@ cleanup_duplicate_repos_pve9() {
                 if grep -q "^deb.*$url_match" "$list_file"; then
                     sed -i "/^deb.*$url_match/s/^/# /" "$list_file"
                     cleaned_count=$((cleaned_count + 1))
-                    msg_info "$(translate "Commented $src lines in $(basename "$list_file") (using .sources format)")"
                 fi
             done
         fi

@@ -160,7 +160,6 @@ EOF
 
     cleanup_duplicate_repos
 
-    msg_info "$(translate "Updating package lists...")"
     update_output=$(apt-get update 2>&1)
     update_exit_code=$?
 
@@ -186,7 +185,7 @@ EOF
     fi
 
 
-    msg_info "$(translate "Verifying Proxmox VE 9.x repositories...")"
+
     if apt policy 2>/dev/null | grep -q "${TARGET_CODENAME}.*pve-no-subscription"; then
         msg_ok "$(translate "Proxmox VE 9.x repositories verified")"
     else
