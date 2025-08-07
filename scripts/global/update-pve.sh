@@ -47,10 +47,7 @@ update_pve9() {
 
     download_common_functions
 
-    clear
-    show_proxmenux_logo
-    echo -e
-    msg_title "$(translate "Proxmox VE System Update")"
+
     msg_info2 "$(translate "Detected: Proxmox VE 9.x (Current: $OS_CODENAME, Target: $TARGET_CODENAME)")"
     echo
 
