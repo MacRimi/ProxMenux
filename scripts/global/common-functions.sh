@@ -82,7 +82,93 @@ lvm_repair_check() {
 }
 
 
-cleanup_duplicate_repos() {
+cleanup_duplicate_repos_pve9() {
+    msg_info "$(translate "Cleaning up duplicate repositories...")"
+
+    local cleaned_count=0
+    local sources_file="/etc/apt/sources.list"
+
+
+    if [[ -f "$sources_file" ]]; then
+        local temp_file
+        temp_file=$(mktemp)
+        declare -A seen_repos
+
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "$line" ]]; then
+                echo "$line" >> "$temp_file"
+                continue
+            fi
+
+            if [[ "$line" =~ ^[[:space:]]*deb ]]; then
+                read -r _ url dist components <<< "$line"
+                local key="${url}_${dist}"
+                if [[ -v "seen_repos[$key]" ]]; then
+                    echo "# $line" >> "$temp_file"
+                    cleaned_count=$((cleaned_count + 1))
+                else
+                    echo "$line" >> "$temp_file"
+                    seen_repos[$key]="$components"
+                fi
+            else
+                echo "$line" >> "$temp_file"
+            fi
+        done < "$sources_file"
+
+        mv "$temp_file" "$sources_file"
+        chmod 644 "$sources_file"
+    fi
+
+
+    local legacy_list_files=(
+        /etc/apt/sources.list.d/debian.list
+        /etc/apt/sources.list.d/pve-public-repo.list
+        /etc/apt/sources.list.d/pve-install-repo.list
+        /etc/apt/sources.list.d/proxmox.list
+        /etc/apt/sources.list.d/ceph.list
+    )
+
+    for file in "${legacy_list_files[@]}"; do
+        if [[ -f "$file" ]]; then
+            msg_info "$(translate "Removing old repository file: $(basename "$file")")"
+            rm -f "$file"
+            cleaned_count=$((cleaned_count + 1))
+        fi
+    done
+
+
+    local list_sources_pairs=(
+        "pve-enterprise"
+        "ceph"
+        "proxmox"
+    )
+
+    for name in "${list_sources_pairs[@]}"; do
+        local list_file="/etc/apt/sources.list.d/${name}.list"
+        local sources_file="/etc/apt/sources.list.d/${name}.sources"
+
+        if [[ -f "$list_file" && -f "$sources_file" ]]; then
+            if grep -q "^Enabled: *true" "$sources_file"; then
+                msg_info "$(translate "Removing redundant file: $(basename "$list_file")")"
+                rm -f "$list_file"
+                cleaned_count=$((cleaned_count + 1))
+            fi
+        fi
+    done
+
+
+    if [ "$cleaned_count" -gt 0 ]; then
+        msg_ok "$(translate "Cleaned up $cleaned_count duplicate/old repositories")"
+        apt-get update > /dev/null 2>&1 || true
+    else
+        msg_ok "$(translate "No duplicate repositories found")"
+    fi
+    
+
+}
+        
+
+cleanup_duplicate_repos_pve8() {
     msg_info "$(translate "Cleaning up duplicate repositories...")"
 
     local cleaned_count=0
@@ -145,3 +231,20 @@ cleanup_duplicate_repos() {
     fi
 }
 
+
+
+cleanup_duplicate_repos() {
+    local pve_version
+    pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
+
+    if [[ -z "$pve_version" ]]; then
+        msg_error "Unable to detect Proxmox version."
+        return 1
+    fi
+
+    if [[ "$pve_version" -ge 9 ]]; then
+        cleanup_duplicate_repos_pve9
+    else
+        cleanup_duplicate_repos_pve8
+    fi
+}
