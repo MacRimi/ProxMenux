@@ -110,14 +110,14 @@ disable_sources_repo() {
                        /etc/apt/sources.list.d/debian.list; do
         if [[ -f "$legacy_file" ]]; then
             rm -f "$legacy_file"
-            msg_warn "$(translate "Removed legacy repository: $(basename "$legacy_file")")"
+            msg_ok "$(translate "Removed legacy repository: $(basename "$legacy_file")")"
         fi
     done
 
 
     if [[ -f /etc/apt/sources.list.d/debian.sources ]]; then
         rm -f /etc/apt/sources.list.d/debian.sources
-        msg_warn "$(translate "Old debian.sources file removed to prevent duplication")"
+        msg_ok "$(translate "Old debian.sources file removed to prevent duplication")"
     fi
 
 
