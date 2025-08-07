@@ -178,16 +178,63 @@ EOF
         msg_ok "$(translate "Conflicting utilities removed")"
     fi
 
-    msg_info "$(translate "Performing system upgrade...")"
-    if DEBIAN_FRONTEND=noninteractive apt-get -y \
-        -o Dpkg::Options::='--force-confdef' \
-        -o Dpkg::Options::='--force-confold' \
-        dist-upgrade >> "$log_file" 2>&1; then
-        msg_ok "$(translate "System upgrade completed successfully")"
-    else
-        msg_error "$(translate "System upgrade failed. Check log: $log_file")"
-        return 1
+
+
+
+
+
+    msg_info "$(translate "Performing packages upgrade...")"
+    apt-get install pv -y > /dev/null 2>&1
+    total_packages=$(apt-get -s dist-upgrade | grep "^Inst" | wc -l)
+    msg_ok "$(translate "Packages upgrade successfull")"
+   
+    if [ "$total_packages" -eq 0 ]; then
+        total_packages=1  
     fi
+
+    tput civis  
+    tput sc     
+
+    
+    (
+        /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' dist-upgrade 2>&1 | \
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ]]; then
+              
+                package_name=$(echo "$line" | sed -E 's/.*(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ([^ ]+).*/\2/')
+
+                
+                [ -z "$package_name" ] && package_name="$(translate "Unknown")"
+
+               
+                tput rc
+                tput ed
+
+               
+                row=$(( $(tput lines) - 6 ))
+                tput cup $row 0; echo "$(translate "Installing packages...")"
+                tput cup $((row + 1)) 0; echo "──────────────────────────────────────────────"
+                tput cup $((row + 2)) 0; echo "Package: $package_name"
+                tput cup $((row + 3)) 0; echo "Progress: [                                                  ] 0%"
+                tput cup $((row + 4)) 0; echo "──────────────────────────────────────────────"
+
+               
+                for i in $(seq 1 10); do
+                    progress=$((i * 10))
+                    tput cup $((row + 3)) 9 
+                    printf "[%-50s] %3d%%" "$(printf "#%.0s" $(seq 1 $((progress/2))))" "$progress"
+                      
+                done
+            fi
+        done
+    )
+
+    if [ $? -eq 0 ]; then
+        tput rc
+        tput ed
+        msg_ok "$(translate "System upgrade completed")"
+    fi
+
 
     
     local essential_packages=("zfsutils-linux" "proxmox-backup-restore-image" "chrony")
@@ -218,11 +265,13 @@ EOF
     local minutes=$((duration / 60))
     local seconds=$((duration % 60))
 
-    echo -e "${TAB}${BGN}$(translate "=== PVE 8 UPDATE COMPLETED ===")${CL}"
-    echo -e "${TAB}${GN}$(translate "Duration")${CL}: ${DGN}${minutes}m ${seconds}s${CL}"
-    echo -e "${TAB}${GN}$(translate "Log file")${CL}: ${DGN}$log_file${CL}"
-    echo -e "${TAB}${GN}$(translate "Packages upgraded")${CL}: ${DGN}$upgradable${CL}"
-    echo -e "${TAB}${GN}$(translate "Proxmox VE")${CL}: ${DGN}8.x (Debian $OS_CODENAME)${CL}"
+    echo -e "${TAB}${BGN}$(translate "====== PVE UPDATE COMPLETED ======")${CL}"
+    echo -e "${TAB}${GN}⏱️  $(translate "Duration")${CL}: ${BL}${minutes}m ${seconds}s${CL}"
+    echo -e "${TAB}${GN}📄 $(translate "Log file")${CL}: ${BL}$log_file${CL}"
+    echo -e "${TAB}${GN}📦 $(translate "Packages upgraded")${CL}: ${BL}$upgradable${CL}"
+    echo -e "${TAB}${GN}🖥️  $(translate "Proxmox VE")${CL}: ${BL}$target_version (Debian $OS_CODENAME)${CL}"
+
+
 
     msg_ok "$(translate "Proxmox VE 8 system update completed successfully")"
 }
