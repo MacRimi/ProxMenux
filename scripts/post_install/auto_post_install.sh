@@ -572,105 +572,41 @@ EOF
 
 # ==========================================================
 
-install_log2ram_auto_() {
-    msg_info "$(translate "Checking if system disk is SSD or M.2...")"
-
-    ROOT_PART=$(lsblk -no NAME,MOUNTPOINT | grep ' /$' | awk '{print $1}')
-    SYSTEM_DISK=$(lsblk -no PKNAME /dev/$ROOT_PART 2>/dev/null)
-    SYSTEM_DISK=${SYSTEM_DISK:-sda}
-
-    if [[ "$SYSTEM_DISK" == nvme* || "$(cat /sys/block/$SYSTEM_DISK/queue/rotational 2>/dev/null)" == "0" ]]; then
-        msg_ok "$(translate "System disk ($SYSTEM_DISK) is SSD or M.2. Proceeding with Log2RAM setup.")"
-    else
-        msg_warn "$(translate "System disk ($SYSTEM_DISK) is not SSD/M.2. Skipping Log2RAM installation.")"
-        return 0
-    fi
-
-    # Clean up previous state
-    rm -rf /tmp/log2ram
-    rm -f /etc/systemd/system/log2ram*
-    rm -f /etc/systemd/system/log2ram-daily.*
-    rm -f /etc/cron.d/log2ram*
-    rm -f /usr/sbin/log2ram
-    rm -f /etc/log2ram.conf
-    rm -f /usr/local/bin/log2ram-check.sh
-    rm -rf /var/log.hdd
-    systemctl daemon-reexec >/dev/null 2>&1
-    systemctl daemon-reload >/dev/null 2>&1
-
-    msg_info "$(translate "Installing log2ram from GitHub...")"
-
-    if ! command -v git >/dev/null 2>&1; then
-    apt-get update -qq >/dev/null 2>&1
-    apt-get install -y git >/dev/null 2>&1
-    fi
-
-    git clone https://github.com/azlux/log2ram.git /tmp/log2ram >/dev/null 2>>/tmp/log2ram_install.log
-    cd /tmp/log2ram || return 1
-    bash install.sh >>/tmp/log2ram_install.log 2>&1
-
-    if [[ -f /etc/log2ram.conf ]] && systemctl list-units --all | grep -q log2ram; then
-        msg_ok "$(translate "Log2RAM installed successfully")"
-    else
-        msg_error "$(translate "Failed to install Log2RAM. See /tmp/log2ram_install.log")"
-        return 1
-    fi
-
-    # Detect RAM
-    RAM_SIZE_GB=$(free -g | awk '/^Mem:/{print $2}')
-    [[ -z "$RAM_SIZE_GB" || "$RAM_SIZE_GB" -eq 0 ]] && RAM_SIZE_GB=4
-
-    if (( RAM_SIZE_GB <= 8 )); then
-        LOG2RAM_SIZE="128M"
-        CRON_HOURS=1
-    elif (( RAM_SIZE_GB <= 16 )); then
-        LOG2RAM_SIZE="256M"
-        CRON_HOURS=3
-    else
-        LOG2RAM_SIZE="512M"
-        CRON_HOURS=6
-    fi
-
-    msg_ok "$(translate "Detected RAM:") $RAM_SIZE_GB GB — $(translate "Log2RAM size set to:") $LOG2RAM_SIZE"
-
-    sed -i "s/^SIZE=.*/SIZE=$LOG2RAM_SIZE/" /etc/log2ram.conf
-    rm -f /etc/cron.hourly/log2ram
-    echo "0 */$CRON_HOURS * * * root /usr/sbin/log2ram write" > /etc/cron.d/log2ram
-    msg_ok "$(translate "log2ram write scheduled every") $CRON_HOURS $(translate "hour(s)")"
-
-    cat << 'EOF' > /usr/local/bin/log2ram-check.sh
-#!/bin/bash
-CONF_FILE="/etc/log2ram.conf"
-LIMIT_KB=$(grep '^SIZE=' "$CONF_FILE" | cut -d'=' -f2 | tr -d 'M')000
-USED_KB=$(df /var/log --output=used | tail -1)
-THRESHOLD=$(( LIMIT_KB * 90 / 100 ))
-if (( USED_KB > THRESHOLD )); then
-    /usr/sbin/log2ram write
-fi
-EOF
-
-    chmod +x /usr/local/bin/log2ram-check.sh
-    echo "*/5 * * * * root /usr/local/bin/log2ram-check.sh" > /etc/cron.d/log2ram-auto-sync
-    msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 90% of") $LOG2RAM_SIZE"
-
-
-    register_tool "log2ram" true
-}
-
-
 
 
 install_log2ram_auto() {
-    msg_info "$(translate "Checking if system disk is SSD or M.2...")"
+ 
+     msg_info "$(translate "Checking if system disk is SSD or M.2...")"
 
-    ROOT_PART=$(lsblk -no NAME,MOUNTPOINT | grep ' /$' | awk '{print $1}')
-    SYSTEM_DISK=$(lsblk -no PKNAME /dev/$ROOT_PART 2>/dev/null)
-    SYSTEM_DISK=${SYSTEM_DISK:-sda}
+    local is_ssd=false
+    local pool disks disk byid_path dev rot
 
-    if [[ "$SYSTEM_DISK" == nvme* || "$(cat /sys/block/$SYSTEM_DISK/queue/rotational 2>/dev/null)" == "0" ]]; then
-        msg_ok "$(translate "System disk ($SYSTEM_DISK) is SSD or M.2. Proceeding with Log2RAM setup.")"
+    if grep -qE '^root=ZFS=' /etc/kernel/cmdline 2>/dev/null || mount | grep -q 'on / type zfs'; then
+
+        pool=$(zfs list -Ho name,mountpoint 2>/dev/null | awk '$2=="/"{print $1}' | cut -d/ -f1)
+        disks=$(zpool status "$pool" 2>/dev/null | awk '/ONLINE/ && $1 !~ /:|mirror|raidz|log|spare|config|NAME|rpool|state/ {print $1}' | sort -u)
+
+        is_ssd=true
+        for disk in $disks; do
+            byid_path=$(readlink -f /dev/disk/by-id/*$disk* 2>/dev/null) || continue
+            dev=$(basename "$byid_path" | sed -E 's|[0-9]+$||' | sed -E 's|p$||')
+            rot=$(cat /sys/block/$dev/queue/rotational 2>/dev/null)
+            [[ "$rot" != "0" ]] && is_ssd=false && break
+        done
     else
-        msg_warn "$(translate "System disk ($SYSTEM_DISK) is not SSD/M.2. Skipping Log2RAM installation.")"
+
+        ROOT_PART=$(lsblk -no NAME,MOUNTPOINT | grep ' /$' | awk '{print $1}')
+        SYSTEM_DISK=$(lsblk -no PKNAME /dev/$ROOT_PART 2>/dev/null)
+        SYSTEM_DISK=${SYSTEM_DISK:-sda}
+        if [[ "$SYSTEM_DISK" == nvme* || "$(cat /sys/block/$SYSTEM_DISK/queue/rotational 2>/dev/null)" == "0" ]]; then
+            is_ssd=true
+        fi
+    fi
+
+    if [[ "$is_ssd" == true ]]; then
+        msg_ok "$(translate "System disk is SSD or M.2. Proceeding with Log2RAM setup.")"
+    else
+        msg_warn "$(translate "System disk is not SSD/M.2. Skipping Log2RAM installation.")"
         return 0
     fi
 
