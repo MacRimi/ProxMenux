@@ -156,6 +156,26 @@ cleanup_duplicate_repos_pve9_() {
         fi
     done
 
+    if [ -f "/etc/apt/sources.list.d/debian.sources" ]; then
+        for uri in $(grep -E '^UR[IL]:' /etc/apt/sources.list.d/debian.sources | awk '{print $2}'); do
+            if [[ "$uri" == *security.debian.org* ]]; then
+                if grep -q "^deb.*${uri//\//\\/}" "$sources_file"; then
+                    sed -i "/^deb.*${uri//\//\\/}/s/^/# /" "$sources_file"
+                    cleaned_count=$((cleaned_count + 1))
+                    msg_info "$(translate "Commented security.debian.org lines in sources.list (using .sources format)")"
+                fi
+
+                for list_file in /etc/apt/sources.list.d/*.list; do
+                    [[ -f "$list_file" ]] || continue
+                    if grep -q "^deb.*${uri//\//\\/}" "$list_file"; then
+                        sed -i "/^deb.*${uri//\//\\/}/s/^/# /" "$list_file"
+                        cleaned_count=$((cleaned_count + 1))
+                        msg_info "$(translate "Commented security.debian.org lines in $(basename "$list_file") (using .sources format)")"
+                    fi
+                done
+            fi
+        done
+    fi
 
     if [ "$cleaned_count" -gt 0 ]; then
         msg_ok "$(translate "Cleaned up $cleaned_count duplicate/old repositories")"
@@ -169,20 +189,22 @@ cleanup_duplicate_repos_pve9_() {
         
 
 
+
 cleanup_duplicate_repos_pve9() {
     msg_info "$(translate "Cleaning up duplicate repositories...")"
     
     local sources_file="/etc/apt/sources.list"
-    local temp_file=$(mktemp)
+    local temp_file
     local cleaned_count=0
     declare -A seen_repos
 
+
+    temp_file=$(mktemp)
     while IFS= read -r line || [[ -n "$line" ]]; do
         if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "$line" ]]; then
             echo "$line" >> "$temp_file"
             continue
         fi
-
         if [[ "$line" =~ ^deb ]]; then
             read -r _ url dist components <<< "$line"
             local key="${url}_${dist}"
@@ -197,43 +219,33 @@ cleanup_duplicate_repos_pve9() {
             echo "$line" >> "$temp_file"
         fi
     done < "$sources_file"
-
     mv "$temp_file" "$sources_file"
     chmod 644 "$sources_file"
 
-    for src in proxmox debian ceph; do
-        local sources_path="/etc/apt/sources.list.d/${src}.sources"
-        if [ -f "$sources_path" ]; then
-            case "$src" in
-                proxmox)
-                    url_match="download.proxmox.com"
-                    ;;
-                debian)
-                    url_match="deb.debian.org"
-                    ;;
-                ceph)
-                    url_match="download.proxmox.com/ceph"
-                    ;;
-                *)
-                    url_match=""
-                    ;;
-            esac
 
-            if [[ -n "$url_match" ]]; then
-                if grep -q "^deb.*$url_match" "$sources_file"; then
-                    sed -i "/^deb.*$url_match/s/^/# /" "$sources_file"
-                    cleaned_count=$((cleaned_count + 1))
-                fi
+    for sources_path in /etc/apt/sources.list.d/*.sources; do
+        [[ -f "$sources_path" ]] || continue
+
+        if ! grep -qi '^Enabled: *true' "$sources_path"; then
+            continue
+        fi
+
+        while read -r uri; do
+
+            if grep -q "^deb.*${uri//\//\\/}" "$sources_file"; then
+                sed -i "/^deb.*${uri//\//\\/}/s/^/# /" "$sources_file"
+                cleaned_count=$((cleaned_count + 1))
+                msg_info "$(translate "Commented duplicated repo ($uri) in sources.list")"
             fi
-
             for list_file in /etc/apt/sources.list.d/*.list; do
                 [[ -f "$list_file" ]] || continue
-                if grep -q "^deb.*$url_match" "$list_file"; then
-                    sed -i "/^deb.*$url_match/s/^/# /" "$list_file"
+                if grep -q "^deb.*${uri//\//\\/}" "$list_file"; then
+                    sed -i "/^deb.*${uri//\//\\/}/s/^/# /" "$list_file"
                     cleaned_count=$((cleaned_count + 1))
+                    msg_info "$(translate "Commented duplicated repo ($uri) in $(basename "$list_file")")"
                 fi
             done
-        fi
+        done < <(grep -E '^UR[IL]:' "$sources_path" | awk '{print $2}')
     done
 
     if [ $cleaned_count -gt 0 ]; then
@@ -243,6 +255,7 @@ cleanup_duplicate_repos_pve9() {
         msg_ok "$(translate "No duplicate repositories found")"
     fi
 }
+
 
 
 
