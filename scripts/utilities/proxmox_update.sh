@@ -53,84 +53,79 @@ apt_upgrade() {
     fi
 
     if [[ "$pve_version" -ge 9 ]]; then
-
+        show_proxmenux_logo
+        msg_title "$(translate "Proxmox system update")"
         bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve.sh")
-        show_proxmenux_logo
-        msg_title "$(translate "Proxmox system update")"
-    else
 
-        bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve8.sh")
+    else
         show_proxmenux_logo
         msg_title "$(translate "Proxmox system update")"
+        bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve8.sh")
+
     fi
 
 
 }
 
-apt_upgrade
 
-    
+
+check_reboot() {
+    NECESSARY_REBOOT=0
+
+    if [ -f /var/run/reboot-required ]; then
+        NECESSARY_REBOOT=1
+    fi
+    if grep -q "linux-image" "$log_file" 2>/dev/null; then
+        NECESSARY_REBOOT=1
+    fi
+
     if [[ "$NECESSARY_REBOOT" -eq 1 ]]; then
-        if command -v whiptail >/dev/null 2>&1; then
-            if whiptail --title "$(translate "Reboot Required")" \
-                       --yesno "$(translate "Some changes require a reboot to take effect. Do you want to restart now?")" 10 60; then
-                
-                msg_info "$(translate "Removing no longer required packages and purging old cached updates...")"
-                apt-get -y autoremove >/dev/null 2>&1
-                apt-get -y autoclean >/dev/null 2>&1
-                msg_ok "$(translate "Cleanup finished")"
-                
-                msg_success "$(translate "Press Enter to continue...")"
-                read -r
-                
-                msg_warn "$(translate "Rebooting the system...")"
-                reboot
-            else
-                msg_info "$(translate "Removing no longer required packages and purging old cached updates...")"
-                apt-get -y autoremove >/dev/null 2>&1
-                apt-get -y autoclean >/dev/null 2>&1
-                msg_ok "$(translate "Cleanup finished")"
-                
-                msg_info2 "$(translate "You can reboot later manually.")"
-                msg_success "$(translate "Press Enter to continue...")"
-                read -r
-                return 0
-            fi
+        if whiptail --title "$(translate "Reboot Required")" \
+                    --yesno "$(translate "Some changes require a reboot to take effect. Do you want to restart now?")" 10 60; then
+
+            msg_info "$(translate "Removing no longer required packages and purging old cached updates...")"
+            apt-get -y autoremove >/dev/null 2>&1
+            apt-get -y autoclean >/dev/null 2>&1
+            msg_ok "$(translate "Cleanup finished")"
+            echo -e
+            msg_success "$(translate "Press Enter to continue...")"
+            read -r
+
+            msg_warn "$(translate "Rebooting the system...")"
+            reboot
         else
-            # Fallback without whiptail
-            echo "$(translate "Reboot now? (y/N): ")"
-            read -r -t 30 response
-            if [[ "$response" =~ ^[Yy]$ ]]; then
-                msg_info "$(translate "Removing no longer required packages and purging old cached updates...")"
-                apt-get -y autoremove >/dev/null 2>&1
-                apt-get -y autoclean >/dev/null 2>&1
-                msg_ok "$(translate "Cleanup finished")"
-                
-                msg_warn "$(translate "Rebooting the system...")"
-                sleep 3
-                reboot
-            else
-                msg_info "$(translate "Removing no longer required packages and purging old cached updates...")"
-                apt-get -y autoremove >/dev/null 2>&1
-                apt-get -y autoclean >/dev/null 2>&1
-                msg_ok "$(translate "Cleanup finished")"
-                
-                msg_info2 "$(translate "You can reboot later manually.")"
-                return 0
-            fi
+            msg_info "$(translate "Removing no longer required packages and purging old cached updates...")"
+            apt-get -y autoremove >/dev/null 2>&1
+            apt-get -y autoclean >/dev/null 2>&1
+            msg_ok "$(translate "Cleanup finished")"
+            echo -e
+            msg_info2 "$(translate "You can reboot later manually.")"
+            echo -e
+            msg_success "$(translate "Press Enter to continue...")"
+            read -r
+            return 0
         fi
     else
         msg_info "$(translate "Removing no longer required packages and purging old cached updates...")"
         apt-get -y autoremove >/dev/null 2>&1
         apt-get -y autoclean >/dev/null 2>&1
         msg_ok "$(translate "Cleanup finished")"
-        
-        msg_success "$(translate "All changes applied. No reboot required.")"
+
+        msg_ok "$(translate "All changes applied. No reboot required.")"
+        echo -e
         msg_success "$(translate "Press Enter to return to menu...")"
         read -r
     fi
+}
+
+
+
+apt_upgrade
+check_reboot
+
     
 
-}
+
+
 
 
