@@ -498,6 +498,8 @@ install_translation_version() {
 show_installation_options() {
     local current_install_type
     current_install_type=$(check_existing_installation)
+    local pve_version
+    pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
     
     local menu_title="ProxMenux Installation"
     local menu_text="Choose installation type:"
@@ -516,9 +518,29 @@ show_installation_options() {
         esac
     fi
     
-    INSTALL_TYPE=$(whiptail --backtitle "ProxMenux" --title "$menu_title" --menu "\n$menu_text" 14 70 2 \
-        "1" "Normal Version      (English only)" \
-        "2" "Translation Version (Multi-language support)" 3>&1 1>&2 2>&3)
+
+
+
+    if [[ "$pve_version" -ge 9 ]]; then
+        INSTALL_TYPE=$(whiptail --backtitle "ProxMenux" --title "$menu_title" --menu "\n$menu_text" 14 70 2 \
+            "1" "Normal Version      (English only)" 3>&1 1>&2 2>&3)
+        
+        if [ -z "$INSTALL_TYPE" ]; then
+            msg_warn "Installation cancelled."
+            exit 1
+        fi
+    else
+        INSTALL_TYPE=$(whiptail --backtitle "ProxMenux" --title "$menu_title" --menu "\n$menu_text" 14 70 2 \
+            "1" "Normal Version      (English only)" \
+            "2" "Translation Version (Multi-language support)" 3>&1 1>&2 2>&3)
+        
+        if [ -z "$INSTALL_TYPE" ]; then
+            msg_warn "Installation cancelled."
+            exit 1
+        fi
+    fi
+
+ 
     
     if [ -z "$INSTALL_TYPE" ]; then
         msg_warn "Installation cancelled."
