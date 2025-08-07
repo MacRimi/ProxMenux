@@ -255,52 +255,45 @@ EOF
     msg_info "$(translate "Updating packages...")"
     apt-get install pv -y > /dev/null 2>&1
     msg_ok "$(translate "Packages updated successfully")"
-
+    
+    tput sc
+    
     DEBIAN_FRONTEND=noninteractive apt-get -y \
         -o Dpkg::Options::='--force-confdef' \
         -o Dpkg::Options::='--force-confold' \
         dist-upgrade 2>&1 | while IFS= read -r line; do
-
+    
         echo "$line" >> "$log_file"
-
+    
         if [[ "$line" =~ \[[#=\-]+\]\ *[0-9]{1,3}% ]]; then
             continue
         fi
-
+    
         if [[ "$line" =~ ^(Setting\ up|Unpacking|Preparing\ to\ unpack|Processing\ triggers\ for) ]]; then
             package_name=$(echo "$line" | sed -E 's/.*(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ([^ :]+).*/\2/')
             [ -z "$package_name" ] && package_name="$(translate "Unknown")"
-
-            tput sc
+    
             row=$(( $(tput lines) - 6 ))
             tput cup $row 0; printf "%s\n" "$(translate "Installing packages...")"
             tput cup $((row + 1)) 0; printf "%s\n" "──────────────────────────────────────────────"
             tput cup $((row + 2)) 0; printf "%s %s\n" "$(translate "Package:")" "$package_name"
             tput cup $((row + 3)) 0; printf "%s\n" "Progress: [                                                  ] 0%"
             tput cup $((row + 4)) 0; printf "%s\n" "──────────────────────────────────────────────"
-
+    
             for i in $(seq 1 10); do
                 sleep 0.1
                 progress=$((i * 10))
                 tput cup $((row + 3)) 9
                 printf "[%-50s] %3d%%" "$(printf "#%.0s" $(seq 1 $((progress/2))))" "$progress"
             done
-            tput rc
         fi
     done
-
-
-    if [[ -t 1 ]]; then
-        row=$(( $(tput lines) - 6 ))
-        for i in {0..5}; do
-            tput cup $((row + i)) 0
-            tput el
-        done
-        tput cup $row 0
-    fi
-
-
+    
+    tput rc
+    tput ed
+    
     upgrade_exit_code=${PIPESTATUS[0]}
+
 
 
 
