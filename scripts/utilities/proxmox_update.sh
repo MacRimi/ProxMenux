@@ -67,6 +67,8 @@ apt_upgrade() {
 
 }
 
+apt_upgrade
+
     
     if [[ "$NECESSARY_REBOOT" -eq 1 ]]; then
         if command -v whiptail >/dev/null 2>&1; then
@@ -131,4 +133,4 @@ apt_upgrade() {
 
 }
 
-apt_upgrade
+
