@@ -169,7 +169,7 @@ cleanup_duplicate_repos_pve9_() {
         
 
 
-cleanup_duplicate_repos_pve9_() {
+cleanup_duplicate_repos_pve9() {
     msg_info "$(translate "Cleaning up duplicate repositories...")"
     
     local sources_file="/etc/apt/sources.list"
