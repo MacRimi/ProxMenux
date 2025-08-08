@@ -1788,6 +1788,20 @@
     "type": "ct"
   },
   {
+    "name": "HortusFox",
+    "slug": "hortusfox",
+    "desc": "HortusFox is a collaborative plant management system for plant enthusiasts. Manage, document and track your entire plant collection \u2013 self-hosted and privacy-friendly.",
+    "script": "ct/hortusfox.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/hortusfox.sh",
+    "categories": [
+      24
+    ],
+    "notes": [
+      "Login Credentials : `cat ~/hortusfox.creds`"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Proxmox VE Host Backup",
     "slug": "host-backup",
     "desc": "This script serves as a versatile backup utility, enabling users to specify both the backup path and the directory they want to work in. This flexibility empowers users to select the specific files and directories they wish to back up, making it compatible with a wide range of hosts, not limited to Proxmox.",
