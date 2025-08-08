@@ -3341,6 +3341,21 @@
     "type": "ct"
   },
   {
+    "name": "Palmr",
+    "slug": "palmr",
+    "desc": "Palmr is a fast and secure platform for sharing files, built with performance and privacy in mind.",
+    "script": "ct/palmr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/palmr.sh",
+    "categories": [
+      11
+    ],
+    "notes": [
+      "To use a bind mount for storage, create symlinks to your mount for both `uploads` and `temp-uploads` in `/opt/palmr_data`",
+      "To use Palmr with a reverse proxy, uncomment `SECURE_SITE` in `/opt/palmr/apps/server/.env`"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "PaperlessAI",
     "slug": "paperless-ai",
     "desc": "An automated document analyzer for Paperless-ngx using OpenAI API, Ollama and all OpenAI API compatible Services to automatically analyze and tag your documents.It features: Automode, Manual Mode, Ollama and OpenAI, a Chat function to query your documents with AI, a modern and intuitive Webinterface.",
