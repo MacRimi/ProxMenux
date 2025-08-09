@@ -1008,7 +1008,7 @@
   {
     "name": "Docmost",
     "slug": "docmost",
-    "desc": "Open-source collaborative wiki and documentation software Create, collaborate, and share knowledge seamlessly with Docmost. Ideal for managing your wiki, knowledge-base, documentation and a lot more.",
+    "desc": "Open-source collaborative wiki and documentation software. Create, collaborate, and share knowledge seamlessly with Docmost. Ideal for managing your wiki, knowledge-base, documentation and a lot more.",
     "script": "ct/docmost.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/docmost.sh",
     "categories": [
