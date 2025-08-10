@@ -139,7 +139,7 @@ msg_info2() {
 # Display info message with spinner
 msg_info3() {
     local msg="$1"
-    echo -ne "${TAB}${YW}${HOLD}${msg}"
+    echo -ne "${TAB}${YW}${HOLD}${msg}${CL}"
 }
 
 # Display success message
