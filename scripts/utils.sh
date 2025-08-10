@@ -136,6 +136,12 @@ msg_info2() {
     echo -e "${TAB}${BOLD}${YW}${HOLD}${msg}${CL}"
 }
 
+# Display info message with spinner
+msg_info3() {
+    local msg="$1"
+    echo -ne "${TAB}${YW}${HOLD}${msg}"
+}
+
 # Display success message
 msg_success() {
     if [ -n "$SPINNER_PID" ] && ps -p $SPINNER_PID > /dev/null; then 
