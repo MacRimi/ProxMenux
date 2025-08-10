@@ -59,7 +59,7 @@ Then, follow the on-screen options to manage your Proxmox server efficiently.
 
 ## 📌 System Requirements
 🖥 **Compatible with:**
-- Proxmox VE 8.x**
+- Proxmox VE 8.x and 9.x
 
 📦 **Dependencies:**
 - `bash`, `curl`, `wget`, `jq`, `whiptail`, `python3-venv` (These dependencies are installed automatically during setup.)
