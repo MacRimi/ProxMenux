@@ -1008,7 +1008,7 @@
   {
     "name": "Docmost",
     "slug": "docmost",
-    "desc": "Open-source collaborative wiki and documentation software Create, collaborate, and share knowledge seamlessly with Docmost. Ideal for managing your wiki, knowledge-base, documentation and a lot more.",
+    "desc": "Open-source collaborative wiki and documentation software. Create, collaborate, and share knowledge seamlessly with Docmost. Ideal for managing your wiki, knowledge-base, documentation and a lot more.",
     "script": "ct/docmost.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/docmost.sh",
     "categories": [
@@ -1694,23 +1694,6 @@
       10
     ],
     "notes": [],
-    "type": "ct"
-  },
-  {
-    "name": "Home Assistant Core",
-    "slug": "homeassistant-core",
-    "desc": "A standalone installation of Home Assistant Core refers to a setup where the Home Assistant Core software is installed directly on a device or operating system, without the use of Docker containers. This provides a simpler, but less flexible and scalable solution, as the software is tightly coupled with the underlying system.",
-    "script": "ct/homeassistant-core.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/homeassistant-core.sh",
-    "categories": [
-      16
-    ],
-    "notes": [
-      "If the LXC is created Privileged, the script will automatically set up USB passthrough.",
-      "Requires PVE 8.2.2 with kernel 6.8.4-3-pve or newer",
-      "Deprecation-Warning: This Core-based setup will be deprecated by August 2025. Use Home Assistant OS is strongly recommended to ensure long-term stability and updates.",
-      "config path: `/root/.homeassistant`"
-    ],
     "type": "ct"
   },
   {
