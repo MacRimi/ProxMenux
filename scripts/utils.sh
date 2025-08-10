@@ -164,7 +164,7 @@ msg_warn() {
     fi
     printf "\e[?25h"
     local msg="$1"
-    echo -e "${BFR}${TAB}${NV}${CL} ${YWB}${msg}${CL}"
+    echo -e "${BFR}${TAB}${CL} ${YWB}${msg}${CL}"
 }
 
 
