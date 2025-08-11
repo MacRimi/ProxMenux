@@ -184,6 +184,12 @@ msg_ok() {
     echo -e "${BFR}${TAB}${CM}${GN}${msg}${CL}"
 }
 
+msg_ok2() {
+    printf "\e[?25h"
+    local msg="$1"
+    echo -e "${BFR}${TAB}${CM}${GN}${msg}${CL}"
+}
+
 
 # Display error message
 msg_error() {
