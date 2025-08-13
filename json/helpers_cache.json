@@ -3333,6 +3333,7 @@
       11
     ],
     "notes": [
+      "This LXC is very memory-hungry when updating; it requires at least 6GB RAM, but RAM may be reduced to as low as 2GB when running normally",
       "To use a bind mount for storage, create symlinks to your mount for both `uploads` and `temp-uploads` in `/opt/palmr_data`",
       "To use Palmr with a reverse proxy, uncomment `SECURE_SITE` in `/opt/palmr/apps/server/.env`"
     ],
