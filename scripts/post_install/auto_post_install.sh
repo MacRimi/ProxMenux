@@ -686,11 +686,18 @@ install_log2ram_auto() {
     
 
     sed -i "s/^SIZE=.*/SIZE=$LOG2RAM_SIZE/" /etc/log2ram.conf
-    
-
+    LOG2RAM_BIN="$(command -v log2ram || echo /usr/local/bin/log2ram)"
+    rm -f /etc/cron.daily/log2ram /etc/cron.weekly/log2ram /etc/cron.monthly/log2ram 2>/dev/null || true
     rm -f /etc/cron.hourly/log2ram
-    echo "0 */$CRON_HOURS * * * root /usr/sbin/log2ram write" > /etc/cron.d/log2ram
-    msg_ok "$(translate "log2ram write scheduled every") $CRON_HOURS $(translate "hour(s)")"
+
+    {
+    echo 'MAILTO=""'
+    echo "0 */$CRON_HOURS * * * root $LOG2RAM_BIN write >/dev/null 2>&1"
+    } > /etc/cron.d/log2ram
+    
+    chmod 0644 /etc/cron.d/log2ram
+    chown root:root /etc/cron.d/log2ram
+    msg_ok "$(translate "Log2RAM write scheduled every") $CRON_HOURS $(translate "hour(s)")"
     
 
     cat << 'EOF' > /usr/local/bin/log2ram-check.sh
@@ -706,7 +713,12 @@ fi
 EOF
     
     chmod +x /usr/local/bin/log2ram-check.sh
-    echo "*/5 * * * * root /usr/local/bin/log2ram-check.sh" > /etc/cron.d/log2ram-auto-sync
+        {
+    echo 'MAILTO=""'
+    echo "*/5 * * * * root /usr/local/bin/log2ram-check.sh >/dev/null 2>&1"
+    } > /etc/cron.d/log2ram-auto-sync
+    chmod 0644 /etc/cron.d/log2ram-auto-sync
+    chown root:root /etc/cron.d/log2ram-auto-sync
     msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 90% of") $LOG2RAM_SIZE"
     
     register_tool "log2ram" true
