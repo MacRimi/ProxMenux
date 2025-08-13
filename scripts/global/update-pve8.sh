@@ -179,38 +179,42 @@ EOF
     fi
 
 
-
-
-
+    export DEBIAN_FRONTEND=noninteractive
+    export APT_LISTCHANGES_FRONTEND=none
+    export NEEDRESTART_MODE=a      
+    export UCF_FORCE_CONFOLD=1       
+    export DPKG_OPTIONS="--force-confdef --force-confold"  
 
     msg_info "$(translate "Performing packages upgrade...")"
     apt-get install pv -y > /dev/null 2>&1
     total_packages=$(apt-get -s dist-upgrade | grep "^Inst" | wc -l)
     msg_ok "$(translate "Packages upgrade successfull")"
-   
+
     if [ "$total_packages" -eq 0 ]; then
-        total_packages=1  
+        total_packages=1
     fi
 
     tput civis  
-    tput sc     
+    tput sc      
 
-    
     (
-        /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' dist-upgrade 2>&1 | \
+        /usr/bin/env \
+            DEBIAN_FRONTEND=noninteractive \
+            APT_LISTCHANGES_FRONTEND=none \
+            NEEDRESTART_MODE=a \
+            UCF_FORCE_CONFOLD=1 \
+            apt-get -y \
+                -o Dpkg::Options::="--force-confdef" \
+                -o Dpkg::Options::="--force-confold" \
+                dist-upgrade 2>&1 | \
         while IFS= read -r line; do
-            if [[ "$line" =~ ^(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ]]; then
-              
+            if [[ "$line" =~ ^(Setting\ up|Unpacking|Preparing\ to\ unpack|Processing\ triggers\ for) ]]; then
                 package_name=$(echo "$line" | sed -E 's/.*(Setting up|Unpacking|Preparing to unpack|Processing triggers for) ([^ ]+).*/\2/')
-
-                
                 [ -z "$package_name" ] && package_name="$(translate "Unknown")"
 
-               
                 tput rc
                 tput ed
 
-               
                 row=$(( $(tput lines) - 6 ))
                 tput cup $row 0; echo "$(translate "Installing packages...")"
                 tput cup $((row + 1)) 0; echo "──────────────────────────────────────────────"
@@ -218,12 +222,10 @@ EOF
                 tput cup $((row + 3)) 0; echo "Progress: [                                                  ] 0%"
                 tput cup $((row + 4)) 0; echo "──────────────────────────────────────────────"
 
-               
                 for i in $(seq 1 10); do
                     progress=$((i * 10))
-                    tput cup $((row + 3)) 9 
+                    tput cup $((row + 3)) 9
                     printf "[%-50s] %3d%%" "$(printf "#%.0s" $(seq 1 $((progress/2))))" "$progress"
-                      
                 done
             fi
         done
@@ -232,6 +234,7 @@ EOF
     if [ $? -eq 0 ]; then
         tput rc
         tput ed
+        tput cnorm
         msg_ok "$(translate "System upgrade completed")"
     fi
 
