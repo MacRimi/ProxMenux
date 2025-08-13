@@ -2132,6 +2132,439 @@
     "de": "Zum Beenden von iptraf-ng, x drücken",
     "it": "Per uscire da iptraf-ng, premi x",
     "pt": "Para sair do iptraf-ng, pressione x"
+  },
+  "Proxmox VE 8 to 9 Manual Upgrade Guide": {
+    "es": "Guía de actualización manual de Proxmox VE 8 a 9",
+    "fr": "Guide de mise à niveau manuelle de Proxmox VE 8 vers 9",
+    "de": "Manuelles Upgrade-Handbuch: Proxmox VE 8 auf 9",
+    "it": "Guida all'aggiornamento manuale da Proxmox VE 8 a 9",
+    "pt": "Guia de atualização manual do Proxmox VE 8 para 9"
+  },
+  "Source:": {
+    "es": "Fuente:",
+    "fr": "Source :",
+    "de": "Quelle:",
+    "it": "Fonte:",
+    "pt": "Fonte:"
+  },
+  "IMPORTANT PREREQUISITES:": {
+    "es": "REQUISITOS PREVIOS IMPORTANTES:",
+    "fr": "PRÉREQUIS IMPORTANTS :",
+    "de": "WICHTIGE VORAUSSETZUNGEN:",
+    "it": "PREREQUISITI IMPORTANTI:",
+    "pt": "PRÉ-REQUISITOS IMPORTANTES:"
+  },
+  "System must be updated to latest PVE 8.4+ before starting": {
+    "es": "El sistema debe estar actualizado a la versión PVE 8.4+ antes de comenzar",
+    "fr": "Le système doit être mis à jour vers PVE 8.4+ avant de commencer",
+    "de": "Das System muss vor dem Start auf PVE 8.4+ aktualisiert sein",
+    "it": "Il sistema deve essere aggiornato a PVE 8.4+ prima di iniziare",
+    "pt": "O sistema deve estar atualizado para PVE 8.4+ antes de começar"
+  },
+  "Use SSH or terminal access (SSH recommended)": {
+    "es": "Use acceso por SSH o terminal (se recomienda SSH)",
+    "fr": "Utilisez un accès SSH ou terminal (SSH recommandé)",
+    "de": "SSH- oder Terminalzugang verwenden (SSH empfohlen)",
+    "it": "Usa accesso SSH o terminale (consigliato SSH)",
+    "pt": "Use acesso por SSH ou terminal (SSH recomendado)"
+  },
+  "Use tmux or screen to avoid interruptions": {
+    "es": "Use tmux o screen para evitar interrupciones",
+    "fr": "Utilisez tmux ou screen pour éviter les interruptions",
+    "de": "Verwenden Sie tmux oder screen, um Unterbrechungen zu vermeiden",
+    "it": "Usa tmux o screen per evitare interruzioni",
+    "pt": "Use tmux ou screen para evitar interrupções"
+  },
+  "Have valid backups of all VMs and containers": {
+    "es": "Tenga copias de seguridad válidas de todas las VMs y contenedores",
+    "fr": "Ayez des sauvegardes valides de toutes les VM et conteneurs",
+    "de": "Halten Sie gültige Backups aller VMs und Container bereit",
+    "it": "Avere backup validi di tutte le VM e i container",
+    "pt": "Tenha backups válidos de todas as VMs e contêineres"
+  },
+  "At least 5GB free space on root filesystem": {
+    "es": "Al menos 5 GB de espacio libre en el sistema de archivos raíz",
+    "fr": "Au moins 5 Go d’espace libre sur le système de fichiers racine",
+    "de": "Mindestens 5 GB freier Speicherplatz auf dem Root-Dateisystem",
+    "it": "Almeno 5 GB di spazio libero sul filesystem root",
+    "pt": "Pelo menos 5 GB de espaço livre no sistema de arquivos raiz"
+  },
+  "Do not run the upgrade from the Web UI virtual console (it will disconnect)": {
+    "es": "No ejecute la actualización desde la consola virtual de la interfaz web (se desconectará)",
+    "fr": "N’exécutez pas la mise à niveau depuis la console virtuelle de l’interface Web (elle se déconnectera)",
+    "de": "Führen Sie das Upgrade nicht über die virtuelle Konsole der Web-UI aus (die Verbindung wird getrennt)",
+    "it": "Non eseguire l’aggiornamento dalla console virtuale dell’interfaccia Web (si disconnetterà)",
+    "pt": "Não execute a atualização pelo console virtual da interface Web (a conexão será interrompida)"
+  },
+  "Update system to latest PVE 8.4+ (if not done already):": {
+    "es": "Actualizar el sistema a PVE 8.4+ (si aún no se ha hecho):",
+    "fr": "Mettre à jour le système vers PVE 8.4+ (si ce n’est pas déjà fait) :",
+    "de": "System auf PVE 8.4+ aktualisieren (falls noch nicht geschehen):",
+    "it": "Aggiornare il sistema a PVE 8.4+ (se non già fatto):",
+    "pt": "Atualizar o sistema para PVE 8.4+ (se ainda não foi feito):"
+  },
+  "Or use ProxMenux update function": {
+    "es": "O use la función de actualización de ProxMenux",
+    "fr": "Ou utilisez la fonction de mise à jour de ProxMenux",
+    "de": "Oder verwenden Sie die Aktualisierungsfunktion von ProxMenux",
+    "it": "Oppure usa la funzione di aggiornamento di ProxMenux",
+    "pt": "Ou use a função de atualização do ProxMenux"
+  },
+  "Verify PVE version (must be 8.4.1 or newer):": {
+    "es": "Verificar la versión de PVE (debe ser 8.4.1 o superior):",
+    "fr": "Vérifier la version de PVE (doit être 8.4.1 ou plus récente) :",
+    "de": "PVE-Version prüfen (muss 8.4.1 oder neuer sein):",
+    "it": "Verificare la versione di PVE (deve essere 8.4.1 o successiva):",
+    "pt": "Verificar a versão do PVE (deve ser 8.4.1 ou superior):"
+  },
+  "If this node runs hyper-converged Ceph: ensure Ceph is 19.x (Squid) BEFORE upgrading PVE.": {
+    "es": "Si este nodo ejecuta Ceph hiperconvergente: asegúrese de que Ceph sea 19.x (Squid) ANTES de actualizar PVE.",
+    "fr": "Si ce nœud exécute un Ceph hyperconvergé : assurez-vous que Ceph est en 19.x (Squid) AVANT de mettre à niveau PVE.",
+    "de": "Wenn dieser Knoten hyperkonvergentes Ceph betreibt: Stellen Sie sicher, dass Ceph 19.x (Squid) ist, BEVOR Sie PVE aktualisieren.",
+    "it": "Se questo nodo esegue Ceph iperconvergente: assicurarsi che Ceph sia 19.x (Squid) PRIMA di aggiornare PVE.",
+    "pt": "Se este nó executa Ceph hiperconvergente: certifique-se de que o Ceph esteja em 19.x (Squid) ANTES de atualizar o PVE."
+  },
+  "If not 19.x, upgrade Ceph (Reef→Squid) first per the official guide:": {
+    "es": "Si no es 19.x, actualice primero Ceph (Reef→Squid) según la guía oficial:",
+    "fr": "Si ce n’est pas 19.x, mettez d’abord à niveau Ceph (Reef→Squid) selon le guide officiel :",
+    "de": "Wenn nicht 19.x, aktualisieren Sie Ceph zuerst (Reef→Squid) gemäß der offiziellen Anleitung:",
+    "it": "Se non è 19.x, aggiornare prima Ceph (Reef→Squid) secondo la guida ufficiale:",
+    "pt": "Se não for 19.x, atualize primeiro o Ceph (Reef→Squid) conforme o guia oficial:"
+  },
+  "Run upgrade checklist script:": {
+    "es": "Ejecutar el script de la lista de verificación de actualización:",
+    "fr": "Exécuter le script de liste de vérification de mise à niveau :",
+    "de": "Upgrade-Checklisten-Skript ausführen:",
+    "it": "Eseguire lo script della checklist di aggiornamento:",
+    "pt": "Executar o script da lista de verificação de atualização:"
+  },
+  "If it warns about 'systemd-boot' meta-package, remove it:": {
+    "es": "Si advierte sobre el metapaquete 'systemd-boot', elimínelo:",
+    "fr": "S’il signale le méta-paquet « systemd-boot », supprimez-le :",
+    "de": "Wenn vor dem Metapaket „systemd-boot“ gewarnt wird, entfernen Sie es:",
+    "it": "Se avvisa del metapacchetto 'systemd-boot', rimuoverlo:",
+    "pt": "Se alertar sobre o metapacote 'systemd-boot', remova-o:"
+  },
+  "Start terminal multiplexer (recommended):": {
+    "es": "Iniciar un multiplexor de terminal (recomendado):",
+    "fr": "Démarrer un multiplexeur de terminal (recommandé) :",
+    "de": "Terminal-Multiplexer starten (empfohlen):",
+    "it": "Avviare un multiplexer di terminale (consigliato):",
+    "pt": "Iniciar um multiplexador de terminal (recomendado):"
+  },
+  "# Recommended: avoids disconnection during upgrade": {
+    "es": "# Recomendado: evita desconexiones durante la actualización",
+    "fr": "# Recommandé : évite les déconnexions pendant la mise à niveau",
+    "de": "# Empfohlen: vermeidet Verbindungsabbrüche während des Upgrades",
+    "it": "# Consigliato: evita disconnessioni durante l’aggiornamento",
+    "pt": "# Recomendado: evita desconexões durante a atualização"
+  },
+  "# Alternative if you prefer screen": {
+    "es": "# Alternativa si prefiere screen",
+    "fr": "# Alternative si vous préférez screen",
+    "de": "# Alternative, wenn Sie screen bevorzugen",
+    "it": "# Alternativa se preferisci screen",
+    "pt": "# Alternativa se preferir screen"
+  },
+  "Update Debian repositories to Trixie:": {
+    "es": "Actualizar los repositorios de Debian a Trixie:",
+    "fr": "Mettre à jour les dépôts Debian vers Trixie :",
+    "de": "Debian-Repositories auf Trixie aktualisieren:",
+    "it": "Aggiornare i repository Debian a Trixie:",
+    "pt": "Atualizar os repositórios Debian para Trixie:"
+  },
+  "Update PVE enterprise repository (Only if using enterprise):": {
+    "es": "Actualizar el repositorio empresarial de PVE (solo si usa enterprise):",
+    "fr": "Mettre à jour le dépôt entreprise de PVE (uniquement si vous utilisez enterprise) :",
+    "de": "PVE-Enterprise-Repository aktualisieren (nur bei Verwendung von Enterprise):",
+    "it": "Aggiornare il repository enterprise di PVE (solo se si usa enterprise):",
+    "pt": "Atualizar o repositório enterprise do PVE (apenas se usar enterprise):"
+  },
+  "Skip this step if using no-subscription repository": {
+    "es": "Omita este paso si usa el repositorio sin suscripción",
+    "fr": "Ignorez cette étape si vous utilisez le dépôt sans abonnement",
+    "de": "Überspringen Sie diesen Schritt, wenn Sie das No-Subscription-Repository verwenden",
+    "it": "Saltare questo passaggio se si usa il repository senza sottoscrizione",
+    "pt": "Pule esta etapa se usar o repositório sem assinatura"
+  },
+  "Add new PVE 9 enterprise repository (deb822 format) (Only if using enterprise):": {
+    "es": "Agregar el nuevo repositorio empresarial de PVE 9 (formato deb822) (solo si usa enterprise):",
+    "fr": "Ajouter le nouveau dépôt entreprise de PVE 9 (format deb822) (uniquement si vous utilisez enterprise) :",
+    "de": "Neues PVE-9-Enterprise-Repository (deb822-Format) hinzufügen (nur bei Enterprise):",
+    "it": "Aggiungere il nuovo repository enterprise di PVE 9 (formato deb822) (solo se si usa enterprise):",
+    "pt": "Adicionar o novo repositório enterprise do PVE 9 (formato deb822) (apenas se usar enterprise):"
+  },
+  "Only if using enterprise subscription": {
+    "es": "Solo si utiliza suscripción empresarial",
+    "fr": "Uniquement si vous avez un abonnement entreprise",
+    "de": "Nur bei vorhandener Enterprise-Abonnement",
+    "it": "Solo se si dispone di una sottoscrizione enterprise",
+    "pt": "Apenas se você tiver assinatura enterprise"
+  },
+  "OR add new PVE 9 no-subscription repository:": {
+    "es": "O agregar el nuevo repositorio de PVE 9 sin suscripción:",
+    "fr": "OU ajouter le nouveau dépôt PVE 9 sans abonnement :",
+    "de": "ODER das neue PVE-9-No-Subscription-Repository hinzufügen:",
+    "it": "OPPURE aggiungere il nuovo repository PVE 9 senza sottoscrizione:",
+    "pt": "OU adicionar o novo repositório PVE 9 sem assinatura:"
+  },
+  "Only if using no-subscription repository": {
+    "es": "Solo si usa el repositorio sin suscripción",
+    "fr": "Uniquement si vous utilisez le dépôt sans abonnement",
+    "de": "Nur bei Verwendung des No-Subscription-Repository",
+    "it": "Solo se si usa il repository senza sottoscrizione",
+    "pt": "Apenas se usar o repositório sem assinatura"
+  },
+  "Refresh APT index and verify repositories:": {
+    "es": "Actualizar el índice de APT y verificar los repositorios:",
+    "fr": "Actualiser l’index APT et vérifier les dépôts :",
+    "de": "APT-Index aktualisieren und Repositories prüfen:",
+    "it": "Aggiornare l’indice APT e verificare i repository:",
+    "pt": "Atualizar o índice do APT e verificar os repositórios:"
+  },
+  "Ensure there are no errors and that proxmox-ve candidate shows 9.x": {
+    "es": "Asegúrese de que no haya errores y de que el candidato de proxmox-ve sea 9.x",
+    "fr": "Assurez-vous qu’il n’y a aucune erreur et que le candidat proxmox-ve indique 9.x",
+    "de": "Stellen Sie sicher, dass keine Fehler auftreten und der proxmox-ve-Kandidat 9.x anzeigt",
+    "it": "Assicurarsi che non vi siano errori e che il candidato di proxmox-ve sia 9.x",
+    "pt": "Certifique-se de que não há erros e que o candidato proxmox-ve mostre 9.x"
+  },
+  "Update Ceph repository (Only if using Ceph):": {
+    "es": "Actualizar el repositorio de Ceph (solo si usa Ceph):",
+    "fr": "Mettre à jour le dépôt Ceph (uniquement si vous utilisez Ceph) :",
+    "de": "Ceph-Repository aktualisieren (nur bei Verwendung von Ceph):",
+    "it": "Aggiornare il repository di Ceph (solo se si usa Ceph):",
+    "pt": "Atualizar o repositório do Ceph (apenas se usar Ceph):"
+  },
+  "Use enterprise URL if you have subscription.": {
+    "es": "Use la URL enterprise si dispone de suscripción.",
+    "fr": "Utilisez l’URL enterprise si vous avez un abonnement.",
+    "de": "Verwenden Sie die Enterprise-URL, wenn Sie ein Abonnement haben.",
+    "it": "Usa l’URL enterprise se hai una sottoscrizione.",
+    "pt": "Use a URL enterprise se tiver assinatura."
+  },
+  "Remove old repository files:": {
+    "es": "Eliminar los archivos de repositorio antiguos:",
+    "fr": "Supprimer les anciens fichiers de dépôt :",
+    "de": "Alte Repository-Dateien entfernen:",
+    "it": "Rimuovere i vecchi file di repository:",
+    "pt": "Remover arquivos antigos de repositório:"
+  },
+  "Also comment any remaining 'bookworm' entries in *.list if present.": {
+    "es": "Comente también cualquier entrada restante de ‘bookworm’ en *.list si existe.",
+    "fr": "Commentez également toute entrée ‘bookworm’ restante dans *.list si présente.",
+    "de": "Kommentieren Sie außerdem verbleibende ‚bookworm‘-Einträge in *.list, falls vorhanden.",
+    "it": "Commentare anche eventuali voci ‘bookworm’ rimanenti in *.list se presenti.",
+    "pt": "Comente também quaisquer entradas ‘bookworm’ restantes em *.list, se houver."
+  },
+  "Update package index:": {
+    "es": "Actualizar el índice de paquetes:",
+    "fr": "Mettre à jour l’index des paquets :",
+    "de": "Paketindex aktualisieren:",
+    "it": "Aggiornare l’indice dei pacchetti:",
+    "pt": "Atualizar o índice de pacotes:"
+  },
+  "Disable kernel audit messages (optional but recommended):": {
+    "es": "Desactivar los mensajes de auditoría del kernel (opcional pero recomendado):",
+    "fr": "Désactiver les messages d’audit du noyau (optionnel mais recommandé) :",
+    "de": "Kernel-Audit-Meldungen deaktivieren (optional, aber empfohlen):",
+    "it": "Disabilitare i messaggi di audit del kernel (opzionale ma consigliato):",
+    "pt": "Desativar as mensagens de auditoria do kernel (opcional, mas recomendado):"
+  },
+  "Start the main system upgrade:": {
+    "es": "Iniciar la actualización principal del sistema:",
+    "fr": "Démarrer la mise à niveau principale du système :",
+    "de": "Hauptsystem-Upgrade starten:",
+    "it": "Avviare l’aggiornamento principale del sistema:",
+    "pt": "Iniciar a atualização principal do sistema:"
+  },
+  "This will take time. Answer prompts carefully - see notes below.": {
+    "es": "Esto llevará tiempo. Responda a las indicaciones con cuidado (vea las notas abajo).",
+    "fr": "Cela prendra du temps. Répondez aux invites avec attention (voir les notes ci-dessous).",
+    "de": "Dies wird einige Zeit dauern. Beantworten Sie Rückfragen sorgfältig (siehe Hinweise unten).",
+    "it": "Questo richiederà tempo. Rispondi con attenzione alle richieste (vedi note sotto).",
+    "pt": "Isso levará tempo. Responda às solicitações com atenção (veja as notas abaixo)."
+  },
+  "UPGRADE PROMPTS - RECOMMENDED ANSWERS:": {
+    "es": "INDICACIONES DE ACTUALIZACIÓN - RESPUESTAS RECOMENDADAS:",
+    "fr": "INVITES DE MISE À NIVEAU - RÉPONSES RECOMMANDÉES :",
+    "de": "UPGRADE-AUFFORDERUNGEN – EMPFOHLENE ANTWORTEN:",
+    "it": "PROMPT DI AGGIORNAMENTO - RISPOSTE CONSIGLIATE:",
+    "pt": "PROMPTS DE ATUALIZAÇÃO - RESPOSTAS RECOMENDADAS:"
+  },
+  "Keep current version (N)": {
+    "es": "Mantener la versión actual (N)",
+    "fr": "Conserver la version actuelle (N)",
+    "de": "Aktuelle Version beibehalten (N)",
+    "it": "Mantieni la versione corrente (N)",
+    "pt": "Manter a versão atual (N)"
+  },
+  "Install maintainer's version (Y)": {
+    "es": "Instalar la versión del mantenedor del paquete (Y)",
+    "fr": "Installer la version du mainteneur du paquet (Y)",
+    "de": "Version des Paketbetreuers installieren (Y)",
+    "it": "Installare la versione del maintainer del pacchetto (Y)",
+    "pt": "Instalar a versão do mantenedor do pacote (Y)"
+  },
+  "Keep current version (N) if modified": {
+    "es": "Mantener la versión actual (N) si está modificada",
+    "fr": "Conserver la version actuelle (N) si elle a été modifiée",
+    "de": "Aktuelle Version beibehalten (N), falls angepasst",
+    "it": "Mantieni la versione corrente (N) se modificata",
+    "pt": "Manter a versão atual (N) se estiver modificada"
+  },
+  "Service restarts:": {
+    "es": "Reinicios de servicios:",
+    "fr": "Redémarrages de services :",
+    "de": "Neustarts von Diensten:",
+    "it": "Riavvii dei servizi:",
+    "pt": "Reinicializações de serviços:"
+  },
+  "Use default (Yes)": {
+    "es": "Usar la opción predeterminada (Sí)",
+    "fr": "Utiliser l’option par défaut (Oui)",
+    "de": "Standardoption verwenden (Ja)",
+    "it": "Usare l’opzione predefinita (Sì)",
+    "pt": "Usar a opção padrão (Sim)"
+  },
+  "Press 'q' to exit": {
+    "es": "Presione «q» para salir",
+    "fr": "Appuyez sur « q » pour quitter",
+    "de": "Drücken Sie „q“, um zu beenden",
+    "it": "Premi «q» per uscire",
+    "pt": "Pressione «q» para sair"
+  },
+  "If booting in EFI mode with root on LVM: install GRUB for EFI": {
+    "es": "Si inicia en modo EFI con root en LVM: instale GRUB para EFI",
+    "fr": "Si vous démarrez en mode EFI avec root sur LVM : installez GRUB pour EFI",
+    "de": "Wenn Sie im EFI-Modus mit Root auf LVM booten: GRUB für EFI installieren",
+    "it": "Se l’avvio è in modalità EFI con root su LVM: installare GRUB per EFI",
+    "pt": "Se iniciar em modo EFI com root no LVM: instale o GRUB para EFI"
+  },
+  "Per official known issues; ensures proper boot after upgrade": {
+    "es": "Según las incidencias conocidas oficiales, garantiza un arranque correcto tras la actualización",
+    "fr": "Selon les problèmes connus officiels, cela garantit un démarrage correct après la mise à niveau",
+    "de": "Laut den offiziellen Known Issues sorgt dies für einen ordnungsgemäßen Start nach dem Upgrade",
+    "it": "Secondo le note ufficiali dei problemi noti, garantisce un avvio corretto dopo l’aggiornamento",
+    "pt": "De acordo com os problemas conhecidos oficiais, garante uma inicialização correta após a atualização"
+  },
+  "Run checklist again to verify upgrade:": {
+    "es": "Ejecutar de nuevo la lista de verificación para comprobar la actualización:",
+    "fr": "Relancer la liste de vérification pour valider la mise à niveau :",
+    "de": "Checkliste erneut ausführen, um das Upgrade zu verifizieren:",
+    "it": "Eseguire nuovamente la checklist per verificare l’aggiornamento:",
+    "pt": "Executar novamente a lista de verificação para validar a atualização:"
+  },
+  "Should show fewer or no issues": {
+    "es": "Debería mostrar menos problemas o ninguno",
+    "fr": "Devrait afficher moins de problèmes, voire aucun",
+    "de": "Sollte weniger oder keine Probleme anzeigen",
+    "it": "Dovrebbe mostrare meno problemi o nessuno",
+    "pt": "Deve mostrar menos problemas ou nenhum"
+  },
+  "Reboot the system:": {
+    "es": "Reiniciar el sistema:",
+    "fr": "Redémarrer le système :",
+    "de": "System neu starten:",
+    "it": "Riavviare il sistema:",
+    "pt": "Reiniciar o sistema:"
+  },
+  "After reboot, verify PVE version:": {
+    "es": "Después del reinicio, verificar la versión de PVE:",
+    "fr": "Après le redémarrage, vérifier la version de PVE :",
+    "de": "Nach dem Neustart die PVE-Version prüfen:",
+    "it": "Dopo il riavvio, verificare la versione di PVE:",
+    "pt": "Após reiniciar, verificar a versão do PVE:"
+  },
+  "Should show pve-manager/9.x.x": {
+    "es": "Debería mostrar pve-manager/9.x.x",
+    "fr": "Devrait afficher pve-manager/9.x.x",
+    "de": "Sollte pve-manager/9.x.x anzeigen",
+    "it": "Dovrebbe mostrare pve-manager/9.x.x",
+    "pt": "Deve mostrar pve-manager/9.x.x"
+  },
+  "Optional: Modernize repository sources:": {
+    "es": "Opcional: Modernizar las fuentes de repositorio:",
+    "fr": "Optionnel : Moderniser les sources des dépôts :",
+    "de": "Optional: Repository-Quellen modernisieren:",
+    "it": "Opzionale: Modernizzare le fonti del repository:",
+    "pt": "Opcional: Modernizar as fontes de repositório:"
+  },
+  "Converts to deb822; keeps .list backups as .bak": {
+    "es": "Convierte a deb822; mantiene copias .list como .bak",
+    "fr": "Convertit en deb822 ; conserve les sauvegardes .list en .bak",
+    "de": "Konvertiert zu deb822; behält .list-Backups als .bak bei",
+    "it": "Converte in deb822; mantiene i backup .list come .bak",
+    "pt": "Converte para deb822; mantém backups .list como .bak"
+  },
+  "CLUSTER UPGRADE NOTES:": {
+    "es": "NOTAS DE ACTUALIZACIÓN DEL CLÚSTER:",
+    "fr": "NOTES DE MISE À NIVEAU DU CLUSTER :",
+    "de": "HINWEISE ZUM CLUSTER-UPGRADE:",
+    "it": "NOTE DI AGGIORNAMENTO DEL CLUSTER:",
+    "pt": "NOTAS DE ATUALIZAÇÃO DO CLUSTER:"
+  },
+  "Upgrade one node at a time": {
+    "es": "Actualizar un nodo a la vez",
+    "fr": "Mettre à niveau un nœud à la fois",
+    "de": "Jeweils nur einen Knoten aktualisieren",
+    "it": "Aggiornare un nodo alla volta",
+    "pt": "Atualizar um nó por vez"
+  },
+  "Migrate VMs away from node being upgraded": {
+    "es": "Migrar las VMs fuera del nodo que se está actualizando",
+    "fr": "Migrer les VM hors du nœud en cours de mise à niveau",
+    "de": "VMs vom zu aktualisierenden Knoten weg migrieren",
+    "it": "Migrare le VM dal nodo in aggiornamento",
+    "pt": "Migrar as VMs para fora do nó em atualização"
+  },
+  "Wait for each node to complete before starting next": {
+    "es": "Esperar a que cada nodo termine antes de empezar con el siguiente",
+    "fr": "Attendre que chaque nœud soit terminé avant de commencer le suivant",
+    "de": "Warten, bis jeder Knoten abgeschlossen ist, bevor der nächste beginnt",
+    "it": "Attendere che ogni nodo termini prima di iniziare il successivo",
+    "pt": "Aguardar cada nó concluir antes de iniciar o próximo"
+  },
+  "HA groups will be migrated to HA rules automatically": {
+    "es": "Los grupos de HA se migrarán automáticamente a reglas de HA",
+    "fr": "Les groupes HA seront migrés automatiquement vers des règles HA",
+    "de": "HA-Gruppen werden automatisch in HA-Regeln migriert",
+    "it": "I gruppi HA verranno migrati automaticamente a regole HA",
+    "pt": "Grupos de HA serão migrados automaticamente para regras de HA"
+  },
+  "TROUBLESHOOTING:": {
+    "es": "SOLUCIÓN DE PROBLEMAS:",
+    "fr": "DÉPANNAGE :",
+    "de": "FEHLERBEHEBUNG:",
+    "it": "RISOLUZIONE DEI PROBLEMI:",
+    "pt": "SOLUÇÃO DE PROBLEMAS:"
+  },
+  "If upgrade fails:": {
+    "es": "Si la actualización falla:",
+    "fr": "Si la mise à niveau échoue :",
+    "de": "Wenn das Upgrade fehlschlägt:",
+    "it": "Se l’aggiornamento fallisce:",
+    "pt": "Se a atualização falhar:"
+  },
+  "If repositories error:": {
+    "es": "Si hay errores de repositorios:",
+    "fr": "En cas d’erreurs de dépôts :",
+    "de": "Bei Repository-Fehlern:",
+    "it": "In caso di errori dei repository:",
+    "pt": "Se houver erros nos repositórios:"
+  },
+  "If 'proxmox-ve' removal warning:": {
+    "es": "Si aparece advertencia de eliminación de ‘proxmox-ve’:",
+    "fr": "Si un avertissement de suppression de ‘proxmox-ve’ apparaît :",
+    "de": "Bei Warnung zur Entfernung von ‚proxmox-ve‘:",
+    "it": "Se compare un avviso di rimozione di ‘proxmox-ve’:",
+    "pt": "Se aparecer um aviso de remoção de ‘proxmox-ve’:"
+  },
+  "Emergency recovery:": {
+    "es": "Recuperación de emergencia:",
+    "fr": "Récupération d’urgence :",
+    "de": "Notfallwiederherstellung:",
+    "it": "Ripristino di emergenza:",
+    "pt": "Recuperação de emergência:"
   }
-
 }
