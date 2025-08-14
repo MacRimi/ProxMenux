@@ -261,7 +261,8 @@ EOF${CL}" \
     echo -e 
     read -r
     clear
-    bash <(curl -fsSL "$REPO_URL/scripts/utilities/upgrade_pve8_to_pve9.sh")
+    exit 0
+    #bash <(curl -fsSL "$REPO_URL/scripts/utilities/upgrade_pve8_to_pve9.sh")
 
 }
 
