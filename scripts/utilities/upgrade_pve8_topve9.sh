@@ -2,24 +2,12 @@
 # ==========================================================
 # ProxMenuX - Upgrade PVE 8 → 9 (Simplified, per official guide)
 # ==========================================================
-# Author     : MacRimi
-# License    : MIT
-# Version    : 1.9
-# Updated    : 2025-08-10
-# Description:
-# - Automates the official upgrade from Proxmox VE 8 to 9 (Debian Trixie).
-# - Spinner-safe UI: each msg_info is closed by msg_ok/msg_warn/msg_error.
-# - Choose run mode at start: Interactive, Interactive (Expert), Unattended.
-# - In ALL modes, output is streamed to terminal; Unattended shows everything but asks nothing.
-# - Cluster-aware pre-upgrade (auto/manual).
-# - Ceph handling: enforce 19.x (Squid) only if hyper-converged (flags to relax).
-# - Default repositories: no-subscription (enterprise only if --enterprise).
-# - Enterprise repo fallback: detect 401 and switch to no-subscription if needed.
-# - Pre-flight guard: simulate upgrade to ensure 'proxmox-ve' is not removed.
-# - After upgrading to PVE 9, disable translate() to avoid Python/googletrans issues.
+# Author      : MacRimi
+# Copyright   : (c) 2024 MacRimi
+# License     : MIT (https://raw.githubusercontent.com/MacRimi/ProxMenux/main/LICENSE)
+# Version     : 1.0
+# Last Updated: 14/08/2025
 # ==========================================================
-
-
 
 REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
 BASE_DIR="/usr/local/share/proxmenux"
@@ -61,74 +49,105 @@ done
 
 
 ask_run_mode() {
-    export NCURSES_NO_UTF8_ACS=1
 
     if [[ "${ASSUME_YES:-0}" == "1" ]]; then
         msg_ok "$(translate "Run mode: Unattended")"
-    else
-        if command -v whiptail >/dev/null 2>&1; then
-        
-            local title text choice
-            title="$(translate "Select run mode")"; [[ -z "$title" ]] && title="Select run mode"
-            text="$(translate "Choose how to perform the upgrade:")"; [[ -z "$text" ]] && text="Choose how to perform the upgrade:"
-            title=${title//$'\r'/}; title=${title//$'\n'/' '}
-            text=${text//$'\r'/};  text=${text//$'\n'/' '}
-
-            if ! choice=$(
-                whiptail --title "$title" \
-                         --menu "$text" 17 78 3 \
-                         "unattended"  "$(translate "Automatic/Unattended")" \
-                         "interactive" "$(translate "Interactive (guided, prompts visible)")" \
-                         "manual"      "$(translate "Manual upgrade guide step by step")" \
-                         3>&1 1>&2 2>&3
-            ); then
-                show_proxmenux_logo || true
-                msg_warn "$(translate "Action canceled by user")"
-                exit 0
-            fi
-
-            case "$choice" in
-                unattended)
-                    ASSUME_YES="1"
-                    msg_info2 "$(translate "Run mode selected: Unattended")"
-                    ;;
-                manual)
-                    local url="$REPO_URL/scripts/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh"
-                    if command -v curl >/dev/null 2>&1; then
-                        bash <(curl -fsSL "$url")
-                    else
-                        bash <(wget -qO- "$url")
-                    fi
-                    ;;
-                *)
-                    msg_info2 "$(translate "Run mode selected: Interactive")"
-                    ;;
-            esac
-        else
-            printf "%s" "$(translate "Select run mode: [i]nteractive / [u]nattended / [m]anual guide? (default: i): ")"
-            read -r ans
-            case "$ans" in
-                u|U) ASSUME_YES="1"; msg_info2 "$(translate "Run mode selected: Unattended")" ;;
-                m|M)
-                    local url="$REPO_URL/scripts/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh"
-                    if command -v curl >/dev/null 2>&1; then
-                        bash <(curl -fsSL "$url")
-                    else
-                        bash <(wget -qO- "$url")
-                    fi
-                    ;;
-                *)   msg_info2 "$(translate "Run mode selected: Interactive")" ;;
-            esac
-        fi
-    fi
-
-    if [[ "${ASSUME_YES:-0}" == "1" ]]; then
         export DEBIAN_FRONTEND=noninteractive
         export APT_LISTCHANGES_FRONTEND=none
+        return 0
+    fi
+
+    if command -v dialog >/dev/null 2>&1; then
+        local title text choice
+        title="$(translate "Select run mode")"; [[ -z "$title" ]] && title="Select run mode"
+        text="$(translate "Choose how to perform the upgrade:")"; [[ -z "$text" ]] && text="Choose how to perform the upgrade:"
+        title=${title//$'\r'/}; title=${title//$'\n'/' '}
+        text=${text//$'\r'/};  text=${text//$'\n'/' '}
+
+        choice=$(
+            dialog --backtitle "ProxMenux" \
+                   --title "$title" \
+                   --menu "$text" 17 78 3 \
+                   1 "$(translate "Automatic/Unattended")" \
+                   2 "$(translate "Interactive (guided, prompts visible)")" \
+                   3 "$(translate "Manual upgrade guide step by step")" \
+                   3>&1 1>&2 2>&3
+        ); status=$?
+
+        if [[ $status -ne 0 ]]; then
+            show_proxmenux_logo || true
+            msg_warn "$(translate "Action canceled by user")"
+            exit 0
+        fi
+
+        case "$choice" in
+            1)
+                ASSUME_YES="1"
+                show_proxmenux_logo || true
+                msg_title "$(translate "Upgrade assistant: Proxmox VE 8 → 9 (Trixie)")"
+                msg_info2 "$(translate "Run mode selected: Unattended")"
+                export DEBIAN_FRONTEND=noninteractive
+                export APT_LISTCHANGES_FRONTEND=none
+                ;;
+            3)
+                local url="$REPO_URL/scripts/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh"
+                if command -v curl >/dev/null 2>&1; then
+                    bash <(curl -fsSL "$url")
+                else
+                    bash <(wget -qO- "$url")
+                fi
+                ;;
+            *)
+                show_proxmenux_logo || true
+                msg_title "$(translate "Upgrade assistant: Proxmox VE 8 → 9 (Trixie)")"
+                msg_info2 "$(translate "Run mode selected: Interactive")"
+                ;;
+        esac
+
+    elif command -v whiptail >/dev/null 2>&1; then
+        local choice
+        if ! choice=$(
+            whiptail --title "$(translate "Select run mode")" \
+                     --menu "$(translate "Choose how to perform the upgrade:")" 17 78 3 \
+                     "1"  "$(translate "Automatic/Unattended")" \
+                     "2"  "$(translate "Interactive (guided, prompts visible)")" \
+                     "3"  "$(translate "Manual upgrade guide step by step")" \
+                     3>&1 1>&2 2>&3
+        ); then
+            show_proxmenux_logo || true
+            msg_warn "$(translate "Action canceled by user")"
+            exit 0
+        fi
+        case "$choice" in
+            1) ASSUME_YES="1"; msg_info2 "$(translate "Run mode selected: Unattended")"
+               export DEBIAN_FRONTEND=noninteractive
+               export APT_LISTCHANGES_FRONTEND=none ;;
+            3) local url="$REPO_URL/scripts/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh"
+               if command -v curl >/dev/null 2>&1; then
+                   bash <(curl -fsSL "$url")
+               else
+                   bash <(wget -qO- "$url")
+               fi ;;
+            *) msg_info2 "$(translate "Run mode selected: Interactive")" ;;
+        esac
+
+    else
+        printf "%s" "$(translate "Select run mode: [1]unattended / [2]interactive / [3]manual guide? (default: 2): ")"
+        read -r ans
+        case "$ans" in
+            1) ASSUME_YES="1"; msg_info2 "$(translate "Run mode selected: Unattended")"
+               export DEBIAN_FRONTEND=noninteractive
+               export APT_LISTCHANGES_FRONTEND=none ;;
+            3) local url="$REPO_URL/scripts/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh"
+               if command -v curl >/dev/null 2>&1; then
+                   bash <(curl -fsSL "$url") || exit 1
+               else
+                   bash <(wget -qO- "$url") || exit 1
+               fi ;;
+            *) msg_info2 "$(translate "Run mode selected: Interactive")" ;;
+        esac
     fi
 }
-
-
 
 
 
@@ -439,8 +458,6 @@ check_not_web_terminal() {
 
         if echo "$comm $args" | grep -Eqi 'termproxy|vncshell'; then
             show_web_terminal_block_msg
-            show_proxmenux_logo
-            msg_title "$(translate "Upgrade assistant: Proxmox VE 8 → 9 (Trixie)")"
             msg_warn "$(translate "Upgrade canceled by user")"
             exit 1
         fi
@@ -450,9 +467,6 @@ check_not_web_terminal() {
 }
 
 ask_run_mode
-
-show_proxmenux_logo || true
-msg_title "$(translate "Upgrade assistant: Proxmox VE 8 → 9 (Trixie)")"
 
 check_not_web_terminal
 
@@ -774,8 +788,6 @@ fi
 
 
 # ==========================================================
-
-
 
 
 
