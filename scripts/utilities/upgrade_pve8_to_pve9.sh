@@ -860,17 +860,17 @@ echo
 echo
 echo
 
+msg_success "$(translate "Press Enter to continue...")"
+read -r
 if confirm "It is RECOMMENDED to reboot now to load the new kernel and services.\n\nReboot now?"; then
   echo -e
-  msg_success "$(translate "Press Enter to continue...")"
-  read -r
   msg_warn "$(translate "Rebooting the system...")"
   echo -e
   reboot
 else
   msg_info2 "$(translate "You can reboot later manually.")"
   echo -e
-  msg_success "$(translate "Press Enter to continue...")"
+  msg_success "$(translate "Press Enter to exit")"
   read -r
 fi
 
