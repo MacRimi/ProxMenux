@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenu - Manual Proxmox VE 8 to 9 Upgrade Guide
+# ProxMenux - Manual Proxmox VE 8 to 9 Upgrade Guide
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
@@ -260,6 +260,9 @@ EOF${CL}" \
     msg_success "$(translate "Press Enter to return to menu...")"
     echo -e 
     read -r
+    clear
+    bash <(curl -fsSL "$REPO_URL/scripts/utilities/upgrade_pve8_topve9.sh")
+
 }
 
 
