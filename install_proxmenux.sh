@@ -526,6 +526,7 @@ show_installation_options() {
             "1" "Normal Version      (English only)" 3>&1 1>&2 2>&3)
         
         if [ -z "$INSTALL_TYPE" ]; then
+            show_proxmenux_logo
             msg_warn "Installation cancelled."
             exit 1
         fi
@@ -535,6 +536,7 @@ show_installation_options() {
             "2" "Translation Version (Multi-language support)" 3>&1 1>&2 2>&3)
         
         if [ -z "$INSTALL_TYPE" ]; then
+            show_proxmenux_logo
             msg_warn "Installation cancelled."
             exit 1
         fi
@@ -543,6 +545,7 @@ show_installation_options() {
  
     
     if [ -z "$INSTALL_TYPE" ]; then
+        show_proxmenux_logo
         msg_warn "Installation cancelled."
         exit 1
     fi
@@ -550,12 +553,14 @@ show_installation_options() {
     # For new installations, show confirmation with details
     if [ "$current_install_type" = "none" ]; then
         if ! show_installation_confirmation "$INSTALL_TYPE"; then
+            show_proxmenux_logo
             msg_warn "Installation cancelled."
             exit 1
         fi
     fi
     
     if ! handle_installation_change "$current_install_type" "$INSTALL_TYPE"; then
+        show_proxmenux_logo
         msg_warn "Installation cancelled."
         exit 1
     fi
