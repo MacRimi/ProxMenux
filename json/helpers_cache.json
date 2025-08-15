@@ -2007,7 +2007,7 @@
     "script": "ct/jenkins.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/jenkins.sh",
     "categories": [
-      22
+      20
     ],
     "notes": [],
     "type": "ct"
@@ -3930,7 +3930,8 @@
     ],
     "notes": [
       "Create Proxmox-API-Token first: `https://github.com/rcourtman/Pulse?tab=readme-ov-file#creating-api-token`",
-      "After installation, access the web interface to configure your Proxmox connection details through the built-in setup wizard"
+      "After installation, access the web interface to configure your Proxmox connection details through the built-in setup wizard",
+      "Configure authentication in the Web UI => Settings => Security"
     ],
     "type": "ct"
   },
@@ -5023,7 +5024,8 @@
       4
     ],
     "notes": [
-      "Wireguard and WGDashboard are not the same. More info: `https://docs.wgdashboard.dev/what-is-wireguard-what-is-wgdashboard.html`"
+      "Wireguard and WGDashboard are not the same. More info: `https://docs.wgdashboard.dev/what-is-wireguard-what-is-wgdashboard.html`",
+      "WGDashboard installation is optional.`"
     ],
     "type": "ct",
     "default_credentials": {
