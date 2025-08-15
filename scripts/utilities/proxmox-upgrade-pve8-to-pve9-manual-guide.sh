@@ -246,15 +246,19 @@ EOF${CL}" \
     echo -e 
     echo -e 
     
-    echo -e 
+    echo -e
     echo -e "${TAB}${BOLD}$(translate "TROUBLESHOOTING:")${CL}"
     echo -e
+    echo -e "${TAB}${BGN}$(translate "If GUI does not load:")${CL} ${YW}Check with 'systemctl status pveproxy' and restart with 'systemctl restart pveproxy'${CL}"
+    echo -e "${TAB}${BGN}$(translate "If ZFS errors occur:")${CL} ${YW}Ensure the 'zfsutils-linux' package is up to date${CL}"
+    echo -e "${TAB}${BGN}$(translate "If network does not work:")${CL} ${YW}Check /etc/network/interfaces and ensure 'ifupdown2' is installed${CL}"
     echo -e "${TAB}${BGN}$(translate "If upgrade fails:")${CL} ${YW}apt -f install${CL}"
     echo -e "${TAB}${BGN}$(translate "If repositories error:")${CL} ${YW}Check /etc/apt/sources.list*${CL}"
     echo -e "${TAB}${BGN}$(translate "If 'proxmox-ve' removal warning:")${CL} ${YW}Fix repository configuration (ensure PVE 9 repo active)${CL}"
     echo -e "${TAB}${BGN}$(translate "Emergency recovery:")${CL} ${YW}Boot from rescue system${CL}"
-    echo -e 
-    echo -e 
+    echo -e
+    echo -e
+
     
     echo -e 
     msg_success "$(translate "Press Enter to return to menu...")"
