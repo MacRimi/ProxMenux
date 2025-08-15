@@ -860,17 +860,22 @@ echo
 echo
 echo
 
-msg_success "$(translate "Press Enter to continue...")"
+msg_success "Press Enter to continue..."
 read -r
-if confirm "It is RECOMMENDED to reboot now to load the new kernel and services.\n\nReboot now?"; then
+
+whiptail --title "Reboot Required" \
+  --yesno "It is RECOMMENDED to reboot now to load the new kernel and services.\n\nReboot now?" \
+  12 70
+
+if [ $? -eq 0 ]; then
   echo -e
-  msg_warn "$(translate "Rebooting the system...")"
+  msg_warn "Rebooting the system..."
   echo -e
   reboot
 else
-  msg_info2 "$(translate "You can reboot later manually.")"
+  msg_info2 "You can reboot later manually."
   echo -e
-  msg_success "$(translate "Press Enter to exit")"
+  msg_success "Press Enter to exit"
   read -r
 fi
 
