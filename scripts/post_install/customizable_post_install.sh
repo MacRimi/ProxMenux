@@ -564,7 +564,7 @@ configure_time_sync() {
 
 
 
-install_system_utils() {
+install_system_utils_() {
     command_exists() {
         command -v "$1" >/dev/null 2>&1
     }
@@ -740,6 +740,187 @@ EOF
         install_selected_utilities "$selected_utilities"
     fi
 }
+
+
+
+
+
+
+
+
+
+
+
+install_system_utils() {
+    command_exists() { command -v "$1" >/dev/null 2>&1; }
+
+    ensure_repositories() {
+        local sources_file="/etc/apt/sources.list"
+        local need_update=false
+
+        if [[ ! -f "$sources_file" ]]; then
+            msg_warn "$(translate "sources.list not found, creating default Debian repository...")"
+            cat > "$sources_file" << EOF
+# Default Debian ${OS_CODENAME} repository
+deb http://deb.debian.org/debian ${OS_CODENAME} main contrib non-free non-free-firmware
+EOF
+            need_update=true
+        else
+            if ! grep -q "deb.*${OS_CODENAME}.*main" "$sources_file"; then
+                echo "deb http://deb.debian.org/debian ${OS_CODENAME} main contrib non-free non-free-firmware" >> "$sources_file"
+                need_update=true
+            fi
+        fi
+
+        if [[ "$need_update" == true ]] || ! apt list --installed >/dev/null 2>&1; then
+            msg_info "$(translate "Updating APT package lists...")"
+            apt-get update -o Acquire::AllowInsecureRepositories=true >/dev/null 2>&1
+        fi
+        return 0
+    }
+
+    install_single_package() {
+        local package="$1"
+        local command_name="${2:-$package}"
+        local description="$3"
+
+        msg_info "$(translate "Installing") $package ($description)..."
+        local install_success=false
+
+        DEBIAN_FRONTEND=noninteractive apt-get install -y "$package" >/dev/null 2>&1 && install_success=true
+        cleanup
+
+        if [[ "$install_success" == true ]]; then
+            hash -r 2>/dev/null
+            sleep 1
+            if command_exists "$command_name"; then
+                msg_ok "$package $(translate "installed correctly and available")"
+                return 0
+            else
+                msg_warn "$package $(translate "installed but command not immediately available")"
+                msg_info2 "$(translate "May need to restart terminal")"
+                return 2
+            fi
+        else
+            msg_error "$(translate "Error installing") $package"
+            return 1
+        fi
+    }
+
+    show_utilities_selection() {
+        local utilities=(
+            "axel"              "$(translate "Download accelerator")"                     "OFF"
+            "dos2unix"          "$(translate "Convert DOS/Unix text files")"              "OFF"
+            "grc"               "$(translate "Generic log/command colorizer")"            "OFF"
+            "htop"              "$(translate "Interactive process viewer")"               "OFF"
+            "btop"              "$(translate "Modern resource monitor")"                  "OFF"
+            "iftop"             "$(translate "Real-time network usage")"                  "OFF"
+            "iotop"             "$(translate "Monitor disk I/O usage")"                   "OFF"
+            # "iperf3"          "$(translate "Network performance testing")"              "OFF"
+            "ipset"             "$(translate "Manage IP sets")"                           "OFF"
+            "iptraf-ng"         "$(translate "Network monitoring tool")"                  "OFF"
+            "mlocate"           "$(translate "Locate files quickly")"                     "OFF"
+            "msr-tools"         "$(translate "Access CPU MSRs")"                          "OFF"
+            "net-tools"         "$(translate "Legacy networking tools")"                  "OFF"
+            "sshpass"           "$(translate "Non-interactive SSH login")"                "OFF"
+            "tmux"              "$(translate "Terminal multiplexer")"                     "OFF"
+            "unzip"             "$(translate "Extract ZIP files")"                        "OFF"
+            "zip"               "$(translate "Create ZIP files")"                         "OFF"
+            "libguestfs-tools"  "$(translate "VM disk utilities")"                        "OFF"
+            "aria2"             "$(translate "Multi-source downloader")"                  "OFF"
+            "cabextract"        "$(translate "Extract CAB files")"                        "OFF"
+            "wimtools"          "$(translate "Manage WIM images")"                        "OFF"
+            "genisoimage"       "$(translate "Create ISO images")"                        "OFF"
+            "chntpw"            "$(translate "Edit Windows registry/passwords")"          "OFF"
+        )
+
+        local selected
+        selected=$(
+            dialog --clear --backtitle "ProxMenu - $(translate "System Utilities")" \
+                   --title "$(translate "Select utilities to install")" \
+                   --checklist "$(translate "Use SPACE to select/deselect, ENTER to confirm")" \
+                   20 70 12 "${utilities[@]}" 3>&1 1>&2 2>&3
+        )
+        local status=$?
+
+
+        echo "$selected"
+        return "$status"
+    }
+
+    install_selected_utilities() {
+        local selected="$1"
+
+
+        if [[ -z "$selected" ]]; then
+            dialog --clear --backtitle "ProxMenu" \
+                   --title "$(translate "No Selection")" \
+                   --msgbox "$(translate "No utilities were selected")" 8 40
+            return 0
+        fi
+
+        clear
+        show_proxmenux_logo
+        msg_title "$SCRIPT_TITLE"
+        msg_info2 "$(translate "Installing selected utilities")"
+
+        if ! ensure_repositories; then
+            msg_error "$(translate "Failed to configure repositories. Installation aborted.")"
+            return 1
+        fi
+
+        local failed=0 success=0 warning=0
+        local selected_array
+        IFS=' ' read -ra selected_array <<< "$selected"
+
+        declare -A package_to_command=(
+            ["mlocate"]="locate"
+            ["msr-tools"]="rdmsr"
+            ["net-tools"]="netstat"
+            ["libguestfs-tools"]="virt-filesystems"
+            ["aria2"]="aria2c"
+            ["wimtools"]="wimlib-imagex"
+        )
+
+        for util in "${selected_array[@]}"; do
+            util="${util%\"}"; util="${util#\"}" 
+            local verify_command="${package_to_command[$util]:-$util}"
+            install_single_package "$util" "$verify_command" "$util"
+            case $? in
+                0) success=$((success+1)) ;;
+                1) failed=$((failed+1)) ;;
+                2) warning=$((warning+1)) ;;
+            esac
+            sleep 1
+        done
+
+        [[ -f ~/.bashrc ]] && source ~/.bashrc >/dev/null 2>&1
+        hash -r 2>/dev/null
+
+        echo
+        msg_info2 "$(translate "Installation summary"):"
+        msg_ok "$(translate "Successful"): $success"
+        (( warning > 0 )) && msg_warn "$(translate "Warnings"): $warning"
+        (( failed  > 0 )) && msg_error "$(translate "Failed"): $failed"
+        msg_success "$(translate "Common system utilities installation completed")"
+        return 0
+    }
+
+
+    local selected_utilities
+    selected_utilities=$(show_utilities_selection)
+    local dlg_status=$?
+
+    if [[ $dlg_status -ne 0 ]]; then
+        dialog --clear --backtitle "ProxMenu" \
+               --title "$(translate "Canceled")" \
+               --msgbox "$(translate "Action canceled by user")" 8 40
+        return 0
+    fi
+
+    install_selected_utilities "$selected_utilities"
+}
+
 
 
 
