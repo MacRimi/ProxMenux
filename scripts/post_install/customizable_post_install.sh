@@ -639,7 +639,7 @@ EOF
             "btop" "$(translate "Modern resource monitor")" "OFF"
             "iftop" "$(translate "Real-time network usage")" "OFF"
             "iotop" "$(translate "Monitor disk I/O usage")" "OFF"
-            "iperf3" "$(translate "Network performance testing")" "OFF"
+            #"iperf3" "$(translate "Network performance testing")" "OFF"
             "ipset" "$(translate "Manage IP sets")" "OFF"
             "iptraf-ng" "$(translate "Network monitoring tool")" "OFF"
             "mlocate" "$(translate "Locate files quickly")" "OFF"
