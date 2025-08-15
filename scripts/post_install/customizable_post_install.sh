@@ -859,7 +859,7 @@ EOF
             return 0
         fi
 
-        clear
+
         show_proxmenux_logo
         msg_title "$SCRIPT_TITLE"
         msg_info2 "$(translate "Installing selected utilities")"
@@ -915,6 +915,8 @@ EOF
         dialog --clear --backtitle "ProxMenu" \
                --title "$(translate "Canceled")" \
                --msgbox "$(translate "Action canceled by user")" 8 40
+
+        show_proxmenux_logo       
         return 0
     fi
 
