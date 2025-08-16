@@ -634,9 +634,9 @@ run_pve8to9_check() {
       
       # Error 2: Kernel version mismatch
       if grep -q -E '(kernel.*mismatch|kernel.*version)' "$tmp"; then
-        repair_commands+=("apt update && apt install pve-kernel-6.8 -y && update-grub")
+        repair_commands+=("update-grub")
         repair_descriptions+=("$(translate "Update kernel to compatible version")")
-        echo -e "${YW}$(translate "Fix kernel version:") ${CL}apt update && apt install pve-kernel-6.8 -y && update-grub"
+        echo -e "${YW}$(translate "Fix kernel version:") ${CL}update-grub"
       fi
       
       # Error 3: Ceph version incompatible
