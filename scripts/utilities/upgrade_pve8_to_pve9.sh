@@ -616,25 +616,130 @@ run_pve8to9_check() {
   warns=$(grep -c 'WARN:' "$tmp" || true)
 
 
-  if (( fails > 0 )); then
-    echo -e
-    echo -e "${BFR}${RD}[ERROR] $(translate "Pre-check found") $fails $(translate "blocking issue(s).")\n$(translate "Please resolve the problem(s) as described above, then re-run the upgrade script.")${CL}"
-    echo -e
-
-    if grep -q 'systemd-boot meta-package installed' "$tmp"; then
+    if (( fails > 0 )); then
       echo -e
-      echo -e "$(translate "Fix: remove the conflicting meta-package:") apt remove systemd-boot"
-      echo -e 
+      echo -e "${BFR}${RD}[ERROR] $(translate "Pre-check found") $fails $(translate "blocking issue(s).")\n$(translate "Please resolve the problem(s) as described above, then re-run the upgrade script.")${CL}"
+      echo -e
+      
+      # Detectar y ofrecer soluciones para errores específicos
+      local repair_commands=()
+      local repair_descriptions=()
+      
+      # Error 1: systemd-boot meta-package
+      if grep -q 'systemd-boot meta-package installed' "$tmp"; then
+        repair_commands+=("apt install systemd-boot-efi systemd-boot-tools -y && apt remove systemd-boot -y")
+        repair_descriptions+=("$(translate "Fix systemd-boot meta-package conflict")")
+        echo -e "${YW}$(translate "Fix systemd-boot:") ${CL}apt install systemd-boot-efi systemd-boot-tools -y && apt remove systemd-boot -y"
+      fi
+      
+      # Error 2: Kernel version mismatch
+      if grep -q -E '(kernel.*mismatch|kernel.*version)' "$tmp"; then
+        repair_commands+=("apt update && apt install pve-kernel-6.8 -y && update-grub")
+        repair_descriptions+=("$(translate "Update kernel to compatible version")")
+        echo -e "${YW}$(translate "Fix kernel version:") ${CL}apt update && apt install pve-kernel-6.8 -y && update-grub"
+      fi
+      
+      # Error 3: Ceph version incompatible
+      if grep -q -E '(ceph.*version|ceph.*incompatible)' "$tmp"; then
+        repair_commands+=("ceph versions && pveceph upgrade")
+        repair_descriptions+=("$(translate "Upgrade Ceph to compatible version")")
+        echo -e "${YW}$(translate "Fix Ceph version:") ${CL}ceph versions && pveceph upgrade"
+      fi
+      
+      # Error 4: Repository configuration issues
+      if grep -q -E '(repository.*issue|repo.*problem|sources.*error)' "$tmp"; then
+        repair_commands+=("cleanup_duplicate_repos && configure_repositories")
+        repair_descriptions+=("$(translate "Fix repository configuration")")
+        echo -e "${YW}$(translate "Fix repositories:") ${CL}cleanup_duplicate_repos && configure_repositories"
+      fi
+      
+      # Error 5: Package conflicts
+      if grep -q -E '(package.*conflict|dependency.*problem)' "$tmp"; then
+        repair_commands+=("apt update && apt autoremove -y && apt autoclean")
+        repair_descriptions+=("$(translate "Resolve package conflicts")")
+        echo -e "${YW}$(translate "Fix package conflicts:") ${CL}apt update && apt autoremove -y && apt autoclean"
+      fi
+      
+      # Error 6: Disk space issues
+      if grep -q -E '(disk.*space|storage.*full|no.*space)' "$tmp"; then
+        repair_commands+=("apt clean && apt autoremove -y && journalctl --vacuum-time=7d")
+        repair_descriptions+=("$(translate "Free up disk space")")
+        echo -e "${YW}$(translate "Fix disk space:") ${CL}apt clean && apt autoremove -y && journalctl --vacuum-time=7d"
+      fi
+      
+      # Error 7: Network/DNS issues
+      if grep -q -E '(network.*error|dns.*problem|connection.*failed)' "$tmp"; then
+        repair_commands+=("systemctl restart networking && systemctl restart systemd-resolved")
+        repair_descriptions+=("$(translate "Fix network connectivity")")
+        echo -e "${YW}$(translate "Fix network:") ${CL}systemctl restart networking && systemctl restart systemd-resolved"
+      fi
+      
+      echo -e
+      
+      # Ofrecer reparación automática si hay comandos disponibles
+      if [[ ${#repair_commands[@]} -gt 0 ]]; then
+        echo -e "${BFR}${CY}$(translate "Repair Options:")${CL}"
+        echo -e "${TAB}${GN}1.${CL} $(translate "Try automatic repair of detected issues")"
+        echo -e "${TAB}${GN}2.${CL} $(translate "Show manual repair commands")"
+        echo -e "${TAB}${GN}3.${CL} $(translate "Exit and repair manually")"
+        echo -e
+        echo -n "$(translate "Select option [1-3] (default: 3): ")"
+        read -r repair_choice
+        
+        case "$repair_choice" in
+          1)
+            echo -e
+            msg_info "$(translate "Attempting automatic repair...")"
+            local repair_success=0
+            for i in "${!repair_commands[@]}"; do
+              echo -e "${TAB}${YW}$(translate "Executing:") ${repair_descriptions[$i]}${CL}"
+              if eval "${repair_commands[$i]}"; then
+                msg_ok "${repair_descriptions[$i]} - $(translate "Success")"
+              else
+                msg_error "${repair_descriptions[$i]} - $(translate "Failed")"
+                repair_success=1
+              fi
+            done
+            
+            if [[ $repair_success -eq 0 ]]; then
+              echo -e
+              msg_info "$(translate "Re-running pre-check after repairs...")"
+              sleep 2
+              # Re-ejecutar el pre-check
+              run_pve8to9_check
+              return $?
+            else
+              echo -e
+              msg_error "$(translate "Some repairs failed. Please fix manually and re-run the script.")"
+            fi
+            ;;
+          2)
+            echo -e
+            echo -e "${BFR}${CY}$(translate "Manual Repair Commands:")${CL}"
+            for i in "${!repair_commands[@]}"; do
+              echo -e "${TAB}${GN}# ${repair_descriptions[$i]}${CL}"
+              echo -e "${TAB}${repair_commands[$i]}"
+              echo -e
+            done
+            ;;
+          *)
+            echo -e
+            msg_info "$(translate "Exiting for manual repair...")"
+            ;;
+        esac
+      fi
+      
+      msg_success "$(translate "Press Enter to exit and repair")"
+      read -r
+      rm -f "$tmp"
+      exit 1
     fi
-    msg_success "$(translate "Press Enter to exit and repair")"
-    read -r
+    
+    echo -e
+    msg_ok "$(translate "Checklist pre-check finished. Warnings:") $warns"
     rm -f "$tmp"
-    exit 1
-  fi
-  echo -e
-  msg_ok "$(translate "Checklist pre-check finished. Warnings:") $warns"
-  rm -f "$tmp"
-  return $rc
+    return $rc
+
 }
 
 run_pve8to9_check
