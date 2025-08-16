@@ -77,7 +77,7 @@ validate_container_id() {
 
 
 # Configure LXC for iGPU
-configure_lxc_for_igpu_() {
+configure_lxc_for_igpu() {
     validate_container_id
     CONFIG_FILE="/etc/pve/lxc/${CONTAINER_ID}.conf"
     if [ ! -f "$CONFIG_FILE" ]; then
@@ -133,7 +133,7 @@ configure_lxc_for_igpu_() {
 
 
 
-configure_lxc_for_igpu() {
+configure_lxc_for_igpu_() {
   validate_container_id
   CONFIG_FILE="/etc/pve/lxc/${CONTAINER_ID}.conf"
   [[ -f "$CONFIG_FILE" ]] || { msg_error "$(translate 'Configuration file not found.')"; exit 1; }
