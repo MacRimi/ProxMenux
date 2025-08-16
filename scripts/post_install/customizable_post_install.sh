@@ -1075,72 +1075,81 @@ force_apt_ipv4() {
 
 
 apply_network_optimizations() {
-    msg_info2 "$(translate "Optimizing network settings...")"
+    msg_info "$(translate "Optimizing network settings...")"
     NECESSARY_REBOOT=1
 
-    local sysctl_conf="/etc/sysctl.d/99-network.conf"
-    local interfaces_file="/etc/network/interfaces"
+    cat <<'EOF' > /etc/sysctl.d/99-network.conf
+# ==========================================================
+# ProxMenux - Network tuning (PVE 9 compatible)
+# ==========================================================
 
-    msg_info "$(translate "Applying network optimizations...")"
+# Core buffers & queues
+net.core.netdev_max_backlog = 8192
+net.core.optmem_max        = 8192
+net.core.rmem_max          = 16777216
+net.core.wmem_max          = 16777216
+net.core.somaxconn         = 8151
 
-    # Update sysctl configuration
-    cat <<EOF > "$sysctl_conf"
-net.core.netdev_max_backlog=8192
-net.core.optmem_max=8192
-net.core.rmem_max=16777216
-net.core.somaxconn=8151
-net.core.wmem_max=16777216
-net.ipv4.conf.all.accept_redirects = 0
+# IPv4 security hardening
+net.ipv4.conf.all.accept_redirects    = 0
 net.ipv4.conf.all.accept_source_route = 0
-net.ipv4.conf.all.log_martians = 0
-net.ipv4.conf.all.rp_filter = 1
-net.ipv4.conf.all.secure_redirects = 0
-net.ipv4.conf.all.send_redirects = 0
-net.ipv4.conf.default.accept_redirects = 0
+net.ipv4.conf.all.log_martians        = 0
+net.ipv4.conf.all.rp_filter           = 1
+net.ipv4.conf.all.secure_redirects    = 0
+net.ipv4.conf.all.send_redirects      = 0
+
+net.ipv4.conf.default.accept_redirects    = 0
 net.ipv4.conf.default.accept_source_route = 0
-net.ipv4.conf.default.log_martians = 0
-net.ipv4.conf.default.rp_filter = 1
-net.ipv4.conf.default.secure_redirects = 0
-net.ipv4.conf.default.send_redirects = 0
-net.ipv4.icmp_echo_ignore_broadcasts = 1
+net.ipv4.conf.default.log_martians        = 0
+net.ipv4.conf.default.rp_filter           = 1
+net.ipv4.conf.default.secure_redirects    = 0
+net.ipv4.conf.default.send_redirects      = 0
+
+# ICMP handling
+net.ipv4.icmp_echo_ignore_broadcasts   = 1
 net.ipv4.icmp_ignore_bogus_error_responses = 1
-net.ipv4.ip_local_port_range=1024 65535
-net.ipv4.tcp_base_mss = 1024
-net.ipv4.tcp_challenge_ack_limit = 999999999
-net.ipv4.tcp_fin_timeout=10
-net.ipv4.tcp_keepalive_intvl=30
-net.ipv4.tcp_keepalive_probes=3
-net.ipv4.tcp_keepalive_time=240
-net.ipv4.tcp_limit_output_bytes=65536
-net.ipv4.tcp_max_syn_backlog=8192
-net.ipv4.tcp_max_tw_buckets = 1440000
-net.ipv4.tcp_mtu_probing = 1
-net.ipv4.tcp_rfc1337=1
-net.ipv4.tcp_rmem=8192 87380 16777216
-net.ipv4.tcp_sack=1
-net.ipv4.tcp_slow_start_after_idle=0
-net.ipv4.tcp_syn_retries=3
-net.ipv4.tcp_synack_retries = 2
-net.ipv4.tcp_tw_recycle = 0
-net.ipv4.tcp_tw_reuse = 0
-net.ipv4.tcp_wmem=8192 65536 16777216
-net.netfilter.nf_conntrack_generic_timeout = 60
-net.netfilter.nf_conntrack_helper=0
-net.netfilter.nf_conntrack_max = 524288
-net.netfilter.nf_conntrack_tcp_timeout_established = 28800
+
+# TCP/IP tuning
+net.ipv4.ip_local_port_range = 1024 65535
+net.ipv4.tcp_base_mss        = 1024
+net.ipv4.tcp_fin_timeout     = 10
+net.ipv4.tcp_keepalive_intvl = 30
+net.ipv4.tcp_keepalive_probes= 3
+net.ipv4.tcp_keepalive_time  = 240
+net.ipv4.tcp_limit_output_bytes = 65536
+net.ipv4.tcp_max_syn_backlog = 8192
+net.ipv4.tcp_mtu_probing     = 1
+net.ipv4.tcp_rfc1337         = 1
+net.ipv4.tcp_rmem            = 8192 87380 16777216
+net.ipv4.tcp_sack            = 1
+net.ipv4.tcp_slow_start_after_idle = 0
+net.ipv4.tcp_syn_retries     = 3
+net.ipv4.tcp_synack_retries  = 2
+net.ipv4.tcp_wmem            = 8192 65536 16777216
+
+# Unix sockets
 net.unix.max_dgram_qlen = 4096
+
+# Conntrack
+net.netfilter.nf_conntrack_generic_timeout        = 60
+net.netfilter.nf_conntrack_helper                 = 0
+net.netfilter.nf_conntrack_max                    = 524288
+net.netfilter.nf_conntrack_tcp_timeout_established= 28800
 EOF
+
 
     sysctl --system > /dev/null 2>&1
 
-    # Ensure /etc/network/interfaces includes the interfaces.d directory
+
+    local interfaces_file="/etc/network/interfaces"
     if ! grep -q 'source /etc/network/interfaces.d/*' "$interfaces_file"; then
         echo "source /etc/network/interfaces.d/*" >> "$interfaces_file"
     fi
 
-    msg_ok "$(translate "Network optimizations applied")"
-    msg_success "$(translate "Network optimization completed")"
+    msg_ok "$(translate "Network optimization completed")"
+    register_tool "network_optimization" true
 }
+
 
 
 
