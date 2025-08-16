@@ -126,7 +126,7 @@ configure_lxc_for_igpu() {
     fi
 
 
-    msg_ok "$(translate 'Coral TPU and iGPU configuration added to container') $CONTAINER_ID."
+    msg_ok "$(translate 'iGPU configuration added to container') $CONTAINER_ID."
 }
 
 
