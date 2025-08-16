@@ -3977,7 +3977,11 @@
       18
     ],
     "notes": [],
-    "type": "ct"
+    "type": "ct",
+    "default_credentials": {
+      "username": "proxmox",
+      "password": "proxmox"
+    }
   },
   {
     "name": "Radarr",
