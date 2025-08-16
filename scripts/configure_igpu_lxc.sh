@@ -138,7 +138,7 @@ install_igpu_in_container() {
     tput sc
     LOG_FILE=$(mktemp)
 
-    msg_info "$(translate 'Installing iGPU drivers...')"
+    #msg_info "$(translate 'Installing iGPU drivers...')"
     pct start "$CONTAINER_ID" >/dev/null 2>&1
 
     script -q -c "pct exec \"$CONTAINER_ID\" -- bash -c '
