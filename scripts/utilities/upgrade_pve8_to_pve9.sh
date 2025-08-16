@@ -578,11 +578,30 @@ apt_upgrade() {
         hash -r
 
     fi
-
-
 }
 
 apt_upgrade
+
+# ---------------------------
+
+regenerate_pve_cache() {
+  msg_info "$(translate "Regenerating PVE package cache...")"
+  
+  mkdir -p /var/lib/pve-manager
+  chmod 755 /var/lib/pve-manager
+  
+  systemctl restart pve-manager 2>/dev/null || true
+  
+  sleep 2
+  
+  timeout 10 pvesh get /nodes/localhost/apt/update 2>/dev/null || true
+  
+  msg_ok "$(translate "PVE cache regenerated")"
+}
+
+regenerate_pve_cache
+
+# ---------------------------
 
 run_pve8to9_check() {
   local tmp
