@@ -76,8 +76,8 @@ validate_container_id() {
 
 
 
-# Configure LXC for Coral TPU and iGPU
-configure_lxc_for_igpu() {
+# Configure LXC for iGPU
+configure_lxc_for_igpu_() {
     validate_container_id
     CONFIG_FILE="/etc/pve/lxc/${CONTAINER_ID}.conf"
     if [ ! -f "$CONFIG_FILE" ]; then
@@ -128,6 +128,32 @@ configure_lxc_for_igpu() {
 
     msg_ok "$(translate 'iGPU configuration added to container') $CONTAINER_ID."
 }
+
+
+
+
+
+configure_lxc_for_igpu() {
+  validate_container_id
+  CONFIG_FILE="/etc/pve/lxc/${CONTAINER_ID}.conf"
+  [[ -f "$CONFIG_FILE" ]] || { msg_error "$(translate 'Configuration file not found.')"; exit 1; }
+
+
+  if ! grep -q "^unprivileged:" "$CONFIG_FILE"; then
+    echo "unprivileged: 1" >> "$CONFIG_FILE"
+  fi
+
+
+  grep -q "^features: " "$CONFIG_FILE" || echo "features: nesting=1" >> "$CONFIG_FILE"
+  grep -q "^lxc.cgroup2.devices.allow: c 226:\* rwm" "$CONFIG_FILE" || \
+    echo "lxc.cgroup2.devices.allow: c 226:* rwm" >> "$CONFIG_FILE"
+  grep -q "^lxc.mount.entry: /dev/dri " "$CONFIG_FILE" || \
+    echo "lxc.mount.entry: /dev/dri dev/dri none bind,optional,create=dir" >> "$CONFIG_FILE"
+
+  msg_ok "$(translate 'iGPU configuration added to container') $CONTAINER_ID."
+}
+
+
 
 
 
