@@ -187,7 +187,12 @@ is_disk_in_use() {
 
 FREE_DISKS=()
 
-LVM_DEVICES=$(pvs --noheadings -o pv_name 2> >(grep -v 'File descriptor .* leaked') | xargs -n1 readlink -f | sort -u)
+LVM_DEVICES=$(pvs --noheadings -o pv_name 2> >(grep -v 'File descriptor .* leaked') | xargs -r -n1 readlink -f | sort -u)
+
+if [[ -n "$LVM_DEVICES" ]] && echo "$LVM_DEVICES" | grep -qFx "$REAL_PATH"; then
+    IS_MOUNTED=true
+fi
+
 RAID_ACTIVE=$(grep -Po 'md\d+\s*:\s*active\s+raid[0-9]+' /proc/mdstat | awk '{print $1}' | sort -u)
 
 while read -r DISK; do
