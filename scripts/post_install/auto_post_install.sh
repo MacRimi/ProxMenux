@@ -197,7 +197,6 @@ configure_time_sync() {
         systemctl restart postfix 2>/dev/null || true
         msg_ok "$(translate "Automatic time synchronization enabled")"
         register_tool "time_sync" true
-        msg_success "$(translate "Time settings configuration completed")"
     else
         msg_error "$(translate "Failed to enable automatic time synchronization")"
     fi
