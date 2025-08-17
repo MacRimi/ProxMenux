@@ -621,7 +621,7 @@ run_pve8to9_check() {
       echo -e "${BFR}${RD}[ERROR] $(translate "Pre-check found") $fails $(translate "blocking issue(s).")\n$(translate "Please resolve the problem(s) as described above, then re-run the upgrade script.")${CL}"
       echo -e
       
-      # Detectar y ofrecer soluciones para errores específicos
+
       local repair_commands=()
       local repair_descriptions=()
       
@@ -676,7 +676,7 @@ run_pve8to9_check() {
       
       echo -e
       
-      # Ofrecer reparación automática si hay comandos disponibles
+
       if [[ ${#repair_commands[@]} -gt 0 ]]; then
         echo -e "${BFR}${CY}$(translate "Repair Options:")${CL}"
         echo -e "${TAB}${GN}1.${CL} $(translate "Try automatic repair of detected issues")"
