@@ -968,7 +968,7 @@ EOF
 
 
 
-apply_amd_fixes() {
+apply_amd_fixes_() {
     msg_info2 "$(translate "Detecting AMD CPU and applying fixes if necessary...")"
     NECESSARY_REBOOT=1
 
@@ -1036,6 +1036,107 @@ apply_amd_fixes() {
 
     msg_success "$(translate "AMD CPU fixes applied successfully")"
 }
+
+
+
+
+
+
+
+
+apply_amd_fixes() {
+    msg_info2 "$(translate "Detecting AMD CPU and applying fixes if necessary...")"
+    NECESSARY_REBOOT=1
+
+    local cpu_model
+    cpu_model=$(grep -i -m 1 "model name" /proc/cpuinfo || true)
+
+    if echo "$cpu_model" | grep -qiE "EPYC|Ryzen"; then
+        msg_ok "$(translate "AMD CPU detected")"
+    else
+        msg_ok "$(translate "No AMD CPU detected. Skipping AMD fixes.")"
+        return 0
+    fi
+
+    msg_info "$(translate "Applying AMD-specific fixes...")"
+
+
+    local cmdline_file="/etc/kernel/cmdline"
+    local grub_file="/etc/default/grub"
+    local added_param="idle=nomwait"
+    local uses_zfs=false
+
+    if grep -q "root=ZFS=" "$cmdline_file" 2>/dev/null; then
+        uses_zfs=true
+    fi
+
+    if $uses_zfs && [[ -f "$cmdline_file" ]]; then
+        # ZFS/systemd-boot 
+        if ! grep -qw "$added_param" "$cmdline_file"; then
+            cp "$cmdline_file" "${cmdline_file}.bak"
+
+            sed -i "s|\s*$| $added_param|" "$cmdline_file"
+            msg_ok "$(translate "Added '$added_param' to /etc/kernel/cmdline")"
+        else
+            msg_ok "$(translate "'$added_param' already present in /etc/kernel/cmdline")"
+        fi
+
+        if command -v proxmox-boot-tool >/dev/null 2>&1; then
+            proxmox-boot-tool refresh >/dev/null 2>&1 && \
+            msg_ok "$(translate "proxmox-boot-tool refreshed")" || \
+            msg_warn "$(translate "Failed to refresh proxmox-boot-tool")"
+        fi
+    else
+        # GRUB (no ZFS)
+        if [[ -f "$grub_file" ]]; then
+
+            grep -q '^GRUB_CMDLINE_LINUX_DEFAULT="' "$grub_file" || echo 'GRUB_CMDLINE_LINUX_DEFAULT=""' >> "$grub_file"
+
+            if ! grep -q 'GRUB_CMDLINE_LINUX_DEFAULT=' "$grub_file"; then
+                msg_warn "$(translate "GRUB_CMDLINE_LINUX_DEFAULT not found in GRUB config")"
+            else
+                if ! grep -q "GRUB_CMDLINE_LINUX_DEFAULT=.*\b$added_param\b" "$grub_file"; then
+                    cp "$grub_file" "${grub_file}.bak"
+                    sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 $added_param\"/" "$grub_file"
+                    msg_ok "$(translate "Added '$added_param' to GRUB_CMDLINE_LINUX_DEFAULT")"
+                else
+                    msg_ok "$(translate "'$added_param' already present in GRUB_CMDLINE_LINUX_DEFAULT")"
+                fi
+                update-grub >/dev/null 2>&1 && \
+                msg_ok "$(translate "GRUB configuration updated")" || \
+                msg_warn "$(translate "Failed to update GRUB")"
+            fi
+        else
+            msg_warn "$(translate "GRUB config file not found; skipping GRUB changes")"
+        fi
+    fi
+
+
+    local kvm_conf="/etc/modprobe.d/kvm.conf"
+    touch "$kvm_conf"
+
+    if ! grep -q "^options kvm " "$kvm_conf"; then
+        echo "options kvm ignore_msrs=Y report_ignored_msrs=N" >> "$kvm_conf"
+        msg_ok "$(translate "KVM MSR options added to /etc/modprobe.d/kvm.conf")"
+    else
+
+        if ! grep -q "ignore_msrs=" "$kvm_conf"; then
+            sed -i 's/^options kvm /options kvm ignore_msrs=Y /' "$kvm_conf"
+        else
+            sed -i 's/ignore_msrs=[YNyn]/ignore_msrs=Y/' "$kvm_conf"
+        fi
+        if ! grep -q "report_ignored_msrs=" "$kvm_conf"; then
+            sed -i 's/^options kvm .*/& report_ignored_msrs=N/' "$kvm_conf"
+        else
+            sed -i 's/report_ignored_msrs=[YNyn]/report_ignored_msrs=N/' "$kvm_conf"
+        fi
+        msg_ok "$(translate "KVM MSR options ensured in /etc/modprobe.d/kvm.conf")"
+    fi
+
+    msg_success "$(translate "AMD CPU fixes applied successfully")"
+}
+
+
 
 
 
