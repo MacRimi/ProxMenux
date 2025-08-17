@@ -172,7 +172,6 @@ configure_time_sync() {
         msg_warn "$(translate "Failed to obtain public IP address")"
         timezone="UTC"
     else
-
         timezone=$(curl -s "https://ipapi.co/${this_ip}/timezone")
         if [ -z "$timezone" ]; then
             msg_warn "$(translate "Failed to determine timezone from IP address")"
@@ -182,14 +181,17 @@ configure_time_sync() {
         fi
     fi
 
+    timedatectl set-timezone "$timezone"
+    
     msg_info "$(translate "Enabling automatic time synchronization...")"
     if timedatectl set-ntp true; then
         msg_ok "$(translate "Time settings configured - Timezone:") $timezone"
         register_tool "time_sync" true
+        
+        systemctl restart postfix 2>/dev/null || true
     else
         msg_error "$(translate "Failed to enable automatic time synchronization")"
     fi
-
 }
 
 # ==========================================================
