@@ -474,12 +474,6 @@ net.ipv4.tcp_wmem            = 8192 65536 16777216
 
 # Unix sockets
 net.unix.max_dgram_qlen = 4096
-
-# Conntrack
-net.netfilter.nf_conntrack_generic_timeout        = 60
-net.netfilter.nf_conntrack_helper                 = 0
-net.netfilter.nf_conntrack_max                    = 524288
-net.netfilter.nf_conntrack_tcp_timeout_established= 28800
 EOF
 
 
