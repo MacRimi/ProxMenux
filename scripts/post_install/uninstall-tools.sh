@@ -489,6 +489,116 @@ uninstall_persistent_network() {
 
 
 
+
+
+uninstall_amd_fixes() {
+    local registry_file="/opt/xtreamlab-tools/registry.json"
+    
+
+    if [[ ! -f "$registry_file" ]]; then
+        msg_error "$(translate "Registry file not found: $registry_file")"
+        return 1
+    fi
+    
+
+    local amd_status=$(jq -r '.amd_fixes // false' "$registry_file" 2>/dev/null)
+    if [[ "$amd_status" != "true" ]]; then
+        msg_info "$(translate "AMD fixes are not currently applied according to registry")"
+        return 0
+    fi
+    
+    msg_info "$(translate "Reverting AMD fixes...")"
+    
+
+    if grep -q "root=ZFS=" /proc/cmdline 2>/dev/null; then
+
+        local cmdline_file="/etc/kernel/cmdline"
+        if [[ -f "$cmdline_file" ]]; then
+            msg_info "$(translate "Removing idle=nomwait from ZFS kernel cmdline...")"
+            
+            cp "$cmdline_file" "${cmdline_file}.bak.$(date +%Y%m%d_%H%M%S)" || {
+                msg_error "$(translate "Failed to create backup of $cmdline_file")"
+                return 1
+            }
+            
+            sed -i 's/\s*idle=nomwait\s*/ /g; s/\s\+/ /g; s/^\s*//; s/\s*$//' "$cmdline_file"
+
+            if command -v proxmox-boot-tool >/dev/null 2>&1; then
+                proxmox-boot-tool refresh
+                msg_ok "$(translate "Updated ZFS boot configuration")"
+            fi
+        fi
+    else
+
+        local grub_file="/etc/default/grub"
+        if [[ -f "$grub_file" ]]; then
+            msg_info "$(translate "Removing idle=nomwait from GRUB configuration...")"
+            
+
+            cp "$grub_file" "${grub_file}.bak.$(date +%Y%m%d_%H%M%S)" || {
+                msg_error "$(translate "Failed to create backup of $grub_file")"
+                return 1
+            }
+            
+
+            sed -i 's/$$GRUB_CMDLINE_LINUX_DEFAULT="[^"]*$$\s*idle=nomwait\s*/\1/g' "$grub_file"
+            sed -i 's/$$GRUB_CMDLINE_LINUX_DEFAULT="[^"]*$$\s\+/\1 /g' "$grub_file"
+            sed -i 's/$$GRUB_CMDLINE_LINUX_DEFAULT="[^"]*$$\s*"/\1"/g' "$grub_file"
+            
+            update-grub
+            msg_ok "$(translate "Updated GRUB configuration")"
+        fi
+    fi
+    
+
+    local kvm_conf="/etc/modprobe.d/kvm.conf"
+    if [[ -f "$kvm_conf" ]] && grep -q "ignore_msrs\|report_ignored_msrs" "$kvm_conf"; then
+        msg_info "$(translate "Reverting KVM MSR configuration...")"
+        
+
+        cp "$kvm_conf" "${kvm_conf}.bak.$(date +%Y%m%d_%H%M%S)" || {
+            msg_error "$(translate "Failed to create backup of $kvm_conf")"
+            return 1
+        }
+        
+
+        sed -i '/^options kvm.*ignore_msrs=[YN]/d' "$kvm_conf"
+        sed -i '/^options kvm.*report_ignored_msrs=[YN]/d' "$kvm_conf"
+        
+
+        if [[ ! -s "$kvm_conf" ]]; then
+            rm -f "$kvm_conf"
+            msg_info "$(translate "Removed empty KVM configuration file")"
+        fi
+        
+        msg_ok "$(translate "Reverted KVM MSR configuration")"
+    fi
+    
+
+    if command -v jq >/dev/null 2>&1; then
+        local temp_file=$(mktemp)
+        jq '.amd_fixes = false' "$registry_file" > "$temp_file" && mv "$temp_file" "$registry_file" || {
+            msg_error "$(translate "Failed to update registry")"
+            rm -f "$temp_file"
+            return 1
+        }
+        msg_ok "$(translate "Updated registry: AMD fixes marked as reverted")"
+    else
+        msg_error "$(translate "jq not found - cannot update registry")"
+        return 1
+    fi
+    
+    msg_ok "$(translate "AMD fixes have been successfully reverted")"
+    
+    register_tool "amd_fixes" false
+}
+
+
+
+
+
+
+
 ################################################################
 
 migrate_installed_tools() {
@@ -604,6 +714,7 @@ show_uninstall_menu() {
             figurine) desc="Figurine";;
             fastfetch) desc="Fastfetch";;
             log2ram) desc="Log2ram (SSD Protection)";;
+            amd_fixes) desc="AMD CPU fixes";;
             persistent_network) desc="Setting persistent network interfaces";;
             *) desc="$tool";;
         esac
