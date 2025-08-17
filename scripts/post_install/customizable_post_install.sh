@@ -518,8 +518,6 @@ skip_apt_languages() {
 configure_time_sync() {
     msg_info2 "$(translate "Configuring system time settings...")"
 
-    # Set timezone
-    #    msg_info "$(translate "Attempting to set timezone automatically based on IP address...")"
 
     # Get public IP address
     this_ip=$(dig +short myip.opendns.com @resolver1.opendns.com)
@@ -547,12 +545,15 @@ configure_time_sync() {
     # Configure time synchronization
     msg_info "$(translate "Enabling automatic time synchronization...")"
     if timedatectl set-ntp true; then
+        systemctl restart postfix 2>/dev/null || true
         msg_ok "$(translate "Automatic time synchronization enabled")"
+        register_tool "time_sync" true
+        msg_success "$(translate "Time settings configuration completed")"
     else
         msg_error "$(translate "Failed to enable automatic time synchronization")"
     fi
+    
 
-    msg_success "$(translate "Time settings configuration completed")"
 }
 
 
