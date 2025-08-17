@@ -492,106 +492,83 @@ uninstall_persistent_network() {
 
 
 uninstall_amd_fixes() {
-    local registry_file="/opt/xtreamlab-tools/registry.json"
-    
+    msg_info2 "$(translate "Reverting AMD (Ryzen/EPYC) fixes...")"
+    NECESSARY_REBOOT=1
 
-    if [[ ! -f "$registry_file" ]]; then
-        msg_error "$(translate "Registry file not found: $registry_file")"
-        return 1
-    fi
-    
-
-    local amd_status=$(jq -r '.amd_fixes // false' "$registry_file" 2>/dev/null)
-    if [[ "$amd_status" != "true" ]]; then
-        msg_info "$(translate "AMD fixes are not currently applied according to registry")"
-        return 0
-    fi
-    
-    msg_info "$(translate "Reverting AMD fixes...")"
-    
 
     if grep -q "root=ZFS=" /proc/cmdline 2>/dev/null; then
 
-        local cmdline_file="/etc/kernel/cmdline"
-        if [[ -f "$cmdline_file" ]]; then
-            msg_info "$(translate "Removing idle=nomwait from ZFS kernel cmdline...")"
-            
+        cmdline_file="/etc/kernel/cmdline"
+        if [[ -f "$cmdline_file" ]] && grep -q "idle=nomwait" "$cmdline_file"; then
             cp "$cmdline_file" "${cmdline_file}.bak.$(date +%Y%m%d_%H%M%S)" || {
-                msg_error "$(translate "Failed to create backup of $cmdline_file")"
+                msg_error "$(translate "Failed to backup $cmdline_file")"
                 return 1
             }
-            
-            sed -i 's/\s*idle=nomwait\s*/ /g; s/\s\+/ /g; s/^\s*//; s/\s*$//' "$cmdline_file"
+
+            sed -i 's/\bidle=nomwait\b//g; s/[[:space:]]\+/ /g; s/^ //; s/ $//' "$cmdline_file"
 
             if command -v proxmox-boot-tool >/dev/null 2>&1; then
-                proxmox-boot-tool refresh
-                msg_ok "$(translate "Updated ZFS boot configuration")"
+                proxmox-boot-tool refresh >/dev/null 2>&1 || {
+                    msg_error "$(translate "Failed to refresh boot configuration")"
+                    return 1
+                }
+            fi
+            msg_ok "$(translate "Removed idle=nomwait from /etc/kernel/cmdline (ZFS)")"
+        fi
+    else
+
+        grub_file="/etc/default/grub"
+        if [[ -f "$grub_file" ]] && grep -q 'GRUB_CMDLINE_LINUX_DEFAULT=' "$grub_file"; then
+            if grep -q "idle=nomwait" "$grub_file"; then
+                cp "$grub_file" "${grub_file}.bak.$(date +%Y%m%d_%H%M%S)" || {
+                    msg_error "$(translate "Failed to backup $grub_file")"
+                    return 1
+                }
+
+                sed -i -E 's/(GRUB_CMDLINE_LINUX_DEFAULT=")/\1/; s/\bidle=nomwait\b//g' "$grub_file"
+
+                awk -F\" '
+                  $1=="GRUB_CMDLINE_LINUX_DEFAULT=" {
+                    gsub(/[[:space:]]+/," ",$2); sub(/^ /,"",$2); sub(/ $/,"",$2)
+                  }1
+                ' OFS="\"" "$grub_file" > "${grub_file}.tmp" && mv "${grub_file}.tmp" "$grub_file"
+
+                update-grub >/dev/null 2>&1 || {
+                    msg_error "$(translate "Failed to update GRUB configuration")"
+                    return 1
+                }
+                msg_ok "$(translate "Removed idle=nomwait from GRUB configuration")"
             fi
         fi
-    else
+    fi
 
-        local grub_file="/etc/default/grub"
-        if [[ -f "$grub_file" ]]; then
-            msg_info "$(translate "Removing idle=nomwait from GRUB configuration...")"
-            
 
-            cp "$grub_file" "${grub_file}.bak.$(date +%Y%m%d_%H%M%S)" || {
-                msg_error "$(translate "Failed to create backup of $grub_file")"
+    kvm_conf="/etc/modprobe.d/kvm.conf"
+    if [[ -f "$kvm_conf" ]]; then
+        if grep -Eq '(ignore_msrs|report_ignored_msrs)' "$kvm_conf"; then
+            cp "$kvm_conf" "${kvm_conf}.bak.$(date +%Y%m%d_%H%M%S)" || {
+                msg_error "$(translate "Failed to backup $kvm_conf")"
                 return 1
             }
-            
+            sed -i -E '/ignore_msrs|report_ignored_msrs/d' "$kvm_conf"
 
-            sed -i 's/$$GRUB_CMDLINE_LINUX_DEFAULT="[^"]*$$\s*idle=nomwait\s*/\1/g' "$grub_file"
-            sed -i 's/$$GRUB_CMDLINE_LINUX_DEFAULT="[^"]*$$\s\+/\1 /g' "$grub_file"
-            sed -i 's/$$GRUB_CMDLINE_LINUX_DEFAULT="[^"]*$$\s*"/\1"/g' "$grub_file"
-            
-            update-grub
-            msg_ok "$(translate "Updated GRUB configuration")"
+            if [[ ! -s "$kvm_conf" ]]; then
+                rm -f "$kvm_conf"
+                msg_ok "$(translate "Removed empty KVM configuration file")"
+            else
+                msg_ok "$(translate "Removed KVM MSR options from configuration")"
+            fi
+
+            update-initramfs -u -k all >/dev/null 2>&1 || true
+        else
+            msg_ok "$(translate "KVM MSR options not present, nothing to revert")"
         fi
     fi
-    
 
-    local kvm_conf="/etc/modprobe.d/kvm.conf"
-    if [[ -f "$kvm_conf" ]] && grep -q "ignore_msrs\|report_ignored_msrs" "$kvm_conf"; then
-        msg_info "$(translate "Reverting KVM MSR configuration...")"
-        
-
-        cp "$kvm_conf" "${kvm_conf}.bak.$(date +%Y%m%d_%H%M%S)" || {
-            msg_error "$(translate "Failed to create backup of $kvm_conf")"
-            return 1
-        }
-        
-
-        sed -i '/^options kvm.*ignore_msrs=[YN]/d' "$kvm_conf"
-        sed -i '/^options kvm.*report_ignored_msrs=[YN]/d' "$kvm_conf"
-        
-
-        if [[ ! -s "$kvm_conf" ]]; then
-            rm -f "$kvm_conf"
-            msg_info "$(translate "Removed empty KVM configuration file")"
-        fi
-        
-        msg_ok "$(translate "Reverted KVM MSR configuration")"
-    fi
-    
-
-    if command -v jq >/dev/null 2>&1; then
-        local temp_file=$(mktemp)
-        jq '.amd_fixes = false' "$registry_file" > "$temp_file" && mv "$temp_file" "$registry_file" || {
-            msg_error "$(translate "Failed to update registry")"
-            rm -f "$temp_file"
-            return 1
-        }
-        msg_ok "$(translate "Updated registry: AMD fixes marked as reverted")"
-    else
-        msg_error "$(translate "jq not found - cannot update registry")"
-        return 1
-    fi
-    
-    msg_ok "$(translate "AMD fixes have been successfully reverted")"
-    
+    msg_success "$(translate "AMD fixes have been successfully reverted")"
     register_tool "amd_fixes" false
 }
+
 
 
 
@@ -714,7 +691,7 @@ show_uninstall_menu() {
             figurine) desc="Figurine";;
             fastfetch) desc="Fastfetch";;
             log2ram) desc="Log2ram (SSD Protection)";;
-            amd_fixes) desc="AMD CPU fixes";;
+            amd_fixes) desc="AMD CPU (Ryzen/EPYC) fixes";;
             persistent_network) desc="Setting persistent network interfaces";;
             *) desc="$tool";;
         esac
