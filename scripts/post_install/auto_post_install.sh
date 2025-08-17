@@ -181,8 +181,9 @@ configure_time_sync() {
             msg_ok "$(translate "Found timezone $timezone for IP $this_ip")"
         fi
     fi
-
-    msg_info "$(translate "Enabling automatic time synchronization...")"
+    
+    timedatectl set-timezone "$timezone"
+    
     if timedatectl set-ntp true; then
         msg_ok "$(translate "Time settings configured - Timezone:") $timezone"
         register_tool "time_sync" true
