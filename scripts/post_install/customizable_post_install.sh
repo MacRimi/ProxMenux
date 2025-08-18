@@ -515,7 +515,7 @@ skip_apt_languages() {
 
 
 
-configure_time_sync() {
+configure_time_sync_() {
     msg_info2 "$(translate "Configuring system time settings...")"
 
 
@@ -554,6 +554,42 @@ configure_time_sync() {
     fi
     
 
+}
+
+
+
+
+configure_time_sync() {
+    msg_info2 "$(translate "Configuring system time settings...")"
+
+    this_ip=$(dig +short myip.opendns.com @resolver1.opendns.com 2>/dev/null)
+    if [ -z "$this_ip" ]; then
+        msg_warn "$(translate "Failed to obtain public IP address - keeping current timezone settings")"
+        return 0
+    fi
+
+    timezone=$(curl -s --connect-timeout 10 "https://ipapi.co/${this_ip}/timezone" 2>/dev/null)
+    if [ -z "$timezone" ] || [ "$timezone" = "undefined" ]; then
+        msg_warn "$(translate "Failed to determine timezone from IP address - keeping current timezone settings")"
+        return 0
+    fi
+
+    msg_ok "$(translate "Found timezone $timezone for IP $this_ip")"
+    
+    if timedatectl set-timezone "$timezone"; then
+        msg_ok "$(translate "Timezone set to $timezone")"
+        
+        if timedatectl set-ntp true; then
+            msg_ok "$(translate "Time settings configured - Timezone:") $timezone"
+            register_tool "time_sync" true
+            
+            systemctl restart postfix 2>/dev/null || true
+        else
+            msg_warn "$(translate "Failed to enable automatic time synchronization")"
+        fi
+    else
+        msg_warn "$(translate "Failed to set timezone - keeping current settings")"
+    fi
 }
 
 
