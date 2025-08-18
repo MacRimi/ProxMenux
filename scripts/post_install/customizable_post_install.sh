@@ -913,7 +913,7 @@ EOF
         IFS=' ' read -ra selected_array <<< "$selected"
 
         declare -A package_to_command=(
-            ["mlocate"]="locate"
+            ["plocate"]="locate"
             ["msr-tools"]="rdmsr"
             ["net-tools"]="netstat"
             ["libguestfs-tools"]="virt-filesystems"
