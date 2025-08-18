@@ -848,7 +848,7 @@ run_complete_optimization() {
     
     apt_upgrade
     remove_subscription_banner
-    configure_time_sync
+    #configure_time_sync
     skip_apt_languages
     optimize_journald
     optimize_logrotate
