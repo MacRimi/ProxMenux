@@ -774,6 +774,20 @@
     "type": "ct"
   },
   {
+    "name": "Copyparty",
+    "slug": "copyparty",
+    "desc": "Copyparty is a lightweight, portable HTTP file server with a browser-based interface. It supports drag-and-drop uploads, downloads, deduplication, media playback, and advanced search, making it ideal for quickly sharing and managing files.",
+    "script": "tools/addon/copyparty.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/copyparty.sh",
+    "categories": [
+      11
+    ],
+    "notes": [
+      "Execute within the Proxmox shell or in LXC"
+    ],
+    "type": "addon"
+  },
+  {
     "name": "Cosmos",
     "slug": "cosmos",
     "desc": "Cosmos Cloud is a self-hosting platform that automates maintenance and security. It offers an app marketplace, reverse proxy management, container control, VPN integration, real-time monitoring, and disk management. Security features include SSO, anti-DDoS, and encryption. It simplifies self-hosting for all users.",
