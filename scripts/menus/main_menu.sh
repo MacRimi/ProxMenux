@@ -17,6 +17,12 @@ UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
 
 
+if ! command -v dialog &>/dev/null; then
+    apt update -qq >/dev/null 2>&1
+    apt install -y dialog >/dev/null 2>&1
+fi
+
+
 check_pve9_translation_compatibility() {
     local pve_version
     
@@ -63,10 +69,6 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
-if ! command -v dialog &>/dev/null; then
-    apt update -qq >/dev/null 2>&1
-    apt install -y dialog >/dev/null 2>&1
-fi
 
 if [[ "$PROXMENUX_PVE9_WARNING_SHOWN" = "1" ]]; then
 
