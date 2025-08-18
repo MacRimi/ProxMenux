@@ -686,6 +686,7 @@ EOF
             "tmux" "$(translate "Terminal multiplexer")" "OFF"
             "unzip" "$(translate "Extract ZIP files")" "OFF"
             "zip" "$(translate "Create ZIP files")" "OFF"
+            "s-tui" "$(translate "Stress-Terminal UI")" "OFF"
             "libguestfs-tools" "$(translate "VM disk utilities")" "OFF"
             "aria2" "$(translate "Multi-source downloader")" "OFF"
             "cabextract" "$(translate "Extract CAB files")" "OFF"
