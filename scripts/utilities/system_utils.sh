@@ -146,7 +146,7 @@ EOF
             #"iperf3" "$(translate "Network performance testing")" "OFF"
             "ipset" "$(translate "Manage IP sets")" "OFF"
             "iptraf-ng" "$(translate "Network monitoring tool")" "OFF"
-            "mlocate" "$(translate "Locate files quickly")" "OFF"
+            "plocate" "$(translate "Locate files quickly")" "OFF"
             "msr-tools" "$(translate "Access CPU MSRs")" "OFF"
             "net-tools" "$(translate "Legacy networking tools")" "OFF"
             "sshpass" "$(translate "Non-interactive SSH login")" "OFF"
@@ -190,7 +190,7 @@ EOF
         local warning=0
         
         declare -A package_to_command=(
-            ["mlocate"]="locate"
+            ["plocate"]="locate"
             ["msr-tools"]="rdmsr"
             ["net-tools"]="netstat"
             ["libguestfs-tools"]="virt-filesystems"
@@ -305,7 +305,7 @@ EOF
             #"iperf3:Network performance testing"
             "ipset:Manage IP sets"
             "iptraf-ng:Network monitoring tool"
-            "locate:Locate files quickly"
+            "plocate:Locate files quickly"
             "rdmsr:Access CPU MSRs"
             "netstat:Legacy networking tools"
             "sshpass:Non-interactive SSH login"
@@ -364,7 +364,7 @@ EOF
                     #"iperf3:iperf3:Network performance testing"
                     "ipset:ipset:Manage IP sets"
                     "iptraf-ng:iptraf-ng:Network monitoring tool"
-                    "mlocate:locate:Locate files quickly"
+                    "plocate:locate:Locate files quickly"
                     "msr-tools:rdmsr:Access CPU MSRs"
                     "net-tools:netstat:Legacy networking tools"
                     "sshpass:sshpass:Non-interactive SSH login"
