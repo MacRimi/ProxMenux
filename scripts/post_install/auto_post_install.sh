@@ -278,11 +278,10 @@ optimize_journald() {
 [Journal]
 Storage=persistent
 SplitMode=none
-RateLimitInterval=0
-RateLimitIntervalSec=0
-RateLimitBurst=0
+RateLimitIntervalSec=30s
+RateLimitBurst=1000
 ForwardToSyslog=no
-ForwardToWall=yes
+ForwardToWall=no
 Seal=no
 Compress=yes
 SystemMaxUse=64M
