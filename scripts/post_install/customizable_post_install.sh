@@ -228,14 +228,13 @@ optimize_journald() {
 Storage=persistent
 # Don't split Journald logs by user
 SplitMode=none
-# Disable rate limits
-RateLimitInterval=0
-RateLimitIntervalSec=0
-RateLimitBurst=0
+# Reasonable rate limits (evita spam en kernel/auditd)
+RateLimitIntervalSec=30s
+RateLimitBurst=1000
 # Disable Journald forwarding to syslog
 ForwardToSyslog=no
-# Journald forwarding to wall /var/log/kern.log
-ForwardToWall=yes
+# Don't forward to wall (para evitar mensajes en terminales)
+ForwardToWall=no
 # Disable signing of the logs, save cpu resources
 Seal=no
 Compress=yes
