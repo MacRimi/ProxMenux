@@ -1491,8 +1491,7 @@
       9
     ],
     "notes": [
-      "Execute within an existing LXC Console",
-      "WARNING: Installation sources scripts outside of Community Scripts repo. Please check the source before installing."
+      "Execute within an existing LXC Console (Debian / Ubuntu / Alpine supported)"
     ],
     "type": "addon"
   },
