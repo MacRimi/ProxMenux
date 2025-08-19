@@ -857,7 +857,7 @@ EOF
             # "iperf3"          "$(translate "Network performance testing")"              "OFF"
             "ipset"             "$(translate "Manage IP sets")"                           "OFF"
             "iptraf-ng"         "$(translate "Network monitoring tool")"                  "OFF"
-            # "s-tui"           "$(translate "Stress-Terminal UI")"                       "OFF"
+            "s-tui"             "$(translate "Stress-Terminal UI")"                       "OFF"
             "plocate"           "$(translate "Locate files quickly")"                     "OFF"
             "msr-tools"         "$(translate "Access CPU MSRs")"                          "OFF"
             "net-tools"         "$(translate "Legacy networking tools")"                  "OFF"
