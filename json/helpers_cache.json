@@ -3218,7 +3218,9 @@
       4,
       2
     ],
-    "notes": [],
+    "notes": [
+      "If you use VLANs (default LAN is set to VLAN 999), make sure the Proxmox Linux Bridge is configured as VLAN-aware, otherwise the VM may fail to start."
+    ],
     "type": "vm"
   },
   {
