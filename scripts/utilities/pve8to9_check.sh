@@ -165,11 +165,16 @@ run_pve8to9_check2() {
     
     echo -e
     msg_ok "$(translate "Checklist post-upgrade finished. Warnings:") $warns"
+    echo -e
+    msg_success "$(translate "Press Enter to continue")"
+    read -r
     rm -f "$tmp"
     return $rc
 
 }
 
+show_proxmenux_logo
+msg_title "$(translate "Run PVE 8 to 9 check")"
 run_pve8to9_check2
 
 
