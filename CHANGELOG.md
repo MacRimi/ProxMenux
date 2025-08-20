@@ -1,3 +1,51 @@
+## 2025-08-20
+
+### New version v1.1.5
+
+### Added
+
+- **New Script: Upgrade PVE 8 to PVE 9**  
+  Added a full upgrade tool located under `Utilities and Tools`. It provides:
+  1. **Automatic upgrade** from PVE 8 to 9
+  2. **Interactive upgrade** with step-by-step confirmations
+  3. **Check-only mode** using `check-pve8to9`
+  4. **Manual instructions** shown in order for users who prefer to upgrade manually
+
+- **New Tools in System Utilities**
+  - [`s-tui`](https://github.com/amanusk/s-tui): Terminal-based CPU monitoring with graphs
+  - [`intel-gpu-tools`](https://gitlab.freedesktop.org/drm/igt-gpu-tools): Useful for Intel GPU diagnostics
+
+---
+
+### Improved
+
+- **APT Upgrade Handling**  
+  The PVE upgrade function now blocks the process if any package prompts for manual confirmation. This avoids partial upgrades and ensures consistency.
+
+- **Network Optimization (sysctl)**  
+  - Obsolete kernel parameters removed (e.g., `tcp_tw_recycle`, `nf_conntrack_helper`) to prevent warnings in **Proxmox 9 / kernel 6.14**
+  - Now generates only valid, up-to-date sysctl parameters
+
+- **AMD CPU Patch Handling**  
+  - Now applies correct `idle=nomwait` and KVM options (`ignore_msrs=1`, `report_ignored_msrs=0`)
+  - Expected warning is now documented and safely handled for stability with Ryzen/EPYC
+
+- **Timezone & NTP Fixes**  
+  - Automatically detects timezone using public IP geolocation
+  - Falls back to UTC if detection fails
+  - Restarts Postfix after timezone set → resolves `/var/spool/postfix/etc/localtime` mismatch warning
+
+- **Repository & Package Installer Logic**  
+  - Now verifies that working repositories exist before installing any package
+  - If none are available, adds a fallback **Debian stable** repository
+  - Replaces deprecated `mlocate` with `plocate` (compatible with Debian 13 and Proxmox 9)
+
+- **Improved Logs and User Feedback**  
+  - Actions that fail now provide precise messages (instead of falsely marking as success)
+  - Helps users clearly understand what's been applied or skipped
+
+
+
 ## 2025-08-06
 
 ### New version v1.1.4
