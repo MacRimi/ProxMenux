@@ -105,7 +105,7 @@ ask_run_mode() {
                     ASSUME_YES="1"
                     show_proxmenux_logo || true
                     msg_title "$(translate "Upgrade assistant: Proxmox VE 8 → 9 (Trixie)")"
-                    msg_info2 "$(translate "Run mode selected: Unattended")"
+                    msg_info2 "$(translate "Run mode selected: Automatic")"
                     export DEBIAN_FRONTEND=noninteractive
                     export APT_LISTCHANGES_FRONTEND=none
                     break   
@@ -137,8 +137,6 @@ ask_run_mode() {
                          "4" "$(translate "Manual upgrade guide step by step")" \
                          3>&1 1>&2 2>&3
             ); then
-                show_proxmenux_logo || true
-                msg_warn "$(translate "Action canceled by user")"
                 exit 0
             fi
 
@@ -147,7 +145,7 @@ ask_run_mode() {
                     ASSUME_YES="1"
                     show_proxmenux_logo || true
                     msg_title "$(translate "Upgrade assistant: Proxmox VE 8 → 9 (Trixie)")"
-                    msg_info2 "$(translate "Run mode selected: Unattended")"
+                    msg_info2 "$(translate "Run mode selected: Automatic/Unattended")"
                     export DEBIAN_FRONTEND=noninteractive
                     export APT_LISTCHANGES_FRONTEND=none
                     break
