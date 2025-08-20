@@ -56,7 +56,7 @@ install_system_utils() {
     }
 
 
-ensure_repositories() {
+ensure_repositories_() {
     local sources_file="/etc/apt/sources.list"
     local need_update=false
 
@@ -84,6 +84,98 @@ EOF
 
     return 0
 }
+
+
+
+
+
+
+
+ensure_repositories() {
+  local pve_version need_update=false
+  pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
+
+  if [[ -z "$pve_version" ]]; then
+    msg_error "Unable to detect Proxmox version."
+    return 1
+  fi
+
+  if (( pve_version >= 9 )); then
+    # ===== PVE 9 (Debian 13 - trixie) =====
+    # proxmox.sources (no-subscription) ─ create if missing
+    if [[ ! -f /etc/apt/sources.list.d/proxmox.sources ]]; then
+      cat > /etc/apt/sources.list.d/proxmox.sources <<'EOF'
+Enabled: true
+Types: deb
+URIs: http://download.proxmox.com/debian/pve
+Suites: trixie
+Components: pve-no-subscription
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+EOF
+      need_update=true
+    fi
+
+    # debian.sources ─ create if missing
+    if [[ ! -f /etc/apt/sources.list.d/debian.sources ]]; then
+      cat > /etc/apt/sources.list.d/debian.sources <<'EOF'
+Types: deb
+URIs: http://deb.debian.org/debian/
+Suites: trixie trixie-updates
+Components: main contrib non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+Types: deb
+URIs: http://security.debian.org/debian-security/
+Suites: trixie-security
+Components: main contrib non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+EOF
+      need_update=true
+    fi
+
+  # apt-get update only if needed or lists are empty
+  if [[ "$need_update" == true ]] || [[ ! -d /var/lib/apt/lists || -z "$(ls -A /var/lib/apt/lists 2>/dev/null)" ]]; then
+    msg_info "$(translate "Updating APT package lists...")"
+    apt-get update >/dev/null 2>&1 || apt-get update
+  fi
+
+
+  else
+    # ===== PVE 8 (Debian 12 - bookworm) =====
+    local sources_file="/etc/apt/sources.list"
+
+    # Debian base (create or append minimal lines if missing)
+    if ! grep -qE 'deb .* bookworm .* main' "$sources_file" 2>/dev/null; then
+      {
+        echo "deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware"
+        echo "deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware"
+        echo "deb http://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware"
+      } >> "$sources_file"
+      need_update=true
+    fi
+
+    # Proxmox no-subscription list (classic) if missing
+    if [[ ! -f /etc/apt/sources.list.d/pve-no-subscription.list ]]; then
+      echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" \
+        > /etc/apt/sources.list.d/pve-no-subscription.list
+      need_update=true
+    fi
+  fi
+
+  # apt-get update only if needed or lists are empty
+  if [[ "$need_update" == true ]] || [[ ! -d /var/lib/apt/lists || -z "$(ls -A /var/lib/apt/lists 2>/dev/null)" ]]; then
+    msg_info "$(translate "Updating APT package lists...")"
+    apt-get update >/dev/null 2>&1 || apt-get update
+  fi
+
+  return 0
+}
+
+
+
+
+
+
 
     install_single_package() {
         local package="$1"
