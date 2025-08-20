@@ -30,7 +30,8 @@ initialize_cache
                         "1" "$(translate "UUp Dump ISO creator Custom")" \
                         "2" "$(translate "System Utilities Installer")" \
                         "3" "$(translate "Proxmox System Update")" \
-                        "4" "$(translate "Return to Main Menu")" \
+                        "4" "$(translate "Upgrade PVE 8 to PVE 9")" \
+                        "5" "$(translate "Return to Main Menu")" \
                         2>&1 >/dev/tty)
 
         case $OPTION in
@@ -69,7 +70,13 @@ initialize_cache
                     fi
                 fi
                 ;;
-            4) exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh") ;;
+            4)
+                bash <(curl -s "$REPO_URL/scripts/utilities/upgrade_pve8_to_pve9.sh")
+                if [ $? -ne 0 ]; then
+                    return
+                fi
+                ;;    
+            5) exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh") ;;
             *) exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh") ;;
         esac
     done
