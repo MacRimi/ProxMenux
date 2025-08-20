@@ -714,12 +714,20 @@ run_pve8to9_check() {
             ;;
           2)
             echo -e
-            echo -e "${BFR}${CY}$(translate "Manual Repair Commands:")${CL}"
+            echo -e "$(translate "${BFR}${CY}Manual Repair Commands:${CL}")"
             for i in "${!repair_commands[@]}"; do
-              echo -e "${TAB}${GN}# ${repair_descriptions[$i]}${CL}"
+              echo -e "${TAB}${BL}# ${repair_descriptions[$i]}${CL}"
+              echo -e
               echo -e "${TAB}${repair_commands[$i]}"
               echo -e
             done
+            echo -e
+            msg_info2 "$(translate "Once finished, re-run 'run_pve8to9_check' to verify that all issues are resolved \n    before executing the PVE 8 → PVE 9 upgrade.")"
+            echo -e
+            msg_success "$(translate "Press Enter to exit the script after reading instructions...")"
+            read -r
+            rm -f "$tmp"
+            exit 1
             ;;
           *)
             echo -e
@@ -986,7 +994,7 @@ run_pve8to9_check2() {
       echo -e "${BFR}${RD}[ERROR] $(translate "Pre-check found") $fails $(translate "blocking issue(s).")\n$(translate "Please resolve the problem(s) as described above, then re-run the upgrade script.")${CL}"
       echo -e
       
-      # Detectar y ofrecer soluciones para errores específicos
+
       local repair_commands=()
       local repair_descriptions=()
       
@@ -1035,7 +1043,7 @@ run_pve8to9_check2() {
       
       echo -e
       
-      # Ofrecer reparación automática si hay comandos disponibles
+
       if [[ ${#repair_commands[@]} -gt 0 ]]; then
         echo -e "${BFR}${CY}$(translate "Repair Options:")${CL}"
         echo -e "${TAB}${GN}1.${CL} $(translate "Try automatic repair of detected issues")"
@@ -1072,12 +1080,20 @@ run_pve8to9_check2() {
             ;;
           2)
             echo -e
-            echo -e "${BFR}${CY}$(translate "Manual Repair Commands:")${CL}"
+            echo -e "$(translate "${BFR}${CY}Manual Repair Commands:${CL}")"
             for i in "${!repair_commands[@]}"; do
-              echo -e "${TAB}${GN}# ${repair_descriptions[$i]}${CL}"
+              echo -e "${TAB}${BL}# ${repair_descriptions[$i]}${CL}"
+              echo -e
               echo -e "${TAB}${repair_commands[$i]}"
               echo -e
             done
+            echo -e
+            msg_info2 "$(translate "Once finished, re-run the script 'run_pve8to9_check' to verify that all issues are resolved \n   before rebooting.")"
+            echo -e
+            msg_success "$(translate "Press Enter to exit the script after reading instructions...")"
+            read -r
+            rm -f "$tmp"
+            exit 1
             ;;
         esac
       fi
