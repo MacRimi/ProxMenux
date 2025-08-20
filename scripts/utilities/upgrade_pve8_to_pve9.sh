@@ -87,7 +87,7 @@ ask_run_mode() {
             choice=$(
                 dialog --backtitle "ProxMenux" \
                        --title "$title" \
-                       --menu "$text" 17 78 3 \
+                       --menu "$text" 20 70 8 \
                        1 "$(translate "Automatic/Unattended")" \
                        2 "$(translate "Interactive (guided, prompts visible)")" \
                        3 "$(translate "Run PVE 8 to 9") check" \
@@ -130,7 +130,7 @@ ask_run_mode() {
             local choice
             if ! choice=$(
                 whiptail --title "$(translate "Select run mode")" \
-                         --menu "$(translate "Choose how to perform the upgrade:")" 17 78 3 \
+                         --menu "$(translate "Choose how to perform the upgrade:")" 20 70 8 \
                          "1" "$(translate "Automatic/Unattended")" \
                          "2" "$(translate "Interactive (guided, prompts visible)")" \
                          "3" "$(translate "Run PVE 8 to 9") check" \
