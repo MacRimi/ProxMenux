@@ -26,7 +26,7 @@ initialize_cache
 
     while true; do
         OPTION=$(dialog --clear --backtitle "ProxMenux" --title "$(translate "Utilities Menu")" \
-                        --menu "\n$(translate "Select an option:")" 20 70 8 \
+                        --menu "$(translate "Select an option:")" 20 70 8 \
                         "1" "$(translate "UUp Dump ISO creator Custom")" \
                         "2" "$(translate "System Utilities Installer")" \
                         "3" "$(translate "Proxmox System Update")" \
