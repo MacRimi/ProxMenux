@@ -39,7 +39,7 @@ show_main_menu() {
     
     case $CHOICE in
         1)
-            convert_privileged_to_unprivileged
+            bash <(curl -fsSL "$REPO_URL/scripts/lcx/lxc-privileged-to-unprivileged.sh")
             ;;
         2)
             convert_unprivileged_to_privileged
@@ -56,40 +56,12 @@ show_main_menu() {
     esac
 }
 
-convert_privileged_to_unprivileged() {
-    msg_info "$(translate 'Starting privileged to unprivileged conversion...')"
-    
 
-    SCRIPT_PATH="$BASE_DIR/lxc-privileged-to-unprivileged.sh"
-    if [ ! -f "$SCRIPT_PATH" ]; then
-        msg_error "$(translate 'Conversion script not found:') $SCRIPT_PATH"
-        return 1
-    fi
-    
-    bash "$SCRIPT_PATH"
-    
-
-    if whiptail --yesno "$(translate 'Do you want to return to the main menu?')" 10 60; then
-        show_main_menu
-    fi
-}
 
 convert_unprivileged_to_privileged() {
-    msg_info "$(translate 'Starting unprivileged to privileged conversion...')"
-    
 
-    SCRIPT_PATH="$BASE_DIR/lxc-unprivileged-to-privileged.sh"
-    if [ ! -f "$SCRIPT_PATH" ]; then
-        msg_error "$(translate 'Conversion script not found:') $SCRIPT_PATH"
-        return 1
-    fi
+    bash <(curl -fsSL "$REPO_URL/scripts/lcx/lxc-privileged-to-unprivileged.sh")
     
-    bash "$SCRIPT_PATH"
-    
-
-    if whiptail --yesno "$(translate 'Do you want to return to the main menu?')" 10 60; then
-        show_main_menu
-    fi
 }
 
 show_container_status() {
