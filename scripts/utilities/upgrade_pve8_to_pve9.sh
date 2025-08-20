@@ -722,7 +722,7 @@ run_pve8to9_check() {
               echo -e
             done
             echo -e
-            msg_info2 "$(translate "Once finished, re-run 'run_pve8to9_check' to verify that all issues are resolved \n    before executing the PVE 8 → PVE 9 upgrade.")"
+            msg_info2 "$(translate "Once finished, re-run 'PVE 8 to 9 check' to verify that all issues are resolved \n    before executing the PVE 8 → PVE 9 upgrade.")"
             echo -e
             msg_success "$(translate "Press Enter to exit the script after reading instructions...")"
             read -r
@@ -1088,7 +1088,7 @@ run_pve8to9_check2() {
               echo -e
             done
             echo -e
-            msg_info2 "$(translate "Once finished, re-run the script 'run_pve8to9_check' to verify that all issues are resolved \n   before rebooting.")"
+            msg_info2 "$(translate "Once finished, re-run the script 'PVE 8 to 9 check' to verify that all issues are resolved \n   before rebooting.")"
             echo -e
             msg_success "$(translate "Press Enter to exit the script after reading instructions...")"
             read -r
