@@ -154,8 +154,10 @@ convert_direct_method() {
         if ! mount -o loop "$DISK_PATH" "$TEMP_DIR" 2>/dev/null; then
             msg_error "$(translate 'Failed to mount container filesystem.')"
             msg_error "$(translate 'Disk path:') $DISK_PATH"
+            msg_success "$(translate "Press Enter to continue")"
+            read -r
             rmdir "$TEMP_DIR"
-            exit 1
+            exit 0
         fi
     fi
     
