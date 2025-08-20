@@ -157,7 +157,7 @@ convert_direct_method() {
             msg_success "$(translate "Press Enter to continue")"
             read -r
             rmdir "$TEMP_DIR"
-            exit 0
+            return
         fi
     fi
     
