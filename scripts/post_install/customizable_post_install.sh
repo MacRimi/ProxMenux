@@ -854,6 +854,7 @@ EOF
             "iftop"             "$(translate "Real-time network usage")"                  "OFF"
             "iotop"             "$(translate "Monitor disk I/O usage")"                   "OFF"
             # "iperf3"          "$(translate "Network performance testing")"              "OFF"
+            "intel-gpu-tools"   "$(translate "tools for the Intel graphics driver")"      "OFF"
             "ipset"             "$(translate "Manage IP sets")"                           "OFF"
             "iptraf-ng"         "$(translate "Network monitoring tool")"                  "OFF"
             "s-tui"             "$(translate "Stress-Terminal UI")"                       "OFF"
