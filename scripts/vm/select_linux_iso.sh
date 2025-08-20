@@ -167,12 +167,13 @@ function select_linux_iso_official() {
 function select_linux_cloudinit() {
   local CLOUDINIT_OPTIONS=(
     "1" "Arch Linux   (Cloud-Init automated)   │ Helper Scripts"
-    "2" "Debian 12    (Cloud-Init automated)   │ Helper Scripts"
-    "3" "Ubuntu 22.04 (Cloud-Init automated)   │ Helper Scripts"
-    "4" "Ubuntu 24.04 (Cloud-Init automated)   │ Helper Scripts"
-    "5" "Ubuntu 24.10 (Cloud-Init automated)   │ Helper Scripts"
-    "6" "Ubuntu 25.04 (Cloud-Init automated)   │ Helper Scripts"
-    "7" "$(translate "Return to Main Menu")"
+    "2" "Debian 13    (Cloud-Init automated)   │ Helper Scripts"
+    "3" "Debian 12    (Cloud-Init automated)   │ Helper Scripts"
+    "4" "Ubuntu 22.04 (Cloud-Init automated)   │ Helper Scripts"
+    "5" "Ubuntu 24.04 (Cloud-Init automated)   │ Helper Scripts"
+    "6" "Ubuntu 24.10 (Cloud-Init automated)   │ Helper Scripts"
+    "7" "Ubuntu 25.04 (Cloud-Init automated)   │ Helper Scripts"
+    "8" "$(translate "Return to Main Menu")"
   )
 
   local script_selection
@@ -187,24 +188,27 @@ function select_linux_cloudinit() {
       bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/archlinux-vm.sh")
       ;;
     2)
-      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/debian-vm.sh")
+      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/debian-13-vm.sh")
       ;;
     3)
-      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2204-vm.sh")
+      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/debian-vm.sh")
       ;;
     4)
-      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2404-vm.sh")
+      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2204-vm.sh")
       ;;
     5)
-      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2410-vm.sh")
+      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2404-vm.sh")
       ;;
     6)
+      bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2410-vm.sh")
+      ;;
+    7)
       bash <(curl -s "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/ubuntu2504-vm.sh")
       echo -e
       echo -e "after installation, checkout:\nhttps://github.com/community-scripts/ProxmoxVE/discussions/272"
       echo -e
       ;;  
-    7)
+    8)
       return
       ;;
   esac
