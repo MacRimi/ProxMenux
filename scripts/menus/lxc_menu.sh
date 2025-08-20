@@ -121,6 +121,7 @@ show_container_status() {
     
 
     rm -f "$TEMP_FILE"
+    show_main_menu
     
 }
 
