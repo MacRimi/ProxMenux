@@ -1182,6 +1182,7 @@ else
   echo -e "${TAB}1. $(translate "Start the VM")"
   echo -e "${TAB}2. $(translate "Open the VM console and wait for the installer to boot")"
   echo -e "${TAB}3. $(translate "Complete the ZimaOS installation wizard")"
+  echo -e "${TAB}4. $(translate "After installation, remove or disable the installer IDE disk")"
   echo -e
 
 
