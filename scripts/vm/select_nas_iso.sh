@@ -108,7 +108,6 @@ function select_nas_iso() {
       read -r
       return 1
       ;;
-      ;;
     8)
       HN="Umbrel OS"
       bash -c "$(wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/umbrel-os-vm.sh)"
