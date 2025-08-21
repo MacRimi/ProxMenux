@@ -46,7 +46,7 @@ function select_nas_iso() {
     "4" "OpenMediaVault VM          (Debian based)"
     "5" "XigmaNAS       VM          (FreeBSD based)"
     "6" "Rockstor       VM          (openSUSE based)"
-    "7" "ZimaOS         VM          (R0GGER proxmox-zimaos)"
+    "7" "ZimaOS         VM          (Proxmox-zimaos)"
     "8" "Umbrel OS      VM          (Helper Scripts)"
     "9" "$(translate "Return to Main Menu")"
   )
@@ -103,19 +103,11 @@ function select_nas_iso() {
       HN="Rockstor"
       ;;
     7)
-      HN="ZimaOS-VM"
-      if ! confirm_vm_creation; then
-        return 1
-      fi
-      bash -c "$(wget -qLO - https://raw.githubusercontent.com/R0GGER/proxmox-zimaos/refs/heads/main/zimaos_zimacube.sh)"
-      echo -e
+      bash <(curl -s "$REPO_URL/scripts/vm/zimaos.sh")
       msg_success "$(translate "Press Enter to return to menu...")"
       read -r
-      
-      whiptail --title "Proxmox VE - ZimaOS" \
-        --msgbox "$(translate "ZimaOS installer script by R0GGER\n\nVisit the GitHub repo to learn more, contribute, or support the project:\n\nhttps://github.com/R0GGER/proxmox-zimaos")" 15 70
-
       return 1
+      ;;
       ;;
     8)
       HN="Umbrel OS"
