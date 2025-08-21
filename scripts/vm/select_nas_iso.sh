@@ -54,7 +54,7 @@ function select_nas_iso() {
   local NAS_TYPE
   NAS_TYPE=$(dialog --backtitle "ProxMenux" \
     --title "$(translate "NAS Systems")" \
-    --menu "\n$(translate "Select the NAS system to install:")" 18 70 10 \
+    --menu "\n$(translate "Select the NAS system to install:")" 20 70 10 \
     "${NAS_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
 
