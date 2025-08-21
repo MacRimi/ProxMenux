@@ -2331,6 +2331,24 @@
     "type": "ct"
   },
   {
+    "name": "LiteLLM",
+    "slug": "litellm",
+    "desc": "LLM proxy to call 100+ LLMs in a unified interface & track spend, set budgets per virtual key/user",
+    "script": "ct/litellm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/litellm.sh",
+    "categories": [
+      20
+    ],
+    "notes": [
+      "Update master key in the config file"
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": "sk-1234"
+    }
+  },
+  {
     "name": "lldap",
     "slug": "lldap",
     "desc": "LLDAP is a lightweight LDAP server designed for simplicity and ease of use. It provides secure user authentication and authorization management through LDAP over TLS. Ideal for small to medium-sized environments, It aims to streamline identity management tasks with a minimalistic and straightforward setup.",
