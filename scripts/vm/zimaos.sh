@@ -1173,6 +1173,22 @@ ${DISK_INFO}
         fi
     fi
 
+
+if [ "$ERROR_FLAG" = true ]; then
+   msg_error "VM created with errors. Check configuration." 
+else
+  msg_success "$(translate "Completed Successfully!")"
+
+  echo -e "${TAB}${GN}$(translate "Next Steps:")${CL}"
+  echo -e "${TAB}1. $(translate "Start the VM")"
+  echo -e "${TAB}2. $(translate "Open the VM console and wait for the installer to boot")"
+  echo -e "${TAB}3. $(translate "Complete the ZimaOS installation wizard")"
+  echo -e
+
+
+fi
+
+
 }
 
 # ==========================================================
