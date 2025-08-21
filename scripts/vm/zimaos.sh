@@ -106,7 +106,7 @@ function default_settings() {
   MACHINE=" -machine q35"
   BIOS_TYPE=" -bios ovmf"
   DISK_CACHE=""
-  HN="ZimaOS-DSM"
+  HN="ZimaOS"
   CPU_TYPE=" -cpu host"
   CORE_COUNT="2"
   RAM_SIZE="4096"
@@ -420,7 +420,7 @@ function select_virtual_disk() {
     fi
 
     # Request disk size
-    DISK_SIZE=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "System Disk Size (GB)")" 8 58 32 --title "VIRTUAL DISK" --cancel-button Cancel 3>&1 1>&2 2>&3)
+    DISK_SIZE=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "System Disk Size (GB)")" 8 58 64 --title "VIRTUAL DISK" --cancel-button Cancel 3>&1 1>&2 2>&3)
     
     if [ $? -ne 0 ]; then
       if [ ${#VIRTUAL_DISKS[@]} -eq 0 ]; then
@@ -435,7 +435,7 @@ function select_virtual_disk() {
     fi
     
     if [ -z "$DISK_SIZE" ]; then
-      DISK_SIZE="32"
+      DISK_SIZE="64"
     fi
 
     # Store the configuration in the disk list
