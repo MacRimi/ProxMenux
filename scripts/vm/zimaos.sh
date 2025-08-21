@@ -116,6 +116,8 @@ function default_settings() {
   MTU=""
   SERIAL_PORT="socket"
   START_VM="no"
+  INTERFACE_TYPE="scsi"
+  DISCARD_OPTS=",discard=on,ssd=on"
   
   echo -e " ${TAB}${DGN}Using Virtual Machine ID: ${BGN}${VMID}${CL}"
   echo -e " ${TAB}${DGN}Using Machine Type: ${BGN}q35${CL}"
@@ -130,6 +132,7 @@ function default_settings() {
   echo -e " ${TAB}${DGN}Using Interface MTU Size: ${BGN}Default${CL}"
   echo -e " ${TAB}${DGN}Configuring Serial Port: ${BGN}${SERIAL_PORT}${CL}"
   echo -e " ${TAB}${DGN}Start VM when completed: ${BGN}${START_VM}${CL}"
+  echo -e " ${TAB}${DGN}Disk Interface Type: ${BGN}${INTERFACE_TYPE}${CL}"
   echo -e
   echo -e "${DEF}Creating a $NAME using the above default settings${CL}"
  
@@ -304,6 +307,27 @@ function advanced_settings() {
     exit_script
   fi
 
+
+
+
+  # Select Interface Type
+  INTERFACE_TYPE=$(whiptail --backtitle "ProxMenuX" --title "$(translate "Select Disk Interface")" --radiolist \
+    "$(translate "Select the bus type for the disks:")" 15 70 4 \
+    "scsi"    "$(translate "SCSI   (recommended for Linux)")" ON \
+    "sata"    "$(translate "SATA   (standard - high compatibility)")" OFF \
+    "virtio"  "$(translate "VirtIO (advanced - high performance)")" OFF \
+    3>&1 1>&2 2>&3) || exit 1
+
+  case "$INTERFACE_TYPE" in
+    "scsi"|"sata")
+      DISCARD_OPTS=",discard=on,ssd=on"
+      ;;
+    "virtio")
+      DISCARD_OPTS=",discard=on"
+      ;;
+  esac
+
+  msg_ok "$(translate "Disk interface selected:") $INTERFACE_TYPE"
 
 
   # Confirmation
@@ -1017,14 +1041,14 @@ if [ "$DISK_TYPE" = "virtual" ]; then
 
         DISK_NUM=$((i+1))
         DISK_NAME="vm-${VMID}-disk-${DISK_NUM}${DISK_EXT}"
-        SATA_ID="sata$i"
+        INTERFACE_ID="${INTERFACE_TYPE}$i"
         
-        # Create virtual disk
+
         if [[ "$STORAGE_TYPE" == "btrfs" || "$STORAGE_TYPE" == "dir" || "$STORAGE_TYPE" == "nfs" ]]; then
         
           msg_info "Creating virtual disk (format=raw) for $STORAGE_TYPE..."
-          if ! qm set "$VMID" -$SATA_ID "$STORAGE:$SIZE,format=raw" >/dev/null 2>&1; then
-            msg_error "Failed to assign disk $DISK_NUM ($SATA_ID) on $STORAGE"
+          if ! qm set "$VMID" -$INTERFACE_ID "$STORAGE:$SIZE,format=raw$DISCARD_OPTS" >/dev/null 2>&1; then
+            msg_error "Failed to assign disk $DISK_NUM ($INTERFACE_ID) on $STORAGE"
             ERROR_FLAG=true
             continue
           fi
@@ -1036,19 +1060,19 @@ if [ "$DISK_TYPE" = "virtual" ]; then
             ERROR_FLAG=true
             continue
           fi
-          if ! qm set "$VMID" -$SATA_ID "$STORAGE:${DISK_REF}$DISK_NAME" >/dev/null 2>&1; then
-            msg_error "Failed to configure virtual disk as $SATA_ID"
+          if ! qm set "$VMID" -$INTERFACE_ID "$STORAGE:${DISK_REF}$DISK_NAME$DISCARD_OPTS" >/dev/null 2>&1; then
+            msg_error "Failed to configure virtual disk as $INTERFACE_ID"
             ERROR_FLAG=true
             continue
           fi
         fi
 
-        msg_ok "Configured virtual disk as $SATA_ID, ${SIZE}GB on ${CL}${BL}$STORAGE${CL} ${GN}"
+        msg_ok "Configured virtual disk as $INTERFACE_ID, ${SIZE}GB on ${CL}${BL}$STORAGE${CL} ${GN}"
 
         
-        # Add information to the description
-        DISK_INFO="${DISK_INFO}<p>Virtual Disk $DISK_NUM: ${SIZE}GB on ${STORAGE}</p>"
-        CONSOLE_DISK_INFO="${CONSOLE_DISK_INFO}- Virtual Disk $DISK_NUM: ${SIZE}GB on ${STORAGE} ($SATA_ID)\n"
+
+        DISK_INFO="${DISK_INFO}<p>Virtual Disk $DISK_NUM: ${SIZE}GB on ${STORAGE} (${INTERFACE_TYPE}${i})</p>"
+        CONSOLE_DISK_INFO="${CONSOLE_DISK_INFO}- Virtual Disk $DISK_NUM: ${SIZE}GB on ${STORAGE} ($INTERFACE_ID)\n"
     done
     
 
