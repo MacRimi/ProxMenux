@@ -869,7 +869,6 @@ function select_storage_volume() {
 
 
 
-
 # ==========================================================
 # Create VM
 # ==========================================================
@@ -881,9 +880,9 @@ function create_vm() {
     -serial0 socket
   msg_ok "Create a $NAME"
 
+  BOOT_ORDER_LIST=()  # Array to store boot order for all disks
 
- 
-# Check if UEFI (OVMF) is being used ===================
+  # Check if UEFI (OVMF) is being used ===================
   if [[ "$BIOS_TYPE" == *"ovmf"* ]]; then
 
     msg_info "Configuring EFI disk"
@@ -933,16 +932,11 @@ function create_vm() {
         fi
     fi
 
-
   fi
-# ==========================================================
-
 
 # Select storage volume for loader =======================
-
     LOADER_STORAGE=$(select_storage_volume $VMID "loader disk")
       
-
     #Run the command in the background and capture its PID
     qm importdisk $VMID ${LOADER_FILE} $LOADER_STORAGE > /tmp/import_log_$VMID.txt 2>&1 &
     import_pid=$!
@@ -967,10 +961,6 @@ function create_vm() {
           msg_ok "Loader imported successfully to ${CL}${BL}$LOADER_STORAGE${GN}${CL}"
     fi
 
-
-
-
- 
     STORAGE_TYPE=$(pvesm status -storage "$LOADER_STORAGE" | awk 'NR>1 {print $2}')
 
     if [[ "$STORAGE_TYPE" == "btrfs" || "$STORAGE_TYPE" == "dir" || "$STORAGE_TYPE" == "nfs" ]]; then
@@ -982,9 +972,8 @@ function create_vm() {
         if [[ -n "$IMPORTED_REF" && -n "$IMPORTED_ID" ]]; then
             if qm set "$VMID" -ide0 "$IMPORTED_REF" >/dev/null 2>&1; then
                 msg_ok "Configured loader disk as ide0"
-                qm set "$VMID" -delete "$IMPORTED_ID" >/dev/null 2>&1
             else
-                msg_error "Failed to assign loader disk to ide0"
+                msg_error "Failed to assign loader disk"
                 ERROR_FLAG=true
             fi
         else
@@ -1002,81 +991,68 @@ function create_vm() {
         fi
     fi
 
-
-
-
-    result=$(qm set "$VMID" -boot order=ide0 2>&1)
-    if [[ $? -eq 0 ]]; then
-          msg_ok "Loader configured as boot device."
-      else
-          ERROR_FLAG=true
-    fi
-
-# ==========================================================
-
-if [ "$DISK_TYPE" = "virtual" ]; then
-    if [ ${#VIRTUAL_DISKS[@]} -eq 0 ]; then
-        msg_error "No virtual disks configured."
-        exit_script
-    fi
-
-    DISK_INFO=""
-    CONSOLE_DISK_INFO=""
-
-    for i in "${!VIRTUAL_DISKS[@]}"; do
-        IFS=':' read -r STORAGE SIZE <<< "${VIRTUAL_DISKS[$i]}"
-        
-        STORAGE_TYPE=$(pvesm status -storage $STORAGE | awk 'NR>1 {print $2}')
-        case $STORAGE_TYPE in
-            nfs | dir)
-                DISK_EXT=".raw"
-                DISK_REF="$VMID/"
-                ;;
-            *)
-                DISK_EXT=""
-                DISK_REF=""
-                ;;
-        esac
-        
-
-        DISK_NUM=$((i+1))
-        DISK_NAME="vm-${VMID}-disk-${DISK_NUM}${DISK_EXT}"
-        INTERFACE_ID="${INTERFACE_TYPE}$i"
-        
-
-        if [[ "$STORAGE_TYPE" == "btrfs" || "$STORAGE_TYPE" == "dir" || "$STORAGE_TYPE" == "nfs" ]]; then
-        
-          msg_info "Creating virtual disk (format=raw) for $STORAGE_TYPE..."
-          if ! qm set "$VMID" -$INTERFACE_ID "$STORAGE:$SIZE,format=raw$DISCARD_OPTS" >/dev/null 2>&1; then
-            msg_error "Failed to assign disk $DISK_NUM ($INTERFACE_ID) on $STORAGE"
-            ERROR_FLAG=true
-            continue
-          fi
-        else
-
-          msg_info "Allocating virtual disk for $STORAGE_TYPE..."
-          if ! pvesm alloc "$STORAGE" "$VMID" "$DISK_NAME" "$SIZE"G >/dev/null 2>&1; then
-            msg_error "Failed to allocate virtual disk $DISK_NUM"
-            ERROR_FLAG=true
-            continue
-          fi
-          if ! qm set "$VMID" -$INTERFACE_ID "$STORAGE:${DISK_REF}$DISK_NAME$DISCARD_OPTS" >/dev/null 2>&1; then
-            msg_error "Failed to configure virtual disk as $INTERFACE_ID"
-            ERROR_FLAG=true
-            continue
-          fi
+    if [ "$DISK_TYPE" = "virtual" ]; then
+        if [ ${#VIRTUAL_DISKS[@]} -eq 0 ]; then
+            msg_error "No virtual disks configured."
+            exit_script
         fi
 
-        msg_ok "Configured virtual disk as $INTERFACE_ID, ${SIZE}GB on ${CL}${BL}$STORAGE${CL} ${GN}"
+        DISK_INFO=""
+        CONSOLE_DISK_INFO=""
 
-        
+        for i in "${!VIRTUAL_DISKS[@]}"; do
+            IFS=':' read -r STORAGE SIZE <<< "${VIRTUAL_DISKS[$i]}"
+            
+            STORAGE_TYPE=$(pvesm status -storage $STORAGE | awk 'NR>1 {print $2}')
+            case $STORAGE_TYPE in
+                nfs | dir)
+                    DISK_EXT=".raw"
+                    DISK_REF="$VMID/"
+                    ;;
+                *)
+                    DISK_EXT=""
+                    DISK_REF=""
+                    ;;
+            esac
+            
+            DISK_NUM=$((i+1))
+            DISK_NAME="vm-${VMID}-disk-${DISK_NUM}${DISK_EXT}"
+            INTERFACE_ID="${INTERFACE_TYPE}$i"
+            
+            # Create virtual disk
+            if [[ "$STORAGE_TYPE" == "btrfs" || "$STORAGE_TYPE" == "dir" || "$STORAGE_TYPE" == "nfs" ]]; then
+            
+              msg_info "Creating virtual disk (format=raw) for $STORAGE_TYPE..."
+              if ! qm set "$VMID" -$INTERFACE_ID "$STORAGE:$SIZE,format=raw$DISCARD_OPTS" >/dev/null 2>&1; then
+                msg_error "Failed to assign disk $DISK_NUM ($INTERFACE_ID) on $STORAGE"
+                ERROR_FLAG=true
+                continue
+              fi
+            else
 
-        DISK_INFO="${DISK_INFO}<p>Virtual Disk $DISK_NUM: ${SIZE}GB on ${STORAGE} (${INTERFACE_TYPE}${i})</p>"
-        CONSOLE_DISK_INFO="${CONSOLE_DISK_INFO}- Virtual Disk $DISK_NUM: ${SIZE}GB on ${STORAGE} ($INTERFACE_ID)\n"
-    done
-    
+              msg_info "Allocating virtual disk for $STORAGE_TYPE..."
+              if ! pvesm alloc "$STORAGE" "$VMID" "$DISK_NAME" "$SIZE"G >/dev/null 2>&1; then
+                msg_error "Failed to allocate virtual disk $DISK_NUM"
+                ERROR_FLAG=true
+                continue
+              fi
+              if ! qm set "$VMID" -$INTERFACE_ID "$STORAGE:${DISK_REF}$DISK_NAME$DISCARD_OPTS" >/dev/null 2>&1; then
+                msg_error "Failed to configure virtual disk as $INTERFACE_ID"
+                ERROR_FLAG=true
+                continue
+              fi
+            fi
 
-    
+            msg_ok "Configured virtual disk as $INTERFACE_ID, ${SIZE}GB on ${CL}${BL}$STORAGE${CL} ${GN}"
+
+            BOOT_ORDER_LIST+=("$INTERFACE_ID")
+            
+            # Add information to the description
+            DISK_INFO="${DISK_INFO}<p>Virtual Disk $DISK_NUM: ${SIZE}GB on ${STORAGE} (${INTERFACE_TYPE}${i})</p>"
+            CONSOLE_DISK_INFO="${CONSOLE_DISK_INFO}- Virtual Disk $DISK_NUM: ${SIZE}GB on ${STORAGE} ($INTERFACE_ID)\n"
+        done
+
+
     # HTML description
 HTML_DESC="<div align='center'>
 <table style='width: 100%; border-collapse: collapse;'>
@@ -1112,28 +1088,37 @@ ${DISK_INFO}
     msg_ok "Configured VM description"
 
 
-else
 
+    elif [ "$DISK_TYPE" = "passthrough" ]; then
+        if [ ${#PASSTHROUGH_DISKS[@]} -eq 0 ]; then
+            msg_error "No passthrough disks configured."
+            exit_script
+        fi
 
-      # Configure multiple passthrough disks
-      DISK_INFO=""
-      CONSOLE_DISK_INFO=""
+        DISK_INFO=""
+        CONSOLE_DISK_INFO=""
 
-      for i in "${!PASSTHROUGH_DISKS[@]}"; do
-          DISK="${PASSTHROUGH_DISKS[$i]}"
-          DISK_MODEL=$(lsblk -ndo MODEL "$DISK" | xargs)
-          DISK_SIZE=$(lsblk -ndo SIZE "$DISK" | xargs)
-          DISK_ID="sata$i"
-          
-
-          result=$(qm set $VMID -${DISK_ID} ${DISK} 2>&1)
-          if [[ $? -eq 0 ]]; then
-              msg_ok "Configured disk ${CL}${BL}($DISK_MODEL $DISK_SIZE)${CL}${GN} as $DISK_ID"
-          fi
-          # Add information to the description
-          DISK_INFO="${DISK_INFO}<p>Passthrough Disk $((i+1)): $DISK ($DISK_MODEL $DISK_SIZE)</p>"
-          CONSOLE_DISK_INFO="${CONSOLE_DISK_INFO}- Passthrough Disk $((i+1)): $DISK ($DISK_MODEL $DISK_SIZE) (${DISK_ID})\n"
-      done
+        for i in "${!PASSTHROUGH_DISKS[@]}"; do
+            DISK="${PASSTHROUGH_DISKS[$i]}"
+            INTERFACE_ID="${INTERFACE_TYPE}$i"
+            
+            # Get disk information
+            MODEL=$(lsblk -ndo MODEL "$DISK" 2>/dev/null || echo "Unknown")
+            SIZE=$(lsblk -ndo SIZE "$DISK" 2>/dev/null || echo "Unknown")
+            
+            # Configure passthrough disk
+            if qm set "$VMID" -$INTERFACE_ID "$DISK$DISCARD_OPTS" >/dev/null 2>&1; then
+                msg_ok "Configured passthrough disk as $INTERFACE_ID: $DISK ($MODEL $SIZE)"
+                BOOT_ORDER_LIST+=("$INTERFACE_ID")
+                
+                # Add information to the description
+                DISK_INFO="${DISK_INFO}<p>Passthrough Disk $((i+1)): $DISK ($MODEL $SIZE) (${INTERFACE_TYPE}${i})</p>"
+                CONSOLE_DISK_INFO="${CONSOLE_DISK_INFO}- Passthrough Disk $((i+1)): $DISK ($MODEL $SIZE) ($INTERFACE_ID)\n"
+            else
+                msg_error "Failed to configure passthrough disk $DISK as $INTERFACE_ID"
+                ERROR_FLAG=true
+            fi
+        done
 
 
       # HTML description
@@ -1168,26 +1153,26 @@ ${DISK_INFO}
       if [[ $? -eq 0 ]]; then
          msg_ok "Configured VM description"
       fi
-      
-
-fi
-  
-  
-if [ "$ERROR_FLAG" = true ]; then
-   msg_error "VM created with errors. Check configuration." 
-else
-  msg_success "$(translate "Completed Successfully!")"
-
-  echo -e "${TAB}${GN}$(translate "Next Steps:")${CL}"
-  echo -e "${TAB}1. $(translate "Start the VM")"
-  echo -e "${TAB}2. $(translate "Open the VM console and wait for the installer to boot")"
-  echo -e "${TAB}3. $(translate "Complete the ZimaOS installation wizard")"
-  echo -e "${TAB}4. $(translate "After installation, remove or disable the installer IDE disk")"
-  echo -e
 
 
-fi
-  
+    fi
+
+
+
+
+
+    if [ ${#BOOT_ORDER_LIST[@]} -gt 0 ]; then
+        BOOT_ORDER_LIST+=("ide0")  # Add IDE installer as last boot option
+        BOOT_ORDER_STRING=$(IFS=';'; echo "${BOOT_ORDER_LIST[*]}")
+        
+        if qm set "$VMID" -boot order="$BOOT_ORDER_STRING" >/dev/null 2>&1; then
+            msg_ok "Boot order configured: $BOOT_ORDER_STRING"
+        else
+            msg_error "Failed to configure boot order"
+            ERROR_FLAG=true
+        fi
+    fi
+
 }
 
 # ==========================================================
