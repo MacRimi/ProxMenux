@@ -201,7 +201,7 @@ function advanced_settings() {
   # Hostname Selection
   if VM_NAME=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set Hostname")" 8 58 Synology-DSM --title "HOSTNAME" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
     if [ -z $VM_NAME ]; then
-      HN="Synology-DSM"
+      HN="ZimaOS"
       echo -e "${DGN}Using Hostname: ${BGN}$HN${CL}"
     else
       HN=$(echo ${VM_NAME,,} | tr -d ' ')
