@@ -49,16 +49,16 @@ while true; do
             bash <(curl -s "$REPO_URL/scripts/share/nfs_client.sh")
             ;;
         4)
-            bash <(curl -s "$REPO_URL/scripts/storage/samba_client.sh")
+            bash <(curl -s "$REPO_URL/scripts/share/samba_client.sh")
             ;;
         5)
-            bash <(curl -s "$REPO_URL/scripts/storage/nfs_host.sh")
+            bash <(curl -s "$REPO_URL/scripts/share/nfs_host.sh")
             ;;
         6)
-            bash <(curl -s "$REPO_URL/scripts/storage/samba_host.sh")
+            bash <(curl -s "$REPO_URL/scripts/share/samba_host.sh")
             ;;
         7)
-            bash <(curl -s "$REPO_URL/scripts/storage/commands_share.sh")
+            bash <(curl -s "$REPO_URL/scripts/share/commands_share.sh")
             ;;
         8)
             exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
