@@ -30,7 +30,7 @@ initialize_cache
 # ==========================================================
 
 show_main_menu() {
-    CHOICE=$(whiptail --title "$(translate 'LXC Conversion Management')" \
+    CHOICE=$(dialog --backtitle "ProxMenux" --title "$(translate 'LXC Management')" \
         --menu "$(translate 'Select conversion option:')" 20 70 10 \
         "1" "$(translate 'Convert Privileged to Unprivileged')" \
         "2" "$(translate 'Convert Unprivileged to Privileged')" \
