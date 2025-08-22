@@ -133,7 +133,7 @@ main() {
     finalize_conversion
     
     msg_ok "$(translate 'LXC conversion from unprivileged to privileged completed successfully!')"
-    msg_ "$(translate 'Converted container ID:') $CONTAINER_ID"
+    msg_ok "$(translate 'Converted container ID:') $CONTAINER_ID"
     echo -e
     msg_success "$(translate "Press Enter to return to menu...")"
     read -r
