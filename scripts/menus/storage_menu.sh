@@ -36,15 +36,12 @@ while true; do
 
     case $OPTION in
         1)  
-            clear
             bash <(curl -s "$REPO_URL/scripts/storage/disk-passthrough.sh")
             ;;
         2)
-            clear
             bash <(curl -s "$REPO_URL/scripts/storage/disk-passthrough_ct.sh")
             ;;
         3)
-            clear
             bash <(curl -s "$REPO_URL/scripts/storage/import-disk-image.sh")
             ;;
         4)
