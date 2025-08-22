@@ -30,42 +30,38 @@ initialize_cache
 # ==========================================================
 
 show_main_menu() {
-    CHOICE=$(dialog --backtitle "ProxMenux" --title "$(translate 'LXC Management')" \
+    CHOICE=$(whiptail --title "$(translate 'LXC Conversion Management')" \
         --menu "$(translate 'Select conversion option:')" 20 70 10 \
         "1" "$(translate 'Convert Privileged to Unprivileged')" \
         "2" "$(translate 'Convert Unprivileged to Privileged')" \
         "3" "$(translate 'Show Container Privilege Status')" \
-        "4" "$(translate 'Exit')" 3>&1 1>&2 2>&3)
+        "4" "$(translate "Help & Info (commands)")" \
+        "5" "$(translate 'Exit')" 3>&1 1>&2 2>&3)
     
     case $CHOICE in
         1)
-            bash <(curl -fsSL "$REPO_URL/scripts/lcx/lxc-privileged-to-unprivileged.sh")
+            bash <(curl -s "$REPO_URL/scripts/lxc/lxc-privileged-to-unprivileged.sh")
             ;;
         2)
-            convert_unprivileged_to_privileged
+            bash <(curl -s "$REPO_URL/scripts/lxc/lxc-unprivileged-to-privileged.sh")
             ;;
         3)
             show_container_status
             ;;
         4)
-            exit 0
+            bash <(curl -s "$REPO_URL/scripts/lxc/lxc-conversion-manual-guide.sh")
+            ;;
+        5)
+            exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
             ;;
         *)
-            exit 0
-            ;;
+            exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
     esac
 }
 
 
 
-convert_unprivileged_to_privileged() {
-
-    bash <(curl -fsSL "$REPO_URL/scripts/lcx/lxc-privileged-to-unprivileged.sh")
-    
-}
-
 show_container_status() {
-    show_proxmenux_logo
     msg_info "$(translate 'Gathering container privilege information...')"
     
 
@@ -74,6 +70,7 @@ show_container_status() {
     echo "$(translate 'LXC Container Privilege Status')" > "$TEMP_FILE"
     echo "=================================" >> "$TEMP_FILE"
     echo "" >> "$TEMP_FILE"
+    
 
     pct list | awk 'NR>1 {print $1, $3}' | while read id name; do
         if pct config "$id" | grep -q "^unprivileged: 1"; then
@@ -87,17 +84,21 @@ show_container_status() {
         printf "ID: %-4s | %-20s | %-12s | %s\n" "$id" "$name" "$status" "$running_status" >> "$TEMP_FILE"
     done
     
+    echo "" >> "$TEMP_FILE"
+    echo "$(translate 'Legend:')" >> "$TEMP_FILE"
+    echo "$(translate 'Privileged: Full host access (less secure)')" >> "$TEMP_FILE"
+    echo "$(translate 'Unprivileged: Limited access (more secure)')" >> "$TEMP_FILE"
     
     cleanup
-    dialog --backtitle "ProxMenux" --title "$(translate 'Container Status')" --textbox "$TEMP_FILE" 25 80
+    dialog --title "$(translate 'Container Status')" --textbox "$TEMP_FILE" 25 80
     
 
     rm -f "$TEMP_FILE"
-    show_main_menu
     
+  
+    show_main_menu
 }
 
 
 
-
- show_main_menu
+    show_main_menu

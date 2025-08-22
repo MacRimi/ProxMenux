@@ -232,6 +232,10 @@ convert_direct_method() {
     fi
     
     msg_ok "$(translate 'Direct conversion completed for container') $CONTAINER_ID"
+
+    echo -e
+    msg_success "Press Enter to continue..."
+    read -r
 }
 
 cleanup_and_finalize() {
@@ -258,7 +262,7 @@ main() {
     msg_ok "$(translate 'Converted container ID:') $CONTAINER_ID"
     msg_ok "$(translate 'LXC conversion from privileged to unprivileged completed successfully!')"
     echo -e
-    msg_success "$(translate "Press Enter to continue")"
+    msg_success "$(translate "Press Enter to return to menu...")"
     read -r
     exit 0
 }
