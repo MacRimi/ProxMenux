@@ -3293,10 +3293,10 @@ configure_figurine() {
     local marker_end="# END PMX_FIGURINE"
     
  
-    cleanup() { 
+    cleanup_dir() { 
         rm -rf "$temp_dir" 2>/dev/null || true
     }
-    trap cleanup EXIT
+    trap cleanup_dir EXIT
     
   
     if command -v figurine &>/dev/null; then
