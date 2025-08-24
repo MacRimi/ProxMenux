@@ -2091,7 +2091,7 @@
     "notes": [
       "WARNING: Installation sources scripts outside of Community Scripts repo. Please check the source before installing.",
       "Kasm needs swap (on Proxmox host) and activated FUSE to be installed successfully!",
-      "Show password: `cat ~/kasm.creds`"
+      "Show credentials: `cat ~/kasm.creds`"
     ],
     "type": "ct"
   },
