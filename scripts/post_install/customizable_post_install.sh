@@ -3179,105 +3179,6 @@ add_repo_test() {
 
 
 configure_figurine_() {
-    msg_info2 "$(translate "Installing and configuring Figurine...")"
-
-    # Variables
-    local version="1.3.0"
-    local file="figurine_linux_amd64_v${version}.tar.gz"
-    local url="https://github.com/arsham/figurine/releases/download/v${version}/${file}"
-    local temp_dir
-    temp_dir=$(mktemp -d)
-    local install_dir="/usr/local/bin"
-    local profile_script="/etc/profile.d/figurine.sh"
-    local bin_path="${install_dir}/figurine"
-
-    msg_info "$(translate "Downloading Figurine v${version}...")"
-        if command -v figurine &> /dev/null; then
-            rm -f "$bin_path" > /dev/null 2>&1
-            msg_ok "$(translate "Previous installation removed")"
-
-        fi
-
-    wget -qO "${temp_dir}/${file}" "$url" > /dev/null 2>&1
-    msg_ok "$(translate "Download completed")"
-
-
-    msg_info "$(translate "Extracting package...")"
-    tar -xf "${temp_dir}/${file}" -C "${temp_dir}" > /dev/null 2>&1
-    msg_ok "$(translate "Extraction successful")"
-
-
-    if [[ ! -f "${temp_dir}/deploy/figurine" ]]; then
-        msg_error "$(translate "Binary not found in extracted content.")"
-        return 1
-    fi
-
-
-    msg_info "$(translate "Installing binary to ${install_dir}...")"
-    mv "${temp_dir}/deploy/figurine" "$bin_path" > /dev/null 2>&1
-    chmod +x "$bin_path" > /dev/null 2>&1
-    msg_ok "$(translate "Binary installed")"
-
-
-    msg_info "$(translate "Creating figurine welcome message at ${profile_script}...")"
-    cat << 'EOF' > "$profile_script"
-/usr/local/bin/figurine -f "3d.flf" $(hostname)
-EOF
-    chmod +x "$profile_script" > /dev/null 2>&1
-    msg_ok "$(translate "Welcome message script created")"
-
-
-local bashrc="$HOME/.bashrc"
-
-    if ! grep -q "alias aptup=" "$bashrc"; then
-        msg_info "$(translate "Adding useful aliases to ~/.bashrc...")"
-        cat <<EOF >> "$bashrc"
-
-# ProxMenux Figurine aliases and tools
-alias aptup='apt update && apt dist-upgrade'
-
-alias lxcclean='curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/clean-lxcs.sh | bash'
-alias lxcupdate='curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/update-lxcs.sh | bash'
-alias kernelclean='curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/kernel-clean.sh | bash'
-alias cpugov='curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/scaling-governor.sh | bash'
-
-alias updatecerts='pvecm updatecerts'
-alias seqwrite='sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4M --size=32G --readwrite=write --ramp_time=4'
-alias seqread='sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4M --size=32G --readwrite=read --ramp_time=4'
-alias ranwrite='sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4k --size=4G --readwrite=randwrite --ramp_time=4'
-alias ranread='sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4k --size=4G --readwrite=randread --ramp_time=4'
-alias l='ls -CF'
-alias la='ls -A'
-alias ll='ls -alF'
-alias ls='ls --color=auto'
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
-EOF
-        msg_ok "$(translate "Aliases added to .bashrc")"
-        sed -i '/\${marker_begin}/d;/\${marker_end}/d' .bashrc
-
-    else
-        msg_info "$(translate "Aliases already present. Skipping addition.")"
-        msg_ok "$(translate "Aliases added to .bashrc")"
-    fi
-
-
-
-    msg_info "$(translate "Cleaning up temporary files...")"
-    rm -rf "$temp_dir" > /dev/null 2>&1
-    msg_ok "$(translate "Cleanup completed")"
-
-    msg_success "$(translate "Figurine installation and configuration completed successfully.")"
-}
-
-
-
-
-
-
-
-configure_figurine() {
     
     msg_info2 "$(translate "Installing and configuring Figurine...")"
     local version="1.3.0"
@@ -3360,6 +3261,111 @@ EOF
     msg_success "$(translate "Figurine installation and configuration completed successfully.")"
     register_tool "figurine" true
 }
+
+
+
+
+
+
+
+
+configure_figurine() {
+    msg_info2 "$(translate "Installing and configuring Figurine...")"
+    local version="1.3.0"
+    local file="figurine_linux_amd64_v${version}.tar.gz"
+    local url="https://github.com/arsham/figurine/releases/download/v${version}/${file}"
+    local temp_dir; temp_dir=$(mktemp -d)
+    local install_dir="/usr/local/bin"
+    local profile_script="/etc/profile.d/figurine.sh"
+    local bin_path="${install_dir}/figurine"
+    local bashrc="/root/.bashrc"
+
+    cleanup_dir() { rm -rf "$temp_dir" 2>/dev/null || true; }
+    trap cleanup_dir EXIT
+
+    [[ -f "$bashrc" ]] || touch "$bashrc"
+
+    if command -v figurine &>/dev/null; then
+        msg_info "$(translate "Updating Figurine binary...")"
+    else
+        msg_info "$(translate "Downloading Figurine v${version}...")"
+    fi
+
+    if ! wget -qO "${temp_dir}/${file}" "$url"; then
+        msg_error "$(translate "Failed to download Figurine")"
+        return 1
+    fi
+
+    if ! tar -xf "${temp_dir}/${file}" -C "${temp_dir}"; then
+        msg_error "$(translate "Failed to extract package")"
+        return 1
+    fi
+    msg_ok "$(translate "Extraction successful")"
+
+    if [[ ! -f "${temp_dir}/deploy/figurine" ]]; then
+        msg_error "$(translate "Binary not found in extracted content.")"
+        return 1
+    fi
+
+    msg_info "$(translate "Installing binary to ${install_dir}...")"
+    install -m 0755 -o root -g root "${temp_dir}/deploy/figurine" "$bin_path"
+
+
+    cat > "$profile_script" << 'EOF'
+/usr/local/bin/figurine -f "3d.flf" $(hostname)
+EOF
+    chmod +x "$profile_script"
+
+
+    ensure_aliases() {
+        local bashrc="/root/.bashrc"
+        [[ -f "$bashrc" ]] || touch "$bashrc"
+
+        local -a ALIASES=(
+            "aptup=apt update && apt dist-upgrade"
+            "lxcclean=curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/clean-lxcs.sh | bash"
+            "lxcupdate=curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/update-lxcs.sh | bash"
+            "kernelclean=curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/kernel-clean.sh | bash"
+            "cpugov=curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/scaling-governor.sh | bash"
+            "lxctrim=curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/fstrim.sh | bash"
+            "updatecerts=pvecm updatecerts"
+            "seqwrite=sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4M --size=32G --readwrite=write --ramp_time=4"
+            "seqread=sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4M --size=32G --readwrite=read --ramp_time=4"
+            "ranwrite=sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4k --size=4G --readwrite=randwrite --ramp_time=4"
+            "ranread=sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4k --size=4G --readwrite=randread --ramp_time=4"
+        )
+
+        for entry in "${ALIASES[@]}"; do
+            local name="${entry%%=*}"
+            local cmd="${entry#*=}"
+            local esc_cmd
+            esc_cmd=$(printf "%s" "$cmd" | sed -e 's/[\\/&]/\\&/g')
+
+            if grep -Eq "^alias[[:space:]]+$name=" "$bashrc"; then
+                if ! grep -Eq "^alias[[:space:]]+$name='${esc_cmd}'$" "$bashrc"; then
+                    sed -i -E "s|^alias[[:space:]]+$name=.*$|alias $name='${esc_cmd}'|" "$bashrc"
+                fi
+            else
+                printf "alias %s='%s'\n" "$name" "$cmd" >> "$bashrc"
+            fi
+        done
+
+
+        awk '!seen[$0]++' "$bashrc" > "${bashrc}.tmp" && mv "${bashrc}.tmp" "$bashrc"
+    }
+
+    ensure_aliases
+    msg_ok "$(translate "Aliases added to .bashrc")"
+
+    msg_success "$(translate "Figurine installation and configuration completed successfully.")"
+    register_tool "figurine" true
+}
+
+
+
+
+
+
 
 
 
