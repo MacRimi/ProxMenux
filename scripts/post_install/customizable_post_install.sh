@@ -1917,7 +1917,7 @@ EOF
 
 
 
-install_fail2ban() {
+install_fail2ban_() {
     msg_info2 "$(translate "Installing and configuring Fail2Ban to protect the web interface...")"
 
 
@@ -2061,6 +2061,127 @@ EOF
     msg_success "$(translate "Fail2Ban installation and configuration completed successfully!")"
     
 }
+
+
+
+
+
+
+install_fail2ban() {
+    msg_info2 "$(translate "Installing and configuring Fail2Ban to protect Proxmox web interface and SSH...")"
+
+
+    local deb_codename
+    deb_codename=$(grep -oP '^VERSION_CODENAME=\K.*' /etc/os-release 2>/dev/null)
+
+
+    if ! grep -RqsE "debian.*(bookworm|trixie)" /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null; then
+        msg_warn "$(translate "Debian repositories missing; creating default source file")"
+        local src="/etc/apt/sources.list.d/debian.sources"
+        cat > "$src" <<EOF
+Types: deb
+URIs: http://deb.debian.org/debian
+Suites: ${deb_codename} ${deb_codename}-updates
+Components: main contrib non-free non-free-firmware
+
+Types: deb
+URIs: http://security.debian.org/debian-security
+Suites: ${deb_codename}-security
+Components: main contrib non-free non-free-firmware
+EOF
+        msg_ok "$(translate "Debian repositories configured for ${deb_codename}")"
+    fi
+
+
+    msg_info "$(translate "Installing Fail2Ban...")"
+    if ! DEBIAN_FRONTEND=noninteractive apt-get update -y >/dev/null 2>&1 || \
+       ! DEBIAN_FRONTEND=noninteractive apt-get install -y fail2ban >/dev/null 2>&1; then
+        msg_error "$(translate "Failed to install Fail2Ban")"
+        return 1
+    fi
+    msg_ok "$(translate "Fail2Ban installed successfully")"
+
+
+    mkdir -p /etc/fail2ban/filter.d /etc/fail2ban/jail.d
+    msg_info "$(translate "Configuring Proxmox filter...")"
+    cat > /etc/fail2ban/filter.d/proxmox.conf <<'EOF'
+[Definition]
+failregex = pvedaemon\[.*authentication failure; rhost=<HOST> user=.* msg=.*
+ignoreregex =
+EOF
+    msg_ok "$(translate "Proxmox filter configured")"
+
+
+    msg_info "$(translate "Configuring Proxmox jail...")"
+    cat > /etc/fail2ban/jail.d/proxmox.conf <<'EOF'
+[proxmox]
+enabled = true
+port = 8006
+filter = proxmox
+logpath = /var/log/daemon.log
+maxretry = 3
+bantime = 3600
+findtime = 600
+EOF
+    msg_ok "$(translate "Proxmox jail configured")"
+
+
+    msg_info "$(translate "Configuring global Fail2Ban settings and SSH jail...")"
+    cat > /etc/fail2ban/jail.local <<'EOF'
+[DEFAULT]
+ignoreip = 127.0.0.1
+bantime = 86400
+maxretry = 2
+findtime = 1800
+backend = systemd
+banaction = nftables
+banaction_allports = nftables[type=allports]
+
+[sshd]
+enabled = true
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 2
+findtime = 3600
+bantime = 32400
+EOF
+    msg_ok "$(translate "Global settings and SSH jail configured")"
+
+
+    touch /var/log/auth.log /var/log/daemon.log
+    chown root:adm /var/log/auth.log /var/log/daemon.log 2>/dev/null || true
+    chmod 640 /var/log/auth.log /var/log/daemon.log 2>/dev/null || true
+
+
+    systemctl daemon-reload
+    systemctl enable --now fail2ban >/dev/null 2>&1
+    sleep 2
+
+
+    if systemctl is-active --quiet fail2ban; then
+        msg_ok "$(translate "Fail2Ban is running correctly")"
+    else
+        msg_error "$(translate "Fail2Ban is NOT running!")"
+        journalctl -u fail2ban --no-pager -n 20
+    fi
+
+    if [ -S /var/run/fail2ban/fail2ban.sock ]; then
+        msg_ok "$(translate "Fail2Ban socket exists!")"
+    else
+        msg_warn "$(translate "Warning: Fail2Ban socket does not exist!")"
+    fi
+
+    if fail2ban-client ping >/dev/null 2>&1; then
+        msg_ok "$(translate "fail2ban-client successfully communicated with the server")"
+    else
+        msg_error "$(translate "fail2ban-client could not communicate with the server")"
+    fi
+
+    msg_success "$(translate "Fail2Ban installation and configuration completed successfully!")"
+}
+
+
+
 
 
 
