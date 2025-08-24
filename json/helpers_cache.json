@@ -3424,7 +3424,7 @@
       12
     ],
     "notes": [
-      "Show Login Credentials, type `cat ~/paperless.creds` in the LXC console",
+      "Show Login Credentials, type `cat ~/paperless-ngx.creds` in the LXC console",
       "Script installs English as default OCR language. To install additional languages, use `apt-get install tesseract-ocr-[lang]`, where [lang] is the language code (e.g. `apt-get install tesseract-ocr-deu`)."
     ],
     "type": "ct",
