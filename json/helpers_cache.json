@@ -645,18 +645,6 @@
     "type": "pve"
   },
   {
-    "name": "Cleanuparr",
-    "slug": "cleanuparr",
-    "desc": "Cleanuparr is a tool for automating the cleanup of unwanted or blocked files in Sonarr, Radarr, and supported download clients like qBittorrent, Transmission, and Deluge. It removes incomplete, blocked, or malicious downloads and can trigger replacement searches to ensure your media library stays complete and up-to-date.",
-    "script": "ct/cleanuparr.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/cleanuparr.sh",
-    "categories": [
-      14
-    ],
-    "notes": [],
-    "type": "ct"
-  },
-  {
     "name": "Cloudflare-DDNS",
     "slug": "cloudflare-ddns",
     "desc": "A feature-rich and robust Cloudflare DDNS updater with a small footprint. The program will detect your machine\u2019s public IP addresses and update DNS records using the Cloudflare API",
@@ -1470,18 +1458,6 @@
     "type": "ct"
   },
   {
-    "name": "Glance",
-    "slug": "glance",
-    "desc": "A self-hosted dashboard that puts all your feeds in one place",
-    "script": "ct/glance.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/glance.sh",
-    "categories": [
-      9
-    ],
-    "notes": [],
-    "type": "ct"
-  },
-  {
     "name": "Glances",
     "slug": "glances",
     "desc": "Glances is an open-source system cross-platform monitoring tool. It allows real-time monitoring of various aspects of your system such as CPU, memory, disk, network usage etc.",
@@ -2239,7 +2215,7 @@
       3
     ],
     "notes": [
-      "After the initial installation: Enter your desired admin user and password and then click on Sign Up"
+      "For admin username and password type `cat ~/komodo.creds` inside LXC."
     ],
     "type": "ct"
   },
@@ -2499,18 +2475,6 @@
     "notes": [
       "WARNING: Installation sources scripts outside of Community Scripts repo. Please check the source before installing."
     ],
-    "type": "ct"
-  },
-  {
-    "name": "Mealie",
-    "slug": "mealie",
-    "desc": "Mealie is a self hosted recipe manager, meal planner and shopping list with a RestAPI backend and a reactive frontend built in Vue for a pleasant user experience for the whole family. Easily add recipes into your database by providing the URL and Mealie will automatically import the relevant data, or add a family recipe with the UI editor. Mealie also provides an API for interactions from 3rd party applications.",
-    "script": "ct/mealie.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/mealie.sh",
-    "categories": [
-      13
-    ],
-    "notes": [],
     "type": "ct"
   },
   {
@@ -3270,20 +3234,6 @@
       "If you use VLANs (default LAN is set to VLAN 999), make sure the Proxmox Linux Bridge is configured as VLAN-aware, otherwise the VM may fail to start."
     ],
     "type": "vm"
-  },
-  {
-    "name": "openziti-controller",
-    "slug": "openziti-controller",
-    "desc": "OpenZiti is an open-source, zero trust networking platform that enables secure connectivity between applications, services, and devices. It provides secure, encrypted connections between clients and services, and can be used to create secure, zero trust networks.",
-    "script": "ct/openziti-controller.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/openziti-controller.sh",
-    "categories": [
-      4
-    ],
-    "notes": [
-      "The Openziti Controller installation will prompt for configuration settings during installation."
-    ],
-    "type": "ct"
   },
   {
     "name": "openziti-tunnel",
