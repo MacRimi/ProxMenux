@@ -3496,6 +3496,23 @@
     "type": "pve"
   },
   {
+    "name": "PBS 4 Upgrade",
+    "slug": "pbs4-upgrade",
+    "desc": "This script guides you through upgrading Proxmox Backup Server from version 3.x (Debian 12 Bookworm) to version 4.0 (Debian 13 Trixie). It adjusts the Debian base sources, configures PBS 4 repositories in deb822 format, updates enterprise/no-subscription/test repos, runs a full system upgrade, and finalizes with a reboot.",
+    "script": "tools/pve/pbs4-upgrade.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/pbs4-upgrade.sh",
+    "categories": [
+      1
+    ],
+    "notes": [
+      "Execute this script directly on the PBS 3.x host as root.",
+      "Ensure you have a verified backup of /etc/proxmox-backup before starting.",
+      "Do not run this on an already upgraded PBS 4.x system.",
+      "A reboot is strongly recommended after upgrade to activate the new kernel and services."
+    ],
+    "type": "pve"
+  },
+  {
     "name": "PeaNUT",
     "slug": "peanut",
     "desc": "PeaNUT is a small dashboard for Network UPS Tools (NUT). It provides a web interface to monitor and manage UPS devices. PeaNUT allows users to view device status, retrieve information, and manage UPS parameters through its API. It's customizable for different UPS devices and supports integration with the Homepage dashboard.",
@@ -4249,6 +4266,18 @@
     "type": "pve"
   },
   {
+    "name": "SearXNG",
+    "slug": "searxng",
+    "desc": "SearXNG is a free internet metasearch engine which aggregates results from up to 215 search services. Users are neither tracked nor profiled. Additionally, SearXNG can be used over Tor for online anonymity.",
+    "script": "ct/searxng.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/searxng.sh",
+    "categories": [
+      0
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "seelf",
     "slug": "seelf",
     "desc": "seelf is a self-hosted software which makes it easy to deploy your own applications on your own hardware using an easy to use interface.",
@@ -4638,6 +4667,20 @@
       0
     ],
     "notes": [],
+    "type": "ct"
+  },
+  {
+    "name": "Tracktor",
+    "slug": "tracktor",
+    "desc": "Tracktor is an open-source web application for comprehensive vehicle management.\nEasily track fuel consumption, maintenance, insurance, and regulatory documents for all your vehicles in one place.",
+    "script": "ct/tracktor.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/tracktor.sh",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "Please check and update the '/opt/tracktor/app/backend/.env' file if using behind reverse proxy."
+    ],
     "type": "ct"
   },
   {
