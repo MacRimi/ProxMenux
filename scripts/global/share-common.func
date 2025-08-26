@@ -56,19 +56,19 @@ pmx_choose_or_create_group() {
     case "$choice" in
         reuse)
             # Ensure default group exists or create it
-            pmx_ensure_host_group "$default_group" || return 1
+            pmx_ensure_host_group "$default_group" >/dev/null || return 1
             echo "$default_group"
             ;;
         new)
             group_name=$(whiptail --inputbox "$(translate "Enter new group name:")" 10 70 "sharedfiles-project" --title "$(translate "New Group")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
             [[ -z "$group_name" ]] && { msg_error "$(translate "Group name cannot be empty.")"; echo ""; return 1; }
-            pmx_ensure_host_group "$group_name" || return 1
+            pmx_ensure_host_group "$group_name" >/dev/null || return 1
             echo "$group_name"
             ;;
         custom)
             group_name=$(whiptail --inputbox "$(translate "Enter existing group name:")" 10 70 "$default_group" --title "$(translate "Group Name")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
             [[ -z "$group_name" ]] && { msg_error "$(translate "Group name cannot be empty.")"; echo ""; return 1; }
-            pmx_ensure_host_group "$group_name" || return 1
+            pmx_ensure_host_group "$group_name" >/dev/null || return 1
             echo "$group_name"
             ;;
         *) echo ""; return 1;;
@@ -81,8 +81,7 @@ pmx_ensure_host_group() {
     # IN: group name
     # OUT: echoes GID to stdout, return 0 on success
     local group_name="$1"
-    if ! getent group "$group_name" >/dev/null; then
-        msg_info "$(translate "Creating group") $group_name"
+    if ! getent group "$group_name" >/dev/null 2>&1; then
         if groupadd "$group_name" >/dev/null 2>&1; then
             msg_ok "$(translate "Group created:") $group_name"
         else
