@@ -343,7 +343,7 @@ pmx_add_bind_mount_to_ct() {
 
     if [[ "$unpriv" == "1" ]]; then
         # Unprivileged container - need to handle UID/GID mapping
-        msg_info "$(translate "Configuring mount for unprivileged container...")"
+
         
         # For unprivileged containers, we need to ensure proper permissions
         # The host directory should be owned by the mapped UID/GID
@@ -354,7 +354,7 @@ pmx_add_bind_mount_to_ct() {
         # Set proper ownership for unprivileged access
         if [[ -n "$host_gid" && -n "$gid_map_start" ]]; then
             local mapped_gid=$((host_gid + gid_map_start))
-            msg_info "$(translate "Adjusting permissions for unprivileged container access...")"
+
             # Ensure the directory is accessible by the mapped GID
             chmod -R g+rwx "$host_path" 2>/dev/null || true
         fi
