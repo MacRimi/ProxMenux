@@ -622,7 +622,7 @@ run_pve8to9_check() {
         echo -e "${YW}$(translate "Fix systemd-boot:") ${CL}apt remove -y systemd-boot"
       fi
       # Error 2: Kernel version mismatch
-      if grep -q -E '(kernel.*mismatch|kernel.*version)' "$tmp"; then
+      if grep -q -E 'FAIL:.*(kernel.*mismatch|kernel.*version.*mismatch)' "$tmp"; then
         repair_commands+=("update-grub")
         repair_descriptions+=("$(translate "Update kernel to compatible version")")
         echo -e "${YW}$(translate "Fix kernel version:") ${CL}update-grub"
@@ -650,18 +650,12 @@ run_pve8to9_check() {
       fi
       
       # Error 6: Disk space issues
-      if grep -q -E '(disk.*space|storage.*full|no.*space)' "$tmp"; then
+      if grep -q -E 'FAIL:.*(disk space|no space left|storage.*full)' "$tmp"; then
         repair_commands+=("apt clean && apt autoremove -y && journalctl --vacuum-time=7d")
         repair_descriptions+=("$(translate "Free up disk space")")
         echo -e "${YW}$(translate "Fix disk space:") ${CL}apt clean && apt autoremove -y && journalctl --vacuum-time=7d"
       fi
       
-      # Error 7: Network/DNS issues
-      if grep -q -E '(network.*error|dns.*problem|connection.*failed)' "$tmp"; then
-        repair_commands+=("systemctl restart networking && systemctl restart systemd-resolved")
-        repair_descriptions+=("$(translate "Fix network connectivity")")
-        echo -e "${YW}$(translate "Fix network:") ${CL}systemctl restart networking && systemctl restart systemd-resolved"
-      fi
       
       echo -e
       
@@ -993,41 +987,39 @@ run_pve8to9_check2() {
         repair_descriptions+=("$(translate "Remove obsolete systemd-boot meta-package")")
         echo -e "${YW}$(translate "Fix systemd-boot:") ${CL}apt remove -y systemd-boot"
       fi
+      # Error 2: Kernel version mismatch
+      if grep -q -E 'FAIL:.*(kernel.*mismatch|kernel.*version.*mismatch)' "$tmp"; then
+        repair_commands+=("update-grub")
+        repair_descriptions+=("$(translate "Update kernel to compatible version")")
+        echo -e "${YW}$(translate "Fix kernel version:") ${CL}update-grub"
+      fi
       
-      
-      # Error 2: Ceph version incompatible
+      # Error 3: Ceph version incompatible
       if grep -q -E '(ceph.*version|ceph.*incompatible)' "$tmp"; then
         repair_commands+=("ceph versions && pveceph upgrade")
         repair_descriptions+=("$(translate "Upgrade Ceph to compatible version")")
         echo -e "${YW}$(translate "Fix Ceph version:") ${CL}ceph versions && pveceph upgrade"
       fi
       
-      # Error 3: Repository configuration issues
+      # Error 4: Repository configuration issues
       if grep -q -E '(repository.*issue|repo.*problem|sources.*error)' "$tmp"; then
         repair_commands+=("cleanup_duplicate_repos && configure_repositories")
         repair_descriptions+=("$(translate "Fix repository configuration")")
         echo -e "${YW}$(translate "Fix repositories:") ${CL}cleanup_duplicate_repos && configure_repositories"
       fi
       
-      # Error 4: Package conflicts
+      # Error 5: Package conflicts
       if grep -q -E '(package.*conflict|dependency.*problem)' "$tmp"; then
         repair_commands+=("apt update && apt autoremove -y && apt autoclean")
         repair_descriptions+=("$(translate "Resolve package conflicts")")
         echo -e "${YW}$(translate "Fix package conflicts:") ${CL}apt update && apt autoremove -y && apt autoclean"
       fi
       
-      # Error 5: Disk space issues
-      if grep -q -E '(disk.*space|storage.*full|no.*space)' "$tmp"; then
+      # Error 6: Disk space issues
+      if grep -q -E 'FAIL:.*(disk space|no space left|storage.*full)' "$tmp"; then
         repair_commands+=("apt clean && apt autoremove -y && journalctl --vacuum-time=7d")
         repair_descriptions+=("$(translate "Free up disk space")")
         echo -e "${YW}$(translate "Fix disk space:") ${CL}apt clean && apt autoremove -y && journalctl --vacuum-time=7d"
-      fi
-      
-      # Error 6: Network/DNS issues
-      if grep -q -E '(network.*error|dns.*problem|connection.*failed)' "$tmp"; then
-        repair_commands+=("systemctl restart networking && systemctl restart systemd-resolved")
-        repair_descriptions+=("$(translate "Fix network connectivity")")
-        echo -e "${YW}$(translate "Fix network:") ${CL}systemctl restart networking && systemctl restart systemd-resolved"
       fi
       
       echo -e
