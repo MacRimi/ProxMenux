@@ -42,6 +42,143 @@ pmx_share_map_set() {
     echo "${key}=${val}" >> "$PROXMENUX_SHARE_MAP_DB"
 }
 
+# Select container from available LXC containers
+select_container() {
+    CONTAINERS=$(pct list | awk 'NR>1 {print $1, $3}' | xargs -n2)
+    if [ -z "$CONTAINERS" ]; then
+        msg_error "$(translate 'No containers available in Proxmox.')"
+        return 1
+    fi
+
+    CONTAINER_ID=$(whiptail --title "$(translate 'Select Container')" \
+        --menu "$(translate 'Select the LXC container:')" 20 70 10 $CONTAINERS 3>&1 1>&2 2>&3)
+
+    if [ -z "$CONTAINER_ID" ]; then
+        msg_error "$(translate 'No container selected.')"
+        return 1
+    fi
+
+    if ! pct list | awk 'NR>1 {print $1}' | grep -qw "$CONTAINER_ID"; then
+        msg_error "$(translate 'Container with ID') $CONTAINER_ID $(translate 'does not exist.')"
+        return 1
+    fi
+
+    msg_ok "$(translate 'Container selected:') $CONTAINER_ID"
+    echo "$CONTAINER_ID"
+}
+
+# Validate container ID and handle running state
+validate_container_id() {
+    local ctid="$1"
+    if [ -z "$ctid" ]; then
+        msg_error "$(translate 'Container ID not defined. Make sure to select a container first.')"
+        return 1
+    fi
+
+    if pct status "$ctid" | grep -q "running"; then
+        if whiptail --yesno "$(translate 'Container is running. Stop it to apply mount configuration?')" 10 70 --title "$(translate 'Container Running')"; then
+            msg_info "$(translate 'Stopping the container before applying configuration...')"
+            pct stop "$ctid"
+            msg_ok "$(translate 'Container stopped.')"
+        else
+            msg_warn "$(translate 'Mount will be applied to config but requires container restart.')"
+        fi
+    fi
+    return 0
+}
+
+# Select existing host directory for mounting
+pmx_select_existing_host_directory() {
+    local title="${1:-$(translate "Select Host Directory")}"
+    local choice folder_path result
+
+    while true; do
+        choice=$(whiptail --title "$title" --menu "$(translate "Select existing directory location:")" 16 76 4 \
+            "mnt"   "$(translate "Browse /mnt directories")" \
+            "srv"   "$(translate "Browse /srv directories")" \
+            "media" "$(translate "Browse /media directories")" \
+            "custom" "$(translate "Enter custom path")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
+
+        case "$choice" in
+            mnt)
+                folder_path=$(pmx_browse_directory "/mnt")
+                [[ -n "$folder_path" ]] && { echo "$folder_path"; return 0; }
+                ;;
+            srv)
+                folder_path=$(pmx_browse_directory "/srv")
+                [[ -n "$folder_path" ]] && { echo "$folder_path"; return 0; }
+                ;;
+            media)
+                folder_path=$(pmx_browse_directory "/media")
+                [[ -n "$folder_path" ]] && { echo "$folder_path"; return 0; }
+                ;;
+            custom)
+                result=$(whiptail --inputbox "$(translate "Enter full directory path:")" 10 80 "/mnt/shared" --title "$(translate "Custom Path")" 3>&1 1>&2 2>&3) || continue
+                if [[ -d "$result" ]]; then
+                    echo "$result"; return 0
+                else
+                    msg_error "$(translate "Directory does not exist:") $result"
+                fi
+                ;;
+        esac
+    done
+}
+
+# Browse directories in a given path
+pmx_browse_directory() {
+    local base_path="$1"
+    local dirs=()
+    local dir_list=""
+    
+    if [[ ! -d "$base_path" ]]; then
+        msg_error "$(translate "Base path does not exist:") $base_path"
+        return 1
+    fi
+    
+    # Get directories in base path
+    while IFS= read -r -d '' dir; do
+        dir_name=$(basename "$dir")
+        dirs+=("$dir" "$dir_name")
+    done < <(find "$base_path" -maxdepth 1 -type d -not -path "$base_path" -print0 2>/dev/null | sort -z)
+    
+    if [[ ${#dirs[@]} -eq 0 ]]; then
+        msg_warn "$(translate "No directories found in") $base_path"
+        return 1
+    fi
+    
+    # Add option to use base path itself
+    dirs=("$base_path" "$(translate "Use this directory") ($base_path)" "${dirs[@]}")
+    
+    local selected_dir
+    selected_dir=$(whiptail --title "$(translate "Select Directory")" \
+        --menu "$(translate "Choose directory from") $base_path:" 20 80 10 "${dirs[@]}" 3>&1 1>&2 2>&3)
+    
+    [[ -n "$selected_dir" ]] && echo "$selected_dir"
+}
+
+# Get container user mapping information
+pmx_get_container_user_mapping() {
+    local ctid="$1"
+    local conf="/etc/pve/lxc/${ctid}.conf"
+    
+    # Check if container is unprivileged
+    local unpriv=$(awk '/^unprivileged:/ {print $2}' "$conf" 2>/dev/null)
+    
+    if [[ "$unpriv" == "1" ]]; then
+        # Get UID/GID mapping for unprivileged container
+        local uid_map=$(awk '/^lxc.idmap:/ && /uid/ {print $2}' "$conf" 2>/dev/null | head -1)
+        local gid_map=$(awk '/^lxc.idmap:/ && /gid/ {print $2}' "$conf" 2>/dev/null | head -1)
+        
+        # Default mapping if not found in config
+        [[ -z "$uid_map" ]] && uid_map="0 100000 65536"
+        [[ -z "$gid_map" ]] && gid_map="0 100000 65536"
+        
+        echo "unprivileged:$uid_map:$gid_map"
+    else
+        echo "privileged"
+    fi
+}
+
 # Ask user to reuse an existing group or create a new one
 pmx_choose_or_create_group() {
     # comments in English
@@ -192,14 +329,37 @@ pmx_add_bind_mount_to_ct() {
         return 0
     fi
 
-    local unpriv running mpidx mpkey
+    local unpriv running mpidx mpkey user_mapping
     unpriv=$(awk '/^unprivileged:/ {print $2}' "$conf")
     running=$(pct status "$ctid" 2>/dev/null | grep -qi running && echo "yes" || echo "no")
     mpidx="$(pmx_compute_next_mp_index "$ctid")"
     mpkey="mp${mpidx}"
+    user_mapping=$(pmx_get_container_user_mapping "$ctid")
+
+    # Get host directory group and GID
+    local host_group host_gid
+    host_group=$(stat -c "%G" "$host_path" 2>/dev/null)
+    host_gid=$(stat -c "%g" "$host_path" 2>/dev/null)
 
     if [[ "$unpriv" == "1" ]]; then
-        # Unprivileged: append to config; requires restart to take effect
+        # Unprivileged container - need to handle UID/GID mapping
+        msg_info "$(translate "Configuring mount for unprivileged container...")"
+        
+        # For unprivileged containers, we need to ensure proper permissions
+        # The host directory should be owned by the mapped UID/GID
+        local uid_map_start gid_map_start
+        uid_map_start=$(echo "$user_mapping" | cut -d: -f2 | awk '{print $2}')
+        gid_map_start=$(echo "$user_mapping" | cut -d: -f3 | awk '{print $2}')
+        
+        # Set proper ownership for unprivileged access
+        if [[ -n "$host_gid" && -n "$gid_map_start" ]]; then
+            local mapped_gid=$((host_gid + gid_map_start))
+            msg_info "$(translate "Adjusting permissions for unprivileged container access...")"
+            # Ensure the directory is accessible by the mapped GID
+            chmod -R g+rwx "$host_path" 2>/dev/null || true
+        fi
+        
+        # Append to config; requires restart to take effect
         echo "${mpkey}: ${host_path},mp=${ct_path}" >> "$conf"
         msg_ok "$(translate "Bind mount appended to config (unprivileged).")"
         if [[ "$running" == "yes" ]]; then
@@ -228,17 +388,44 @@ pmx_sync_group_in_ct() {
     # IN: CTID, group_name, host_gid, [ct_user1 ct_user2 ...]
     local ctid="$1" group_name="$2" host_gid="$3"; shift 3
     local users=("$@")
+    local user_mapping
 
-    pct exec "$ctid" -- sh -lc "
-        getent group ${group_name} >/dev/null || \
-        (addgroup --gid ${host_gid} ${group_name} 2>/dev/null || groupadd -g ${host_gid} ${group_name} 2>/dev/null)
-    " >/dev/null 2>&1
+    user_mapping=$(pmx_get_container_user_mapping "$ctid")
+    
+    if [[ "$user_mapping" =~ ^unprivileged ]]; then
+        # For unprivileged containers, we need to map the GID
+        local gid_map_start
+        gid_map_start=$(echo "$user_mapping" | cut -d: -f3 | awk '{print $2}')
+        local mapped_gid=$((host_gid - gid_map_start))
+        
+        # Ensure the mapped GID is valid (within container's range)
+        if [[ $mapped_gid -ge 0 && $mapped_gid -lt 65536 ]]; then
+            pct exec "$ctid" -- sh -lc "
+                getent group ${group_name} >/dev/null || \
+                (addgroup --gid ${mapped_gid} ${group_name} 2>/dev/null || groupadd -g ${mapped_gid} ${group_name} 2>/dev/null)
+            " >/dev/null 2>&1
+            msg_ok "$(translate "Group synchronized inside unprivileged CT with mapped GID:") $mapped_gid"
+        else
+            msg_warn "$(translate "GID mapping out of range for unprivileged container")"
+        fi
+    else
+        # Privileged container - use same GID
+        pct exec "$ctid" -- sh -lc "
+            getent group ${group_name} >/dev/null || \
+            (addgroup --gid ${host_gid} ${group_name} 2>/dev/null || groupadd -g ${host_gid} ${group_name} 2>/dev/null)
+        " >/dev/null 2>&1
+        msg_ok "$(translate "Group synchronized inside privileged CT.")"
+    fi
 
+    # Add users to group
     local u
     for u in "${users[@]}"; do
         pct exec "$ctid" -- sh -lc "id -u \"$u\" >/dev/null 2>&1 && usermod -aG ${group_name} \"$u\" 2>/dev/null || true" >/dev/null 2>&1
     done
-    msg_ok "$(translate "Group synchronized inside CT and users added (if present).")"
+    
+    if [[ ${#users[@]} -gt 0 ]]; then
+        msg_ok "$(translate "Users added to group inside CT (if present).")"
+    fi
 }
 
 # Ensure target path exists inside CT with group+2775
@@ -246,6 +433,20 @@ pmx_prepare_ct_target_path() {
     # comments in English
     # IN: CTID, ct_path, group_name
     local ctid="$1" ct_path="$2" group_name="$3"
-    pct exec "$ctid" -- sh -lc "mkdir -p \"$ct_path\" && chgrp \"$group_name\" \"$ct_path\" && chmod 2775 \"$ct_path\"" >/dev/null 2>&1 || true
-    msg_ok "$(translate "Prepared CT target path with group and 2775.")"
+    local user_mapping
+    
+    user_mapping=$(pmx_get_container_user_mapping "$ctid")
+    
+    # Create directory and set permissions
+    pct exec "$ctid" -- sh -lc "mkdir -p \"$ct_path\"" >/dev/null 2>&1 || true
+    
+    if [[ "$user_mapping" =~ ^unprivileged ]]; then
+        # For unprivileged containers, set more permissive permissions
+        pct exec "$ctid" -- sh -lc "chgrp \"$group_name\" \"$ct_path\" 2>/dev/null && chmod 2775 \"$ct_path\" 2>/dev/null" >/dev/null 2>&1 || true
+        msg_ok "$(translate "Prepared CT target path for unprivileged container.")"
+    else
+        # Privileged container
+        pct exec "$ctid" -- sh -lc "chgrp \"$group_name\" \"$ct_path\" && chmod 2775 \"$ct_path\"" >/dev/null 2>&1 || true
+        msg_ok "$(translate "Prepared CT target path with group and 2775.")"
+    fi
 }
