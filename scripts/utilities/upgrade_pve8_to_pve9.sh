@@ -617,11 +617,10 @@ run_pve8to9_check() {
       
       # Error 1: systemd-boot meta-package
       if grep -q 'systemd-boot meta-package installed' "$tmp"; then
-        repair_commands+=("apt install systemd-boot-efi systemd-boot-tools -y && apt remove systemd-boot -y")
-        repair_descriptions+=("$(translate "Fix systemd-boot meta-package conflict")")
-        echo -e "${YW}$(translate "Fix systemd-boot:") ${CL}apt install systemd-boot-efi systemd-boot-tools -y && apt remove systemd-boot -y"
+        repair_commands+=("apt remove -y systemd-boot")
+        repair_descriptions+=("$(translate "Remove obsolete systemd-boot meta-package")")
+        echo -e "${YW}$(translate "Fix systemd-boot:") ${CL}apt remove -y systemd-boot"
       fi
-      
       # Error 2: Kernel version mismatch
       if grep -q -E '(kernel.*mismatch|kernel.*version)' "$tmp"; then
         repair_commands+=("update-grub")
@@ -990,9 +989,9 @@ run_pve8to9_check2() {
       
       # Error 1: systemd-boot meta-package
       if grep -q 'systemd-boot meta-package installed' "$tmp"; then
-        repair_commands+=("apt install systemd-boot-efi systemd-boot-tools -y && apt remove systemd-boot -y")
-        repair_descriptions+=("$(translate "Fix systemd-boot meta-package conflict")")
-        echo -e "${YW}$(translate "Fix systemd-boot:") ${CL}apt install systemd-boot-efi systemd-boot-tools -y && apt remove systemd-boot -y"
+        repair_commands+=("apt remove -y systemd-boot")
+        repair_descriptions+=("$(translate "Remove obsolete systemd-boot meta-package")")
+        echo -e "${YW}$(translate "Fix systemd-boot:") ${CL}apt remove -y systemd-boot"
       fi
       
       
