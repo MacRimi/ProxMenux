@@ -5,7 +5,7 @@
 # ==========================================================
 # All console-visible strings MUST be wrapped with $(translate "...").
 # Comments and code are in English, as requested.
-# Requires: utils.sh (show_proxmenux_logo, msg_info, msg_ok, msg_warn, msg_error, msg_title, etc.)
+# 
 # ==========================================================
 
 # Guard against multiple sourcing
@@ -406,7 +406,7 @@ pmx_add_bind_mount_to_ct() {
     is_unprivileged=$(pmx_is_container_unprivileged "$ctid")
     
     if [[ "$is_unprivileged" == "true" ]]; then
-        msg_info "$(translate "Configuring mount for unprivileged container...")"
+
         # For unprivileged containers, append to config; requires restart
         echo "${mpkey}: ${host_path},mp=${ct_path}" >> "$conf"
         msg_ok "$(translate "Bind mount appended to config (unprivileged).")"
@@ -414,7 +414,7 @@ pmx_add_bind_mount_to_ct() {
             msg_warn "$(translate "Restart the container to apply the mount.")"
         fi
     else
-        msg_info "$(translate "Configuring mount for privileged container...")"
+
         # Privileged: try hot-apply via pct set; fallback to config
         if [[ "$running" == "running" ]]; then
             if pct set "$ctid" -mp${mpidx} "${host_path},mp=${ct_path},create=dir" >/dev/null 2>&1; then
@@ -445,7 +445,7 @@ pmx_sync_group_in_ct() {
     if [[ "$uid_shift" -eq 0 ]]; then
         # Privileged container - use same GID
         ct_gid="$host_gid"
-        msg_info "$(translate "Privileged container - using host GID:") $ct_gid"
+        msg_ok "$(translate "Privileged container - using host GID:") $ct_gid"
     else
         # Unprivileged container - map the GID
         ct_gid=$((host_gid - uid_shift))
@@ -454,7 +454,7 @@ pmx_sync_group_in_ct() {
             ct_gid=1000
             msg_warn "$(translate "GID mapping resulted in negative value, using GID 1000 inside container")"
         fi
-        msg_info "$(translate "Unprivileged container - mapped GID inside CT:") $ct_gid"
+        msg_ok "$(translate "Unprivileged container - mapped GID inside CT:") $ct_gid"
     fi
     
     # Create or ensure group exists inside container
