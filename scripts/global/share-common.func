@@ -5,7 +5,7 @@
 # ==========================================================
 # All console-visible strings MUST be wrapped with $(translate "...").
 # Comments and code are in English, as requested.
-# 
+# Requires: utils.sh (show_proxmenux_logo, msg_info, msg_ok, msg_warn, msg_error, msg_title, etc.)
 # ==========================================================
 
 # Guard against multiple sourcing
@@ -124,16 +124,16 @@ pmx_get_container_uid_shift() {
     
     # Get UID shift from lxc.idmap configuration
     local uid_shift
-    uid_shift=$(grep "^lxc.idmap" "$conf" | grep 'u 0' | awk '{print $5}' | head -1)
+    uid_shift=$(grep "^lxc.idmap" "$conf" 2>/dev/null | grep 'u 0' | awk '{print $5}' | head -1)
     
-    # Default to 0 for privileged containers, 100000 for unprivileged
+    # If no idmap found, check if unprivileged flag is set
     if [[ -z "$uid_shift" ]]; then
         local unpriv
         unpriv=$(awk '/^unprivileged:/ {print $2}' "$conf" 2>/dev/null)
         if [[ "$unpriv" == "1" ]]; then
-            echo "100000"
+            echo "100000"  # Default for unprivileged
         else
-            echo "0"
+            echo "0"       # Privileged
         fi
     else
         echo "$uid_shift"
@@ -147,14 +147,41 @@ pmx_get_container_users_mapping() {
     
     uid_shift=$(pmx_get_container_uid_shift "$ctid")
     
-    # Get all users from container and filter root or UID >= 1000
-    pct exec "$ctid" -- getent passwd 2>/dev/null | while IFS=: read -r username _ uid gid _ home _; do
-        if [[ "$uid" -eq 0 ]] || [[ "$uid" -ge 1000 ]]; then
-            local real_uid=$((uid_shift + uid))
-            local real_gid=$((uid_shift + gid))
-            echo "$username:$uid:$gid:$real_uid:$real_gid"
+    # Check if container is running, if not start it temporarily
+    local was_stopped=false
+    local status
+    status=$(pct status "$ctid" 2>/dev/null | awk '{print $2}')
+    
+    if [[ "$status" != "running" ]]; then
+        msg_info "$(translate "Starting container temporarily to get user information...")"
+        if pct start "$ctid" >/dev/null 2>&1; then
+            was_stopped=true
+            sleep 3  # Wait for container to fully start
+        else
+            msg_warn "$(translate "Could not start container to get user information")"
+            return 1
         fi
-    done
+    fi
+    
+    # Get all users from container and filter root or UID >= 1000
+    local users_output
+    users_output=$(pct exec "$ctid" -- getent passwd 2>/dev/null)
+    
+    if [[ -n "$users_output" ]]; then
+        echo "$users_output" | while IFS=: read -r username _ uid gid _ home _; do
+            if [[ "$uid" -eq 0 ]] || [[ "$uid" -ge 1000 ]]; then
+                local real_uid=$((uid_shift + uid))
+                local real_gid=$((uid_shift + gid))
+                echo "$username:$uid:$gid:$real_uid:$real_gid"
+            fi
+        done
+    fi
+    
+    # Stop container if we started it
+    if [[ "$was_stopped" == "true" ]]; then
+        msg_info "$(translate "Stopping container...")"
+        pct stop "$ctid" >/dev/null 2>&1
+    fi
 }
 
 # Check if container is unprivileged
@@ -167,14 +194,22 @@ pmx_is_container_unprivileged() {
         return 0
     fi
     
+    # Check unprivileged flag first
     local unpriv
     unpriv=$(awk '/^unprivileged:/ {print $2}' "$conf" 2>/dev/null)
     
     if [[ "$unpriv" == "1" ]]; then
         echo "true"
-    else
-        echo "false"
+        return 0
     fi
+    
+    # Also check for lxc.idmap entries (alternative way to detect unprivileged)
+    if grep -q "^lxc.idmap" "$conf" 2>/dev/null; then
+        echo "true"
+        return 0
+    fi
+    
+    echo "false"
 }
 
 # Select existing host directory for mounting
@@ -390,8 +425,8 @@ pmx_add_bind_mount_to_ct() {
     [[ -z "$ctid" || -z "$host_path" || -z "$ct_path" ]] && { msg_error "$(translate "Internal error: missing arguments in pmx_add_bind_mount_to_ct")"; return 1; }
     [[ ! -f "$conf" ]] && { msg_error "$(translate "Container config not found:") $conf"; return 1; }
 
-    # Avoid duplicates
-    if grep -qE "^mp[0-9]+:\s*${host_path}," "$conf"; then
+    # Avoid duplicates - check for exact host path match
+    if grep -qF "${host_path}," "$conf" | grep -qE "^mp[0-9]+:"; then
         msg_warn "$(translate "This host path is already present in CT config.")"
         return 0
     fi
@@ -406,7 +441,7 @@ pmx_add_bind_mount_to_ct() {
     is_unprivileged=$(pmx_is_container_unprivileged "$ctid")
     
     if [[ "$is_unprivileged" == "true" ]]; then
-
+        msg_info "$(translate "Configuring mount for unprivileged container...")"
         # For unprivileged containers, append to config; requires restart
         echo "${mpkey}: ${host_path},mp=${ct_path}" >> "$conf"
         msg_ok "$(translate "Bind mount appended to config (unprivileged).")"
@@ -414,7 +449,7 @@ pmx_add_bind_mount_to_ct() {
             msg_warn "$(translate "Restart the container to apply the mount.")"
         fi
     else
-
+        msg_info "$(translate "Configuring mount for privileged container...")"
         # Privileged: try hot-apply via pct set; fallback to config
         if [[ "$running" == "running" ]]; then
             if pct set "$ctid" -mp${mpidx} "${host_path},mp=${ct_path},create=dir" >/dev/null 2>&1; then
@@ -445,7 +480,7 @@ pmx_sync_group_in_ct() {
     if [[ "$uid_shift" -eq 0 ]]; then
         # Privileged container - use same GID
         ct_gid="$host_gid"
-        msg_ok "$(translate "Privileged container - using host GID:") $ct_gid"
+        msg_info "$(translate "Privileged container - using host GID:") $ct_gid"
     else
         # Unprivileged container - map the GID
         ct_gid=$((host_gid - uid_shift))
@@ -454,7 +489,23 @@ pmx_sync_group_in_ct() {
             ct_gid=1000
             msg_warn "$(translate "GID mapping resulted in negative value, using GID 1000 inside container")"
         fi
-        msg_ok "$(translate "Unprivileged container - mapped GID inside CT:") $ct_gid"
+        msg_info "$(translate "Unprivileged container - mapped GID inside CT:") $ct_gid"
+    fi
+    
+    # Check if container is running, start if needed
+    local was_stopped=false
+    local status
+    status=$(pct status "$ctid" 2>/dev/null | awk '{print $2}')
+    
+    if [[ "$status" != "running" ]]; then
+        msg_info "$(translate "Starting container to configure group...")"
+        if pct start "$ctid" >/dev/null 2>&1; then
+            was_stopped=true
+            sleep 3  # Wait for container to fully start
+        else
+            msg_error "$(translate "Could not start container to configure group")"
+            return 1
+        fi
     fi
     
     # Create or ensure group exists inside container
@@ -476,6 +527,12 @@ pmx_sync_group_in_ct() {
         done <<< "$users_mapping"
     fi
     
+    # Stop container if we started it
+    if [[ "$was_stopped" == "true" ]]; then
+        msg_info "$(translate "Stopping container...")"
+        pct stop "$ctid" >/dev/null 2>&1
+    fi
+    
     msg_ok "$(translate "Group synchronized inside CT.")"
 }
 
@@ -485,9 +542,51 @@ pmx_prepare_ct_target_path() {
     # IN: CTID, ct_path, group_name
     local ctid="$1" ct_path="$2" group_name="$3"
     
+    # Check if container is running, start if needed
+    local was_stopped=false
+    local status
+    status=$(pct status "$ctid" 2>/dev/null | awk '{print $2}')
+    
+    if [[ "$status" != "running" ]]; then
+        msg_info "$(translate "Starting container to prepare target path...")"
+        if pct start "$ctid" >/dev/null 2>&1; then
+            was_stopped=true
+            sleep 3  # Wait for container to fully start
+        else
+            msg_warn "$(translate "Could not start container to prepare target path")"
+            return 0  # Not critical, continue
+        fi
+    fi
+    
     # Create directory and set permissions
     pct exec "$ctid" -- sh -lc "mkdir -p \"$ct_path\"" >/dev/null 2>&1 || true
     pct exec "$ctid" -- sh -lc "chgrp \"$group_name\" \"$ct_path\" 2>/dev/null && chmod 2775 \"$ct_path\" 2>/dev/null" >/dev/null 2>&1 || true
     
+    # Stop container if we started it
+    if [[ "$was_stopped" == "true" ]]; then
+        msg_info "$(translate "Stopping container...")"
+        pct stop "$ctid" >/dev/null 2>&1
+    fi
+    
     msg_ok "$(translate "Prepared CT target path with group and 2775.")"
+}
+
+# Debug function to show container configuration
+pmx_debug_container_config() {
+    local ctid="$1"
+    local conf="/etc/pve/lxc/${ctid}.conf"
+    
+    echo "=== Container $ctid Configuration Debug ==="
+    echo "Config file: $conf"
+    if [[ -f "$conf" ]]; then
+        echo "Unprivileged flag:"
+        grep "^unprivileged:" "$conf" || echo "  Not found"
+        echo "LXC idmap entries:"
+        grep "^lxc.idmap" "$conf" || echo "  Not found"
+        echo "UID shift detected: $(pmx_get_container_uid_shift "$ctid")"
+        echo "Is unprivileged: $(pmx_is_container_unprivileged "$ctid")"
+    else
+        echo "Config file not found!"
+    fi
+    echo "============================================"
 }
