@@ -72,7 +72,7 @@ ask_run_mode() {
         msg_ok "$(translate "Run mode: Unattended")"
         export DEBIAN_FRONTEND=noninteractive
         export APT_LISTCHANGES_FRONTEND=none
-        return 0
+        exit 0
     fi
 
 
