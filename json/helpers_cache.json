@@ -1304,7 +1304,9 @@
     "categories": [
       14
     ],
-    "notes": [],
+    "notes": [
+      "Flaresolverr is pinned to Version 3.3.25 because they add an breaking python package which doesn't work with debian 12.`"
+    ],
     "type": "ct"
   },
   {
@@ -2512,6 +2514,26 @@
     ],
     "notes": [],
     "type": "ct"
+  },
+  {
+    "name": "MediaManager",
+    "slug": "mediamanager",
+    "desc": "A modern selfhosted media management system for your media library",
+    "script": "ct/mediamanager.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/mediamanager.sh",
+    "categories": [
+      14,
+      13
+    ],
+    "notes": [
+      "During the installation, provide the email address of the first admin user",
+      "You're probably going to want to use a bind mount for the media directories"
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "<email address>",
+      "password": "admin"
+    }
   },
   {
     "name": "MediaMTX",
