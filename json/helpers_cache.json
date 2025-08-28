@@ -2165,7 +2165,6 @@
     ],
     "notes": [
       "First start can take a few minutes",
-      "This script requires some extra steps after the installation, Please checkout the `https://github.com/community-scripts/ProxmoxVE/discussions/193`",
       "When updating, if you had modified cache-ispn.xml: Re-apply your changes to the new file, otherwise leave it unchanged."
     ],
     "type": "ct",
