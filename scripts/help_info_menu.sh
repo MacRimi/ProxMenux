@@ -197,13 +197,12 @@ show_vm_ct_commands() {
 
                 echo -e "\n${YELLOW}$(translate 'Listing relevant CT users and their mapped UID/GID on host...')${NC}\n"
 
-                # Obtener el shift de UID del CT (por defecto 100000 si no está configurado)
+
                 UID_SHIFT=$(grep "^lxc.idmap" /etc/pve/lxc/"$id".conf | grep 'u 0' | awk '{print $5}')
                 UID_SHIFT=${UID_SHIFT:-100000}
 
-                # Obtener todos los usuarios y filtrar solo root o UID >= 1000
                 pct exec "$id" -- getent passwd | while IFS=: read -r username _ uid gid _ home _; do
-                    if [ "$uid" -eq 0 ] || [ "$uid" -ge 1000 ]; then
+                    if [ "$uid" -eq 0 ] || [ "$uid" -eq 65534 ] || [ "$uid" -ge 30 ]; then
                         real_uid=$((UID_SHIFT + uid))
                         real_gid=$((UID_SHIFT + gid))
                         echo -e "${GREEN}$(translate 'User')${NC}: $username"
