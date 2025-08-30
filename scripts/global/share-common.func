@@ -170,7 +170,7 @@ pmx_prepare_host_shared_dir() {
 
 
 
-pmx_select_host_mount_point() {
+pmx_select_host_mount_point_() {
 
     local title="${1:-$(translate "Select Mount Point")}"
     local default_path="${2:-/mnt/shared}"
@@ -203,6 +203,53 @@ pmx_select_host_mount_point() {
         esac
     done
 }
+
+
+
+
+
+
+
+
+
+
+
+
+pmx_select_host_mount_point() {
+    local title="${1:-$(translate "Select Mount Point")}"
+    local default_path="${2:-/mnt/shared}"
+    local choice folder_name result
+
+    while true; do
+        choice=$(whiptail --title "$title" --menu "$(translate "Where do you want the host folder?")" 16 76 4 \
+            "mnt"   "$(translate "Create folder in /mnt")" \
+            "srv"   "$(translate "Create folder in /srv")" \
+            "media" "$(translate "Create folder in /media")" \
+            "custom" "$(translate "Enter custom path")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
+
+        case "$choice" in
+            mnt)
+                folder_name=$(whiptail --inputbox "$(translate "Enter folder name for /mnt:")" 10 70 "$(basename "$default_path")" --title "$(translate "Folder Name")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
+                [[ -z "$folder_name" ]] && continue
+                echo "/mnt/$folder_name"; return 0;;
+            srv)
+                folder_name=$(whiptail --inputbox "$(translate "Enter folder name for /srv:")" 10 70 "$(basename "$default_path")" --title "$(translate "Folder Name")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
+                [[ -z "$folder_name" ]] && continue
+                echo "/srv/$folder_name"; return 0;;
+            media)
+                folder_name=$(whiptail --inputbox "$(translate "Enter folder name for /media:")" 10 70 "$(basename "$default_path")" --title "$(translate "Folder Name")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
+                [[ -z "$folder_name" ]] && continue
+                echo "/media/$folder_name"; return 0;;
+            custom)
+                result=$(whiptail --inputbox "$(translate "Enter full path:")" 10 80 "$default_path" --title "$(translate "Custom Path")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
+                [[ -z "$result" ]] && continue
+                echo "$result"; return 0;;
+        esac
+    done
+}
+
+
+
 
 
 
