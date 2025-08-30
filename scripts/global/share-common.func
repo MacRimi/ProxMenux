@@ -3,79 +3,98 @@
 # ProxMenux - Global Share Functions (reusable)
 # File: scripts/global/share_common.func
 # ==========================================================
-# All console-visible strings MUST be wrapped with $(translate "...").
-# Comments and code are in English, as requested.
-# Requires: utils.sh (show_proxmenux_logo, msg_info, msg_ok, msg_warn, msg_error, msg_title, etc.)
-# ==========================================================
 
-# Guard against multiple sourcing
+
+
 if [[ -n "${__PROXMENUX_SHARE_COMMON__}" ]]; then
     return 0
 fi
 __PROXMENUX_SHARE_COMMON__=1
 
-# Default group name used for shared folders (can be overridden by caller)
+
 : "${PROXMENUX_DEFAULT_SHARE_GROUP:=sharedfiles}"
 
-# Where to store simple mappings (dir -> group) to remember choices (optional)
+
 : "${PROXMENUX_SHARE_MAP_DB:=/usr/local/share/proxmenux/share-map.db}"
 
-# Ensure the mapping DB exists (best-effort)
+
 mkdir -p "$(dirname "$PROXMENUX_SHARE_MAP_DB")" 2>/dev/null || true
 touch "$PROXMENUX_SHARE_MAP_DB" 2>/dev/null || true
 
-# Read mapping: returns group name for a given path
+
 pmx_share_map_get() {
-    # comments in English
-    # Usage: pmx_share_map_get "/mnt/myshare"
+
     local key="$1"
     awk -F'=' -v k="$key" '$1==k {print $2}' "$PROXMENUX_SHARE_MAP_DB" 2>/dev/null | tail -n1
 }
 
-# Write mapping: persist association between directory and group
+
 pmx_share_map_set() {
-    # comments in English
-    # Usage: pmx_share_map_set "/mnt/myshare" "sharedfiles"
+
     local key="$1" val="$2"
-    # Remove any existing line for this key
+
     sed -i "\|^${key}=|d" "$PROXMENUX_SHARE_MAP_DB" 2>/dev/null || true
     echo "${key}=${val}" >> "$PROXMENUX_SHARE_MAP_DB"
 }
 
-# Ask user to reuse an existing group or create a new one
+
+
+
+
 pmx_choose_or_create_group() {
-    # comments in English
-    # OUT: echoes chosen group name
+
     local default_group="${1:-$PROXMENUX_DEFAULT_SHARE_GROUP}"
     local choice group_name
-    choice=$(whiptail --title "$(translate "Shared Group")" --menu "$(translate "Choose a group policy for this shared directory:")" 16 78 3 \
-        "reuse"  "$(translate "Use existing group (recommended)")" \
-        "new"    "$(translate "Create a new group for isolation")" \
-        "custom" "$(translate "Enter a custom existing group name")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
+    choice=$(whiptail --title "$(translate "Shared Group")" --menu "$(translate "Choose a group policy for this shared directory:")" 18 78 6 \
+        "1"  "$(translate "Use sharefiles group default (recommended)")" \
+        "2"  "$(translate "Create a new group for isolation")" \
+        "3"  "$(translate "Select an existing group")" \
+        3>&1 1>&2 2>&3) || { echo ""; return 1; }
 
     case "$choice" in
-        reuse)
-            # Ensure default group exists or create it
+        1)
+
             pmx_ensure_host_group "$default_group" >/dev/null || return 1
             echo "$default_group"
             ;;
-        new)
+        2)
             group_name=$(whiptail --inputbox "$(translate "Enter new group name:")" 10 70 "sharedfiles-project" --title "$(translate "New Group")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
             [[ -z "$group_name" ]] && { msg_error "$(translate "Group name cannot be empty.")"; echo ""; return 1; }
             pmx_ensure_host_group "$group_name" >/dev/null || return 1
             echo "$group_name"
             ;;
-        custom)
-            group_name=$(whiptail --inputbox "$(translate "Enter existing group name:")" 10 70 "$default_group" --title "$(translate "Group Name")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
-            [[ -z "$group_name" ]] && { msg_error "$(translate "Group name cannot be empty.")"; echo ""; return 1; }
+        3)
+
+            groups=$(getent group | awk -F: '$3 >= 1000 && $1 != "nogroup" && $1 !~ /^pve/ {print $1 ":" $3}')
+            if [[ -z "$groups" ]]; then
+                whiptail --title "$(translate "Groups")" --msgbox "$(translate "No user groups found.")" 8 60
+                echo ""; return 1
+            fi
+
+
+            menu_args=()
+            while IFS=: read -r gname gid; do
+                menu_args+=("$gname" "GID=$gid")
+            done <<< "$groups"
+
+            group_name=$(whiptail --title "$(translate "Existing Groups")" --menu "$(translate "Select an existing group:")" 20 70 12 \
+                "${menu_args[@]}" \
+                3>&1 1>&2 2>&3) || { echo ""; return 1; }
+
             pmx_ensure_host_group "$group_name" >/dev/null || return 1
             echo "$group_name"
             ;;
+
         *) echo ""; return 1;;
     esac
 }
 
-# Ensure group exists on host and return its GID
+
+
+
+
+
+
 pmx_ensure_host_group() {
 
     local group_name="$1"
@@ -112,10 +131,15 @@ pmx_ensure_host_group() {
     return 0
 }
 
-# Prepare directory on host with shared permissions (root:group, 2775, default ACLs)
+
+
+
+
+
+
+
 pmx_prepare_host_shared_dir() {
-    # comments in English
-    # IN: dir path, group name
+
     local dir="$1" group_name="$2"
     [[ -z "$dir" || -z "$group_name" ]] && { msg_error "$(translate "Internal error: missing arguments in pmx_prepare_host_shared_dir")"; return 1; }
 
@@ -140,10 +164,14 @@ pmx_prepare_host_shared_dir() {
     return 0
 }
 
-# Common selector for host mountpoint base (used by SMB/NFS/Local)
+
+
+
+
+
+
 pmx_select_host_mount_point() {
-    # comments in English
-    # OUT: echoes selected mount point path
+
     local title="${1:-$(translate "Select Mount Point")}"
     local default_path="${2:-/mnt/shared}"
     local choice folder_name result
@@ -176,89 +204,54 @@ pmx_select_host_mount_point() {
     done
 }
 
-# Compute next free mp index for a CT config (mp0..mpN)
-pmx_compute_next_mp_index() {
-    # comments in English
-    # IN: CTID
-    local ctid="$1" conf="/etc/pve/lxc/${ctid}.conf"
-    [[ ! -f "$conf" ]] && { echo "0"; return 0; }
-    local used idx next=0
-    used=$(awk -F: '/^mp[0-9]+:/ {print $1}' "$conf" | sed 's/mp//' | sort -n)
-    for idx in $used; do
-        [[ "$idx" -ge "$next" ]] && next=$((idx+1))
-    done
-    echo "$next"
-}
 
-# Add bind mount host->CT (handles privileged/unprivileged, running state)
-pmx_add_bind_mount_to_ct() {
-    # comments in English
-    # IN: CTID, host_path, ct_path
-    local ctid="$1" host_path="$2" ct_path="$3"
-    local conf="/etc/pve/lxc/${ctid}.conf"
-    [[ -z "$ctid" || -z "$host_path" || -z "$ct_path" ]] && { msg_error "$(translate "Internal error: missing arguments in pmx_add_bind_mount_to_ct")"; return 1; }
-    [[ ! -f "$conf" ]] && { msg_error "$(translate "Container config not found:") $conf"; return 1; }
 
-    # Avoid duplicates
-    if grep -qE "^mp[0-9]+:\s*${host_path}," "$conf"; then
-        msg_warn "$(translate "This host path is already present in CT config.")"
-        return 0
-    fi
 
-    local unpriv running mpidx mpkey
-    unpriv=$(awk '/^unprivileged:/ {print $2}' "$conf")
-    running=$(pct status "$ctid" 2>/dev/null | grep -qi running && echo "yes" || echo "no")
-    mpidx="$(pmx_compute_next_mp_index "$ctid")"
-    mpkey="mp${mpidx}"
 
-    if [[ "$unpriv" == "1" ]]; then
-        # Unprivileged: append to config; requires restart to take effect
-        echo "${mpkey}: ${host_path},mp=${ct_path}" >> "$conf"
-        msg_ok "$(translate "Bind mount appended to config (unprivileged).")"
-        if [[ "$running" == "yes" ]]; then
-            msg_warn "$(translate "Restart the container to apply the mount.")"
-        fi
-    else
-        # Privileged: try hot-apply via pct set; fallback to config
-        if [[ "$running" == "yes" ]]; then
-            if pct set "$ctid" -mp${mpidx} "${host_path},mp=${ct_path},create=dir" >/dev/null 2>&1; then
-                msg_ok "$(translate "Bind mount applied live to running container (privileged).")"
-            else
-                echo "${mpkey}: ${host_path},mp=${ct_path},create=dir" >> "$conf"
-                msg_warn "$(translate "pct set failed; entry appended to config.")"
+
+select_host_directory() {
+    local method choice result
+
+    method=$(whiptail --title "$(translate "Select Host Directory")" --menu "$(translate "How do you want to select the host folder to mount?")" 15 70 4 \
+        "mnt" "$(translate "Select from /mnt directories")" \
+        "srv" "$(translate "Select from /srv directories")" \
+        "media" "$(translate "Select from /media directories")" \
+        "manual" "$(translate "Enter path manually")" 3>&1 1>&2 2>&3) || return 1
+
+    case "$method" in
+        mnt|srv|media)
+            local base_path="/$method"
+            local host_dirs=("$base_path"/*)
+            local options=()
+            
+            for dir in "${host_dirs[@]}"; do
+                if [[ -d "$dir" ]]; then
+                    options+=("$dir" "$(basename "$dir")")
+                fi
+            done
+            
+            if [[ ${#options[@]} -eq 0 ]]; then
+                msg_error "$(translate "No directories found in") $base_path"
+                return 1
             fi
-        else
-            echo "${mpkey}: ${host_path},mp=${ct_path},create=dir" >> "$conf"
-            msg_ok "$(translate "Bind mount appended to config (privileged).")"
-        fi
+            
+            result=$(whiptail --title "$(translate "Select Host Folder")" \
+                --menu "$(translate "Select the folder to mount:")" 20 80 10 "${options[@]}" 3>&1 1>&2 2>&3)
+            ;;
+        manual)
+            result=$(whiptail --title "$(translate "Enter Path")" \
+                --inputbox "$(translate "Enter the full path to the host folder:")" 10 70 "/mnt/" 3>&1 1>&2 2>&3)
+            ;;
+    esac
+
+    if [[ -z "$result" ]]; then
+        return 1
     fi
-    return 0
-}
 
-# Ensure same shared group (name + GID) inside CT and add CT users to it
-pmx_sync_group_in_ct() {
-    # comments in English
-    # IN: CTID, group_name, host_gid, [ct_user1 ct_user2 ...]
-    local ctid="$1" group_name="$2" host_gid="$3"; shift 3
-    local users=("$@")
+    if [[ ! -d "$result" ]]; then
+        msg_error "$(translate "The selected path is not a valid directory:") $result"
+        return 1
+    fi
 
-    pct exec "$ctid" -- sh -lc "
-        getent group ${group_name} >/dev/null || \
-        (addgroup --gid ${host_gid} ${group_name} 2>/dev/null || groupadd -g ${host_gid} ${group_name} 2>/dev/null)
-    " >/dev/null 2>&1
-
-    local u
-    for u in "${users[@]}"; do
-        pct exec "$ctid" -- sh -lc "id -u \"$u\" >/dev/null 2>&1 && usermod -aG ${group_name} \"$u\" 2>/dev/null || true" >/dev/null 2>&1
-    done
-    msg_ok "$(translate "Group synchronized inside CT and users added (if present).")"
-}
-
-# Ensure target path exists inside CT with group+2775
-pmx_prepare_ct_target_path() {
-    # comments in English
-    # IN: CTID, ct_path, group_name
-    local ctid="$1" ct_path="$2" group_name="$3"
-    pct exec "$ctid" -- sh -lc "mkdir -p \"$ct_path\" && chgrp \"$group_name\" \"$ct_path\" && chmod 2775 \"$ct_path\"" >/dev/null 2>&1 || true
-    msg_ok "$(translate "Prepared CT target path with group and 2775.")"
+    echo "$result"
 }
