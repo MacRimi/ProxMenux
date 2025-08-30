@@ -25,28 +25,31 @@ fi
 load_language
 initialize_cache
 
+# Load common share functions
+SHARE_COMMON_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/scripts/global/share-common.func"
+if ! source <(curl -s "$SHARE_COMMON_URL" 2>/dev/null); then
+    msg_warn "$(translate "Could not load shared functions. Using fallback methods.")"
+    SHARE_COMMON_LOADED=false
+else
+    SHARE_COMMON_LOADED=true
+fi
 
 if ! command -v pveversion >/dev/null 2>&1; then
     dialog --backtitle "ProxMenux" --title "$(translate "Error")" --msgbox "$(translate "This script must be run on a Proxmox host.")" 8 60
     exit 1
 fi
 
-
 discover_nfs_servers() {
     show_proxmenux_logo
     msg_title "$(translate "NFS Host Manager - Proxmox Host")"
     msg_info "$(translate "Scanning network for NFS servers...")"
 
-    
-
     HOST_IP=$(hostname -I | awk '{print $1}')
     NETWORK=$(echo "$HOST_IP" | cut -d. -f1-3).0/24
-    
 
     if ! which nmap >/dev/null 2>&1; then
         apt-get install -y nmap &>/dev/null
     fi
-    
 
     SERVERS=$(nmap -p 2049 --open "$NETWORK" 2>/dev/null | grep -B 4 "2049/tcp open" | grep "Nmap scan report" | awk '{print $5}' | sort -u || true)
     
@@ -120,7 +123,6 @@ select_nfs_export() {
                  10 60
         return 1
     fi
-    
 
     if ! ping -c 1 -W 3 "$NFS_SERVER" >/dev/null 2>&1; then
         whiptail --title "$(translate "Connection Error")" \
@@ -128,7 +130,6 @@ select_nfs_export() {
                12 70
         return 1
     fi
-    
 
     if ! nc -z -w 3 "$NFS_SERVER" 2049 2>/dev/null; then
         whiptail --title "$(translate "NFS Port Error")" \
@@ -136,7 +137,6 @@ select_nfs_export() {
                12 70
         return 1
     fi
-    
 
     EXPORTS_OUTPUT=$(showmount -e "$NFS_SERVER" 2>&1)
     EXPORTS_RESULT=$?
@@ -194,54 +194,22 @@ select_nfs_export() {
     [[ -n "$NFS_EXPORT" ]] && return 0 || return 1
 }
 
+
+
+
+
+
 select_host_mount_point() {
-    while true; do
-        METHOD=$(whiptail --title "$(translate "Select Mount Point")" --menu "$(translate "Where do you want to mount the NFS export on the host?")" 15 70 4 \
-        "mnt" "$(translate "Create folder in /mnt")" \
-        "media" "$(translate "Create folder in /media")" \
-        "srv" "$(translate "Create folder in /srv")" \
-        "custom" "$(translate "Enter custom path")" 3>&1 1>&2 2>&3)
-        
-        case "$METHOD" in
-            mnt)
-                EXPORT_NAME=$(basename "$NFS_EXPORT")
-                DEFAULT_NAME="${EXPORT_NAME}"
-                FOLDER_NAME=$(whiptail --inputbox "$(translate "Enter folder name for /mnt:")" 10 60 "$DEFAULT_NAME" --title "$(translate "Folder in /mnt")" 3>&1 1>&2 2>&3)
-                if [[ -n "$FOLDER_NAME" ]]; then
-                    MOUNT_POINT="/mnt/$FOLDER_NAME"
-                    return 0
-                fi
-                ;;
-            media)
-                EXPORT_NAME=$(basename "$NFS_EXPORT")
-                DEFAULT_NAME="nfs_${NFS_SERVER}_${EXPORT_NAME}"
-                FOLDER_NAME=$(whiptail --inputbox "$(translate "Enter folder name for /media:")" 10 60 "$DEFAULT_NAME" --title "$(translate "Folder in /media")" 3>&1 1>&2 2>&3)
-                if [[ -n "$FOLDER_NAME" ]]; then
-                    MOUNT_POINT="/media/$FOLDER_NAME"
-                    return 0
-                fi
-                ;;
-            srv)
-                EXPORT_NAME=$(basename "$NFS_EXPORT")
-                DEFAULT_NAME="nfs_${NFS_SERVER}_${EXPORT_NAME}"
-                FOLDER_NAME=$(whiptail --inputbox "$(translate "Enter folder name for /srv:")" 10 60 "$DEFAULT_NAME" --title "$(translate "Folder in /srv")" 3>&1 1>&2 2>&3)
-                if [[ -n "$FOLDER_NAME" ]]; then
-                    MOUNT_POINT="/srv/$FOLDER_NAME"
-                    return 0
-                fi
-                ;;
-            custom)
-                MOUNT_POINT=$(whiptail --inputbox "$(translate "Enter full path for mount point:")" 10 70 "/mnt/nfs_share" --title "$(translate "Custom Path")" 3>&1 1>&2 2>&3)
-                if [[ -n "$MOUNT_POINT" ]]; then
-                    return 0
-                fi
-                ;;
-            *)
-                return 1
-                ;;
-        esac
-    done
+    local export_name=$(basename "$NFS_EXPORT")
+    local default_path="/mnt/shared_nfs_${export_name}"
+
+    MOUNT_POINT=$(pmx_select_host_mount_point "$(translate "NFS Mount Point")" "$default_path")
+    [[ -n "$MOUNT_POINT" ]] && return 0 || return 1
 }
+
+
+
+
 
 configure_host_mount_options() {
     MOUNT_TYPE=$(whiptail --title "$(translate "Mount Options")" --menu "$(translate "Select mount configuration:")" 15 70 4 \
@@ -271,7 +239,6 @@ configure_host_mount_options() {
             MOUNT_OPTIONS="rw,hard,intr,rsize=8192,wsize=8192,timeo=14"
             ;;
     esac
-    
 
     if whiptail --yesno "$(translate "Do you want to make this mount permanent?")\n\n$(translate "This will add the mount to /etc/fstab so it persists after reboot.")" 10 70 --title "$(translate "Permanent Mount")"; then
         PERMANENT_MOUNT=true
@@ -282,33 +249,55 @@ configure_host_mount_options() {
             return 1
         fi
     fi
+
+    # Test basic NFS connectivity before offering Proxmox storage
+    show_proxmenux_logo
+    msg_info "$(translate "Testing NFS export accessibility...")"
     
-
-    if whiptail --yesno "$(translate "Do you want to add this as Proxmox storage?")\n\n$(translate "This will make the NFS share available as storage in Proxmox web interface.")" 10 70 --title "$(translate "Proxmox Storage")"; then
-        PROXMOX_STORAGE=true
+    # Try a simple mount test to validate the export
+    TEMP_MOUNT="/tmp/nfs_test_$$"
+    mkdir -p "$TEMP_MOUNT" 2>/dev/null
+    
+    NFS_PATH="$NFS_SERVER:$NFS_EXPORT"
+    if timeout 10 mount -t nfs -o ro,soft,timeo=5 "$NFS_PATH" "$TEMP_MOUNT" 2>/dev/null; then
+        umount "$TEMP_MOUNT" 2>/dev/null || true
+        rmdir "$TEMP_MOUNT" 2>/dev/null || true
+        msg_ok "$(translate "NFS export is accessible")"
         
-
-        STORAGE_ID=$(whiptail --inputbox "$(translate "Enter storage ID for Proxmox:")" 10 60 "nfs-$(echo $NFS_SERVER | tr '.' '-')" --title "$(translate "Storage ID")" 3>&1 1>&2 2>&3)
-        STORAGE_ID_RESULT=$?
-        
-        if [[ $STORAGE_ID_RESULT -ne 0 ]]; then
-
-            if whiptail --yesno "$(translate "Storage ID input was cancelled.")\n\n$(translate "Do you want to continue without Proxmox storage integration?")" 10 70 --title "$(translate "Continue Without Storage")"; then
+        # Export is accessible, offer Proxmox storage integration
+        if whiptail --yesno "$(translate "Do you want to add this as Proxmox storage?")\n\n$(translate "This will make the NFS share available as storage in Proxmox web interface.")" 10 70 --title "$(translate "Proxmox Storage")"; then
+            PROXMOX_STORAGE=true
+            
+            STORAGE_ID=$(whiptail --inputbox "$(translate "Enter storage ID for Proxmox:")" 10 60 "nfs-$(echo $NFS_SERVER | tr '.' '-')" --title "$(translate "Storage ID")" 3>&1 1>&2 2>&3)
+            STORAGE_ID_RESULT=$?
+            
+            if [[ $STORAGE_ID_RESULT -ne 0 ]]; then
+                if whiptail --yesno "$(translate "Storage ID input was cancelled.")\n\n$(translate "Do you want to continue without Proxmox storage integration?")" 10 70 --title "$(translate "Continue Without Storage")"; then
+                    PROXMOX_STORAGE=false
+                else
+                    return 1
+                fi
+            else
+                [[ -z "$STORAGE_ID" ]] && STORAGE_ID="nfs-$(echo $NFS_SERVER | tr '.' '-')"
+            fi
+        else
+            DIALOG_RESULT=$?
+            if [[ $DIALOG_RESULT -eq 1 ]]; then
                 PROXMOX_STORAGE=false
             else
                 return 1
             fi
-        else
-
-            [[ -z "$STORAGE_ID" ]] && STORAGE_ID="nfs-$(echo $NFS_SERVER | tr '.' '-')"
         fi
     else
-        DIALOG_RESULT=$?
-        if [[ $DIALOG_RESULT -eq 1 ]]; then
-
+        # Export is not accessible or has issues
+        rmdir "$TEMP_MOUNT" 2>/dev/null || true
+        msg_warn "$(translate "NFS export accessibility test failed")"
+        
+        if whiptail --yesno "$(translate "The NFS export could not be validated for accessibility.")\n\n$(translate "This might be due to:")\n• $(translate "Network connectivity issues")\n• $(translate "Export permission restrictions")\n• $(translate "Firewall blocking access")\n\n$(translate "Do you want to continue mounting anyway?")\n$(translate "(Proxmox storage integration will be skipped)")" 16 80 --title "$(translate "Export Validation Failed")"; then
             PROXMOX_STORAGE=false
+            msg_info "$(translate "Continuing without Proxmox storage integration due to accessibility issues.")"
+            sleep 2
         else
-
             return 1
         fi
     fi
@@ -348,7 +337,6 @@ add_proxmox_nfs_storage() {
     fi
     
     msg_ok "$(translate "pvesm command found")"
-    
 
     if pvesm status "$storage_id" >/dev/null 2>&1; then
         msg_warn "$(translate "Storage ID already exists:") $storage_id"
@@ -359,18 +347,12 @@ add_proxmox_nfs_storage() {
     fi
     
     msg_ok "$(translate "Storage ID is available")"
-    
 
     msg_info "$(translate "Creating NFS storage...")"
     CONTENT_LIST="backup,iso,vztmpl"
-    
 
-#############################################
-
+    # Use NFS version 3 for better compatibility
     NFS_VERSION="3"
-    
-#############################################
-
 
     PVESM_OUTPUT=$(pvesm add nfs "$storage_id" \
         --server "$server" \
@@ -401,8 +383,40 @@ add_proxmox_nfs_storage() {
     fi
 }
 
-mount_host_nfs_share() {
+prepare_host_directory() {
+    local mount_point="$1"
+    
+    if [[ "$SHARE_COMMON_LOADED" == "true" ]]; then
+        # Use common functions for advanced directory preparation
+        local group_name
+        group_name=$(pmx_choose_or_create_group "sharedfiles")
+        if [[ -n "$group_name" ]]; then
+            local host_gid
+            host_gid=$(pmx_ensure_host_group "$group_name")
+            if [[ -n "$host_gid" ]]; then
+                pmx_prepare_host_shared_dir "$mount_point" "$group_name"
+                pmx_share_map_set "$mount_point" "$group_name"
+                msg_ok "$(translate "Directory prepared with shared group:") $group_name (GID: $host_gid)"
+                return 0
+            fi
+        fi
+        msg_warn "$(translate "Failed to use shared functions, using basic directory creation.")"
+    fi
+    
+    # Fallback: basic directory creation
+    if ! test -d "$mount_point"; then
+        if mkdir -p "$mount_point"; then
+            msg_ok "$(translate "Mount point created on host.")"
+            return 0
+        else
+            msg_error "$(translate "Failed to create mount point on host.")"
+            return 1
+        fi
+    fi
+    return 0
+}
 
+mount_host_nfs_share() {
     if ! which showmount >/dev/null 2>&1; then
         msg_error "$(translate "NFS client tools not found. Please check Proxmox installation.")"
         return 1
@@ -428,25 +442,11 @@ mount_host_nfs_share() {
     
     # Step 4: 
     configure_host_mount_options || return
-    
-
-  # ===================================================  
 
     show_proxmenux_logo
     msg_title "$(translate "Mount NFS Share on Host")"
-    
-# =====================================================
 
-
-    if ! test -d "$MOUNT_POINT"; then
-        if mkdir -p "$MOUNT_POINT"; then
-            msg_ok "$(translate "Mount point created on host.")"
-        else
-            msg_error "$(translate "Failed to create mount point on host.")"
-            return 1
-        fi
-    fi
-    
+    prepare_host_directory "$MOUNT_POINT" || return 1
 
     if mount | grep -q "$MOUNT_POINT"; then
         msg_warn "$(translate "Something is already mounted at") $MOUNT_POINT"
@@ -455,14 +455,11 @@ mount_host_nfs_share() {
         fi
         umount "$MOUNT_POINT" 2>/dev/null || true
     fi
-    
 
     NFS_PATH="$NFS_SERVER:$NFS_EXPORT"
 
     if mount -t nfs -o "$MOUNT_OPTIONS" "$NFS_PATH" "$MOUNT_POINT" > /dev/null 2>&1; then
         msg_ok "$(translate "NFS share mounted successfully on host!")"
-
-        
 
         if touch "$MOUNT_POINT/.test_write" 2>/dev/null; then
             rm "$MOUNT_POINT/.test_write" 2>/dev/null
@@ -470,10 +467,8 @@ mount_host_nfs_share() {
         else
             msg_warn "$(translate "Read-only access (or no write permissions).")"
         fi
-        
 
         if [[ "$PERMANENT_MOUNT" == "true" ]]; then
-
             sed -i "\|$MOUNT_POINT|d" /etc/fstab
             FSTAB_ENTRY="$NFS_PATH $MOUNT_POINT nfs $MOUNT_OPTIONS 0 0"
             echo "$FSTAB_ENTRY" >> /etc/fstab
@@ -483,12 +478,10 @@ mount_host_nfs_share() {
             systemctl daemon-reload 2>/dev/null || true
             msg_ok "$(translate "Systemd configuration reloaded.")"
         fi
-        
 
         if [[ "$PROXMOX_STORAGE" == "true" ]]; then
             add_proxmox_nfs_storage "$STORAGE_ID" "$NFS_SERVER" "$NFS_EXPORT" "$MOUNT_POINT"
         fi
-        
 
         echo -e ""
         echo -e "${TAB}${BOLD}$(translate "Host Mount Information:")${CL}"
@@ -565,7 +558,6 @@ view_host_nfs_mounts() {
     else
         echo "$(translate "No permanent NFS mounts configured on host.")"
     fi
-    
 
     echo -e "${BOLD}$(translate "Proxmox NFS Storage:")${CL}"
     if which pvesm >/dev/null 2>&1; then
@@ -574,7 +566,6 @@ view_host_nfs_mounts() {
             while IFS= read -r storage_id; do
                 if [[ -n "$storage_id" ]]; then
                     echo -e "${TAB}${BGN}$(translate "Storage ID:")${CL} ${BL}$storage_id${CL}"
-                    
 
                     STORAGE_INFO=$(pvesm config "$storage_id" 2>/dev/null || true)
                     if [[ -n "$STORAGE_INFO" ]]; then
@@ -602,10 +593,8 @@ view_host_nfs_mounts() {
 }
 
 unmount_host_nfs_share() {
-
     MOUNTS=$(mount | grep -E "type nfs|:.*on.*nfs" | awk '{print $3}' | sort -u || true)
     FSTAB_MOUNTS=$(grep -E "nfs" /etc/fstab 2>/dev/null | grep -v "^#" | awk '{print $2}' | sort -u || true)
-    
 
     ALL_MOUNTS=$(echo -e "$MOUNTS\n$FSTAB_MOUNTS" | sort -u | grep -v "^$" || true)
     
@@ -617,7 +606,6 @@ unmount_host_nfs_share() {
     OPTIONS=()
     while IFS= read -r mount_point; do
         if [[ -n "$mount_point" ]]; then
-
             NFS_PATH=$(mount | grep "$mount_point" | awk '{print $1}' || grep "$mount_point" /etc/fstab | awk '{print $1}' || echo "Unknown")
             SERVER=$(echo "$NFS_PATH" | cut -d: -f1)
             EXPORT=$(echo "$NFS_PATH" | cut -d: -f2)
@@ -627,16 +615,13 @@ unmount_host_nfs_share() {
     
     SELECTED_MOUNT=$(dialog --backtitle "ProxMenux" --title "$(translate "Unmount NFS Share")" --menu "$(translate "Select mount point to unmount:")" 20 80 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
     [[ -z "$SELECTED_MOUNT" ]] && return
-    
 
     NFS_PATH=$(mount | grep "$SELECTED_MOUNT" | awk '{print $1}' || grep "$SELECTED_MOUNT" /etc/fstab | awk '{print $1}' || echo "Unknown")
     SERVER=$(echo "$NFS_PATH" | cut -d: -f1)
     EXPORT=$(echo "$NFS_PATH" | cut -d: -f2)
-    
 
     PROXMOX_STORAGE=""
     if which pvesm >/dev/null 2>&1; then
-
         NFS_STORAGES=$(pvesm status 2>/dev/null | grep "nfs" | awk '{print $1}' || true)
         while IFS= read -r storage_id; do
             if [[ -n "$storage_id" ]]; then
@@ -650,7 +635,6 @@ unmount_host_nfs_share() {
             fi
         done <<< "$NFS_STORAGES"
     fi
-    
 
     CONFIRMATION_MSG="$(translate "Are you sure you want to unmount this NFS share?")\n\n$(translate "Mount Point:"): $SELECTED_MOUNT\n$(translate "Server:"): $SERVER\n$(translate "Export:"): $EXPORT\n\n$(translate "This will:")\n• $(translate "Unmount the NFS share")\n• $(translate "Remove from /etc/fstab")"
     
@@ -671,7 +655,6 @@ unmount_host_nfs_share() {
                 msg_warn "$(translate "Failed to remove Proxmox storage, continuing with unmount...")"
             fi
         fi
-        
 
         if mount | grep -q "$SELECTED_MOUNT"; then
             if umount "$SELECTED_MOUNT"; then
@@ -686,7 +669,6 @@ unmount_host_nfs_share() {
                 fi
             fi
         fi
-        
 
         msg_info "$(translate "Removing from /etc/fstab...")"
         sed -i "\|[[:space:]]$SELECTED_MOUNT[[:space:]]|d" /etc/fstab
@@ -707,9 +689,6 @@ unmount_host_nfs_share() {
     read -r
 }
 
-
-
-
 manage_proxmox_storage() {
     if ! command -v pvesm >/dev/null 2>&1; then
         dialog --backtitle "ProxMenux" --title "$(translate "Error")" --msgbox "\n$(translate "pvesm command not found. This should not happen on Proxmox.")" 8 60
@@ -721,7 +700,6 @@ manage_proxmox_storage() {
         dialog --backtitle "ProxMenux" --title "$(translate "No NFS Storage")" --msgbox "\n$(translate "No NFS storage found in Proxmox.")" 8 60
         return
     fi
-
 
      OPTIONS=()
     while IFS= read -r storage_id; do
@@ -741,12 +719,10 @@ manage_proxmox_storage() {
     SELECTED_STORAGE=$(dialog --backtitle "ProxMenux" --title "$(translate "Manage Proxmox NFS Storage")" --menu "$(translate "Select storage to manage:")" 20 80 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
     [[ -z "$SELECTED_STORAGE" ]] && return
 
-
     STORAGE_INFO=$(pvesm config "$SELECTED_STORAGE" 2>/dev/null || true)
     SERVER=$(echo "$STORAGE_INFO" | grep "server" | awk '{print $2}')
     EXPORT=$(echo "$STORAGE_INFO" | grep "export" | awk '{print $2}')
     CONTENT=$(echo "$STORAGE_INFO" | grep "content" | awk '{print $2}')
-
 
     FSTAB_NFS=$(grep "nfs" /etc/fstab 2>/dev/null || true)
     if [[ -n "$FSTAB_NFS" ]]; then
@@ -762,7 +738,6 @@ manage_proxmox_storage() {
         done <<< "$FSTAB_NFS"
     fi
 
-
     if whiptail --yesno "$(translate "Are you sure you want to REMOVE storage") $SELECTED_STORAGE?\n\n$(translate "Server:"): $SERVER\n$(translate "Export:"): $EXPORT\n\n$(translate "WARNING: This will permanently remove the storage from Proxmox configuration.")\n$(translate "The NFS mount on the host will NOT be affected.")" 14 80 --title "$(translate "Remove Storage")"; then
         show_proxmenux_logo
         msg_title "$(translate "Remove Storage")"
@@ -776,11 +751,7 @@ manage_proxmox_storage() {
             msg_error "$(translate "Failed to remove storage.")"
         fi
     fi
-
-
 }
-
-
 
 test_host_nfs_connectivity() {
     show_proxmenux_logo
@@ -788,11 +759,9 @@ test_host_nfs_connectivity() {
     
     echo -e "$(translate "NFS Client Status on Proxmox Host:"):"
     echo "=================================="
-    
 
     if which showmount >/dev/null 2>&1; then
         echo "$(translate "NFS Client Tools: AVAILABLE")"
-        
 
         if systemctl is-active --quiet rpcbind 2>/dev/null; then
             echo "$(translate "RPC Bind Service: RUNNING")"
@@ -813,7 +782,6 @@ test_host_nfs_connectivity() {
         
         echo ""
         echo "$(translate "Testing network connectivity...")"
-        
 
         FSTAB_SERVERS=$(grep "nfs" /etc/fstab 2>/dev/null | awk '{print $1}' | cut -d: -f1 | sort -u || true)
         if [[ -n "$FSTAB_SERVERS" ]]; then
@@ -822,7 +790,6 @@ test_host_nfs_connectivity() {
                     echo -n "$(translate "Testing") $server: "
                     if ping -c 1 -W 2 "$server" >/dev/null 2>&1; then
                         echo -e "${GN}$(translate "Reachable")${CL}"
-                        
 
                         echo -n "  $(translate "NFS port 2049"): "
                         if nc -z -w 2 "$server" 2049 2>/dev/null; then
@@ -830,7 +797,6 @@ test_host_nfs_connectivity() {
                         else
                             echo -e "${RD}$(translate "Closed")${CL}"
                         fi
-                        
 
                         echo -n "  $(translate "Export list test"): "
                         if showmount -e "$server" >/dev/null 2>&1; then
@@ -846,7 +812,6 @@ test_host_nfs_connectivity() {
         else
             echo "$(translate "No NFS servers configured to test.")"
         fi
-        
 
         echo ""
         echo "$(translate "Proxmox NFS Storage Status:")"
@@ -865,6 +830,18 @@ test_host_nfs_connectivity() {
         echo "$(translate "NFS Client Tools: NOT AVAILABLE")"
         echo ""
         echo "$(translate "This is unusual for Proxmox. NFS client tools should be installed.")"
+    fi
+
+    echo ""
+    echo "$(translate "ProxMenux Extensions:")"
+    if [[ "$SHARE_COMMON_LOADED" == "true" ]]; then
+        echo "$(translate "Shared Functions: LOADED")"
+        if [[ -f "$PROXMENUX_SHARE_MAP_DB" ]]; then
+            MAPPED_DIRS=$(wc -l < "$PROXMENUX_SHARE_MAP_DB" 2>/dev/null || echo "0")
+            echo "$(translate "Mapped directories:"): $MAPPED_DIRS"
+        fi
+    else
+        echo "$(translate "Shared Functions: NOT LOADED (using fallback methods)")"
     fi
     
     echo ""

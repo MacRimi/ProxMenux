@@ -16,7 +16,6 @@
 REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
-VENV_PATH="/opt/googletrans-env"
 CREDENTIALS_DIR="/etc/samba/credentials"
 
 if [[ -f "$UTILS_FILE" ]]; then
@@ -25,6 +24,15 @@ fi
 
 load_language
 initialize_cache
+
+# Load common share functions
+SHARE_COMMON_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/scripts/global/share-common.func"
+if ! source <(curl -s "$SHARE_COMMON_URL" 2>/dev/null); then
+    msg_warn "$(translate "Could not load shared functions. Using fallback methods.")"
+    SHARE_COMMON_LOADED=false
+else
+    SHARE_COMMON_LOADED=true
+fi
 
 
 if ! command -v pveversion >/dev/null 2>&1; then
@@ -499,78 +507,43 @@ EOF
     [[ -n "$SAMBA_SHARE" ]] && return 0 || return 1
 }
 
+
+
+
+
+
 select_host_mount_point() {
-    while true; do
-        METHOD=$(whiptail --title "$(translate "Select Mount Point")" --menu "$(translate "Where do you want to mount the Samba share on the host?")" 15 70 4 \
-        "mnt" "$(translate "Create folder in /mnt")" \
-        "media" "$(translate "Create folder in /media")" \
-        "srv" "$(translate "Create folder in /srv")" \
-        "custom" "$(translate "Enter custom path")" 3>&1 1>&2 2>&3)
-        
-        case "$METHOD" in
-            mnt)
-                DEFAULT_NAME="${SAMBA_SHARE}"
-                FOLDER_NAME=$(whiptail --inputbox "$(translate "Enter folder name for /mnt:")" 10 60 "$DEFAULT_NAME" --title "$(translate "Folder in /mnt")" 3>&1 1>&2 2>&3)
-                if [[ -n "$FOLDER_NAME" ]]; then
-                    MOUNT_POINT="/mnt/$FOLDER_NAME"
-                    return 0
-                fi
-                ;;
-            media)
-                DEFAULT_NAME="samba_${SAMBA_SERVER}_${SAMBA_SHARE}"
-                FOLDER_NAME=$(whiptail --inputbox "$(translate "Enter folder name for /media:")" 10 60 "$DEFAULT_NAME" --title "$(translate "Folder in /media")" 3>&1 1>&2 2>&3)
-                if [[ -n "$FOLDER_NAME" ]]; then
-                    MOUNT_POINT="/media/$FOLDER_NAME"
-                    return 0
-                fi
-                ;;
-            srv)
-                DEFAULT_NAME="samba_${SAMBA_SERVER}_${SAMBA_SHARE}"
-                FOLDER_NAME=$(whiptail --inputbox "$(translate "Enter folder name for /srv:")" 10 60 "$DEFAULT_NAME" --title "$(translate "Folder in /srv")" 3>&1 1>&2 2>&3)
-                if [[ -n "$FOLDER_NAME" ]]; then
-                    MOUNT_POINT="/srv/$FOLDER_NAME"
-                    return 0
-                fi
-                ;;
-            custom)
-                MOUNT_POINT=$(whiptail --inputbox "$(translate "Enter full path for mount point:")" 10 70 "/mnt/samba_share" --title "$(translate "Custom Path")" 3>&1 1>&2 2>&3)
-                if [[ -n "$MOUNT_POINT" ]]; then
-                    return 0
-                fi
-                ;;
-            *)
-                return 1
-                ;;
-        esac
-    done
+    local default_path="/mnt/shared_samba_${SAMBA_SHARE}"
+
+    MOUNT_POINT=$(pmx_select_host_mount_point "$(translate "Samba Mount Point")" "$default_path")
+    [[ -n "$MOUNT_POINT" ]] && return 0 || return 1
 }
+
+
+
 
 configure_host_mount_options() {
     MOUNT_TYPE=$(whiptail --title "$(translate "Mount Options")" --menu "$(translate "Select mount configuration:")" 15 70 4 \
     "default" "$(translate "Default options")" \
     "readonly" "$(translate "Read-only mount")" \
-    "performance" "$(translate "Performance optimized")" \
     "custom" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
     
     [[ $? -ne 0 ]] && return 1
     
     case "$MOUNT_TYPE" in
         default)
-            MOUNT_OPTIONS="rw,file_mode=0664,dir_mode=0775,iocharset=utf8"
+            MOUNT_OPTIONS="rw,noperm,file_mode=0664,dir_mode=0775,iocharset=utf8"
             ;;
         readonly)
-            MOUNT_OPTIONS="ro,file_mode=0444,dir_mode=0555,iocharset=utf8"
-            ;;
-        performance)
-            MOUNT_OPTIONS="rw,file_mode=0664,dir_mode=0775,iocharset=utf8,cache=strict,rsize=1048576,wsize=1048576"
+            MOUNT_OPTIONS="ro,noperm,file_mode=0444,dir_mode=0555,iocharset=utf8"
             ;;
         custom)
             MOUNT_OPTIONS=$(whiptail --inputbox "$(translate "Enter custom mount options:")" 10 70 "rw,file_mode=0664,dir_mode=0775" --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
             [[ $? -ne 0 ]] && return 1
-            [[ -z "$MOUNT_OPTIONS" ]] && MOUNT_OPTIONS="rw,file_mode=0664,dir_mode=0775"
+            [[ -z "$MOUNT_OPTIONS" ]] && MOUNT_OPTIONS="rw,noperm,file_mode=0664,dir_mode=0775"
             ;;
         *)
-            MOUNT_OPTIONS="rw,file_mode=0664,dir_mode=0775,iocharset=utf8"
+            MOUNT_OPTIONS="rw,noperm,file_mode=0664,dir_mode=0775,iocharset=utf8"
             ;;
     esac
     
@@ -586,8 +559,8 @@ configure_host_mount_options() {
     fi
     
 
+    # Only ask about Proxmox storage if using username/password authentication
     if [[ "$USE_GUEST" != "true" ]]; then
-
         if whiptail --yesno "$(translate "Do you want to add this as Proxmox storage?")\n\n$(translate "This will make the Samba share available as storage in Proxmox web interface.")" 10 70 --title "$(translate "Proxmox Storage")"; then
             PROXMOX_STORAGE=true
             
@@ -611,6 +584,9 @@ configure_host_mount_options() {
                 return 1
             fi
         fi
+    else
+        # For guest access, don't offer Proxmox storage integration
+        PROXMOX_STORAGE=false
     fi
     
     return 0
@@ -667,41 +643,14 @@ add_proxmox_cifs_storage() {
     CONTENT_LIST="backup,iso,vztmpl"
     
 
-    if [[ "$USE_GUEST" == "true" ]]; then
-        msg_warn "$(translate "Attempting to add guest access storage to Proxmox...")"
-
-        
-        PVESM_OUTPUT=""
-        PVESM_RESULT=1
-        
-        msg_info "$(translate "Trying method 1: guest option...")"
-        PVESM_OUTPUT=$(pvesm add cifs "$storage_id" \
-            --server "$server" \
-            --share "$share" \
-            --content "$CONTENT_LIST" \
-            --options "guest" 2>&1)
-        PVESM_RESULT=$?
-        cleanup
-
-        if [[ $PVESM_RESULT -ne 0 ]]; then
-            msg_info "$(translate "Trying method 2: without guest option...")"
-            PVESM_OUTPUT=$(pvesm add cifs "$storage_id" \
-                --server "$server" \
-                --share "$share" \
-                --content "$CONTENT_LIST" 2>&1)
-            PVESM_RESULT=$?
-            cleanup
-        fi
-        
-    else
-        PVESM_OUTPUT=$(pvesm add cifs "$storage_id" \
-            --server "$server" \
-            --share "$share" \
-            --username "$USERNAME" \
-            --password "$PASSWORD" \
-            --content "$CONTENT_LIST" 2>&1)
-        PVESM_RESULT=$?
-    fi
+    msg_info "$(translate "Adding authenticated storage to Proxmox...")"
+    PVESM_OUTPUT=$(pvesm add cifs "$storage_id" \
+        --server "$server" \
+        --share "$share" \
+        --username "$USERNAME" \
+        --password "$PASSWORD" \
+        --content "$CONTENT_LIST" 2>&1)
+    PVESM_RESULT=$?
     
     if [[ $PVESM_RESULT -eq 0 ]]; then
         msg_ok "$(translate "CIFS storage added successfully to Proxmox!")"
@@ -711,15 +660,16 @@ add_proxmox_cifs_storage() {
         echo -e "${TAB}${BGN}$(translate "Server:")${CL} ${BL}$server${CL}"
         echo -e "${TAB}${BGN}$(translate "Share:")${CL} ${BL}$share${CL}"
         echo -e "${TAB}${BGN}$(translate "Content Types:")${CL} ${BL}$CONTENT_LIST${CL}"
-        echo -e "${TAB}${BGN}$(translate "Authentication:")${CL} ${BL}$([ "$USE_GUEST" == "true" ] && echo "Guest" || echo "User: $USERNAME")${CL}"
+        echo -e "${TAB}${BGN}$(translate "Authentication:")${CL} ${BL}User: $USERNAME${CL}"
         echo -e ""
         msg_ok "$(translate "Storage is now available in Proxmox web interface under Datacenter > Storage")"
         return 0
     else
 
         msg_error "$(translate "Failed to add CIFS storage to Proxmox.")"
-        echo "${TAB}Error details: $PVESM_OUTPUT"
+        echo -e "${TAB}$(translate "Error details:"): $PVESM_OUTPUT"
         msg_warn "$(translate "The Samba share is still mounted, but not added as Proxmox storage.")"
+        echo -e ""
         msg_info2 "$(translate "You can add it manually through:")"
         echo -e "${TAB}• $(translate "Proxmox web interface: Datacenter > Storage > Add > SMB/CIFS")"
         echo -e "${TAB}• $(translate "Command line:"): pvesm add cifs $storage_id --server $server --share $share --username $USERNAME --password [PASSWORD] --content backup,iso,vztmpl"
@@ -757,14 +707,7 @@ mount_host_samba_share() {
     msg_title "$(translate "Mount Samba Share on Host")"
     
 
-    if ! test -d "$MOUNT_POINT"; then
-        if mkdir -p "$MOUNT_POINT"; then
-            msg_ok "$(translate "Mount point created on host.")"
-        else
-            msg_error "$(translate "Failed to create mount point on host.")"
-            return 1
-        fi
-    fi
+    prepare_host_directory "$MOUNT_POINT" || return 1
     
 
     if mount | grep -q "$MOUNT_POINT"; then
@@ -782,6 +725,22 @@ mount_host_samba_share() {
     else
         CRED_OPTION="guest"
     fi
+
+
+        # --- Ensure correct group mapping ---
+    if [[ "$SHARE_COMMON_LOADED" == "true" ]]; then
+        GROUP=$(pmx_share_map_get "$MOUNT_POINT")
+        if [[ -z "$GROUP" ]]; then
+            GROUP=$(pmx_choose_or_create_group "sharedfiles") || return 1
+            pmx_share_map_set "$MOUNT_POINT" "$GROUP"
+        fi
+
+        HOST_GID=$(pmx_ensure_host_group "$GROUP" 101000) || return 1
+        # Forzar que los ficheros/directorios se monten con este GID
+        MOUNT_OPTIONS="$MOUNT_OPTIONS,gid=$HOST_GID,uid=0"
+        msg_ok "$(translate "Directory prepared with shared group:") $GROUP (GID: $HOST_GID)"
+    fi
+
     
 
     FULL_OPTIONS="$MOUNT_OPTIONS,$CRED_OPTION"
@@ -1229,10 +1188,55 @@ test_host_samba_connectivity() {
         apt-get install -y cifs-utils smbclient &>/dev/null
         echo "$(translate "CIFS client tools installed.")"
     fi
+
+    echo ""
+    echo "$(translate "ProxMenux Extensions:")"
+    if [[ "$SHARE_COMMON_LOADED" == "true" ]]; then
+        echo "$(translate "Shared Functions: LOADED")"
+        if [[ -f "$PROXMENUX_SHARE_MAP_DB" ]]; then
+            MAPPED_DIRS=$(wc -l < "$PROXMENUX_SHARE_MAP_DB" 2>/dev/null || echo "0")
+            echo "$(translate "Mapped directories:"): $MAPPED_DIRS"
+        fi
+    else
+        echo "$(translate "Shared Functions: NOT LOADED (using fallback methods)")"
+    fi
     
     echo ""
     msg_success "$(translate "Press Enter to return to menu...")"
     read -r
+}
+
+prepare_host_directory() {
+    local mount_point="$1"
+    
+    if [[ "$SHARE_COMMON_LOADED" == "true" ]]; then
+        # Use common functions for advanced directory preparation
+        local group_name
+        group_name=$(pmx_choose_or_create_group "sharedfiles")
+        if [[ -n "$group_name" ]]; then
+            local host_gid
+            host_gid=$(pmx_ensure_host_group "$group_name")
+            if [[ -n "$host_gid" ]]; then
+                pmx_prepare_host_shared_dir "$mount_point" "$group_name"
+                pmx_share_map_set "$mount_point" "$group_name"
+                msg_ok "$(translate "Directory prepared with shared group:") $group_name (GID: $host_gid)"
+                return 0
+            fi
+        fi
+        msg_warn "$(translate "Failed to use shared functions, using basic directory creation.")"
+    fi
+    
+    # Fallback: basic directory creation
+    if ! test -d "$mount_point"; then
+        if mkdir -p "$mount_point"; then
+            msg_ok "$(translate "Mount point created on host.")"
+            return 0
+        else
+            msg_error "$(translate "Failed to create mount point on host.")"
+            return 1
+        fi
+    fi
+    return 0
 }
 
 # === Main Menu ===
