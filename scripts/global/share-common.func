@@ -374,7 +374,7 @@ select_host_directory() {
             
             for dir in "${host_dirs[@]}"; do
                 if [[ -d "$dir" ]]; then
-                    options+=("$dir"    "$(basename "$dir")")
+                    options+=("$dir" "$(basename "$dir")")
                 fi
             done
             
