@@ -4195,7 +4195,7 @@
   },
   {
     "name": "Redlib",
-    "slug": "redlib",
+    "slug": "alpine-redlib",
     "desc": "An alternative private front-end to Reddit. Redlib hopes to provide an easier way to browse Reddit, without the ads, trackers, and bloat.",
     "script": "ct/alpine-redlib.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/alpine-redlib.sh",
