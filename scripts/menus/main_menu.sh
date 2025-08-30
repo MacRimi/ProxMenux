@@ -122,7 +122,7 @@ show_menu() {
 
         case $OPTION in
             1) exec bash <(curl -s "$REPO_URL/scripts/menus/menu_post_install.sh") ;;
-            2) exec bash <(curl -s "$REPO_URL/scripts/help_info_menu.sh") ;;
+            2) bash <(curl -s "$REPO_URL/scripts/help_info_menu.sh") ;;
             3) exec bash <(curl -s "$REPO_URL/scripts/menus/hw_grafics_menu.sh") ;;
             4) exec bash <(curl -s "$REPO_URL/scripts/menus/create_vm_menu.sh") ;;
             5) exec bash <(curl -s "$REPO_URL/scripts/menus/storage_menu.sh") ;;
