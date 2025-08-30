@@ -255,3 +255,37 @@ select_host_directory() {
 
     echo "$result"
 }
+
+
+
+
+
+
+select_lxc_container() {
+    local ct_list ctid ct_status
+    
+    ct_list=$(pct list | awk 'NR>1 {print $1, $2, $3}')
+    if [[ -z "$ct_list" ]]; then
+        dialog --title "$(translate "Error")" \
+            --msgbox "$(translate "No LXC containers available")" 8 50
+        return 1
+    fi
+
+    local options=()
+    while read -r id name status; do
+        if [[ -n "$id" ]]; then
+            options+=("$id" "$name ($status)")
+        fi
+    done <<< "$ct_list"
+
+    ctid=$(dialog --title "$(translate "Select LXC Container")" \
+        --menu "$(translate "Select container:")" 20 70 12 \
+        "${options[@]}" 3>&1 1>&2 2>&3)
+    
+    if [[ -z "$ctid" ]]; then
+        return 1
+    fi
+
+    echo "$ctid"
+    return 0
+}
