@@ -148,7 +148,7 @@ pmx_choose_or_create_group() {
     local default_group="${1:-$PROXMENUX_DEFAULT_SHARE_GROUP}"
     local choice group_name groups menu_args gid_min
 
-    # Detect GID_MIN (fallback 1000)
+
     gid_min="$(awk '/^\s*GID_MIN\s+[0-9]+/ {print $2}' /etc/login.defs 2>/dev/null | tail -n1)"
     [[ -z "$gid_min" ]] && gid_min=1000
 
@@ -161,7 +161,7 @@ pmx_choose_or_create_group() {
 
     case "$choice" in
         1)
-            # Ensure exists; auto GID >= 101000 if creation is needed
+
             pmx_ensure_host_group "$default_group" >/dev/null || { echo ""; return 1; }
             echo "$default_group"
             ;;
@@ -174,7 +174,7 @@ pmx_choose_or_create_group() {
                 msg_error "$(translate "Group name cannot be empty.")"
                 echo ""; return 1
             fi
-            # POSIX-ish validation: start with letter/_ ; then letters/digits/_/-
+
             if ! [[ "$group_name" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]; then
                 msg_error "$(translate "Invalid group name. Use letters, digits, underscore or hyphen, and start with a letter or underscore.")"
                 echo ""; return 1
@@ -185,7 +185,7 @@ pmx_choose_or_create_group() {
             ;;
 
         3)
-            # Build list of real user groups (>= GID_MIN), exclude nogroup and pve*
+
             groups=$(getent group | awk -F: -v MIN="$gid_min" '
                 $3 >= MIN && $1 != "nogroup" && $1 !~ /^pve/ {print $0}
             ' | sort -t: -k1,1)
@@ -204,7 +204,7 @@ pmx_choose_or_create_group() {
                 --menu "$(translate "Select an existing group:")" 20 70 12 \
                 "${menu_args[@]}" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
 
-            # Ensure (no-op if exists)
+
             pmx_ensure_host_group "$group_name" >/dev/null || { echo ""; return 1; }
             echo "$group_name"
             ;;
@@ -228,7 +228,7 @@ pmx_ensure_host_group() {
     local base_gid=101000
     local new_gid gid
 
-    # Si ya existe, devuelve su GID
+
     if getent group "$group_name" >/dev/null 2>&1; then
         gid="$(getent group "$group_name" | cut -d: -f3)"
         echo "$gid"
@@ -236,7 +236,7 @@ pmx_ensure_host_group() {
     fi
 
     if [[ -n "$suggested_gid" ]]; then
-        # Verifica que el GID sugerido esté libre
+
         if getent group "$suggested_gid" >/dev/null 2>&1; then
             msg_error "$(translate "GID already in use:") $suggested_gid"
             echo ""
@@ -249,7 +249,7 @@ pmx_ensure_host_group() {
         fi
         msg_ok "$(translate "Group created:") $group_name"
     else
-        # Busca el primer GID libre >= 101000
+
         new_gid="$base_gid"
         while getent group "$new_gid" >/dev/null 2>&1; do
             new_gid=$((new_gid+1))
@@ -314,39 +314,6 @@ pmx_prepare_host_shared_dir() {
 
 
 
-pmx_select_host_mount_point_() {
-
-    local title="${1:-$(translate "Select Mount Point")}"
-    local default_path="${2:-/mnt/shared}"
-    local choice folder_name result
-
-    while true; do
-        choice=$(whiptail --title "$title" --menu "$(translate "Where do you want the host folder?")" 16 76 4 \
-            "mnt"   "$(translate "Create folder in /mnt")" \
-            "srv"   "$(translate "Create folder in /srv")" \
-            "media" "$(translate "Create folder in /media")" \
-            "custom" "$(translate "Enter custom path")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
-
-        case "$choice" in
-            mnt)
-                folder_name=$(whiptail --inputbox "$(translate "Enter folder name for /mnt:")" 10 70 "shared" --title "$(translate "Folder Name")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
-                [[ -z "$folder_name" ]] && continue
-                echo "/mnt/$folder_name"; return 0;;
-            srv)
-                folder_name=$(whiptail --inputbox "$(translate "Enter folder name for /srv:")" 10 70 "shared" --title "$(translate "Folder Name")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
-                [[ -z "$folder_name" ]] && continue
-                echo "/srv/$folder_name"; return 0;;
-            media)
-                folder_name=$(whiptail --inputbox "$(translate "Enter folder name for /media:")" 10 70 "shared" --title "$(translate "Folder Name")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
-                [[ -z "$folder_name" ]] && continue
-                echo "/media/$folder_name"; return 0;;
-            custom)
-                result=$(whiptail --inputbox "$(translate "Enter full path:")" 10 80 "$default_path" --title "$(translate "Custom Path")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
-                [[ -z "$result" ]] && continue
-                echo "$result"; return 0;;
-        esac
-    done
-}
 
 
 
@@ -506,7 +473,7 @@ select_host_directory_() {
 select_host_directory() {
     local method choice result
 
-    method=$(whiptail --title "$(translate "Select Host Directory")" --menu "$(translate "How do you want to select the host folder to mount?")" 15 70 4 \
+    method=$(whiptail --title "$(translate "Select Host Directory")" --menu "$(translate "How do you want to select the HOST folder to mount?")" 15 70 4 \
         "mnt" "$(translate "Select from /mnt directories")" \
         "manual" "$(translate "Enter path manually")" 3>&1 1>&2 2>&3) || return 1
 

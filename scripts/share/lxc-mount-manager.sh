@@ -24,27 +24,6 @@ load_language
 initialize_cache
 
 # ==========================================================
-# CORE FUNCTIONS
-# ==========================================================
-
-
-
-
-ensure_host_group() {
-    local group_name="$1"
-    if ! getent group "$group_name" >/dev/null 2>&1; then
-        if groupadd "$group_name" >/dev/null 2>&1; then
-            msg_ok "$(translate "Group created:") $group_name"
-        else
-            msg_error "$(translate "Failed to create group:") $group_name"
-            return 1
-        fi
-    fi
-    local gid
-    gid="$(getent group "$group_name" | cut -d: -f3)"
-    echo "$gid"
-    return 0
-}
 
 
 get_container_uid_shift() {
@@ -192,37 +171,10 @@ add_bind_mount() {
 }
 
 
-# ==========================================================
 
 
-select_lxc_container() {
-    local ct_list ctid ct_status
-    
-    ct_list=$(pct list | awk 'NR>1 {print $1, $2, $3}')
-    if [[ -z "$ct_list" ]]; then
-        dialog --title "$(translate "Error")" \
-            --msgbox "$(translate "No LXC containers available")" 8 50
-        return 1
-    fi
 
-    local options=()
-    while read -r id name status; do
-        if [[ -n "$id" ]]; then
-            options+=("$id" "$name ($status)")
-        fi
-    done <<< "$ct_list"
 
-    ctid=$(dialog --title "$(translate "Select LXC Container")" \
-        --menu "$(translate "Select container:")" 20 70 12 \
-        "${options[@]}" 3>&1 1>&2 2>&3)
-    
-    if [[ -z "$ctid" ]]; then
-        return 1
-    fi
-
-    echo "$ctid"
-    return 0
-}
 
 
 select_container_mount_point() {
@@ -231,7 +183,7 @@ select_container_mount_point() {
     local choice mount_point existing_dirs options
 
     while true; do
-        choice=$(whiptail --title "$(translate "Container Mount Point")" \
+        choice=$(whiptail --title "$(translate "Configure Mount Point inside LXC")" \
             --menu "$(translate "Where to mount inside container?")" 18 70 5 \
             "1" "$(translate "Create new directory in /mnt")" \
             "2" "$(translate "Use existing directory in /mnt")" \
@@ -300,14 +252,11 @@ mount_host_directory_to_lxc() {
             sleep 3
             msg_ok "$(translate "Container started")"
         else
-            show_proxmenux_logo
-            msg_title "$(translate 'Mount Host Directory to LXC Container')"
             msg_error "$(translate "Failed to start container")"
             return 1
         fi
     fi
     msg_ok "$(translate 'Select LXC container')"
-    sleep 2
 
 
 
@@ -318,12 +267,11 @@ mount_host_directory_to_lxc() {
         return 1
     fi
     msg_ok "$(translate 'Select Host directory')"
-    
 
     # Step 3: Setup group
     local group_name="sharedfiles"
     local group_gid
-    group_gid=$(ensure_host_group "$group_name")
+    group_gid=$(pmx_ensure_host_group "$group_name")
     if [[ -z "$group_gid" ]]; then
         return 1
     fi
@@ -423,8 +371,7 @@ $(translate "Proceed?")"
 }
 
 # ==========================================================
-# MAIN MENU
-# ==========================================================
+
 
 main_menu() {
     while true; do
@@ -454,13 +401,6 @@ main_menu() {
     done
 }
 
-# ==========================================================
-# MAIN EXECUTION
-# ==========================================================
 
-if ! command -v pct >/dev/null 2>&1; then
-    echo "Error: This script must be run on a Proxmox host with LXC support."
-    exit 1
-fi
 
 main_menu
