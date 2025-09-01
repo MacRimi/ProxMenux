@@ -66,7 +66,7 @@ while true; do
             bash <(curl -s "$REPO_URL/scripts/share/samba.sh")
             ;;    
         6)
-            bash <(curl -s "$REPO_URL/scripts/share/nfs_host.sh")
+            bash <(curl -s "$REPO_URL/scripts/share/nfs_host_auto.sh")
             ;;
         7)
             bash <(curl -s "$REPO_URL/scripts/share/samba_host.sh")
