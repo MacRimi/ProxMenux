@@ -222,58 +222,47 @@ pmx_choose_or_create_group() {
 
 
 
-
+# Requiere bash
 pmx_ensure_host_group() {
     local group_name="$1"
     local suggested_gid="${2:-}"
     local base_gid=101000
-    local new_gid
+    local new_gid gid
 
-    # Helper: return 0 if GID is in use, 1 otherwise
-    local _gid_in_use() {
-        local gid="$1"
-        # getent group prints "name:x:GID:members"; check numeric field 3
-        getent group | awk -F: -v G="$gid" '$3==G {found=1} END{exit !found}'
-    }
-
-    # If the group already exists, return its GID
+    # Si ya existe, devuelve su GID
     if getent group "$group_name" >/dev/null 2>&1; then
-        getent group "$group_name" | cut -d: -f3
+        gid="$(getent group "$group_name" | cut -d: -f3)"
+        echo "$gid"
         return 0
     fi
 
-    # Create with suggested GID (if provided)
     if [[ -n "$suggested_gid" ]]; then
-        if _gid_in_use "$suggested_gid"; then
+        # Verifica que el GID sugerido esté libre
+        if getent group "$suggested_gid" >/dev/null 2>&1; then
             msg_error "$(translate "GID already in use:") $suggested_gid"
             echo ""
             return 1
         fi
-        if groupadd -g "$suggested_gid" "$group_name" >/dev/null 2>&1; then
-            msg_ok "$(translate "Group created:") $group_name"
-        else
+        if ! groupadd -g "$suggested_gid" "$group_name" >/dev/null 2>&1; then
             msg_error "$(translate "Failed to create group:") $group_name"
             echo ""
             return 1
         fi
+        msg_ok "$(translate "Group created:") $group_name"
     else
-        # Auto-pick first free GID >= 101000
+        # Busca el primer GID libre >= 101000
         new_gid="$base_gid"
-        while _gid_in_use "$new_gid"; do
+        while getent group "$new_gid" >/dev/null 2>&1; do
             new_gid=$((new_gid+1))
         done
-
-        if groupadd -g "$new_gid" "$group_name" >/dev/null 2>&1; then
-            msg_ok "$(translate "Group created:") $group_name"
-        else
+        if ! groupadd -g "$new_gid" "$group_name" >/dev/null 2>&1; then
             msg_error "$(translate "Failed to create group:") $group_name"
             echo ""
             return 1
         fi
+        msg_ok "$(translate "Group created:") $group_name"
     fi
 
-    # Resolve and return the GID
-    local gid
     gid="$(getent group "$group_name" | cut -d: -f3)"
     if [[ -z "$gid" ]]; then
         msg_error "$(translate "Failed to resolve group GID for") $group_name"
@@ -284,6 +273,7 @@ pmx_ensure_host_group() {
     echo "$gid"
     return 0
 }
+
 
 
 
