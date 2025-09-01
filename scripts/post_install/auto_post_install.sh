@@ -691,7 +691,7 @@ install_log2ram_auto() {
     if ! command -v git >/dev/null 2>&1; then
         apt-get update -qq >/dev/null 2>&1
         apt-get install -y git >/dev/null 2>&1
-        msg_ok "$(translate "Git installed successfully")"
+        #msg_ok "$(translate "Git installed successfully")"
     fi
     
     if ! git clone https://github.com/azlux/log2ram.git /tmp/log2ram >/dev/null 2>>/tmp/log2ram_install.log; then
