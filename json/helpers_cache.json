@@ -498,7 +498,9 @@
     "categories": [
       13
     ],
-    "notes": [],
+    "notes": [
+      "Starting Booklore (Web UI) may take up to 2 minutes after a restart or fresh installation."
+    ],
     "type": "ct"
   },
   {
