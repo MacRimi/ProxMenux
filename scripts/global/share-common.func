@@ -41,7 +41,7 @@ pmx_share_map_set() {
 
 
 
-pmx_choose_or_create_group_() {
+pmx_choose_or_create_group() {
 
     local default_group="${1:-$PROXMENUX_DEFAULT_SHARE_GROUP}"
     local choice group_name
@@ -95,7 +95,7 @@ pmx_choose_or_create_group_() {
 
 
 
-pmx_ensure_host_group_() {
+pmx_ensure_host_group() {
 
     local group_name="$1"
     local suggested_gid="$2"
@@ -144,7 +144,7 @@ pmx_ensure_host_group_() {
 
 
 
-pmx_choose_or_create_group() {
+pmx_choose_or_create_group_() {
     local default_group="${1:-$PROXMENUX_DEFAULT_SHARE_GROUP}"
     local choice group_name groups menu_args gid_min
 
@@ -222,8 +222,7 @@ pmx_choose_or_create_group() {
 
 
 
-# Requiere bash
-pmx_ensure_host_group() {
+pmx_ensure_host_group_() {
     local group_name="$1"
     local suggested_gid="${2:-}"
     local base_gid=101000
