@@ -848,7 +848,7 @@ run_complete_optimization() {
     configure_kernel_panic
     force_apt_ipv4
     apply_network_optimizations
-    disable_rpc
+    #disable_rpc
     customize_bashrc
     install_log2ram_auto
     setup_persistent_network
