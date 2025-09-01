@@ -852,7 +852,7 @@ function select_storage_volume() {
   else
     while [ -z "${STORAGE:+x}" ]; do
       STORAGE=$(whiptail --backtitle "ProxMenuX" --title "Storage Pools" --radiolist \
-        "$(translate "Choose the storage volume for $purpose:\n\nUse Spacebar to select.")" \
+        "$(translate "Choose the storage volume for $purpose:")" \
         16 $(($MSG_MAX_LENGTH + 23)) 6 \
         "${STORAGE_MENU[@]}" 3>&1 1>&2 2>&3) || exit
     done
