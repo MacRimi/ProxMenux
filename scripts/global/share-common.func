@@ -138,6 +138,150 @@ pmx_ensure_host_group() {
 
 
 
+
+
+
+
+
+
+pmx_choose_or_create_group_() {
+    local default_group="${1:-$PROXMENUX_DEFAULT_SHARE_GROUP}"
+    local choice group_name groups menu_args gid_min
+
+    # Detect GID_MIN (fallback 1000)
+    gid_min="$(awk '/^\s*GID_MIN\s+[0-9]+/ {print $2}' /etc/login.defs 2>/dev/null | tail -n1)"
+    [[ -z "$gid_min" ]] && gid_min=1000
+
+    choice=$(whiptail --title "$(translate "Shared Group")" \
+        --menu "$(translate "Choose a group policy for this shared directory:")" 18 78 6 \
+        "1"  "$(translate "Use default group:") $default_group $(translate "(recommended)")" \
+        "2"  "$(translate "Create a new group for isolation")" \
+        "3"  "$(translate "Select an existing group")" \
+        3>&1 1>&2 2>&3) || { echo ""; return 1; }
+
+    case "$choice" in
+        1)
+            # Ensure exists; auto GID >= 101000 if creation is needed
+            pmx_ensure_host_group "$default_group" >/dev/null || { echo ""; return 1; }
+            echo "$default_group"
+            ;;
+
+        2)
+            group_name=$(whiptail --inputbox "$(translate "Enter new group name:")" 10 70 "sharedfiles-project" \
+                --title "$(translate "New Group")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
+
+            if [[ -z "$group_name" ]]; then
+                msg_error "$(translate "Group name cannot be empty.")"
+                echo ""; return 1
+            fi
+            # POSIX-ish validation: start with letter/_ ; then letters/digits/_/-
+            if ! [[ "$group_name" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]; then
+                msg_error "$(translate "Invalid group name. Use letters, digits, underscore or hyphen, and start with a letter or underscore.")"
+                echo ""; return 1
+            fi
+
+            pmx_ensure_host_group "$group_name" >/dev/null || { echo ""; return 1; }
+            echo "$group_name"
+            ;;
+
+        3)
+            # Build list of real user groups (>= GID_MIN), exclude nogroup and pve*
+            groups=$(getent group | awk -F: -v MIN="$gid_min" '
+                $3 >= MIN && $1 != "nogroup" && $1 !~ /^pve/ {print $0}
+            ' | sort -t: -k1,1)
+
+            if [[ -z "$groups" ]]; then
+                whiptail --title "$(translate "Groups")" --msgbox "$(translate "No user groups found.")" 8 60
+                echo ""; return 1
+            fi
+
+            menu_args=()
+            while IFS=: read -r gname _ gid members; do
+                menu_args+=("$gname" "GID=$gid")
+            done <<< "$groups"
+
+            group_name=$(whiptail --title "$(translate "Existing Groups")" \
+                --menu "$(translate "Select an existing group:")" 20 70 12 \
+                "${menu_args[@]}" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
+
+            # Ensure (no-op if exists)
+            pmx_ensure_host_group "$group_name" >/dev/null || { echo ""; return 1; }
+            echo "$group_name"
+            ;;
+
+        *)
+            echo ""; return 1
+            ;;
+    esac
+}
+
+
+
+
+
+
+
+
+pmx_ensure_host_group_() {
+    local group_name="$1"
+    local suggested_gid="${2:-}"
+    local base_gid=101000
+    local new_gid gid
+
+    # Si ya existe, devuelve su GID
+    if getent group "$group_name" >/dev/null 2>&1; then
+        gid="$(getent group "$group_name" | cut -d: -f3)"
+        echo "$gid"
+        return 0
+    fi
+
+    if [[ -n "$suggested_gid" ]]; then
+        # Verifica que el GID sugerido esté libre
+        if getent group "$suggested_gid" >/dev/null 2>&1; then
+            msg_error "$(translate "GID already in use:") $suggested_gid"
+            echo ""
+            return 1
+        fi
+        if ! groupadd -g "$suggested_gid" "$group_name" >/dev/null 2>&1; then
+            msg_error "$(translate "Failed to create group:") $group_name"
+            echo ""
+            return 1
+        fi
+        msg_ok "$(translate "Group created:") $group_name"
+    else
+        # Busca el primer GID libre >= 101000
+        new_gid="$base_gid"
+        while getent group "$new_gid" >/dev/null 2>&1; do
+            new_gid=$((new_gid+1))
+        done
+        if ! groupadd -g "$new_gid" "$group_name" >/dev/null 2>&1; then
+            msg_error "$(translate "Failed to create group:") $group_name"
+            echo ""
+            return 1
+        fi
+        msg_ok "$(translate "Group created:") $group_name"
+    fi
+
+    gid="$(getent group "$group_name" | cut -d: -f3)"
+    if [[ -z "$gid" ]]; then
+        msg_error "$(translate "Failed to resolve group GID for") $group_name"
+        echo ""
+        return 1
+    fi
+
+    echo "$gid"
+    return 0
+}
+
+
+
+
+
+
+
+
+
+
 pmx_prepare_host_shared_dir() {
 
     local dir="$1" group_name="$2"

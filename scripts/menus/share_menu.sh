@@ -28,39 +28,56 @@ while true; do
     OPTION=$(dialog --clear --backtitle "ProxMenux" \
         --title "$(translate "Network Storage Manager")" \
         --menu "\n$(translate "Select an option:")" 25 80 15 \
-        "1" "$(translate "Set up NFS Server in LXC")" \
-        "2" "$(translate "Set up Samba Server in LXC")" \
-        "3" "$(translate "Configure NFS Client in LXC")" \
-        "4" "$(translate "Configure Samba Client in LXC")" \
-        "5" "$(translate "Configure NFS Storage on Host (Proxmox)")" \
-        "6" "$(translate "Configure Samba Storage on Host (Proxmox)")" \
-        "7" "$(translate "Help & Info (commands)")" \
-        "8" "$(translate "Return to Main Menu")" \
-        2>&1 >/dev/tty)
-    
-    case $OPTION in
+            ""  "\Z4──────────── $(translate "LXC") ────────────\Zn" \
+            "1"         "$(translate "Mount Host Directory into LXC (Mount Manager)")" \
+            "2"         "$(translate "Configure NFS Client in LXC (only privileged)")" \
+            "3"         "$(translate "Configure Samba Client in LXC (only privileged)")" \
+            "4"         "$(translate "Set up NFS Server in LXC")" \
+            "5"         "$(translate "Set up Samba Server in LXC")" \
+            "" "\Z4──────────── $(translate "HOST") ─────────────\Zn" \
+            "6"         "$(translate "Configure NFS share on Host")" \
+            "7"         "$(translate "Configure Samba share on Host")" \
+            "8"         "$(translate "Configure Local Shared on Host")" \
+            ""          "" \
+            "9"         "$(translate "Help & Info (commands)")" \
+            "0"         "$(translate "Return to Main Menu")" \
+            2>&1 >/dev/tty
+    ) || { exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh"); }
+
+    case "$OPTION" in
+
+        lxctitle|hosttitle)
+            continue
+            ;;
+
         1)
-            bash <(curl -s "$REPO_URL/scripts/share/nfs.sh")
+            bash <(curl -s "$REPO_URL/scripts/share/lxc-mount-manager.sh")
             ;;
         2)
-            bash <(curl -s "$REPO_URL/scripts/share/samba.sh")
-            ;;
-        3)
             bash <(curl -s "$REPO_URL/scripts/share/nfs_client.sh")
             ;;
-        4)
+        3)
             bash <(curl -s "$REPO_URL/scripts/share/samba_client.sh")
+            ;;    
+        4)
+            bash <(curl -s "$REPO_URL/scripts/share/nfs.sh")
             ;;
         5)
+            bash <(curl -s "$REPO_URL/scripts/share/samba.sh")
+            ;;    
+        6)
             bash <(curl -s "$REPO_URL/scripts/share/nfs_host.sh")
             ;;
-        6)
+        7)
             bash <(curl -s "$REPO_URL/scripts/share/samba_host.sh")
             ;;
-        7)
+        8)  
+            bash <(curl -s "$REPO_URL/scripts/share/local-shared-manager.sh")
+            ;;
+        9)
             bash <(curl -s "$REPO_URL/scripts/share/commands_share.sh")
             ;;
-        8)
+        0)
             exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
             ;;
         *)

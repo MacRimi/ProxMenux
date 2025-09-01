@@ -1325,47 +1325,36 @@ apply_network_optimizations() {
 
 # Core buffers & queues
 net.core.netdev_max_backlog = 8192
-net.core.optmem_max        = 8192
-net.core.rmem_max          = 16777216
-net.core.wmem_max          = 16777216
-net.core.somaxconn         = 8151
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+net.core.somaxconn = 8192
 
-# IPv4 security hardening
-net.ipv4.conf.all.accept_redirects    = 0
+net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.all.accept_source_route = 0
-net.ipv4.conf.all.log_martians        = 0
-net.ipv4.conf.all.rp_filter           = 1
-net.ipv4.conf.all.secure_redirects    = 0
-net.ipv4.conf.all.send_redirects      = 0
+net.ipv4.conf.all.secure_redirects = 0
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.all.log_martians = 1
 
-net.ipv4.conf.default.accept_redirects    = 0
+net.ipv4.conf.default.accept_redirects = 0
 net.ipv4.conf.default.accept_source_route = 0
-net.ipv4.conf.default.log_martians        = 0
-net.ipv4.conf.default.rp_filter           = 1
-net.ipv4.conf.default.secure_redirects    = 0
-net.ipv4.conf.default.send_redirects      = 0
+net.ipv4.conf.default.secure_redirects = 0
+net.ipv4.conf.default.send_redirects = 0
+net.ipv4.conf.default.log_martians = 1
 
-# ICMP handling
-net.ipv4.icmp_echo_ignore_broadcasts   = 1
+net.ipv4.conf.all.rp_filter = 2
+net.ipv4.conf.default.rp_filter = 2
+
+# ICMP
+net.ipv4.icmp_echo_ignore_broadcasts = 1
 net.ipv4.icmp_ignore_bogus_error_responses = 1
 
-# TCP/IP tuning
+# TCP/IP
 net.ipv4.ip_local_port_range = 1024 65535
-net.ipv4.tcp_base_mss        = 1024
-net.ipv4.tcp_fin_timeout     = 10
-net.ipv4.tcp_keepalive_intvl = 30
-net.ipv4.tcp_keepalive_probes= 3
-net.ipv4.tcp_keepalive_time  = 240
-net.ipv4.tcp_limit_output_bytes = 65536
-net.ipv4.tcp_max_syn_backlog = 8192
-net.ipv4.tcp_mtu_probing     = 1
-net.ipv4.tcp_rfc1337         = 1
-net.ipv4.tcp_rmem            = 8192 87380 16777216
-net.ipv4.tcp_sack            = 1
-net.ipv4.tcp_slow_start_after_idle = 0
-net.ipv4.tcp_syn_retries     = 3
-net.ipv4.tcp_synack_retries  = 2
-net.ipv4.tcp_wmem            = 8192 65536 16777216
+net.ipv4.tcp_mtu_probing = 1
+net.ipv4.tcp_rfc1337 = 1
+net.ipv4.tcp_sack = 1
+net.ipv4.tcp_rmem = 8192 87380 16777216
+net.ipv4.tcp_wmem = 8192 65536 16777216
 
 # Unix sockets
 net.unix.max_dgram_qlen = 4096

@@ -315,15 +315,11 @@ function advanced_settings() {
     "$(translate "Select the bus type for the disks:")" 15 70 4 \
     "scsi"    "$(translate "SCSI   (recommended for Linux)")" ON \
     "sata"    "$(translate "SATA   (standard - high compatibility)")" OFF \
-    "virtio"  "$(translate "VirtIO (advanced - high performance)")" OFF \
     3>&1 1>&2 2>&3) || exit 1
 
   case "$INTERFACE_TYPE" in
     "scsi"|"sata")
       DISCARD_OPTS=",discard=on,ssd=on"
-      ;;
-    "virtio")
-      DISCARD_OPTS=",discard=on"
       ;;
   esac
 
@@ -856,7 +852,7 @@ function select_storage_volume() {
   else
     while [ -z "${STORAGE:+x}" ]; do
       STORAGE=$(whiptail --backtitle "ProxMenuX" --title "Storage Pools" --radiolist \
-        "$(translate "Choose the storage volume for $purpose:\n\nUse Spacebar to select.")" \
+        "$(translate "Choose the storage volume for $purpose:")" \
         16 $(($MSG_MAX_LENGTH + 23)) 6 \
         "${STORAGE_MENU[@]}" 3>&1 1>&2 2>&3) || exit
     done
