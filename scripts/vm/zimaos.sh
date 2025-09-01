@@ -315,15 +315,11 @@ function advanced_settings() {
     "$(translate "Select the bus type for the disks:")" 15 70 4 \
     "scsi"    "$(translate "SCSI   (recommended for Linux)")" ON \
     "sata"    "$(translate "SATA   (standard - high compatibility)")" OFF \
-    "virtio"  "$(translate "VirtIO (advanced - high performance)")" OFF \
     3>&1 1>&2 2>&3) || exit 1
 
   case "$INTERFACE_TYPE" in
     "scsi"|"sata")
       DISCARD_OPTS=",discard=on,ssd=on"
-      ;;
-    "virtio")
-      DISCARD_OPTS=",discard=on"
       ;;
   esac
 
