@@ -300,11 +300,14 @@ mount_host_directory_to_lxc() {
             sleep 3
             msg_ok "$(translate "Container started")"
         else
+            show_proxmenux_logo
+            msg_title "$(translate 'Mount Host Directory to LXC Container')"
             msg_error "$(translate "Failed to start container")"
             return 1
         fi
     fi
     msg_ok "$(translate 'Select LXC container')"
+    sleep 2
 
 
 
@@ -315,6 +318,7 @@ mount_host_directory_to_lxc() {
         return 1
     fi
     msg_ok "$(translate 'Select Host directory')"
+    
 
     # Step 3: Setup group
     local group_name="sharedfiles"
