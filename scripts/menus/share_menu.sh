@@ -25,7 +25,7 @@ initialize_cache
 # ==========================================================
 
 while true; do
-    OPTION=$(dialog --clear --backtitle "ProxMenux" \
+    OPTION=$(dialog --colors --backtitle "ProxMenux" \
         --title "$(translate "Network Storage Manager")" \
         --menu "\n$(translate "Select an option:")" 25 80 15 \
             ""  "\Z4──────────── $(translate "LXC") ────────────\Zn" \
