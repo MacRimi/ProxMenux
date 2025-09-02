@@ -422,6 +422,8 @@ select_container_mount_point() {
     done
 }
 
+
+
 # ==========================================================
 # CLIENT MOUNT FUNCTIONS (NFS/SAMBA COMMON)
 # ==========================================================
@@ -567,14 +569,13 @@ pmx_discover_network_servers() {
     fi
 
     local servers
-    if [[ "$service_type" == "samba" ]]; then
+    if [[ "$service_type" == "Samba" ]]; then
         servers=$(nmap -p 139,445 --open "$network" 2>/dev/null | grep -B 4 -E "(139|445)/tcp open" | grep "Nmap scan report" | awk '{print $5}' | sort -u || true)
     else
         servers=$(nmap -p 2049 --open "$network" 2>/dev/null | grep -B 4 "2049/tcp open" | grep "Nmap scan report" | awk '{print $5}' | sort -u || true)
     fi
     
     if [[ -z "$servers" ]]; then
-        cleanup
         whiptail --title "$(translate "No Servers Found")" --msgbox "$(translate "No") $service_type $(translate "servers found on the network.")\n\n$(translate "You can add servers manually.")" 10 60
         return 1
     fi
@@ -582,7 +583,7 @@ pmx_discover_network_servers() {
     local options=()
     while IFS= read -r server; do
         if [[ -n "$server" ]]; then
-            if [[ "$service_type" == "samba" ]]; then
+            if [[ "$service_type" == "Samba" ]]; then
                 # Try to get NetBIOS name for Samba
                 local nb_name=$(nmblookup -A "$server" 2>/dev/null | awk '/<00> -.*B <ACTIVE>/ {print $1; exit}')
                 if [[ -z "$nb_name" || "$nb_name" == "$server" || "$nb_name" == "address" || "$nb_name" == "-" ]]; then
@@ -598,7 +599,6 @@ pmx_discover_network_servers() {
     done <<< "$servers"
     
     if [[ ${#options[@]} -eq 0 ]]; then
-        cleanup
         whiptail --title "$(translate "No Valid Servers")" --msgbox "$(translate "No accessible") $service_type $(translate "servers found.")" 8 50
         return 1
     fi
@@ -626,7 +626,14 @@ pmx_select_server() {
     
     case "$method" in
         auto)
-            pmx_discover_network_servers "$service_type" "$port"
+            local discovered_server
+            discovered_server=$(pmx_discover_network_servers "$service_type" "$port")
+            if [[ $? -eq 0 && -n "$discovered_server" ]]; then
+                echo "$discovered_server"
+                return 0
+            else
+                return 1
+            fi
             ;;
         manual)
             clear
@@ -647,7 +654,14 @@ pmx_select_server() {
                 fs_type="cifs"
             fi
             
-            local recent=$(grep "$fs_type" /etc/fstab 2>/dev/null | awk '{print $1}' | cut -d/ -f3 | cut -d: -f1 | sort -u || true)
+            # Fix the recent servers detection for NFS
+            local recent
+            if [[ "$service_type" == "NFS" ]]; then
+                recent=$(grep "$fs_type" /etc/fstab 2>/dev/null | awk '{print $1}' | cut -d: -f1 | sort -u || true)
+            else
+                recent=$(grep "$fs_type" /etc/fstab 2>/dev/null | awk '{print $1}' | cut -d/ -f3 | sort -u || true)
+            fi
+            
             if [[ -z "$recent" ]]; then
                 dialog --title "$(translate "No Recent Servers")" --msgbox "\n$(translate "No recent") $service_type $(translate "servers found.")" 8 50
                 return 1
