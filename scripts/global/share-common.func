@@ -455,6 +455,8 @@ select_privileged_lxc() {
     # === Start CT if not running ===
     ct_status=$(pct status "$ctid" | awk '{print $2}')
     if [[ "$ct_status" != "running" ]]; then
+        show_proxmenux_logo
+        echo -e
         msg_info "$(translate "Starting CT") $ctid..."
         pct start "$ctid"
         sleep 2
