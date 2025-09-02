@@ -431,7 +431,7 @@ select_container_mount_point() {
 
 
 # Check if container is privileged (required for client mounts)
-select_privileged_ct() {
+select_privileged_lxc() {
     # === Select CT ===
     local ct_list ctid ct_status conf unpriv
 
