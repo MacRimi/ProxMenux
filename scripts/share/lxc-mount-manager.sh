@@ -440,7 +440,7 @@ $(translate "Proceed?")"
 main_menu() {
     while true; do
         choice=$(dialog --title "$(translate 'LXC Mount Manager')" \
-            --menu "$(translate 'Choose an option:')" 16 60 4 \
+            --menu "$(translate 'Choose an option:')" 25 80 15 \
             "1" "$(translate 'Mount Host Directory to LXC')" \
             "2" "$(translate 'View Mount Points')" \
             "3" "$(translate 'Remove Mount Point')" \
