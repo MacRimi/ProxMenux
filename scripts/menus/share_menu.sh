@@ -26,10 +26,10 @@ initialize_cache
 
 while true; do
     OPTION=$(dialog --colors --backtitle "ProxMenux" \
-        --title "$(translate "Network Storage Manager")" \
+        --title "$(translate "Mount and Share Manager")" \
         --menu "\n$(translate "Select an option:")" 25 80 15 \
             ""  "\Z4──────────── $(translate "LXC") ────────────\Zn" \
-            "1"         "$(translate "Mount and configire Host Directory into LXC")" \
+            "1"         "$(translate "Configure LXC Mount Points    (Host ↔ Container)")" \
             "2"         "$(translate "Configure NFS Client in LXC   (only privileged)")" \
             "3"         "$(translate "Configure Samba Client in LXC (only privileged)")" \
             "4"         "$(translate "Set up NFS Server   in LXC")" \
