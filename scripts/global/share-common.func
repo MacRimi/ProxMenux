@@ -352,7 +352,7 @@ select_lxc_container() {
     done <<< "$ct_list"
 
     ctid=$(dialog --title "$(translate "Select LXC Container")" \
-        --menu "$(translate "Select container:")" 20 70 12 \
+        --menu "$(translate "Select container:")" 25 80 15 \
         "${options[@]}" 3>&1 1>&2 2>&3)
     
     if [[ -z "$ctid" ]]; then
@@ -390,7 +390,7 @@ select_container_mount_point() {
             2)
                 #existing_dirs=$(pct exec "$ctid" -- ls -1 /mnt 2>/dev/null | awk '{print "/mnt/"$1" "$1}')
                 existing_dirs=$(pct exec "$ctid" -- find /mnt -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
-                
+
                 if [[ -z "$existing_dirs" ]]; then
                     whiptail --msgbox "$(translate "No existing directories found in /mnt")" 8 60
                     continue
