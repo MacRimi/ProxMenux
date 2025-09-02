@@ -421,3 +421,321 @@ select_container_mount_point() {
         fi
     done
 }
+
+# ==========================================================
+# CLIENT MOUNT FUNCTIONS (NFS/SAMBA COMMON)
+# ==========================================================
+
+# Check if container is privileged (required for client mounts)
+pmx_check_container_privileged() {
+    local ctid="$1"
+    local conf="/etc/pve/lxc/${ctid}.conf"
+    
+    if [[ ! -f "$conf" ]]; then
+        return 1
+    fi
+    
+    local unpriv=$(grep "^unprivileged:" "$conf" | awk '{print $2}')
+    
+    if [[ "$unpriv" == "1" ]]; then
+        return 1  # Unprivileged
+    else
+        return 0  # Privileged
+    fi
+}
+
+# Select and validate LXC container for client mounts
+pmx_select_privileged_container() {
+    local ctid
+    ctid=$(select_lxc_container)
+    if [[ $? -ne 0 || -z "$ctid" ]]; then
+        return 1
+    fi
+    
+    # Check if container is privileged
+    if ! pmx_check_container_privileged "$ctid"; then
+        whiptail --title "$(translate "Privileged Container Required")" \
+            --msgbox "$(translate "Network share mounting (NFS/SAMBA) requires a PRIVILEGED container.")\n\n$(translate "Selected container") $ctid $(translate "is UNPRIVILEGED.")\n\n$(translate "For unprivileged containers, use:")\n• $(translate "Configure LXC mount points")\n• $(translate "Mount shares on HOST first")\n• $(translate "Then bind-mount to container")" \
+            16 80
+        return 1
+    fi
+    
+    # Start container if not running
+    local ct_status=$(pct status "$ctid" | awk '{print $2}')
+    if [[ "$ct_status" != "running" ]]; then
+        msg_info "$(translate "Starting container") $ctid..."
+        if pct start "$ctid"; then
+            sleep 2
+            if [[ "$(pct status "$ctid" | awk '{print $2}')" == "running" ]]; then
+                msg_ok "$(translate "Container started successfully.")"
+            else
+                msg_error "$(translate "Failed to start the container.")"
+                return 1
+            fi
+        else
+            msg_error "$(translate "Failed to start the container.")"
+            return 1
+        fi
+    fi
+    
+    echo "$ctid"
+    return 0
+}
+
+# Common mount point selection for containers
+pmx_select_container_mount_point() {
+    local ctid="$1"
+    local share_name="${2:-shared}"
+    
+    while true; do
+        local choice=$(whiptail --title "$(translate "Select Mount Point")" --menu "$(translate "Where do you want to mount inside container?")" 15 70 3 \
+        "existing" "$(translate "Select from existing folders in /mnt")" \
+        "new" "$(translate "Create new folder in /mnt")" \
+        "custom" "$(translate "Enter custom path")" 3>&1 1>&2 2>&3)
+        
+        case "$choice" in
+            existing)
+                local existing_dirs=$(pct exec "$ctid" -- find /mnt -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
+                if [[ -z "$existing_dirs" ]]; then
+                    whiptail --title "$(translate "No Folders")" --msgbox "$(translate "No folders found in /mnt. Please create a new folder.")" 8 60
+                    continue
+                fi
+                
+                local options=()
+                while IFS= read -r dir; do
+                    if [[ -n "$dir" ]]; then
+                        local name=$(basename "$dir")
+                        if pct exec "$ctid" -- [ "$(ls -A "$dir" 2>/dev/null | wc -l)" -eq 0 ]; then
+                            local status="$(translate "Empty")"
+                        else
+                            local status="$(translate "Contains files")"
+                        fi
+                        options+=("$dir" "$name ($status)")
+                    fi
+                done <<< "$existing_dirs"
+                
+                local mount_point=$(whiptail --title "$(translate "Select Existing Folder")" --menu "$(translate "Choose a folder to mount:")" 20 80 10 "${options[@]}" 3>&1 1>&2 2>&3)
+                
+                if [[ -n "$mount_point" ]]; then
+                    if pct exec "$ctid" -- [ "$(ls -A "$mount_point" 2>/dev/null | wc -l)" -gt 0 ]; then
+                        local file_count=$(pct exec "$ctid" -- ls -A "$mount_point" 2>/dev/null | wc -l)
+                        if ! whiptail --yesno "$(translate "WARNING: The selected directory is not empty!")\n\n$(translate "Directory:"): $mount_point\n$(translate "Contains:"): $file_count $(translate "files/folders")\n\n$(translate "Mounting here will hide existing files until unmounted.")\n\n$(translate "Do you want to continue?")" 14 70 --title "$(translate "Directory Not Empty")"; then
+                            continue
+                        fi
+                    fi
+                    echo "$mount_point"
+                    return 0
+                fi
+                ;;
+            new)
+                local folder_name=$(whiptail --inputbox "$(translate "Enter new folder name:")" 10 60 "$share_name" --title "$(translate "New Folder in /mnt")" 3>&1 1>&2 2>&3)
+                if [[ -n "$folder_name" ]]; then
+                    local mount_point="/mnt/$folder_name"
+                    echo "$mount_point"
+                    return 0
+                fi
+                ;;
+            custom)
+                local mount_point=$(whiptail --inputbox "$(translate "Enter full path for mount point:")" 10 70 "/mnt/${share_name}" --title "$(translate "Custom Path")" 3>&1 1>&2 2>&3)
+                if [[ -n "$mount_point" ]]; then
+                    echo "$mount_point"
+                    return 0
+                fi
+                ;;
+            *)
+                return 1
+                ;;
+        esac
+    done
+}
+
+# Common server discovery function
+pmx_discover_network_servers() {
+    local service_type="$1"  # "nfs" or "samba"
+    local port="$2"          # "2049" for NFS, "139,445" for Samba
+    
+    show_proxmenux_logo
+    msg_title "$(translate "Network Server Discovery")"
+    msg_info "$(translate "Scanning network for") $service_type $(translate "servers...")"
+
+    local host_ip=$(hostname -I | awk '{print $1}')
+    local network=$(echo "$host_ip" | cut -d. -f1-3).0/24
+
+    # Install nmap if needed
+    if ! which nmap >/dev/null 2>&1; then
+        apt-get install -y nmap &>/dev/null
+    fi
+
+    local servers
+    if [[ "$service_type" == "samba" ]]; then
+        servers=$(nmap -p 139,445 --open "$network" 2>/dev/null | grep -B 4 -E "(139|445)/tcp open" | grep "Nmap scan report" | awk '{print $5}' | sort -u || true)
+    else
+        servers=$(nmap -p 2049 --open "$network" 2>/dev/null | grep -B 4 "2049/tcp open" | grep "Nmap scan report" | awk '{print $5}' | sort -u || true)
+    fi
+    
+    if [[ -z "$servers" ]]; then
+        cleanup
+        whiptail --title "$(translate "No Servers Found")" --msgbox "$(translate "No") $service_type $(translate "servers found on the network.")\n\n$(translate "You can add servers manually.")" 10 60
+        return 1
+    fi
+
+    local options=()
+    while IFS= read -r server; do
+        if [[ -n "$server" ]]; then
+            if [[ "$service_type" == "samba" ]]; then
+                # Try to get NetBIOS name for Samba
+                local nb_name=$(nmblookup -A "$server" 2>/dev/null | awk '/<00> -.*B <ACTIVE>/ {print $1; exit}')
+                if [[ -z "$nb_name" || "$nb_name" == "$server" || "$nb_name" == "address" || "$nb_name" == "-" ]]; then
+                    nb_name="Unknown"
+                fi
+                options+=("$server" "$nb_name ($server)")
+            else
+                # For NFS, show export count
+                local exports_count=$(showmount -e "$server" 2>/dev/null | tail -n +2 | wc -l || echo "0")
+                options+=("$server" "NFS Server ($exports_count exports)")
+            fi
+        fi
+    done <<< "$servers"
+    
+    if [[ ${#options[@]} -eq 0 ]]; then
+        cleanup
+        whiptail --title "$(translate "No Valid Servers")" --msgbox "$(translate "No accessible") $service_type $(translate "servers found.")" 8 50
+        return 1
+    fi
+
+    msg_ok "$(translate "Servers detected")"
+    local selected_server=$(whiptail --title "$(translate "Select") $service_type $(translate "Server")" --menu "$(translate "Choose a server:")" 20 80 10 "${options[@]}" 3>&1 1>&2 2>&3)
+    
+    if [[ -n "$selected_server" ]]; then
+        echo "$selected_server"
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Common server selection function
+pmx_select_server() {
+    local service_type="$1"  # "NFS" or "Samba"
+    local port="$2"          # "2049" for NFS, "139,445" for Samba
+    
+    local method=$(dialog --title "$(translate "$service_type Server Selection")" --menu "$(translate "How do you want to select the") $service_type $(translate "server?")" 15 70 3 \
+    "auto" "$(translate "Auto-discover servers on network")" \
+    "manual" "$(translate "Enter server IP/hostname manually")" \
+    "recent" "$(translate "Select from recent servers")" 3>&1 1>&2 2>&3)
+    
+    case "$method" in
+        auto)
+            pmx_discover_network_servers "$service_type" "$port"
+            ;;
+        manual)
+            clear
+            local server=$(whiptail --inputbox "$(translate "Enter") $service_type $(translate "server IP or hostname:")" 10 60 --title "$(translate "$service_type Server")" 3>&1 1>&2 2>&3)
+            if [[ -n "$server" ]]; then
+                echo "$server"
+                return 0
+            else
+                return 1
+            fi
+            ;;
+        recent)
+            clear
+            local fs_type
+            if [[ "$service_type" == "NFS" ]]; then
+                fs_type="nfs"
+            else
+                fs_type="cifs"
+            fi
+            
+            local recent=$(grep "$fs_type" /etc/fstab 2>/dev/null | awk '{print $1}' | cut -d/ -f3 | cut -d: -f1 | sort -u || true)
+            if [[ -z "$recent" ]]; then
+                dialog --title "$(translate "No Recent Servers")" --msgbox "\n$(translate "No recent") $service_type $(translate "servers found.")" 8 50
+                return 1
+            fi
+            
+            local options=()
+            while IFS= read -r server; do
+                [[ -n "$server" ]] && options+=("$server" "$(translate "Recent") $service_type $(translate "server")")
+            done <<< "$recent"
+            
+            local selected_server=$(whiptail --title "$(translate "Recent") $service_type $(translate "Servers")" --menu "$(translate "Choose a recent server:")" 20 70 10 "${options[@]}" 3>&1 1>&2 2>&3)
+            if [[ -n "$selected_server" ]]; then
+                echo "$selected_server"
+                return 0
+            else
+                return 1
+            fi
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Common mount options configuration
+pmx_configure_mount_options() {
+    local service_type="$1"  # "NFS" or "CIFS"
+    
+    local mount_type
+    if [[ "$service_type" == "NFS" ]]; then
+        mount_type=$(whiptail --title "$(translate "Mount Options")" --menu "$(translate "Select mount configuration:")" 15 70 4 \
+        "default" "$(translate "Default options")" \
+        "readonly" "$(translate "Read-only mount")" \
+        "performance" "$(translate "Performance optimized")" \
+        "custom" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
+        
+        case "$mount_type" in
+            default)
+                echo "rw,hard,intr,rsize=8192,wsize=8192,timeo=14"
+                ;;
+            readonly)
+                echo "ro,hard,intr,rsize=8192,timeo=14"
+                ;;
+            performance)
+                echo "rw,hard,intr,rsize=1048576,wsize=1048576,timeo=14,retrans=2"
+                ;;
+            custom)
+                local options=$(whiptail --inputbox "$(translate "Enter custom mount options:")" 10 70 "rw,hard,intr" --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
+                echo "${options:-rw,hard,intr}"
+                ;;
+            *)
+                echo "rw,hard,intr,rsize=8192,wsize=8192,timeo=14"
+                ;;
+        esac
+    else
+        # CIFS options
+        mount_type=$(whiptail --title "$(translate "Mount Options")" --menu "$(translate "Select mount configuration:")" 15 70 4 \
+        "default" "$(translate "Default options")" \
+        "readonly" "$(translate "Read-only mount")" \
+        "performance" "$(translate "Performance optimized")" \
+        "custom" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
+        
+        case "$mount_type" in
+            default)
+                echo "rw,file_mode=0664,dir_mode=0775,iocharset=utf8"
+                ;;
+            readonly)
+                echo "ro,file_mode=0444,dir_mode=0555,iocharset=utf8"
+                ;;
+            performance)
+                echo "rw,file_mode=0664,dir_mode=0775,iocharset=utf8,cache=strict,rsize=1048576,wsize=1048576"
+                ;;
+            custom)
+                local options=$(whiptail --inputbox "$(translate "Enter custom mount options:")" 10 70 "rw,file_mode=0664,dir_mode=0775" --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
+                echo "${options:-rw,file_mode=0664,dir_mode=0775}"
+                ;;
+            *)
+                echo "rw,file_mode=0664,dir_mode=0775,iocharset=utf8"
+                ;;
+        esac
+    fi
+}
+
+# Common permanent mount question
+pmx_ask_permanent_mount() {
+    if whiptail --yesno "$(translate "Do you want to make this mount permanent?")\n\n$(translate "This will add the mount to /etc/fstab so it persists after reboot.")" 10 70 --title "$(translate "Permanent Mount")"; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
