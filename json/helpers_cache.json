@@ -3944,7 +3944,7 @@
     ],
     "notes": [
       "Set a root password if using autologin. This will be the PBS password. `passwd root`",
-      "Advanced Install is only possible without root password and root SSH access, you can configure this after installation."
+      "Advanced Install is only possible with disabled IPV6! Otherwise the installation sometimes stuck."
     ],
     "type": "ct",
     "default_credentials": {
