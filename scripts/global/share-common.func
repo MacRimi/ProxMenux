@@ -428,61 +428,61 @@ select_container_mount_point() {
 # CLIENT MOUNT FUNCTIONS (NFS/SAMBA COMMON)
 # ==========================================================
 
-# Check if container is privileged (required for client mounts)
-pmx_check_container_privileged() {
-    local ctid="$1"
-    local conf="/etc/pve/lxc/${ctid}.conf"
-    
-    if [[ ! -f "$conf" ]]; then
-        return 1
-    fi
-    
-    local unpriv=$(grep "^unprivileged:" "$conf" | awk '{print $2}')
-    
-    if [[ "$unpriv" == "1" ]]; then
-        return 1  # Unprivileged
-    else
-        return 0  # Privileged
-    fi
-}
 
-# Select and validate LXC container for client mounts
-pmx_select_privileged_container() {
-    local ctid
-    ctid=$(select_lxc_container)
-    if [[ $? -ne 0 || -z "$ctid" ]]; then
+
+# Check if container is privileged (required for client mounts)
+select_privileged_ct() {
+    # === Select CT ===
+    local ct_list ctid ct_status conf unpriv
+
+    ct_list=$(pct list | awk 'NR>1 {print $1, $3}')
+    if [[ -z "$ct_list" ]]; then
+        dialog --backtitle "ProxMenux" --title "$(translate "Error")" \
+            --msgbox "$(translate "No CTs available in the system.")" 8 50
         return 1
     fi
-    
-    # Check if container is privileged
-    if ! pmx_check_container_privileged "$ctid"; then
-        whiptail --title "$(translate "Privileged Container Required")" \
-            --msgbox "$(translate "Network share mounting (NFS/SAMBA) requires a PRIVILEGED container.")\n\n$(translate "Selected container") $ctid $(translate "is UNPRIVILEGED.")\n\n$(translate "For unprivileged containers, use:")\n• $(translate "Configure LXC mount points")\n• $(translate "Mount shares on HOST first")\n• $(translate "Then bind-mount to container")" \
-            16 80
+
+    ctid=$(dialog --backtitle "ProxMenux" --title "$(translate "Select CT")" \
+        --menu "$(translate "Select the CT to manage NFS/Samba client:")" 20 70 12 \
+        $ct_list 3>&1 1>&2 2>&3)
+
+    if [[ -z "$ctid" ]]; then
+        dialog --backtitle "ProxMenux" --title "$(translate "Error")" \
+            --msgbox "$(translate "No CT was selected.")" 8 50
         return 1
     fi
-    
-    # Start container if not running
-    local ct_status=$(pct status "$ctid" | awk '{print $2}')
+
+    # === Start CT if not running ===
+    ct_status=$(pct status "$ctid" | awk '{print $2}')
     if [[ "$ct_status" != "running" ]]; then
-        msg_info "$(translate "Starting container") $ctid..."
-        if pct start "$ctid"; then
-            sleep 2
-            if [[ "$(pct status "$ctid" | awk '{print $2}')" == "running" ]]; then
-                msg_ok "$(translate "Container started successfully.")"
-            else
-                msg_error "$(translate "Failed to start the container.")"
-                return 1
-            fi
-        else
-            msg_error "$(translate "Failed to start the container.")"
+        msg_info "$(translate "Starting CT") $ctid..."
+        pct start "$ctid"
+        sleep 2
+        if [[ "$(pct status "$ctid" | awk '{print $2}')" != "running" ]]; then
+            msg_error "$(translate "Failed to start the CT.")"
             return 1
         fi
+        msg_ok "$(translate "CT started successfully.")"
     fi
-    
-    echo "$ctid"
+
+    # === Check privileged/unprivileged ===
+    conf="/etc/pve/lxc/${ctid}.conf"
+    unpriv=$(awk '/^unprivileged:/ {print $2}' "$conf" 2>/dev/null)
+
+    if [[ "$unpriv" == "1" ]]; then
+        dialog --backtitle "ProxMenux" --title "$(translate "Privileged Container Required")" \
+            --msgbox "\n$(translate "Network share mounting (NFS/Samba) requires a PRIVILEGED container.")\n\n$(translate "Selected container") $ctid $(translate "is UNPRIVILEGED.")\n\n$(translate "For unprivileged containers, use instead:")\n  • $(translate "Configure LXC mount points")\n  • $(translate "Mount shares on HOST first")\n  • $(translate "Then bind-mount to container")" 15 75
+        exit 1
+    fi
+
+    # Export CTID if all good
+    CTID="$ctid"
     return 0
 }
+
+
+
+
 
 # Common mount point selection for containers
 pmx_select_container_mount_point() {
