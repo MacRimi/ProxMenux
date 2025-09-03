@@ -450,32 +450,40 @@ pmx_check_container_privileged() {
 pmx_select_privileged_container() {
     local ctid
     ctid=$(select_lxc_container)
-    if [[ $? -ne 0 || -z "$ctid" ]]; then
+    local select_result=$?
+    
+    if [[ $select_result -ne 0 ]]; then
+        return 1
+    fi
+    
+    if [[ -z "$ctid" ]]; then
         return 1
     fi
     
     # Check if container is privileged
     if ! pmx_check_container_privileged "$ctid"; then
-        whiptail --title "$(translate "Privileged Container Required")" \
-            --msgbox "$(translate "Network share mounting (NFS/SAMBA) requires a PRIVILEGED container.")\n\n$(translate "Selected container") $ctid $(translate "is UNPRIVILEGED.")\n\n$(translate "For unprivileged containers, use:")\n• $(translate "Configure LXC mount points")\n• $(translate "Mount shares on HOST first")\n• $(translate "Then bind-mount to container")" \
+        whiptail --title "Privileged Container Required" \
+            --msgbox "Network share mounting (NFS/SAMBA) requires a PRIVILEGED container.\n\nSelected container $ctid is UNPRIVILEGED.\n\nFor unprivileged containers, use:\n• Configure LXC mount points\n• Mount shares on HOST first\n• Then bind-mount to container" \
             16 80
         return 1
     fi
     
     # Start container if not running
-    local ct_status=$(pct status "$ctid" | awk '{print $2}')
+    local ct_status=$(pct status "$ctid" 2>/dev/null | awk '{print $2}')
     if [[ "$ct_status" != "running" ]]; then
-        msg_info "$(translate "Starting container") $ctid..."
-        if pct start "$ctid"; then
-            sleep 2
-            if [[ "$(pct status "$ctid" | awk '{print $2}')" == "running" ]]; then
-                msg_ok "$(translate "Container started successfully.")"
+        if whiptail --yesno "Container $ctid is not running.\n\nDo you want to start it now?" 10 60 --title "Start Container"; then
+            if pct start "$ctid" 2>/dev/null; then
+                sleep 3
+                ct_status=$(pct status "$ctid" 2>/dev/null | awk '{print $2}')
+                if [[ "$ct_status" != "running" ]]; then
+                    whiptail --title "Error" --msgbox "Failed to start container $ctid" 8 50
+                    return 1
+                fi
             else
-                msg_error "$(translate "Failed to start the container.")"
+                whiptail --title "Error" --msgbox "Failed to start container $ctid" 8 50
                 return 1
             fi
         else
-            msg_error "$(translate "Failed to start the container.")"
             return 1
         fi
     fi
