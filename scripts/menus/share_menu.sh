@@ -29,8 +29,8 @@ while true; do
         --title "$(translate "Mount and Share Manager")" \
         --menu "\n$(translate "Select an option:")" 25 80 15 \
             ""  "\Z4──────────── $(translate "LXC") ────────────\Zn" \
-            "1"         "\Z2$(translate "Configure LXC Mount Points    (Host ↔ Container)\Zn")" \
-            "" "                                                                        " \
+            "1"         "$(translate "Configure LXC Mount Points    (Host ↔ Container)")" \
+            " "         " " \
             "2"         "$(translate "Configure NFS Client in LXC   (only privileged)")" \
             "3"         "$(translate "Configure Samba Client in LXC (only privileged)")" \
             "4"         "$(translate "Set up NFS Server in LXC      (only privileged)")" \
