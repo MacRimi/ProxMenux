@@ -107,7 +107,7 @@ select_mount_point() {
 }
 
 get_network_config() {
-    clear
+
     NETWORK=$(whiptail --title "$(translate "Network Configuration")" --menu "$(translate "Select network access level:")" 15 70 4 \
     "1" "$(translate "Local network only (192.168.0.0/16)")" \
     "2" "$(translate "Specific subnet (enter manually)")" \
@@ -146,6 +146,9 @@ create_nfs_export() {
     select_mount_point || return
     get_network_config || return
 
+    show_proxmenux_logo
+    msg_title "$(translate "Create NFS server service")"
+
     # Ensure directory exists inside CT
     if ! pct exec "$CTID" -- test -d "$MOUNT_POINT"; then
         if whiptail --yesno "$(translate "The directory does not exist in the CT.")\n\n$MOUNT_POINT\n\n$(translate "Do you want to create it?")" \
@@ -159,8 +162,6 @@ create_nfs_export() {
         fi
     fi
 
-    show_proxmenux_logo
-    msg_title "$(translate "Create NFS server service")"
 
     # Install NFS server if missing
     if ! pct exec "$CTID" -- dpkg -s nfs-kernel-server &>/dev/null; then
