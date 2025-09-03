@@ -149,7 +149,7 @@ create_nfs_export() {
     show_proxmenux_logo
     msg_title "$(translate "Create NFS server service")"
 
-    # Ensure directory exists inside CT
+
     if ! pct exec "$CTID" -- test -d "$MOUNT_POINT"; then
         if whiptail --yesno "$(translate "The directory does not exist in the CT.")\n\n$MOUNT_POINT\n\n$(translate "Do you want to create it?")" \
             12 70 --title "$(translate "Create Directory")"; then
@@ -163,7 +163,7 @@ create_nfs_export() {
     fi
 
 
-    # Install NFS server if missing
+
     if ! pct exec "$CTID" -- dpkg -s nfs-kernel-server &>/dev/null; then
         msg_info "$(translate "Installing NFS server packages inside the CT...")"
         pct exec "$CTID" -- bash -c "apt-get update && apt-get install -y nfs-kernel-server nfs-common rpcbind"
@@ -173,7 +173,7 @@ create_nfs_export() {
         msg_ok "$(translate "NFS server is already installed.")"
     fi
 
-    # Ask for export options
+
     EXPORT_OPTIONS=$(whiptail --title "$(translate "Export Options")" --menu \
         "$(translate "Select export permissions:")" 15 70 3 \
         "1" "$(translate "Read-Write access")" \
@@ -192,7 +192,7 @@ create_nfs_export() {
 
     EXPORT_LINE="$MOUNT_POINT $NETWORK_RANGE($OPTIONS)"
 
-    # Add or update /etc/exports
+
     if pct exec "$CTID" -- grep -q "^$MOUNT_POINT " /etc/exports; then
         msg_warn "$(translate "Export already exists for:") $MOUNT_POINT"
         if whiptail --yesno "$(translate "Do you want to update the existing export?")" \
@@ -206,21 +206,21 @@ create_nfs_export() {
         msg_ok "$(translate "Export added successfully.")"
     fi
 
-    # Restart NFS services
+
     pct exec "$CTID" -- systemctl restart rpcbind nfs-kernel-server
     pct exec "$CTID" -- exportfs -ra
 
-    # Show summary
+
     CT_IP=$(pct exec "$CTID" -- hostname -I | awk '{print $1}')
     echo -e ""
     msg_ok "$(translate "NFS export created successfully!")"
     echo -e ""
     echo -e "${TAB}${BOLD}$(translate "Connection details:")${CL}"
-    echo -e "${TAB}${BGN}$(translate "Server IP:")${CL}  ${CUS}$CT_IP${CL}"
-    echo -e "${TAB}${BGN}$(translate "Export path:")${CL} ${CUS}$CT_IP:$MOUNT_POINT${CL}"
-    echo -e
     echo -e "${TAB}${BGN}$(translate "Mount options:")${CL} ${CUS}$OPTIONS${CL}"
     echo -e "${TAB}${BGN}$(translate "Network access:")${CL} ${CUS}$NETWORK_RANGE${CL}"
+    echo -e
+    echo -e "${TAB}${BGN}$(translate "Server IP:")${CL}  ${CUS}$CT_IP${CL}"
+    echo -e "${TAB}${BGN}$(translate "Export path:")${CL} ${CUS}$CT_IP:$MOUNT_POINT${CL}"
     echo ""
     msg_success "$(translate "Press Enter to return to menu...")"
     read -r
