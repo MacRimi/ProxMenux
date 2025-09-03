@@ -109,24 +109,24 @@ select_mount_point() {
 get_network_config() {
     clear
     NETWORK=$(whiptail --title "$(translate "Network Configuration")" --menu "$(translate "Select network access level:")" 15 70 4 \
-    "local" "$(translate "Local network only (192.168.0.0/16)")" \
-    "subnet" "$(translate "Specific subnet (enter manually)")" \
-    "host" "$(translate "Specific host (enter IP)")" \
-    "all" "$(translate "All networks (*) - NOT RECOMMENDED")" 3>&1 1>&2 2>&3)
+    "1" "$(translate "Local network only (192.168.0.0/16)")" \
+    "2" "$(translate "Specific subnet (enter manually)")" \
+    "3" "$(translate "Specific host (enter IP)")" \
+    "4" "$(translate "All networks (*) - NOT RECOMMENDED")" 3>&1 1>&2 2>&3)
     
     case "$NETWORK" in
-        local)
+        1)
             NETWORK_RANGE="192.168.0.0/16"
             ;;
-        subnet)
+        2)
             NETWORK_RANGE=$(whiptail --inputbox "$(translate "Enter subnet (e.g., 192.168.1.0/24):")" 10 60 "192.168.1.0/24" --title "$(translate "Subnet")" 3>&1 1>&2 2>&3)
             [[ -z "$NETWORK_RANGE" ]] && return 1
             ;;
-        host)
+        3)
             NETWORK_RANGE=$(whiptail --inputbox "$(translate "Enter host IP (e.g., 192.168.1.100):")" 10 60 --title "$(translate "Host IP")" 3>&1 1>&2 2>&3)
             [[ -z "$NETWORK_RANGE" ]] && return 1
             ;;
-        all)
+        4)
             if whiptail --yesno "$(translate "WARNING: This will allow access from ANY network.\nThis is a security risk. Are you sure?")" 10 60 --title "$(translate "Security Warning")"; then
                 NETWORK_RANGE="*"
             else
@@ -145,127 +145,86 @@ get_network_config() {
 create_nfs_export() {
     select_mount_point || return
     get_network_config || return
-    
 
+    # Ensure directory exists inside CT
     if ! pct exec "$CTID" -- test -d "$MOUNT_POINT"; then
-        if whiptail --yesno "$(translate "The directory does not exist in the CT.")\n\n$MOUNT_POINT\n\n$(translate "Do you want to create it?")" 12 70 --title "$(translate "Create Directory")"; then
+        if whiptail --yesno "$(translate "The directory does not exist in the CT.")\n\n$MOUNT_POINT\n\n$(translate "Do you want to create it?")" \
+            12 70 --title "$(translate "Create Directory")"; then
             pct exec "$CTID" -- mkdir -p "$MOUNT_POINT"
+            pct exec "$CTID" -- chmod 755 "$MOUNT_POINT"
             msg_ok "$(translate "Directory created successfully.")"
         else
             msg_error "$(translate "Directory does not exist and was not created.")"
             return
         fi
     fi
+
     show_proxmenux_logo
     msg_title "$(translate "Create NFS server service")"
-    if pct exec "$CTID" -- dpkg -s nfs-kernel-server &>/dev/null; then
-        NFS_INSTALLED=true
-    else
-        NFS_INSTALLED=false
-    fi
-    
 
-    if [ "$NFS_INSTALLED" = false ]; then
-        echo -e "${TAB}$(translate "Installing NFS server packages inside the CT...")"
+    # Install NFS server if missing
+    if ! pct exec "$CTID" -- dpkg -s nfs-kernel-server &>/dev/null; then
+        msg_info "$(translate "Installing NFS server packages inside the CT...")"
         pct exec "$CTID" -- bash -c "apt-get update && apt-get install -y nfs-kernel-server nfs-common rpcbind"
-        
-
-        pct exec "$CTID" -- systemctl enable rpcbind
-        pct exec "$CTID" -- systemctl enable nfs-kernel-server
-        pct exec "$CTID" -- systemctl start rpcbind
-        
+        pct exec "$CTID" -- systemctl enable --now rpcbind nfs-kernel-server
         msg_ok "$(translate "NFS server installed successfully.")"
     else
         msg_ok "$(translate "NFS server is already installed.")"
     fi
-    
 
-    IS_MOUNTED=$(pct exec "$CTID" -- mount | grep "$MOUNT_POINT" || true)
-    if [[ -n "$IS_MOUNTED" ]]; then
-        msg_info "$(translate "Detected a mounted directory from host. Setting up shared group...")"
-        
-        SHARE_GID=999
-        GROUP_EXISTS=$(pct exec "$CTID" -- getent group nfsshare || true)
-        GID_IN_USE=$(pct exec "$CTID" -- getent group "$SHARE_GID" | cut -d: -f1 || true)
-        
-        if [[ -z "$GROUP_EXISTS" ]]; then
-            if [[ -z "$GID_IN_USE" ]]; then
-                pct exec "$CTID" -- groupadd -g "$SHARE_GID" nfsshare
-                msg_ok "$(translate "Group 'nfsshare' created with GID $SHARE_GID")"
-            else
-                pct exec "$CTID" -- groupadd nfsshare
-                msg_warn "$(translate "GID $SHARE_GID already in use. Group 'nfsshare' created with dynamic GID.")"
-            fi
-        else
-            msg_ok "$(translate "Group 'nfsshare' already exists inside the CT")"
-        fi
-        
-        pct exec "$CTID" -- chown root:nfsshare "$MOUNT_POINT"
-        pct exec "$CTID" -- chmod 2775 "$MOUNT_POINT"
-    else
-        msg_ok "$(translate "No shared mount detected. Applying standard local access.")"
-        pct exec "$CTID" -- chmod 755 "$MOUNT_POINT"
-    fi
-    
+    # Ask for export options
+    EXPORT_OPTIONS=$(whiptail --title "$(translate "Export Options")" --menu \
+        "$(translate "Select export permissions:")" 15 70 3 \
+        "1" "$(translate "Read-Write access")" \
+        "2" "$(translate "Read-Only access")" \
+        "2" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
 
-    EXPORT_OPTIONS=$(whiptail --title "$(translate "Export Options")" --menu "$(translate "Select export permissions:")" 15 70 3 \
-        "rw" "$(translate "Read-Write access")" \
-        "ro" "$(translate "Read-Only access")" \
-        "custom" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
-
-    
     case "$EXPORT_OPTIONS" in
-        rw)
-            OPTIONS="rw,sync,no_subtree_check,no_root_squash"
-            ;;
-        ro)
-            OPTIONS="ro,sync,no_subtree_check,root_squash"
-            ;;
-        custom)
-            OPTIONS=$(whiptail --inputbox "$(translate "Enter custom NFS options:")" 10 70 "rw,sync,no_subtree_check,no_root_squash" --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
-            [[ -z "$OPTIONS" ]] && OPTIONS="rw,sync,no_subtree_check,no_root_squash"
-            ;;
-        *)
-            OPTIONS="rw,sync,no_subtree_check,no_root_squash"
-            ;;
+        1)     OPTIONS="rw,sync,no_subtree_check,no_root_squash" ;;
+        2)     OPTIONS="ro,sync,no_subtree_check,root_squash" ;;
+        3) OPTIONS=$(whiptail --inputbox "$(translate "Enter custom NFS options:")" \
+                    10 70 "rw,sync,no_subtree_check,no_root_squash" \
+                    --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
+                [[ -z "$OPTIONS" ]] && OPTIONS="rw,sync,no_subtree_check,no_root_squash" ;;
+        *)      OPTIONS="rw,sync,no_subtree_check,no_root_squash" ;;
     esac
-    
 
     EXPORT_LINE="$MOUNT_POINT $NETWORK_RANGE($OPTIONS)"
-    
 
+    # Add or update /etc/exports
     if pct exec "$CTID" -- grep -q "^$MOUNT_POINT " /etc/exports; then
         msg_warn "$(translate "Export already exists for:") $MOUNT_POINT"
-        if whiptail --yesno "$(translate "Do you want to update the existing export?")" 10 60 --title "$(translate "Update Export")"; then
-
+        if whiptail --yesno "$(translate "Do you want to update the existing export?")" \
+            10 60 --title "$(translate "Update Export")"; then
             pct exec "$CTID" -- sed -i "\|^$MOUNT_POINT |d" /etc/exports
             pct exec "$CTID" -- bash -c "echo '$EXPORT_LINE' >> /etc/exports"
             msg_ok "$(translate "Export updated successfully.")"
-        else
-            return
         fi
     else
-        msg_ok "$(translate "Adding new export to /etc/exports...")"
         pct exec "$CTID" -- bash -c "echo '$EXPORT_LINE' >> /etc/exports"
         msg_ok "$(translate "Export added successfully.")"
     fi
-    
-    pct exec "$CTID" -- systemctl restart nfs-kernel-server
+
+    # Restart NFS services
+    pct exec "$CTID" -- systemctl restart rpcbind nfs-kernel-server
     pct exec "$CTID" -- exportfs -ra
 
+    # Show summary
     CT_IP=$(pct exec "$CTID" -- hostname -I | awk '{print $1}')
     echo -e ""
     msg_ok "$(translate "NFS export created successfully!")"
     echo -e ""
     echo -e "${TAB}${BOLD}$(translate "Connection details:")${CL}"
-    echo -e "${TAB}${BGN}$(translate "Mount options:")${CL} ${CUS}$OPTIONS${CL}"
     echo -e "${TAB}${BGN}$(translate "Server IP:")${CL}  ${CUS}$CT_IP${CL}"
     echo -e "${TAB}${BGN}$(translate "Export path:")${CL} ${CUS}$CT_IP:$MOUNT_POINT${CL}"
-    
     echo -e
+    echo -e "${TAB}${BGN}$(translate "Mount options:")${CL} ${CUS}$OPTIONS${CL}"
+    echo -e "${TAB}${BGN}$(translate "Network access:")${CL} ${CUS}$NETWORK_RANGE${CL}"
+    echo ""
     msg_success "$(translate "Press Enter to return to menu...")"
     read -r
 }
+
 
 
 
@@ -314,18 +273,6 @@ view_exports() {
 
 delete_export() {
  
- #   if ! pct exec "$CTID" -- test -f /etc/exports; then
- #       whiptail --title "$(translate "Error")" --msgbox "$(translate "No exports file found.")" 8 50
- #       return
- #   fi
-    
- #   EXPORTS=$(pct exec "$CTID" -- awk '!/^#|^$/ {print NR, $0}' /etc/exports)
- #   if [[ -z "$EXPORTS" ]]; then
- #       whiptail --title "$(translate "No Exports")" --msgbox "$(translate "No exports found in /etc/exports.")" 8 60
- #       return
- #   fi
-
-
 
     if ! pct exec "$CTID" -- test -f /etc/exports; then
     dialog --title "$(translate "Error")" --msgbox "\n$(translate "No exports file found.")" 8 50
@@ -352,9 +299,6 @@ while read -r line; do
     OPTIONS+=("$NUM" "$EXPORT_PATH $EXPORT_CLIENT")
 done <<< "$EXPORTS"
 
-    
-#    SELECTED_NUM=$(whiptail --title "$(translate "Delete Export")" --menu "$(translate "Select an export to delete:")" 20 70 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
-#    [ -z "$SELECTED_NUM" ] && return
 
 
 SELECTED_NUM=$(dialog --title "$(translate "Delete Export")" --menu "$(translate "Select an export to delete:")" 20 70 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
