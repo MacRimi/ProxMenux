@@ -428,63 +428,61 @@ select_container_mount_point() {
 # CLIENT MOUNT FUNCTIONS (NFS/SAMBA COMMON)
 # ==========================================================
 
-
-
 # Check if container is privileged (required for client mounts)
-select_privileged_lxc() {
-    # === Select CT ===
-    local ct_list ctid ct_status conf unpriv
-
-    ct_list=$(pct list | awk 'NR>1 {print $1, $3}')
-    if [[ -z "$ct_list" ]]; then
-        dialog --backtitle "ProxMenux" --title "$(translate "Error")" \
-            --msgbox "$(translate "No CTs available in the system.")" 8 50
+pmx_check_container_privileged() {
+    local ctid="$1"
+    local conf="/etc/pve/lxc/${ctid}.conf"
+    
+    if [[ ! -f "$conf" ]]; then
         return 1
     fi
-
-    ctid=$(dialog --backtitle "ProxMenux" --title "$(translate "Select CT")" \
-        --menu "$(translate "Select the CT to manage NFS/Samba client:")" 20 70 12 \
-        $ct_list 3>&1 1>&2 2>&3)
-
-    if [[ -z "$ctid" ]]; then
-        dialog --backtitle "ProxMenux" --title "$(translate "Error")" \
-            --msgbox "$(translate "No CT was selected.")" 8 50
-        return 1
-    fi
-
-    # === Start CT if not running ===
-    ct_status=$(pct status "$ctid" | awk '{print $2}')
-    if [[ "$ct_status" != "running" ]]; then
-        show_proxmenux_logo
-        echo -e
-        msg_info "$(translate "Starting CT") $ctid..."
-        pct start "$ctid"
-        sleep 2
-        if [[ "$(pct status "$ctid" | awk '{print $2}')" != "running" ]]; then
-            msg_error "$(translate "Failed to start the CT.")"
-            return 1
-        fi
-        msg_ok "$(translate "CT started successfully.")"
-    fi
-
-    # === Check privileged/unprivileged ===
-    conf="/etc/pve/lxc/${ctid}.conf"
-    unpriv=$(awk '/^unprivileged:/ {print $2}' "$conf" 2>/dev/null)
-
+    
+    local unpriv=$(grep "^unprivileged:" "$conf" | awk '{print $2}')
+    
     if [[ "$unpriv" == "1" ]]; then
-        dialog --backtitle "ProxMenux" --title "$(translate "Privileged Container Required")" \
-            --msgbox "\n$(translate "Network share mounting (NFS/Samba) requires a PRIVILEGED container.")\n\n$(translate "Selected container") $ctid $(translate "is UNPRIVILEGED.")\n\n$(translate "For unprivileged containers, use instead:")\n  • $(translate "Configure LXC mount points")\n  • $(translate "Mount shares on HOST first")\n  • $(translate "Then bind-mount to container")" 15 75
-        exit 1
+        return 1  # Unprivileged
+    else
+        return 0  # Privileged
     fi
-
-    # Export CTID if all good
-    CTID="$ctid"
-    return 0
 }
 
-
-
-
+# Select and validate LXC container for client mounts
+pmx_select_privileged_container() {
+    local ctid
+    ctid=$(select_lxc_container)
+    if [[ $? -ne 0 || -z "$ctid" ]]; then
+        return 1
+    fi
+    
+    # Check if container is privileged
+    if ! pmx_check_container_privileged "$ctid"; then
+        whiptail --title "$(translate "Privileged Container Required")" \
+            --msgbox "$(translate "Network share mounting (NFS/SAMBA) requires a PRIVILEGED container.")\n\n$(translate "Selected container") $ctid $(translate "is UNPRIVILEGED.")\n\n$(translate "For unprivileged containers, use:")\n• $(translate "Configure LXC mount points")\n• $(translate "Mount shares on HOST first")\n• $(translate "Then bind-mount to container")" \
+            16 80
+        return 1
+    fi
+    
+    # Start container if not running
+    local ct_status=$(pct status "$ctid" | awk '{print $2}')
+    if [[ "$ct_status" != "running" ]]; then
+        msg_info "$(translate "Starting container") $ctid..."
+        if pct start "$ctid"; then
+            sleep 2
+            if [[ "$(pct status "$ctid" | awk '{print $2}')" == "running" ]]; then
+                msg_ok "$(translate "Container started successfully.")"
+            else
+                msg_error "$(translate "Failed to start the container.")"
+                return 1
+            fi
+        else
+            msg_error "$(translate "Failed to start the container.")"
+            return 1
+        fi
+    fi
+    
+    echo "$ctid"
+    return 0
+}
 
 # Common mount point selection for containers
 pmx_select_container_mount_point() {
@@ -522,7 +520,7 @@ pmx_select_container_mount_point() {
                 
                 if [[ -n "$mount_point" ]]; then
                     if pct exec "$ctid" -- [ "$(ls -A "$mount_point" 2>/dev/null | wc -l)" -gt 0 ]; then
-                        local file_count=$(pct exec "$ctid" -- ls -A "$mount_point" 2>/dev/null | wc -l)
+                        local file_count=$(pct exec "$ctid" -- ls -A "$mount_point" 2>/dev/null | wc -l || true)
                         if ! whiptail --yesno "$(translate "WARNING: The selected directory is not empty!")\n\n$(translate "Directory:"): $mount_point\n$(translate "Contains:"): $file_count $(translate "files/folders")\n\n$(translate "Mounting here will hide existing files until unmounted.")\n\n$(translate "Do you want to continue?")" 14 70 --title "$(translate "Directory Not Empty")"; then
                             continue
                         fi
@@ -555,13 +553,9 @@ pmx_select_container_mount_point() {
 
 # Common server discovery function
 pmx_discover_network_servers() {
-    local service_type="$1"  # "nfs" or "samba"
+    local service_type="$1"  # "NFS" or "Samba"
     local port="$2"          # "2049" for NFS, "139,445" for Samba
     
-    show_proxmenux_logo
-    msg_title "$(translate "Network Server Discovery")"
-    msg_info "$(translate "Scanning network for") $service_type $(translate "servers...")"
-
     local host_ip=$(hostname -I | awk '{print $1}')
     local network=$(echo "$host_ip" | cut -d. -f1-3).0/24
 
@@ -605,7 +599,6 @@ pmx_discover_network_servers() {
         return 1
     fi
 
-    msg_ok "$(translate "Servers detected")"
     local selected_server=$(whiptail --title "$(translate "Select") $service_type $(translate "Server")" --menu "$(translate "Choose a server:")" 20 80 10 "${options[@]}" 3>&1 1>&2 2>&3)
     
     if [[ -n "$selected_server" ]]; then
@@ -621,16 +614,22 @@ pmx_select_server() {
     local service_type="$1"  # "NFS" or "Samba"
     local port="$2"          # "2049" for NFS, "139,445" for Samba
     
-    local method=$(dialog --title "$(translate "$service_type Server Selection")" --menu "$(translate "How do you want to select the") $service_type $(translate "server?")" 15 70 3 \
+    local method=$(whiptail --title "$(translate "$service_type Server Selection")" --menu "$(translate "How do you want to select the") $service_type $(translate "server?")" 15 70 3 \
     "auto" "$(translate "Auto-discover servers on network")" \
     "manual" "$(translate "Enter server IP/hostname manually")" \
     "recent" "$(translate "Select from recent servers")" 3>&1 1>&2 2>&3)
+    
+    local result_code=$?
+    if [[ $result_code -ne 0 ]]; then
+        return 1
+    fi
     
     case "$method" in
         auto)
             local discovered_server
             discovered_server=$(pmx_discover_network_servers "$service_type" "$port")
-            if [[ $? -eq 0 && -n "$discovered_server" ]]; then
+            local discover_result=$?
+            if [[ $discover_result -eq 0 && -n "$discovered_server" ]]; then
                 echo "$discovered_server"
                 return 0
             else
@@ -638,9 +637,9 @@ pmx_select_server() {
             fi
             ;;
         manual)
-            clear
             local server=$(whiptail --inputbox "$(translate "Enter") $service_type $(translate "server IP or hostname:")" 10 60 --title "$(translate "$service_type Server")" 3>&1 1>&2 2>&3)
-            if [[ -n "$server" ]]; then
+            local input_result=$?
+            if [[ $input_result -eq 0 && -n "$server" ]]; then
                 echo "$server"
                 return 0
             else
@@ -648,7 +647,6 @@ pmx_select_server() {
             fi
             ;;
         recent)
-            clear
             local fs_type
             if [[ "$service_type" == "NFS" ]]; then
                 fs_type="nfs"
@@ -665,7 +663,7 @@ pmx_select_server() {
             fi
             
             if [[ -z "$recent" ]]; then
-                dialog --title "$(translate "No Recent Servers")" --msgbox "\n$(translate "No recent") $service_type $(translate "servers found.")" 8 50
+                whiptail --title "$(translate "No Recent Servers")" --msgbox "\n$(translate "No recent") $service_type $(translate "servers found.")" 8 50
                 return 1
             fi
             
@@ -675,7 +673,8 @@ pmx_select_server() {
             done <<< "$recent"
             
             local selected_server=$(whiptail --title "$(translate "Recent") $service_type $(translate "Servers")" --menu "$(translate "Choose a recent server:")" 20 70 10 "${options[@]}" 3>&1 1>&2 2>&3)
-            if [[ -n "$selected_server" ]]; then
+            local select_result=$?
+            if [[ $select_result -eq 0 && -n "$selected_server" ]]; then
                 echo "$selected_server"
                 return 0
             else
