@@ -16,42 +16,23 @@
 REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
-VENV_PATH="/opt/googletrans-env"
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+# Load shared functions
+SHARE_COMMON_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/scripts/global/share-common.func"
+if ! source <(curl -s "$SHARE_COMMON_URL" 2>/dev/null); then
+    msg_error "$(translate "Could not load shared functions. Script cannot continue.")"
+    exit 1
+fi
+
 load_language
 initialize_cache
 
-# === Select CT ===
-CT_LIST=$(pct list | awk 'NR>1 {print $1, $3}')
-if [ -z "$CT_LIST" ]; then
-    dialog --backtitle "ProxMenux" --title "$(translate "Error")" --msgbox "$(translate "No CTs available in the system.")" 8 50
-    exit 1
-fi
 
-CTID=$(dialog --backtitle "ProxMenux" --title "$(translate "Select CT")" --menu "$(translate "Select the CT to manage NFS client:")" 20 70 12 $CT_LIST 3>&1 1>&2 2>&3)
-if [ -z "$CTID" ]; then
-    dialog --backtitle "ProxMenux" --title "$(translate "Error")" --msgbox "$(translate "No CT was selected.")" 8 50
-    exit 1
-fi
-
-
-# === Start CT if not running ===
-CT_STATUS=$(pct status "$CTID" | awk '{print $2}')
-if [ "$CT_STATUS" != "running" ]; then
-    msg_info "$(translate "Starting CT") $CTID..."
-    pct start "$CTID"
-    sleep 2
-    if [ "$(pct status "$CTID" | awk '{print $2}')" != "running" ]; then
-        msg_error "$(translate "Failed to start the CT.")"
-        exit 1
-    fi
-    msg_ok "$(translate "CT started successfully.")"
-fi
-
+select_privileged_lxc
 
 
 install_nfs_client() {
@@ -60,8 +41,9 @@ install_nfs_client() {
         return 0
     fi
 
+
     show_proxmenux_logo
-    msg_title "$(translate "Installing NFS Client")"
+    msg_title "$(translate "Mount NFS Share on Host")"
 
     msg_info "$(translate "Installing NFS client packages...")"
     if ! pct exec "$CTID" -- apt-get update >/dev/null 2>&1; then
@@ -99,7 +81,7 @@ install_nfs_client() {
 
 discover_nfs_servers() {
     show_proxmenux_logo
-    msg_title "$(translate "NFS Host Manager - Proxmox Host")"
+    msg_title "$(translate "Mount NFS Share on Host")"
     msg_info "$(translate "Scanning network for NFS servers...")"
 
     
@@ -143,33 +125,14 @@ discover_nfs_servers() {
 select_nfs_server() {
     METHOD=$(dialog --backtitle "ProxMenux" --title "$(translate "NFS Server Selection")" --menu "$(translate "How do you want to select the NFS server?")" 15 70 3 \
     "auto" "$(translate "Auto-discover servers on network")" \
-    "manual" "$(translate "Enter server IP/hostname manually")" \
-    "recent" "$(translate "Select from recent servers")" 3>&1 1>&2 2>&3)
-    
+    "manual" "$(translate "Enter server IP/hostname manually")" 3>&1 1>&2 2>&3)    
     case "$METHOD" in
         auto)
             discover_nfs_servers || return 1
             ;;
         manual)
-            clear
             NFS_SERVER=$(whiptail --inputbox "$(translate "Enter NFS server IP or hostname:")" 10 60 --title "$(translate "NFS Server")" 3>&1 1>&2 2>&3)
             [[ -z "$NFS_SERVER" ]] && return 1
-            ;;
-        recent)
-            clear
-            RECENT=$(grep "nfs" /etc/fstab 2>/dev/null | awk '{print $1}' | cut -d: -f1 | sort -u || true)
-            if [[ -z "$RECENT" ]]; then
-                dialog --backtitle "ProxMenux" --title "$(translate "No Recent Servers")" --msgbox "\n$(translate "No recent NFS servers found.")" 8 50
-                return 1
-            fi
-            
-            OPTIONS=()
-            while IFS= read -r server; do
-                [[ -n "$server" ]] && OPTIONS+=("$server" "$(translate "Recent NFS server")")
-            done <<< "$RECENT"
-            
-            NFS_SERVER=$(whiptail --title "$(translate "Recent NFS Servers")" --menu "$(translate "Choose a recent server:")" 20 70 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
-            [[ -n "$NFS_SERVER" ]] && return 0 || return 1
             ;;
         *)
             return 1
@@ -178,8 +141,11 @@ select_nfs_server() {
     return 0
 }
 
+
+
+
 select_nfs_export() {
-    clear
+
     if ! pct exec "$CTID" -- which showmount >/dev/null 2>&1; then
         whiptail --title "$(translate "NFS Client Error")" \
                  --msgbox "$(translate "showmount command is not working properly.")\n\n$(translate "Please check the installation.")" \
@@ -266,12 +232,22 @@ select_nfs_export() {
 select_mount_point() {
     while true; do
         METHOD=$(whiptail --title "$(translate "Select Mount Point")" --menu "$(translate "Where do you want to mount the NFS export?")" 15 70 3 \
-        "existing" "$(translate "Select from existing folders in /mnt")" \
-        "new" "$(translate "Create new folder in /mnt")" \
-        "custom" "$(translate "Enter custom path")" 3>&1 1>&2 2>&3)
+        "1" "$(translate "Create new folder in /mnt")" \
+        "2" "$(translate "Select from existing folders in /mnt")" \
+        "3" "$(translate "Enter custom path")" 3>&1 1>&2 2>&3)
         
         case "$METHOD" in
-            existing)
+            1)
+                # Create default name from server and export
+                EXPORT_NAME=$(basename "$NFS_EXPORT")
+                DEFAULT_NAME="nfs_${NFS_SERVER}_${EXPORT_NAME}"
+                FOLDER_NAME=$(whiptail --inputbox "$(translate "Enter new folder name:")" 10 60 "$DEFAULT_NAME" --title "$(translate "New Folder in /mnt")" 3>&1 1>&2 2>&3)
+                if [[ -n "$FOLDER_NAME" ]]; then
+                    MOUNT_POINT="/mnt/$FOLDER_NAME"
+                    return 0
+                fi
+                ;;
+            2)
                 DIRS=$(pct exec "$CTID" -- find /mnt -maxdepth 1 -mindepth 1 -type d 2>/dev/null)
                 if [[ -z "$DIRS" ]]; then
                     whiptail --title "$(translate "No Folders")" --msgbox "$(translate "No folders found in /mnt. Please create a new folder.")" 8 60
@@ -302,18 +278,8 @@ select_mount_point() {
                     fi
                     return 0
                 fi
-                ;;
-            new)
-                # Create default name from server and export
-                EXPORT_NAME=$(basename "$NFS_EXPORT")
-                DEFAULT_NAME="nfs_${NFS_SERVER}_${EXPORT_NAME}"
-                FOLDER_NAME=$(whiptail --inputbox "$(translate "Enter new folder name:")" 10 60 "$DEFAULT_NAME" --title "$(translate "New Folder in /mnt")" 3>&1 1>&2 2>&3)
-                if [[ -n "$FOLDER_NAME" ]]; then
-                    MOUNT_POINT="/mnt/$FOLDER_NAME"
-                    return 0
-                fi
-                ;;
-            custom)
+                ;;    
+            3)
                 MOUNT_POINT=$(whiptail --inputbox "$(translate "Enter full path for mount point:")" 10 70 "/mnt/nfs_share" --title "$(translate "Custom Path")" 3>&1 1>&2 2>&3)
                 if [[ -n "$MOUNT_POINT" ]]; then
                     return 0
@@ -328,22 +294,18 @@ select_mount_point() {
 
 configure_mount_options() {
     MOUNT_TYPE=$(whiptail --title "$(translate "Mount Options")" --menu "$(translate "Select mount configuration:")" 15 70 4 \
-    "default" "$(translate "Default options")" \
-    "readonly" "$(translate "Read-only mount")" \
-    "performance" "$(translate "Performance optimized")" \
-    "custom" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
+    "1" "$(translate "Default options")" \
+    "2" "$(translate "Read-only mount")" \
+    "3" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
     
     case "$MOUNT_TYPE" in
-        default)
+        1)
             MOUNT_OPTIONS="rw,hard,intr,rsize=8192,wsize=8192,timeo=14"
             ;;
-        readonly)
+        2)
             MOUNT_OPTIONS="ro,hard,intr,rsize=8192,timeo=14"
             ;;
-        performance)
-            MOUNT_OPTIONS="rw,hard,intr,rsize=1048576,wsize=1048576,timeo=14,retrans=2"
-            ;;
-        custom)
+        3)
             MOUNT_OPTIONS=$(whiptail --inputbox "$(translate "Enter custom mount options:")" 10 70 "rw,hard,intr" --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
             [[ -z "$MOUNT_OPTIONS" ]] && MOUNT_OPTIONS="rw,hard,intr"
             ;;
@@ -380,15 +342,21 @@ validate_export_exists() {
     fi
 }
 
+
+
 mount_nfs_share() {
     # Step 0: Install NFS client first
     install_nfs_client || return
     
     # Step 1: Select server
     select_nfs_server || return
+    show_proxmenux_logo
+    msg_title "$(translate "Mount NFS Share on Host")"
+    msg_ok "$(translate "NFS server Selected")"
     
     # Step 2: Select export
     select_nfs_export || return
+     msg_ok "$(translate "NFS export Selected")"
     
     # Step 2.5: Validate export exists
     if ! validate_export_exists "$NFS_SERVER" "$NFS_EXPORT"; then
@@ -406,12 +374,6 @@ mount_nfs_share() {
     configure_mount_options || return
 
 
-# ===================================================  
-
-    show_proxmenux_logo
-    msg_title "$(translate "Mount NFS Share on Host")"
-    
-# =====================================================
     
     
     if ! pct exec "$CTID" -- test -d "$MOUNT_POINT"; then
