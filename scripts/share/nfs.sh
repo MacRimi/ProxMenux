@@ -260,6 +260,14 @@ create_nfs_export() {
     echo -e "${TAB}${BOLD}$(translate "Connection details:")${CL}"
     echo -e "${TAB}${BGN}$(translate "Server IP:")${CL}  ${CUS}$CT_IP${CL}"
     echo -e "${TAB}${BGN}$(translate "Export path:")${CL} ${CUS}$MOUNT_POINT${CL}"
+    echo -e "${TAB}${CUS}mount -t nfs $CT_IP:$MOUNT_POINT /mnt/nfs${CL}"
+    echo -e "${TAB}${BGN}$(translate "Mount options:")${CL} ${CUS}$OPTIONS${CL}"
+    echo -e ""
+    echo -e "${TAB}${BOLD}$(translate "Mount command examples:")${CL}"
+    echo -e "${TAB}${CUS}mount -t nfs $CT_IP:$MOUNT_POINT /mnt/nfs${CL}"
+        if [[ -n "$NFS_OPTS" ]]; then
+            echo -e "${TAB}${CUS}mount -t nfs -o $NFS_OPTS $CT_IP:$MOUNT_POINT /mnt/nfs${CL}"
+        fi
     echo -e
     msg_success "$(translate "Press Enter to return to menu...")"
     read -r
