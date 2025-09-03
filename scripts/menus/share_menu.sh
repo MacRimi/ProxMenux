@@ -36,8 +36,8 @@ while true; do
             "4"         "$(translate "Set up NFS Server in LXC      (only privileged)")" \
             "5"         "$(translate "Set up Samba Server in LXC    (only privileged)")" \
             "" "\Z4──────────── $(translate "HOST") ─────────────\Zn" \
-            "6"         "$(translate "Configure NFS share    on Host")" \
-            "7"         "$(translate "Configure Samba share  on Host")" \
+            "6"         "$(translate "Configure NFS shared   on Host")" \
+            "7"         "$(translate "Configure Samba shared on Host")" \
             "8"         "$(translate "Configure Local Shared on Host")" \
             ""          "" \
             "9"         "$(translate "Help & Info (commands)")" \
