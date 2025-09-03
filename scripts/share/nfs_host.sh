@@ -34,10 +34,7 @@ else
     SHARE_COMMON_LOADED=true
 fi
 
-if ! command -v pveversion >/dev/null 2>&1; then
-    dialog --backtitle "ProxMenux" --title "$(translate "Error")" --msgbox "$(translate "This script must be run on a Proxmox host.")" 8 60
-    exit 1
-fi
+
 
 discover_nfs_servers() {
     show_proxmenux_logo
@@ -195,10 +192,6 @@ select_nfs_export() {
 }
 
 
-
-
-
-
 select_host_mount_point() {
     local export_name=$(basename "$NFS_EXPORT")
     local default_path="/mnt/shared_nfs_${export_name}"
@@ -206,8 +199,6 @@ select_host_mount_point() {
     MOUNT_POINT=$(pmx_select_host_mount_point "$(translate "NFS Mount Point")" "$default_path")
     [[ -n "$MOUNT_POINT" ]] && return 0 || return 1
 }
-
-
 
 
 
@@ -250,11 +241,11 @@ configure_host_mount_options() {
         fi
     fi
 
-    # Test basic NFS connectivity before offering Proxmox storage
-    show_proxmenux_logo
+
+
     msg_info "$(translate "Testing NFS export accessibility...")"
     
-    # Try a simple mount test to validate the export
+
     TEMP_MOUNT="/tmp/nfs_test_$$"
     mkdir -p "$TEMP_MOUNT" 2>/dev/null
     
@@ -264,7 +255,7 @@ configure_host_mount_options() {
         rmdir "$TEMP_MOUNT" 2>/dev/null || true
         msg_ok "$(translate "NFS export is accessible")"
         
-        # Export is accessible, offer Proxmox storage integration
+
         if whiptail --yesno "$(translate "Do you want to add this as Proxmox storage?")\n\n$(translate "This will make the NFS share available as storage in Proxmox web interface.")" 10 70 --title "$(translate "Proxmox Storage")"; then
             PROXMOX_STORAGE=true
             
@@ -289,7 +280,7 @@ configure_host_mount_options() {
             fi
         fi
     else
-        # Export is not accessible or has issues
+
         rmdir "$TEMP_MOUNT" 2>/dev/null || true
         msg_warn "$(translate "NFS export accessibility test failed")"
         
@@ -325,11 +316,12 @@ add_proxmox_nfs_storage() {
     local storage_id="$1"
     local server="$2"
     local export="$3"
-    local mount_point="$4"
+    local content="${4:-backup,iso,vztmpl}"
     
     msg_info "$(translate "Starting Proxmox storage integration...")"
     
-    if ! which pvesm >/dev/null 2>&1; then
+    if ! command -v pvesm >/dev/null 2>&1; then
+        show_proxmenux_logo
         msg_error "$(translate "pvesm command not found. This should not happen on Proxmox.")"
         echo "Press Enter to continue..."
         read -r
@@ -338,6 +330,7 @@ add_proxmox_nfs_storage() {
     
     msg_ok "$(translate "pvesm command found")"
 
+    # Check if storage ID already exists
     if pvesm status "$storage_id" >/dev/null 2>&1; then
         msg_warn "$(translate "Storage ID already exists:") $storage_id"
         if ! whiptail --yesno "$(translate "Storage ID already exists. Do you want to remove and recreate it?")" 8 60 --title "$(translate "Storage Exists")"; then
@@ -348,33 +341,34 @@ add_proxmox_nfs_storage() {
     
     msg_ok "$(translate "Storage ID is available")"
 
-    msg_info "$(translate "Creating NFS storage...")"
-    CONTENT_LIST="backup,iso,vztmpl"
-
-    # Use NFS version 3 for better compatibility
-    NFS_VERSION="3"
-
-    PVESM_OUTPUT=$(pvesm add nfs "$storage_id" \
+    msg_info "$(translate "Creating NFS storage (Proxmox will auto-detect optimal NFS version)...")"
+    
+    # Let Proxmox handle NFS version negotiation automatically
+    if pvesm_output=$(pvesm add nfs "$storage_id" \
         --server "$server" \
         --export "$export" \
-        --content "$CONTENT_LIST" \
-        --options "vers=$NFS_VERSION" 2>&1)
-    PVESM_RESULT=$?
-    
-    if [[ $PVESM_RESULT -eq 0 ]]; then
-        msg_ok "$(translate "NFS storage added successfully to Proxmox!")"
+        --content "$content" 2>&1); then
+        
+        msg_ok "$(translate "NFS storage added successfully!")"
+        
+        # Get the actual NFS version that Proxmox negotiated
+        local nfs_version="Auto-negotiated"
+        if pvesm config "$storage_id" 2>/dev/null | grep -q "options.*vers="; then
+            nfs_version="v$(pvesm config "$storage_id" | grep "options" | grep -o "vers=[0-9.]*" | cut -d= -f2)"
+        fi
+        
         echo -e ""
         echo -e "${TAB}${BGN}$(translate "Storage ID:")${CL} ${BL}$storage_id${CL}"
         echo -e "${TAB}${BGN}$(translate "Server:")${CL} ${BL}$server${CL}"
         echo -e "${TAB}${BGN}$(translate "Export:")${CL} ${BL}$export${CL}"
-        echo -e "${TAB}${BGN}$(translate "Content Types:")${CL} ${BL}$CONTENT_LIST${CL}"
-        echo -e "${TAB}${BGN}$(translate "NFS Version:")${CL} ${BL}$NFS_VERSION${CL}"
+        echo -e "${TAB}${BGN}$(translate "Content Types:")${CL} ${BL}$content${CL}"
+        echo -e "${TAB}${BGN}$(translate "NFS Version:")${CL} ${BL}$nfs_version${CL}"
         echo -e ""
         msg_ok "$(translate "Storage is now available in Proxmox web interface under Datacenter > Storage")"
         return 0
     else
         msg_error "$(translate "Failed to add NFS storage to Proxmox.")"
-        echo "Error details: $PVESM_OUTPUT"
+        echo "$(translate "Error details:"): $pvesm_output"
         msg_warn "$(translate "The NFS share is still mounted, but not added as Proxmox storage.")"
         msg_info2 "$(translate "You can add it manually through:")"
         echo -e "${TAB}• $(translate "Proxmox web interface: Datacenter > Storage > Add > NFS")"
@@ -480,7 +474,7 @@ mount_host_nfs_share() {
         fi
 
         if [[ "$PROXMOX_STORAGE" == "true" ]]; then
-            add_proxmox_nfs_storage "$STORAGE_ID" "$NFS_SERVER" "$NFS_EXPORT" "$MOUNT_POINT"
+            add_proxmox_nfs_storage "$STORAGE_ID" "$NFS_SERVER" "$NFS_EXPORT" "$MOUNT_CONTENT"
         fi
 
         echo -e ""
@@ -559,34 +553,19 @@ view_host_nfs_mounts() {
         echo "$(translate "No permanent NFS mounts configured on host.")"
     fi
 
-    echo -e "${BOLD}$(translate "Proxmox NFS Storage:")${CL}"
+    echo ""
+    echo "$(translate "Proxmox NFS Storage Status:")"
     if which pvesm >/dev/null 2>&1; then
-        NFS_STORAGES=$(pvesm status 2>/dev/null | grep "nfs" | awk '{print $1}' || true)
+        NFS_STORAGES=$(pvesm status 2>/dev/null | grep "nfs" || true)
         if [[ -n "$NFS_STORAGES" ]]; then
-            while IFS= read -r storage_id; do
-                if [[ -n "$storage_id" ]]; then
-                    echo -e "${TAB}${BGN}$(translate "Storage ID:")${CL} ${BL}$storage_id${CL}"
-
-                    STORAGE_INFO=$(pvesm config "$storage_id" 2>/dev/null || true)
-                    if [[ -n "$STORAGE_INFO" ]]; then
-                        SERVER=$(echo "$STORAGE_INFO" | grep "server" | awk '{print $2}')
-                        EXPORT=$(echo "$STORAGE_INFO" | grep "export" | awk '{print $2}')
-                        CONTENT=$(echo "$STORAGE_INFO" | grep "content" | awk '{print $2}')
-                        
-                        [[ -n "$SERVER" ]] && echo -e "${TAB}  ${BGN}$(translate "Server:")${CL} ${BL}$SERVER${CL}"
-                        [[ -n "$EXPORT" ]] && echo -e "${TAB}  ${BGN}$(translate "Export:")${CL} ${BL}$EXPORT${CL}"
-                        [[ -n "$CONTENT" ]] && echo -e "${TAB}  ${BGN}$(translate "Content:")${CL} ${BL}$CONTENT${CL}"
-                    fi
-                    echo ""
-                fi
-            done <<< "$NFS_STORAGES"
+            echo "$NFS_STORAGES"
         else
-            echo -e "${TAB}$(translate "No NFS storage configured in Proxmox")"
+            echo "$(translate "No NFS storage configured in Proxmox.")"
         fi
     else
-        echo -e "${TAB}$(translate "pvesm command not available")"
+        echo "$(translate "pvesm command not available.")"
     fi
-    
+        
     echo ""
     msg_success "$(translate "Press Enter to return to menu...")"
     read -r
@@ -701,7 +680,7 @@ manage_proxmox_storage() {
         return
     fi
 
-     OPTIONS=()
+    OPTIONS=()
     while IFS= read -r storage_id; do
         if [[ -n "$storage_id" ]]; then
             STORAGE_INFO=$(pvesm config "$storage_id" 2>/dev/null || true)
