@@ -43,7 +43,7 @@ install_nfs_client() {
 
 
     show_proxmenux_logo
-    msg_title "$(translate "Mount NFS Share on Host")"
+    msg_title "$(translate "Installing NFS Client in LXC")"
 
     msg_info "$(translate "Installing NFS client packages...")"
     if ! pct exec "$CTID" -- apt-get update >/dev/null 2>&1; then
@@ -81,7 +81,7 @@ install_nfs_client() {
 
 discover_nfs_servers() {
     show_proxmenux_logo
-    msg_title "$(translate "Mount NFS Share on Host")"
+    msg_title "$(translate "Mount NFS Client in LXC")"
     msg_info "$(translate "Scanning network for NFS servers...")"
 
     
