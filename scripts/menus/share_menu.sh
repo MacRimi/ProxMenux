@@ -28,11 +28,11 @@ while true; do
     OPTION=$(dialog --colors --backtitle "ProxMenux" \
         --title "$(translate "Mount and Share Manager")" \
         --menu "\n$(translate "Select an option:")" 25 80 15 \
-            "" "\Z4────────────────── $(translate "HOST") ───────────────────\Zn" \
+            "" "\Z4───────────────────── $(translate "HOST") ──────────────────────\Zn" \
             "1"         "$(translate "Configure NFS shared   on Host")" \
             "2"         "$(translate "Configure Samba shared on Host")" \
             "3"         "$(translate "Configure Local Shared on Host")" \
-            ""  "\Z4────────────────── $(translate "LXC") ───────────────────\Zn" \
+            ""  "\Z4───────────────────── $(translate "LXC") ──────────────────────\Zn" \
             "4"         "$(translate "Configure LXC Mount Points    (Host ↔ Container)")" \
             ""          "" \
             "5"         "$(translate "Configure NFS Client in LXC   (only privileged)")" \
