@@ -13,6 +13,7 @@
 # - Manage credentials securely
 # ==========================================================
 
+
 # Configuration
 REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
 BASE_DIR="/usr/local/share/proxmenux"
@@ -24,37 +25,20 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
+
+SHARE_COMMON_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/scripts/global/share-common.func"
+if ! source <(curl -s "$SHARE_COMMON_URL" 2>/dev/null); then
+    msg_error "$(translate "Could not load shared functions. Script cannot continue.")"
+    exit 1
+fi
+
+
 load_language
 initialize_cache
 
-# === Select CT ===
-CT_LIST=$(pct list | awk 'NR>1 {print $1, $3}')
-if [ -z "$CT_LIST" ]; then
-    dialog --title "$(translate "Error")" --msgbox "$(translate "No CTs available in the system.")" 8 50
-    exit 1
-fi
 
-CTID=$(dialog --title "$(translate "Select CT")" --menu "$(translate "Select the CT to manage Samba client:")" 20 70 12 $CT_LIST 3>&1 1>&2 2>&3)
-if [ -z "$CTID" ]; then
-    dialog --title "$(translate "Error")" --msgbox "$(translate "No CT was selected.")" 8 50
-    exit 1
-fi
+select_privileged_lxc
 
-
-
-# === Start CT if not running ===
-CT_STATUS=$(pct status "$CTID" | awk '{print $2}')
-if [ "$CT_STATUS" != "running" ]; then
-    show_proxmenux_logo
-    msg_info "$(translate "Starting CT") $CTID..."
-    pct start "$CTID"
-    sleep 2
-    if [ "$(pct status "$CTID" | awk '{print $2}')" != "running" ]; then
-        msg_error "$(translate "Failed to start the CT.")"
-        exit 1
-    fi
-    msg_ok "$(translate "CT started successfully.")"
-fi
 
 install_samba_client() {
 
