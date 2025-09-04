@@ -524,20 +524,20 @@ select_host_mount_point() {
 
 configure_host_mount_options() {
     MOUNT_TYPE=$(whiptail --title "$(translate "Mount Options")" --menu "$(translate "Select mount configuration:")" 15 70 4 \
-    "default" "$(translate "Default options")" \
-    "readonly" "$(translate "Read-only mount")" \
-    "custom" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
+    "1" "$(translate "Default options read/write")" \
+    "2" "$(translate "Read-only mount")" \
+    "3" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
     
     [[ $? -ne 0 ]] && return 1
     
     case "$MOUNT_TYPE" in
-        default)
+        1)
             MOUNT_OPTIONS="rw,noperm,file_mode=0664,dir_mode=0775,iocharset=utf8"
             ;;
-        readonly)
+        2)
             MOUNT_OPTIONS="ro,noperm,file_mode=0444,dir_mode=0555,iocharset=utf8"
             ;;
-        custom)
+        3)
             MOUNT_OPTIONS=$(whiptail --inputbox "$(translate "Enter custom mount options:")" 10 70 "rw,file_mode=0664,dir_mode=0775" --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
             [[ $? -ne 0 ]] && return 1
             [[ -z "$MOUNT_OPTIONS" ]] && MOUNT_OPTIONS="rw,noperm,file_mode=0664,dir_mode=0775"
