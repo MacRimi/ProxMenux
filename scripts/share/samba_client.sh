@@ -651,22 +651,19 @@ select_mount_point() {
 
 configure_mount_options() {
     MOUNT_TYPE=$(whiptail --title "$(translate "Mount Options")" --menu "$(translate "Select mount configuration:")" 15 70 4 \
-    "default" "$(translate "Default options")" \
-    "readonly" "$(translate "Read-only mount")" \
-    "performance" "$(translate "Performance optimized")" \
+    "1" "$(translate "Default options read/write")" \
+    "2" "$(translate "Read-only mount")" \
+    "3" "$(translate "Performance optimized")" \
     "custom" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
     
     case "$MOUNT_TYPE" in
-        default)
+        1)
             MOUNT_OPTIONS="rw,file_mode=0664,dir_mode=0775,iocharset=utf8"
             ;;
-        readonly)
+        1)
             MOUNT_OPTIONS="ro,file_mode=0444,dir_mode=0555,iocharset=utf8"
             ;;
-        performance)
-            MOUNT_OPTIONS="rw,file_mode=0664,dir_mode=0775,iocharset=utf8,cache=strict,rsize=1048576,wsize=1048576"
-            ;;
-        custom)
+        3)
             MOUNT_OPTIONS=$(whiptail --inputbox "$(translate "Enter custom mount options:")" 10 70 "rw,file_mode=0664,dir_mode=0775" --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
             [[ -z "$MOUNT_OPTIONS" ]] && MOUNT_OPTIONS="rw,file_mode=0664,dir_mode=0775"
             ;;
