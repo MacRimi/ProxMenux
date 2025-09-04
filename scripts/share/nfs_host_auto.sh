@@ -204,30 +204,31 @@ select_host_mount_point() {
 
 configure_host_mount_options() {
     MOUNT_TYPE=$(whiptail --title "$(translate "Mount Options")" --menu "$(translate "Select mount configuration:")" 15 70 4 \
-    "default" "$(translate "Default options")" \
-    "readonly" "$(translate "Read-only mount")" \
-    "performance" "$(translate "Performance optimized")" \
-    "custom" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
+    "1"     "$(translate "Default options read/write")" \
+    "2"    "$(translate "Read-only mount")" \
+    "3"      "$(translate "Enter custom options")" 3>&1 1>&2 2>&3)
     
     [[ $? -ne 0 ]] && return 1
     
     case "$MOUNT_TYPE" in
-        default)
-            MOUNT_OPTIONS="rw,hard,intr,rsize=8192,wsize=8192,timeo=14"
+        1)
+
+            MOUNT_OPTIONS="rw,hard,rsize=1048576,wsize=1048576,timeo=600,retrans=2"
             ;;
-        readonly)
-            MOUNT_OPTIONS="ro,hard,intr,rsize=8192,timeo=14"
+        2)
+
+            MOUNT_OPTIONS="ro,hard,rsize=65536,wsize=65536,timeo=600,retrans=2"
             ;;
-        performance)
-            MOUNT_OPTIONS="rw,hard,intr,rsize=1048576,wsize=1048576,timeo=14,retrans=2"
-            ;;
-        custom)
-            MOUNT_OPTIONS=$(whiptail --inputbox "$(translate "Enter custom mount options:")" 10 70 "rw,hard,intr" --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
+        3)
+
+            MOUNT_OPTIONS=$(whiptail --inputbox "$(translate "Enter custom mount options:")" \
+                10 70 "rw,hard,rsize=1048576,wsize=1048576,timeo=600,retrans=2" \
+                --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
             [[ $? -ne 0 ]] && return 1
-            [[ -z "$MOUNT_OPTIONS" ]] && MOUNT_OPTIONS="rw,hard,intr"
+            [[ -z "$MOUNT_OPTIONS" ]] && MOUNT_OPTIONS="rw,hard"
             ;;
         *)
-            MOUNT_OPTIONS="rw,hard,intr,rsize=8192,wsize=8192,timeo=14"
+            MOUNT_OPTIONS="rw,hard,rsize=65536,wsize=65536,timeo=600,retrans=2"
             ;;
     esac
 
