@@ -759,7 +759,7 @@ mount_samba_share() {
     configure_mount_options || return
     
     show_proxmenux_logo
-    msg_title "$(translate "Installing Samba Client")"
+    msg_title "$(translate "Installing Samba Client in LXC")"
 
     if ! pct exec "$CTID" -- test -d "$MOUNT_POINT"; then
         if pct exec "$CTID" -- mkdir -p "$MOUNT_POINT"; then
