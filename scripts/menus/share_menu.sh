@@ -52,7 +52,7 @@ while true; do
             ;;
 
         1)
-            bash <(curl -s "$REPO_URL/scripts/share/nfs_host_auto.sh")
+            bash <(curl -s "$REPO_URL/scripts/share/nfs_host.sh")
             ;;
         2)
             bash <(curl -s "$REPO_URL/scripts/share/samba_host.sh")
@@ -73,7 +73,7 @@ while true; do
             bash <(curl -s "$REPO_URL/scripts/share/nfs_lxc_server.sh")
             ;;
         8)
-            bash <(curl -s "$REPO_URL/scripts/share/samba.sh")
+            bash <(curl -s "$REPO_URL/scripts/share/samba_lxc_server.sh")
             ;;
         h)
             bash <(curl -s "$REPO_URL/scripts/share/commands_share.sh")
