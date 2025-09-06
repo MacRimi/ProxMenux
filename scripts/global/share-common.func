@@ -432,7 +432,7 @@ select_container_mount_point() {
                 ;;
 
             3)
-                exit 1
+                return 0
                 ;;
         esac
 
