@@ -352,7 +352,6 @@ mount_host_directory_to_lxc() {
     chown -R root:"$group_name" "$host_dir" 2>/dev/null || true
     chmod -R 2775 "$host_dir" 2>/dev/null || true
 
-    msg_ok "$(translate 'Host group configured')"
     
     # Step 4: Select container mount point
     local ct_mount_point
