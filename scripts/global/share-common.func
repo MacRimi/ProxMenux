@@ -234,8 +234,7 @@ pmx_select_host_mount_point() {
     while true; do
         choice=$(whiptail --title "$title" --menu "$(translate "Where do you want the host folder?")" 16 76 3 \
             "1"  "$(translate "Create new folder in /mnt")" \
-            "2" "$(translate "Use existing folder")" \
-            "3"  "$(translate "Enter custom path")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
+            "2" "$(translate "Use existing folder")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
 
         case "$choice" in
             1)
@@ -246,23 +245,6 @@ pmx_select_host_mount_point() {
                 ;;
             
             2)
-                existing_dirs=($(ls -1d /mnt/*/ 2>/dev/null | sed 's:/$::'))
-                if [[ ${#existing_dirs[@]} -eq 0 ]]; then
-                    whiptail --msgbox "$(translate "No existing folders found in /mnt")" 8 60
-                    continue
-                fi
-                mount_point=$(whiptail --title "$(translate "Select Existing Folder")" \
-                    --menu "$(translate "Choose a folder in /mnt:")" 20 70 10 \
-                    $(for d in "${existing_dirs[@]}"; do echo "$d" "$(basename "$d")"; done) \
-                    3>&1 1>&2 2>&3) || continue
-
-                if [[ "$context" =~ ^(nfs|samba)$ ]] && [[ -n "$(ls -A "$mount_point" 2>/dev/null)" ]]; then
-                    whiptail --yesno "$(translate "Warning: The selected folder is not empty. Files may not be accessible once the network share is mounted. Proceed anyway?")" 12 70 || continue
-                fi
-                echo "$mount_point"; return 0
-                ;;
-            
-            3)
                 result=$(whiptail --inputbox "$(translate "Enter full path:")" 10 80 "$default_path" --title "$(translate "Custom Path")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
                 [[ -z "$result" ]] && continue
                 echo "$result"; return 0
