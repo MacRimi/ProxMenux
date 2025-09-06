@@ -52,7 +52,7 @@ discover_nfs_servers() {
     
     if [[ -z "$SERVERS" ]]; then
         cleanup
-        whiptail --title "$(translate "No Servers Found")" --msgbox "$(translate "No NFS servers found on the network.")\n\n$(translate "You can add servers manually.")" 10 60
+        dialog --clear --title "$(translate "No Servers Found")" --msgbox "$(translate "No NFS servers found on the network.")\n\n$(translate "You can add servers manually.")" 10 60
         return 1
     fi
     
@@ -67,12 +67,11 @@ discover_nfs_servers() {
     
     if [[ ${#OPTIONS[@]} -eq 0 ]]; then
         cleanup
-        whiptail --title "$(translate "No Valid Servers")" --msgbox "$(translate "No accessible NFS servers found.")" 8 50
+        dialog --clear --title "$(translate "No Valid Servers")" --msgbox "$(translate "No accessible NFS servers found.")" 8 50
         return 1
     fi
     cleanup
-    clear
-    NFS_SERVER=$(whiptail --title "$(translate "Select NFS Server")" --menu "$(translate "Choose an NFS server:")" 20 80 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
+    NFS_SERVER=$(dialog --clear --backtitle "ProxMenux" --title "$(translate "Select NFS Server")" --menu "$(translate "Choose an NFS server:")" 20 80 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
     [[ -n "$NFS_SERVER" ]] && return 0 || return 1
 }
 
