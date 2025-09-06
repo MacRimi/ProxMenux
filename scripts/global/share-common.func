@@ -267,7 +267,7 @@ pmx_select_host_mount_point() {
 
 select_host_directory_() {
     local method choice result
-    clear
+    
     method=$(whiptail --title "$(translate "Select Host Directory")" --menu "$(translate "How do you want to select the HOST folder to mount?")" 15 70 4 \
         "mnt" "$(translate "Select from /mnt directories")" \
         "manual" "$(translate "Enter path manually")" 3>&1 1>&2 2>&3) || return 1
