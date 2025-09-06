@@ -288,11 +288,12 @@ select_host_directory() {
                 msg_error "$(translate "No directories found in") $base_path"
                 return 1
             fi
-            
+            clear
             result=$(whiptail --title "$(translate "Select Host Folder")" \
                 --menu "$(translate "Select the folder to mount:")" 20 80 10 "${options[@]}" 3>&1 1>&2 2>&3)
             ;;
         manual)
+            clear
             result=$(whiptail --title "$(translate "Enter Path")" \
                 --inputbox "$(translate "Enter the full path to the host folder:")" 10 70 "/mnt/" 3>&1 1>&2 2>&3)
             ;;
