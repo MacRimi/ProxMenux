@@ -320,7 +320,7 @@ select_host_directory_() {
 select_host_directory() {
     local method result
 
-
+    clear
     method=$(whiptail --title "$(translate "Select Host Directory")" \
         --menu "$(translate "How do you want to select the HOST folder to mount?")" 15 70 4 \
         "mnt"    "$(translate "Select from /mnt directories")" \
@@ -363,7 +363,7 @@ select_host_directory() {
     }
 
     echo "$result"
-    return 0
+
 }
 
 
@@ -432,7 +432,7 @@ select_container_mount_point() {
                 ;;
 
             3)
-                exit 0
+                return 1
                 ;;
         esac
 
