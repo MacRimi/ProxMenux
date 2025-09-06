@@ -736,9 +736,7 @@ mount_host_samba_share() {
         fi
 
         HOST_GID=$(pmx_ensure_host_group "$GROUP" 101000) || return 1
-        # Forzar que los ficheros/directorios se monten con este GID
         MOUNT_OPTIONS="$MOUNT_OPTIONS,gid=$HOST_GID,uid=0"
-        msg_ok "$(translate "Directory prepared with shared group:") $GROUP (GID: $HOST_GID)"
     fi
 
     
