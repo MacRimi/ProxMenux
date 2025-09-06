@@ -2272,6 +2272,18 @@
     "type": "ct"
   },
   {
+    "name": "Leantime",
+    "slug": "leantime",
+    "desc": "Leantime is a goals focused project management system for non-project managers. Building with ADHD, Autism, and dyslexia in mind. ",
+    "script": "ct/leantime.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/leantime.sh",
+    "categories": [
+      12
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Librespeed Rust",
     "slug": "librespeed-rust",
     "desc": "Librespeed is a no flash, no java, no websocket speedtest server. This community script deploys the rust version for simplicity and low resource usage.",
@@ -3466,11 +3478,7 @@
       "Show Login Credentials, type `cat ~/paperless-ngx.creds` in the LXC console",
       "Script installs English as default OCR language. To install additional languages, use `apt-get install tesseract-ocr-[lang]`, where [lang] is the language code (e.g. `apt-get install tesseract-ocr-deu`)."
     ],
-    "type": "ct",
-    "default_credentials": {
-      "username": "admin",
-      "password": null
-    }
+    "type": "ct"
   },
   {
     "name": "Part-DB",
