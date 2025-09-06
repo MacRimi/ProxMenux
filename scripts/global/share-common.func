@@ -371,11 +371,9 @@ select_container_mount_point() {
                 ;;
 
             2)
-                #existing_dirs=$(pct exec "$ctid" -- ls -1 /mnt 2>/dev/null | awk '{print "/mnt/"$1" "$1}')
-                existing_dirs=$(pct exec "$ctid" -- find /mnt -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
-
-                if [[ -z "$existing_dirs" ]]; then
-                    whiptail --msgbox "$(translate "No existing directories found in /mnt")" 8 60
+                DIRS=$(pct exec "$CTID" -- find /mnt -maxdepth 1 -mindepth 1 -type d 2>/dev/null)
+                if [[ -z "$DIRS" ]]; then
+                    whiptail --title "$(translate "No Folders")" --msgbox "$(translate "No folders found in /mnt. Please create a new folder.")" 8 60
                     continue
                 fi
                 mount_point=$(whiptail --title "$(translate "Select Existing Folder")" \
