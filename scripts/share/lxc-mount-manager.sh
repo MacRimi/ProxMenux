@@ -331,7 +331,7 @@ mount_host_directory_to_lxc() {
         fi
     fi
 
-    
+    clear 
     # Step 2: Select host directory
     local host_dir
     host_dir=$(select_host_directory)
