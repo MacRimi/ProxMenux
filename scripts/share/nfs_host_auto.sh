@@ -212,23 +212,21 @@ configure_host_mount_options() {
     
     case "$MOUNT_TYPE" in
         1)
-
-            MOUNT_OPTIONS="rw,hard,rsize=1048576,wsize=1048576,timeo=600,retrans=2"
+            MOUNT_OPTIONS="rw,hard,nofail,rsize=131072,wsize=131072,timeo=600,retrans=2" 
             ;;
         2)
-
-            MOUNT_OPTIONS="ro,hard,rsize=65536,wsize=65536,timeo=600,retrans=2"
+            MOUNT_OPTIONS="ro,hard,nofail,rsize=131072,wsize=131072,timeo=600,retrans=2" 
             ;;
         3)
 
             MOUNT_OPTIONS=$(whiptail --inputbox "$(translate "Enter custom mount options:")" \
-                10 70 "rw,hard,rsize=1048576,wsize=1048576,timeo=600,retrans=2" \
+                10 70 "rw,hard,nofail,rsize=131072,wsize=131072,timeo=600,retrans=2" \
                 --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
             [[ $? -ne 0 ]] && return 1
-            [[ -z "$MOUNT_OPTIONS" ]] && MOUNT_OPTIONS="rw,hard"
+            [[ -z "$MOUNT_OPTIONS" ]] && MOUNT_OPTIONS="rw,hard,nofail"
             ;;
         *)
-            MOUNT_OPTIONS="rw,hard,rsize=65536,wsize=65536,timeo=600,retrans=2"
+            MOUNT_OPTIONS="rw,hard,nofail,rsize=131072,wsize=131072,timeo=600,retrans=2"
             ;;
     esac
 
