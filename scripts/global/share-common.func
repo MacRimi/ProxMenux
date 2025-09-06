@@ -232,13 +232,13 @@ pmx_select_host_mount_point() {
     local choice folder_name result existing_dirs mount_point
 
     while true; do
-        choice=$(dialog --backtitle "ProxMenux" --title "$title" --menu "\n$(translate "Where do you want the host folder?")" 16 76 3 \
+        choice=$(whiptail --title "$title" --menu "$(translate "Where do you want the host folder?")" 16 76 3 \
             "1"  "$(translate "Create new folder in /mnt")" \
+            "2" "$(translate "Use existing folder")" \
             "3"  "$(translate "Enter custom path")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
 
         case "$choice" in
             1)
-                clear
                 folder_name=$(whiptail --inputbox "$(translate "Enter folder name for /mnt:")" 10 70 "$(basename "$default_path")" --title "$(translate "Folder Name")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
                 [[ -z "$folder_name" ]] && continue
                 mount_point="/mnt/$folder_name"
@@ -246,7 +246,23 @@ pmx_select_host_mount_point() {
                 ;;
             
             2)
-                clear
+                existing_dirs=($(ls -1d /mnt/*/ 2>/dev/null | sed 's:/$::'))
+                if [[ ${#existing_dirs[@]} -eq 0 ]]; then
+                    whiptail --msgbox "$(translate "No existing folders found in /mnt")" 8 60
+                    continue
+                fi
+                mount_point=$(whiptail --title "$(translate "Select Existing Folder")" \
+                    --menu "$(translate "Choose a folder in /mnt:")" 20 70 10 \
+                    $(for d in "${existing_dirs[@]}"; do echo "$d" "$(basename "$d")"; done) \
+                    3>&1 1>&2 2>&3) || continue
+
+                if [[ "$context" =~ ^(nfs|samba)$ ]] && [[ -n "$(ls -A "$mount_point" 2>/dev/null)" ]]; then
+                    whiptail --yesno "$(translate "Warning: The selected folder is not empty. Files may not be accessible once the network share is mounted. Proceed anyway?")" 12 70 || continue
+                fi
+                echo "$mount_point"; return 0
+                ;;
+            
+            3)
                 result=$(whiptail --inputbox "$(translate "Enter full path:")" 10 80 "$default_path" --title "$(translate "Custom Path")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
                 [[ -z "$result" ]] && continue
                 echo "$result"; return 0
@@ -261,10 +277,16 @@ pmx_select_host_mount_point() {
 
 
 
+
+
+
+
+
+
 select_host_directory() {
     local method choice result
 
-    method=$(dialog --clear --backtitle "ProxMenux" --title "$(translate "Select Host Directory")" --menu "\n$(translate "How do you want to select the HOST folder to mount?")" 15 70 4 \
+    method=$(whiptail --title "$(translate "Select Host Directory")" --menu "$(translate "How do you want to select the HOST folder to mount?")" 15 70 4 \
         "mnt" "$(translate "Select from /mnt directories")" \
         "manual" "$(translate "Enter path manually")" 3>&1 1>&2 2>&3) || return 1
 
@@ -285,11 +307,11 @@ select_host_directory() {
                 return 1
             fi
             
-            result=$(dialog --title "$(translate "Select Host Folder")" \
-                --menu "\n$(translate "Select the folder to mount:")" 20 80 10 "${options[@]}" 3>&1 1>&2 2>&3)
+            result=$(whiptail --title "$(translate "Select Host Folder")" \
+                --menu "$(translate "Select the folder to mount:")" 20 80 10 "${options[@]}" 3>&1 1>&2 2>&3)
             ;;
         manual)
-            result=$(dialog --title "$(translate "Enter Path")" \
+            result=$(whiptail --title "$(translate "Enter Path")" \
                 --inputbox "$(translate "Enter the full path to the host folder:")" 10 70 "/mnt/" 3>&1 1>&2 2>&3)
             ;;
     esac
@@ -350,8 +372,8 @@ select_container_mount_point() {
     local choice mount_point existing_dirs options
 
     while true; do
-        choice=$(dialog --backtitle "ProxMenux" --title "$(translate "Configure Mount Point inside LXC")" \
-            --menu "\n$(translate "Where to mount inside container?")" 18 70 5 \
+        choice=$(whiptail --title "$(translate "Configure Mount Point inside LXC")" \
+            --menu "$(translate "Where to mount inside container?")" 18 70 5 \
             "1" "$(translate "Create new directory in /mnt")" \
             "2" "$(translate "Use existing directory in /mnt")" \
             "3" "$(translate "Enter path manually")" \
@@ -359,30 +381,32 @@ select_container_mount_point() {
 
         case "$choice" in
             1)
-                mount_point=$(dialog --inputbox "\n$(translate "Enter folder name for /mnt in LXC:")" 10 60 "shared" 3>&1 1>&2 2>&3) || continue
+                mount_point=$(whiptail --inputbox "$(translate "Enter folder name for /mnt:")" 10 60 "shared" 3>&1 1>&2 2>&3) || continue
                 [[ -z "$mount_point" ]] && continue
                 mount_point="/mnt/$mount_point"
                 pct exec "$ctid" -- mkdir -p "$mount_point" 2>/dev/null
                 ;;
+
             2)
+                #existing_dirs=$(pct exec "$ctid" -- ls -1 /mnt 2>/dev/null | awk '{print "/mnt/"$1" "$1}')
                 existing_dirs=$(pct exec "$ctid" -- find /mnt -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
+
                 if [[ -z "$existing_dirs" ]]; then
-                    dialog --msgbox "$(translate "No existing directories found in /mnt")" 8 60
+                    whiptail --msgbox "$(translate "No existing directories found in /mnt")" 8 60
                     continue
                 fi
-                options=()
-                while IFS= read -r dir; do
-                    name=$(basename "$dir")
-                    options+=("$dir" "$name")
-                done <<< "$existing_dirs"
-                mount_point=$(dialog --title "$(translate "Select Existing Folder in LXC")" \
-                    --menu "\n$(translate "Choose a folder from /mnt:")" 20 70 10 "${options[@]}" 3>&1 1>&2 2>&3) || continue
+                mount_point=$(whiptail --title "$(translate "Select Existing Folder")" \
+                    --menu "$(translate "Choose a folder from /mnt:")" 20 70 10 \
+                    $existing_dirs 3>&1 1>&2 2>&3) || continue
                 ;;
+
             3)
-                mount_point=$(dialog --inputbox "$(translate "Enter full path:")" 10 70 "/mnt/shared" 3>&1 1>&2 2>&3) || continue
+                mount_point=$(whiptail --inputbox "$(translate "Enter full path:")" 10 70 "/mnt/shared" 3>&1 1>&2 2>&3) || continue
                 [[ -z "$mount_point" ]] && continue
+                mount_point="/mnt/$mount_point"
                 pct exec "$ctid" -- mkdir -p "$mount_point" 2>/dev/null
                 ;;
+
             4)
                 return 1
                 ;;
@@ -397,8 +421,6 @@ select_container_mount_point() {
         fi
     done
 }
-
-
 
 
 
