@@ -320,7 +320,6 @@ select_host_directory_() {
 select_host_directory() {
     local method result
 
-    clear
     method=$(whiptail --title "$(translate "Select Host Directory")" \
         --menu "$(translate "How do you want to select the HOST folder to mount?")" 15 70 4 \
         "mnt"    "$(translate "Select from /mnt directories")" \
@@ -409,7 +408,6 @@ select_container_mount_point() {
     local choice mount_point existing_dirs options
 
     while true; do
-        clear
         choice=$(whiptail --title "$(translate "Configure Mount Point inside LXC")" \
             --menu "$(translate "Where to mount inside container?")" 18 70 5 \
             "1" "$(translate "Create new directory in /mnt")" \
