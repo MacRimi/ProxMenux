@@ -38,7 +38,7 @@ fi
 
 discover_nfs_servers() {
     show_proxmenux_logo
-    msg_title "$(translate "NFS Host Manager - Proxmox Host")"
+    msg_title "$(translate "Mount NFS Share on Host")"
     msg_info "$(translate "Scanning network for NFS servers...")"
 
     HOST_IP=$(hostname -I | awk '{print $1}')
@@ -52,7 +52,7 @@ discover_nfs_servers() {
     
     if [[ -z "$SERVERS" ]]; then
         cleanup
-        whiptail --title "$(translate "No Servers Found")" --msgbox "$(translate "No NFS servers found on the network.")\n\n$(translate "You can add servers manually.")" 10 60
+        dialog --clear --title "$(translate "No Servers Found")" --msgbox "$(translate "No NFS servers found on the network.")\n\n$(translate "You can add servers manually.")" 10 60
         return 1
     fi
     
@@ -67,11 +67,11 @@ discover_nfs_servers() {
     
     if [[ ${#OPTIONS[@]} -eq 0 ]]; then
         cleanup
-        whiptail --title "$(translate "No Valid Servers")" --msgbox "$(translate "No accessible NFS servers found.")" 8 50
+        dialog --clear --title "$(translate "No Valid Servers")" --msgbox "$(translate "No accessible NFS servers found.")" 8 50
         return 1
     fi
-    msg_ok "$(translate "NFS servers detected")"
-    NFS_SERVER=$(whiptail --title "$(translate "Select NFS Server")" --menu "$(translate "Choose an NFS server:")" 20 80 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
+    cleanup
+    NFS_SERVER=$(dialog --clear --backtitle "ProxMenux" --title "$(translate "Select NFS Server")" --menu "$(translate "Choose an NFS server:")" 20 80 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
     [[ -n "$NFS_SERVER" ]] && return 0 || return 1
 }
 
@@ -204,30 +204,29 @@ select_host_mount_point() {
 
 configure_host_mount_options() {
     MOUNT_TYPE=$(whiptail --title "$(translate "Mount Options")" --menu "$(translate "Select mount configuration:")" 15 70 4 \
-    "default" "$(translate "Default options")" \
-    "readonly" "$(translate "Read-only mount")" \
-    "performance" "$(translate "Performance optimized")" \
-    "custom" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
+    "1"     "$(translate "Default options read/write")" \
+    "2"    "$(translate "Read-only mount")" \
+    "3"      "$(translate "Enter custom options")" 3>&1 1>&2 2>&3)
     
     [[ $? -ne 0 ]] && return 1
     
     case "$MOUNT_TYPE" in
-        default)
-            MOUNT_OPTIONS="rw,hard,intr,rsize=8192,wsize=8192,timeo=14"
+        1)
+            MOUNT_OPTIONS="rw,hard,nofail,rsize=131072,wsize=131072,timeo=600,retrans=2" 
             ;;
-        readonly)
-            MOUNT_OPTIONS="ro,hard,intr,rsize=8192,timeo=14"
+        2)
+            MOUNT_OPTIONS="ro,hard,nofail,rsize=131072,wsize=131072,timeo=600,retrans=2" 
             ;;
-        performance)
-            MOUNT_OPTIONS="rw,hard,intr,rsize=1048576,wsize=1048576,timeo=14,retrans=2"
-            ;;
-        custom)
-            MOUNT_OPTIONS=$(whiptail --inputbox "$(translate "Enter custom mount options:")" 10 70 "rw,hard,intr" --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
+        3)
+
+            MOUNT_OPTIONS=$(whiptail --inputbox "$(translate "Enter custom mount options:")" \
+                10 70 "rw,hard,nofail,rsize=131072,wsize=131072,timeo=600,retrans=2" \
+                --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
             [[ $? -ne 0 ]] && return 1
-            [[ -z "$MOUNT_OPTIONS" ]] && MOUNT_OPTIONS="rw,hard,intr"
+            [[ -z "$MOUNT_OPTIONS" ]] && MOUNT_OPTIONS="rw,hard,nofail"
             ;;
         *)
-            MOUNT_OPTIONS="rw,hard,intr,rsize=8192,wsize=8192,timeo=14"
+            MOUNT_OPTIONS="rw,hard,nofail,rsize=131072,wsize=131072,timeo=600,retrans=2"
             ;;
     esac
 
@@ -241,11 +240,7 @@ configure_host_mount_options() {
         fi
     fi
 
-
-
-    msg_info "$(translate "Testing NFS export accessibility...")"
     
-
     TEMP_MOUNT="/tmp/nfs_test_$$"
     mkdir -p "$TEMP_MOUNT" 2>/dev/null
     
@@ -286,7 +281,7 @@ configure_host_mount_options() {
         
         if whiptail --yesno "$(translate "The NFS export could not be validated for accessibility.")\n\n$(translate "This might be due to:")\n• $(translate "Network connectivity issues")\n• $(translate "Export permission restrictions")\n• $(translate "Firewall blocking access")\n\n$(translate "Do you want to continue mounting anyway?")\n$(translate "(Proxmox storage integration will be skipped)")" 16 80 --title "$(translate "Export Validation Failed")"; then
             PROXMOX_STORAGE=false
-            msg_info "$(translate "Continuing without Proxmox storage integration due to accessibility issues.")"
+            msg_info2 "$(translate "Continuing without Proxmox storage integration due to accessibility issues.")"
             sleep 2
         else
             return 1
@@ -341,7 +336,6 @@ add_proxmox_nfs_storage() {
     
     msg_ok "$(translate "Storage ID is available")"
 
-    msg_info "$(translate "Creating NFS storage (Proxmox will auto-detect optimal NFS version)...")"
     
     # Let Proxmox handle NFS version negotiation automatically
     if pvesm_output=$(pvesm add nfs "$storage_id" \
@@ -439,6 +433,7 @@ mount_host_nfs_share() {
 
     show_proxmenux_logo
     msg_title "$(translate "Mount NFS Share on Host")"
+    msg_ok "$(translate "NFS server selected")"
 
     prepare_host_directory "$MOUNT_POINT" || return 1
 
