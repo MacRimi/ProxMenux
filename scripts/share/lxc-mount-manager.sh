@@ -203,7 +203,7 @@ setup_container_access() {
         
         # Show sample ACL entries
         if [[ $acl_count -gt 0 ]]; then
-            echo -e "${TAB}${BGN}$(translate "ACL entries:")${CL}"
+            echo -e "${TAB}${BGN}$(translate "  ACL entries:")${CL}"
             getfacl "$host_dir" 2>/dev/null | grep "^user:" | grep -v "^user::" | head -3 | while read acl_line; do
                 echo -e "${TAB}  ${BL}$acl_line${CL}"
             done
@@ -303,8 +303,6 @@ add_bind_mount() {
 
 
 
-
-
 mount_host_directory_to_lxc() {
     
     # Step 1: Select container
@@ -314,22 +312,25 @@ mount_host_directory_to_lxc() {
         return 1
     fi
 
-    show_proxmenux_logo
-    msg_title "$(translate 'Mount Host Directory to LXC Container')"
 
     # Step 1.1: Ensure running
     ct_status=$(pct status "$container_id" | awk '{print $2}')
     if [[ "$ct_status" != "running" ]]; then
+        show_proxmenux_logo
+        msg_title "$(translate 'Mount Host Directory to LXC Container')"
         msg_info "$(translate "Starting container") $container_id..."
         if pct start "$container_id"; then
             sleep 3
             msg_ok "$(translate "Container started")"
         else
             msg_error "$(translate "Failed to start container")"
+            echo -e ""
+            msg_success "$(translate 'Press Enter to continue...')"
+            read -r
             return 1
         fi
     fi
-    msg_ok "$(translate 'Container selected and running')"
+
 
     # Step 2: Select host directory
     local host_dir
@@ -337,7 +338,7 @@ mount_host_directory_to_lxc() {
     if [[ -z "$host_dir" ]]; then
         return 1
     fi
-    msg_ok "$(translate 'Host directory selected')"
+
 
     # Step 3: Setup group
     local group_name="sharedfiles"
@@ -360,6 +361,8 @@ mount_host_directory_to_lxc() {
         return 1
     fi
     
+
+
     # Step 5: Confirmation
     local uid_shift container_type
     uid_shift=$(get_container_uid_shift "$container_id")
@@ -378,9 +381,16 @@ $(translate "Shared Group:"): $group_name (GID: $group_gid)
 
 $(translate "Proceed?")"
 
-    if ! whiptail --title "$(translate "Confirm Mount")" --yesno "$confirm_msg" 16 70; then
+    if ! dialog --title "$(translate "Confirm Mount")" --yesno "$confirm_msg" 16 70; then
         return 1
     fi
+
+    show_proxmenux_logo
+    msg_title "\n$(translate 'Mount Host Directory to LXC Container')"
+
+    msg_ok "$(translate 'Container selected and running')"
+    msg_ok "$(translate 'Host directory selected')"
+    msg_ok "$(translate 'Host group configured')"
     
     # Step 6: Add mount
     if ! add_bind_mount "$container_id" "$host_dir" "$ct_mount_point"; then
