@@ -385,7 +385,7 @@ $(translate "Proceed?")"
     fi
 
     show_proxmenux_logo
-    msg_title "\n$(translate 'Mount Host Directory to LXC Container')"
+    msg_title "$(translate 'Mount Host Directory to LXC Container')"
 
     msg_ok "$(translate 'Container selected and running')"
     msg_ok "$(translate 'Host directory selected')"
