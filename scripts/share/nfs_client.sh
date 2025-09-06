@@ -544,7 +544,7 @@ unmount_nfs_share() {
     SELECTED_MOUNT=$(dialog --backtitle "ProxMenux" --title "$(translate "Unmount NFS Share")" --menu "$(translate "Select mount point to unmount:")" 20 80 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
     [[ -z "$SELECTED_MOUNT" ]] && return
     
-    if dialog --yesno "$(translate "Are you sure you want to unmount this NFS share?")\n\n$(translate "Mount Point:"): $SELECTED_MOUNT\n\n$(translate "This will remove the mount from /etc/fstab.")" 12 80 --title "$(translate "Confirm Unmount")"; then
+    if whiptail --yesno "$(translate "Are you sure you want to unmount this NFS share?")\n\n$(translate "Mount Point:"): $SELECTED_MOUNT\n\n$(translate "This will remove the mount from /etc/fstab.")" 12 80 --title "$(translate "Confirm Unmount")"; then
         show_proxmenux_logo
         msg_title "$(translate "Unmount NFS Share")"
         
