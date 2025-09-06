@@ -54,7 +54,7 @@ pmx_choose_or_create_group() {
     gid_min="$(awk '/^\s*GID_MIN\s+[0-9]+/ {print $2}' /etc/login.defs 2>/dev/null | tail -n1)"
     [[ -z "$gid_min" ]] && gid_min=1000
 
-    choice=$(whiptail --title "$(translate "Shared Group")" \
+    choice=$(dialog --title "$(translate "Shared Group")" \
         --menu "$(translate "Choose a group policy for this shared directory:")" 18 78 6 \
         "1"  "$(translate "Use default group:") $default_group $(translate "(recommended)")" \
         "2"  "$(translate "Create a new group for isolation")" \
@@ -286,7 +286,7 @@ pmx_select_host_mount_point() {
 select_host_directory() {
     local method choice result
 
-    method=$(whiptail --title "$(translate "Select Host Directory")" --menu "$(translate "How do you want to select the HOST folder to mount?")" 15 70 4 \
+    method=$(dialog --title "$(translate "Select Host Directory")" --menu "$(translate "How do you want to select the HOST folder to mount?")" 15 70 4 \
         "mnt" "$(translate "Select from /mnt directories")" \
         "manual" "$(translate "Enter path manually")" 3>&1 1>&2 2>&3) || return 1
 
@@ -303,15 +303,18 @@ select_host_directory() {
             done
             
             if [[ ${#options[@]} -eq 0 ]]; then
+                show_proxmenux_logo
                 msg_error "$(translate "No directories found in") $base_path"
+                echo -e ""
+                msg_success "$(translate 'Press Enter to continue...')"
                 return 1
             fi
             
-            result=$(whiptail --title "$(translate "Select Host Folder")" \
+            result=$(dialog --title "$(translate "Select Host Folder")" \
                 --menu "$(translate "Select the folder to mount:")" 20 80 10 "${options[@]}" 3>&1 1>&2 2>&3)
             ;;
         manual)
-            result=$(whiptail --title "$(translate "Enter Path")" \
+            result=$(dialog --title "$(translate "Enter Path")" \
                 --inputbox "$(translate "Enter the full path to the host folder:")" 10 70 "/mnt/" 3>&1 1>&2 2>&3)
             ;;
     esac
@@ -321,7 +324,10 @@ select_host_directory() {
     fi
 
     if [[ ! -d "$result" ]]; then
+        show_proxmenux_logo
         msg_error "$(translate "The selected path is not a valid directory:") $result"
+        echo -e ""
+        msg_success "$(translate 'Press Enter to continue...')"
         return 1
     fi
 
@@ -372,7 +378,7 @@ select_container_mount_point() {
     local choice mount_point existing_dirs options
 
     while true; do
-        choice=$(whiptail --title "$(translate "Configure Mount Point inside LXC")" \
+        choice=$(dialog --title "$(translate "Configure Mount Point inside LXC")" \
             --menu "$(translate "Where to mount inside container?")" 18 70 5 \
             "1" "$(translate "Create new directory in /mnt")" \
             "2" "$(translate "Use existing directory in /mnt")" \
