@@ -267,7 +267,7 @@ pmx_select_host_mount_point() {
 
 select_host_directory_() {
     local method choice result
-
+    clear
     method=$(whiptail --title "$(translate "Select Host Directory")" --menu "$(translate "How do you want to select the HOST folder to mount?")" 15 70 4 \
         "mnt" "$(translate "Select from /mnt directories")" \
         "manual" "$(translate "Enter path manually")" 3>&1 1>&2 2>&3) || return 1
@@ -288,12 +288,12 @@ select_host_directory_() {
                 msg_error "$(translate "No directories found in") $base_path"
                 return 1
             fi
-            clear
+            
             result=$(whiptail --title "$(translate "Select Host Folder")" \
                 --menu "$(translate "Select the folder to mount:")" 20 80 10 "${options[@]}" 3>&1 1>&2 2>&3)
             ;;
         manual)
-            clear
+            
             result=$(whiptail --title "$(translate "Enter Path")" \
                 --inputbox "$(translate "Enter the full path to the host folder:")" 10 70 "/mnt/" 3>&1 1>&2 2>&3)
             ;;
