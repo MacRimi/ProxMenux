@@ -87,7 +87,7 @@ select_nfs_server() {
             ;;
         manual)
             clear
-            NFS_SERVER=$(dialog --inputbox "$(translate "Enter NFS server IP or hostname:")" 10 60 --title "$(translate "NFS Server")" 3>&1 1>&2 2>&3)
+            NFS_SERVER=$(whiptail --inputbox "$(translate "Enter NFS server IP or hostname:")" 10 60 --title "$(translate "NFS Server")" 3>&1 1>&2 2>&3)
             [[ -z "$NFS_SERVER" ]] && return 1
             ;;
         recent)
@@ -622,7 +622,7 @@ unmount_host_nfs_share() {
     CONFIRMATION_MSG="$CONFIRMATION_MSG\n• $(translate "Remove mount point directory")"
     
     if dialog --backtitle "ProxMenux" --yesno "$CONFIRMATION_MSG" 16 80 --title "$(translate "Confirm Unmount")"; then
-    
+
         show_proxmenux_logo
         msg_title "$(translate "Unmount NFS Share from Host")"
         
