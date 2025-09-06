@@ -35,6 +35,8 @@ initialize_cache
 select_privileged_lxc
 
 
+
+
 setup_universal_sharedfiles_group() {
     local ctid="$1"
     
@@ -106,9 +108,12 @@ setup_universal_sharedfiles_group() {
     msg_ok "$(translate "Universal sharedfiles group configured with") $remapped_count $(translate "remapped users")"
 }
 
+
+
+
 select_mount_point() {
     while true; do
-        METHOD=$(dialog --title "$(translate "Select Folder")" \
+        METHOD=$(dialog --backtitle "ProxMenux" --title "$(translate "Select Folder")" \
             --menu "$(translate "How do you want to select the folder to export?")" 15 60 5 \
             "auto" "$(translate "Select from folders inside /mnt")" \
             "manual" "$(translate "Enter path manually")" \
@@ -132,35 +137,36 @@ select_mount_point() {
                     OPTIONS+=("$dir" "$name")
                 done <<< "$DIRS"
                 
-                MOUNT_POINT=$(dialog --title "$(translate "Select Folder")" \
+                MOUNT_POINT=$(dialog --backtitle "ProxMenux" --title "$(translate "Select Folder")" \
                     --menu "$(translate "Choose a folder to export:")" 20 60 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
                 if [[ $? -ne 0 ]]; then
                     return 1
                 fi
                 [[ -n "$MOUNT_POINT" ]] && return 0
                 ;;
-            manual)
-                CT_NAME=$(pct config "$CTID" | awk -F: '/hostname/ {print $2}' | xargs)
-                DEFAULT_MOUNT_POINT="/mnt/${CT_NAME}_nfs"
-                MOUNT_POINT=$(whiptail --title "$(translate "Mount Point")" \
-                    --inputbox "$(translate "Enter the mount point for the NFS export (e.g., /mnt/mynfs):")" \
-                    10 70 "$DEFAULT_MOUNT_POINT" 3>&1 1>&2 2>&3)
-                if [[ $? -ne 0 ]]; then
-                    return 1
-                fi
-                if [[ -z "$MOUNT_POINT" ]]; then
-                    whiptail --title "$(translate "Error")" --msgbox "$(translate "No mount point was specified.")" 8 50
-                    continue
-                else
+                manual)
+                    CT_NAME=$(pct config "$CTID" | awk -F: '/hostname/ {print $2}' | xargs)
+                    DEFAULT_MOUNT_POINT="/mnt/${CT_NAME}_nfs"
+                    MOUNT_POINT=$(dialog --title "$(translate "Mount Point")" \
+                        --inputbox "$(translate "Enter the mount point for the NFS export (e.g., /mnt/mynfs):")" \
+                        10 70 "$DEFAULT_MOUNT_POINT" 3>&1 1>&2 2>&3)
+                    if [[ $? -ne 0 ]]; then
+                        return 1
+                    fi
+                    if [[ -z "$MOUNT_POINT" ]]; then
+                        dialog --title "$(translate "Error")" \
+                            --msgbox "$(translate "No mount point was specified.")" 8 50
+                        continue
+                    fi
+                    pct exec "$CTID" -- mkdir -p "$MOUNT_POINT" 2>/dev/null
                     return 0
-                fi
-                ;;
+                    ;;
         esac
     done
 }
 
 get_network_config() {
-    NETWORK=$(whiptail --title "$(translate "Network Configuration")" --menu "$(translate "Select network access level:")" 15 70 4 \
+    NETWORK=$(dialog --backtitle "ProxMenux" --title "$(translate "Network Configuration")" --menu "\n$(translate "Select network access level:")" 15 70 4 \
     "1" "$(translate "Local network only (192.168.0.0/16)")" \
     "2" "$(translate "Specific subnet (enter manually)")" \
     "3" "$(translate "Specific host (enter IP)")" \
@@ -171,15 +177,15 @@ get_network_config() {
             NETWORK_RANGE="192.168.0.0/16"
             ;;
         2)
-            NETWORK_RANGE=$(whiptail --inputbox "$(translate "Enter subnet (e.g., 192.168.1.0/24):")" 10 60 "192.168.1.0/24" --title "$(translate "Subnet")" 3>&1 1>&2 2>&3)
+            NETWORK_RANGE=$(dialog --inputbox "$(translate "Enter subnet (e.g., 192.168.1.0/24):")" 10 60 "192.168.1.0/24" --title "$(translate "Subnet")" 3>&1 1>&2 2>&3)
             [[ -z "$NETWORK_RANGE" ]] && return 1
             ;;
         3)
-            NETWORK_RANGE=$(whiptail --inputbox "$(translate "Enter host IP (e.g., 192.168.1.100):")" 10 60 --title "$(translate "Host IP")" 3>&1 1>&2 2>&3)
+            NETWORK_RANGE=$(dialog --inputbox "$(translate "Enter host IP (e.g., 192.168.1.100):")" 10 60 --title "$(translate "Host IP")" 3>&1 1>&2 2>&3)
             [[ -z "$NETWORK_RANGE" ]] && return 1
             ;;
         4)
-            if whiptail --yesno "$(translate "WARNING: This will allow access from ANY network.\nThis is a security risk. Are you sure?")" 10 60 --title "$(translate "Security Warning")"; then
+            if dialog --yesno "$(translate "WARNING: This will allow access from ANY network.\nThis is a security risk. Are you sure?")" 10 60 --title "$(translate "Security Warning")"; then
                 NETWORK_RANGE="*"
             else
                 return 1
@@ -192,23 +198,52 @@ get_network_config() {
     return 0
 }
 
+
+
+
+
+
+
+select_export_options() {
+    EXPORT_OPTIONS=$(dialog --title "$(translate "Export Options")" --menu \
+        "\n$(translate "Select export permissions:")" 15 70 3 \
+        "1" "$(translate "Read-Write (recommended)")" \
+        "2" "$(translate "Read-Only")" \
+        "3" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
+
+    case "$EXPORT_OPTIONS" in
+        1)
+            OPTIONS="rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
+            ;;
+        2)
+            OPTIONS="ro,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
+            ;;
+        3)
+            OPTIONS=$(dialog --inputbox "$(translate "Enter custom NFS options:")" \
+                10 70 "rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000" \
+                --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
+            [[ -z "$OPTIONS" ]] && OPTIONS="rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
+            ;;
+        *)
+            OPTIONS="rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
+            ;;
+    esac
+}
+
+
+
+
+
 create_nfs_export() {
     select_mount_point || return
     get_network_config || return
+    select_export_options || return
+
 
     show_proxmenux_logo
     msg_title "$(translate "Create LXC server NFS")"
 
-    if ! pct exec "$CTID" -- test -d "$MOUNT_POINT"; then
-        if whiptail --yesno "$(translate "The directory does not exist in the CT.")\n\n$MOUNT_POINT\n\n$(translate "Do you want to create it?")" \
-            12 70 --title "$(translate "Create Directory")"; then
-            pct exec "$CTID" -- mkdir -p "$MOUNT_POINT"
-            msg_ok "$(translate "Directory created successfully.")"
-        else
-            msg_error "$(translate "Directory does not exist and was not created.")"
-            return
-        fi
-    fi
+    msg_ok "$(translate "Directory successfully.")"
 
 
     if ! pct exec "$CTID" -- dpkg -s nfs-kernel-server &>/dev/null; then
@@ -230,40 +265,22 @@ create_nfs_export() {
     msg_ok "$(translate "Directory configured with sharedfiles group ownership")"
 
 
-    EXPORT_OPTIONS=$(whiptail --title "$(translate "Export Options")" --menu \
-        "$(translate "Select export permissions:")" 15 70 3 \
-        "1" "$(translate "Universal Read-Write (recommended)")" \
-        "2" "$(translate "Universal Read-Only")" \
-        "3" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
-
-    case "$EXPORT_OPTIONS" in
-        1)
-            OPTIONS="rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
-            ;;
-        2)
-            OPTIONS="ro,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
-            ;;
-        3)
-            OPTIONS=$(whiptail --inputbox "$(translate "Enter custom NFS options:")" \
-                    10 70 "rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000" \
-                    --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
-            [[ -z "$OPTIONS" ]] && OPTIONS="rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
-            ;;
-        *)
-            OPTIONS="rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
-            ;;
-    esac
 
     EXPORT_LINE="$MOUNT_POINT $NETWORK_RANGE($OPTIONS)"
 
 
     if pct exec "$CTID" -- grep -q "^$MOUNT_POINT " /etc/exports; then
-        msg_warn "$(translate "Export already exists for:") $MOUNT_POINT"
-        if whiptail --yesno "$(translate "Do you want to update the existing export?")" \
+        if dialog --yesno "$(translate "Do you want to update the existing export?")" \
             10 60 --title "$(translate "Update Export")"; then
             pct exec "$CTID" -- sed -i "\|^$MOUNT_POINT |d" /etc/exports
             pct exec "$CTID" -- bash -c "echo '$EXPORT_LINE' >> /etc/exports"
+            show_proxmenux_logo
+            msg_title "$(translate "Create LXC server NFS")"
+            msg_ok "$(translate "Directory successfully.")"
             msg_ok "$(translate "Export updated successfully.")"
+            msg_ok "$(translate "NFS server is already installed.")"
+            msg_ok "$(translate "Directory configured with sharedfiles group ownership")"
+
         fi
     else
         pct exec "$CTID" -- bash -c "echo '$EXPORT_LINE' >> /etc/exports"
@@ -278,20 +295,20 @@ create_nfs_export() {
     CT_IP=$(pct exec "$CTID" -- hostname -I | awk '{print $1}')
     
     echo -e ""
-    msg_ok "$(translate "Universal NFS export created successfully!")"
+    msg_ok "$(translate "NFS export created successfully!")"
     echo -e ""
     echo -e "${TAB}${BOLD}$(translate "Connection details:")${CL}"
-    echo -e "${TAB}${BGN}$(translate "Server IP:")${CL}  ${CUS}$CT_IP${CL}"
-    echo -e "${TAB}${BGN}$(translate "Export path:")${CL} ${CUS}$MOUNT_POINT${CL}"
-    echo -e "${TAB}${BGN}$(translate "Mount options:")${CL} ${CUS}$OPTIONS${CL}"
-    echo -e "${TAB}${BGN}$(translate "Network access:")${CL} ${CUS}$NETWORK_RANGE${CL}"
-    echo -e "${TAB}${BGN}$(translate "NFS Version:")${CL} ${CUS}Auto-negotiation (NFSv3/NFSv4)${CL}"
+    echo -e "${TAB}${BGN}$(translate "Server IP:")${CL}  ${BL}$CT_IP${CL}"
+    echo -e "${TAB}${BGN}$(translate "Export path:")${CL} ${BL}$MOUNT_POINT${CL}"
+    echo -e "${TAB}${BGN}$(translate "Mount options:")${CL} ${BL}$OPTIONS${CL}"
+    echo -e "${TAB}${BGN}$(translate "Network access:")${CL} ${BL}$NETWORK_RANGE${CL}"
+    echo -e "${TAB}${BGN}$(translate "NFS Version:")${CL} ${BL}Auto-negotiation (NFSv3/NFSv4)${CL}"
     echo -e ""
     
     echo -e "${TAB}${BOLD}$(translate "Mount Examples:")${CL}"
-    echo -e "${TAB}${BGN}$(translate "Auto-negotiate:")${CL} ${CUS}mount -t nfs $CT_IP:$MOUNT_POINT /mnt/nfs${CL}"
-    echo -e "${TAB}${BGN}$(translate "Force NFSv4:")${CL} ${CUS}mount -t nfs4 $CT_IP:$MOUNT_POINT /mnt/nfs${CL}"
-    echo -e "${TAB}${BGN}$(translate "Force NFSv3:")${CL} ${CUS}mount -t nfs -o vers=3 $CT_IP:$MOUNT_POINT /mnt/nfs${CL}"
+    echo -e "${TAB}${BGN}$(translate "Auto-negotiate:")${CL} ${BL}mount -t nfs $CT_IP:$MOUNT_POINT /mnt/nfs${CL}"
+    echo -e "${TAB}${BGN}$(translate "Force NFSv4:")${CL} ${BL}mount -t nfs4 $CT_IP:$MOUNT_POINT /mnt/nfs${CL}"
+    echo -e "${TAB}${BGN}$(translate "Force NFSv3:")${CL} ${BL}mount -t nfs -o vers=3 $CT_IP:$MOUNT_POINT /mnt/nfs${CL}"
     echo ""
     
     msg_success "$(translate "Press Enter to return to menu...")"
@@ -342,11 +359,11 @@ view_exports() {
             echo ""
             echo "=================================="
             echo -e "${TAB}${BOLD}$(translate "Connection Details:")${CL}"
-            echo -e "${TAB}${BGN}$(translate "Server IP:")${CL}  ${CUS}$CT_IP${CL}"
+            echo -e "${TAB}${BGN}$(translate "Server IP:")${CL}  ${BL}$CT_IP${CL}"
             while IFS= read -r export_line; do
                 if [[ -n "$export_line" ]]; then
                     EXPORT_PATH=$(echo "$export_line" | awk '{print $1}')
-                    echo -e "${TAB}${BGN}$(translate "Export path:")${CL} ${CUS}$EXPORT_PATH${CL}"
+                    echo -e "${TAB}${BGN}$(translate "Export path:")${CL} ${BL}$EXPORT_PATH${CL}"
                     echo ""
                 fi
             done <<< "$EXPORTS"
@@ -538,7 +555,7 @@ uninstall_nfs() {
 
 # === Main Menu ===
 while true; do
-    CHOICE=$(dialog --title "$(translate "Universal NFS Manager - CT") $CTID" --menu "$(translate "Choose an option:")" 20 70 12 \
+    CHOICE=$(dialog --title "$(translate "NFS LXC Manager - CT") $CTID" --menu "$(translate "Choose an option:")" 20 70 12 \
     "1" "$(translate "Create Universal NFS Export")" \
     "2" "$(translate "View Current Exports")" \
     "3" "$(translate "Delete Export")" \
