@@ -573,12 +573,19 @@ EOF
 select_mount_point() {
     while true; do
         METHOD=$(whiptail --title "$(translate "Select Mount Point")" --menu "$(translate "Where do you want to mount the Samba share?")" 15 70 3 \
-        "existing" "$(translate "Select from existing folders in /mnt")" \
-        "new" "$(translate "Create new folder in /mnt")" \
-        "custom" "$(translate "Enter custom path")" 3>&1 1>&2 2>&3)
+        "1" "$(translate "Create new folder in /mnt")" \
+        "2" "$(translate "Select from existing folders in /mnt")" \
+        "3" "$(translate "Enter custom path")" 3>&1 1>&2 2>&3)
         
         case "$METHOD" in
-            existing)
+            1)
+                FOLDER_NAME=$(whiptail --inputbox "$(translate "Enter new folder name:")" 10 60 "${SAMBA_SHARE}" --title "$(translate "New Folder in /mnt")" 3>&1 1>&2 2>&3)
+                if [[ -n "$FOLDER_NAME" ]]; then
+                    MOUNT_POINT="/mnt/$FOLDER_NAME"
+                    return 0
+                fi
+                ;;
+            2)
 
                 DIRS=$(pct exec "$CTID" -- find /mnt -maxdepth 1 -mindepth 1 -type d 2>/dev/null)
                 if [[ -z "$DIRS" ]]; then
@@ -613,14 +620,7 @@ select_mount_point() {
                     return 0
                 fi
                 ;;
-            new)
-                FOLDER_NAME=$(whiptail --inputbox "$(translate "Enter new folder name:")" 10 60 "${SAMBA_SHARE}" --title "$(translate "New Folder in /mnt")" 3>&1 1>&2 2>&3)
-                if [[ -n "$FOLDER_NAME" ]]; then
-                    MOUNT_POINT="/mnt/$FOLDER_NAME"
-                    return 0
-                fi
-                ;;
-            custom)
+            3)
                 MOUNT_POINT=$(whiptail --inputbox "$(translate "Enter full path for mount point:")" 10 70 "/mnt/samba_share" --title "$(translate "Custom Path")" 3>&1 1>&2 2>&3)
                 if [[ -n "$MOUNT_POINT" ]]; then
                     return 0
