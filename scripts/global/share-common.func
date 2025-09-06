@@ -358,9 +358,8 @@ select_container_mount_point() {
         choice=$(whiptail --title "$(translate "Configure Mount Point inside LXC")" \
             --menu "$(translate "Where to mount inside container?")" 18 70 5 \
             "1" "$(translate "Create new directory in /mnt")" \
-            "2" "$(translate "Use existing directory in /mnt")" \
-            "3" "$(translate "Enter path manually")" \
-            "4" "$(translate "Cancel")" 3>&1 1>&2 2>&3) || return 1
+            "2" "$(translate "Enter path manually")" \
+            "3" "$(translate "Cancel")" 3>&1 1>&2 2>&3) || return 1
 
         case "$choice" in
             1)
@@ -371,17 +370,6 @@ select_container_mount_point() {
                 ;;
 
             2)
-                DIRS=$(pct exec "$CTID" -- find /mnt -maxdepth 1 -mindepth 1 -type d 2>/dev/null)
-                if [[ -z "$DIRS" ]]; then
-                    whiptail --title "$(translate "No Folders")" --msgbox "$(translate "No folders found in /mnt. Please create a new folder.")" 8 60
-                    continue
-                fi
-                mount_point=$(whiptail --title "$(translate "Select Existing Folder")" \
-                    --menu "$(translate "Choose a folder from /mnt:")" 20 70 10 \
-                    $existing_dirs 3>&1 1>&2 2>&3) || continue
-                ;;
-
-            3)
                 mount_point=$(whiptail --inputbox "$(translate "Enter full path:")" 10 70 "/mnt/shared" 3>&1 1>&2 2>&3) || continue
                 [[ -z "$mount_point" ]] && continue
                 mount_point="/mnt/$mount_point"
