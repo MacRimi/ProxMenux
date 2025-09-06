@@ -81,53 +81,51 @@ show_host_mount_resources_help() {
     echo -e "${BOLD}${BL}=== NFS MOUNT ON HOST ===${CL}"
     echo -e
     
-    show_command "1" \
-        "$(translate "Install NFS client on host:")" \
-        "apt-get update && apt-get install -y nfs-common" \
-        "" \
-        ""
 
-    show_command "2" \
+    show_command "1" \
         "$(translate "Create host mount point:")" \
         "mkdir -p ${CUS}/mnt/host_nfs${CL}" \
         "$(translate "Replace /mnt/host_nfs with your preferred path.")" \
         ""
 
-    show_command "3" \
-        "$(translate "Create shared group on host:")" \
-        "groupadd -g 101000 sharedfiles" \
-        "$(translate "Creates universal group for NFS access.")" \
+    show_command "2" \
+        "$(translate "Create shared groups on host (for both container types):")" \
+        "groupadd -g 1000 sharedfiles
+groupadd -g 101000 sharedfiles_unpriv" \
+        "$(translate "GID 1000 for privileged containers, GID 101000 maps to unprivileged.")" \
         ""
 
-    show_command "4" \
+    show_command "3" \
         "$(translate "Mount NFS share on host:")" \
         "mount -t nfs ${CUS}192.168.1.100${CL}:${CUS}/mnt/nfs_export${CL} ${CUS}/mnt/host_nfs${CL}" \
         "$(translate "Replace server IP and remote path.")" \
         ""
 
-    show_command "5" \
-        "$(translate "Set host mount permissions:")" \
+    show_command "4" \
+        "$(translate "Set host mount permissions for privileged containers:")" \
         "chgrp sharedfiles ${CUS}/mnt/host_nfs${CL}
 chmod 2775 ${CUS}/mnt/host_nfs${CL}" \
-        "$(translate "Ensures proper group access and inheritance.")" \
+        "$(translate "For privileged LXC containers (GID 1000).")" \
+        ""
+
+    show_command "5" \
+        "$(translate "Alternative: Set permissions for unprivileged containers:")" \
+        "chgrp sharedfiles_unpriv ${CUS}/mnt/host_nfs${CL}
+chmod 2775 ${CUS}/mnt/host_nfs${CL}" \
+        "$(translate "For unprivileged LXC containers (GID 101000 → maps to GID 1000 inside).")" \
         ""
 
     echo -e "${BOLD}${BL}=== SAMBA/CIFS MOUNT ON HOST ===${CL}"
     echo -e
 
-    show_command "6" \
-        "$(translate "Install CIFS client on host:")" \
-        "apt-get install -y cifs-utils" \
-        "" \
-        ""
 
-    show_command "7" \
+    show_command "6" \
         "$(translate "Create Samba mount point:")" \
         "mkdir -p ${CUS}/mnt/host_samba${CL}" \
         "$(translate "Replace /mnt/host_samba with your preferred path.")" \
         ""
 
-    show_command "8" \
+    show_command "7" \
         "$(translate "Create credentials file:")" \
         "cat > /etc/samba/host_credentials << EOF
 username=${CUS}sambauser${CL}
@@ -138,10 +136,16 @@ chmod 600 /etc/samba/host_credentials" \
         "$(translate "Secure storage for Samba credentials.")" \
         ""
 
+    show_command "8" \
+        "$(translate "Mount Samba share for privileged containers:")" \
+        "mount -t cifs //${CUS}192.168.1.100${CL}/${CUS}shared${CL} ${CUS}/mnt/host_samba${CL} -o credentials=/etc/samba/host_credentials,uid=0,gid=1000,file_mode=0664,dir_mode=2775" \
+        "$(translate "Uses GID 1000 for privileged containers.")" \
+        ""
+
     show_command "9" \
-        "$(translate "Mount Samba share on host:")" \
+        "$(translate "Alternative: Mount Samba share for unprivileged containers:")" \
         "mount -t cifs //${CUS}192.168.1.100${CL}/${CUS}shared${CL} ${CUS}/mnt/host_samba${CL} -o credentials=/etc/samba/host_credentials,uid=0,gid=101000,file_mode=0664,dir_mode=2775" \
-        "$(translate "Uses universal group GID 101000.")" \
+        "$(translate "Uses GID 101000 which maps to GID 1000 inside unprivileged containers.")" \
         ""
 
     echo -e "${BOLD}${BL}=== LOCAL BIND MOUNT ON HOST ===${CL}"
@@ -161,51 +165,64 @@ mkdir -p ${CUS}/mnt/host_bind${CL}" \
         ""
 
     show_command "12" \
-        "$(translate "Set universal permissions:")" \
+        "$(translate "Set permissions for privileged containers:")" \
         "chgrp sharedfiles ${CUS}/mnt/host_bind${CL}
 chmod 2775 ${CUS}/mnt/host_bind${CL}" \
-        "" \
+        "$(translate "GID 1000 for privileged containers.")" \
+        ""
+
+    show_command "13" \
+        "$(translate "Alternative: Set permissions for unprivileged containers:")" \
+        "chgrp sharedfiles_unpriv ${CUS}/mnt/host_bind${CL}
+chmod 2775 ${CUS}/mnt/host_bind${CL}" \
+        "$(translate "GID 101000 maps to GID 1000 inside unprivileged containers.")" \
         ""
 
     echo -e "${BOLD}${BL}=== MAKE MOUNTS PERMANENT ===${CL}"
     echo -e
 
-    show_command "13" \
+    show_command "14" \
         "$(translate "Add NFS to fstab:")" \
         "echo '${CUS}192.168.1.100${CL}:${CUS}/mnt/nfs_export${CL} ${CUS}/mnt/host_nfs${CL} nfs defaults,_netdev 0 0' >> /etc/fstab" \
         "$(translate "_netdev waits for network before mounting.")" \
         ""
 
-    show_command "14" \
-        "$(translate "Add Samba to fstab:")" \
-        "echo '//${CUS}192.168.1.100${CL}/${CUS}shared${CL} ${CUS}/mnt/host_samba${CL} cifs credentials=/etc/samba/host_credentials,uid=0,gid=101000,file_mode=0664,dir_mode=2775,_netdev 0 0' >> /etc/fstab" \
-        "" \
+    show_command "15" \
+        "$(translate "Add Samba to fstab (privileged):")" \
+        "echo '//${CUS}192.168.1.100${CL}/${CUS}shared${CL} ${CUS}/mnt/host_samba${CL} cifs credentials=/etc/samba/host_credentials,uid=0,gid=1000,file_mode=0664,dir_mode=2775,_netdev 0 0' >> /etc/fstab" \
+        "$(translate "For privileged containers.")" \
         ""
 
-    show_command "15" \
+    show_command "16" \
+        "$(translate "Add Samba to fstab (unprivileged):")" \
+        "echo '//${CUS}192.168.1.100${CL}/${CUS}shared${CL} ${CUS}/mnt/host_samba${CL} cifs credentials=/etc/samba/host_credentials,uid=0,gid=101000,file_mode=0664,dir_mode=2775,_netdev 0 0' >> /etc/fstab" \
+        "$(translate "For unprivileged containers.")" \
+        ""
+
+    show_command "17" \
         "$(translate "Add bind mount to fstab:")" \
         "echo '${CUS}/source/directory${CL} ${CUS}/mnt/host_bind${CL} none bind 0 0' >> /etc/fstab" \
         "" \
         ""
 
-    show_command "16" \
+    show_command "18" \
         "$(translate "Test fstab configuration:")" \
         "mount -a" \
         "$(translate "Mounts all entries in fstab to verify configuration.")" \
         ""
 
-    show_command "17" \
+    show_command "19" \
         "$(translate "Verify all mounts:")" \
         "df -h | grep -E '(host_nfs|host_samba|host_bind)'" \
         "" \
         ""
     
     echo -e "${BOR}"
-    echo -e "${BOLD}$(translate "Important Notes:")${CL}"
-    echo -e "${TAB}${BGN}$(translate "Universal Group:")${CL} ${BL}GID 101000 works with all container types${CL}"
+    echo -e "${BOLD}$(translate "GID Mapping for Container Types:")${CL}"
+    echo -e "${TAB}${BGN}$(translate "Privileged containers:")${CL} ${BL}Use GID 1000 (direct mapping)${CL}"
+    echo -e "${TAB}${BGN}$(translate "Unprivileged containers:")${CL} ${BL}Use GID 101000 (maps to 1000 inside container)${CL}"
+    echo -e "${TAB}${BGN}$(translate "Result:")${CL} ${BL}Both see the same group (sharedfiles) with GID 1000${CL}"
     echo -e "${TAB}${BGN}$(translate "Permissions:")${CL} ${BL}2775 = rwxrwsr-x (group sticky bit)${CL}"
-    echo -e "${TAB}${BGN}$(translate "Network mounts:")${CL} ${BL}Use _netdev option in fstab${CL}"
-    echo -e "${TAB}${BGN}$(translate "Security:")${CL} ${BL}Protect credential files with chmod 600${CL}"
     
     echo -e ""
     msg_success "$(translate "Press Enter to return to menu...")"
@@ -219,11 +236,14 @@ show_host_to_lxc_mount_help() {
     
     msg_info2 "$(translate "Manual commands to mount a host directory into an LXC container. Execute these commands on the Proxmox host.")"
     echo -e 
+
+    echo -e "${BOLD}${BL}=== FOR PRIVILEGED LXC CONTAINERS ===${CL}"
+    echo -e
     
     show_command "1" \
         "$(translate "Create the shared group on the host:")" \
         "groupadd -g 1000 sharedfiles" \
-        "$(translate "Creates a group with GID 1000 for shared access.")" \
+        "$(translate "Creates a group with GID 1000 for privileged containers.")" \
         ""
 
     show_command "2" \
@@ -240,44 +260,75 @@ chmod 2775 ${CUS}/mnt/shared_data${CL}" \
         ""
 
     show_command "4" \
-        "$(translate "Add bind mount to LXC container:")" \
+        "$(translate "Add bind mount to privileged LXC container:")" \
         "pct set ${CUS}<container-id>${CL} -mp0 ${CUS}/mnt/shared_data${CL},mp=${CUS}/mnt/shared${CL},backup=0,acl=1" \
         "$(translate "Replace <container-id>, host path, and container mount point.")" \
         "$(translate "Example: pct set 101 -mp0 /mnt/shared_data,mp=/mnt/shared,backup=0,acl=1")"
 
+    echo -e "${BOLD}${BL}=== FOR UNPRIVILEGED LXC CONTAINERS ===${CL}"
+    echo -e
+
     show_command "5" \
+        "$(translate "Create the mapped group on the host:")" \
+        "groupadd -g 101000 sharedfiles_unpriv" \
+        "$(translate "Creates group with GID 101000 that maps to GID 1000 inside unprivileged container.")" \
+        ""
+
+    show_command "6" \
+        "$(translate "Create the host directory for unprivileged:")" \
+        "mkdir -p ${CUS}/mnt/shared_data_unpriv${CL}" \
+        "$(translate "Separate directory for unprivileged containers.")" \
+        ""
+
+    show_command "7" \
+        "$(translate "Set ownership for unprivileged containers:")" \
+        "chown root:sharedfiles_unpriv ${CUS}/mnt/shared_data_unpriv${CL}
+chmod 2775 ${CUS}/mnt/shared_data_unpriv${CL}" \
+        "$(translate "Uses GID 101000 which maps to GID 1000 inside container.")" \
+        ""
+
+    show_command "8" \
+        "$(translate "Add bind mount to unprivileged LXC container:")" \
+        "pct set ${CUS}<container-id>${CL} -mp0 ${CUS}/mnt/shared_data_unpriv${CL},mp=${CUS}/mnt/shared${CL},backup=0,acl=1" \
+        "$(translate "Replace <container-id> with unprivileged container ID.")" \
+        ""
+
+    echo -e "${BOLD}${BL}=== INSIDE CONTAINER CONFIGURATION (BOTH TYPES) ===${CL}"
+    echo -e
+
+    show_command "9" \
         "$(translate "Enter the container to configure access:")" \
         "pct enter ${CUS}<container-id>${CL}" \
         "" \
         ""
 
-    show_command "6" \
+    show_command "10" \
         "$(translate "Inside the container - create matching group:")" \
         "groupadd -g 1000 sharedfiles" \
-        "$(translate "Creates the same group inside the container.")" \
+        "$(translate "Creates GID 1000 group inside both privileged and unprivileged containers.")" \
         ""
 
-    show_command "7" \
+    show_command "11" \
         "$(translate "Add users to the shared group:")" \
         "usermod -aG sharedfiles www-data
 usermod -aG sharedfiles root" \
         "$(translate "Add any users that need access to the shared directory.")" \
         ""
 
-    show_command "8" \
+    show_command "12" \
         "$(translate "Set container directory permissions:")" \
         "chgrp sharedfiles ${CUS}/mnt/shared${CL}
 chmod 2775 ${CUS}/mnt/shared${CL}" \
         "" \
         ""
 
-    show_command "9" \
+    show_command "13" \
         "$(translate "Test access (inside container):")" \
         "su - www-data -c 'touch ${CUS}/mnt/shared${CL}/test_file.txt'" \
         "$(translate "Verify that users can create files in the shared directory.")" \
         ""
 
-    show_command "10" \
+    show_command "14" \
         "$(translate "Restart container to activate mount:")" \
         "exit
 pct reboot ${CUS}<container-id>${CL}" \
@@ -285,9 +336,11 @@ pct reboot ${CUS}<container-id>${CL}" \
         ""
     
     echo -e "${BOR}"
-    echo -e "${BOLD}$(translate "Important Notes:")${CL}"
+    echo -e "${BOLD}$(translate "GID Mapping Explanation:")${CL}"
+    echo -e "${TAB}${BGN}$(translate "Privileged containers:")${CL} ${BL}Host GID 1000 = Container GID 1000${CL}"
+    echo -e "${TAB}${BGN}$(translate "Unprivileged containers:")${CL} ${BL}Host GID 101000 = Container GID 1000${CL}"
+    echo -e "${TAB}${BGN}$(translate "Result:")${CL} ${BL}Both container types see sharedfiles as GID 1000${CL}"
     echo -e "${TAB}${BGN}$(translate "Mount point index:")${CL} ${BL}Use mp0, mp1, mp2, etc. for multiple mounts${CL}"
-    echo -e "${TAB}${BGN}$(translate "Permissions:")${CL} ${BL}2775 = rwxrwsr-x (group sticky bit)${CL}"
     echo -e "${TAB}${BGN}$(translate "ACL support:")${CL} ${BL}acl=1 enables advanced permissions${CL}"
     
     echo -e ""
@@ -389,7 +442,8 @@ chmod 2775 ${CUS}/mnt/nfs_export${CL}" \
     echo -e "${TAB}${BGN}$(translate "all_squash:")${CL} ${BL}Maps all users to anonymous user${CL}"
     echo -e "${TAB}${BGN}$(translate "anonuid=0:")${CL} ${BL}Anonymous user = root (UID 0)${CL}"
     echo -e "${TAB}${BGN}$(translate "anongid=101000:")${CL} ${BL}Anonymous group = sharedfiles (GID 101000)${CL}"
-    echo -e "${TAB}${BGN}$(translate "Result:")${CL} ${BL}Works with privileged and unprivileged containers${CL}"
+    echo -e "${TAB}${BGN}$(translate "Privileged clients:")${CL} ${BL}See files as root:sharedfiles (0:101000)${CL}"
+    echo -e "${TAB}${BGN}$(translate "Unprivileged clients:")${CL} ${BL}See files as root:sharedfiles (0:1000) - mapped${CL}"
     
     echo -e ""
     msg_success "$(translate "Press Enter to return to menu...")"
@@ -524,7 +578,7 @@ show_nfs_client_help() {
     show_command "3" \
         "$(translate "Create matching shared group:")" \
         "groupadd -g 1000 sharedfiles" \
-        "$(translate "Creates group that matches the NFS server group mapping.")" \
+        "$(translate "Creates group that matches the mapped NFS server group.")" \
         ""
 
     show_command "4" \
@@ -573,9 +627,10 @@ chmod 2775 ${CUS}/mnt/nfsmount${CL}" \
     
     echo -e "${BOR}"
     echo -e "${BOLD}$(translate "Universal Compatibility:")${CL}"
-    echo -e "${TAB}${BGN}$(translate "Privileged containers:")${CL} ${BL}Direct UID/GID mapping${CL}"
-    echo -e "${TAB}${BGN}$(translate "Unprivileged containers:")${CL} ${BL}all_squash maps to root:sharedfiles${CL}"
-    echo -e "${TAB}${BGN}$(translate "Group GID:")${CL} ${BL}Use 1000 for privileged, auto-mapped for unprivileged${CL}"
+    echo -e "${TAB}${BGN}$(translate "NFS Server:")${CL} ${BL}Uses all_squash,anonuid=0,anongid=101000${CL}"
+    echo -e "${TAB}${BGN}$(translate "Privileged containers:")${CL} ${BL}See files as root:101000, create group GID 1000${CL}"
+    echo -e "${TAB}${BGN}$(translate "Unprivileged containers:")${CL} ${BL}See files as root:1000 (mapped from 101000)${CL}"
+    echo -e "${TAB}${BGN}$(translate "Result:")${CL} ${BL}Both container types can access with sharedfiles group${CL}"
     
     echo -e ""
     msg_success "$(translate "Press Enter to return to menu...")"
