@@ -37,9 +37,10 @@ while true; do
             ""          "" \
             "5"         "$(translate "Configure NFS Client in LXC   (only privileged)")" \
             "6"         "$(translate "Configure Samba Client in LXC (only privileged)")" \
-            "7"         "$(translate "Set up Samba Server in LXC    (only privileged)")" \
+            "7"         "$(translate "Configure NFS Server in LXC   (only privileged)")" \
+            "8"         "$(translate "configure Samba Server in LXC (only privileged)")" \
             ""          "" \
-            "8"         "$(translate "Help & Info (commands)")" \
+            "h"         "$(translate "Help & Info (commands)")" \
             "0"         "$(translate "Return to Main Menu")" \
             2>&1 >/dev/tty
     ) || { exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh"); }
@@ -72,6 +73,9 @@ while true; do
             bash <(curl -s "$REPO_URL/scripts/share/samba.sh")
             ;;
         8)
+            bash <(curl -s "$REPO_URL/scripts/share/nfs_lxc_server.sh")
+            ;;
+        h)
             bash <(curl -s "$REPO_URL/scripts/share/commands_share.sh")
             ;;
         0)
