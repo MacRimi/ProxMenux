@@ -621,7 +621,8 @@ unmount_host_nfs_share() {
     
     CONFIRMATION_MSG="$CONFIRMATION_MSG\n• $(translate "Remove mount point directory")"
     
-    if whiptail --yesno "$CONFIRMATION_MSG" 16 80 --title "$(translate "Confirm Unmount")"; then
+    if dialog --backtitle "ProxMenux" --yesno "$CONFIRMATION_MSG" 16 80 --title "$(translate "Confirm Unmount")"; then
+    
         show_proxmenux_logo
         msg_title "$(translate "Unmount NFS Share from Host")"
         
