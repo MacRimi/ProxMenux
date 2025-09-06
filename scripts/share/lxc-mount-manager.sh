@@ -474,4 +474,5 @@ main_menu() {
     done
 }
 
-main_menu
+#main_menu
+mount_host_directory_to_lxc
