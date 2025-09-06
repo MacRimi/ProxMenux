@@ -169,27 +169,21 @@ get_network_config() {
     NETWORK=$(dialog --backtitle "ProxMenux" --title "$(translate "Network Configuration")" --menu "\n$(translate "Select network access level:")" 15 70 4 \
     "1" "$(translate "Local network only (192.168.0.0/16)")" \
     "2" "$(translate "Specific subnet (enter manually)")" \
-    "3" "$(translate "Specific host (enter IP)")" \
-    "4" "$(translate "All networks")" 3>&1 1>&2 2>&3)
+    "3" "$(translate "Specific host (enter IP)")" 3>&1 1>&2 2>&3)
     
     case "$NETWORK" in
         1)
             NETWORK_RANGE="192.168.0.0/16"
             ;;
         2)
-            NETWORK_RANGE=$(dialog --inputbox "$(translate "Enter subnet (e.g., 192.168.1.0/24):")" 10 60 "192.168.1.0/24" --title "$(translate "Subnet")" 3>&1 1>&2 2>&3)
+            clear
+            NETWORK_RANGE=$(whiptail --inputbox "$(translate "Enter subnet (e.g., 192.168.0.0/24):")" 10 60 "192.168.0.0/24" --title "$(translate "Subnet")" 3>&1 1>&2 2>&3)
             [[ -z "$NETWORK_RANGE" ]] && return 1
             ;;
         3)
-            NETWORK_RANGE=$(dialog --inputbox "$(translate "Enter host IP (e.g., 192.168.1.100):")" 10 60 --title "$(translate "Host IP")" 3>&1 1>&2 2>&3)
+            dialog
+            NETWORK_RANGE=$(dialog --inputbox "$(translate "Enter host IP (e.g., 192.168.0.100):")" 10 60 --title "$(translate "Host IP")" 3>&1 1>&2 2>&3)
             [[ -z "$NETWORK_RANGE" ]] && return 1
-            ;;
-        4)
-            if dialog --yesno "$(translate "WARNING: This will allow access from ANY network.\nThis is a security risk. Are you sure?")" 10 60 --title "$(translate "Security Warning")"; then
-                NETWORK_RANGE="*"
-            else
-                return 1
-            fi
             ;;
         *)
             return 1
