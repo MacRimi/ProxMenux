@@ -234,7 +234,7 @@ pmx_select_host_mount_point() {
     while true; do
         choice=$(whiptail --title "$title" --menu "$(translate "Where do you want the host folder?")" 16 76 3 \
             "1"  "$(translate "Create new folder in /mnt")" \
-            "2" "$(translate "Use existing folder")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
+            "2" "$(translate "Enter custom pathr")" 3>&1 1>&2 2>&3) || { echo ""; return 1; }
 
         case "$choice" in
             1)
