@@ -386,25 +386,26 @@ select_container_mount_point() {
                 mount_point="/mnt/$mount_point"
                 pct exec "$ctid" -- mkdir -p "$mount_point" 2>/dev/null
                 ;;
+
             2)
                 existing_dirs=$(pct exec "$ctid" -- find /mnt -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
+
                 if [[ -z "$existing_dirs" ]]; then
                     whiptail --msgbox "$(translate "No existing directories found in /mnt")" 8 60
                     continue
                 fi
-                options=()
-                while IFS= read -r dir; do
-                    name=$(basename "$dir")
-                    options+=("$dir" "$name")
-                done <<< "$existing_dirs"
                 mount_point=$(whiptail --title "$(translate "Select Existing Folder")" \
-                    --menu "$(translate "Choose a folder from /mnt:")" 20 70 10 "${options[@]}" 3>&1 1>&2 2>&3) || continue
+                    --menu "$(translate "Choose a folder from /mnt:")" 20 70 10 \
+                    $existing_dirs 3>&1 1>&2 2>&3) || continue
                 ;;
+
             3)
                 mount_point=$(whiptail --inputbox "$(translate "Enter full path:")" 10 70 "/mnt/shared" 3>&1 1>&2 2>&3) || continue
                 [[ -z "$mount_point" ]] && continue
+                mount_point="/mnt/$mount_point"
                 pct exec "$ctid" -- mkdir -p "$mount_point" 2>/dev/null
                 ;;
+
             4)
                 return 1
                 ;;
