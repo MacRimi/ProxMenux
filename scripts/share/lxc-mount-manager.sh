@@ -358,7 +358,7 @@ mount_host_directory_to_lxc() {
     clear
     ct_mount_point=$(select_container_mount_point "$container_id" "$host_dir")
     if [[ -z "$ct_mount_point" ]]; then
-        exit 1
+        return 1
     fi
     
 
