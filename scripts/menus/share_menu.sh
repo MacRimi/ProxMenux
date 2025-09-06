@@ -70,10 +70,10 @@ while true; do
             bash <(curl -s "$REPO_URL/scripts/share/samba_client.sh")
             ;;
         7)
-            bash <(curl -s "$REPO_URL/scripts/share/samba.sh")
+            bash <(curl -s "$REPO_URL/scripts/share/nfs_lxc_server.sh")
             ;;
         8)
-            bash <(curl -s "$REPO_URL/scripts/share/nfs_lxc_server.sh")
+            bash <(curl -s "$REPO_URL/scripts/share/samba.sh")
             ;;
         h)
             bash <(curl -s "$REPO_URL/scripts/share/commands_share.sh")
