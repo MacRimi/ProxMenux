@@ -267,7 +267,7 @@ pmx_select_host_mount_point() {
 
 select_host_directory_() {
     local method choice result
-    
+
     method=$(whiptail --title "$(translate "Select Host Directory")" --menu "$(translate "How do you want to select the HOST folder to mount?")" 15 70 4 \
         "mnt" "$(translate "Select from /mnt directories")" \
         "manual" "$(translate "Enter path manually")" 3>&1 1>&2 2>&3) || return 1
@@ -317,7 +317,7 @@ select_host_directory_() {
 
 
 
-select_host_directory() {
+select_host_directory__() {
     local method result
 
     method=$(whiptail --title "$(translate "Select Host Directory")" \
@@ -342,6 +342,61 @@ select_host_directory() {
             fi
 
             result=$(whiptail --title "$(translate "Select Host Folder")" \
+                --menu "$(translate "Select the folder to mount:")" 20 80 10 \
+                "${options[@]}" 3>&1 1>&2 2>&3) || return 1
+            ;;
+        manual)
+            result=$(whiptail --title "$(translate "Enter Path")" \
+                --inputbox "$(translate "Enter the full path to the host folder:")" \
+                10 70 "/mnt/" 3>&1 1>&2 2>&3) || return 1
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    [[ -z "$result" ]] && return 1
+    [[ ! -d "$result" ]] && { 
+        msg_error "$(translate "The selected path is not a valid directory:") $result"
+        return 1
+    }
+
+    echo "$result"
+
+}
+
+
+
+
+
+
+
+
+select_host_directory() {
+    local method result
+
+    method=$(dialog --title "$(translate "Select Host Directory")" \
+        --menu "$(translate "How do you want to select the HOST folder to mount?")" 15 70 4 \
+        "mnt"    "$(translate "Select from /mnt directories")" \
+        "manual" "$(translate "Enter path manually")" \
+        3>&1 1>&2 2>&3) || return 1   
+
+    case "$method" in
+        mnt|srv|media)
+            local base_path="/$method"
+            local host_dirs=("$base_path"/*)
+            local options=()
+
+            for dir in "${host_dirs[@]}"; do
+                [[ -d "$dir" ]] && options+=("$dir" "$(basename "$dir")")
+            done
+
+            if [[ ${#options[@]} -eq 0 ]]; then
+                msg_error "$(translate "No directories found in") $base_path"
+                return 1
+            fi
+
+            result=$(dialog --title "$(translate "Select Host Folder")" \
                 --menu "$(translate "Select the folder to mount:")" 20 80 10 \
                 "${options[@]}" 3>&1 1>&2 2>&3) || return 1
             ;;
@@ -402,7 +457,7 @@ select_lxc_container() {
 
 
 
-select_container_mount_point() {
+select_container_mount_point_() {
     local ctid="$1"
     local host_dir="$2"
     local choice mount_point existing_dirs options
@@ -443,6 +498,58 @@ select_container_mount_point() {
         fi
     done
 }
+
+
+
+
+
+
+
+
+select_container_mount_point() {
+    local ctid="$1"
+    local host_dir="$2"
+    local choice mount_point existing_dirs options
+
+    while true; do
+        choice=$(dialog --title "$(translate "Configure Mount Point inside LXC")" \
+            --menu "$(translate "Where to mount inside container?")" 18 70 5 \
+            "1" "$(translate "Create new directory in /mnt")" \
+            "2" "$(translate "Enter path manually")" \
+            "3" "$(translate "Cancel")" 3>&1 1>&2 2>&3) || return 1
+
+        case "$choice" in
+            1)
+                mount_point=$(whiptail --inputbox "$(translate "Enter folder name for /mnt:")" 10 60 "shared" 3>&1 1>&2 2>&3) || continue
+                [[ -z "$mount_point" ]] && continue
+                mount_point="/mnt/$mount_point"
+                pct exec "$ctid" -- mkdir -p "$mount_point" 2>/dev/null
+                ;;
+
+            2)
+                mount_point=$(whiptail --inputbox "$(translate "Enter full path:")" 10 70 "/mnt/shared" 3>&1 1>&2 2>&3) || continue
+                [[ -z "$mount_point" ]] && continue
+                mount_point="/mnt/$mount_point"
+                pct exec "$ctid" -- mkdir -p "$mount_point" 2>/dev/null
+                ;;
+
+            3)
+                return 1
+                ;;
+        esac
+
+        if pct exec "$ctid" -- test -d "$mount_point" 2>/dev/null; then
+            echo "$mount_point"
+            return 0
+        else
+            whiptail --msgbox "$(translate "Could not create or access directory:") $mount_point" 8 70
+            continue
+        fi
+    done
+}
+
+
+
 
 
 
