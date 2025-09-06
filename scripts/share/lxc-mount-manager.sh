@@ -352,8 +352,9 @@ mount_host_directory_to_lxc() {
     chown -R root:"$group_name" "$host_dir" 2>/dev/null || true
     chmod -R 2775 "$host_dir" 2>/dev/null || true
 
-    
+     
     # Step 4: Select container mount point
+    clear
     local ct_mount_point
     ct_mount_point=$(select_container_mount_point "$container_id" "$host_dir")
     if [[ -z "$ct_mount_point" ]]; then
