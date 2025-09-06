@@ -377,7 +377,7 @@ select_container_mount_point() {
                 pct exec "$ctid" -- mkdir -p "$mount_point" 2>/dev/null
                 ;;
 
-            4)
+            3)
                 exit 1
                 ;;
         esac
