@@ -331,7 +331,7 @@ mount_host_directory_to_lxc() {
         fi
     fi
 
-
+    clear
     # Step 2: Select host directory
     local host_dir
     host_dir=$(select_host_directory)
@@ -355,7 +355,6 @@ mount_host_directory_to_lxc() {
     
     # Step 4: Select container mount point
     local ct_mount_point
-    clear
     ct_mount_point=$(select_container_mount_point "$container_id" "$host_dir")
     if [[ -z "$ct_mount_point" ]]; then
         return 1
