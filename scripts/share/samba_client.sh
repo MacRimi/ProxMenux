@@ -637,8 +637,7 @@ configure_mount_options() {
     MOUNT_TYPE=$(whiptail --title "$(translate "Mount Options")" --menu "$(translate "Select mount configuration:")" 15 70 4 \
     "1" "$(translate "Default options read/write")" \
     "2" "$(translate "Read-only mount")" \
-    "3" "$(translate "Performance optimized")" \
-    "custom" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
+    "3" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
     
     case "$MOUNT_TYPE" in
         1)

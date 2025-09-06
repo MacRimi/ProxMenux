@@ -354,6 +354,7 @@ select_container_mount_point() {
     local choice mount_point existing_dirs options
 
     while true; do
+        clear
         choice=$(whiptail --title "$(translate "Configure Mount Point inside LXC")" \
             --menu "$(translate "Where to mount inside container?")" 18 70 5 \
             "1" "$(translate "Create new directory in /mnt")" \
