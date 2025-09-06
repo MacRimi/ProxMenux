@@ -380,7 +380,7 @@ $(translate "Shared Group:"): $group_name (GID: $group_gid)
 
 $(translate "Proceed?")"
 
-    if ! dialog --title "$(translate "Confirm Mount")" --yesno "$confirm_msg" 16 70; then
+    if ! whiptail --title "$(translate "Confirm Mount")" --yesno "$confirm_msg" 16 70; then
         return 1
     fi
 
