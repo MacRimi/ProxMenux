@@ -287,7 +287,7 @@ add_bind_mount() {
 
     mpidx=$(get_next_mp_index "$ctid")
     
-    result=$(pct set "$ctid" -mp${mpidx} "$host_path,mp=$ct_path,backup=0,ro=0,acl=1" 2>&1)
+    result=$(pct set "$ctid" -mp${mpidx} "$host_path,mp=$ct_path,backup=0,acl=1" 2>&1)
 
     if [[ $? -eq 0 ]]; then
         msg_ok "$(translate "Successfully mounted:") $host_path → $ct_path"
