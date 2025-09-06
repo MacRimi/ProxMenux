@@ -331,7 +331,7 @@ mount_host_directory_to_lxc() {
         fi
     fi
 
-    clear 
+    
     # Step 2: Select host directory
     local host_dir
     host_dir=$(select_host_directory)
@@ -380,7 +380,7 @@ $(translate "Shared Group:"): $group_name (GID: $group_gid)
 
 $(translate "Proceed?")"
 
-    if ! dialog --bactitle "ProxMenux" --title "$(translate "Confirm Mount")" --yesno "$confirm_msg" 16 70; then
+    if ! whiptail --title "$(translate "Confirm Mount")" --yesno "$confirm_msg" 16 70; then
         return 1
     fi
 
