@@ -38,7 +38,7 @@ fi
 
 discover_nfs_servers() {
     show_proxmenux_logo
-    msg_title "$(translate "NFS Host Manager - Proxmox Host")"
+    msg_title "$(translate "Mount NFS Share on Host")"
     msg_info "$(translate "Scanning network for NFS servers...")"
 
     HOST_IP=$(hostname -I | awk '{print $1}')
@@ -70,7 +70,8 @@ discover_nfs_servers() {
         whiptail --title "$(translate "No Valid Servers")" --msgbox "$(translate "No accessible NFS servers found.")" 8 50
         return 1
     fi
-    msg_ok "$(translate "NFS servers detected")"
+    cleanup
+    clear
     NFS_SERVER=$(whiptail --title "$(translate "Select NFS Server")" --menu "$(translate "Choose an NFS server:")" 20 80 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
     [[ -n "$NFS_SERVER" ]] && return 0 || return 1
 }
@@ -240,11 +241,7 @@ configure_host_mount_options() {
         fi
     fi
 
-
-
-    msg_info "$(translate "Testing NFS export accessibility...")"
     
-
     TEMP_MOUNT="/tmp/nfs_test_$$"
     mkdir -p "$TEMP_MOUNT" 2>/dev/null
     
@@ -285,7 +282,7 @@ configure_host_mount_options() {
         
         if whiptail --yesno "$(translate "The NFS export could not be validated for accessibility.")\n\n$(translate "This might be due to:")\n• $(translate "Network connectivity issues")\n• $(translate "Export permission restrictions")\n• $(translate "Firewall blocking access")\n\n$(translate "Do you want to continue mounting anyway?")\n$(translate "(Proxmox storage integration will be skipped)")" 16 80 --title "$(translate "Export Validation Failed")"; then
             PROXMOX_STORAGE=false
-            msg_info "$(translate "Continuing without Proxmox storage integration due to accessibility issues.")"
+            msg_info2 "$(translate "Continuing without Proxmox storage integration due to accessibility issues.")"
             sleep 2
         else
             return 1
@@ -340,7 +337,6 @@ add_proxmox_nfs_storage() {
     
     msg_ok "$(translate "Storage ID is available")"
 
-    msg_info "$(translate "Creating NFS storage (Proxmox will auto-detect optimal NFS version)...")"
     
     # Let Proxmox handle NFS version negotiation automatically
     if pvesm_output=$(pvesm add nfs "$storage_id" \
@@ -438,6 +434,7 @@ mount_host_nfs_share() {
 
     show_proxmenux_logo
     msg_title "$(translate "Mount NFS Share on Host")"
+    msg_ok "$(translate "NFS server selected")"
 
     prepare_host_directory "$MOUNT_POINT" || return 1
 
