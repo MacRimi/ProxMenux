@@ -113,7 +113,7 @@ setup_universal_sharedfiles_group() {
 
 select_mount_point() {
     while true; do
-        METHOD=$(dialog --backtitle "ProxMenux" --title "$(translate "Select Folder")" \
+        METHOD=$(whiptail --backtitle "ProxMenux" --title "$(translate "Select Folder")" \
             --menu "$(translate "How do you want to select the folder to export?")" 15 60 5 \
             "auto" "$(translate "Select from folders inside /mnt")" \
             "manual" "$(translate "Enter path manually")" \
@@ -127,7 +127,7 @@ select_mount_point() {
             auto)
                 DIRS=$(pct exec "$CTID" -- find /mnt -maxdepth 1 -mindepth 1 -type d 2>/dev/null)
                 if [[ -z "$DIRS" ]]; then
-                    dialog --title "$(translate "No Folders")" --msgbox "$(translate "No folders found inside /mnt in the CT.")" 8 60
+                    whiptail --title "$(translate "No Folders")" --msgbox "$(translate "No folders found inside /mnt in the CT.")" 8 60
                     continue
                 fi
                 
@@ -137,7 +137,7 @@ select_mount_point() {
                     OPTIONS+=("$dir" "$name")
                 done <<< "$DIRS"
                 
-                MOUNT_POINT=$(dialog --backtitle "ProxMenux" --title "$(translate "Select Folder")" \
+                MOUNT_POINT=$(whiptail --backtitle "ProxMenux" --title "$(translate "Select Folder")" \
                     --menu "$(translate "Choose a folder to export:")" 20 60 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
                 if [[ $? -ne 0 ]]; then
                     return 1
@@ -147,14 +147,14 @@ select_mount_point() {
                 manual)
                     CT_NAME=$(pct config "$CTID" | awk -F: '/hostname/ {print $2}' | xargs)
                     DEFAULT_MOUNT_POINT="/mnt/${CT_NAME}_nfs"
-                    MOUNT_POINT=$(dialog --title "$(translate "Mount Point")" \
+                    MOUNT_POINT=$(whiptail --title "$(translate "Mount Point")" \
                         --inputbox "$(translate "Enter the mount point for the NFS export (e.g., /mnt/mynfs):")" \
                         10 70 "$DEFAULT_MOUNT_POINT" 3>&1 1>&2 2>&3)
                     if [[ $? -ne 0 ]]; then
                         return 1
                     fi
                     if [[ -z "$MOUNT_POINT" ]]; then
-                        dialog --title "$(translate "Error")" \
+                        whiptail --title "$(translate "Error")" \
                             --msgbox "$(translate "No mount point was specified.")" 8 50
                         continue
                     fi
@@ -166,7 +166,7 @@ select_mount_point() {
 }
 
 get_network_config() {
-    NETWORK=$(dialog --backtitle "ProxMenux" --title "$(translate "Network Configuration")" --menu "\n$(translate "Select network access level:")" 15 70 4 \
+    NETWORK=$(whiptail --backtitle "ProxMenux" --title "$(translate "Network Configuration")" --menu "\n$(translate "Select network access level:")" 15 70 4 \
     "1" "$(translate "Local network only (192.168.0.0/16)")" \
     "2" "$(translate "Specific subnet (enter manually)")" \
     "3" "$(translate "Specific host (enter IP)")" 3>&1 1>&2 2>&3)
@@ -182,7 +182,7 @@ get_network_config() {
             ;;
         3)
             dialog
-            NETWORK_RANGE=$(dialog --inputbox "$(translate "Enter host IP (e.g., 192.168.0.100):")" 10 60 --title "$(translate "Host IP")" 3>&1 1>&2 2>&3)
+            NETWORK_RANGE=$(whiptail --inputbox "$(translate "Enter host IP (e.g., 192.168.0.100):")" 10 60 --title "$(translate "Host IP")" 3>&1 1>&2 2>&3)
             [[ -z "$NETWORK_RANGE" ]] && return 1
             ;;
         *)
@@ -199,7 +199,7 @@ get_network_config() {
 
 
 select_export_options() {
-    EXPORT_OPTIONS=$(dialog --title "$(translate "Export Options")" --menu \
+    EXPORT_OPTIONS=$(whiptail --title "$(translate "Export Options")" --menu \
         "\n$(translate "Select export permissions:")" 15 70 3 \
         "1" "$(translate "Read-Write (recommended)")" \
         "2" "$(translate "Read-Only")" \
@@ -213,7 +213,7 @@ select_export_options() {
             OPTIONS="ro,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
             ;;
         3)
-            OPTIONS=$(dialog --inputbox "$(translate "Enter custom NFS options:")" \
+            OPTIONS=$(whiptail --inputbox "$(translate "Enter custom NFS options:")" \
                 10 70 "rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000" \
                 --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
             [[ -z "$OPTIONS" ]] && OPTIONS="rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
@@ -229,13 +229,15 @@ select_export_options() {
 
 
 create_nfs_export() {
+
+    show_proxmenux_logo
+    msg_title "$(translate "Create LXC server NFS")"
+
+
     select_mount_point || return
     get_network_config || return
     select_export_options || return
 
-
-    show_proxmenux_logo
-    msg_title "$(translate "Create LXC server NFS")"
 
     msg_ok "$(translate "Directory successfully.")"
 
