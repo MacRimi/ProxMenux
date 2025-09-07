@@ -552,6 +552,9 @@ select_privileged_lxc() {
         sleep 2
         if [[ "$(pct status "$ctid" | awk '{print $2}')" != "running" ]]; then
             msg_error "$(translate "Failed to start the CT.")"
+            echo -e ""
+            msg_success "$(translate 'Press Enter to continue...')"
+            read -r
             return 1
         fi
         msg_ok "$(translate "CT started successfully.")"
