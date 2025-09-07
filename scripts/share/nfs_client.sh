@@ -123,7 +123,7 @@ discover_nfs_servers() {
 }
 
 select_nfs_server() {
-    METHOD=$(dialog --backtitle "ProxMenux" --title "$(translate "NFS Server Selection")" --menu "$(translate "How do you want to select the NFS server?")" 15 70 3 \
+    METHOD=$(whiptail --backtitle "ProxMenux" --title "$(translate "NFS Server Selection")" --menu "$(translate "How do you want to select the NFS server?")" 15 70 3 \
     "auto" "$(translate "Auto-discover servers on network")" \
     "manual" "$(translate "Enter server IP/hostname manually")" 3>&1 1>&2 2>&3)    
     case "$METHOD" in
