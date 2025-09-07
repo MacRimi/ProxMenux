@@ -313,11 +313,13 @@ mount_host_directory_to_lxc() {
     fi
 
 
+    show_proxmenux_logo
+    msg_title "$(translate 'Mount Host Directory to LXC Container')"
+
     # Step 1.1: Ensure running
     ct_status=$(pct status "$container_id" | awk '{print $2}')
     if [[ "$ct_status" != "running" ]]; then
-        show_proxmenux_logo
-        msg_title "$(translate 'Mount Host Directory to LXC Container')"
+
         msg_info "$(translate "Starting container") $container_id..."
         if pct start "$container_id"; then
             sleep 3
@@ -331,6 +333,8 @@ mount_host_directory_to_lxc() {
         fi
     fi
 
+    msg_ok "$(translate 'Container selected and running')"
+    sleep 2
     
     # Step 2: Select host directory
     local host_dir
@@ -339,6 +343,7 @@ mount_host_directory_to_lxc() {
         return 1
     fi
 
+    msg_ok "$(translate 'Host directory selected')"
 
     # Step 3: Setup group
     local group_name="sharedfiles"
@@ -352,6 +357,7 @@ mount_host_directory_to_lxc() {
     chown -R root:"$group_name" "$host_dir" 2>/dev/null || true
     chmod -R 2775 "$host_dir" 2>/dev/null || true
 
+    msg_ok "$(translate 'Host group configured')"
      
     # Step 4: Select container mount point
     clear
@@ -385,12 +391,7 @@ $(translate "Proceed?")"
         return 1
     fi
 
-    show_proxmenux_logo
-    msg_title "$(translate 'Mount Host Directory to LXC Container')"
 
-    msg_ok "$(translate 'Container selected and running')"
-    msg_ok "$(translate 'Host directory selected')"
-    msg_ok "$(translate 'Host group configured')"
     
     # Step 6: Add mount
     if ! add_bind_mount "$container_id" "$host_dir" "$ct_mount_point"; then
