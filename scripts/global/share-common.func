@@ -375,7 +375,7 @@ select_host_directory__() {
 select_host_directory() {
     local method result
 
-    method=$(dialog --title "$(translate "Select Host Directory")" \
+    method=$(whiptail --title "$(translate "Select Host Directory")" \
         --menu "$(translate "How do you want to select the HOST folder to mount?")" 15 70 4 \
         "mnt"    "$(translate "Select from /mnt directories")" \
         "manual" "$(translate "Enter path manually")" \
@@ -396,7 +396,7 @@ select_host_directory() {
                 return 1
             fi
 
-            result=$(dialog --title "$(translate "Select Host Folder")" \
+            result=$(whiptail --title "$(translate "Select Host Folder")" \
                 --menu "$(translate "Select the folder to mount:")" 20 80 10 \
                 "${options[@]}" 3>&1 1>&2 2>&3) || return 1
             ;;
