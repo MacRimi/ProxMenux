@@ -150,7 +150,7 @@ discover_samba_servers() {
 }
 
 select_samba_server() {
-    METHOD=$(dialog --title "$(translate "Samba Server Selection")" --menu "$(translate "How do you want to select the Samba server?")" 15 70 3 \
+    METHOD=$(whiptail --title "$(translate "Samba Server Selection")" --menu "$(translate "How do you want to select the Samba server?")" 15 70 3 \
     "auto" "$(translate "Auto-discover servers on network")" \
     "manual" "$(translate "Enter server IP")" \
     "recent" "$(translate "Select from recent servers")" 3>&1 1>&2 2>&3)
