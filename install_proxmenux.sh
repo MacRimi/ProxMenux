@@ -151,7 +151,7 @@ uninstall_proxmenu() {
         sed -i '/This system is optimised by: ProxMenux/d' /etc/motd
     fi
     
-    echo "ProxMenu has been uninstalled."
+    echo "ProxMenux has been uninstalled."
     return 0
 }
 
