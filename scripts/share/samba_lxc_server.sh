@@ -40,7 +40,7 @@ select_privileged_lxc
 
 select_mount_point() {
     while true; do
-        METHOD=$(dialog --backtitle "ProxMenux" --title "$(translate "Select Folder")" \
+        METHOD=$(whiptail --backtitle "ProxMenux" --title "$(translate "Select Folder")" \
             --menu "$(translate "How do you want to select the folder to share?")" 15 60 5 \
             "auto" "$(translate "Select from folders inside /mnt")" \
             "manual" "$(translate "Enter path manually")" \
@@ -54,7 +54,7 @@ select_mount_point() {
             auto)
                 DIRS=$(pct exec "$CTID" -- find /mnt -maxdepth 1 -mindepth 1 -type d 2>/dev/null)
                 if [[ -z "$DIRS" ]]; then
-                    dialog --title "$(translate "No Folders")" --msgbox "$(translate "No folders found inside /mnt in the CT.")" 8 60
+                    whiptail --title "$(translate "No Folders")" --msgbox "$(translate "No folders found inside /mnt in the CT.")" 8 60
                     continue
                 fi
 
@@ -64,7 +64,7 @@ select_mount_point() {
                     OPTIONS+=("$dir" "$name")
                 done <<< "$DIRS"
                 
-                MOUNT_POINT=$(dialog --title "$(translate "Select Folder")" \
+                MOUNT_POINT=$(whiptail --title "$(translate "Select Folder")" \
                     --menu "$(translate "Choose a folder to share:")" 20 60 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
                 if [[ $? -ne 0 ]]; then
                     return 1
@@ -95,6 +95,11 @@ select_mount_point() {
 
 
 create_share() {
+
+    show_proxmenux_logo
+    msg_title "$(translate "Create Samba server service")"
+    sleep 2
+
     select_mount_point || return
     
 
@@ -108,8 +113,6 @@ create_share() {
         fi
     fi
     
-    show_proxmenux_logo
-    msg_title "$(translate "Create Samba server service")"
     
 
     if pct exec "$CTID" -- dpkg -s samba &>/dev/null; then

@@ -232,6 +232,7 @@ create_nfs_export() {
 
     show_proxmenux_logo
     msg_title "$(translate "Create LXC server NFS")"
+    sleep 2
 
 
     select_mount_point || return
