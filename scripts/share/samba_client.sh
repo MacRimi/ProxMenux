@@ -135,7 +135,7 @@ discover_samba_servers() {
     fi
 
     msg_ok "$(translate "Samba servers detected")"
-    CHOICE=$(dialog --title "$(translate "Select Samba Server")" \
+    CHOICE=$(whiptail --title "$(translate "Select Samba Server")" \
         --menu "$(translate "Choose a Samba server:")" 20 80 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
     if [[ -n "$CHOICE" ]]; then
