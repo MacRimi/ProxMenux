@@ -106,12 +106,12 @@ uninstall_proxmenu() {
     local force_clean="$2"
     
     if [ "$force_clean" != "force" ]; then
-        if ! whiptail --title "Uninstall ProxMenu" --yesno "Are you sure you want to uninstall ProxMenu?" 10 60; then
+        if ! whiptail --title "Uninstall ProxMenux" --yesno "Are you sure you want to uninstall ProxMenux?" 10 60; then
             return 1
         fi
     fi
     
-    echo "Uninstalling ProxMenu..."
+    echo "Uninstalling ProxMenux..."
     
     if [ -f "$VENV_PATH/bin/activate" ]; then
         echo "Removing googletrans and virtual environment..."
@@ -221,7 +221,7 @@ show_progress() {
     local total="$2"
     local message="$3"
     
-    echo -e "\n${BOLD}${BL}${TAB}Installing ProxMenu: Step $step of $total${CL}"
+    echo -e "\n${BOLD}${BL}${TAB}Installing ProxMenux: Step $step of $total${CL}"
     echo
     msg_info2 "$message"
 }
