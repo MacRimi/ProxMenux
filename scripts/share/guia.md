@@ -161,7 +161,7 @@ chgrp sharedfiles /tmp/sin_setgid
 
 ls -ld /tmp/sin_setgid
 # Salida: drwxrwxr-x 2 root sharedfiles 4096 sep  8 10:30 /tmp/sin_setgid
-#         ↑ No hay 's' en la posición del grupo
+#               ↑ No hay 's' en la posición del grupo
 
 # Crear archivo como usuario www-data
 sudo -u www-data touch /tmp/sin_setgid/archivo1
@@ -188,7 +188,7 @@ chgrp sharedfiles /tmp/con_setgid
 
 ls -ld /tmp/con_setgid
 # Salida: drwxrwsr-x 2 root sharedfiles 4096 sep  8 10:37 /tmp/con_setgid
-#              ↑ La 's' indica que setgid está activo
+#               ↑ La 's' indica que setgid está activo
 
 # Crear archivo como usuario www-data
 sudo -u www-data touch /tmp/con_setgid/archivo1
