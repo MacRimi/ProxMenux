@@ -457,7 +457,7 @@ select_lxc_container() {
 
 
 
-select_container_mount_point() {
+select_container_mount_point_() {
     local ctid="$1"
     local host_dir="$2"
     local choice mount_point existing_dirs options
@@ -499,6 +499,59 @@ select_container_mount_point() {
     done
 }
 
+
+
+
+
+
+
+
+
+
+select_container_mount_point() {
+    local ctid="$1"
+    local host_dir="$2"
+    local choice mount_point base_name
+
+    base_name=$(basename "$host_dir")
+
+    while true; do
+        choice=$(whiptail --title "$(translate "Configure Mount Point inside LXC")" \
+            --menu "$(translate "Where to mount inside container?")" 18 70 5 \
+            "1" "$(translate "Create new directory in /mnt")" \
+            "2" "$(translate "Enter path manually")" \
+            "3" "$(translate "Cancel")" 3>&1 1>&2 2>&3) || return 1
+
+        case "$choice" in
+            1)
+                mount_point=$(whiptail --inputbox "$(translate "Enter folder name for /mnt:")" \
+                    10 60 "$base_name" 3>&1 1>&2 2>&3) || continue
+                [[ -z "$mount_point" ]] && continue
+                mount_point="/mnt/$mount_point"
+                pct exec "$ctid" -- mkdir -p "$mount_point" 2>/dev/null
+                ;;
+
+            2)
+                mount_point=$(whiptail --inputbox "$(translate "Enter full path:")" \
+                    10 70 "/mnt/$base_name" 3>&1 1>&2 2>&3) || continue
+                [[ -z "$mount_point" ]] && continue
+                pct exec "$ctid" -- mkdir -p "$mount_point" 2>/dev/null
+                ;;
+
+            3)
+                return 1
+                ;;
+        esac
+
+        if pct exec "$ctid" -- test -d "$mount_point" 2>/dev/null; then
+            echo "$mount_point"
+            return 0
+        else
+            whiptail --msgbox "$(translate "Could not create or access directory:") $mount_point" 8 70
+            continue
+        fi
+    done
+}
 
 
 
