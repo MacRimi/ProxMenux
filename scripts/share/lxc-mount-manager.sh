@@ -360,7 +360,7 @@ mount_host_directory_to_lxc() {
     msg_ok "$(translate 'Host group configured')"
      
     # Step 4: Select container mount point
-    clear
+    
     local ct_mount_point
     ct_mount_point=$(select_container_mount_point "$container_id" "$host_dir")
     if [[ -z "$ct_mount_point" ]]; then
