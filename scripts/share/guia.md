@@ -2,870 +2,633 @@
 
 ## 📋 Índice
 
-### 🎯 Conceptos Fundamentales
-- [¿Qué son los permisos en Linux?](#qué-son-los-permisos-en-linux)
-- [Usuarios y grupos en Linux](#usuarios-y-grupos-en-linux)
-- [¿Qué son las ACLs?](#qué-son-las-acls)
-- [Contenedores privilegiados vs no privilegiados](#contenedores-privilegiados-vs-no-privilegiados)
-
-### 🛠️ Configuración Práctica
-- [Crear directorio local compartido](#crear-directorio-local-compartido)
-- [Configurar recurso NFS](#configurar-recurso-nfs)
-- [Configurar recurso Samba](#configurar-recurso-samba)
-- [Montar recursos en contenedores](#montar-recursos-en-contenedores)
-
-### 🔧 Casos Prácticos
-- [Ejemplo completo: NFS](#ejemplo-completo-nfs)
-- [Ejemplo completo: Samba](#ejemplo-completo-samba)
-- [Ejemplo completo: Directorio local](#ejemplo-completo-directorio-local)
-
-### 🚨 Solución de Problemas
-- [Errores comunes y soluciones](#errores-comunes-y-soluciones)
-- [Comandos de verificación](#comandos-de-verificación)
+1. [Conceptos Fundamentales](#1-conceptos-fundamentales)
+2. [Preparación del Host Proxmox](#2-preparación-del-host-proxmox)
+3. [Tipos de Recursos Compartidos](#3-tipos-de-recursos-compartidos)
+4. [Configuración de Contenedores](#4-configuración-de-contenedores)
+5. [Montaje en Contenedores](#5-montaje-en-contenedores)
+6. [Verificación y Pruebas](#6-verificación-y-pruebas)
+7. [Solución de Problemas](#7-solución-de-problemas)
+8. [Comandos de Referencia Rápida](#8-comandos-de-referencia-rápida)
 
 ---
 
-## 🎯 Conceptos Fundamentales
+## 1. Conceptos Fundamentales
 
-### ¿Qué son los permisos en Linux?
+### ¿Qué son los Usuarios y Grupos en Linux?
 
-En Linux, cada archivo y directorio tiene **permisos** que determinan quién puede hacer qué con ellos.
+En Linux, cada archivo y proceso pertenece a un **usuario** y un **grupo**:
 
-#### Tipos de permisos:
-- **r (read/lectura)**: Ver el contenido
-- **w (write/escritura)**: Modificar el contenido  
-- **x (execute/ejecución)**: Ejecutar archivos o acceder a directorios
-
-#### Niveles de permisos:
-- **Usuario propietario (u)**: El dueño del archivo
-- **Grupo propietario (g)**: El grupo al que pertenece el archivo
-- **Otros (o)**: Todos los demás usuarios
-
-#### Ejemplo práctico:
 ```bash
-ls -l /mnt/shared_data/archivo.txt
--rw-rw-r-- 1 root sharedfiles 1024 sep 8 archivo.txt
+# Ver información de un archivo
+ls -l /mnt/shared/archivo.txt
+# Salida: -rw-rw-r-- 1 root sharedfiles 1024 dic 8 archivo.txt
+#         ↑permisos  ↑usuario ↑grupo    ↑tamaño
 ```
 
-**Desglose:**
-- `-rw-rw-r--`: Permisos (explicado abajo)
-- `root`: Usuario propietario
-- `sharedfiles`: Grupo propietario
-- `1024`: Tamaño en bytes
+**Explicación de permisos:**
+- `rw-` = Usuario propietario: lectura y escritura
+- `rw-` = Grupo propietario: lectura y escritura  
+- `r--` = Otros usuarios: solo lectura
 
-**Permisos desglosados:**
-- Primer `-`: Tipo de archivo (- = archivo, d = directorio)
-- `rw-`: Usuario puede leer y escribir, no ejecutar
-- `rw-`: Grupo puede leer y escribir, no ejecutar
-- `r--`: Otros solo pueden leer
+### ¿Qué son las ACLs (Access Control Lists)?
 
-### Usuarios y grupos en Linux
+Las **ACLs** son permisos extendidos que van más allá del sistema tradicional usuario/grupo/otros:
 
-#### ¿Qué es un usuario?
-Un **usuario** es una identidad en el sistema. Cada usuario tiene:
-- **UID (User ID)**: Número único que lo identifica
-- **Nombre**: Como `root`, `www-data`, `nextcloud`
-- **Grupo principal**: Su grupo por defecto
-
-#### ¿Qué es un grupo?
-Un **grupo** es una colección de usuarios que comparten permisos. Cada grupo tiene:
-- **GID (Group ID)**: Número único que lo identifica
-- **Nombre**: Como `sharedfiles`, `www-data`, `users`
-
-#### ¿Por qué usar grupos en Proxmox?
 ```bash
-# Sin grupo común - PROBLEMÁTICO
-# Host: archivo pertenece a "root"
-# LXC1: usuario "www-data" no puede escribir
-# LXC2: usuario "nextcloud" no puede escribir
-
-# Con grupo común - SOLUCIÓN
-# Host: archivo pertenece a grupo "sharedfiles"
-# LXC1: "www-data" está en grupo "sharedfiles" → puede escribir
-# LXC2: "nextcloud" está en grupo "sharedfiles" → puede escribir
+# Ver ACLs de un directorio
+getfacl /mnt/shared
+# Salida:
+# user::rwx
+# group::rwx
+# group:sharedfiles:rwx    ← ACL específica para el grupo
+# mask::rwx
+# other::r-x
+# default:user::rwx        ← Permisos por defecto para nuevos archivos
+# default:group::rwx
+# default:group:sharedfiles:rwx
+# default:mask::rwx
+# default:other::r-x
 ```
 
-#### Comandos útiles:
-```bash
-# Ver usuarios del sistema
-cat /etc/passwd
+### ¿Por qué son importantes los Grupos en Proxmox?
 
-# Ver grupos del sistema
-cat /etc/group
+Los **contenedores no privilegiados** usan un mapeo de IDs:
+- Usuario `root` (UID 0) en el contenedor = UID 100000 en el host
+- Usuario `www-data` (UID 33) en el contenedor = UID 100033 en el host
 
-# Ver a qué grupos pertenece un usuario
-groups www-data
+**El problema:** Si un archivo pertenece al UID 1000 en el host, el contenedor lo ve como UID 101000 (inexistente).
 
-# Ver información completa de un usuario
-id www-data
-```
-
-### ¿Qué son las ACLs?
-
-**ACL (Access Control Lists)** son permisos **extendidos** que van más allá de los permisos básicos de Linux.
-
-#### ¿Por qué necesitamos ACLs?
-Los permisos básicos solo permiten **un usuario** y **un grupo** por archivo. Las ACLs permiten:
-- Múltiples usuarios con diferentes permisos
-- Múltiples grupos con diferentes permisos
-- Permisos por defecto para archivos nuevos
-
-#### Ejemplo sin ACLs (limitado):
-```bash
-# Solo podemos dar permisos a UN grupo
-chown root:sharedfiles /mnt/shared_data
-chmod 775 /mnt/shared_data
-# ¿Qué pasa si necesitamos que otro grupo también tenga acceso?
-```
-
-#### Ejemplo con ACLs (flexible):
-```bash
-# Podemos dar permisos a MÚLTIPLES grupos
-setfacl -m g:sharedfiles:rwx /mnt/shared_data
-setfacl -m g:developers:rwx /mnt/shared_data
-setfacl -m g:backup:r-x /mnt/shared_data
-```
-
-#### ¿Por qué son cruciales con NFS?
-**NFS no entiende nombres, solo números (UID/GID)**:
-```bash
-# En el servidor NFS
-# Usuario "www-data" tiene UID 33, GID 33
-
-# En el cliente NFS  
-# Usuario "www-data" tiene UID 33, GID 33
-# ✅ Coinciden → funciona
-
-# Pero si los números no coinciden:
-# Servidor: "www-data" UID 33
-# Cliente: "www-data" UID 1001  
-# ❌ NFS ve usuarios diferentes → permisos rotos
-```
-
-**Las ACLs solucionan esto** asegurando que el grupo tenga permisos sin importar qué usuario específico cree el archivo.
-
-### Contenedores privilegiados vs no privilegiados
-
-#### Contenedor Privilegiado
-- **UID/GID idénticos** al host
-- `root` en contenedor = `root` en host (UID 0)
-- **Más simple** de configurar
-- **Menos seguro** (escape = root en host)
-
-#### Contenedor No Privilegiado  
-- **UID/GID desplazados** +100000
-- `root` en contenedor (UID 0) = usuario 100000 en host
-- **Más complejo** de configurar
-- **Más seguro** (escape = usuario sin privilegios)
-
-#### Mapeo de IDs en contenedores no privilegiados:
-```bash
-# Contenedor → Host
-UID 0 → UID 100000      (root)
-UID 33 → UID 100033     (www-data)  
-UID 1000 → UID 101000   (usuario normal)
-
-GID 0 → GID 100000      (root)
-GID 33 → GID 100033     (www-data)
-GID 1000 → GID 101000   (grupo personalizado)
-```
+**La solución:** Usar un **grupo común** con **ACLs** que garanticen permisos independientemente del UID.
 
 ---
 
-## 🛠️ Configuración Práctica
+## 2. Preparación del Host Proxmox
 
-### Crear directorio local compartido
+### Paso 1: Crear Grupo Universal
 
-#### Paso 1: Crear directorio y grupo en el host
 ```bash
-# Crear directorio
-mkdir -p /mnt/shared_data
-
-# Crear grupo universal (si no existe)
-groupadd -g 101000 sharedfiles 2>/dev/null || true
+# Crear grupo que usarán todos los recursos compartidos
+groupadd -g 101000 sharedfiles
 
 # Verificar que se creó correctamente
 getent group sharedfiles
 # Salida: sharedfiles:x:101000:
 ```
 
-#### Paso 2: Configurar permisos base
+**¿Por qué GID 101000?**
+- Es el primer GID mapeado de contenedores no privilegiados
+- Garantiza compatibilidad entre host y contenedores
+
+### Paso 2: Instalar Herramientas Necesarias
+
 ```bash
-# Asignar propietario y grupo
-chown root:sharedfiles /mnt/shared_data
-
-# Permisos con setgid (bit especial)
-chmod 2775 /mnt/shared_data
-```
-
-**¿Qué significa `2775`?**
-- **2**: Bit setgid → archivos nuevos heredan el grupo `sharedfiles`
-- **7**: Propietario (root) → lectura, escritura, ejecución
-- **7**: Grupo (sharedfiles) → lectura, escritura, ejecución  
-- **5**: Otros → lectura, ejecución (sin escritura)
-
-#### Paso 3: Aplicar ACLs
-```bash
-# ACLs para contenido existente
-setfacl -R -m g:sharedfiles:rwx /mnt/shared_data
-
-# ACLs por defecto para contenido nuevo
-setfacl -d -m g:sharedfiles:rwx /mnt/shared_data
-
-# Verificar ACLs aplicadas
-getfacl /mnt/shared_data
-```
-
-### Configurar recurso NFS
-
-#### Paso 1: Instalar servidor NFS
-```bash
-# En Debian/Ubuntu
+# Instalar herramientas para ACLs
 apt update
-apt install -y nfs-kernel-server
+apt install -y acl
 
-# En CentOS/RHEL
-yum install -y nfs-utils
-systemctl enable nfs-server
-systemctl start nfs-server
+# Para recursos NFS
+apt install -y nfs-common
+
+# Para recursos Samba/CIFS
+apt install -y cifs-utils
 ```
-
-#### Paso 2: Configurar exportación
-```bash
-# Editar archivo de exportaciones
-nano /etc/exports
-
-# Añadir línea (ajustar red según tu configuración)
-/mnt/shared_data 192.168.1.0/24(rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000)
-```
-
-**Explicación de opciones:**
-- `rw`: Lectura y escritura
-- `sync`: Confirma escritura antes de responder
-- `no_subtree_check`: Evita verificaciones innecesarias
-- `all_squash`: Mapea todos los usuarios al anónimo
-- `anonuid=0`: Usuario anónimo = root (UID 0)
-- `anongid=101000`: Grupo anónimo = sharedfiles (GID 101000)
-
-#### Paso 3: Activar exportación
-```bash
-# Recargar configuración
-exportfs -ra
-
-# Verificar exportaciones activas
-exportfs -v
-showmount -e localhost
-```
-
-#### Paso 4: Configurar firewall (si está activo)
-```bash
-# UFW (Ubuntu)
-ufw allow from 192.168.1.0/24 to any port nfs
-
-# Firewalld (CentOS)
-firewall-cmd --permanent --add-service=nfs
-firewall-cmd --reload
-```
-
-### Configurar recurso Samba
-
-#### Paso 1: Instalar servidor Samba
-```bash
-# En Debian/Ubuntu
-apt update
-apt install -y samba samba-common-bin
-
-# En CentOS/RHEL
-yum install -y samba samba-client
-systemctl enable smb nmb
-systemctl start smb nmb
-```
-
-#### Paso 2: Configurar compartición
-```bash
-# Hacer backup de configuración original
-cp /etc/samba/smb.conf /etc/samba/smb.conf.backup
-
-# Editar configuración
-nano /etc/samba/smb.conf
-```
-
-Añadir al final del archivo:
-```ini
-[shared_data]
-    comment = Directorio compartido
-    path = /mnt/shared_data
-    browseable = yes
-    read only = no
-    valid users = @sharedfiles
-    force group = sharedfiles
-    create mask = 0664
-    directory mask = 2775
-    force create mode = 0664
-    force directory mode = 2775
-```
-
-**Explicación de opciones:**
-- `valid users = @sharedfiles`: Solo miembros del grupo pueden acceder
-- `force group = sharedfiles`: Fuerza que archivos pertenezcan al grupo
-- `create mask = 0664`: Permisos para archivos nuevos
-- `directory mask = 2775`: Permisos para directorios nuevos (con setgid)
-
-#### Paso 3: Crear usuario Samba
-```bash
-# Crear usuario del sistema (si no existe)
-useradd -r -s /bin/false -g sharedfiles sambauser
-
-# Crear usuario Samba
-smbpasswd -a sambauser
-# Te pedirá contraseña
-
-# Añadir usuario existente al grupo
-usermod -aG sharedfiles sambauser
-```
-
-#### Paso 4: Reiniciar servicios
-```bash
-# Verificar configuración
-testparm
-
-# Reiniciar servicios
-systemctl restart smbd nmbd
-```
-
-### Montar recursos en contenedores
-
-#### Paso 1: Configurar contenedor privilegiado
-
-**¿Por qué necesitamos configurar grupos en contenedores privilegiados?**
-
-Aunque los contenedores privilegiados comparten los mismos UID/GID que el host, **NO comparten automáticamente los grupos**. Cada contenedor tiene su propio `/etc/group`.
-
-```bash
-# 1.1 Entrar al contenedor
-pct exec 100 -- bash
-
-# 1.2 Crear grupo idéntico al host
-groupadd -g 101000 sharedfiles
-
-# ¿Por qué GID 101000?
-# Porque es el mismo GID que usamos en el host
-# En privilegiados: GID contenedor = GID host
-
-# 1.3 Añadir usuarios relevantes al grupo
-usermod -aG sharedfiles root
-usermod -aG sharedfiles www-data
-
-# Si tienes otros usuarios específicos
-usermod -aG sharedfiles nextcloud 2>/dev/null || true
-usermod -aG sharedfiles jellyfin 2>/dev/null || true
-
-# 1.4 Verificar membresía
-groups root
-groups www-data
-
-# 1.5 Salir del contenedor
-exit
-```
-
-#### Paso 2: Configurar contenedor no privilegiado
-
-```bash
-# 2.1 Entrar al contenedor
-pct exec 101 -- bash
-
-# 2.2 Crear grupo con GID mapeado
-groupadd -g 1000 sharedfiles
-# Importante: GID 1000 en contenedor = GID 101000 en host
-
-# 2.3 Listar todos los usuarios disponibles
-echo "Usuarios disponibles en el contenedor:"
-awk -F: '$3>=1000 && $1!="nobody" {print "- " $1 " (UID: " $3 ")"}' /etc/passwd
-
-# También mostrar usuarios del sistema comunes
-echo "Usuarios del sistema comunes:"
-for user in root www-data nginx apache mysql postgres redis; do
-    if id "$user" >/dev/null 2>&1; then
-        echo "- $user ($(id -u $user))"
-    fi
-done
-
-# 2.4 Añadir usuarios al grupo
-# Usuarios básicos siempre necesarios
-usermod -aG sharedfiles root
-usermod -aG sharedfiles www-data
-
-# Usuarios específicos según aplicaciones instaladas
-usermod -aG sharedfiles nextcloud 2>/dev/null || true
-usermod -aG sharedfiles jellyfin 2>/dev/null || true
-usermod -aG sharedfiles plex 2>/dev/null || true
-usermod -aG sharedfiles mysql 2>/dev/null || true
-usermod -aG sharedfiles postgres 2>/dev/null || true
-
-# 2.5 Verificar configuración
-echo "Verificando configuración de usuarios:"
-for user in root www-data nextcloud jellyfin; do
-    if id "$user" >/dev/null 2>&1; then
-        echo "Usuario $user:"
-        id "$user"
-        echo ""
-    fi
-done
-
-# 2.6 Salir del contenedor
-exit
-```
-
-**Comando para añadir TODOS los usuarios automáticamente:**
-```bash
-# Dentro del contenedor no privilegiado
-# Añadir todos los usuarios con UID >= 1000 al grupo sharedfiles
-awk -F: '$3>=1000 && $1!="nobody" {print $1}' /etc/passwd | while read user; do
-    usermod -aG sharedfiles "$user"
-    echo "Añadido $user al grupo sharedfiles"
-done
-
-# Añadir usuarios del sistema importantes
-for user in root www-data nginx apache mysql postgres redis; do
-    if id "$user" >/dev/null 2>&1; then
-        usermod -aG sharedfiles "$user"
-        echo "Añadido $user al grupo sharedfiles"
-    fi
-done
-```
-
-#### Paso 3: Montar directorios en contenedores
-
-```bash
-# 3.1 Para contenedor privilegiado (ID 100)
-pct set 100 -mp0 /mnt/shared_data,mp=/mnt/shared,backup=0,acl=1,shared=1
-
-# 3.2 Para contenedor no privilegiado (ID 101)  
-pct set 101 -mp0 /mnt/shared_data,mp=/mnt/shared,backup=0,acl=1,shared=1
-
-# 3.3 Reiniciar contenedores para activar montajes
-pct reboot 100
-pct reboot 101
-
-# Esperar a que arranquen
-sleep 15
-```
-
-**Explicación de parámetros:**
-- `mp0`: Punto de montaje 0 (puedes usar mp1, mp2, etc.)
-- `/mnt/shared_data`: Ruta en el host
-- `mp=/mnt/shared`: Ruta dentro del contenedor
-- `backup=0`: Excluir del backup automático
-- `acl=1`: Habilitar soporte para ACLs
-- `shared=1`: **IMPORTANTE** - Permite migración en clusters sin copiar datos
 
 ---
 
-## 🔧 Casos Prácticos
+## 3. Tipos de Recursos Compartidos
 
-### Ejemplo completo: NFS
+### A) Directorio Local del Host
 
-#### Escenario: Servidor NFS en host, cliente en contenedor
+**Cuándo usar:** Para almacenamiento compartido simple entre contenedores del mismo host.
 
-**Paso 1: Preparar servidor NFS en host**
 ```bash
-# Crear directorio y configurar permisos
-mkdir -p /mnt/nfs_export
-groupadd -g 101000 sharedfiles 2>/dev/null || true
-chown root:sharedfiles /mnt/nfs_export
-chmod 2775 /mnt/nfs_export
-setfacl -R -m g:sharedfiles:rwx /mnt/nfs_export
-setfacl -d -m g:sharedfiles:rwx /mnt/nfs_export
+# 1. Crear directorio
+mkdir -p /mnt/local_shared
 
-# Configurar exportación NFS
-echo "/mnt/nfs_export 192.168.1.0/24(rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000)" >> /etc/exports
-exportfs -ra
+# 2. Configurar propietario y permisos
+chown root:sharedfiles /mnt/local_shared
+chmod 2775 /mnt/local_shared
+
+# 3. Aplicar ACLs
+setfacl -R -m g:sharedfiles:rwx /mnt/local_shared
+setfacl -d -m g:sharedfiles:rwx /mnt/local_shared
+
+# 4. Verificar configuración
+ls -ld /mnt/local_shared
+# Salida: drwxrwsr-x+ 2 root sharedfiles 4096 dic 8 /mnt/local_shared
+#         ↑ La 's' indica setgid activo
+#         ↑ El '+' indica ACLs aplicadas
 ```
 
-**Paso 2: Montar NFS desde otro host**
+**Explicación de permisos 2775:**
+- `2` = setgid (nuevos archivos heredan el grupo)
+- `7` = rwx para el propietario (root)
+- `7` = rwx para el grupo (sharedfiles)
+- `5` = r-x para otros
+
+### B) Recurso NFS Remoto
+
+**Cuándo usar:** Para acceder a un servidor NFS existente en la red.
+
 ```bash
-# En otro servidor Proxmox
-mkdir -p /mnt/nfs_client
+# 1. Crear punto de montaje
+mkdir -p /mnt/nfs_shared
 
-# Montar temporalmente para probar
-mount -t nfs 192.168.1.50:/mnt/nfs_export /mnt/nfs_client
+# 2. Montar temporalmente para probar
+mount -t nfs 192.168.1.100:/export/data /mnt/nfs_shared
 
-# Hacer persistente tras reinicio
-echo "192.168.1.50:/mnt/nfs_export /mnt/nfs_client nfs rw,hard,nofail,rsize=131072,wsize=131072,timeo=600,retrans=2,_netdev 0 0" >> /etc/fstab
+# 3. Verificar que funciona
+ls -la /mnt/nfs_shared
+
+# 4. Si funciona, hacer persistente en /etc/fstab
+echo "192.168.1.100:/export/data /mnt/nfs_shared nfs rw,hard,nofail,rsize=131072,wsize=131072,timeo=600,retrans=2,_netdev 0 0" >> /etc/fstab
+
+# 5. Configurar permisos locales
+chown root:sharedfiles /mnt/nfs_shared
+chmod 2775 /mnt/nfs_shared
+setfacl -R -m g:sharedfiles:rwx /mnt/nfs_shared
+setfacl -d -m g:sharedfiles:rwx /mnt/nfs_shared
+
+# 6. Probar montaje persistente
+umount /mnt/nfs_shared
+mount -a
 ```
 
-**Explicación del fstab:**
-- `rw`: Lectura y escritura
-- `hard`: Reintentar indefinidamente si hay problemas
-- `nofail`: No bloquear arranque si no está disponible
-- `rsize/wsize=131072`: Tamaño de buffer (128KB) para mejor rendimiento
-- `timeo=600`: Timeout de 60 segundos (600 décimas)
-- `retrans=2`: Reintentar 2 veces antes de timeout
-- `_netdev`: Esperar a que la red esté lista
-- `0 0`: No hacer dump ni fsck (siempre para recursos de red)
+**Explicación de opciones NFS:**
+- `rw` = lectura y escritura
+- `hard` = reintentar indefinidamente si el servidor no responde
+- `nofail` = no bloquear el arranque si no está disponible
+- `rsize/wsize=131072` = tamaño de buffer para mejor rendimiento
+- `timeo=600` = timeout de 60 segundos
+- `retrans=2` = reintentar 2 veces antes de reportar error
+- `_netdev` = esperar a que la red esté lista
+- `0 0` = no hacer dump ni fsck (siempre para recursos de red)
 
-**Paso 3: Configurar contenedor para usar NFS**
+### C) Recurso Samba/CIFS
+
+**Cuándo usar:** Para acceder a recursos compartidos de Windows o servidores Samba.
+
 ```bash
-# Configurar permisos en el host cliente
-groupadd -g 101000 sharedfiles 2>/dev/null || true
-chown root:sharedfiles /mnt/nfs_client
-setfacl -R -m g:sharedfiles:rwx /mnt/nfs_client
-setfacl -d -m g:sharedfiles:rwx /mnt/nfs_client
-
-# Montar en contenedor
-pct set 102 -mp0 /mnt/nfs_client,mp=/mnt/shared_nfs,backup=0,acl=1,shared=1
-pct reboot 102
-```
-
-### Ejemplo completo: Samba
-
-#### Escenario: Montar recurso Samba externo en host y compartir con contenedores
-
-**Paso 1: Montar Samba en host**
-```bash
-# Instalar cliente Samba
-apt install -y cifs-utils
-
-# Crear directorio de montaje
-mkdir -p /mnt/samba_share
-
-# Crear archivo de credenciales
+# 1. Crear archivo de credenciales seguro
 cat > /etc/cifs-credentials << EOF
 username=tu_usuario
-password=tu_contraseña
+password=tu_password
 domain=tu_dominio
 EOF
 
-# Proteger credenciales
+# 2. Proteger el archivo
 chmod 600 /etc/cifs-credentials
 
-# Montar temporalmente para probar
-mount -t cifs //192.168.1.60/shared_folder /mnt/samba_share -o credentials=/etc/cifs-credentials,iocharset=utf8,vers=3.0
+# 3. Crear punto de montaje
+mkdir -p /mnt/samba_shared
 
-# Hacer persistente
-echo "//192.168.1.60/shared_folder /mnt/samba_share cifs credentials=/etc/cifs-credentials,iocharset=utf8,vers=3.0,_netdev,nofail 0 0" >> /etc/fstab
+# 4. Montar temporalmente para probar
+mount -t cifs //192.168.1.200/shared /mnt/samba_shared -o credentials=/etc/cifs-credentials,iocharset=utf8,vers=3.0
+
+# 5. Verificar que funciona
+ls -la /mnt/samba_shared
+
+# 6. Si funciona, hacer persistente en /etc/fstab
+echo "//192.168.1.200/shared /mnt/samba_shared cifs credentials=/etc/cifs-credentials,iocharset=utf8,vers=3.0,_netdev,nofail 0 0" >> /etc/fstab
+
+# 7. Configurar permisos locales
+chown root:sharedfiles /mnt/samba_shared
+chmod 2775 /mnt/samba_shared
+setfacl -R -m g:sharedfiles:rwx /mnt/samba_shared
+setfacl -d -m g:sharedfiles:rwx /mnt/samba_shared
+
+# 8. Probar montaje persistente
+umount /mnt/samba_shared
+mount -a
 ```
 
-**Paso 2: Configurar permisos para contenedores**
+**Explicación de opciones CIFS:**
+- `credentials=` = archivo con usuario/password
+- `iocharset=utf8` = codificación de caracteres
+- `vers=3.0` = versión del protocolo SMB
+- `_netdev` = esperar a que la red esté lista
+- `nofail` = no bloquear el arranque si no está disponible
+
+---
+
+## 4. Configuración de Contenedores
+
+### Contenedor Privilegiado (Ejemplo: ID 100)
+
+**¿Necesita configuración especial?**
+En teoría no, porque los UIDs/GIDs son idénticos al host. Sin embargo, **es recomendable** crear el grupo para consistencia:
+
 ```bash
-# Configurar grupo y permisos
-groupadd -g 101000 sharedfiles 2>/dev/null || true
-chown root:sharedfiles /mnt/samba_share
-chmod 2775 /mnt/samba_share
-setfacl -R -m g:sharedfiles:rwx /mnt/samba_share
-setfacl -d -m g:sharedfiles:rwx /mnt/samba_share
+# 1. Entrar al contenedor
+pct exec 100 -- bash
+
+# 2. Crear grupo idéntico al host
+groupadd -g 101000 sharedfiles
+
+# 3. Añadir usuarios relevantes al grupo
+usermod -aG sharedfiles root
+usermod -aG sharedfiles www-data
+
+# Si tienes otros usuarios específicos de aplicaciones:
+usermod -aG sharedfiles ncp 2>/dev/null || true  # Nextcloud
+usermod -aG sharedfiles mysql 2>/dev/null || true  # MySQL
+
+# 4. Verificar membresía
+groups root
+groups www-data
+
+# 5. Salir del contenedor
+exit
 ```
 
-**Paso 3: Montar en contenedores**
+**¿Por qué hacerlo aunque no sea estrictamente necesario?**
+- **Consistencia:** Mismo comportamiento en privilegiados y no privilegiados
+- **Migración:** Si conviertes el contenedor a no privilegiado, ya está configurado
+- **Claridad:** Es evidente qué usuarios tienen acceso al recurso compartido
+
+### Contenedor No Privilegiado (Ejemplo: ID 101)
+
+**Aquí SÍ es obligatorio** configurar el grupo:
+
 ```bash
-# Contenedor privilegiado
-pct set 103 -mp0 /mnt/samba_share,mp=/mnt/samba,backup=0,acl=1,shared=1
+# 1. Entrar al contenedor
+pct exec 101 -- bash
 
-# Contenedor no privilegiado  
-pct set 104 -mp0 /mnt/samba_share,mp=/mnt/samba,backup=0,acl=1,shared=1
+# 2. Crear grupo con GID mapeado
+groupadd -g 1000 sharedfiles
+# Importante: GID 1000 en contenedor = GID 101000 en host
 
-# Reiniciar contenedores
-pct reboot 103 104
+# 3. Listar todos los usuarios disponibles
+awk -F: '$3>=1000 && $1!="nobody" {print $1 " (UID: " $3 ")"}' /etc/passwd
+# O más simple, solo los nombres:
+awk -F: '$3>=1000 && $1!="nobody" {print $1}' /etc/passwd
+
+# 4. Añadir usuarios al grupo (ajusta según tu contenedor)
+usermod -aG sharedfiles root
+usermod -aG sharedfiles www-data
+
+# Para aplicaciones específicas:
+usermod -aG sharedfiles ncp 2>/dev/null || true      # Nextcloud
+usermod -aG sharedfiles mysql 2>/dev/null || true    # MySQL
+usermod -aG sharedfiles postgres 2>/dev/null || true # PostgreSQL
+usermod -aG sharedfiles redis 2>/dev/null || true    # Redis
+
+# 5. Verificar configuración
+id www-data
+# Salida esperada: uid=33(www-data) gid=33(www-data) groups=33(www-data),1000(sharedfiles)
+
+# 6. Salir del contenedor
+exit
 ```
 
-### Ejemplo completo: Directorio local
+**¿Cómo añadir TODOS los usuarios automáticamente?**
 
-#### Escenario: Compartir directorio local del host con múltiples contenedores
-
-**Paso 1: Crear y configurar directorio**
 ```bash
-# Crear directorio principal
-mkdir -p /mnt/local_shared
+# Dentro del contenedor no privilegiado:
+# Obtener lista de usuarios y añadirlos al grupo
+for user in $(awk -F: '$3>=1000 && $1!="nobody" {print $1}' /etc/passwd); do
+    usermod -aG sharedfiles "$user"
+    echo "Usuario $user añadido al grupo sharedfiles"
+done
 
-# Crear subdirectorios por aplicación
-mkdir -p /mnt/local_shared/{nextcloud,jellyfin,backup,common}
-
-# Configurar permisos base
-groupadd -g 101000 sharedfiles 2>/dev/null || true
-chown -R root:sharedfiles /mnt/local_shared
-chmod -R 2775 /mnt/local_shared
-
-# Aplicar ACLs recursivamente
-setfacl -R -m g:sharedfiles:rwx /mnt/local_shared
-setfacl -R -d -m g:sharedfiles:rwx /mnt/local_shared
-```
-
-**Paso 2: Montar en múltiples contenedores**
-```bash
-# Nextcloud (contenedor 105) - acceso completo
-pct set 105 -mp0 /mnt/local_shared,mp=/mnt/shared,backup=0,acl=1,shared=1
-
-# Jellyfin (contenedor 106) - solo su directorio
-pct set 106 -mp0 /mnt/local_shared/jellyfin,mp=/mnt/media,backup=0,acl=1,shared=1
-
-# Backup (contenedor 107) - acceso de solo lectura
-pct set 107 -mp0 /mnt/local_shared,mp=/mnt/backup_source,backup=0,acl=1,shared=1,ro=1
-
-# Reiniciar todos
-pct reboot 105 106 107
+# Verificar resultado
+getent group sharedfiles
 ```
 
 ---
 
-## 🚨 Solución de Problemas
+## 5. Montaje en Contenedores
 
-### Errores comunes y soluciones
+### Configurar Puntos de Montaje
 
-#### Error: "Permission denied" al escribir desde contenedor no privilegiado
+```bash
+# Para contenedor privilegiado (ID 100)
+pct set 100 -mp0 /mnt/local_shared,mp=/mnt/shared,backup=0,acl=1,shared=1
+
+# Para contenedor no privilegiado (ID 101)  
+pct set 101 -mp0 /mnt/local_shared,mp=/mnt/shared,backup=0,acl=1,shared=1
+
+# Si tienes múltiples recursos:
+pct set 101 -mp1 /mnt/nfs_shared,mp=/mnt/nfs,backup=0,acl=1,shared=1
+pct set 101 -mp2 /mnt/samba_shared,mp=/mnt/samba,backup=0,acl=1,shared=1
+```
+
+**Explicación de parámetros:**
+- `mp0` = identificador del punto de montaje (mp0, mp1, mp2...)
+- `/mnt/local_shared` = ruta en el host
+- `mp=/mnt/shared` = ruta dentro del contenedor
+- `backup=0` = excluir del backup de vzdump (recomendado para recursos de red)
+- `acl=1` = habilitar soporte para ACLs dentro del contenedor
+- `shared=1` = **IMPORTANTE** para clusters - permite migración sin copiar datos
+
+### Aplicar Cambios
+
+```bash
+# Reiniciar contenedores para activar montajes
+pct reboot 100
+pct reboot 101
+
+# Esperar a que arranquen completamente
+sleep 15
+
+# Verificar que están funcionando
+pct status 100
+pct status 101
+```
+
+---
+
+## 6. Verificación y Pruebas
+
+### Prueba Básica de Escritura
+
+```bash
+# 1. Crear archivo desde el host
+echo "Archivo creado desde el host" > /mnt/local_shared/test_host.txt
+
+# 2. Verificar permisos en el host
+ls -l /mnt/local_shared/test_host.txt
+getfacl /mnt/local_shared/test_host.txt
+
+# 3. Probar desde contenedor privilegiado
+pct exec 100 -- bash -c "echo 'Desde contenedor privilegiado' > /mnt/shared/test_privileged.txt"
+
+# 4. Probar desde contenedor no privilegiado
+pct exec 101 -- bash -c "echo 'Desde contenedor no privilegiado' > /mnt/shared/test_unprivileged.txt"
+
+# 5. Verificar todos los archivos desde el host
+ls -la /mnt/local_shared/
+getfacl /mnt/local_shared/test_*
+```
+
+**Resultado esperado:**
+```bash
+# Todos los archivos deben tener:
+-rw-rw-r--+ 1 root sharedfiles [tamaño] [fecha] archivo.txt
+#         ↑ El '+' confirma que las ACLs están activas
+```
+
+### Prueba de Acceso Cruzado
+
+```bash
+# 1. Desde contenedor privilegiado, leer archivo del no privilegiado
+pct exec 100 -- cat /mnt/shared/test_unprivileged.txt
+
+# 2. Desde contenedor no privilegiado, leer archivo del privilegiado
+pct exec 101 -- cat /mnt/shared/test_privileged.txt
+
+# 3. Modificar archivos cruzados
+pct exec 100 -- bash -c "echo 'Modificado por privilegiado' >> /mnt/shared/test_unprivileged.txt"
+pct exec 101 -- bash -c "echo 'Modificado por no privilegiado' >> /mnt/shared/test_privileged.txt"
+
+# 4. Verificar contenido final
+cat /mnt/local_shared/test_unprivileged.txt
+cat /mnt/local_shared/test_privileged.txt
+```
+
+### Verificar Herencia de Permisos
+
+```bash
+# 1. Crear subdirectorio desde contenedor
+pct exec 101 -- mkdir /mnt/shared/subdir_test
+
+# 2. Crear archivo en subdirectorio
+pct exec 101 -- bash -c "echo 'Archivo en subdirectorio' > /mnt/shared/subdir_test/archivo.txt"
+
+# 3. Verificar herencia desde el host
+ls -ld /mnt/local_shared/subdir_test
+ls -l /mnt/local_shared/subdir_test/archivo.txt
+getfacl /mnt/local_shared/subdir_test
+```
+
+**Resultado esperado:**
+- El subdirectorio debe tener grupo `sharedfiles`
+- El archivo debe tener grupo `sharedfiles`
+- Las ACLs deben estar presentes
+
+---
+
+## 7. Solución de Problemas
+
+### Error: "Permission denied" al escribir
 
 **Síntomas:**
 ```bash
-# Dentro del contenedor
-touch /mnt/shared/test.txt
+pct exec 101 -- touch /mnt/shared/test.txt
 # touch: cannot touch '/mnt/shared/test.txt': Permission denied
 ```
 
 **Diagnóstico:**
 ```bash
-# En el host, verificar permisos
-ls -la /mnt/shared_data/
-getfacl /mnt/shared_data/
+# 1. Verificar montaje en el contenedor
+pct exec 101 -- mount | grep /mnt/shared
 
-# En el contenedor, verificar usuario
-id
-groups
+# 2. Verificar permisos en el host
+ls -ld /mnt/local_shared
+getfacl /mnt/local_shared
+
+# 3. Verificar grupo en el contenedor
+pct exec 101 -- getent group sharedfiles
+pct exec 101 -- groups root
 ```
 
 **Soluciones:**
 ```bash
-# 1. Verificar que el grupo existe en el contenedor
-pct exec 101 -- getent group sharedfiles
-
-# 2. Si no existe, crearlo
+# Si falta el grupo en el contenedor:
 pct exec 101 -- groupadd -g 1000 sharedfiles
+pct exec 101 -- usermod -aG sharedfiles root
 
-# 3. Añadir usuario al grupo
-pct exec 101 -- usermod -aG sharedfiles www-data
+# Si faltan ACLs en el host:
+setfacl -R -m g:sharedfiles:rwx /mnt/local_shared
+setfacl -d -m g:sharedfiles:rwx /mnt/local_shared
 
-# 4. Verificar ACLs en el host
-setfacl -R -m g:sharedfiles:rwx /mnt/shared_data
-setfacl -d -m g:sharedfiles:rwx /mnt/shared_data
+# Si faltan permisos básicos:
+chmod 2775 /mnt/local_shared
+chown root:sharedfiles /mnt/local_shared
 ```
 
-#### Error: "Stale file handle" en montajes NFS
+### Error: Archivos con propietario incorrecto
 
 **Síntomas:**
 ```bash
-ls /mnt/nfs_mount
-# ls: cannot access '/mnt/nfs_mount': Stale file handle
+ls -l /mnt/local_shared/
+# -rw-r--r-- 1 100033 100033 archivo.txt  ← UIDs numéricos en lugar de nombres
 ```
+
+**Causa:** El contenedor no privilegiado creó el archivo, pero el host no reconoce los UIDs mapeados.
 
 **Solución:**
 ```bash
-# Desmontar forzadamente
-umount -f /mnt/nfs_mount
+# 1. Verificar que las ACLs están activas
+getfacl /mnt/local_shared/archivo.txt
+# Debe mostrar: group:sharedfiles:rwx
 
-# Limpiar cache NFS
-echo 3 > /proc/sys/vm/drop_caches
-
-# Volver a montar
-mount -t nfs servidor:/export /mnt/nfs_mount
+# 2. Si las ACLs están bien, el archivo es accesible aunque el UID se vea raro
+# 3. Para "limpiar" la visualización, cambiar propietario:
+chown root:sharedfiles /mnt/local_shared/archivo.txt
 ```
 
-#### Error: Archivos aparecen con propietario incorrecto
+### Error: Montaje no persistente tras reinicio
+
+**Síntomas:**
+Tras reiniciar Proxmox, los recursos NFS/Samba no están montados.
+
+**Solución:**
+```bash
+# 1. Verificar /etc/fstab
+cat /etc/fstab | grep -E "(nfs|cifs)"
+
+# 2. Probar montaje manual
+mount -a
+
+# 3. Si falla, verificar conectividad
+ping 192.168.1.100  # IP del servidor NFS/Samba
+
+# 4. Para NFS, verificar que el servicio está activo
+systemctl status nfs-common
+
+# 5. Para Samba, verificar credenciales
+cat /etc/cifs-credentials
+```
+
+### Error: "Transport endpoint is not connected"
 
 **Síntomas:**
 ```bash
-ls -l /mnt/shared/
-# -rw-r--r-- 1 100033 100033 1024 sep 8 archivo.txt
+ls /mnt/nfs_shared
+# ls: cannot access '/mnt/nfs_shared': Transport endpoint is not connected
 ```
 
-**Explicación:**
-El archivo muestra UID/GID numéricos porque el sistema no encuentra nombres correspondientes.
+**Causa:** El servidor NFS no está disponible o la conexión se perdió.
 
 **Solución:**
 ```bash
-# Verificar mapeo de IDs
-# En contenedor no privilegiado: UID 33 → Host UID 100033
+# 1. Desmontar forzosamente
+umount -f /mnt/nfs_shared
 
-# Crear grupo con GID correcto en host si es necesario
-groupadd -g 100033 container-www-data
+# 2. Verificar conectividad
+ping 192.168.1.100
+showmount -e 192.168.1.100
 
-# O mejor, usar el grupo universal
-chown -R root:sharedfiles /mnt/shared/
-```
+# 3. Remontar
+mount /mnt/nfs_shared
 
-#### Error: "Transport endpoint is not connected" en Samba
-
-**Síntomas:**
-```bash
-ls /mnt/samba_mount
-# ls: cannot access '/mnt/samba_mount': Transport endpoint is not connected
-```
-
-**Solución:**
-```bash
-# Desmontar
-umount /mnt/samba_mount
-
-# Verificar conectividad
-ping servidor_samba
-smbclient -L //servidor_samba -U usuario
-
-# Remontar con opciones específicas
-mount -t cifs //servidor/share /mnt/samba_mount -o username=user,vers=3.0,iocharset=utf8
-```
-
-### Comandos de verificación
-
-#### Verificar configuración de permisos
-```bash
-# Verificar permisos básicos
-ls -la /mnt/shared_data/
-
-# Verificar ACLs
-getfacl /mnt/shared_data/
-
-# Verificar grupos
-getent group sharedfiles
-
-# Verificar usuarios en grupo
-getent group sharedfiles | cut -d: -f4
-```
-
-#### Verificar montajes NFS
-```bash
-# Ver exportaciones disponibles
-showmount -e servidor_nfs
-
-# Ver montajes activos
-mount | grep nfs
-df -h | grep nfs
-
-# Verificar estadísticas NFS
-nfsstat -c  # Cliente
-nfsstat -s  # Servidor
-```
-
-#### Verificar montajes Samba
-```bash
-# Ver recursos compartidos disponibles
-smbclient -L //servidor_samba -U usuario
-
-# Ver montajes activos
-mount | grep cifs
-df -h | grep cifs
-
-# Probar conectividad
-smbclient //servidor/share -U usuario
-```
-
-#### Verificar configuración de contenedores
-```bash
-# Ver configuración de contenedor
-cat /etc/pve/lxc/101.conf | grep mp
-
-# Ver montajes dentro del contenedor
-pct exec 101 -- df -h
-pct exec 101 -- mount | grep /mnt
-
-# Verificar permisos dentro del contenedor
-pct exec 101 -- ls -la /mnt/shared/
-pct exec 101 -- getfacl /mnt/shared/
-```
-
-#### Probar escritura desde contenedores
-```bash
-# Crear archivo de prueba desde contenedor privilegiado
-pct exec 100 -- bash -c 'echo "Prueba desde privilegiado" > /mnt/shared/test_privileged.txt'
-
-# Crear archivo de prueba desde contenedor no privilegiado
-pct exec 101 -- bash -c 'echo "Prueba desde no privilegiado" > /mnt/shared/test_unprivileged.txt'
-
-# Verificar en el host
-ls -la /mnt/shared_data/test_*.txt
-getfacl /mnt/shared_data/test_*.txt
-```
-
-#### Script de diagnóstico completo
-```bash
-#!/bin/bash
-# Guardar como: diagnostico_permisos.sh
-
-echo "=== DIAGNÓSTICO DE PERMISOS COMPARTIDOS ==="
-echo
-
-echo "1. Verificando directorio compartido:"
-ls -la /mnt/shared_data/
-echo
-
-echo "2. Verificando ACLs:"
-getfacl /mnt/shared_data/
-echo
-
-echo "3. Verificando grupo sharedfiles:"
-getent group sharedfiles
-echo
-
-echo "4. Verificando montajes NFS:"
-mount | grep nfs
-echo
-
-echo "5. Verificando montajes Samba:"
-mount | grep cifs
-echo
-
-echo "6. Verificando configuración de contenedores:"
-for ct in $(pct list | awk 'NR>1 {print $1}'); do
-    echo "Contenedor $ct:"
-    grep mp /etc/pve/lxc/$ct.conf 2>/dev/null || echo "  Sin montajes configurados"
-done
-echo
-
-echo "7. Probando escritura desde host:"
-if touch /mnt/shared_data/test_host.txt 2>/dev/null; then
-    echo "  ✅ Host puede escribir"
-    rm -f /mnt/shared_data/test_host.txt
-else
-    echo "  ❌ Host NO puede escribir"
-fi
-
-echo
-echo "=== FIN DEL DIAGNÓSTICO ==="
+# 4. Si persiste, revisar opciones de montaje
+# Cambiar 'hard' por 'soft' en /etc/fstab para evitar bloqueos
 ```
 
 ---
 
-## 📝 Resumen de mejores prácticas
+## 8. Comandos de Referencia Rápida
 
-### ✅ Configuración correcta
-1. **Usar grupo universal** `sharedfiles` con GID 101000
-2. **Aplicar setgid** (chmod 2775) para herencia automática
-3. **Configurar ACLs** por defecto para garantizar permisos
-4. **Usar shared=1** en montajes para compatibilidad con clusters
-5. **Excluir de backups** (backup=0) para evitar duplicación
-6. **Habilitar ACLs** (acl=1) en montajes de contenedores
-
-### ❌ Errores a evitar
-1. No crear el grupo en los contenedores
-2. Olvidar el bit setgid (2775)
-3. No aplicar ACLs por defecto
-4. Usar rutas diferentes entre nodos del cluster
-5. No configurar _netdev en fstab para recursos de red
-6. Usar fsck (último número ≠ 0) en recursos de red
-
-### 🔧 Comandos esenciales
+### Gestión de Grupos
 ```bash
-# Configuración básica de directorio compartido
-mkdir -p /mnt/shared_data
+# Crear grupo
 groupadd -g 101000 sharedfiles
-chown root:sharedfiles /mnt/shared_data
-chmod 2775 /mnt/shared_data
-setfacl -R -m g:sharedfiles:rwx /mnt/shared_data
-setfacl -d -m g:sharedfiles:rwx /mnt/shared_data
 
-# Montaje en contenedor
-pct set ID -mp0 /mnt/shared_data,mp=/mnt/shared,backup=0,acl=1,shared=1
+# Añadir usuario a grupo
+usermod -aG sharedfiles usuario
 
-# Configuración en contenedor no privilegiado
-pct exec ID -- groupadd -g 1000 sharedfiles
-pct exec ID -- usermod -aG sharedfiles www-data
+# Ver miembros de un grupo
+getent group sharedfiles
+
+# Ver grupos de un usuario
+groups usuario
+id usuario
 ```
 
-Esta guía te permitirá configurar correctamente recursos compartidos entre Proxmox y contenedores LXC, garantizando permisos adecuados y compatibilidad con clusters.
+### Gestión de Permisos
+```bash
+# Permisos básicos con setgid
+chmod 2775 /ruta/directorio
+chown root:sharedfiles /ruta/directorio
+
+# ACLs
+setfacl -R -m g:sharedfiles:rwx /ruta/directorio    # Aplicar a existente
+setfacl -d -m g:sharedfiles:rwx /ruta/directorio    # Por defecto para nuevos
+
+# Ver ACLs
+getfacl /ruta/directorio
+
+# Eliminar ACLs
+setfacl -b /ruta/directorio
 ```
+
+### Gestión de Contenedores LXC
+```bash
+# Añadir punto de montaje
+pct set ID -mp0 /host/path,mp=/container/path,backup=0,acl=1,shared=1
+
+# Ejecutar comando en contenedor
+pct exec ID -- comando
+
+# Entrar al contenedor
+pct enter ID
+
+# Ver configuración del contenedor
+cat /etc/pve/lxc/ID.conf
+```
+
+### Montajes de Red
+```bash
+# NFS temporal
+mount -t nfs servidor:/export /punto/montaje
+
+# Samba temporal
+mount -t cifs //servidor/recurso /punto/montaje -o credentials=/archivo
+
+# Ver montajes activos
+mount | grep -E "(nfs|cifs)"
+
+# Desmontar
+umount /punto/montaje
+
+# Montaje persistente
+echo "entrada" >> /etc/fstab
+mount -a
+```
+
+### Diagnóstico
+```bash
+# Ver permisos detallados
+ls -la /ruta
+getfacl /ruta
+
+# Ver procesos usando un directorio
+lsof /ruta
+
+# Ver montajes del sistema
+cat /proc/mounts | grep /ruta
+
+# Verificar conectividad NFS
+showmount -e servidor_nfs
+
+# Verificar conectividad Samba
+smbclient -L //servidor_samba -U usuario
+```
+
+---
+
+## ✅ Resumen Final
+
+Esta guía te ha enseñado a:
+
+1. **Entender** los conceptos de usuarios, grupos y ACLs en Linux
+2. **Crear** un grupo universal (`sharedfiles`) para compartir recursos
+3. **Montar** diferentes tipos de recursos (local, NFS, Samba) en Proxmox
+4. **Configurar** contenedores privilegiados y no privilegiados correctamente
+5. **Aplicar** permisos que funcionen en todos los escenarios
+6. **Solucionar** problemas comunes de permisos y montajes
+
+**Puntos clave para recordar:**
+- Usa **GID 101000** para el grupo `sharedfiles`
+- Aplica **permisos 2775** (con setgid) en directorios compartidos
+- Configura **ACLs por defecto** para garantizar herencia
+- Usa **shared=1** en montajes LXC para compatibilidad con clusters
+- Los contenedores **no privilegiados** requieren configuración del grupo
+- Los recursos de red necesitan **_netdev** y **nofail** en `/etc/fstab`
+
+Con esta configuración, tendrás un sistema robusto de recursos compartidos que funciona correctamente entre el host Proxmox y todos tus contenedores LXC, independientemente de si son privilegiados o no.
+```
+
