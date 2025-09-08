@@ -92,6 +92,9 @@ cleanup_duplicate_repos_pve9() {
     local cleaned_count=0
     declare -A seen_repos
     
+    if [ ! -s "$sources_file" ]; then
+        return 0
+    fi
 
     while IFS= read -r line || [[ -n "$line" ]]; do
         if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "$line" ]]; then
