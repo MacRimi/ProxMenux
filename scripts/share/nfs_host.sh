@@ -71,7 +71,7 @@ discover_nfs_servers() {
         return 1
     fi
     cleanup
-    NFS_SERVER=$(dialog --clear --backtitle "ProxMenux" --title "$(translate "Select NFS Server")" --menu "$(translate "Choose an NFS server:")" 20 80 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
+    NFS_SERVER=$(whiptail --backtitle "ProxMenux" --title "$(translate "Select NFS Server")" --menu "$(translate "Choose an NFS server:")" 20 80 10 "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
     [[ -n "$NFS_SERVER" ]] && return 0 || return 1
 }
 
