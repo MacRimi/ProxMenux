@@ -1,5 +1,18 @@
 # 📘 Guía Completa: Compartir Recursos entre Proxmox Host y Contenedores LXC
 
+## Índice
+1. [Conceptos Fundamentales](#conceptos-fundamentales)
+2. [Usuarios y Grupos en Linux](#usuarios-y-grupos-en-linux)
+3. [Permisos en Linux](#permisos-en-linux)
+4. [¿Qué son las ACL?](#qué-son-las-acl)
+5. [El Problema de los Contenedores No Privilegiados](#el-problema-de-los-contenedores-no-privilegiados)
+6. [Solución Universal: Grupos Compartidos](#solución-universal-grupos-compartidos)
+7. [Configuración Paso a Paso](#configuración-paso-a-paso)
+8. [Casos Prácticos](#casos-prácticos)
+9. [Resolución de Problemas](#resolución-de-problemas)
+
+---
+
 ## 🎯 Introducción
 
 Esta guía explica paso a paso cómo compartir carpetas y recursos entre el host de Proxmox y contenedores LXC (privilegiados y no privilegiados). Aprenderás los conceptos fundamentales de permisos en Linux y cómo configurar correctamente NFS, Samba y directorios locales.
