@@ -939,55 +939,6 @@ ls -l /mnt/shared_data/subdir_test/archivo_en_subdir.txt
 # Salida esperada: -rw-rw-r--+ 1 100000 sharedfiles 0 sep  8 12:06 archivo_en_subdir.txt
 ```
 
-### Script de Verificación Completa
-
-```bash
-#!/bin/bash
-# Script de verificación completa
-
-echo "=== VERIFICACIÓN DE CONFIGURACIÓN COMPARTIDA ==="
-echo
-
-# Verificar host
-echo "1. Verificando configuración del host:"
-echo "   Directorio: $(ls -ld /mnt/shared_data)"
-echo "   ACL: $(getfacl /mnt/shared_data | grep -E '(group:sharedfiles|default:group:sharedfiles)')"
-echo
-
-# Verificar contenedores
-for ct in 100 101; do
-    if pct status $ct | grep -q running; then
-        echo "2. Verificando contenedor $ct:"
-        echo "   Montaje: $(pct exec $ct -- df -h | grep shared || echo 'No montado')"
-        echo "   Grupo: $(pct exec $ct -- getent group sharedfiles || echo 'Grupo no existe')"
-        echo "   Usuarios en grupo: $(pct exec $ct -- getent group sharedfiles | cut -d: -f4)"
-        echo
-    fi
-done
-
-# Prueba de escritura
-echo "3. Prueba de escritura:"
-test_file="/mnt/shared_data/verification_test.txt"
-echo "Test desde host" > "$test_file"
-
-for ct in 100 101; do
-    if pct status $ct | grep -q running; then
-        pct exec $ct -- bash -c "echo 'Test desde contenedor $ct' >> /mnt/shared/verification_test.txt" 2>/dev/null
-        if [ $? -eq 0 ]; then
-            echo "   ✅ Contenedor $ct puede escribir"
-        else
-            echo "   ❌ Contenedor $ct NO puede escribir"
-        fi
-    fi
-done
-
-echo
-echo "4. Contenido final del archivo de prueba:"
-cat "$test_file" 2>/dev/null || echo "   ❌ No se puede leer el archivo"
-echo
-echo "5. Permisos del archivo de prueba:"
-ls -l "$test_file" 2>/dev/null || echo "   ❌ Archivo no existe"
-```
 
 ---
 
