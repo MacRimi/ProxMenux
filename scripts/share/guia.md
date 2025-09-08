@@ -696,6 +696,7 @@ usermod -aG sharedfiles www-data
 # Si tienes otros usuarios específicos de aplicaciones:
 usermod -aG sharedfiles nextcloud 2>/dev/null || true
 usermod -aG sharedfiles nginx 2>/dev/null || true
+# (añade los usuaros que desees)
 
 # 4. Verificar membresía
 groups root
@@ -745,6 +746,7 @@ usermod -aG sharedfiles www-data
 # Si tienes usuarios específicos de aplicaciones:
 usermod -aG sharedfiles ncp 2>/dev/null || true
 usermod -aG sharedfiles nextcloud 2>/dev/null || true
+# (añade los usuaros que desees)
 
 # 5. Verificar configuración
 id www-data
@@ -1237,5 +1239,5 @@ Esta guía te ha mostrado cómo configurar correctamente recursos compartidos en
 5. **Configuración adecuada** de montajes con `shared=1`, `backup=0`, `acl=1`
 
 Con esta configuración, tendrás un sistema robusto que funciona con NFS, Samba, directorios locales, y es compatible con clusters y migraciones de Proxmox.
-```
+
 
