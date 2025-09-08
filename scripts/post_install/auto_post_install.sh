@@ -657,9 +657,13 @@ install_log2ram_auto() {
     if [[ "$is_ssd" == true ]]; then
         msg_ok "$(translate "System disk is SSD or M.2. Proceeding with Log2RAM setup.")"
     else
-        msg_warn "$(translate "System disk is not SSD/M.2. Skipping Log2RAM installation.")"
-        return 0
+        if whiptail --yesno "$(translate "SDo you want to install Log2RAM anyway to reduce log write load?")" \
+            10 70 --title "Log2RAM"; then
+        else
+            return 0
+        fi
     fi
+
 
 
     if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1 && systemctl list-units --all | grep -q log2ram; then
