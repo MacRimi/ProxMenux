@@ -43,13 +43,14 @@ Un **usuario** en Linux es una identidad que puede:
 - Tener permisos específicos
 
 Cada usuario tiene:
-- **Nombre**: Como `root`, `www-data`, `juan`
-- **UID (User ID)**: Número único, como `0` (root), `33` (www-data), `1000` (primer usuario)
+- **Nombre**: Como `root`, `www-data`, `juan`, `jonatan`, `proxmeux`, `rafa` etc...
+- **UID (User ID)**: Número único, como `0` (root), `33` (www-data), `1000` (primer usuario),`1001` (segundo usuario), etc...
 
 ```bash
 # Ver información de un usuario
 id www-data
 # Salida: uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
 
 # Listar todos los usuarios del sistema
 cat /etc/passwd | head -5
@@ -78,12 +79,15 @@ cat /etc/group | head -5
 # daemon:x:1:
 # bin:x:2:
 
+
 # Ver grupos de un usuario
 groups www-data
 # Salida: www-data : www-data
 
+
 # Crear un nuevo grupo
 groupadd -g 1001 migrupo
+
 
 # Añadir usuario a un grupo
 usermod -aG migrupo www-data
@@ -124,6 +128,7 @@ ls -l /mnt/ejemplo
 #         │└┴┴┴┴┴┴┴─ Permisos
 #         └─────────── Tipo (d=directorio, -=archivo)
 
+
 # Desglose de permisos: rwxrwxr-x
 # Propietario (root): rwx = 7 (lectura + escritura + ejecución)
 # Grupo (sharedfiles): rwx = 7 (lectura + escritura + ejecución)  
@@ -159,15 +164,18 @@ mkdir /tmp/sin_setgid
 chmod 775 /tmp/sin_setgid
 chgrp sharedfiles /tmp/sin_setgid
 
+
 ls -ld /tmp/sin_setgid
 # Salida: drwxrwxr-x 2 root sharedfiles 4096 sep  8 10:30 /tmp/sin_setgid
 #               ↑ No hay 's' en la posición del grupo
+
 
 # Crear archivo como usuario www-data
 sudo -u www-data touch /tmp/sin_setgid/archivo1
 ls -l /tmp/sin_setgid/archivo1
 # Salida: -rw-r--r-- 1 www-data www-data 0 sep  8 10:35 archivo1
 # ❌ El archivo pertenece al grupo 'www-data', NO 'sharedfiles'
+
 
 # Crear archivo como usuario root
 touch /tmp/sin_setgid/archivo2
@@ -186,9 +194,11 @@ mkdir /tmp/con_setgid
 chmod 2775 /tmp/con_setgid  # El '2' inicial activa setgid
 chgrp sharedfiles /tmp/con_setgid
 
+
 ls -ld /tmp/con_setgid
 # Salida: drwxrwsr-x 2 root sharedfiles 4096 sep  8 10:37 /tmp/con_setgid
 #               ↑ La 's' indica que setgid está activo
+
 
 # Crear archivo como usuario www-data
 sudo -u www-data touch /tmp/con_setgid/archivo1
@@ -196,11 +206,13 @@ ls -l /tmp/con_setgid/archivo1
 # Salida: -rw-r--r-- 1 www-data sharedfiles 0 sep  8 10:38 archivo1
 # ✅ El archivo hereda el grupo 'sharedfiles' del directorio padre
 
+
 # Crear archivo como usuario root
 touch /tmp/con_setgid/archivo2
 ls -l /tmp/con_setgid/archivo2
 # Salida: -rw-r--r-- 1 root sharedfiles 0 sep  8 10:39 archivo2
 # ✅ El archivo también hereda el grupo 'sharedfiles'
+
 
 # Crear subdirectorio
 mkdir /tmp/con_setgid/subdir
@@ -321,6 +333,7 @@ chgrp sharedfiles /mnt/shared/archivo.txt
 ls -l /mnt/shared/archivo.txt
 # Salida: -rw-r--r-- 1 root sharedfiles 6 sep  8 archivo.txt
 
+
 # En el CONTENEDOR NO PRIVILEGIADO: Ver el mismo archivo
 pct exec 101 -- ls -l /mnt/shared/archivo.txt
 # Salida: -rw-r--r-- 1 nobody nogroup 6 sep  8 archivo.txt
@@ -357,8 +370,10 @@ Los servidores NFS (ya sean Linux, TrueNAS, Synology, etc.) funcionan de manera 
 # Grupo: shared (GID 1001)  
 # Permisos: 775
 
+
 # En Proxmox: Montar el NFS
 mount -t nfs 192.168.1.100:/mnt/pool/shared /mnt/truenas_shared
+
 
 # Ver cómo se ven los permisos en Proxmox
 ls -ld /mnt/truenas_shared
@@ -371,6 +386,7 @@ ls -ld /mnt/truenas_shared
 ```bash
 # En Proxmox: Crear grupo con el mismo GID que TrueNAS
 groupadd -g 1001 truenas_shared
+
 
 # Ahora se ve correctamente
 ls -ld /mnt/truenas_shared
@@ -411,9 +427,11 @@ Samba es más complejo porque debe mapear entre:
 # Permisos SMB: Grupo 'users' con lectura/escritura
 # Permisos Linux: 775, propietario 'admin', grupo 'users'
 
+
 # En Proxmox: Montar Samba
 mount -t cifs //192.168.1.200/SharedData /mnt/synology_shared \
   -o username=admin,password=mipassword,uid=root,gid=1000,file_mode=0664,dir_mode=0775
+
 
 # Ver permisos
 ls -ld /mnt/synology_shared
@@ -448,22 +466,27 @@ Para crear un directorio local que se compartirá con contenedores:
 # 1. Crear directorio
 mkdir -p /mnt/local_shared
 
+
 # 2. Crear grupo común (usaremos GID 101000 para compatibilidad universal)
 groupadd -g 101000 sharedfiles
+
 
 # 3. Configurar propietario y permisos con setgid
 chown root:sharedfiles /mnt/local_shared
 chmod 2775 /mnt/local_shared
 
+
 # 4. Aplicar ACL para garantizar permisos
 setfacl -R -m g:sharedfiles:rwx /mnt/local_shared
 setfacl -d -m g:sharedfiles:rwx /mnt/local_shared
+
 
 # 5. Verificar configuración
 ls -ld /mnt/local_shared
 # Salida esperada: drwxrwsr-x+ 2 root sharedfiles 4096 sep  8 11:00 /mnt/local_shared
 #                       ↑ 's' indica setgid activo
 #                          ↑ '+' indica ACL aplicadas
+
 
 getfacl /mnt/local_shared
 # Salida esperada:
@@ -486,12 +509,15 @@ getfacl /mnt/local_shared
 # 1. Crear punto de montaje
 mkdir -p /mnt/nfs_shared
 
+
 # 2. Montar NFS
 mount -t nfs 192.168.1.100:/export/shared /mnt/nfs_shared
+
 
 # 3. Verificar montaje
 df -h | grep nfs
 mount | grep nfs
+
 
 # 4. Ver permisos originales
 ls -ld /mnt/nfs_shared
@@ -504,6 +530,7 @@ ls -ld /mnt/nfs_shared
 # Si el directorio NFS tiene un GID específico (ej: 1001), crear grupo local
 groupadd -g 1001 nfs_shared
 
+
 # Verificar que ahora se ve el nombre del grupo
 ls -ld /mnt/nfs_shared
 # Salida: drwxrwxr-x 2 root nfs_shared 4096 sep  8 11:05 /mnt/nfs_shared
@@ -515,11 +542,14 @@ ls -ld /mnt/nfs_shared
 # Para compatibilidad con contenedores, aplicar nuestro esquema estándar
 # IMPORTANTE: Solo si tienes permisos de escritura en el NFS
 
+
 # Crear nuestro grupo estándar
 groupadd -g 101000 sharedfiles
 
+
 # Cambiar grupo del directorio NFS (si es posible)
 chgrp sharedfiles /mnt/nfs_shared
+
 
 # Aplicar setgid y ACL
 chmod 2775 /mnt/nfs_shared
@@ -533,8 +563,10 @@ setfacl -d -m g:sharedfiles:rwx /mnt/nfs_shared
 # Editar /etc/fstab
 nano /etc/fstab
 
+
 # Añadir línea:
 192.168.1.100:/export/shared /mnt/nfs_shared nfs rw,hard,nofail,rsize=131072,wsize=131072,timeo=600,retrans=2,_netdev 0 0
+
 
 # Explicación de opciones:
 # rw: lectura/escritura
@@ -549,6 +581,7 @@ nano /etc/fstab
 # Probar montaje
 mount -a
 
+
 # Verificar
 df -h | grep nfs
 ```
@@ -561,10 +594,12 @@ df -h | grep nfs
 # Crear archivo de credenciales seguro
 nano /etc/cifs-credentials
 
+
 # Contenido:
 username=tu_usuario
 password=tu_password
 domain=tu_dominio
+
 
 # Proteger archivo
 chmod 600 /etc/cifs-credentials
@@ -577,9 +612,11 @@ chown root:root /etc/cifs-credentials
 # 1. Crear punto de montaje
 mkdir -p /mnt/samba_shared
 
+
 # 2. Montar Samba con opciones específicas
 mount -t cifs //192.168.1.200/SharedData /mnt/samba_shared \
   -o credentials=/etc/cifs-credentials,uid=root,gid=101000,file_mode=0664,dir_mode=2775,iocharset=utf8,vers=3.0
+
 
 # Explicación de opciones:
 # credentials: archivo con usuario/password
@@ -589,6 +626,7 @@ mount -t cifs //192.168.1.200/SharedData /mnt/samba_shared \
 # dir_mode=2775: permisos para directorios (rwxrwsr-x) con setgid
 # iocharset=utf8: codificación de caracteres
 # vers=3.0: versión del protocolo SMB
+
 
 # 3. Verificar montaje
 df -h | grep cifs
@@ -601,9 +639,11 @@ ls -ld /mnt/samba_shared
 # Crear grupo si no existe
 groupadd -g 101000 sharedfiles
 
+
 # Verificar que los permisos son correctos
 ls -ld /mnt/samba_shared
 # Salida esperada: drwxrwsr-x 2 root sharedfiles 4096 sep  8 11:10 /mnt/samba_shared
+
 
 # Aplicar ACL adicionales si es necesario
 setfacl -R -m g:sharedfiles:rwx /mnt/samba_shared
@@ -616,11 +656,14 @@ setfacl -d -m g:sharedfiles:rwx /mnt/samba_shared
 # Editar /etc/fstab
 nano /etc/fstab
 
+
 # Añadir línea:
 //192.168.1.200/SharedData /mnt/samba_shared cifs credentials=/etc/cifs-credentials,uid=root,gid=101000,file_mode=0664,dir_mode=2775,iocharset=utf8,vers=3.0,_netdev,nofail 0 0
 
+
 # Probar montaje
 mount -a
+
 
 # Verificar
 df -h | grep cifs
@@ -651,6 +694,7 @@ pct exec 100 -- bash
 whoami  # root
 id      # uid=0(root) gid=0(root) groups=0(root)
 
+
 # Crear archivo en directorio compartido
 echo "test" > /mnt/shared/archivo.txt
 ls -l /mnt/shared/archivo.txt
@@ -669,9 +713,11 @@ Si el contenedor privilegiado:
 # Ejemplo: Contenedor con Nextcloud
 pct exec 100 -- bash
 
+
 # Ver usuarios del sistema
 cat /etc/passwd | grep -E "(www-data|nginx|apache)"
 # Salida: www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+
 
 # Sin configuración: Nextcloud crea archivos como www-data:www-data
 sudo -u www-data touch /mnt/shared/nextcloud_file.txt
@@ -686,24 +732,30 @@ ls -l /mnt/shared/nextcloud_file.txt
 # 1. Entrar al contenedor
 pct exec 100 -- bash
 
+
 # 2. Crear grupo con el mismo GID que el host
 groupadd -g 101000 sharedfiles
+
 
 # 3. Añadir usuarios relevantes al grupo
 usermod -aG sharedfiles root
 usermod -aG sharedfiles www-data
+
 
 # Si tienes otros usuarios específicos de aplicaciones:
 usermod -aG sharedfiles nextcloud 2>/dev/null || true
 usermod -aG sharedfiles nginx 2>/dev/null || true
 # (añade los usuaros que desees)
 
+
 # 4. Verificar membresía
 groups root
 # Salida: root : root sharedfiles
 
+
 groups www-data  
 # Salida: www-data : www-data sharedfiles
+
 
 # 5. Salir del contenedor
 exit
@@ -725,9 +777,11 @@ Los contenedores no privilegiados SIEMPRE necesitan configuración especial debi
 # 1. Entrar al contenedor
 pct exec 101 -- bash
 
+
 # 2. Crear grupo con GID mapeado
 # GID 1000 en contenedor = GID 101000 en host
 groupadd -g 1000 sharedfiles
+
 
 # 3. Listar usuarios disponibles en el contenedor
 awk -F: '$3>=1000 && $1!="nobody" {print $1 " (UID: " $3 ")"}' /etc/passwd
@@ -736,21 +790,26 @@ awk -F: '$3>=1000 && $1!="nobody" {print $1 " (UID: " $3 ")"}' /etc/passwd
 # www-data (UID: 33)  
 # ncp (UID: 1000)
 
+
 # También incluir usuarios del sistema si es necesario
 awk -F: '$3<1000 && $3>0 && $1!="nobody" {print $1 " (UID: " $3 ")"}' /etc/passwd
+
 
 # 4. Añadir usuarios al grupo
 usermod -aG sharedfiles root
 usermod -aG sharedfiles www-data
+
 
 # Si tienes usuarios específicos de aplicaciones:
 usermod -aG sharedfiles ncp 2>/dev/null || true
 usermod -aG sharedfiles nextcloud 2>/dev/null || true
 # (añade los usuaros que desees)
 
+
 # 5. Verificar configuración
 id www-data
 # Salida esperada: uid=33(www-data) gid=33(www-data) groups=33(www-data),1000(sharedfiles)
+
 
 # 6. Salir del contenedor
 exit
@@ -764,11 +823,14 @@ Si instalas nuevas aplicaciones que crean usuarios adicionales:
 # Entrar al contenedor
 pct exec 101 -- bash
 
+
 # Buscar nuevos usuarios (UID >= 100)
 awk -F: '$3>=100 && $3<65534 {print $1 " (UID: " $3 ", GID: " $4 ")"}' /etc/passwd
 
+
 # Añadir al grupo sharedfiles
 usermod -aG sharedfiles nombre_usuario
+
 
 # Verificar
 groups nombre_usuario
@@ -798,20 +860,20 @@ getent group sharedfiles
 ### Configuración del Montaje
 
 Para ambos tipos de contenedores, el montaje se configura igual, pero con consideraciones importantes:
-
+Por ejemplo:
 ```bash
 # Para contenedor privilegiado (ID 100)
 pct set 100 -mp0 /mnt/shared_data,mp=/mnt/shared,backup=0,acl=1,shared=1
 
+
 # Para contenedor no privilegiado (ID 101)  
 pct set 101 -mp0 /mnt/shared_data,mp=/mnt/shared,backup=0,acl=1,shared=1
+
 
 # Reiniciar contenedores para activar montajes
 pct reboot 100
 pct reboot 101
 
-# Esperar a que arranquen
-sleep 15
 ```
 
 #### Explicación de Parámetros
@@ -841,9 +903,11 @@ Con `shared=1`:
 pct exec 100 -- df -h | grep shared
 pct exec 101 -- df -h | grep shared
 
+
 # Verificar permisos dentro de los contenedores
 pct exec 100 -- ls -ld /mnt/shared
 pct exec 101 -- ls -ld /mnt/shared
+
 
 # Verificar ACL dentro de los contenedores
 pct exec 100 -- getfacl /mnt/shared
@@ -862,6 +926,7 @@ pct exec 101 -- getfacl /mnt/shared
 # Crear archivo de prueba desde el host
 echo "Archivo creado desde HOST" > /mnt/shared_data/test_host.txt
 
+
 # Verificar propietario y permisos
 ls -l /mnt/shared_data/test_host.txt
 # Salida esperada: -rw-rw-r--+ 1 root sharedfiles 26 sep  8 12:00 test_host.txt
@@ -873,8 +938,10 @@ ls -l /mnt/shared_data/test_host.txt
 # Crear archivo como root
 pct exec 100 -- bash -c 'echo "Archivo desde contenedor privilegiado (root)" > /mnt/shared/test_priv_root.txt'
 
+
 # Crear archivo como www-data
 pct exec 100 -- sudo -u www-data bash -c 'echo "Archivo desde contenedor privilegiado (www-data)" > /mnt/shared/test_priv_www.txt'
+
 
 # Verificar en el host
 ls -l /mnt/shared_data/test_priv_*
@@ -889,8 +956,10 @@ ls -l /mnt/shared_data/test_priv_*
 # Crear archivo como root del contenedor
 pct exec 101 -- bash -c 'echo "Archivo desde contenedor no privilegiado (root)" > /mnt/shared/test_unpriv_root.txt'
 
+
 # Crear archivo como www-data del contenedor
 pct exec 101 -- sudo -u www-data bash -c 'echo "Archivo desde contenedor no privilegiado (www-data)" > /mnt/shared/test_unpriv_www.txt'
+
 
 # Verificar en el host
 ls -l /mnt/shared_data/test_unpriv_*
@@ -907,13 +976,16 @@ ls -l /mnt/shared_data/test_unpriv_*
 pct exec 100 -- cat /mnt/shared/test_unpriv_root.txt
 # Salida: Archivo desde contenedor no privilegiado (root)
 
+
 # Desde contenedor no privilegiado, leer archivo del privilegiado
 pct exec 101 -- cat /mnt/shared/test_priv_root.txt
 # Salida: Archivo desde contenedor privilegiado (root)
 
+
 # Modificar archivo desde diferentes contenedores
 pct exec 100 -- bash -c 'echo "Modificado desde privilegiado" >> /mnt/shared/test_unpriv_root.txt'
 pct exec 101 -- bash -c 'echo "Modificado desde no privilegiado" >> /mnt/shared/test_priv_root.txt'
+
 
 # Verificar contenido
 cat /mnt/shared_data/test_unpriv_root.txt
@@ -926,13 +998,16 @@ cat /mnt/shared_data/test_priv_root.txt
 # Crear subdirectorio desde contenedor
 pct exec 100 -- mkdir /mnt/shared/subdir_test
 
+
 # Verificar que hereda setgid y grupo
 ls -ld /mnt/shared_data/subdir_test
 # Salida esperada: drwxrwsr-x+ 2 root sharedfiles 4096 sep  8 12:05 subdir_test
-#                       ↑ 's' indica setgid heredado
+#                        ↑ 's' indica setgid heredado
+
 
 # Crear archivo en subdirectorio
 pct exec 101 -- touch /mnt/shared/subdir_test/archivo_en_subdir.txt
+
 
 # Verificar herencia
 ls -l /mnt/shared_data/subdir_test/archivo_en_subdir.txt
@@ -958,8 +1033,10 @@ pct exec 101 -- touch /mnt/shared/test.txt
 ls -ld /mnt/shared_data
 getfacl /mnt/shared_data
 
+
 # 2. Verificar grupo en el contenedor
 pct exec 101 -- getent group sharedfiles
+
 
 # 3. Verificar membresía del usuario
 pct exec 101 -- groups www-data
@@ -971,9 +1048,11 @@ pct exec 101 -- groups www-data
 pct exec 101 -- groupadd -g 1000 sharedfiles
 pct exec 101 -- usermod -aG sharedfiles www-data
 
+
 # Solución 2: Reaplicar ACL en host
 setfacl -R -m g:sharedfiles:rwx /mnt/shared_data
 setfacl -d -m g:sharedfiles:rwx /mnt/shared_data
+
 
 # Solución 3: Verificar setgid
 chmod 2775 /mnt/shared_data
@@ -997,9 +1076,11 @@ ls -n /mnt/shared_data/archivo.txt
 # -rw-r--r-- 1 0 101000 100 sep  8 12:00 archivo.txt
 #              ↑ GID 101000
 
+
 # 2. Crear grupo en contenedor con GID mapeado
 # GID 101000 en host = GID 1000 en contenedor no privilegiado
 pct exec 101 -- groupadd -g 1000 sharedfiles
+
 
 # 3. Verificar que ahora se ve correctamente
 pct exec 101 -- ls -l /mnt/shared/archivo.txt
@@ -1020,6 +1101,7 @@ ls /mnt/nfs_shared
 mount | grep nfs
 df -h | grep nfs
 
+
 # Verificar conectividad
 ping 192.168.1.100
 showmount -e 192.168.1.100
@@ -1031,9 +1113,11 @@ showmount -e 192.168.1.100
 umount /mnt/nfs_shared
 mount -t nfs 192.168.1.100:/export/shared /mnt/nfs_shared
 
+
 # Solución 2: Usar opciones más robustas
 mount -t nfs 192.168.1.100:/export/shared /mnt/nfs_shared \
   -o hard,intr,rsize=32768,wsize=32768,timeo=600,retrans=2
+
 
 # Solución 3: Verificar servicios NFS
 systemctl status nfs-common
@@ -1054,11 +1138,14 @@ El directorio compartido no está montado en el nodo destino, o falta `shared=1`
 cat /etc/pve/lxc/101.conf | grep mp0
 # Debe incluir: shared=1
 
+
 # 2. Si falta shared=1, añadirlo
 pct set 101 -mp0 /mnt/shared_data,mp=/mnt/shared,backup=0,acl=1,shared=1
 
+
 # 3. Verificar que el directorio existe en el nodo destino
 ls -ld /mnt/shared_data
+
 
 # 4. Si no existe, montar el recurso en el nodo destino
 # (repetir pasos de montaje NFS/Samba según corresponda)
@@ -1080,6 +1167,7 @@ El sistema de archivos no soporta ACL.
 # Verificar tipo de sistema de archivos
 df -T /mnt/shared_data
 
+
 # Verificar opciones de montaje
 mount | grep shared_data
 ```
@@ -1089,9 +1177,11 @@ mount | grep shared_data
 # Para ext4: Remontar con soporte ACL
 mount -o remount,acl /mnt/shared_data
 
+
 # Para NFS: Añadir opción acl
 umount /mnt/shared_data
 mount -t nfs 192.168.1.100:/export/shared /mnt/shared_data -o acl
+
 
 # Para sistemas de archivos que no soportan ACL:
 # Usar solo permisos tradicionales con setgid
@@ -1112,11 +1202,14 @@ La umask del proceso no permite escritura de grupo.
 pct exec 101 -- umask
 # Si es 022, cambiar a 002
 
+
 # Cambiar umask temporalmente
 pct exec 101 -- umask 002
 
+
 # Cambiar umask permanentemente
 pct exec 101 -- bash -c 'echo "umask 002" >> /etc/profile'
+
 
 # Alternativa: Usar ACL por defecto (más robusta)
 setfacl -d -m g:sharedfiles:rwx /mnt/shared_data
@@ -1138,8 +1231,10 @@ chmod 2775 /mnt/shared_data
 setfacl -R -m g:sharedfiles:rwx /mnt/shared_data
 setfacl -d -m g:sharedfiles:rwx /mnt/shared_data
 
+
 # Montar NFS persistente
 echo "192.168.1.100:/export/shared /mnt/nfs_shared nfs rw,hard,nofail,_netdev 0 0" >> /etc/fstab
+
 
 # Montar Samba persistente  
 echo "//192.168.1.200/share /mnt/samba_shared cifs credentials=/etc/cifs-creds,uid=root,gid=101000,file_mode=0664,dir_mode=2775,_netdev,nofail 0 0" >> /etc/fstab
@@ -1153,10 +1248,12 @@ pct exec 100 -- groupadd -g 101000 sharedfiles
 pct exec 100 -- usermod -aG sharedfiles root
 pct exec 100 -- usermod -aG sharedfiles www-data
 
+
 # Contenedor no privilegiado
 pct exec 101 -- groupadd -g 1000 sharedfiles
 pct exec 101 -- usermod -aG sharedfiles root
 pct exec 101 -- usermod -aG sharedfiles www-data
+
 
 # Montaje
 pct set 100 -mp0 /mnt/shared_data,mp=/mnt/shared,backup=0,acl=1,shared=1
@@ -1170,6 +1267,7 @@ pct set 101 -mp0 /mnt/shared_data,mp=/mnt/shared,backup=0,acl=1,shared=1
 ls -ld /mnt/shared_data
 getfacl /mnt/shared_data
 pct exec 101 -- groups www-data
+
 
 # Prueba de escritura
 echo "test" > /mnt/shared_data/test.txt
