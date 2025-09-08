@@ -4269,7 +4269,8 @@
     ],
     "notes": [
       "Check our configuration guide for help: `https://github.com/community-scripts/ProxmoxVE/discussions/2388`",
-      "Login credentials: `cat ~/rustdesk.creds`"
+      "To set admin password on Debian, type `cd /var/lib/rustdesk-api && rustdesk-api reset-admin-pwd <yournewpasswordhere>` inside LXC.",
+      "To see admin password on Alpine, type `cat ~/rustdesk.creds` inside LXC."
     ],
     "type": "ct"
   },
