@@ -4537,7 +4537,7 @@
     "script": "ct/swizzin.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/swizzin.sh",
     "categories": [
-      15
+      13
     ],
     "notes": [
       "Installation might take a long time if choosing to install many apps. Be patient.",
