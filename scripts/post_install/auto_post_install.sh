@@ -843,6 +843,7 @@ run_complete_optimization() {
     ensure_tools_json
     
     apt_upgrade
+    cleanup
     remove_subscription_banner
     #configure_time_sync
     skip_apt_languages
