@@ -204,8 +204,6 @@ pmx_prepare_host_shared_dir() {
     if command -v setfacl >/dev/null 2>&1; then
         setfacl -R -m d:g:"$group_name":rwx -m d:o::rx -m g:"$group_name":rwx "$dir" 2>/dev/null || true
         msg_ok "$(translate "Default ACLs applied for group inheritance.")"
-    else
-        msg_warn "$(translate "setfacl not found; default ACLs were not applied.")"
     fi
     return 0
 }
