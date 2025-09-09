@@ -240,12 +240,14 @@ EOF
         return 0
     fi
 
-    msg_info "$(translate "Removing conflicting utilities...")"
+    msg_info "$(translate "Cleaning up unused time synchronization services...")"
+
     if /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' purge ntp openntpd systemd-timesyncd > /dev/null 2>&1; then
-        msg_ok "$(translate "Conflicting utilities removed")"
+        msg_ok "$(translate "Old time services removed successfully")"
     else
-        msg_warn "$(translate "Some conflicting utilities may not have been removed")"
+        msg_warn "$(translate "Some old time services could not be removed (not installed)")"
     fi
+
 
 
     msg_info "$(translate "Updating packages...")"
@@ -330,6 +332,7 @@ EOF
     echo -e "${TAB}${GN}🖥️  $(translate "Proxmox VE")${CL}: ${BL}$target_version (Debian $OS_CODENAME)${CL}"
 
     msg_ok "$(translate "Proxmox VE 9.x configuration completed.")"
+    
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
