@@ -366,6 +366,22 @@
     "type": "ct"
   },
   {
+    "name": "Autocaliweb",
+    "slug": "autocaliweb",
+    "desc": "A modern web management system for eBooks, eComics and PDFs",
+    "script": "ct/autocaliweb.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/autocaliweb.sh",
+    "categories": [
+      13
+    ],
+    "notes": [],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin123"
+    }
+  },
+  {
     "name": "Baby Buddy",
     "slug": "babybuddy",
     "desc": "Baby Buddy is an open-source web application designed to assist caregivers in tracking various aspects of a baby's daily routine, including sleep, feedings, diaper changes, tummy time, and more. By recording this data, caregivers can better understand and anticipate their baby's needs, reducing guesswork in daily care. The application offers a user-friendly dashboard for data entry and visualization, supports multiple users, and provides features like timers and reminders. Additionally, Baby Buddy can be integrated with platforms like Home Assistant and Grafana for enhanced functionality.",
@@ -3034,11 +3050,11 @@
     "notes": [
       "This uses Docker under the hood, as this can not easily be installed bare-metal. ",
       "The initial starting process can be take 1-2min. ",
-      "Application credentials: `cat /opt/.npm_pwd`"
+      "Application credentials: `cat /opt/.npm_pwd` - if file not exist in LXC check docker logs for password with `docker logs npmplus`"
     ],
     "type": "ct",
     "default_credentials": {
-      "username": "root",
+      "username": "admin@example.org",
       "password": null
     }
   },
