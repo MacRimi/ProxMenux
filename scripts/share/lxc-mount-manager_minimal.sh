@@ -348,19 +348,6 @@ select_host_directory_unified() {
             local owner_group=$(stat -c '%U:%G' "$mount_point" 2>/dev/null)
             
 
-            local alternatives=0
-            while IFS='|' read -r alt_mount_point alt_source alt_type alt_size alt_used alt_mount_source; do
-                if [[ -n "$alt_mount_point" && "$alt_mount_point" != "$mount_point" ]]; then
-                    if are_same_resource "$mount_point" "$source" "$type" "$alt_mount_point" "$alt_source" "$alt_type"; then
-                        alternatives=$((alternatives + 1))
-                    fi
-                fi
-            done <<< "$all_network_shares"
-            
-            local alt_text=""
-            [[ $alternatives -gt 0 ]] && alt_text=" (+$alternatives alternative$([ $alternatives -gt 1 ] && echo 's'))"
-            
-
             local warning=""
             if detect_problematic_storage "$mount_point" "$mount_source" "$type"; then
                 warning=" [READ-ONLY]"
@@ -382,7 +369,7 @@ select_host_directory_unified() {
                     ;;
             esac
             
-            options+=("$mount_point" "$prefix$type: $share_name → $mount_name ($size)$warning$alt_text")
+            options+=("$mount_point" "$prefix$type: $share_name → $mount_name ($size)$warning")
 
         done
     fi
