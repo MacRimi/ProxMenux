@@ -216,11 +216,18 @@ show_nfs_server_help() {
         "" \
         ""
     
-    show_command "4" \
-        "$(translate "Configure exports:")" \
-        "echo '${CUS}/mnt/nfs_export${CL} ${CUS}192.168.1.0/24${CL}(rw,sync,no_subtree_check)' >> /etc/exports" \
+    show_command "4.1" \
+        "$(translate "Configure exports (safe root_squash):")" \
+        "echo '${CUS}/mnt/nfs_export${CL} ${CUS}192.168.1.0/24${CL}(rw,sync,no_subtree_check,root_squash)' >> /etc/exports" \
         "$(translate "Replace directory path and network range.")" \
         ""
+
+    show_command "4.2" \
+        "$(translate "Configure exports (map all users):")" \
+        "echo '${CUS}/mnt/nfs_export${CL} ${CUS}192.168.1.0/24${CL}(rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=0)' >> /etc/exports" \
+        "$(translate "Replace directory path and network range.")" \
+        ""
+
     
     show_command "5" \
         "$(translate "Apply configuration:")" \
