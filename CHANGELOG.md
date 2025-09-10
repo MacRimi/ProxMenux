@@ -1,3 +1,56 @@
+## 2025-01-10
+
+### New version v1.1.6
+
+![Shared Resources Menu](https://macrimi.github.io/ProxMenux/share/main-menu.png)
+
+### Added
+
+- **New Menu: Mount and Share Manager**  
+  Introduced a comprehensive new menu for managing shared resources between Proxmox host and LXC containers:
+
+  **Host Configuration Options:**
+  1. **Configure NFS Shared on Host** - Add, view, and remove NFS shared resources on the Proxmox server with automatic export management
+  2. **Configure Samba Shared on Host** - Add, view, and remove Samba/CIFS shared resources on the Proxmox server with share configuration  
+  3. **Configure Local Shared on Host** - Create and manage local shared directories with proper permissions on the Proxmox host
+
+  **LXC Integration Options:**
+  4. **Configure LXC Mount Points (Host ↔ Container)** - **Core feature** that enables mounting host directories into LXC containers with automatic permission handling. Includes the ability to **view existing mount points** for each container in a clear, organized way and **remove mount points** with proper verification that the process completed successfully. Especially optimized for **unprivileged containers** where UID/GID mapping is critical.
+  5. **Configure NFS Client in LXC** - Set up NFS client inside privileged containers
+  6. **Configure Samba Client in LXC** - Set up Samba client inside privileged containers  
+  7. **Configure NFS Server in LXC** - Install NFS server inside privileged containers
+  8. **Configure Samba Server in LXC** - Install Samba server inside privileged containers
+
+  **Documentation & Support:**
+  - **Help & Info (commands)** - Comprehensive guides with step-by-step manual instructions for all sharing scenarios
+
+  The entire system is built around the **LXC Mount Points** functionality, which automatically detects filesystem types, handles permission mapping between host and container users, and provides seamless integration for both privileged and unprivileged containers.
+
+---
+
+### Improved
+
+- **Log2RAM Auto-Detection Enhancement**  
+  In the automatic post-install script, the Log2RAM installation function now prompts the user when automatic disk ssd/m2 detection fails.
+  This ensures Log2RAM can still be installed on systems where automatic disk detection doesn't work properly.
+
+---
+
+### Fixed
+
+- **Proxmox Update Repository Verification**  
+  Fixed an issue in the Proxmox update function where empty repository source files would cause errors during conflict verification. The function now properly handles empty `/etc/apt/sources.list.d/` files without throwing false warnings.
+
+  Thanks to **@JF_Car** for reporting this issue.
+
+---
+
+### Acknowledgments
+
+Special thanks to **@JF_Car**, **@ghosthvj**, and **@jonatanc** for their testing, valuable feedback, and suggestions that helped refine the shared resources functionality and improve the overall user experience.
+
+
+
 ## 2025-08-20
 
 ### New version v1.1.5
