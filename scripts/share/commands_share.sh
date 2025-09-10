@@ -363,7 +363,6 @@ show_nfs_client_help() {
     show_command "5" \
         "$(translate "Make permanent (optional):")" \
         "echo '${CUS}192.168.1.100${CL}:${CUS}/path/to/share${CL} ${CUS}/mnt/nfs_share${CL} nfs4 rw,hard,intr,_netdev,rsize=1048576,wsize=1048576,timeo=600,retrans=2 0 0' >> /etc/fstab" \
-
         "$(translate "Replace with your server IP and paths.")" \
         ""
     
