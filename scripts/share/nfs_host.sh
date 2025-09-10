@@ -545,7 +545,7 @@ view_host_nfs_mounts() {
             fi
         done <<< "$FSTAB_NFS"
     else
-        echo "$(translate "No permanent NFS mounts configured on host.")"
+        echo "$(translate "No NFS Mounts (fstab).")"
     fi
 
     echo ""
