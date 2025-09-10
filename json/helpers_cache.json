@@ -3449,8 +3449,7 @@
       11
     ],
     "notes": [
-      "This LXC is very memory-hungry when updating; it requires at least 6GB RAM, but RAM may be reduced to as low as 2GB when running normally",
-      "To use a bind mount for storage, create symlinks to your mount for both `uploads` and `temp-uploads` in `/opt/palmr_data`",
+      "To use a bind mount for storage, create symlinks to your mount for both `uploads` and `temp-uploads` in `/opt/palmr_data`, and uncomment `CUSTOM_PATH` to add the path to your bind mount",
       "To use Palmr with a reverse proxy, uncomment `SECURE_SITE` in `/opt/palmr/apps/server/.env`"
     ],
     "type": "ct"
@@ -3668,9 +3667,7 @@
     "categories": [
       4
     ],
-    "notes": [
-      "WARNING: Installation sources scripts outside of Community Scripts repo. Please check the source before installing."
-    ],
+    "notes": [],
     "type": "ct"
   },
   {
@@ -3743,8 +3740,7 @@
       13
     ],
     "notes": [
-      "With Privileged/Unprivileged Hardware Acceleration Support",
-      "WARNING: Installation sources scripts outside of Community Scripts repo. Please check the source before installing."
+      "With Privileged/Unprivileged Hardware Acceleration Support"
     ],
     "type": "ct"
   },
@@ -3786,8 +3782,7 @@
     "notes": [
       "If the LXC is created Privileged, the script will automatically set up USB passthrough.",
       "config path: `/var/lib/containers/storage/volumes/hass_config/_data`",
-      "Options to Install Portainer or Portainer Agent",
-      "WARNING: Installation sources scripts outside of Community Scripts repo. Please check the source before installing."
+      "Options to Install Portainer or Portainer Agent"
     ],
     "type": "ct"
   },
