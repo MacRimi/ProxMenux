@@ -61,7 +61,7 @@ while true; do
             bash <(curl -s "$REPO_URL/scripts/share/local-shared-manager.sh")
             ;;    
         4)
-            bash <(curl -s "$REPO_URL/scripts/share/lxc-mount-manager.sh")
+            bash <(curl -s "$REPO_URL/scripts/share/lxc-mount-manager_minimal.sh")
             ;;
         5)
             bash <(curl -s "$REPO_URL/scripts/share/nfs_client.sh")
