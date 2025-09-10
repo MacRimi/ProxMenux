@@ -118,12 +118,12 @@
     "it": "Mostra informazioni sulla versione",
     "pt": "Mostrar informações da versão"
   },
-  "Uninstall ProxMenu": {
-    "es": "Desinstalar ProxMenu",
-    "fr": "Désinstaller ProxMenu",
-    "de": "ProxMenu deinstallieren",
-    "it": "Disinstallare ProxMenu",
-    "pt": "Desinstalar ProxMenu"
+  "Uninstall ProxMenux": {
+    "es": "Desinstalar ProxMenux",
+    "fr": "Désinstaller ProxMenux",
+    "de": "ProxMenux deinstallieren",
+    "it": "Disinstallare ProxMenux",
+    "pt": "Desinstalar ProxMenux"
   },
   "Select a new language for the menu:": {
     "es": "Seleccione un nuevo idioma para el menú:",
@@ -188,11 +188,11 @@
     "it": "Giapponese",
     "pt": "Japonês"
   },
-  "Thank you for using ProxMenu. Goodbye!": {
-  "es": "Gracias por usar ProxMenu. ¡Hasta luego!",
-  "fr": "Merci d'avoir utilisé ProxMenu. À bientôt !",
-  "de": "Vielen Dank, dass Sie ProxMenu verwendet haben. Bis bald!",
-  "it": "Grazie per aver usato ProxMenu. A presto!",
-  "pt": "Obrigado por usar o ProxMenu. Até logo!"
+  "Thank you for using ProxMenux. Goodbye!": {
+  "es": "Gracias por usar ProxMenux. ¡Hasta luego!",
+  "fr": "Merci d'avoir utilisé ProxMenux. À bientôt !",
+  "de": "Vielen Dank, dass Sie ProxMenux verwendet haben. Bis bald!",
+  "it": "Grazie per aver usato ProxMenux. A presto!",
+  "pt": "Obrigado por usar o ProxMenux. Até logo!"
   }
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenu - Mount independent disk on Proxmox host
+# ProxMenux - Mount independent disk on Proxmox host
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi

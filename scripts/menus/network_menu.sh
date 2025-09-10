@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenu - Network Management and Repair Tool
+# ProxMenux - Network Management and Repair Tool
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi

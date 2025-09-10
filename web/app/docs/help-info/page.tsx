@@ -83,7 +83,7 @@ export default function HelpAndInfoPage() {
 
         <div className="space-y-4 mt-6">
           <p className="text-lg text-black">
-            ProxMenu provides an interactive command reference menu for Proxmox VE through a dialog-based interface.
+            ProxMenux provides an interactive command reference menu for Proxmox VE through a dialog-based interface.
             Select one of the categories below to explore the available commands.
           </p>
 
@@ -170,12 +170,12 @@ export default function HelpAndInfoPage() {
       <div className="mt-16 mb-6">
         <div className="flex items-center gap-3 mb-6">
           <Book className="h-8 w-8 mr-2 text-blue-500" />
-          <h2 className="text-2xl font-bold text-black">ProxMenu Guides</h2>
+          <h2 className="text-2xl font-bold text-black">ProxMenux Guides</h2>
         </div>
 
         <p className="text-lg mb-6 text-black">
           Check out the guides section for additional resources, tutorials, and documentation to help you get the most
-          out of Proxmox VE and ProxMenu.
+          out of Proxmox VE and ProxMenux.
         </p>
 
         <div className="flex justify-center">

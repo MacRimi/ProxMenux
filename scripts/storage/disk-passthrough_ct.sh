@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenu - A menu-driven script for Proxmox VE management
+# ProxMenux - A menu-driven script for Proxmox VE management
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi

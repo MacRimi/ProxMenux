@@ -111,7 +111,7 @@ export default function LinuxResourcesPage() {
 
           <p className="text-lg mb-8 text-gray-700">
             A collection of useful resources for learning Linux commands, security practices, monitoring tools, and
-            more. These resources complement the commands available in ProxMenu and will help you deepen your knowledge
+            more. These resources complement the commands available in ProxMenux and will help you deepen your knowledge
             of Linux system administration.
           </p>
         </div>

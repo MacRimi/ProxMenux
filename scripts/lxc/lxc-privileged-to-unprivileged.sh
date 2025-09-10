@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenu - LXC Privileged to Unprivileged Converter
+# ProxMenux - LXC Privileged to Unprivileged Converter
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi

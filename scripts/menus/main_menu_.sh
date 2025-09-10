@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenu - A menu-driven script for Proxmox VE management
+# ProxMenux - A menu-driven script for Proxmox VE management
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
@@ -71,7 +71,7 @@ show_menu() {
             7) exec bash <(curl -s "$REPO_URL/scripts/menus/network_menu.sh") ;;
             8) exec bash <(curl -s "$REPO_URL/scripts/menus/utilities_menu.sh") ;;
             9) exec bash <(curl -s "$REPO_URL/scripts/menus/config_menu.sh") ;;
-            0) clear; msg_ok "$(translate "Thank you for using ProxMenu. Goodbye!")"; rm -f "$TEMP_FILE"; exit 0 ;;
+            0) clear; msg_ok "$(translate "Thank you for using ProxMenux. Goodbye!")"; rm -f "$TEMP_FILE"; exit 0 ;;
             *) msg_warn "$(translate "Invalid option")"; sleep 2 ;;
         esac
     done

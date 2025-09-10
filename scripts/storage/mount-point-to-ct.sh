@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenu - Mount point from host into LXC container (CT)
+# ProxMenux - Mount point from host into LXC container (CT)
 # ==========================================================
 # Author      : MacRimi
 # License     : MIT

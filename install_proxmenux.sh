@@ -599,4 +599,4 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 cleanup_corrupted_files
-install_proxmenu
+install_proxmenux

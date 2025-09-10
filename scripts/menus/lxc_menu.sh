@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenu - LXC Conversion Management Menu
+# ProxMenux - LXC Conversion Management Menu
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi

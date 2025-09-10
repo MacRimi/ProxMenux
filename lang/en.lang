@@ -3,7 +3,7 @@ MAIN_MENU_TITLE="ProxMenux - Main Menu"
 CONFIG_TITLE="ProxMenux - Configuration"
 SELECT_OPTION="Select an option:"
 LANG_OPTION="Change language"
-UNINSTALL_OPTION="Uninstall ProxMenu"
+UNINSTALL_OPTION="Uninstall ProxMenux"
 EXIT_MENU="Exit"
 EXIT_MESSAGE="Exiting menu. Goodbye!"
 
@@ -30,10 +30,10 @@ UPDATE_COMPLETE="Update completed to version %s."
 UPDATE_ERROR_DOWNLOAD="Error downloading the update."
 
 # Uninstall messages
-UNINSTALL_TITLE="Uninstall ProxMenu"
+UNINSTALL_TITLE="Uninstall ProxMenux"
 UNINSTALL_CONFIRM="Are you sure you want to uninstall ProxMenu?"
-UNINSTALL_COMPLETE="ProxMenu has been uninstalled successfully."
-UNINSTALL_PROCESS="Uninstalling ProxMenu..."
+UNINSTALL_COMPLETE="ProxMenux has been uninstalled successfully."
+UNINSTALL_PROCESS="Uninstalling ProxMenux..."
 
 # Script messages
 SCRIPT_RUNNING="Running igpu_tpu.sh script..."

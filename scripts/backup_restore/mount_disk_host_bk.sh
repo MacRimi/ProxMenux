@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenu - Mount disk on Proxmox host for backups
+# ProxMenux - Mount disk on Proxmox host for backups
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi

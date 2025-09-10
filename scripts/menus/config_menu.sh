@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenu - A menu-driven script for Proxmox VE management
+# ProxMenux - A menu-driven script for Proxmox VE management
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
@@ -71,7 +71,7 @@ show_config_menu() {
             option_actions[2]="show_version_info"
             
             menu_options+=("3" "$(translate "Uninstall ProxMenux")")
-            option_actions[3]="uninstall_proxmenu"
+            option_actions[3]="uninstall_proxmenux"
             
             menu_options+=("4" "$(translate "Return to Main Menu")")
             option_actions[4]="return_main"
@@ -81,7 +81,7 @@ show_config_menu() {
             option_actions[1]="show_version_info"
             
             menu_options+=("2" "Uninstall ProxMenux")
-            option_actions[2]="uninstall_proxmenu"
+            option_actions[2]="uninstall_proxmenux"
             
             menu_options+=("3" "Return to Main Menu")
             option_actions[3]="return_main"
@@ -101,8 +101,8 @@ show_config_menu() {
             "show_version_info")
                 show_version_info
                 ;;
-            "uninstall_proxmenu")
-                uninstall_proxmenu
+            "uninstall_proxmenux")
+                uninstall_proxmenux
                 ;;
             "return_main"|"")
                 exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
@@ -197,7 +197,7 @@ show_version_info() {
         info_message+="$(translate "No installation information available.")\n"
     fi
     
-    info_message+="\n$(translate "ProxMenu files:")\n"
+    info_message+="\n$(translate "ProxMenux files:")\n"
     [ -f "$INSTALL_DIR/$MENU_SCRIPT" ] && info_message+="✓ $MENU_SCRIPT → $INSTALL_DIR/$MENU_SCRIPT\n" || info_message+="✗ $MENU_SCRIPT\n"
     [ -f "$UTILS_FILE" ] && info_message+="✓ utils.sh → $UTILS_FILE\n" || info_message+="✗ utils.sh\n"
     [ -f "$CONFIG_FILE" ] && info_message+="✓ config.json → $CONFIG_FILE\n" || info_message+="✗ config.json\n"
@@ -237,7 +237,7 @@ uninstall_proxmenu() {
     install_type=$(detect_installation_type)
     
     if ! dialog --clear --backtitle "ProxMenux Configuration" \
-                --title "Uninstall ProxMenu" \
+                --title "Uninstall ProxMenux" \
                 --yesno "\n$(translate "Are you sure you want to uninstall ProxMenu?")" 8 60; then
         return
     fi
@@ -265,7 +265,7 @@ uninstall_proxmenu() {
     
 
     (
-        echo "10" ; echo "Removing ProxMenu files..."
+        echo "10" ; echo "Removing ProxMenux files..."
         sleep 1
         
 
@@ -277,7 +277,7 @@ uninstall_proxmenu() {
             rm -rf "$VENV_PATH"
         fi
         
-        echo "50" ; echo "Removing ProxMenu files..."
+        echo "50" ; echo "Removing ProxMenux files..."
         rm -f "$INSTALL_DIR/$MENU_SCRIPT"
         rm -rf "$BASE_DIR"
         

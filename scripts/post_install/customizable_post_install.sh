@@ -795,7 +795,7 @@ EOF
         )
         
         local selected
-        selected=$(dialog --clear --backtitle "ProxMenu - $(translate "System Utilities")" \
+        selected=$(dialog --clear --backtitle "ProxMenux - $(translate "System Utilities")" \
             --title "$(translate "Select utilities to install")" \
             --checklist "$(translate "Use SPACE to select/deselect, ENTER to confirm")" \
             20 70 12 "${utilities[@]}" 2>&1 >/dev/tty)
@@ -807,7 +807,7 @@ EOF
         local selected="$1"
         
         if [ -z "$selected" ]; then
-            dialog --clear --backtitle "ProxMenu" \
+            dialog --clear --backtitle "ProxMenux" \
                 --title "$(translate "No Selection")" \
                 --msgbox "$(translate "No utilities were selected")" 8 40
             return
@@ -975,7 +975,7 @@ EOF
 
         local selected
         selected=$(
-            dialog --clear --backtitle "ProxMenu - $(translate "System Utilities")" \
+            dialog --clear --backtitle "ProxMenux - $(translate "System Utilities")" \
                    --title "$(translate "Select utilities to install")" \
                    --checklist "$(translate "Use SPACE to select/deselect, ENTER to confirm")" \
                    20 70 12 "${utilities[@]}" 3>&1 1>&2 2>&3
@@ -992,7 +992,7 @@ EOF
 
 
         if [[ -z "$selected" ]]; then
-            dialog --clear --backtitle "ProxMenu" \
+            dialog --clear --backtitle "ProxMenux" \
                    --title "$(translate "No Selection")" \
                    --msgbox "$(translate "No utilities were selected")" 8 40
             return 0
@@ -1051,7 +1051,7 @@ EOF
     local dlg_status=$?
 
     if [[ $dlg_status -ne 0 ]]; then
-        dialog --clear --backtitle "ProxMenu" \
+        dialog --clear --backtitle "ProxMenux" \
                --title "$(translate "Canceled")" \
                --msgbox "$(translate "Action canceled by user")" 8 40
 

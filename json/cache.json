@@ -132,13 +132,6 @@
     "it": "Mostra versione",
     "pt": "Mostrar versão"
   },
-  "Uninstall ProxMenu": {
-    "es": "Desinstalar ProxMenu",
-    "fr": "Désinstaller ProxMenu",
-    "de": "ProxMenu deinstallieren",
-    "it": "Disinstallare ProxMenu",
-    "pt": "Desinstalar ProxMenu"
-  },
   "Select a new language for the menu:": {
     "es": "Seleccione idioma para el menú:",
     "fr": "Sélectionnez langue pour le menu :",
@@ -202,12 +195,12 @@
     "it": "Giapponese",
     "pt": "Japonês"
   },
-  "Thank you for using ProxMenu. Goodbye!": {
-    "es": "Gracias por usar ProxMenu. ¡Adiós!",
-    "fr": "Merci d'avoir utilisé ProxMenu. Au revoir!",
-    "de": "Danke für die Nutzung von ProxMenu. Auf Wiedersehen!",
-    "it": "Grazie per aver usato ProxMenu. Arrivederci!",
-    "pt": "Obrigado por usar o ProxMenu. Adeus!"
+  "Thank you for using ProxMenux. Goodbye!": {
+    "es": "Gracias por usar ProxMenux. ¡Adiós!",
+    "fr": "Merci d'avoir utilisé ProxMenux. Au revoir!",
+    "de": "Danke für die Nutzung von ProxMenux. Auf Wiedersehen!",
+    "it": "Grazie per aver usato ProxMenux. Arrivederci!",
+    "pt": "Obrigado por usar o ProxMenux. Adeus!"
   },
   "Uninstall ProxMenux": {
     "es": "Desinstalar ProxMenux",
@@ -814,7 +807,7 @@
     "it": "installato",
     "pt": "instalado"
   },
-  "ProxMenu files:": {
+  "ProxMenux files:": {
     "es": "Archivos ProxMenu:",
     "fr": "Fichiers ProxMenu:",
     "de": "ProxMenu-Dateien:",
