@@ -99,14 +99,15 @@ show_menu() {
             --title "$(translate "$menu_title")" \
             --menu "$(translate "Select an option:")" 20 70 10 \
             1 "$(translate "Settings post-install Proxmox")" \
-            2 "$(translate "Help and Info Commands")" \
-            3 "$(translate "Hardware: GPUs and Coral-TPU")" \
-            4 "$(translate "Create VM from template or script")" \
-            5 "$(translate "Disk and Storage Manager")" \
+            2 "$(translate "Hardware: GPUs and Coral-TPU")" \
+            3 "$(translate "Create VM from template or script")" \
+            4 "$(translate "Disk and Storage Manager")" \
+            5 "$(translate "Mount and Share Manager")" \
             6 "$(translate "Proxmox VE Helper Scripts")" \
             7 "$(translate "Network Management")" \
             8 "$(translate "Utilities and Tools")" \
-            9 "$(translate "Settings")" \
+            h "$(translate "Help and Info Commands")" \
+            s "$(translate "Settings")" \
             0 "$(translate "Exit")" 2>"$TEMP_FILE"
 
         local EXIT_STATUS=$?
@@ -122,14 +123,15 @@ show_menu() {
 
         case $OPTION in
             1) exec bash <(curl -s "$REPO_URL/scripts/menus/menu_post_install.sh") ;;
-            2) bash <(curl -s "$REPO_URL/scripts/help_info_menu.sh") ;;
-            3) exec bash <(curl -s "$REPO_URL/scripts/menus/hw_grafics_menu.sh") ;;
-            4) exec bash <(curl -s "$REPO_URL/scripts/menus/create_vm_menu.sh") ;;
-            5) exec bash <(curl -s "$REPO_URL/scripts/menus/storage_menu.sh") ;;
+            2) exec bash <(curl -s "$REPO_URL/scripts/menus/hw_grafics_menu.sh") ;;
+            3) exec bash <(curl -s "$REPO_URL/scripts/menus/create_vm_menu.sh") ;;
+            4) exec bash <(curl -s "$REPO_URL/scripts/menus/storage_menu.sh") ;;
+            5) exec bash <(curl -s "$REPO_URL/scripts/menus/share_menu.sh") ;;
             6) exec bash <(curl -s "$REPO_URL/scripts/menus/menu_Helper_Scripts.sh") ;;
             7) exec bash <(curl -s "$REPO_URL/scripts/menus/network_menu.sh") ;;
             8) exec bash <(curl -s "$REPO_URL/scripts/menus/utilities_menu.sh") ;;
-            9) exec bash <(curl -s "$REPO_URL/scripts/menus/config_menu.sh") ;;
+            h) bash <(curl -s "$REPO_URL/scripts/help_info_menu.sh") ;;
+            s) exec bash <(curl -s "$REPO_URL/scripts/menus/config_menu.sh") ;;
             0) clear; msg_ok "$(translate "Thank you for using ProxMenux. Goodbye!")"; rm -f "$TEMP_FILE"; exit 0 ;;
             *) msg_warn "$(translate "Invalid option")"; sleep 2 ;;
         esac
