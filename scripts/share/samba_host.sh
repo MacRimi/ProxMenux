@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenu Host - Samba Host Manager for Proxmox Host
+# ProxMenux Host - Samba Host Manager for Proxmox Host
 # ==========================================================
 # Based on ProxMenux by MacRimi
 # ==========================================================

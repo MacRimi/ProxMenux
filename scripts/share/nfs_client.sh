@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenu CT - NFS Client Manager for Proxmox LXC
+# ProxMenux CT - NFS Client Manager for Proxmox LXC
 # ==========================================================
 # Based on ProxMenux by MacRimi
 # ==========================================================

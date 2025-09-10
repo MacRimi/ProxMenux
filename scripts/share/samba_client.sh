@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenu CT - Samba Client Manager for Proxmox LXC
+# ProxMenux CT - Samba Client Manager for Proxmox LXC
 # ==========================================================
 # Based on ProxMenux by MacRimi
 # ==========================================================

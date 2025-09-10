@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenu Host - NFS Host Manager for Proxmox Host
+# ProxMenux Host - NFS Host Manager for Proxmox Host
 # ==========================================================
 # Based on ProxMenux by MacRimi
 # ==========================================================

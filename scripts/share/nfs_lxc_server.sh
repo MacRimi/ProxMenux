@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenu CT - NFS Manager for Proxmox LXC (Simple + Universal)
+# ProxMenux CT - NFS Manager for Proxmox LXC (Simple + Universal)
 # ==========================================================
 # Based on ProxMenux by MacRimi
 # ==========================================================
