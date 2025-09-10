@@ -4,27 +4,51 @@
 
 ![Shared Resources Menu](https://macrimi.github.io/ProxMenux/share/main-menu.png)
 
+
 ### Added
 
 - **New Menu: Mount and Share Manager**  
   Introduced a comprehensive new menu for managing shared resources between Proxmox host and LXC containers:
 
   **Host Configuration Options:**
-  1. **Configure NFS Shared on Host** - Add, view, and remove NFS shared resources on the Proxmox server with automatic export management
-  2. **Configure Samba Shared on Host** - Add, view, and remove Samba/CIFS shared resources on the Proxmox server with share configuration  
-  3. **Configure Local Shared on Host** - Create and manage local shared directories with proper permissions on the Proxmox host
+
+  1. **Configure NFS Shared on Host**  
+     Add, view, and remove NFS shared resources on the Proxmox server with automatic export management.
+
+  2. **Configure Samba Shared on Host**  
+     Add, view, and remove Samba/CIFS shared resources on the Proxmox server with share configuration.
+
+  3. **Configure Local Shared on Host**  
+     Create and manage local shared directories with proper permissions on the Proxmox host.
 
   **LXC Integration Options:**
-  4. **Configure LXC Mount Points (Host ↔ Container)** - **Core feature** that enables mounting host directories into LXC containers with automatic permission handling. Includes the ability to **view existing mount points** for each container in a clear, organized way and **remove mount points** with proper verification that the process completed successfully. Especially optimized for **unprivileged containers** where UID/GID mapping is critical.
-  5. **Configure NFS Client in LXC** - Set up NFS client inside privileged containers
-  6. **Configure Samba Client in LXC** - Set up Samba client inside privileged containers  
-  7. **Configure NFS Server in LXC** - Install NFS server inside privileged containers
-  8. **Configure Samba Server in LXC** - Install Samba server inside privileged containers
+
+  4. **Configure LXC Mount Points (Host ↔ Container)**  
+     **Core feature** that enables mounting host directories into LXC containers with automatic permission handling.  
+     Includes the ability to **view existing mount points** for each container in a clear, organized way and  
+     **remove mount points** with proper verification that the process completed successfully.  
+     Especially optimized for **unprivileged containers** where UID/GID mapping is critical.
+
+  5. **Configure NFS Client in LXC**  
+     Set up NFS client inside privileged containers.
+
+  6. **Configure Samba Client in LXC**  
+     Set up Samba client inside privileged containers.
+
+  7. **Configure NFS Server in LXC**  
+     Install NFS server inside privileged containers.
+
+  8. **Configure Samba Server in LXC**  
+     Install Samba server inside privileged containers.
 
   **Documentation & Support:**
-  - **Help & Info (commands)** - Comprehensive guides with step-by-step manual instructions for all sharing scenarios
 
-  The entire system is built around the **LXC Mount Points** functionality, which automatically detects filesystem types, handles permission mapping between host and container users, and provides seamless integration for both privileged and unprivileged containers.
+  - **Help & Info (commands)**  
+    Comprehensive guides with step-by-step manual instructions for all sharing scenarios.
+
+  The entire system is built around the **LXC Mount Points** functionality, which automatically detects filesystem types,  
+  handles permission mapping between host and container users, and provides seamless integration for both privileged  
+  and unprivileged containers.
 
 ---
 
