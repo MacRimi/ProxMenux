@@ -322,7 +322,7 @@ select_host_directory_unified() {
     done <<< "$all_network_shares"
 
     if [[ "$has_local_dirs" == true ]]; then
-        options+=("" "\Z4───────────────── LOCAL DIRECTORIES ─────────────────\Zn")
+        options+=("" "\Z4──────────────── LOCAL DIRECTORIES ────────────────\Zn")
         
         while IFS='|' read -r dir_path source type size used mount_source; do
             if [[ -n "$dir_path" && "$type" == "Directory" ]]; then
