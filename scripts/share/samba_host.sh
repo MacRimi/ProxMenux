@@ -862,7 +862,7 @@ view_host_samba_mounts() {
             fi
         done <<< "$FSTAB_CIFS"
     else
-        echo "$(translate "No permanent Samba mounts configured on host.")"
+        echo "$(translate "No Samba mounts found in fstab.")"
     fi
     
 

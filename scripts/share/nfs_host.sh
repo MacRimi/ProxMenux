@@ -545,7 +545,7 @@ view_host_nfs_mounts() {
             fi
         done <<< "$FSTAB_NFS"
     else
-        echo "$(translate "No NFS Mounts (fstab).")"
+        echo "$(translate "No NFS mounts found in fstab.")"
     fi
 
     echo ""
