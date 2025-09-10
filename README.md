@@ -1,6 +1,6 @@
 <div align="center">
     <img src="https://github.com/MacRimi/ProxMenux/blob/main/images/main.png" 
-         alt="ProxMenu Logo" 
+         alt="ProxMenux Logo" 
          style="max-width: 100%; height: auto;" >
         
 </div>
