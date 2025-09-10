@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenu - A menu-driven script for Proxmox VE management
+# ProxMenux - A menu-driven script for Proxmox VE management
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
@@ -13,13 +13,13 @@
 # This script serves as the main entry point for ProxMenux,
 # a menu-driven tool designed for Proxmox VE management.
 #
-# - Displays the ProxMenu logo on startup.
+# - Displays the ProxMenux logo on startup.
 # - Loads necessary configurations and language settings.
 # - Checks for available updates and installs them if confirmed.
 # - Downloads and executes the latest main menu script.
 #
 # Key Features:
-# - Ensures ProxMenu is always up-to-date by fetching the latest version.
+# - Ensures ProxMenux is always up-to-date by fetching the latest version.
 # - Uses whiptail for interactive menus and language selection.
 # - Loads utility functions and translation support.
 # - Maintains a cache system to improve performance.
@@ -67,7 +67,7 @@ check_updates() {
     if whiptail --title "$(translate "Update Available")" \
                 --yesno "$(translate "New version available") ($REMOTE_VERSION)\n\n$(translate "Do you want to update now?")" \
                 10 60 --defaultno; then
-        msg_warn "$(translate "Starting ProxMenu update...")"
+        msg_warn "$(translate "Starting ProxMenux update...")"
 
         if wget -qO "$INSTALL_SCRIPT" "$REPO_URL/install_proxmenux.sh"; then
             chmod +x "$INSTALL_SCRIPT"
