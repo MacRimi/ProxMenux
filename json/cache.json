@@ -2616,7 +2616,7 @@
   "Configure LXC Mount Points    (Host ↔ Container)": {
     "es": "Configurar puntos de montaje LXC (Host ↔ LXC)",
     "fr": "Configurer les points de montage LXC (Hôte ↔ LXC)",
-    "de": "LXC-Mount-Punkte konfigurieren (Host ↔ Container)",
+    "de": "LXC-Mount-Punkte konfigurieren (Host ↔ LXC)",
     "it": "Configurare punti di mount LXC (Host ↔ LXC)",
     "pt": "Configurar pontos de montagem LXC (Host ↔ LXC)"
   },
