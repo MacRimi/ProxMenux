@@ -437,12 +437,14 @@ select_host_directory_unified() {
 
 
     if detect_problematic_storage "$result" "Proxmox-GUI" "CIFS/SMB"; then
-        dialog --clear --title "$(translate "CIFS Storage Notice")" \
-            --yesno "$(translate "This directory is a CIFS storage configured from the Proxmox web interface.")\n\n\
-    $(translate "CIFS storages configured in Proxmox have restrictive permissions that")\n\
-    $(translate "ONLY ALLOW READ access from LXC containers.")\n\n\
-    $(translate "If you need WRITE access, cancel and use 'Configure Samba shared on Host'.")\n\n\
-    $(translate "Do you want to continue anyway?")" 20 80 3>&1 1>&2 2>&3
+dialog --clear --title "$(translate "CIFS Storage Notice")" --yesno "\
+$(translate "\nThis directory is a CIFS storage configured from the Proxmox web interface.")\n\n\
+$(translate "When CIFS storage is configured through the Proxmox GUI, it applies restrictive permissions.")\n\
+$(translate "As a result, LXC containers can usually READ files but may NOT be able to WRITE.")\n\n\
+$(translate "If you need WRITE access, cancel this operation and instead use the option:")\n\
+$(translate "Configure Samba shared on Host")\n\n\
+
+$(translate "Do you want to continue anyway?")" 18 80 3>&1 1>&2 2>&3
 
         dialog_result=$?
 
@@ -612,7 +614,7 @@ view_mount_points() {
     done <<< "$ct_list"
     
     if [[ "$found_mounts" == false ]]; then
-        msg_info "$(translate 'No mount points found in any container')"
+        msg_ok "$(translate 'No mount points found in any container')"
     fi
     
     echo -e ""
@@ -839,7 +841,7 @@ setup_minimal_container_access() {
         done < "$temp_file"
         
         if [[ $users_added -gt 0 ]]; then
-            msg_ok "$(translate "Users added to group") $container_group:$user_list" >&2
+            msg_ok "$(translate "Users added to group") $container_group: $users_added" >&2
         fi
     fi
     
