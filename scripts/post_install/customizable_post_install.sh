@@ -795,7 +795,7 @@ EOF
         )
         
         local selected
-        selected=$(dialog --clear --backtitle "ProxMenu - $(translate "System Utilities")" \
+        selected=$(dialog --clear --backtitle "ProxMenux - $(translate "System Utilities")" \
             --title "$(translate "Select utilities to install")" \
             --checklist "$(translate "Use SPACE to select/deselect, ENTER to confirm")" \
             20 70 12 "${utilities[@]}" 2>&1 >/dev/tty)

@@ -237,8 +237,8 @@ uninstall_proxmenu() {
     install_type=$(detect_installation_type)
     
     if ! dialog --clear --backtitle "ProxMenux Configuration" \
-                --title "Uninstall ProxMenu" \
-                --yesno "\n$(translate "Are you sure you want to uninstall ProxMenu?")" 8 60; then
+                --title "Uninstall ProxMenux" \
+                --yesno "\n$(translate "Are you sure you want to uninstall ProxMenux?")" 8 60; then
         return
     fi
     
