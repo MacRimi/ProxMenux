@@ -101,7 +101,7 @@ check_existing_installation() {
     fi
 }
 
-uninstall_proxmenu() {
+uninstall_proxmenux() {
     local install_type="$1"
     local force_clean="$2"
     
@@ -168,7 +168,7 @@ handle_installation_change() {
             if whiptail --title "Installation Type Change" \
                 --yesno "Switch from Translation to Normal Version?\n\nThis will remove translation components." 10 60; then
                 echo "Preparing for installation type change..."
-                uninstall_proxmenu "translation" "force" >/dev/null 2>&1
+                uninstall_proxmenux "translation" "force" >/dev/null 2>&1
                 return 0
             else
                 return 1
