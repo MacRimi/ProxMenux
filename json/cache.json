@@ -202,7 +202,7 @@
     "it": "Giapponese",
     "pt": "Japonês"
   },
-  "Thank you for using ProxMenu. Goodbye!": {
+  "Thank you for using ProxMenux. Goodbye!": {
     "es": "Gracias por usar ProxMenu. ¡Adiós!",
     "fr": "Merci d'avoir utilisé ProxMenu. Au revoir!",
     "de": "Danke für die Nutzung von ProxMenu. Auf Wiedersehen!",
@@ -900,7 +900,11 @@
     "it": "Trova il tuo dispositivo usando https://finds.synology.com"
   },
   "Help and Info Commands": {
-    "es": "Comandos de ayuda e información"
+    "es": "Comandos de ayuda e información",
+    "fr": "Aide et Informations (commandes)",
+    "de": "Hilfe & Informationen (Befehle)",
+    "it": "Aiuto e Informazioni (comandi)",
+    "pt": "Ajuda e Informações (comandos)"
   },
   "Create VM from template or script": {
     "es": "Crear VM a partir de plantilla o script",
@@ -2566,5 +2570,103 @@
     "de": "Notfallwiederherstellung:",
     "it": "Ripristino di emergenza:",
     "pt": "Recuperação de emergência:"
+  },
+  "Mount and Share Manager": {
+    "es": "Montajes y Recursos Compartidos",
+    "fr": "Gestionnaire de Montage et Partage",
+    "de": "Mount- und Share-Manager",
+    "it": "Gestore di Mount e Condivisioni",
+    "pt": "Gerenciador de Montagem e Compartilhamento"
+  },
+  "HOST": {
+    "es": "HOST",
+    "fr": "HÔTE",
+    "de": "HOST",
+    "it": "HOST",
+    "pt": "HOST"
+  },
+  "Configure NFS shared   on Host": {
+    "es": "Configurar recursos NFS compartidos en el Host",
+    "fr": "Configurer les partages NFS sur l'hôte",
+    "de": "NFS-Freigaben auf Host konfigurieren",
+    "it": "Configurare condivisioni NFS su Host",
+    "pt": "Configurar compartilhamentos NFS no Host"
+  },
+  "Configure Samba shared on Host": {
+    "es": "Configurar recursos Samba compartidos en el Host",
+    "fr": "Configurer les partages Samba sur l'hôte",
+    "de": "Samba-Freigaben auf Host konfigurieren",
+    "it": "Configurare condivisioni Samba su Host",
+    "pt": "Configurar compartilhamentos Samba no Host"
+  },
+  "Configure Local Shared on Host": {
+    "es": "Configurar directorios locales compartidos en el Host",
+    "fr": "Configurer les répertoires locaux partagés sur l'hôte",
+    "de": "Lokale geteilte Verzeichnisse auf Host konfigurieren",
+    "it": "Configurare directory locali condivise su Host",
+    "pt": "Configurar diretórios locais compartilhados no Host"
+  },
+  "LXC": {
+    "es": "LXC",
+    "fr": "LXC",
+    "de": "LXC",
+    "it": "LXC",
+    "pt": "LXC"
+  },
+  "Configure LXC Mount Points    (Host ↔ Container)": {
+    "es": "Configurar puntos de montaje LXC (Host ↔ LXC)",
+    "fr": "Configurer les points de montage LXC (Hôte ↔ LXC)",
+    "de": "LXC-Mount-Punkte konfigurieren (Host ↔ Container)",
+    "it": "Configurare punti di mount LXC (Host ↔ LXC)",
+    "pt": "Configurar pontos de montagem LXC (Host ↔ LXC)"
+  },
+  "Configure NFS Client in LXC   (only privileged)": {
+    "es": "Configurar cliente NFS en LXC (solo privilegiados)",
+    "fr": "Configurer le client NFS dans LXC (privilégiés uniquement)",
+    "de": "NFS-Client in LXC konfigurieren (nur privilegiert)",
+    "it": "Configurare client NFS in LXC (solo privilegiati)",
+    "pt": "Configurar cliente NFS em LXC (apenas privilegiados)"
+  },
+  "Configure Samba Client in LXC (only privileged)": {
+    "es": "Configurar cliente Samba en LXC (solo privilegiados)",
+    "fr": "Configurer le client Samba dans LXC (privilégiés uniquement)",
+    "de": "Samba-Client in LXC konfigurieren (nur privilegiert)",
+    "it": "Configurare client Samba in LXC (solo privilegiati)",
+    "pt": "Configurar cliente Samba em LXC (apenas privilegiados)"
+  },
+  "Configure NFS Server in LXC   (only privileged)": {
+    "es": "Configurar servidor NFS en LXC (solo privilegiados)",
+    "fr": "Configurer le serveur NFS dans LXC (privilégiés uniquement)",
+    "de": "NFS-Server in LXC konfigurieren (nur privilegiert)",
+    "it": "Configurare server NFS in LXC (solo privilegiati)",
+    "pt": "Configurar servidor NFS em LXC (apenas privilegiados)"
+  },
+  "configure Samba Server in LXC (only privileged)": {
+    "es": "Configurar servidor Samba en LXC (solo privilegiados)",
+    "fr": "Configurer le serveur Samba dans LXC (privilégiés uniquement)",
+    "de": "Samba-Server in LXC konfigurieren (nur privilegiert)",
+    "it": "Configurare server Samba in LXC (solo privilegiati)",
+    "pt": "Configurar servidor Samba em LXC (apenas privilegiados)"
+  },
+  "Help & Info (commands)": {
+    "es": "Comandos de ayuda e información",
+    "fr": "Aide et Informations (commandes)",
+    "de": "Hilfe & Informationen (Befehle)",
+    "it": "Aiuto e Informazioni (comandi)",
+    "pt": "Ajuda e Informações (comandos)"
+  },
+  "English": {
+    "es": "Inglés",
+    "fr": "Anglais",
+    "de": "Englisch",
+    "it": "Inglese",
+    "pt": "Inglês"
+  },
+  "Language Change": {
+    "es": "Cambio de Idioma",
+    "fr": "Changement de Langue",
+    "de": "Sprachänderung",
+    "it": "Cambio Lingua",
+    "pt": "Mudança de Idioma"
   }
 }
