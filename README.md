@@ -70,6 +70,12 @@ Then, follow the on-screen options to manage your Proxmox server efficiently.
 ## ⭐ Support the Project!
 If you find **ProxMenux** useful, consider giving it a ⭐ on GitHub to help others discover it!
 
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=MacRimi/ProxMenux&type=Date)](https://www.star-history.com/#MacRimi/ProxMenux&Date)
+
+
 <div style="display: flex; justify-content: center; align-items: center;">
   <a href="https://ko-fi.com/G2G313ECAN" target="_blank" style="display: flex; align-items: center; text-decoration: none;">
     <img src="https://raw.githubusercontent.com/MacRimi/HWEncoderX/main/images/kofi.png" alt="Support me on Ko-fi" style="width:140px; margin-right:40px;"/>
@@ -77,9 +83,3 @@ If you find **ProxMenux** useful, consider giving it a ⭐ on GitHub to help oth
 </div>
 
 Support the project on Ko-fi!
-
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=MacRimi/ProxMenux&type=Date)](https://www.star-history.com/#MacRimi/ProxMenux&Date)
-
