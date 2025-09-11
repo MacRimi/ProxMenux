@@ -4231,8 +4231,8 @@
     "name": "Resilio Sync",
     "slug": "resiliosync",
     "desc": "Fast, reliable, and simple file sync and share solution, powered by P2P technology. Sync files across all your devices without storing them in the cloud.",
-    "script": "ct/resilio-sync.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/resilio-sync.sh",
+    "script": "ct/resiliosync.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/resiliosync.sh",
     "categories": [
       11
     ],
