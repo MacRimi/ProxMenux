@@ -79,3 +79,7 @@ If you find **ProxMenux** useful, consider giving it a ⭐ on GitHub to help oth
 Support the project on Ko-fi!
 
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=MacRimi/ProxMenux&type=Date)](https://www.star-history.com/#MacRimi/ProxMenux&Date)
+
