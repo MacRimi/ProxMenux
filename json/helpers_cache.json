@@ -4674,6 +4674,20 @@
     "type": "ct"
   },
   {
+    "name": "Telegraf",
+    "slug": "telegraf",
+    "desc": "Telegraf collects and sends time series data from databases, systems, and IoT sensors. It has no external dependencies, is easy to install, and requires minimal memory.",
+    "script": "ct/telegraf.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/telegraf.sh",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "Make sure to configure an output for the telegraf config and start the service with `systemctl start telegraf`."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "The Lounge",
     "slug": "the-lounge",
     "desc": "Modern web IRC client designed for self-hosting ",
