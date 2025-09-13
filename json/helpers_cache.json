@@ -4528,6 +4528,18 @@
     }
   },
   {
+    "name": "Stylus",
+    "slug": "stylus",
+    "desc": "Stylus (style + status) is a lightweight status page for infrastructure and networks. Configure a set of bash scripts that test the various parts of your infrastructure, set up visualizations with minimal configuration, and Stylus will generate you a dashboard for your system.",
+    "script": "ct/stylus.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/stylus.sh",
+    "categories": [
+      4
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Suwayomi-Server",
     "slug": "suwayomi-server",
     "desc": "A free and open source manga reader server that runs extensions built for Mihon (Tachiyomi).",
