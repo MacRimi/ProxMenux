@@ -3310,10 +3310,10 @@
   },
   {
     "name": "OpenWrt",
-    "slug": "openwrt",
+    "slug": "openwrt-vm",
     "desc": "OpenWrt is a powerful open-source firmware that can transform a wide range of networking devices into highly customizable and feature-rich routers, providing users with greater control and flexibility over their network infrastructure.",
-    "script": "vm/openwrt.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/openwrt.sh",
+    "script": "vm/openwrt-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/openwrt-vm.sh",
     "categories": [
       4,
       2
@@ -4324,6 +4324,20 @@
     "type": "pve"
   },
   {
+    "name": "Scraparr",
+    "slug": "scraparr",
+    "desc": "Scraparr is a Prometheus exporter for the *arr suite (Sonarr, Radarr, Lidarr, etc.). It provides metrics that can be scraped by Prometheus to monitor and visualize the health and performance of your *arr applications.",
+    "script": "ct/scraparr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/scraparr.sh",
+    "categories": [
+      14
+    ],
+    "notes": [
+      "Edit config file then restart the scraparr service: `systemctl restart scraparr`"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "SearXNG",
     "slug": "searxng",
     "desc": "SearXNG is a free internet metasearch engine which aggregates results from up to 215 search services. Users are neither tracked nor profiled. Additionally, SearXNG can be used over Tor for online anonymity.",
@@ -4395,6 +4409,20 @@
       "username": "admin@shinobi.video",
       "password": "admin"
     }
+  },
+  {
+    "name": "SigNoz",
+    "slug": "signoz",
+    "desc": "SigNoz is an open-source Datadog or New Relic alternative. Get APM, logs, traces, metrics, exceptions, & alerts in a single tool.",
+    "script": "ct/signoz.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/signoz.sh",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "The first user you register will be the admin user."
+    ],
+    "type": "ct"
   },
   {
     "name": "Silverbullet",
