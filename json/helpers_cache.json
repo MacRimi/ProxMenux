@@ -1623,7 +1623,7 @@
   {
     "name": "Grist",
     "slug": "grist",
-    "desc": "Grist is a modern, open source spreadsheet that goes beyond the grid",
+    "desc": "Grist is like a spreadsheet + database hybrid. It lets you store structured data, use relational links between tables, apply formulas (even with Python), build custom layouts (cards, forms, dashboards), set fine-grained access rules, and visualize data with charts or pivot-tables.",
     "script": "ct/grist.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/grist.sh",
     "categories": [
