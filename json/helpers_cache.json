@@ -1223,6 +1223,22 @@
     "type": "ct"
   },
   {
+    "name": "PVE LXC Execute Command",
+    "slug": "lxc-execute",
+    "desc": "This script allows administrators to execute a custom command inside one or multiple LXC containers on a Proxmox VE node. Containers can be selectively excluded via an interactive checklist. If a container is stopped, the script will automatically start it, run the command, and then shut it down again. Only Debian and Ubuntu based containers are supported.",
+    "script": "tools/pve/execute.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/execute.sh",
+    "categories": [
+      1
+    ],
+    "notes": [
+      "Execute within the Proxmox shell.",
+      "Non-Debian/Ubuntu containers will be skipped automatically.",
+      "Stopped containers will be started temporarily to run the command, then shut down again."
+    ],
+    "type": "pve"
+  },
+  {
     "name": "Fenrus",
     "slug": "fenrus",
     "desc": "A personal home page for quick access to all your personal apps/sites.",
@@ -1516,6 +1532,18 @@
     "type": "addon"
   },
   {
+    "name": "GlobaLeaks",
+    "slug": "globaleaks",
+    "desc": "GlobaLeaks is a free and open-source whistleblowing software enabling anyone to easily set up and maintain a secure reporting platform.",
+    "script": "ct/globaleaks.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/globaleaks.sh",
+    "categories": [
+      0
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "GLPI",
     "slug": "glpi",
     "desc": "GLPI is a Free Asset and IT Management Software package, Data center management, ITIL Service Desk, licenses tracking and software auditing.",
@@ -1770,6 +1798,7 @@
       16
     ],
     "notes": [
+      "Containerized version doesn't allow Home Assistant add-ons.",
       "If the LXC is created Privileged, the script will automatically set up USB passthrough.",
       "config path: `/var/lib/docker/volumes/hass_config/_data`",
       "Portainer interface: $IP: 9443 - User & password must be set manually within 5 minutes, otherwise a restart of Portainer is required!",
