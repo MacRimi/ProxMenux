@@ -4879,6 +4879,18 @@
     "type": "ct"
   },
   {
+    "name": "Tunarr",
+    "slug": "tunarr",
+    "desc": "Create a classic TV experience using your own media - IPTV backed by Plex/Jellyfin/Emby.",
+    "script": "ct/tunarr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/tunarr.sh",
+    "categories": [
+      13
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "TurnKey",
     "slug": "turnkey",
     "desc": "TurnKey LXC Appliances is an open-source project that provides a collection of free, ready-to-use virtual appliances and installation images for various software applications and services. These appliances are pre-configured and come with all the necessary software and settings to simplify deployment and management. The goal of TurnKey Linux is to make it easier for users to set up and run popular software applications without the need for extensive manual configuration.",
