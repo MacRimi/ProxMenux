@@ -27,7 +27,7 @@
     "type": "ct"
   },
   {
-    "name": "Proxmox VE LXC Tag",
+    "name": "PVE LXC Tag",
     "slug": "add-iptag",
     "desc": "This script automatically adds IP address as tags to LXC containers or VM's using a systemd service. The service also updates the tags if a LXC/VM IP address is changed.",
     "script": "tools/pve/add-iptag.sh",
@@ -635,7 +635,7 @@
     "type": "ct"
   },
   {
-    "name": "Proxmox VE LXC Cleaner",
+    "name": "PVE LXC Cleaner",
     "slug": "clean-lxcs",
     "desc": "This script provides options to delete logs and cache, and repopulate apt lists for Ubuntu and Debian systems.",
     "script": "tools/pve/clean-lxcs.sh",
@@ -649,7 +649,7 @@
     "type": "pve"
   },
   {
-    "name": "Proxmox Clean Orphaned LVM",
+    "name": "PVE Clean Orphaned LVM",
     "slug": "clean-orphaned-lvm",
     "desc": "This script helps Proxmox users identify and remove orphaned LVM volumes that are no longer associated with any VM or LXC container. It scans all LVM volumes, detects unused ones, and provides an interactive prompt to delete them safely. System-critical volumes like root, swap, and data are excluded to prevent accidental deletion.",
     "script": "tools/pve/clean-orphaned-lvm.sh",
@@ -837,7 +837,7 @@
     }
   },
   {
-    "name": "Proxmox VE Cron LXC Updater",
+    "name": "PVE Cron LXC Updater",
     "slug": "cron-update-lxcs",
     "desc": "This script will add/remove a crontab schedule that updates all LXCs every Sunday at midnight.",
     "script": "tools/pve/cron-update-lxcs.sh",
@@ -1429,7 +1429,7 @@
     "type": "ct"
   },
   {
-    "name": "Proxmox VE LXC Filesystem Trim",
+    "name": "PVE LXC Filesystem Trim",
     "slug": "fstrim",
     "desc": "This maintains SSD performance by managing unused blocks. Thin-provisioned storage systems also require management to prevent unnecessary storage use. VMs automate fstrim, while LXC containers need manual or automated fstrim processes for optimal performance.",
     "script": "tools/pve/fstrim.sh",
@@ -1878,7 +1878,7 @@
     "type": "ct"
   },
   {
-    "name": "Proxmox VE Host Backup",
+    "name": "PVE Host Backup",
     "slug": "host-backup",
     "desc": "This script serves as a versatile backup utility, enabling users to specify both the backup path and the directory they want to work in. This flexibility empowers users to select the specific files and directories they wish to back up, making it compatible with a wide range of hosts, not limited to Proxmox.",
     "script": "tools/pve/host-backup.sh",
@@ -2175,7 +2175,7 @@
     "type": "ct"
   },
   {
-    "name": "Proxmox VE Kernel Clean",
+    "name": "PVE Kernel Clean",
     "slug": "kernel-clean",
     "desc": "Cleaning unused kernel images is beneficial for reducing the length of the GRUB menu and freeing up disk space. By removing old, unused kernels, the system is able to conserve disk space and streamline the boot process.",
     "script": "tools/pve/kernel-clean.sh",
@@ -2189,7 +2189,7 @@
     "type": "pve"
   },
   {
-    "name": "Proxmox VE Kernel Pin",
+    "name": "PVE Kernel Pin",
     "slug": "kernel-pin",
     "desc": "Kernel Pin is an essential tool for effortlessly managing kernel pinning and unpinning.",
     "script": "tools/pve/kernel-pin.sh",
@@ -2670,7 +2670,7 @@
     "type": "ct"
   },
   {
-    "name": "Proxmox VE Processor Microcode",
+    "name": "PVE Processor Microcode",
     "slug": "microcode",
     "desc": "Processor Microcode is a layer of low-level software that runs on the processor and provides patches or updates to its firmware. Microcode updates can fix hardware bugs, improve performance, and enhance security features of the processor.\r\n\r\nIt's important to note that the availability of firmware update mechanisms, such as Intel's Management Engine (ME) or AMD's Platform Security Processor (PSP), may vary depending on the processor and its specific implementation. Therefore, it's recommended to consult the documentation for your processor to confirm whether firmware updates can be applied through the operating system.",
     "script": "tools/pve/microcode.sh",
@@ -2764,7 +2764,7 @@
     }
   },
   {
-    "name": "Proxmox VE Monitor-All",
+    "name": "PVE Monitor-All",
     "slug": "monitor-all",
     "desc": "This script will add Monitor-All to Proxmox VE, which will monitor the status of all your instances, both containers and virtual machines, excluding templates and user-defined ones, and automatically restart or reset them if they become unresponsive. This is particularly useful if you're experiencing problems with Home Assistant becoming non-responsive every few days/weeks. Monitor-All also maintains a log of the entire process, which can be helpful for troubleshooting and monitoring purposes.\r\n\r\n\ud83d\udec8 Virtual machines without the QEMU guest agent installed must be excluded.\r\n\ud83d\udec8 Prior to generating any new CT/VM not found in this repository, it's necessary to halt Proxmox VE Monitor-All by running systemctl stop ping-instances.",
     "script": "tools/pve/monitor-all.sh",
@@ -2913,7 +2913,7 @@
     "type": "ct"
   },
   {
-    "name": "Proxmox VE Netdata",
+    "name": "PVE Netdata",
     "slug": "netdata",
     "desc": "Netdata is an open-source, real-time performance monitoring tool designed to provide insights into the performance and health of systems and applications. It is often used by system administrators, DevOps professionals, and developers to monitor and troubleshoot issues on servers and other devices.",
     "script": "tools/addon/netdata.sh",
@@ -3557,7 +3557,7 @@
     }
   },
   {
-    "name": "Proxmox Backup Server Processor Microcode",
+    "name": "PBS Processor Microcode",
     "slug": "pbs-microcode",
     "desc": "Processor Microcode is a layer of low-level software that runs on the processor and provides patches or updates to its firmware. Microcode updates can fix hardware bugs, improve performance, and enhance security features of the processor. This script is adapted for the Proxmox Backup Server environment and will only run on bare metal systems. If running in a virtualized environment, the script will exit. Note that firmware update mechanisms, such as Intel's Management Engine (ME) or AMD's Platform Security Processor (PSP), may vary depending on your processor and its implementation. Please consult your processor's documentation to verify if firmware updates can be applied through the operating system.",
     "script": "tools/pve/pbs_microcode.sh",
@@ -3830,9 +3830,9 @@
     "type": "ct"
   },
   {
-    "name": "Proxmox Backup Server Post Install",
+    "name": "PBS Post Install",
     "slug": "post-pbs-install",
-    "desc": "The script will give options to Disable the Enterprise Repo, Add/Correct PBS Sources, Enable the No-Subscription Repo, Add Test Repo, Disable Subscription Nag, Update Proxmox Backup Server and Reboot PBS.",
+    "desc": "The script is designed for Proxmox Backup Server (PBS) and will give options to Disable the Enterprise Repo, Add/Correct PBS Sources, Enable the No-Subscription Repo, Add Test Repo, Disable Subscription Nag, Update Proxmox Backup Server and Reboot PBS.",
     "script": "tools/pve/post-pbs-install.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pbs-install.sh",
     "categories": [
@@ -3846,9 +3846,9 @@
     "type": "pve"
   },
   {
-    "name": "Proxmox Mail Gateway Post Install",
+    "name": "PMG Post Install",
     "slug": "post-pmg-install",
-    "desc": "The script will give options to Disable the Enterprise Repo, Add/Correct PMG Sources, Enable the No-Subscription Repo, Add Test Repo, Disable Subscription Nag, Update Proxmox Mail Gateway and Reboot PMG.",
+    "desc": "The script is designed for Proxmox Mail Gateway and will give options to Disable the Enterprise Repo, Add/Correct PMG Sources, Enable the No-Subscription Repo, Add Test Repo, Disable Subscription Nag, Update Proxmox Mail Gateway and Reboot PMG.",
     "script": "tools/pve/post-pmg-install.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pmg-install.sh",
     "categories": [
@@ -3862,7 +3862,7 @@
     "type": "pve"
   },
   {
-    "name": "Proxmox VE Post Install",
+    "name": "PVE Post Install",
     "slug": "post-pve-install",
     "desc": "This script provides options for managing Proxmox VE repositories, including disabling the Enterprise Repo, adding or correcting PVE sources, enabling the No-Subscription Repo, adding the test Repo, disabling the subscription nag, updating Proxmox VE, and rebooting the system.",
     "script": "tools/pve/post-pve-install.sh",
@@ -3983,7 +3983,7 @@
     "type": "ct"
   },
   {
-    "name": "Proxmox Backup Server",
+    "name": "Proxmox Backup Server (PBS)",
     "slug": "proxmox-backup-server",
     "desc": "Proxmox Backup Server is an enterprise backup solution, for backing up and restoring VMs, containers, and physical hosts. By supporting incremental, fully deduplicated backups, Proxmox Backup Server significantly reduces network load and saves valuable storage space.",
     "script": "ct/proxmox-backup-server.sh",
@@ -4002,7 +4002,7 @@
     }
   },
   {
-    "name": "Proxmox Datacenter Manager",
+    "name": "Proxmox Datacenter Manager (PDM)",
     "slug": "proxmox-datacenter-manager",
     "desc": "The Proxmox Datacenter Manager project has been developed with the objective of providing a centralized overview of all your individual nodes and clusters. It also enables basic management like migrations of virtual guests without any cluster network requirements. ",
     "script": "ct/proxmox-datacenter-manager.sh",
@@ -4017,7 +4017,7 @@
     "type": "ct"
   },
   {
-    "name": "Proxmox Mail Gateway",
+    "name": "Proxmox Mail Gateway (PMG)",
     "slug": "proxmox-mail-gateway",
     "desc": "Proxmox Mail Gateway is the leading open-source email security solution helping you to protect your mail server against all email threats from the moment they emerge.",
     "script": "ct/proxmox-mail-gateway.sh",
@@ -4339,7 +4339,7 @@
     "type": "ct"
   },
   {
-    "name": "Proxmox VE CPU Scaling Governor",
+    "name": "PVE CPU Scaling Governor",
     "slug": "scaling-governor",
     "desc": "The CPU scaling governor determines how the CPU frequency is adjusted based on the workload, with the goal of either conserving power or improving performance. By scaling the frequency up or down, the operating system can optimize the CPU usage and conserve energy when possible. Generic Scaling Governors",
     "script": "tools/pve/scaling-governor.sh",
@@ -5089,7 +5089,7 @@
     "type": "ct"
   },
   {
-    "name": "Proxmox VE LXC Updater",
+    "name": "PVE LXC Updater",
     "slug": "update-lxcs",
     "desc": "This script has been created to simplify and speed up the process of updating all LXC containers across various Linux distributions, such as Ubuntu, Debian, Devuan, Alpine Linux, CentOS-Rocky-Alma, Fedora, and ArchLinux. It's designed to automatically skip templates and specific containers during the update, enhancing its convenience and usability.",
     "script": "tools/pve/update-lxcs.sh",
@@ -5103,7 +5103,7 @@
     "type": "pve"
   },
   {
-    "name": "Proxmox Update Repositories",
+    "name": "PVE Update Repositories",
     "slug": "update-repo",
     "desc": "This script updates repository links in LXC containers, replacing old links from the tteck repository with links to the new community-scripts repository to fix issues related to updating scripts.",
     "script": "tools/pve/update-repo.sh",
