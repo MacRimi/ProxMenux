@@ -815,7 +815,9 @@
       2,
       3
     ],
-    "notes": [],
+    "notes": [
+      "The file `/etc/sysconfig/CosmosCloud` is optional. If you need custom settings, you can create it yourself."
+    ],
     "type": "ct"
   },
   {
@@ -1136,7 +1138,8 @@
     ],
     "notes": [
       "Type `cat ~/matrix.creds` to see admin username/password.",
-      "Synapse-Admin is running on port 5173"
+      "Synapse-Admin is running on port 5173",
+      "For bridges Installation methods (WhatsApp, Signal, Discord, etc.), see: \u00b4https://docs.mau.fi/bridges/go/setup.html\u00b4"
     ],
     "type": "ct"
   },
@@ -3334,7 +3337,9 @@
     "categories": [
       20
     ],
-    "notes": [],
+    "notes": [
+      "Script contains optional installation of Ollama."
+    ],
     "type": "ct"
   },
   {
@@ -4820,9 +4825,13 @@
       9
     ],
     "notes": [
-      "Please check and update the '/opt/tracktor/app/backend/.env' file if using behind reverse proxy."
+      "Please check and update the '/opt/tracktor.env' file if using behind reverse proxy."
     ],
-    "type": "ct"
+    "type": "ct",
+    "default_credentials": {
+      "username": null,
+      "password": "123456"
+    }
   },
   {
     "name": "Traefik",
@@ -5115,6 +5124,20 @@
       "Execute within the Proxmox shell"
     ],
     "type": "pve"
+  },
+  {
+    "name": "UpSnap",
+    "slug": "upsnap",
+    "desc": "UpSnap is a self-hosted web app that lets you wake up, manage and monitor devices on your network with ease. Built with SvelteKit, Go and PocketBase, it offers a clean dashboard, scheduled wake-ups, device discovery and secure user management.",
+    "script": "ct/upsnap.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/upsnap.sh",
+    "categories": [
+      4
+    ],
+    "notes": [
+      "The first user you register will be the admin user."
+    ],
+    "type": "ct"
   },
   {
     "name": "Uptime Kuma",
@@ -5424,8 +5447,10 @@
       9
     ],
     "notes": [
-      "Database credentials: `cat zabbix.creds`",
-      "Zabbix agent 2 is used by default"
+      "Database credentials: `cat ~/zabbix.creds`",
+      "You can choose between Zabbix agent (classic) and agent2 (modern) during installation",
+      "For agent2 the PostgreSQL plugin is installed by default; all plugins are optional",
+      "If agent2 with NVIDIA plugin is installed in an environment without GPU, the installer disables it automatically"
     ],
     "type": "ct",
     "default_credentials": {
