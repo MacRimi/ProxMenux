@@ -2110,6 +2110,24 @@
     "type": "ct"
   },
   {
+    "name": "Joplin Server",
+    "slug": "joplin-server",
+    "desc": "Joplin - the privacy-focused note taking app with sync capabilities for Windows, macOS, Linux, Android and iOS.",
+    "script": "ct/joplin-server.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/joplin-server.sh",
+    "categories": [
+      12
+    ],
+    "notes": [
+      "Application can take some time to build, depending on your host speed. Please be patient."
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin@localhost",
+      "password": "admin"
+    }
+  },
+  {
     "name": "Jupyter Notebook",
     "slug": "jupyternotebook",
     "desc": "The Jupyter Notebook is an open-source web application that allows you to create and share documents that contain live code, equations, visualizations and narrative text. Uses include: data cleaning and transformation, numerical simulation, statistical modeling, data visualization, machine learning, and much more.",
