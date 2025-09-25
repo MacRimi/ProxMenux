@@ -1575,6 +1575,20 @@
     "type": "ct"
   },
   {
+    "name": "GoAway",
+    "slug": "goaway",
+    "desc": "Lightweight DNS sinkhole written in Go with a modern dashboard client. Very good looking new alternative to Pi-Hole and Adguard Home.",
+    "script": "ct/goaway.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/goaway.sh",
+    "categories": [
+      5
+    ],
+    "notes": [
+      "Type `cat ~/goaway.creds` to see login credentials."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Gokapi",
     "slug": "gokapi",
     "desc": "Gokapi is a lightweight server to share files, which expire after a set amount of downloads or days.",
