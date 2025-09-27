@@ -201,25 +201,25 @@ get_network_config() {
 select_export_options() {
     EXPORT_OPTIONS=$(whiptail --title "$(translate "Export Options")" --menu \
         "\n$(translate "Select export permissions:")" 15 70 3 \
-        "1" "$(translate "Read-Write (recommended)")" \
+        "1" "$(translate "Read-Write (universal)")" \
         "2" "$(translate "Read-Only")" \
         "3" "$(translate "Custom options")" 3>&1 1>&2 2>&3)
 
     case "$EXPORT_OPTIONS" in
         1)
-            OPTIONS="rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
+            OPTIONS="rw,sync,no_subtree_check,no_root_squash"
             ;;
         2)
-            OPTIONS="ro,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
+            OPTIONS="ro,sync,no_subtree_check,no_root_squash"
             ;;
         3)
             OPTIONS=$(whiptail --inputbox "$(translate "Enter custom NFS options:")" \
-                10 70 "rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000" \
+                10 70 "rw,sync,no_subtree_check,no_root_squash" \
                 --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
-            [[ -z "$OPTIONS" ]] && OPTIONS="rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
+            [[ -z "$OPTIONS" ]] && OPTIONS="rw,sync,no_subtree_check,no_root_squash"
             ;;
         *)
-            OPTIONS="rw,sync,no_subtree_check,all_squash,anonuid=0,anongid=101000"
+            OPTIONS="rw,sync,no_subtree_check,no_root_squash"
             ;;
     esac
 }
