@@ -841,7 +841,7 @@
   {
     "name": "PVE Cron LXC Updater",
     "slug": "cron-update-lxcs",
-    "desc": "This script will add/remove a crontab schedule that updates all LXCs every Sunday at midnight.",
+    "desc": "This script will add/remove a crontab schedule that updates the operating system of all LXCs every Sunday at midnight.",
     "script": "tools/pve/cron-update-lxcs.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/cron-update-lxcs.sh",
     "categories": [
@@ -5132,14 +5132,15 @@
   {
     "name": "PVE LXC Updater",
     "slug": "update-lxcs",
-    "desc": "This script has been created to simplify and speed up the process of updating all LXC containers across various Linux distributions, such as Ubuntu, Debian, Devuan, Alpine Linux, CentOS-Rocky-Alma, Fedora, and ArchLinux. It's designed to automatically skip templates and specific containers during the update, enhancing its convenience and usability.",
+    "desc": "This script has been created to simplify and speed up the process of updating the operating system running inside LXC containers across various Linux distributions, such as Ubuntu, Debian, Devuan, Alpine Linux, CentOS-Rocky-Alma, Fedora, and ArchLinux. It's designed to automatically skip templates and specific containers during the update, enhancing its convenience and usability.",
     "script": "tools/pve/update-lxcs.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/update-lxcs.sh",
     "categories": [
       1
     ],
     "notes": [
-      "Execute within the Proxmox shell"
+      "Execute within the Proxmox shell",
+      "The script updates only the operating system of the LXC container. It DOES NOT update the application installed within the container!"
     ],
     "type": "pve"
   },
