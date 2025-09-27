@@ -158,8 +158,6 @@ EOF
         msg_ok "$(translate "Non-free firmware warnings disabled")"
     fi
 
-    cleanup_duplicate_repos
-
     update_output=$(apt-get update 2>&1)
     update_exit_code=$?
 
