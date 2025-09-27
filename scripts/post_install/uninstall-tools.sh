@@ -150,7 +150,7 @@ uninstall_apt_upgrade() {
 
 ################################################################
 
-uninstall_subscription_banner() {
+uninstall_subscription_banner_() {
     msg_info "$(translate "Restoring subscription banner...")"
     
     # Remove APT hook
@@ -162,6 +162,112 @@ uninstall_subscription_banner() {
     msg_ok "$(translate "Subscription banner restored")"
     register_tool "subscription_banner" false
 }
+
+
+
+
+uninstall_subscription_banner() {
+    msg_info "$(translate "Restoring subscription banner...")"
+    
+    local JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
+    local MOBILE_TPL="/usr/share/pve-manager/templates/index.html.tpl"
+    local PATCH_BIN="/usr/local/bin/pve-remove-nag.sh"
+    local BASE_DIR="/opt/pve-nag-buster"
+    local MIN_JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.min.js"
+    local GZ_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz"
+    local MARK_MOBILE=" PVE9 Mobile Subscription Banner Removal "
+    
+    local restored=false
+    
+    # Remove APT hook (both old and new versions)
+    for hook in /etc/apt/apt.conf.d/*nag* /etc/apt/apt.conf.d/no-nag-script; do
+        if [[ -e "$hook" ]]; then
+            rm -f "$hook"
+            msg_ok "$(translate "Removed APT hook: $hook")"
+        fi
+    done
+    
+    # Remove patch script
+    if [[ -f "$PATCH_BIN" ]]; then
+        rm -f "$PATCH_BIN"
+        msg_ok "$(translate "Removed patch script: $PATCH_BIN")"
+    fi
+    
+    # Restore JavaScript file from backups (new script method)
+    if [[ -d "$BASE_DIR/backups" ]]; then
+        local latest_backup
+        latest_backup=$(ls -t "$BASE_DIR/backups"/proxmoxlib.js.backup.* 2>/dev/null | head -1)
+        if [[ -n "$latest_backup" && -f "$latest_backup" ]]; then
+            # Simple integrity check
+            if [[ -s "$latest_backup" ]] && grep -q "Ext\|function" "$latest_backup" && ! grep -q $'\0' "$latest_backup"; then
+                cp -a "$latest_backup" "$JS_FILE"
+                msg_ok "$(translate "Restored from backup: $latest_backup")"
+                restored=true
+            fi
+        fi
+    fi
+    
+    # Restore from old script backups (if new method didn't work)
+    if [[ "$restored" == false ]]; then
+        local old_backup
+        old_backup=$(ls -t "${JS_FILE}".backup.pve9.* 2>/dev/null | head -1)
+        if [[ -n "$old_backup" && -f "$old_backup" ]]; then
+            if [[ -s "$old_backup" ]] && grep -q "Ext\|function" "$old_backup" && ! grep -q $'\0' "$old_backup"; then
+                cp -a "$old_backup" "$JS_FILE"
+                msg_ok "$(translate "Restored from old backup: $old_backup")"
+                restored=true
+            fi
+        fi
+    fi
+    
+    # Restore mobile template if patched
+    if [[ -f "$MOBILE_TPL" ]] && grep -q "$MARK_MOBILE" "$MOBILE_TPL"; then
+        local mobile_backup
+        mobile_backup=$(ls -t "$BASE_DIR/backups"/index.html.tpl.backup.* 2>/dev/null | head -1)
+        if [[ -n "$mobile_backup" && -f "$mobile_backup" ]]; then
+            cp -a "$mobile_backup" "$MOBILE_TPL"
+            msg_ok "$(translate "Restored mobile template from backup")"
+        else
+            # Remove the patch manually if no backup available
+            sed -i "/^$MARK_MOBILE$/,\$d" "$MOBILE_TPL"
+            msg_ok "$(translate "Removed mobile template patches")"
+        fi
+    fi
+    
+    # If no valid backups found, reinstall packages
+    if [[ "$restored" == false ]]; then
+        msg_info "$(translate "No valid backups found, reinstalling packages...")"
+        
+        if apt --reinstall install proxmox-widget-toolkit -y >/dev/null 2>&1; then
+            msg_ok "$(translate "Reinstalled proxmox-widget-toolkit")"
+            restored=true
+        else
+            msg_error "$(translate "Failed to reinstall proxmox-widget-toolkit")"
+        fi
+        
+        # Also try to reinstall pve-manager if mobile template was patched
+        if [[ -f "$MOBILE_TPL" ]] && grep -q "$MARK_MOBILE" "$MOBILE_TPL"; then
+            apt --reinstall install pve-manager -y >/dev/null 2>&1 || true
+        fi
+    fi
+    
+    rm -f "$MIN_JS_FILE" "$GZ_FILE" 2>/dev/null || true
+    find /var/cache/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
+    find /var/lib/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
+    find /var/cache/nginx/ -type f -delete 2>/dev/null || true
+        
+    register_tool "subscription_banner" false
+    
+    if [[ "$restored" == true ]]; then
+        msg_ok "$(translate "Subscription banner restored successfully")"
+        msg_ok "$(translate "Refresh your browser to see changes (server restart may be required)")"
+    else
+        msg_error "$(translate "Failed to restore subscription banner completely")"
+        return 1
+    fi
+}
+
+
 
 ################################################################
 
@@ -583,7 +689,6 @@ migrate_installed_tools() {
         return
     fi
     
-    clear
     show_proxmenux_logo
     msg_info "$(translate 'Detecting previous optimizations...')"
     

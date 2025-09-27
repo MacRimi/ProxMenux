@@ -247,7 +247,7 @@ remove_subscription_banner_pve9() {
 
   register_tool "subscription_banner" true
   msg_ok "$(translate "Subscription banner removed successfully.")"
-  msg_ok "$(translate "Refresh your browser (Ctrl+F5) to see changes.")"
+  msg_ok "$(translate "Refresh your browser to see changes.")"
 }
 
 
