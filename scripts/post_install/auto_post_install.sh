@@ -143,7 +143,7 @@ remove_subscription_banner() {
             msg_warn "Banner removal cancelled by user."
             return 1
         fi
-        bash <(curl -fsSL "$REPO_URL/scripts/global/remove-banner-pve9.sh")
+        bash <(curl -fsSL "$REPO_URL/scripts/global/remove-banner-pve9_2.sh")
     else
         if ! whiptail --title "Proxmox VE 8.x Subscription Banner Removal" \
         --yesno "Do you want to remove the Proxmox subscription banner from the web interface for PVE $pve_version?" 10 70; then
