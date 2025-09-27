@@ -198,7 +198,6 @@ uninstall_subscription_banner() {
         local latest_backup
         latest_backup=$(ls -t "$BASE_DIR/backups"/proxmoxlib.js.backup.* 2>/dev/null | head -1)
         if [[ -n "$latest_backup" && -f "$latest_backup" ]]; then
-            # Simple integrity check
             if [[ -s "$latest_backup" ]] && grep -q "Ext\|function" "$latest_backup" && ! grep -q $'\0' "$latest_backup"; then
                 cp -a "$latest_backup" "$JS_FILE"
                 msg_ok "$(translate "Restored from backup: $latest_backup")"
@@ -210,7 +209,7 @@ uninstall_subscription_banner() {
     # Restore from old script backups (if new method didn't work)
     if [[ "$restored" == false ]]; then
         local old_backup
-        old_backup=$(ls -t "${JS_FILE}".backup.pve9.* 2>/dev/null | head -1)
+        old_backup=$(ls -t "${JS_FILE}".backup.pve9.* "${JS_FILE}".backup.* 2>/dev/null | head -1)
         if [[ -n "$old_backup" && -f "$old_backup" ]]; then
             if [[ -s "$old_backup" ]] && grep -q "Ext\|function" "$old_backup" && ! grep -q $'\0' "$old_backup"; then
                 cp -a "$old_backup" "$JS_FILE"
