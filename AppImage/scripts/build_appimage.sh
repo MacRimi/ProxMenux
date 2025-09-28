@@ -10,7 +10,7 @@ APP_DIR="$WORK_DIR/ProxMenux.AppDir"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST_DIR="$SCRIPT_DIR/../dist"
 
-VERSION=$(sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/' "$SCRIPT_DIR/../package.json")
+VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$SCRIPT_DIR/../package.json" | sed 's/.*"$$[^"]*$$".*/\1/')
 APPIMAGE_NAME="ProxMenux-${VERSION}.AppImage"
 
 echo "🚀 Building ProxMenux Monitor AppImage v${VERSION} with translation support..."
