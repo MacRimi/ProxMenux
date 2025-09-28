@@ -1,8 +1,8 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Progress } from "./ui/progress"
+import { Badge } from "./ui/badge"
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts"
 import { Cpu, MemoryStick, Thermometer, Users, Activity, Server, Zap } from "lucide-react"
 

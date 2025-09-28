@@ -1,8 +1,8 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Badge } from "./ui/badge"
+import { Progress } from "./ui/progress"
 import { Server, Play, Square, RotateCcw, Monitor, Cpu, MemoryStick } from "lucide-react"
 
 const virtualMachines = [

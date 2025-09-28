@@ -1,7 +1,7 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Badge } from "./ui/badge"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts"
 import { Wifi, Globe, Shield, Activity, Network, Router } from "lucide-react"
 
@@ -80,9 +80,11 @@ export function NetworkMetrics() {
         </Card>
 
         <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Latency</CardTitle>
-            <Globe className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center">
+              <Globe className="h-5 w-5 mr-2" />
+              Latency
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">12ms</div>
