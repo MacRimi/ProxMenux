@@ -3,14 +3,14 @@
 # ProxMenux Monitor AppImage Builder
 # This script creates a single AppImage with Flask server, Next.js dashboard, and translation support
 
-set -e
+set -euo pipefail
 
 WORK_DIR="/tmp/proxmenux_build"
 APP_DIR="$WORK_DIR/ProxMenux.AppDir"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST_DIR="$SCRIPT_DIR/../dist"
 
-VERSION=$(grep '"version"' "$SCRIPT_DIR/../package.json" | sed 's/.*"version": *"$$[^"]*$$".*/\1/')
+VERSION=$(sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/' "$SCRIPT_DIR/../package.json")
 APPIMAGE_NAME="ProxMenux-${VERSION}.AppImage"
 
 echo "🚀 Building ProxMenux Monitor AppImage v${VERSION} with translation support..."
