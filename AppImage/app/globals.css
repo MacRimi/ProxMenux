@@ -35,8 +35,8 @@
 }
 
 .dark {
-  /* Proxmox dark theme with proper gray background (#2b2f36) */
-  --background: #2b2f36; /* Proxmox dark gray */
+  /* Updated Proxmox dark theme with consistent gray background throughout */
+  --background: #2b2f36; /* Proxmox dark gray applied everywhere */
   --foreground: #ffffff;
   --card: #363c45; /* Slightly lighter gray for cards */
   --card-foreground: #ffffff;
@@ -69,8 +69,8 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #4a5058;
   --sidebar-ring: #6b7280;
-  /* Header is black only in dark mode */
-  --header-bg: #000000;
+  /* Header now uses same background as body for consistency */
+  --header-bg: #2b2f36;
   --header-foreground: #ffffff;
 }
 
@@ -125,7 +125,7 @@
   }
 }
 
-/* Header styling that adapts to theme */
+/* Header styling now uses consistent background color */
 .header-bg {
   background-color: var(--header-bg);
   color: var(--header-foreground);
