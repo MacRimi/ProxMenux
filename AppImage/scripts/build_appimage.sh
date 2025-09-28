@@ -3,7 +3,7 @@
 # ProxMenux Monitor AppImage Builder
 # This script creates a single AppImage with Flask server, Next.js dashboard, and translation support
 
-set -euo pipefail
+set -e
 
 WORK_DIR="/tmp/proxmenux_build"
 APP_DIR="$WORK_DIR/ProxMenux.AppDir"
@@ -164,17 +164,17 @@ chmod +x "$APP_DIR/usr/bin/translate_cli.py"
 
 # Copy Next.js build
 echo "📋 Copying web dashboard..."
-if [ -d "$SCRIPT_DIR/../.next" ]; then
-    cp -r "$SCRIPT_DIR/../.next" "$APP_DIR/web/"
-    cp -r "$SCRIPT_DIR/../public" "$APP_DIR/web/"
+if [ -d "$SCRIPT_DIR/../../.next" ]; then
+    cp -r "$SCRIPT_DIR/../../.next" "$APP_DIR/web/"
+    cp -r "$SCRIPT_DIR/../../web/public" "$APP_DIR/web/"
     cp "$SCRIPT_DIR/../package.json" "$APP_DIR/web/"
     echo "✅ Next.js build copied successfully"
 else
     echo "⚠️  Warning: Next.js build not found. Run 'npm run build' first."
     echo "📋 Creating minimal web structure..."
     mkdir -p "$APP_DIR/web/public/images"
-    if [ -f "$SCRIPT_DIR/../public/images/proxmenux-logo.png" ]; then
-        cp "$SCRIPT_DIR/../public/images/proxmenux-logo.png" "$APP_DIR/web/public/images/"
+    if [ -f "$SCRIPT_DIR/../../web/public/images/proxmenux-logo.png" ]; then
+        cp "$SCRIPT_DIR/../../web/public/images/proxmenux-logo.png" "$APP_DIR/web/public/images/"
     fi
 fi
 
@@ -256,8 +256,8 @@ cp "$APP_DIR/proxmenux-monitor.desktop" "$APP_DIR/usr/share/applications/"
 
 # Download and set icon
 echo "🎨 Setting up icon..."
-if [ -f "$SCRIPT_DIR/../public/images/proxmenux-logo.png" ]; then
-    cp "$SCRIPT_DIR/../public/images/proxmenux-logo.png" "$APP_DIR/proxmenux-monitor.png"
+if [ -f "$SCRIPT_DIR/../../web/public/images/proxmenux-logo.png" ]; then
+    cp "$SCRIPT_DIR/../../web/public/images/proxmenux-logo.png" "$APP_DIR/proxmenux-monitor.png"
 else
     wget -q "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logo.png" -O "$APP_DIR/proxmenux-monitor.png" || {
         echo "⚠️  Could not download logo, creating placeholder..."
