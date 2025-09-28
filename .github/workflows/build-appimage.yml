@@ -1,0 +1,57 @@
+name: Build ProxMenux Monitor AppImage
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'AppImage/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'AppImage/**' ]
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: 'AppImage/package-lock.json'
+        
+    - name: Install dependencies
+      working-directory: AppImage
+      run: npm ci
+      
+    - name: Build Next.js app
+      working-directory: AppImage
+      run: npm run build
+      
+    - name: Install Python dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3 python3-pip python3-venv
+        
+    - name: Make build script executable
+      working-directory: AppImage
+      run: chmod +x scripts/build_appimage.sh
+      
+    - name: Build AppImage
+      working-directory: AppImage
+      run: ./scripts/build_appimage.sh
+      
+    - name: Get version from package.json
+      id: version
+      working-directory: AppImage
+      run: echo "VERSION=$(grep '"version"' package.json | sed 's/.*"version": *"$$[^"]*$$".*/\1/')" >> $GITHUB_OUTPUT
+      
+    - name: Upload AppImage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ProxMenux-${{ steps.version.outputs.VERSION }}-AppImage
+        path: AppImage/dist/*.AppImage
+        retention-days: 30
