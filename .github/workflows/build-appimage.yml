@@ -55,3 +55,4 @@ jobs:
         name: ProxMenux-${{ steps.version.outputs.VERSION }}-AppImage
         path: AppImage/dist/*.AppImage
         retention-days: 30
+        
