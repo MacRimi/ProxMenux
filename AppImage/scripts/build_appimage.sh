@@ -318,7 +318,8 @@ PYEOF
 # Build AppImage
 echo "🔨 Building unified AppImage v${VERSION}..."
 cd "$WORK_DIR"
-ARCH=x86_64 ./appimagetool --no-appstream "$APP_DIR" "$APPIMAGE_NAME"
+export NO_CLEANUP=1
+ARCH=x86_64 ./appimagetool --no-appstream --verbose "$APP_DIR" "$APPIMAGE_NAME"
 
 # Move to dist directory
 mv "$APPIMAGE_NAME" "$DIST_DIR/"

@@ -1,4 +1,4 @@
-import { ProxmoxDashboard } from "@/components/proxmox-dashboard"
+import { ProxmoxDashboard } from "../components/proxmox-dashboard"
 
 export default function Home() {
   return (
