@@ -7,11 +7,11 @@ on:
   pull_request:
     branches: [ main ]
     paths: [ 'AppImage/**' ]
-  workflow_dispatch:   
+  workflow_dispatch:  
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Checkout code
