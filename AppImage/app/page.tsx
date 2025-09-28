@@ -1,6 +1,6 @@
-import { ProxmoxDashboard } from "../AppImage/components/proxmox-dashboard"
+import { ProxmoxDashboard } from "../components/proxmox-dashboard"
 
-export default function Page() {
+export default function Home() {
   return (
     <main className="min-h-screen bg-background">
       <ProxmoxDashboard />
