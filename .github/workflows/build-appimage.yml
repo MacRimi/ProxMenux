@@ -7,11 +7,10 @@ on:
   pull_request:
     branches: [ main ]
     paths: [ 'AppImage/**' ]
-  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     
     steps:
     - name: Checkout code
@@ -21,12 +20,10 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: 'AppImage/package-lock.json'
         
     - name: Install dependencies
       working-directory: AppImage
-      run: npm ci
+      run: npm install
       
     - name: Build Next.js app
       working-directory: AppImage
@@ -56,4 +53,3 @@ jobs:
         name: ProxMenux-${{ steps.version.outputs.VERSION }}-AppImage
         path: AppImage/dist/*.AppImage
         retention-days: 30
-        
