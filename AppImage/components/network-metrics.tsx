@@ -1,31 +1,111 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts"
-import { Wifi, Globe, Shield, Activity, Network, Router } from "lucide-react"
+import { Wifi, Globe, Shield, Activity, Network, Router, AlertCircle } from "lucide-react"
 
-const networkTraffic = [
-  { time: "00:00", incoming: 45, outgoing: 32 },
-  { time: "04:00", incoming: 52, outgoing: 28 },
-  { time: "08:00", incoming: 78, outgoing: 65 },
-  { time: "12:00", incoming: 65, outgoing: 45 },
-  { time: "16:00", incoming: 82, outgoing: 58 },
-  { time: "20:00", incoming: 58, outgoing: 42 },
-  { time: "24:00", incoming: 43, outgoing: 35 },
-]
+interface NetworkData {
+  interfaces: NetworkInterface[]
+  traffic: {
+    bytes_sent: number
+    bytes_recv: number
+    packets_sent?: number
+    packets_recv?: number
+  }
+}
 
-const connectionData = [
-  { time: "00:00", connections: 1250 },
-  { time: "04:00", connections: 980 },
-  { time: "08:00", connections: 1850 },
-  { time: "12:00", connections: 1650 },
-  { time: "16:00", connections: 2100 },
-  { time: "20:00", connections: 1580 },
-  { time: "24:00", connections: 1320 },
-]
+interface NetworkInterface {
+  name: string
+  status: string
+  addresses: Array<{
+    ip: string
+    netmask: string
+  }>
+}
+
+const fetchNetworkData = async (): Promise<NetworkData | null> => {
+  try {
+    console.log("[v0] Fetching network data from Flask server...")
+    const response = await fetch("/api/network", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(5000),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Flask server responded with status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    console.log("[v0] Successfully fetched network data from Flask:", data)
+    return data
+  } catch (error) {
+    console.error("[v0] Failed to fetch network data from Flask server:", error)
+    return null
+  }
+}
 
 export function NetworkMetrics() {
+  const [networkData, setNetworkData] = useState<NetworkData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      setError(null)
+      const result = await fetchNetworkData()
+
+      if (!result) {
+        setError("Flask server not available. Please ensure the server is running.")
+      } else {
+        setNetworkData(result)
+      }
+
+      setLoading(false)
+    }
+
+    fetchData()
+    const interval = setInterval(fetchData, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <div className="text-lg font-medium text-foreground mb-2">Loading network data...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !networkData) {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-red-500/10 border-red-500/20">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 text-red-600">
+              <AlertCircle className="h-6 w-6" />
+              <div>
+                <div className="font-semibold text-lg mb-1">Flask Server Not Available</div>
+                <div className="text-sm">
+                  {error || "Unable to connect to the Flask server. Please ensure the server is running and try again."}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const trafficInMB = (networkData.traffic.bytes_recv / (1024 * 1024)).toFixed(1)
+  const trafficOutMB = (networkData.traffic.bytes_sent / (1024 * 1024)).toFixed(1)
+
   return (
     <div className="space-y-6">
       {/* Network Overview Cards */}
@@ -36,30 +116,30 @@ export function NetworkMetrics() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">156 MB/s</div>
+            <div className="text-2xl font-bold text-foreground">{trafficInMB} MB</div>
             <div className="flex items-center space-x-2 mt-2">
-              <span className="text-xs text-green-500">↓ 89 MB/s</span>
-              <span className="text-xs text-blue-500">↑ 67 MB/s</span>
+              <span className="text-xs text-green-500">↓ {trafficInMB} MB</span>
+              <span className="text-xs text-blue-500">↑ {trafficOutMB} MB</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Peak: 245 MB/s at 16:30</p>
+            <p className="text-xs text-muted-foreground mt-2">Total data transferred</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Connections</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Interfaces</CardTitle>
             <Network className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">1,847</div>
+            <div className="text-2xl font-bold text-foreground">
+              {networkData.interfaces.filter((i) => i.status === "up").length}
+            </div>
             <div className="flex items-center mt-2">
               <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                Normal
+                Online
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              <span className="text-green-500">↑ 12%</span> from last hour
-            </p>
+            <p className="text-xs text-muted-foreground mt-2">{networkData.interfaces.length} total interfaces</p>
           </CardContent>
         </Card>
 
@@ -75,7 +155,7 @@ export function NetworkMetrics() {
                 Protected
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">247 blocked attempts today</p>
+            <p className="text-xs text-muted-foreground mt-2">System protected</p>
           </CardContent>
         </Card>
 
@@ -83,97 +163,19 @@ export function NetworkMetrics() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Globe className="h-5 w-5 mr-2" />
-              Latency
+              Packets
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">12ms</div>
+            <div className="text-2xl font-bold text-foreground">
+              {networkData.traffic.packets_recv ? (networkData.traffic.packets_recv / 1000).toFixed(0) : "N/A"}K
+            </div>
             <div className="flex items-center mt-2">
               <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                Excellent
+                Received
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Avg response time</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Network Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <Activity className="h-5 w-5 mr-2" />
-              Network Traffic (24h)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={networkTraffic}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    color: "hsl(var(--foreground))",
-                  }}
-                  formatter={(value, name) => [`${value} MB/s`, name === "incoming" ? "Incoming" : "Outgoing"]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="incoming"
-                  stackId="1"
-                  stroke="#10b981"
-                  fill="#10b981"
-                  fillOpacity={0.6}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="outgoing"
-                  stackId="1"
-                  stroke="#3b82f6"
-                  fill="#3b82f6"
-                  fillOpacity={0.6}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <Network className="h-5 w-5 mr-2" />
-              Active Connections (24h)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={connectionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    color: "hsl(var(--foreground))",
-                  }}
-                  formatter={(value) => [`${value}`, "Connections"]}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="connections"
-                  stroke="#8b5cf6"
-                  strokeWidth={3}
-                  dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <p className="text-xs text-muted-foreground mt-2">Total packets received</p>
           </CardContent>
         </Card>
       </div>
@@ -188,44 +190,7 @@ export function NetworkMetrics() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[
-              {
-                name: "vmbr0",
-                type: "Bridge",
-                status: "up",
-                ip: "192.168.1.100/24",
-                speed: "1000 Mbps",
-                rx: "2.3 GB",
-                tx: "1.8 GB",
-              },
-              {
-                name: "enp1s0",
-                type: "Physical",
-                status: "up",
-                ip: "192.168.1.101/24",
-                speed: "1000 Mbps",
-                rx: "1.2 GB",
-                tx: "890 MB",
-              },
-              {
-                name: "vmbr1",
-                type: "Bridge",
-                status: "up",
-                ip: "10.0.0.1/24",
-                speed: "1000 Mbps",
-                rx: "456 MB",
-                tx: "234 MB",
-              },
-              {
-                name: "tap101i0",
-                type: "TAP",
-                status: "up",
-                ip: "10.0.0.101/24",
-                speed: "1000 Mbps",
-                rx: "123 MB",
-                tx: "89 MB",
-              },
-            ].map((interface_, index) => (
+            {networkData.interfaces.map((interface_, index) => (
               <div
                 key={index}
                 className="flex items-center justify-between p-4 rounded-lg border border-border bg-card/50"
@@ -234,26 +199,33 @@ export function NetworkMetrics() {
                   <Wifi className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <div className="font-medium text-foreground">{interface_.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {interface_.type} • {interface_.speed}
-                    </div>
+                    <div className="text-sm text-muted-foreground">Network Interface</div>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-6">
                   <div className="text-center">
                     <div className="text-sm text-muted-foreground">IP Address</div>
-                    <div className="text-sm font-medium text-foreground font-mono">{interface_.ip}</div>
-                  </div>
-
-                  <div className="text-center">
-                    <div className="text-sm text-muted-foreground">RX / TX</div>
-                    <div className="text-sm font-medium text-foreground">
-                      {interface_.rx} / {interface_.tx}
+                    <div className="text-sm font-medium text-foreground font-mono">
+                      {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
                     </div>
                   </div>
 
-                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground">Netmask</div>
+                    <div className="text-sm font-medium text-foreground">
+                      {interface_.addresses.length > 0 ? interface_.addresses[0].netmask : "N/A"}
+                    </div>
+                  </div>
+
+                  <Badge
+                    variant="outline"
+                    className={
+                      interface_.status === "up"
+                        ? "bg-green-500/10 text-green-500 border-green-500/20"
+                        : "bg-red-500/10 text-red-500 border-red-500/20"
+                    }
+                  >
                     {interface_.status.toUpperCase()}
                   </Badge>
                 </div>

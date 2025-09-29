@@ -1,24 +1,111 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts"
-import { HardDrive, Database, Archive, AlertTriangle, CheckCircle, Activity } from "lucide-react"
+import { HardDrive, Database, Archive, AlertTriangle, CheckCircle, Activity, AlertCircle } from "lucide-react"
 
-const storageData = [
-  { name: "Used", value: 1250, color: "#3b82f6" }, // Blue
-  { name: "Available", value: 750, color: "#10b981" }, // Green
-]
+interface StorageData {
+  total: number
+  used: number
+  available: number
+  disks: DiskInfo[]
+}
 
-const diskPerformance = [
-  { disk: "sda", read: 45, write: 32, iops: 1250 },
-  { disk: "sdb", read: 67, write: 28, iops: 980 },
-  { disk: "sdc", read: 23, write: 45, iops: 1100 },
-  { disk: "nvme0n1", read: 156, write: 89, iops: 3400 },
-]
+interface DiskInfo {
+  name: string
+  mountpoint: string
+  fstype: string
+  total: number
+  used: number
+  available: number
+  usage_percent: number
+  health: string
+  temperature: number
+}
+
+const fetchStorageData = async (): Promise<StorageData | null> => {
+  try {
+    console.log("[v0] Fetching storage data from Flask server...")
+    const response = await fetch("/api/storage", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(5000),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Flask server responded with status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    console.log("[v0] Successfully fetched storage data from Flask:", data)
+    return data
+  } catch (error) {
+    console.error("[v0] Failed to fetch storage data from Flask server:", error)
+    return null
+  }
+}
 
 export function StorageMetrics() {
+  const [storageData, setStorageData] = useState<StorageData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      setError(null)
+      const result = await fetchStorageData()
+
+      if (!result) {
+        setError("Flask server not available. Please ensure the server is running.")
+      } else {
+        setStorageData(result)
+      }
+
+      setLoading(false)
+    }
+
+    fetchData()
+    const interval = setInterval(fetchData, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <div className="text-lg font-medium text-foreground mb-2">Loading storage data...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !storageData) {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-red-500/10 border-red-500/20">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 text-red-600">
+              <AlertCircle className="h-6 w-6" />
+              <div>
+                <div className="font-semibold text-lg mb-1">Flask Server Not Available</div>
+                <div className="text-sm">
+                  {error || "Unable to connect to the Flask server. Please ensure the server is running and try again."}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const usagePercent = storageData.total > 0 ? (storageData.used / storageData.total) * 100 : 0
+
   return (
     <div className="space-y-6">
       {/* Storage Overview Cards */}
@@ -29,21 +116,23 @@ export function StorageMetrics() {
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">2.0 TB</div>
-            <Progress value={62.5} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-2">1.25 TB used • 750 GB available</p>
+            <div className="text-2xl font-bold text-foreground">{storageData.total.toFixed(1)} GB</div>
+            <Progress value={usagePercent} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-2">
+              {storageData.used.toFixed(1)} GB used • {storageData.available.toFixed(1)} GB available
+            </p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">VM & LXC Storage</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Used Storage</CardTitle>
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">890 GB</div>
-            <Progress value={71.2} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-2">71.2% of allocated space</p>
+            <div className="text-2xl font-bold text-foreground">{storageData.used.toFixed(1)} GB</div>
+            <Progress value={usagePercent} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-2">{usagePercent.toFixed(1)}% of total space</p>
           </CardContent>
         </Card>
 
@@ -51,17 +140,17 @@ export function StorageMetrics() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Archive className="h-5 w-5 mr-2" />
-              Backups
+              Available
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">245 GB</div>
+            <div className="text-2xl font-bold text-foreground">{storageData.available.toFixed(1)} GB</div>
             <div className="flex items-center mt-2">
               <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                12 Backups
+                {((storageData.available / storageData.total) * 100).toFixed(1)}% Free
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Last backup: 2h ago</p>
+            <p className="text-xs text-muted-foreground mt-2">Available space</p>
           </CardContent>
         </Card>
 
@@ -69,104 +158,17 @@ export function StorageMetrics() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Activity className="h-5 w-5 mr-2" />
-              IOPS
+              Disks
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">6.7K</div>
+            <div className="text-2xl font-bold text-foreground">{storageData.disks.length}</div>
             <div className="flex items-center space-x-2 mt-2">
-              <span className="text-xs text-green-500">Read: 4.2K</span>
-              <span className="text-xs text-blue-500">Write: 2.5K</span>
+              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                {storageData.disks.filter((d) => d.health === "healthy").length} Healthy
+              </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Average operations/sec</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Storage Distribution and Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <HardDrive className="h-5 w-5 mr-2" />
-              Storage Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-foreground font-medium">Used Storage</span>
-                  <span className="text-muted-foreground">1.25 TB (62.5%)</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-3">
-                  <div
-                    className="bg-blue-500 h-3 rounded-full transition-all duration-300"
-                    style={{ width: "62.5%" }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-foreground font-medium">Available Storage</span>
-                  <span className="text-muted-foreground">750 GB (37.5%)</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-3">
-                  <div
-                    className="bg-green-500 h-3 rounded-full transition-all duration-300"
-                    style={{ width: "37.5%" }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-border">
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-center">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                      <span className="text-sm font-medium text-foreground">Used</span>
-                    </div>
-                    <div className="text-lg font-bold text-foreground">1.25 TB</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-center">
-                      <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                      <span className="text-sm font-medium text-foreground">Available</span>
-                    </div>
-                    <div className="text-lg font-bold text-foreground">750 GB</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <Activity className="h-5 w-5 mr-2" />
-              Disk Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={diskPerformance}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="disk" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    color: "hsl(var(--foreground))",
-                  }}
-                />
-                <Bar dataKey="read" fill="#3b82f6" name="Read MB/s" />
-                <Bar dataKey="write" fill="#10b981" name="Write MB/s" />
-              </BarChart>
-            </ResponsiveContainer>
+            <p className="text-xs text-muted-foreground mt-2">Storage devices</p>
           </CardContent>
         </Card>
       </div>
@@ -181,12 +183,7 @@ export function StorageMetrics() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[
-              { name: "/dev/sda", type: "HDD", size: "1TB", used: "650GB", health: "healthy", temp: "42°C" },
-              { name: "/dev/sdb", type: "HDD", size: "1TB", used: "480GB", health: "healthy", temp: "38°C" },
-              { name: "/dev/sdc", type: "SSD", size: "500GB", used: "120GB", health: "healthy", temp: "35°C" },
-              { name: "/dev/nvme0n1", type: "NVMe", size: "1TB", used: "340GB", health: "warning", temp: "55°C" },
-            ].map((disk, index) => (
+            {storageData.disks.map((disk, index) => (
               <div
                 key={index}
                 className="flex items-center justify-between p-4 rounded-lg border border-border bg-card/50"
@@ -196,7 +193,7 @@ export function StorageMetrics() {
                   <div>
                     <div className="font-medium text-foreground">{disk.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {disk.type} • {disk.size}
+                      {disk.fstype} • {disk.mountpoint}
                     </div>
                   </div>
                 </div>
@@ -204,17 +201,14 @@ export function StorageMetrics() {
                 <div className="flex items-center space-x-6">
                   <div className="text-right">
                     <div className="text-sm font-medium text-foreground">
-                      {disk.used} / {disk.size}
+                      {disk.used.toFixed(1)} GB / {disk.total.toFixed(1)} GB
                     </div>
-                    <Progress
-                      value={(Number.parseInt(disk.used) / Number.parseInt(disk.size)) * 100}
-                      className="w-24 mt-1"
-                    />
+                    <Progress value={disk.usage_percent} className="w-24 mt-1" />
                   </div>
 
                   <div className="text-center">
                     <div className="text-sm text-muted-foreground">Temp</div>
-                    <div className="text-sm font-medium text-foreground">{disk.temp}</div>
+                    <div className="text-sm font-medium text-foreground">{disk.temperature}°C</div>
                   </div>
 
                   <Badge
