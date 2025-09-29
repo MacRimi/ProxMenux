@@ -51,13 +51,26 @@ fi
 echo "🏗️  Building Next.js static export..."
 npm run export
 
-# Verify export was successful
-if [ ! -d "out" ]; then
+echo "🔍 Checking export results..."
+if [ -d "out" ]; then
+    echo "✅ Export directory found"
+    echo "📁 Contents of out directory:"
+    ls -la out/
+    if [ -f "out/index.html" ]; then
+        echo "✅ index.html found in out directory"
+    else
+        echo "❌ index.html NOT found in out directory"
+        echo "📁 Looking for HTML files:"
+        find out/ -name "*.html" -type f || echo "No HTML files found"
+    fi
+else
     echo "❌ Error: Next.js export failed - out directory not found"
+    echo "📁 Current directory contents:"
+    ls -la
+    echo "📁 Looking for any build outputs:"
+    find . -name "*.html" -type f 2>/dev/null || echo "No HTML files found anywhere"
     exit 1
 fi
-
-echo "✅ Next.js static export completed successfully"
 
 # Return to script directory
 cd "$SCRIPT_DIR"
@@ -194,7 +207,17 @@ chmod +x "$APP_DIR/usr/bin/translate_cli.py"
 echo "📋 Copying web dashboard..."
 if [ -d "$APPIMAGE_ROOT/out" ]; then
     mkdir -p "$APP_DIR/web"
+    echo "📁 Copying from $APPIMAGE_ROOT/out to $APP_DIR/web"
     cp -r "$APPIMAGE_ROOT/out"/* "$APP_DIR/web/"
+    
+    if [ -f "$APP_DIR/web/index.html" ]; then
+        echo "✅ index.html copied successfully to $APP_DIR/web/"
+    else
+        echo "❌ index.html NOT found after copying"
+        echo "📁 Contents of $APP_DIR/web:"
+        ls -la "$APP_DIR/web/" || echo "Directory is empty or doesn't exist"
+    fi
+    
     if [ -d "$APPIMAGE_ROOT/public" ]; then
         cp -r "$APPIMAGE_ROOT/public"/* "$APP_DIR/web/" 2>/dev/null || true
     fi
