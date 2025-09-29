@@ -4,7 +4,6 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Proxmox light theme colors */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -32,46 +31,51 @@
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
 .dark {
-  /* Updated Proxmox dark theme with proper dark gray background matching Proxmox style */
-  --background: #1a1d21; /* Proxmox dark background */
-  --foreground: #ffffff;
-  --card: #2b2f36; /* Proxmox card background */
-  --card-foreground: #ffffff;
-  --popover: #2b2f36;
-  --popover-foreground: #ffffff;
-  --primary: #ffffff;
-  --primary-foreground: #1a1d21;
-  --secondary: #363c45; /* Better contrast for secondary elements */
-  --secondary-foreground: #ffffff;
-  --muted: #363c45;
-  --muted-foreground: #b4b4b4; /* Better contrast for muted text */
-  --accent: #363c45;
-  --accent-foreground: #ffffff;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #404854; /* More visible borders */
-  --input: #363c45;
-  --ring: #6b7280;
-  /* Updated chart colors to be more vibrant and visible in dark mode */
-  --chart-1: #3b82f6; /* Bright Blue */
-  --chart-2: #10b981; /* Bright Green */
-  --chart-3: #f59e0b; /* Bright Yellow */
-  --chart-4: #8b5cf6; /* Bright Purple */
-  --chart-5: #f97316; /* Bright Orange */
-  --sidebar: #1a1d21;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #6366f1;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #363c45;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #363c45;
-  --sidebar-ring: #6b7280;
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
 }
 
 @theme inline {
+  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -108,9 +112,6 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  /* Custom header colors */
-  --color-header-bg: var(--header-bg);
-  --color-header-foreground: var(--header-foreground);
 }
 
 @layer base {
@@ -120,80 +121,4 @@
   body {
     @apply bg-background text-foreground;
   }
-}
-
-/* Header styling now uses consistent background color */
-.header-bg {
-  background-color: var(--header-bg);
-  color: var(--header-foreground);
-}
-
-/* Custom scrollbar with better contrast */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--background);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--muted);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
-}
-
-/* Better contrast for dark mode content */
-.dark .metric-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-}
-
-.dark .metric-value {
-  color: var(--foreground);
-  font-weight: 600;
-}
-
-.dark .metric-label {
-  color: var(--muted-foreground);
-}
-
-/* Fix chart axis visibility in dark mode */
-.dark .recharts-cartesian-axis-tick-value {
-  fill: var(--muted-foreground) !important;
-}
-
-.dark .recharts-text {
-  fill: var(--muted-foreground) !important;
-}
-
-/* Improve server info layout in header - clean design without transparency */
-.server-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 0.375rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.dark .server-info {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Better spacing for VM/LXC badges */
-.vm-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  align-items: center;
-}
-
-.vm-badge {
-  font-size: 0.75rem;
-  padding: 0.125rem 0.5rem;
-  white-space: nowrap;
 }
