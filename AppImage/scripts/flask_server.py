@@ -23,14 +23,18 @@ CORS(app)  # Enable CORS for Next.js frontend
 def serve_dashboard():
     """Serve the main dashboard page from Next.js build"""
     try:
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        appimage_root = os.path.dirname(base_dir)  # Subir un nivel desde scripts/
+        # Detectar si estamos ejecutándose desde AppImage
+        appimage_root = os.environ.get('APPDIR')
+        if not appimage_root:
+            # Fallback: intentar detectar desde la ubicación del script
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            appimage_root = os.path.dirname(base_dir)  # Subir un nivel desde usr/bin/
         
         index_paths = [
-            os.path.join(appimage_root, 'web', 'index.html'),  # Ruta principal para exportación estática
+            os.path.join(appimage_root, 'web', 'index.html'),  # Ruta principal para AppImage
+            os.path.join(appimage_root, 'usr', 'web', 'index.html'),  # Fallback con usr/
             os.path.join(appimage_root, 'web', 'out', 'index.html'),  # Fallback si está en subcarpeta
-            os.path.join(base_dir, '..', 'web', 'index.html'),  # Ruta relativa alternativa
-            os.path.join(base_dir, '..', 'web', 'out', 'index.html'),  # Fallback relativo
+            os.path.join(appimage_root, 'usr', 'web', 'out', 'index.html'),  # Fallback con usr/out/
         ]
         
         print(f"[v0] Flask server looking for index.html in:")
@@ -136,13 +140,16 @@ def serve_sw():
 def serve_next_static(filename):
     """Serve Next.js static files"""
     try:
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        appimage_root = os.path.dirname(base_dir)
+        appimage_root = os.environ.get('APPDIR')
+        if not appimage_root:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            appimage_root = os.path.dirname(base_dir)
         
         static_paths = [
             os.path.join(appimage_root, 'web', '_next'),  # Ruta principal
-            os.path.join(appimage_root, 'web', 'out', '_next'),  # Fallback
-            os.path.join(base_dir, '..', 'web', '_next'),  # Ruta relativa
+            os.path.join(appimage_root, 'usr', 'web', '_next'),  # Fallback con usr/
+            os.path.join(appimage_root, 'web', 'out', '_next'),  # Fallback con out/
+            os.path.join(appimage_root, 'usr', 'web', 'out', '_next'),  # Fallback con usr/out/
         ]
         
         for static_dir in static_paths:
@@ -158,14 +165,16 @@ def serve_next_static(filename):
 def serve_static_files(filename):
     """Serve static files (icons, etc.)"""
     try:
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        appimage_root = os.path.dirname(base_dir)
+        appimage_root = os.environ.get('APPDIR')
+        if not appimage_root:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            appimage_root = os.path.dirname(base_dir)
         
         public_paths = [
             os.path.join(appimage_root, 'web'),  # Raíz web para exportación estática
-            os.path.join(appimage_root, 'web', 'out'),  # Fallback
-            os.path.join(base_dir, '..', 'web'),  # Ruta relativa
-            os.path.join(base_dir, '..', 'web', 'out'),  # Fallback relativo
+            os.path.join(appimage_root, 'usr', 'web'),  # Fallback con usr/
+            os.path.join(appimage_root, 'web', 'out'),  # Fallback con out/
+            os.path.join(appimage_root, 'usr', 'web', 'out'),  # Fallback con usr/out/
         ]
         
         for public_dir in public_paths:
