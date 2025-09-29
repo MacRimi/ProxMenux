@@ -23,13 +23,10 @@ CORS(app)  # Enable CORS for Next.js frontend
 def serve_dashboard():
     """Serve the main dashboard page from Next.js build"""
     try:
-        next_dir = os.path.join(os.path.dirname(__file__), '..', 'web', '.next')
-        
-        # Try to serve the Next.js built index page
         index_paths = [
-            os.path.join(next_dir, 'server', 'app', 'page.html'),
-            os.path.join(next_dir, 'server', 'pages', 'index.html'),
             os.path.join(os.path.dirname(__file__), '..', 'web', 'out', 'index.html'),
+            os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'server', 'app', 'page.html'),
+            os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'server', 'pages', 'index.html'),
             os.path.join(os.path.dirname(__file__), '..', 'web', 'dist', 'index.html')
         ]
         
@@ -130,9 +127,15 @@ def serve_sw():
 def serve_next_static(filename):
     """Serve Next.js static files"""
     try:
-        next_static_dir = os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'static')
-        if os.path.exists(os.path.join(next_static_dir, filename)):
-            return send_from_directory(next_static_dir, filename)
+        static_paths = [
+            os.path.join(os.path.dirname(__file__), '..', 'web', 'out', '_next'),
+            os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'static')
+        ]
+        
+        for static_dir in static_paths:
+            file_path = os.path.join(static_dir, filename)
+            if os.path.exists(file_path):
+                return send_file(file_path)
         return '', 404
     except Exception as e:
         print(f"Error serving Next.js static file {filename}: {e}")
@@ -142,11 +145,10 @@ def serve_next_static(filename):
 def serve_static_files(filename):
     """Serve static files (icons, etc.)"""
     try:
-        # Try Next.js public directory first
         public_paths = [
+            os.path.join(os.path.dirname(__file__), '..', 'web', 'out'),
             os.path.join(os.path.dirname(__file__), '..', 'web', 'public'),
             os.path.join(os.path.dirname(__file__), '..', 'public'),
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'out'),
             os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'static')
         ]
         

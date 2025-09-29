@@ -48,17 +48,16 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-# Build Next.js application
-echo "🏗️  Building Next.js application..."
-npm run build
+echo "🏗️  Building Next.js static export..."
+npm run export
 
-# Verify build was successful
-if [ ! -d ".next" ]; then
-    echo "❌ Error: Next.js build failed - .next directory not found"
+# Verify export was successful
+if [ ! -d "out" ]; then
+    echo "❌ Error: Next.js export failed - out directory not found"
     exit 1
 fi
 
-echo "✅ Next.js build completed successfully"
+echo "✅ Next.js static export completed successfully"
 
 # Return to script directory
 cd "$SCRIPT_DIR"
@@ -193,24 +192,15 @@ chmod +x "$APP_DIR/usr/bin/translate_cli.py"
 
 # Copy Next.js build
 echo "📋 Copying web dashboard..."
-if [ -d "$APPIMAGE_ROOT/.next" ]; then
+if [ -d "$APPIMAGE_ROOT/out" ]; then
     mkdir -p "$APP_DIR/web"
-    cp -r "$APPIMAGE_ROOT/.next" "$APP_DIR/web/"
+    cp -r "$APPIMAGE_ROOT/out" "$APP_DIR/web/"
     cp -r "$APPIMAGE_ROOT/public" "$APP_DIR/web/"
     cp "$APPIMAGE_ROOT/package.json" "$APP_DIR/web/"
     
-    # Also try to create a static export if possible
-    cd "$APPIMAGE_ROOT"
-    if npm run export 2>/dev/null; then
-        echo "✅ Next.js static export created"
-        if [ -d "out" ]; then
-            cp -r "out" "$APP_DIR/web/"
-        fi
-    fi
-    
-    echo "✅ Next.js build copied successfully"
+    echo "✅ Next.js static export copied successfully"
 else
-    echo "❌ Error: Next.js build not found even after building"
+    echo "❌ Error: Next.js export not found even after building"
     exit 1
 fi
 
