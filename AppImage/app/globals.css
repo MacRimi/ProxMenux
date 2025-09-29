@@ -35,25 +35,25 @@
 }
 
 .dark {
-  /* Updated Proxmox dark theme with consistent gray background throughout */
-  --background: #2b2f36; /* Proxmox dark gray applied everywhere */
+  /* Updated Proxmox dark theme with proper dark gray background matching Proxmox style */
+  --background: #1a1d21; /* Proxmox dark background */
   --foreground: #ffffff;
-  --card: #363c45; /* Slightly lighter gray for cards */
+  --card: #2b2f36; /* Proxmox card background */
   --card-foreground: #ffffff;
-  --popover: #363c45;
+  --popover: #2b2f36;
   --popover-foreground: #ffffff;
   --primary: #ffffff;
-  --primary-foreground: #2b2f36;
-  --secondary: #4a5058; /* Better contrast for secondary elements */
+  --primary-foreground: #1a1d21;
+  --secondary: #363c45; /* Better contrast for secondary elements */
   --secondary-foreground: #ffffff;
-  --muted: #4a5058;
+  --muted: #363c45;
   --muted-foreground: #b4b4b4; /* Better contrast for muted text */
-  --accent: #4a5058;
+  --accent: #363c45;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #525862; /* More visible borders */
-  --input: #4a5058;
+  --border: #404854; /* More visible borders */
+  --input: #363c45;
   --ring: #6b7280;
   /* Updated chart colors to be more vibrant and visible in dark mode */
   --chart-1: #3b82f6; /* Bright Blue */
@@ -61,17 +61,14 @@
   --chart-3: #f59e0b; /* Bright Yellow */
   --chart-4: #8b5cf6; /* Bright Purple */
   --chart-5: #f97316; /* Bright Orange */
-  --sidebar: #2b2f36;
+  --sidebar: #1a1d21;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #6366f1;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #4a5058;
+  --sidebar-accent: #363c45;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #4a5058;
+  --sidebar-border: #363c45;
   --sidebar-ring: #6b7280;
-  /* Header now uses same background as body for consistency */
-  --header-bg: #2b2f36;
-  --header-foreground: #ffffff;
 }
 
 @theme inline {

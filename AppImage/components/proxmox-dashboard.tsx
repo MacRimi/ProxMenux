@@ -9,7 +9,7 @@ import { StorageMetrics } from "./storage-metrics"
 import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
 import { SystemLogs } from "./system-logs"
-import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Languages, Server } from "lucide-react"
+import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Server } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
 
@@ -30,12 +30,11 @@ export function ProxmoxDashboard() {
     nodeId: "pve-node-01",
   })
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [isTranslating, setIsTranslating] = useState(false)
 
   useEffect(() => {
     const fetchServerInfo = async () => {
       try {
-        const response = await fetch("/api/flask/system-info")
+        const response = await fetch("/api/system-info")
         if (response.ok) {
           const data = await response.json()
           setSystemStatus((prev) => ({
@@ -62,34 +61,6 @@ export function ProxmoxDashboard() {
     setIsRefreshing(false)
   }
 
-  const translatePage = async () => {
-    setIsTranslating(true)
-    try {
-      if ("translate" in document.documentElement.dataset) {
-        const currentLang = document.documentElement.dataset.translate
-        document.documentElement.dataset.translate = currentLang === "yes" ? "no" : "yes"
-      } else {
-        const googleTranslateScript = document.createElement("script")
-        googleTranslateScript.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-        document.head.appendChild(googleTranslateScript)
-
-        window.googleTranslateElementInit = () => {
-          new window.google.translate.TranslateElement(
-            {
-              pageLanguage: "en",
-              includedLanguages: "es,en,fr,de,it,pt,ru,zh,ja,ko",
-              layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE,
-            },
-            "google_translate_element",
-          )
-        }
-      }
-    } catch (error) {
-      console.error("Translation error:", error)
-    }
-    setIsTranslating(false)
-  }
-
   const getStatusIcon = () => {
     switch (systemStatus.status) {
       case "healthy":
@@ -114,7 +85,7 @@ export function ProxmoxDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border header-bg sticky top-0 z-50">
+      <header className="border-b border-border bg-background sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -164,21 +135,9 @@ export function ProxmoxDashboard() {
               </Button>
 
               <ThemeToggle />
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-border/50 bg-transparent hover:bg-secondary"
-                onClick={translatePage}
-                disabled={isTranslating}
-              >
-                <Languages className={`h-4 w-4 mr-2 ${isTranslating ? "animate-pulse" : ""}`} />
-                Translate
-              </Button>
             </div>
           </div>
         </div>
-        <div id="google_translate_element" className="hidden"></div>
       </header>
 
       <div className="container mx-auto px-6 py-6">
