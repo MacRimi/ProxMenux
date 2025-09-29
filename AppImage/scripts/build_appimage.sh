@@ -194,9 +194,20 @@ chmod +x "$APP_DIR/usr/bin/translate_cli.py"
 # Copy Next.js build
 echo "📋 Copying web dashboard..."
 if [ -d "$APPIMAGE_ROOT/.next" ]; then
+    mkdir -p "$APP_DIR/web"
     cp -r "$APPIMAGE_ROOT/.next" "$APP_DIR/web/"
     cp -r "$APPIMAGE_ROOT/public" "$APP_DIR/web/"
     cp "$APPIMAGE_ROOT/package.json" "$APP_DIR/web/"
+    
+    # Also try to create a static export if possible
+    cd "$APPIMAGE_ROOT"
+    if npm run export 2>/dev/null; then
+        echo "✅ Next.js static export created"
+        if [ -d "out" ]; then
+            cp -r "out" "$APP_DIR/web/"
+        fi
+    fi
+    
     echo "✅ Next.js build copied successfully"
 else
     echo "❌ Error: Next.js build not found even after building"
