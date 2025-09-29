@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts"
-import { Cpu, MemoryStick, Thermometer, Users, Activity, Server, Zap } from "lucide-react"
+import { Cpu, MemoryStick, Thermometer, Users, Activity, Server, Zap, AlertCircle } from "lucide-react"
 
 interface SystemData {
   cpu_usage: number
@@ -32,7 +32,7 @@ interface VMData {
   uptime: number
 }
 
-const generateRealtimeData = () => ({
+const generateDemoSystemData = (): SystemData => ({
   cpu_usage: Math.floor(Math.random() * 20) + 60, // 60-80%
   memory_usage: Math.floor(Math.random() * 10) + 45, // 45-55%
   memory_total: 32.0,
@@ -40,12 +40,12 @@ const generateRealtimeData = () => ({
   temperature: Math.floor(Math.random() * 8) + 48, // 48-56°C
   uptime: "15d 7h 23m",
   load_average: [1.23, 1.45, 1.67],
-  hostname: "proxmox-01",
-  node_id: "pve-node-01",
+  hostname: "proxmox-demo",
+  node_id: "pve-demo-node",
   timestamp: new Date().toISOString(),
 })
 
-const staticVMData: VMData[] = [
+const demVMData: VMData[] = [
   {
     vmid: 100,
     name: "web-server-01",
@@ -79,34 +79,76 @@ const staticVMData: VMData[] = [
     maxdisk: 21474836480,
     uptime: 0,
   },
-  {
-    vmid: 103,
-    name: "test-server",
-    status: "stopped",
-    cpu: 0,
-    mem: 0,
-    maxmem: 2147483648,
-    disk: 5368709120,
-    maxdisk: 10737418240,
-    uptime: 0,
-  },
 ]
 
-const generateChartData = () => {
+const fetchSystemData = async (): Promise<{ data: SystemData | null; isDemo: boolean }> => {
+  try {
+    console.log("[v0] Attempting to fetch system data from Flask server...")
+    const response = await fetch("http://localhost:8008/api/system", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(3000), // Reduced timeout for faster fallback
+    })
+
+    if (!response.ok) {
+      throw new Error(`Flask server responded with status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    console.log("[v0] Successfully fetched real system data from Flask:", data)
+    return { data, isDemo: false }
+  } catch (error) {
+    console.log("[v0] Flask server not available, using demo data for development")
+    return { data: generateDemoSystemData(), isDemo: true }
+  }
+}
+
+const fetchVMData = async (): Promise<{ data: VMData[]; isDemo: boolean }> => {
+  try {
+    console.log("[v0] Attempting to fetch VM data from Flask server...")
+    const response = await fetch("http://localhost:8008/api/vms", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(3000), // Reduced timeout for faster fallback
+    })
+
+    if (!response.ok) {
+      throw new Error(`Flask server responded with status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    console.log("[v0] Successfully fetched VM data from Flask:", data)
+    return { data: data.vms || [], isDemo: false }
+  } catch (error) {
+    console.log("[v0] Flask server not available, using demo VM data")
+    return { data: demVMData, isDemo: true }
+  }
+}
+
+const generateChartData = (systemData?: SystemData) => {
   const cpuData = []
   const memoryData = []
 
   for (let i = 0; i < 24; i += 4) {
     const time = `${i.toString().padStart(2, "0")}:00`
+    // Use real CPU data as base if available, otherwise use random data
+    const baseCpu = systemData?.cpu_usage || 60
     cpuData.push({
       time,
-      value: Math.floor(Math.random() * 40) + 40, // 40-80%
+      value: Math.max(0, Math.min(100, baseCpu + (Math.random() - 0.5) * 20)),
     })
 
+    // Use real memory data as base if available
+    const baseMemory = systemData?.memory_used || 15.8
+    const totalMemory = systemData?.memory_total || 32
     memoryData.push({
       time,
-      used: 12 + Math.random() * 8, // 12-20 GB
-      available: 32 - (12 + Math.random() * 8), // Resto disponible
+      used: Math.max(0, baseMemory + (Math.random() - 0.5) * 4),
+      available: Math.max(0, totalMemory - (baseMemory + (Math.random() - 0.5) * 4)),
     })
   }
 
@@ -114,43 +156,63 @@ const generateChartData = () => {
 }
 
 export function SystemOverview() {
-  const [systemData, setSystemData] = useState<SystemData>(generateRealtimeData())
-  const [vmData, setVmData] = useState<VMData[]>(staticVMData)
+  const [systemData, setSystemData] = useState<SystemData | null>(null)
+  const [vmData, setVmData] = useState<VMData[]>([])
   const [chartData, setChartData] = useState(generateChartData())
   const [loading, setLoading] = useState(true)
+  const [isDemo, setIsDemo] = useState(false) // Added demo mode state
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 1000)
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+
+        const [systemResult, vmResult] = await Promise.all([fetchSystemData(), fetchVMData()])
+
+        setSystemData(systemResult.data)
+        setVmData(vmResult.data)
+        setIsDemo(systemResult.isDemo || vmResult.isDemo) // Set demo mode if either fetch is demo
+
+        if (systemResult.data) {
+          setChartData(generateChartData(systemResult.data))
+        }
+      } catch (err) {
+        console.error("[v0] Error fetching data:", err)
+        const fallbackData = generateDemoSystemData()
+        setSystemData(fallbackData)
+        setVmData(demVMData)
+        setChartData(generateChartData(fallbackData))
+        setIsDemo(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
 
     const interval = setInterval(() => {
-      setSystemData(generateRealtimeData())
-      setChartData(generateChartData())
-    }, 5000) // Actualizar cada 5 segundos
+      if (!isDemo) {
+        fetchData()
+      } else {
+        // In demo mode, just update with new random data
+        const newDemoData = generateDemoSystemData()
+        setSystemData(newDemoData)
+        setChartData(generateChartData(newDemoData))
+      }
+    }, 5000) // Update every 5 seconds instead of 30
 
     return () => {
-      clearTimeout(timer)
       clearInterval(interval)
     }
-  }, [])
-
-  const vmStats = {
-    total: vmData.length,
-    running: vmData.filter((vm) => vm.status === "running").length,
-    stopped: vmData.filter((vm) => vm.status === "stopped").length,
-    lxc: 0,
-  }
-
-  const getTemperatureStatus = (temp: number) => {
-    if (temp < 60) return { status: "Normal", color: "bg-green-500/10 text-green-500 border-green-500/20" }
-    if (temp < 75) return { status: "Warm", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" }
-    return { status: "Hot", color: "bg-red-500/10 text-red-500 border-red-500/20" }
-  }
+  }, [isDemo])
 
   if (loading) {
     return (
       <div className="space-y-6">
+        <div className="text-center py-8">
+          <div className="text-lg font-medium text-foreground mb-2">Connecting to ProxMenux Monitor...</div>
+          <div className="text-sm text-muted-foreground">Fetching real-time system data</div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
             <Card key={i} className="bg-card border-border animate-pulse">
@@ -167,10 +229,39 @@ export function SystemOverview() {
     )
   }
 
+  if (!systemData) return null
+
+  const vmStats = {
+    total: vmData.length,
+    running: vmData.filter((vm) => vm.status === "running").length,
+    stopped: vmData.filter((vm) => vm.status === "stopped").length,
+    lxc: 0,
+  }
+
+  const getTemperatureStatus = (temp: number) => {
+    if (temp < 60) return { status: "Normal", color: "bg-green-500/10 text-green-500 border-green-500/20" }
+    if (temp < 75) return { status: "Warm", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" }
+    return { status: "Hot", color: "bg-red-500/10 text-red-500 border-red-500/20" }
+  }
+
   const tempStatus = getTemperatureStatus(systemData.temperature)
 
   return (
     <div className="space-y-6">
+      {isDemo && (
+        <Card className="bg-blue-500/10 border-blue-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-sm text-blue-600">
+              <AlertCircle className="h-4 w-4" />
+              <span>
+                <strong>Demo Mode:</strong> Flask server not available. Showing simulated data for development. In the
+                AppImage, this will connect to the real Flask server.
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-card border-border metric-card">
@@ -182,7 +273,7 @@ export function SystemOverview() {
             <div className="text-2xl font-bold text-foreground metric-value">{systemData.cpu_usage}%</div>
             <Progress value={systemData.cpu_usage} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2 metric-label">
-              <span className="text-green-500">↓ 2.1%</span> from last hour
+              {isDemo ? "Simulated data" : "Real-time data from Flask server"}
             </p>
           </CardContent>
         </Card>
@@ -198,8 +289,7 @@ export function SystemOverview() {
             </div>
             <Progress value={systemData.memory_usage} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2 metric-label">
-              {systemData.memory_usage.toFixed(1)}% of {systemData.memory_total} GB •{" "}
-              <span className="text-green-500">↑ 1.2 GB</span>
+              {systemData.memory_usage.toFixed(1)}% of {systemData.memory_total} GB
             </p>
           </CardContent>
         </Card>
@@ -216,7 +306,9 @@ export function SystemOverview() {
                 {tempStatus.status}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2 metric-label">Max: 78°C • Avg: 48°C</p>
+            <p className="text-xs text-muted-foreground mt-2 metric-label">
+              {isDemo ? "Simulated temperature" : "Live temperature reading"}
+            </p>
           </CardContent>
         </Card>
 
@@ -322,16 +414,18 @@ export function SystemOverview() {
               <span className="text-foreground font-mono metric-value">{systemData.hostname}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground metric-label">Version:</span>
-              <span className="text-foreground metric-value">PVE 8.1.3</span>
+              <span className="text-muted-foreground metric-label">Uptime:</span>
+              <span className="text-foreground metric-value">{systemData.uptime}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground metric-label">Kernel:</span>
-              <span className="text-foreground font-mono metric-value">6.5.11-7-pve</span>
+              <span className="text-muted-foreground metric-label">Node ID:</span>
+              <span className="text-foreground font-mono metric-value">{systemData.node_id}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground metric-label">Architecture:</span>
-              <span className="text-foreground metric-value">x86_64</span>
+              <span className="text-muted-foreground metric-label">Last Update:</span>
+              <span className="text-foreground metric-value">
+                {new Date(systemData.timestamp).toLocaleTimeString()}
+              </span>
             </div>
           </CardContent>
         </Card>
