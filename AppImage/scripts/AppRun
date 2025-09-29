@@ -6,9 +6,9 @@
 # Get the directory where this AppImage is mounted
 APPDIR="$(dirname "$(readlink -f "${0}")")"
 
-# Set up environment
 export PATH="${APPDIR}/usr/bin:${PATH}"
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib:${LD_LIBRARY_PATH}"
+export PYTHONPATH="${APPDIR}/usr/lib/python3/dist-packages:${APPDIR}/usr/lib/python3/site-packages:${PYTHONPATH}"
 
 # Change to the AppImage directory
 cd "${APPDIR}"
@@ -23,6 +23,10 @@ ls -la "${APPDIR}/web/" || echo "[v0] Web directory not found"
 
 echo "[v0] Looking for index.html:"
 find "${APPDIR}" -name "index.html" -type f || echo "[v0] No index.html found"
+
+echo "[v0] Python path: ${PYTHONPATH}"
+echo "[v0] Checking Flask installation:"
+python3 -c "import flask; print('Flask version:', flask.__version__)" 2>/dev/null || echo "[v0] Flask not found"
 
 # Check for translation argument
 if [[ "$1" == "--translate" ]]; then
