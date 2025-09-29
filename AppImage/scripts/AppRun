@@ -27,7 +27,7 @@ find "${APPDIR}" -name "index.html" -type f || echo "[v0] No index.html found"
 # Check for translation argument
 if [[ "$1" == "--translate" ]]; then
     echo "🌐 Starting ProxMenux Translation Service..."
-    exec python3 "${APPDIR}/scripts/translator.py" "${@:2}"
+    exec python3 "${APPDIR}/usr/bin/translate_cli.py" "${@:2}"
 else
     echo "🚀 Starting ProxMenux Monitor Dashboard..."
     echo "📊 Dashboard will be available at: http://localhost:8008"
@@ -37,5 +37,5 @@ else
     echo ""
     
     # Start the Flask server
-    exec python3 "${APPDIR}/scripts/flask_server.py"
+    exec python3 "${APPDIR}/usr/bin/flask_server.py"
 fi
