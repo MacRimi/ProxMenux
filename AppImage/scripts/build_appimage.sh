@@ -35,6 +35,34 @@ mkdir -p "$APP_DIR/usr/share/applications"
 mkdir -p "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
 mkdir -p "$APP_DIR/web"
 
+echo "🔨 Building Next.js application..."
+cd "$APPIMAGE_ROOT"
+if [ ! -f "package.json" ]; then
+    echo "❌ Error: package.json not found in AppImage directory"
+    exit 1
+fi
+
+# Install dependencies if node_modules doesn't exist
+if [ ! -d "node_modules" ]; then
+    echo "📦 Installing dependencies..."
+    npm install
+fi
+
+# Build Next.js application
+echo "🏗️  Building Next.js application..."
+npm run build
+
+# Verify build was successful
+if [ ! -d ".next" ]; then
+    echo "❌ Error: Next.js build failed - .next directory not found"
+    exit 1
+fi
+
+echo "✅ Next.js build completed successfully"
+
+# Return to script directory
+cd "$SCRIPT_DIR"
+
 # Copy Flask server
 echo "📋 Copying Flask server..."
 cp "$SCRIPT_DIR/flask_server.py" "$APP_DIR/usr/bin/"
@@ -171,12 +199,8 @@ if [ -d "$APPIMAGE_ROOT/.next" ]; then
     cp "$APPIMAGE_ROOT/package.json" "$APP_DIR/web/"
     echo "✅ Next.js build copied successfully"
 else
-    echo "⚠️  Warning: Next.js build not found in AppImage directory. Run 'npm run build' in AppImage directory first."
-    echo "📋 Creating minimal web structure..."
-    mkdir -p "$APP_DIR/web/public/images"
-    if [ -f "$APPIMAGE_ROOT/public/images/proxmenux-logo.png" ]; then
-        cp "$APPIMAGE_ROOT/public/images/proxmenux-logo.png" "$APP_DIR/web/public/images/"
-    fi
+    echo "❌ Error: Next.js build not found even after building"
+    exit 1
 fi
 
 # Create AppRun script

@@ -60,8 +60,8 @@ export function SystemOverview() {
 
   const fetchSystemData = async () => {
     try {
-      console.log("[v0] Fetching system data from API...")
-      const response = await fetch("/api/system", {
+      console.log("[v0] Fetching system data from Flask server...")
+      const response = await fetch("http://localhost:8008/api/system", {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -124,8 +124,8 @@ export function SystemOverview() {
 
   const fetchVMData = async () => {
     try {
-      console.log("[v0] Fetching VM data from API...")
-      const response = await fetch("/api/vms", {
+      console.log("[v0] Fetching VM data from Flask server...")
+      const response = await fetch("http://localhost:8008/api/vms", {
         method: "GET",
         headers: {
           Accept: "application/json",
