@@ -199,7 +199,7 @@ export function SystemOverview() {
         setSystemData(newDemoData)
         setChartData(generateChartData(newDemoData))
       }
-    }, 5000) // Update every 5 seconds instead of 30
+    }, 30000) // Update every 30 seconds instead of 5
 
     return () => {
       clearInterval(interval)
