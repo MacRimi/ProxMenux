@@ -4,8 +4,9 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
+import { Button } from "./ui/button"
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts"
-import { Cpu, MemoryStick, Thermometer, Users, Activity, Server, Zap, AlertCircle } from "lucide-react"
+import { Cpu, MemoryStick, Thermometer, Users, Activity, Server, Zap, AlertCircle, RefreshCw } from "lucide-react"
 
 interface SystemData {
   cpu_usage: number
@@ -160,46 +161,55 @@ export function SystemOverview() {
   const [vmData, setVmData] = useState<VMData[]>([])
   const [chartData, setChartData] = useState(generateChartData())
   const [loading, setLoading] = useState(true)
-  const [isDemo, setIsDemo] = useState(false) // Added demo mode state
+  const [isDemo, setIsDemo] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+
+  const fetchData = async () => {
+    try {
+      setIsRefreshing(true)
+
+      const [systemResult, vmResult] = await Promise.all([fetchSystemData(), fetchVMData()])
+
+      setSystemData(systemResult.data)
+      setVmData(vmResult.data)
+      setIsDemo(systemResult.isDemo || vmResult.isDemo)
+      setLastUpdate(new Date())
+
+      if (systemResult.data) {
+        setChartData(generateChartData(systemResult.data))
+      }
+    } catch (err) {
+      console.error("[v0] Error fetching data:", err)
+      const fallbackData = generateDemoSystemData()
+      setSystemData(fallbackData)
+      setVmData(demVMData)
+      setChartData(generateChartData(fallbackData))
+      setIsDemo(true)
+      setLastUpdate(new Date())
+    } finally {
+      setLoading(false)
+      setIsRefreshing(false)
+    }
+  }
+
+  const handleManualRefresh = () => {
+    fetchData()
+  }
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-
-        const [systemResult, vmResult] = await Promise.all([fetchSystemData(), fetchVMData()])
-
-        setSystemData(systemResult.data)
-        setVmData(vmResult.data)
-        setIsDemo(systemResult.isDemo || vmResult.isDemo) // Set demo mode if either fetch is demo
-
-        if (systemResult.data) {
-          setChartData(generateChartData(systemResult.data))
-        }
-      } catch (err) {
-        console.error("[v0] Error fetching data:", err)
-        const fallbackData = generateDemoSystemData()
-        setSystemData(fallbackData)
-        setVmData(demVMData)
-        setChartData(generateChartData(fallbackData))
-        setIsDemo(true)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchData()
 
     const interval = setInterval(() => {
       if (!isDemo) {
         fetchData()
       } else {
-        // In demo mode, just update with new random data
         const newDemoData = generateDemoSystemData()
         setSystemData(newDemoData)
         setChartData(generateChartData(newDemoData))
+        setLastUpdate(new Date())
       }
-    }, 5000) // Update every 5 seconds instead of 30
+    }, 30000)
 
     return () => {
       clearInterval(interval)
@@ -208,22 +218,27 @@ export function SystemOverview() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="text-center py-8">
-          <div className="text-lg font-medium text-foreground mb-2">Connecting to ProxMenux Monitor...</div>
-          <div className="text-sm text-muted-foreground">Fetching real-time system data</div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="bg-card border-border animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
-                <div className="h-8 bg-muted rounded w-3/4 mb-2"></div>
-                <div className="h-2 bg-muted rounded w-full mb-2"></div>
-                <div className="h-3 bg-muted rounded w-2/3"></div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="text-center py-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500/10 rounded-full mb-4">
+              <Server className="w-8 h-8 text-blue-500 animate-pulse" />
+            </div>
+            <div className="text-2xl font-bold text-white mb-2">Connecting to ProxMenux Monitor...</div>
+            <div className="text-slate-400">Fetching real-time system data</div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i} className="bg-slate-800/50 border-slate-700 backdrop-blur-sm animate-pulse">
+                <CardContent className="p-6">
+                  <div className="h-4 bg-slate-700 rounded w-1/2 mb-4"></div>
+                  <div className="h-8 bg-slate-700 rounded w-3/4 mb-2"></div>
+                  <div className="h-2 bg-slate-700 rounded w-full mb-2"></div>
+                  <div className="h-3 bg-slate-700 rounded w-2/3"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -239,250 +254,276 @@ export function SystemOverview() {
   }
 
   const getTemperatureStatus = (temp: number) => {
-    if (temp < 60) return { status: "Normal", color: "bg-green-500/10 text-green-500 border-green-500/20" }
-    if (temp < 75) return { status: "Warm", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" }
-    return { status: "Hot", color: "bg-red-500/10 text-red-500 border-red-500/20" }
+    if (temp < 60) return { status: "Normal", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" }
+    if (temp < 75) return { status: "Warm", color: "bg-amber-500/10 text-amber-400 border-amber-500/20" }
+    return { status: "Hot", color: "bg-red-500/10 text-red-400 border-red-500/20" }
   }
 
   const tempStatus = getTemperatureStatus(systemData.temperature)
 
   return (
-    <div className="space-y-6">
-      {isDemo && (
-        <Card className="bg-blue-500/10 border-blue-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-sm text-blue-600">
-              <AlertCircle className="h-4 w-4" />
-              <span>
-                <strong>Demo Mode:</strong> Flask server not available. Showing simulated data for development. In the
-                AppImage, this will connect to the real Flask server.
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">ProxMenux System Dashboard</h1>
+            <p className="text-slate-400">Last updated: {lastUpdate.toLocaleTimeString()} • Auto-refresh every 30s</p>
+          </div>
+          <Button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="bg-blue-600 hover:bg-blue-700 text-white border-0"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+        </div>
 
-      {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-card border-border metric-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">CPU Usage</CardTitle>
-            <Cpu className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground metric-value">{systemData.cpu_usage}%</div>
-            <Progress value={systemData.cpu_usage} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-2 metric-label">
-              {isDemo ? "Simulated data" : "Real-time data from Flask server"}
-            </p>
-          </CardContent>
-        </Card>
+        {isDemo && (
+          <Card className="bg-blue-500/10 border-blue-500/20 backdrop-blur-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-sm text-blue-400">
+                <AlertCircle className="h-4 w-4" />
+                <span>
+                  <strong>Demo Mode:</strong> Flask server not available. Showing simulated data for development. In the
+                  AppImage, this will connect to the real Flask server.
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card className="bg-card border-border metric-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Memory Usage</CardTitle>
-            <MemoryStick className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground metric-value">
-              {systemData.memory_used.toFixed(1)} GB
-            </div>
-            <Progress value={systemData.memory_usage} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-2 metric-label">
-              {systemData.memory_usage.toFixed(1)}% of {systemData.memory_total} GB
-            </p>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm hover:bg-slate-800/70 transition-all duration-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">CPU Usage</CardTitle>
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Cpu className="h-4 w-4 text-blue-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-white mb-2">{systemData.cpu_usage}%</div>
+              <Progress value={systemData.cpu_usage} className="mt-2 h-2" />
+              <p className="text-xs text-slate-400 mt-2">
+                {isDemo ? "Simulated data" : "Real-time data from Flask server"}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-card border-border metric-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Temperature</CardTitle>
-            <Thermometer className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground metric-value">{systemData.temperature}°C</div>
-            <div className="flex items-center mt-2">
-              <Badge variant="outline" className={tempStatus.color}>
-                {tempStatus.status}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 metric-label">
-              {isDemo ? "Simulated temperature" : "Live temperature reading"}
-            </p>
-          </CardContent>
-        </Card>
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm hover:bg-slate-800/70 transition-all duration-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Memory Usage</CardTitle>
+              <div className="p-2 bg-emerald-500/10 rounded-lg">
+                <MemoryStick className="h-4 w-4 text-emerald-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-white mb-2">{systemData.memory_used.toFixed(1)} GB</div>
+              <Progress value={systemData.memory_usage} className="mt-2 h-2" />
+              <p className="text-xs text-slate-400 mt-2">
+                {systemData.memory_usage.toFixed(1)}% of {systemData.memory_total} GB
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-card border-border metric-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active VMs</CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground metric-value">{vmStats.running}</div>
-            <div className="vm-badges mt-2 flex flex-wrap gap-1">
-              <Badge variant="outline" className="vm-badge bg-green-500/10 text-green-500 border-green-500/20">
-                {vmStats.running} Running
-              </Badge>
-              {vmStats.stopped > 0 && (
-                <Badge variant="outline" className="vm-badge bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
-                  {vmStats.stopped} Stopped
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm hover:bg-slate-800/70 transition-all duration-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Temperature</CardTitle>
+              <div className="p-2 bg-orange-500/10 rounded-lg">
+                <Thermometer className="h-4 w-4 text-orange-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-white mb-2">{systemData.temperature}°C</div>
+              <div className="flex items-center mt-2">
+                <Badge variant="outline" className={tempStatus.color}>
+                  {tempStatus.status}
                 </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 metric-label">Total: {vmStats.total} VMs configured</p>
-          </CardContent>
-        </Card>
-      </div>
+              </div>
+              <p className="text-xs text-slate-400 mt-2">
+                {isDemo ? "Simulated temperature" : "Live temperature reading"}
+              </p>
+            </CardContent>
+          </Card>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-card border-border metric-card">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <Activity className="h-5 w-5 mr-2" />
-              CPU Usage (24h)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={chartData.cpuData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    color: "hsl(var(--foreground))",
-                  }}
-                />
-                <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm hover:bg-slate-800/70 transition-all duration-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Active VMs</CardTitle>
+              <div className="p-2 bg-purple-500/10 rounded-lg">
+                <Server className="h-4 w-4 text-purple-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-white mb-2">{vmStats.running}</div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                  {vmStats.running} Running
+                </Badge>
+                {vmStats.stopped > 0 && (
+                  <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/20">
+                    {vmStats.stopped} Stopped
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-2">Total: {vmStats.total} VMs configured</p>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card className="bg-card border-border metric-card">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <MemoryStick className="h-5 w-5 mr-2" />
-              Memory Usage (24h)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={chartData.memoryData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    color: "hsl(var(--foreground))",
-                  }}
-                />
-                <Area type="monotone" dataKey="used" stackId="1" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
-                <Area
-                  type="monotone"
-                  dataKey="available"
-                  stackId="1"
-                  stroke="#10b981"
-                  fill="#10b981"
-                  fillOpacity={0.6}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <div className="p-2 bg-blue-500/10 rounded-lg mr-3">
+                  <Activity className="h-5 w-5 text-blue-400" />
+                </div>
+                CPU Usage (24h)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={chartData.cpuData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="time" stroke="#9CA3AF" fontSize={12} />
+                  <YAxis stroke="#9CA3AF" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1F2937",
+                      border: "1px solid #374151",
+                      borderRadius: "8px",
+                      color: "#F9FAFB",
+                    }}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-      {/* System Information */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="bg-card border-border metric-card">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <Server className="h-5 w-5 mr-2" />
-              System Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground metric-label">Hostname:</span>
-              <span className="text-foreground font-mono metric-value">{systemData.hostname}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground metric-label">Uptime:</span>
-              <span className="text-foreground metric-value">{systemData.uptime}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground metric-label">Node ID:</span>
-              <span className="text-foreground font-mono metric-value">{systemData.node_id}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground metric-label">Last Update:</span>
-              <span className="text-foreground metric-value">
-                {new Date(systemData.timestamp).toLocaleTimeString()}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <div className="p-2 bg-emerald-500/10 rounded-lg mr-3">
+                  <MemoryStick className="h-5 w-5 text-emerald-400" />
+                </div>
+                Memory Usage (24h)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={chartData.memoryData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="time" stroke="#9CA3AF" fontSize={12} />
+                  <YAxis stroke="#9CA3AF" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1F2937",
+                      border: "1px solid #374151",
+                      borderRadius: "8px",
+                      color: "#F9FAFB",
+                    }}
+                  />
+                  <Area type="monotone" dataKey="used" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} />
+                  <Area
+                    type="monotone"
+                    dataKey="available"
+                    stackId="1"
+                    stroke="#10B981"
+                    fill="#10B981"
+                    fillOpacity={0.6}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card className="bg-card border-border metric-card">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <Users className="h-5 w-5 mr-2" />
-              Active Sessions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground metric-label">Web Console:</span>
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                3 active
-              </Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground metric-label">SSH Sessions:</span>
-              <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                1 active
-              </Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground metric-label">API Calls:</span>
-              <span className="text-foreground metric-value">247/hour</span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <div className="p-2 bg-blue-500/10 rounded-lg mr-3">
+                  <Server className="h-5 w-5 text-blue-400" />
+                </div>
+                System Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Hostname:</span>
+                <span className="text-white font-mono bg-slate-700/50 px-2 py-1 rounded text-sm">
+                  {systemData.hostname}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Uptime:</span>
+                <span className="text-white font-semibold">{systemData.uptime}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Node ID:</span>
+                <span className="text-white font-mono bg-slate-700/50 px-2 py-1 rounded text-sm">
+                  {systemData.node_id}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Status:</span>
+                <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">healthy</Badge>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-card border-border metric-card">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <Zap className="h-5 w-5 mr-2" />
-              Power & Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground metric-label">Power State:</span>
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                Running
-              </Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground metric-label">Load Average:</span>
-              <span className="text-foreground font-mono metric-value">
-                {systemData.load_average.map((avg) => avg.toFixed(2)).join(", ")}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground metric-label">Boot Time:</span>
-              <span className="text-foreground metric-value">2.3s</span>
-            </div>
-          </CardContent>
-        </Card>
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <div className="p-2 bg-emerald-500/10 rounded-lg mr-3">
+                  <Users className="h-5 w-5 text-emerald-400" />
+                </div>
+                Active Sessions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Web Console:</span>
+                <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">3 active</Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">SSH Sessions:</span>
+                <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">1 active</Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">API Calls:</span>
+                <span className="text-white font-semibold">247/hour</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <div className="p-2 bg-amber-500/10 rounded-lg mr-3">
+                  <Zap className="h-5 w-5 text-amber-400" />
+                </div>
+                Power & Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Power State:</span>
+                <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Running</Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Load Average:</span>
+                <span className="text-white font-mono bg-slate-700/50 px-2 py-1 rounded text-sm">
+                  {systemData.load_average.map((avg) => avg.toFixed(2)).join(", ")}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Boot Time:</span>
+                <span className="text-white font-semibold">2.3s</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
