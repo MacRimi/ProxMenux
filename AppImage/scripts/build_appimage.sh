@@ -194,8 +194,10 @@ chmod +x "$APP_DIR/usr/bin/translate_cli.py"
 echo "📋 Copying web dashboard..."
 if [ -d "$APPIMAGE_ROOT/out" ]; then
     mkdir -p "$APP_DIR/web"
-    cp -r "$APPIMAGE_ROOT/out" "$APP_DIR/web/"
-    cp -r "$APPIMAGE_ROOT/public" "$APP_DIR/web/"
+    cp -r "$APPIMAGE_ROOT/out"/* "$APP_DIR/web/"
+    if [ -d "$APPIMAGE_ROOT/public" ]; then
+        cp -r "$APPIMAGE_ROOT/public"/* "$APP_DIR/web/" 2>/dev/null || true
+    fi
     cp "$APPIMAGE_ROOT/package.json" "$APP_DIR/web/"
     
     echo "✅ Next.js static export copied successfully"

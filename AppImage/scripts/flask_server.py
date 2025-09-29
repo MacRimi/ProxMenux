@@ -24,7 +24,8 @@ def serve_dashboard():
     """Serve the main dashboard page from Next.js build"""
     try:
         index_paths = [
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'out', 'index.html'),
+            os.path.join(os.path.dirname(__file__), '..', 'web', 'index.html'),  # Exportación estática
+            os.path.join(os.path.dirname(__file__), '..', 'web', 'out', 'index.html'),  # Fallback
             os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'server', 'app', 'page.html'),
             os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'server', 'pages', 'index.html'),
             os.path.join(os.path.dirname(__file__), '..', 'web', 'dist', 'index.html')
@@ -128,7 +129,8 @@ def serve_next_static(filename):
     """Serve Next.js static files"""
     try:
         static_paths = [
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'out', '_next'),
+            os.path.join(os.path.dirname(__file__), '..', 'web', '_next'),  # Exportación estática
+            os.path.join(os.path.dirname(__file__), '..', 'web', 'out', '_next'),  # Fallback
             os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'static')
         ]
         
@@ -146,7 +148,8 @@ def serve_static_files(filename):
     """Serve static files (icons, etc.)"""
     try:
         public_paths = [
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'out'),
+            os.path.join(os.path.dirname(__file__), '..', 'web'),  # Raíz web para exportación estática
+            os.path.join(os.path.dirname(__file__), '..', 'web', 'out'),  # Fallback
             os.path.join(os.path.dirname(__file__), '..', 'web', 'public'),
             os.path.join(os.path.dirname(__file__), '..', 'public'),
             os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'static')
