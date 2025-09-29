@@ -1417,21 +1417,6 @@
     "type": "ct"
   },
   {
-    "name": "Frigate",
-    "slug": "frigate",
-    "desc": "Frigate is an open source NVR built around real-time AI object detection. All processing is performed locally on your own hardware, and your camera feeds never leave your home.",
-    "script": "ct/frigate.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/frigate.sh",
-    "categories": [
-      15
-    ],
-    "notes": [
-      "Discussions (explore more advanced methods): `https://github.com/tteck/Proxmox/discussions/2711`",
-      "go2rtc Interface port:`1984`"
-    ],
-    "type": "ct"
-  },
-  {
     "name": "PVE LXC Filesystem Trim",
     "slug": "fstrim",
     "desc": "This maintains SSD performance by managing unused blocks. Thin-provisioned storage systems also require management to prevent unnecessary storage use. VMs automate fstrim, while LXC containers need manual or automated fstrim processes for optimal performance.",
@@ -2847,6 +2832,18 @@
     "notes": [
       "You can find post-install info here: `https://github.com/community-scripts/ProxmoxVE/discussions/782`"
     ],
+    "type": "ct"
+  },
+  {
+    "name": "MyIP",
+    "slug": "myip",
+    "desc": "The best IP Toolbox. Easy to check what's your IPs, IP geolocation, check for DNS leaks, examine WebRTC connections, speed test, ping test, MTR test, check website availability, whois search and more!",
+    "script": "ct/myip.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/myip.sh",
+    "categories": [
+      4
+    ],
+    "notes": [],
     "type": "ct"
   },
   {
@@ -5210,6 +5207,20 @@
     "notes": [
       "Application uses self-signed certificate for HTTPS to work and is enabled by default. If you need a different setup, please read the documentation.",
       "To set the Admin Token, run the command below (or type update) in the LXC Console."
+    ],
+    "type": "ct"
+  },
+  {
+    "name": "Verdaccio",
+    "slug": "verdaccio",
+    "desc": "Verdaccio is a lightweight private npm proxy registry built with Node.js. It allows you to host your own npm registry with minimal configuration, providing a private npm repository for your projects. Verdaccio supports npm, yarn, and pnpm, and can cache packages from the public npm registry, allowing for faster installs and protection against npm registry outages. It includes a web interface for browsing packages, authentication and authorization features, and can be easily integrated into your development workflow.",
+    "script": "ct/verdaccio.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/verdaccio.sh",
+    "categories": [
+      20
+    ],
+    "notes": [
+      "To create the first user, run: npm adduser --registry http://<container-ip>:4873"
     ],
     "type": "ct"
   },
