@@ -84,7 +84,7 @@ const demVMData: VMData[] = [
 const fetchSystemData = async (): Promise<{ data: SystemData | null; isDemo: boolean }> => {
   try {
     console.log("[v0] Attempting to fetch system data from Flask server...")
-    const response = await fetch("http://localhost:8008/api/system", {
+    const response = await fetch("/api/system", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -108,7 +108,7 @@ const fetchSystemData = async (): Promise<{ data: SystemData | null; isDemo: boo
 const fetchVMData = async (): Promise<{ data: VMData[]; isDemo: boolean }> => {
   try {
     console.log("[v0] Attempting to fetch VM data from Flask server...")
-    const response = await fetch("http://localhost:8008/api/vms", {
+    const response = await fetch("/api/vms", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
