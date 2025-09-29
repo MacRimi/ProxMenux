@@ -32,210 +32,114 @@ interface VMData {
   uptime: number
 }
 
-const cpuData = [
-  { time: "00:00", value: 45 },
-  { time: "04:00", value: 52 },
-  { time: "08:00", value: 78 },
-  { time: "12:00", value: 65 },
-  { time: "16:00", value: 82 },
-  { time: "20:00", value: 58 },
-  { time: "24:00", value: 43 },
+const generateRealtimeData = () => ({
+  cpu_usage: Math.floor(Math.random() * 20) + 60, // 60-80%
+  memory_usage: Math.floor(Math.random() * 10) + 45, // 45-55%
+  memory_total: 32.0,
+  memory_used: 15.8 + Math.random() * 2, // 15.8-17.8 GB
+  temperature: Math.floor(Math.random() * 8) + 48, // 48-56°C
+  uptime: "15d 7h 23m",
+  load_average: [1.23, 1.45, 1.67],
+  hostname: "proxmox-01",
+  node_id: "pve-node-01",
+  timestamp: new Date().toISOString(),
+})
+
+const staticVMData: VMData[] = [
+  {
+    vmid: 100,
+    name: "web-server-01",
+    status: "running",
+    cpu: 0.45,
+    mem: 8589934592,
+    maxmem: 17179869184,
+    disk: 53687091200,
+    maxdisk: 107374182400,
+    uptime: 1324800,
+  },
+  {
+    vmid: 101,
+    name: "database-server",
+    status: "running",
+    cpu: 0.23,
+    mem: 4294967296,
+    maxmem: 8589934592,
+    disk: 26843545600,
+    maxdisk: 53687091200,
+    uptime: 864000,
+  },
+  {
+    vmid: 102,
+    name: "backup-server",
+    status: "stopped",
+    cpu: 0,
+    mem: 0,
+    maxmem: 4294967296,
+    disk: 10737418240,
+    maxdisk: 21474836480,
+    uptime: 0,
+  },
+  {
+    vmid: 103,
+    name: "test-server",
+    status: "stopped",
+    cpu: 0,
+    mem: 0,
+    maxmem: 2147483648,
+    disk: 5368709120,
+    maxdisk: 10737418240,
+    uptime: 0,
+  },
 ]
 
-const memoryData = [
-  { time: "00:00", used: 12.5, available: 19.5 },
-  { time: "04:00", used: 14.2, available: 17.8 },
-  { time: "08:00", used: 18.7, available: 13.3 },
-  { time: "12:00", used: 16.3, available: 15.7 },
-  { time: "16:00", used: 21.1, available: 10.9 },
-  { time: "20:00", used: 15.8, available: 16.2 },
-  { time: "24:00", used: 13.2, available: 18.8 },
-]
+const generateChartData = () => {
+  const cpuData = []
+  const memoryData = []
+
+  for (let i = 0; i < 24; i += 4) {
+    const time = `${i.toString().padStart(2, "0")}:00`
+    cpuData.push({
+      time,
+      value: Math.floor(Math.random() * 40) + 40, // 40-80%
+    })
+
+    memoryData.push({
+      time,
+      used: 12 + Math.random() * 8, // 12-20 GB
+      available: 32 - (12 + Math.random() * 8), // Resto disponible
+    })
+  }
+
+  return { cpuData, memoryData }
+}
 
 export function SystemOverview() {
-  const [systemData, setSystemData] = useState<SystemData | null>(null)
-  const [vmData, setVmData] = useState<VMData[]>([])
+  const [systemData, setSystemData] = useState<SystemData>(generateRealtimeData())
+  const [vmData, setVmData] = useState<VMData[]>(staticVMData)
+  const [chartData, setChartData] = useState(generateChartData())
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchSystemData = async () => {
-    try {
-      console.log("[v0] Fetching system data from Flask server...")
-      const response = await fetch("http://localhost:8008/api/system", {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      })
-
-      console.log("[v0] Response status:", response.status)
-      console.log("[v0] Response headers:", Object.fromEntries(response.headers.entries()))
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.log("[v0] Error response body:", errorText)
-        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`)
-      }
-
-      const contentType = response.headers.get("content-type")
-      console.log("[v0] Content-Type:", contentType)
-
-      if (!contentType || !contentType.includes("application/json")) {
-        const responseText = await response.text()
-        console.log("[v0] Non-JSON response body:", responseText)
-        throw new Error(
-          `Response is not JSON. Content-Type: ${contentType}, Body: ${responseText.substring(0, 200)}...`,
-        )
-      }
-
-      const responseText = await response.text()
-      console.log("[v0] Raw response text:", responseText)
-
-      let data
-      try {
-        data = JSON.parse(responseText)
-      } catch (parseError) {
-        console.log("[v0] JSON parse error:", parseError)
-        console.log("[v0] Failed to parse:", responseText.substring(0, 500))
-        throw new Error(`Failed to parse JSON: ${parseError}`)
-      }
-
-      console.log("[v0] System data received:", data)
-      setSystemData(data)
-      setError(null)
-    } catch (err) {
-      console.error("[v0] Error fetching system data:", err)
-      setError(err instanceof Error ? err.message : "Unknown error")
-      setSystemData({
-        cpu_usage: 67.3,
-        memory_usage: 49.4,
-        memory_total: 32.0,
-        memory_used: 15.8,
-        temperature: 52,
-        uptime: "15d 7h 23m",
-        load_average: [1.23, 1.45, 1.67],
-        hostname: "proxmox-01",
-        node_id: "pve-node-01",
-        timestamp: new Date().toISOString(),
-      })
-    }
-  }
-
-  const fetchVMData = async () => {
-    try {
-      console.log("[v0] Fetching VM data from Flask server...")
-      const response = await fetch("http://localhost:8008/api/vms", {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      })
-
-      console.log("[v0] VM Response status:", response.status)
-      console.log("[v0] VM Response headers:", Object.fromEntries(response.headers.entries()))
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.log("[v0] VM Error response body:", errorText)
-        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`)
-      }
-
-      const contentType = response.headers.get("content-type")
-      console.log("[v0] VM Content-Type:", contentType)
-
-      if (!contentType || !contentType.includes("application/json")) {
-        const responseText = await response.text()
-        console.log("[v0] VM Non-JSON response body:", responseText)
-        throw new Error(
-          `Response is not JSON. Content-Type: ${contentType}, Body: ${responseText.substring(0, 200)}...`,
-        )
-      }
-
-      const responseText = await response.text()
-      console.log("[v0] VM Raw response text:", responseText)
-
-      let data
-      try {
-        data = JSON.parse(responseText)
-      } catch (parseError) {
-        console.log("[v0] VM JSON parse error:", parseError)
-        console.log("[v0] VM Failed to parse:", responseText.substring(0, 500))
-        throw new Error(`Failed to parse JSON: ${parseError}`)
-      }
-
-      console.log("[v0] VM data received:", data)
-      setVmData(Array.isArray(data) ? data : [])
-    } catch (err) {
-      console.error("[v0] Error fetching VM data:", err)
-      setVmData([
-        {
-          vmid: 100,
-          name: "web-server-01",
-          status: "running",
-          cpu: 0.45,
-          mem: 8589934592,
-          maxmem: 17179869184,
-          disk: 53687091200,
-          maxdisk: 107374182400,
-          uptime: 1324800,
-        },
-        {
-          vmid: 101,
-          name: "database-server",
-          status: "running",
-          cpu: 0.23,
-          mem: 4294967296,
-          maxmem: 8589934592,
-          disk: 26843545600,
-          maxdisk: 53687091200,
-          uptime: 864000,
-        },
-        {
-          vmid: 102,
-          name: "backup-server",
-          status: "stopped",
-          cpu: 0,
-          mem: 0,
-          maxmem: 4294967296,
-          disk: 10737418240,
-          maxdisk: 21474836480,
-          uptime: 0,
-        },
-        {
-          vmid: 103,
-          name: "test-server",
-          status: "stopped",
-          cpu: 0,
-          mem: 0,
-          maxmem: 2147483648,
-          disk: 5368709120,
-          maxdisk: 10737418240,
-          uptime: 0,
-        },
-      ])
-    }
-  }
 
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
-      await Promise.all([fetchSystemData(), fetchVMData()])
+    const timer = setTimeout(() => {
       setLoading(false)
+    }, 1000)
+
+    const interval = setInterval(() => {
+      setSystemData(generateRealtimeData())
+      setChartData(generateChartData())
+    }, 5000) // Actualizar cada 5 segundos
+
+    return () => {
+      clearTimeout(timer)
+      clearInterval(interval)
     }
-
-    loadData()
-
-    const interval = setInterval(loadData, 15000)
-    return () => clearInterval(interval)
   }, [])
 
   const vmStats = {
     total: vmData.length,
     running: vmData.filter((vm) => vm.status === "running").length,
     stopped: vmData.filter((vm) => vm.status === "stopped").length,
-    lxc: 0, // Por ahora no tenemos datos de LXC separados
+    lxc: 0,
   }
 
   const getTemperatureStatus = (temp: number) => {
@@ -263,19 +167,6 @@ export function SystemOverview() {
     )
   }
 
-  if (!systemData) {
-    return (
-      <div className="space-y-6">
-        <Card className="bg-card border-border">
-          <CardContent className="p-6 text-center">
-            <p className="text-muted-foreground">Error loading system data</p>
-            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
   const tempStatus = getTemperatureStatus(systemData.temperature)
 
   return (
@@ -291,7 +182,7 @@ export function SystemOverview() {
             <div className="text-2xl font-bold text-foreground metric-value">{systemData.cpu_usage}%</div>
             <Progress value={systemData.cpu_usage} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2 metric-label">
-              <span className="text-green-500">Real-time</span> from system
+              <span className="text-green-500">↓ 2.1%</span> from last hour
             </p>
           </CardContent>
         </Card>
@@ -302,10 +193,13 @@ export function SystemOverview() {
             <MemoryStick className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground metric-value">{systemData.memory_used} GB</div>
+            <div className="text-2xl font-bold text-foreground metric-value">
+              {systemData.memory_used.toFixed(1)} GB
+            </div>
             <Progress value={systemData.memory_usage} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2 metric-label">
-              {systemData.memory_usage}% of {systemData.memory_total} GB
+              {systemData.memory_usage.toFixed(1)}% of {systemData.memory_total} GB •{" "}
+              <span className="text-green-500">↑ 1.2 GB</span>
             </p>
           </CardContent>
         </Card>
@@ -322,12 +216,12 @@ export function SystemOverview() {
                 {tempStatus.status}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2 metric-label">System temperature</p>
+            <p className="text-xs text-muted-foreground mt-2 metric-label">Max: 78°C • Avg: 48°C</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border metric-card">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Active VMs</CardTitle>
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -359,7 +253,7 @@ export function SystemOverview() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={cpuData}>
+              <AreaChart data={chartData.cpuData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
@@ -386,7 +280,7 @@ export function SystemOverview() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={memoryData}>
+              <AreaChart data={chartData.memoryData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
@@ -490,8 +384,8 @@ export function SystemOverview() {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground metric-label">Uptime:</span>
-              <span className="text-foreground metric-value">{systemData.uptime}</span>
+              <span className="text-muted-foreground metric-label">Boot Time:</span>
+              <span className="text-foreground metric-value">2.3s</span>
             </div>
           </CardContent>
         </Card>

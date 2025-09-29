@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
@@ -30,26 +30,6 @@ export function ProxmoxDashboard() {
     nodeId: "pve-node-01",
   })
   const [isRefreshing, setIsRefreshing] = useState(false)
-
-  useEffect(() => {
-    const fetchServerInfo = async () => {
-      try {
-        const response = await fetch("/api/system-info")
-        if (response.ok) {
-          const data = await response.json()
-          setSystemStatus((prev) => ({
-            ...prev,
-            serverName: data.hostname || "proxmox-01",
-            nodeId: data.node_id || "pve-node-01",
-          }))
-        }
-      } catch (error) {
-        console.log("[v0] Using default server name due to API error:", error)
-      }
-    }
-
-    fetchServerInfo()
-  }, [])
 
   const refreshData = async () => {
     setIsRefreshing(true)
