@@ -229,65 +229,16 @@ else
     exit 1
 fi
 
-# Create AppRun script
-cat > "$APP_DIR/AppRun" << 'EOF'
-#!/bin/bash
-
-# Get the directory where this AppImage is located
-HERE="$(dirname "$(readlink -f "${0}")")"
-
-# Set Python path
-export PYTHONPATH="$HERE/usr/lib/python3/dist-packages:$PYTHONPATH"
-export PATH="$HERE/usr/bin:$PATH"
-
-# Check if translation mode is requested
-if [ "$1" = "--translate" ]; then
-    shift
-    exec python3 "$HERE/usr/bin/translate_cli.py" "$@"
+# Copy AppRun script
+echo "📋 Copying AppRun script..."
+if [ -f "$SCRIPT_DIR/AppRun" ]; then
+    cp "$SCRIPT_DIR/AppRun" "$APP_DIR/AppRun"
+    chmod +x "$APP_DIR/AppRun"
+    echo "✅ AppRun script copied successfully"
+else
+    echo "❌ Error: AppRun script not found at $SCRIPT_DIR/AppRun"
+    exit 1
 fi
-
-# Start Flask server in background
-echo "🚀 Starting ProxMenux Monitor..."
-echo "📊 Dashboard will be available at: http://localhost:8008"
-
-cd "$HERE"
-python3 "$HERE/usr/bin/flask_server.py" &
-FLASK_PID=$!
-
-# Function to cleanup on exit
-cleanup() {
-    echo "🛑 Stopping ProxMenux Monitor..."
-    kill $FLASK_PID 2>/dev/null || true
-    exit 0
-}
-
-# Set trap for cleanup
-trap cleanup SIGINT SIGTERM EXIT
-
-# Wait for Flask to start
-sleep 3
-
-# Try to open browser
-if command -v xdg-open > /dev/null; then
-    xdg-open "http://localhost:8008" 2>/dev/null || true
-elif command -v firefox > /dev/null; then
-    firefox "http://localhost:8008" 2>/dev/null || true
-elif command -v chromium > /dev/null; then
-    chromium "http://localhost:8008" 2>/dev/null || true
-elif command -v google-chrome > /dev/null; then
-    google-chrome "http://localhost:8008" 2>/dev/null || true
-fi
-
-echo "✅ ProxMenux Monitor is running!"
-echo "📝 Press Ctrl+C to stop"
-echo "🌐 Access dashboard at: http://localhost:8008"
-echo "🌍 Translation available with: ./ProxMenux-Monitor.AppImage --translate"
-
-# Keep the script running
-wait $FLASK_PID
-EOF
-
-chmod +x "$APP_DIR/AppRun"
 
 # Create desktop file
 cat > "$APP_DIR/proxmenux-monitor.desktop" << EOF

@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# ProxMenux Monitor AppImage Entry Point
+# This script is executed when the AppImage is run
+
+# Get the directory where this AppImage is mounted
+APPDIR="$(dirname "$(readlink -f "${0}")")"
+
+# Set up environment
+export PATH="${APPDIR}/usr/bin:${PATH}"
+export LD_LIBRARY_PATH="${APPDIR}/usr/lib:${LD_LIBRARY_PATH}"
+
+# Change to the AppImage directory
+cd "${APPDIR}"
+
+# Debug: Print directory structure for troubleshooting
+echo "[v0] AppImage mounted at: ${APPDIR}"
+echo "[v0] Contents of AppImage root:"
+ls -la "${APPDIR}/" || echo "[v0] Cannot list AppImage root"
+
+echo "[v0] Contents of web directory:"
+ls -la "${APPDIR}/web/" || echo "[v0] Web directory not found"
+
+echo "[v0] Looking for index.html:"
+find "${APPDIR}" -name "index.html" -type f || echo "[v0] No index.html found"
+
+# Check for translation argument
+if [[ "$1" == "--translate" ]]; then
+    echo "🌐 Starting ProxMenux Translation Service..."
+    exec python3 "${APPDIR}/scripts/translator.py" "${@:2}"
+else
+    echo "🚀 Starting ProxMenux Monitor Dashboard..."
+    echo "📊 Dashboard will be available at: http://localhost:8008"
+    echo "🔌 API endpoints at: http://localhost:8008/api/"
+    echo ""
+    echo "Press Ctrl+C to stop the server"
+    echo ""
+    
+    # Start the Flask server
+    exec python3 "${APPDIR}/scripts/flask_server.py"
+fi

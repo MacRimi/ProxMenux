@@ -23,20 +23,28 @@ CORS(app)  # Enable CORS for Next.js frontend
 def serve_dashboard():
     """Serve the main dashboard page from Next.js build"""
     try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        appimage_root = os.path.dirname(base_dir)  # Subir un nivel desde scripts/
+        
         index_paths = [
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'index.html'),  # Exportación estática
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'out', 'index.html'),  # Fallback
-            os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'server', 'app', 'page.html'),
-            os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'server', 'pages', 'index.html'),
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'dist', 'index.html')
+            os.path.join(appimage_root, 'web', 'index.html'),  # Ruta principal para exportación estática
+            os.path.join(appimage_root, 'web', 'out', 'index.html'),  # Fallback si está en subcarpeta
+            os.path.join(base_dir, '..', 'web', 'index.html'),  # Ruta relativa alternativa
+            os.path.join(base_dir, '..', 'web', 'out', 'index.html'),  # Fallback relativo
         ]
         
-        for index_path in index_paths:
-            if os.path.exists(index_path):
-                return send_file(index_path)
+        print(f"[v0] Flask server looking for index.html in:")
+        for path in index_paths:
+            abs_path = os.path.abspath(path)
+            exists = os.path.exists(abs_path)
+            print(f"[v0]   {abs_path} - {'EXISTS' if exists else 'NOT FOUND'}")
+            if exists:
+                print(f"[v0] Found index.html, serving from: {abs_path}")
+                return send_file(abs_path)
         
-        # If no Next.js build found, return error message
-        return '''
+        # If no Next.js build found, return error message with actual paths checked
+        actual_paths = [os.path.abspath(path) for path in index_paths]
+        return f'''
         <!DOCTYPE html>
         <html>
         <head><title>ProxMenux Monitor - Build Error</title></head>
@@ -44,7 +52,7 @@ def serve_dashboard():
             <h1>🚨 ProxMenux Monitor - Build Error</h1>
             <p>Next.js application not found. The AppImage may not have been built correctly.</p>
             <p>Expected paths checked:</p>
-            <ul>''' + ''.join([f'<li>{path}</li>' for path in index_paths]) + '''</ul>
+            <ul>{''.join([f'<li>{path}</li>' for path in actual_paths])}</ul>
             <p>API endpoints are still available:</p>
             <ul>
                 <li><a href="/api/system" style="color: #4f46e5;">/api/system</a></li>
@@ -128,10 +136,13 @@ def serve_sw():
 def serve_next_static(filename):
     """Serve Next.js static files"""
     try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        appimage_root = os.path.dirname(base_dir)
+        
         static_paths = [
-            os.path.join(os.path.dirname(__file__), '..', 'web', '_next'),  # Exportación estática
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'out', '_next'),  # Fallback
-            os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'static')
+            os.path.join(appimage_root, 'web', '_next'),  # Ruta principal
+            os.path.join(appimage_root, 'web', 'out', '_next'),  # Fallback
+            os.path.join(base_dir, '..', 'web', '_next'),  # Ruta relativa
         ]
         
         for static_dir in static_paths:
@@ -147,12 +158,14 @@ def serve_next_static(filename):
 def serve_static_files(filename):
     """Serve static files (icons, etc.)"""
     try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        appimage_root = os.path.dirname(base_dir)
+        
         public_paths = [
-            os.path.join(os.path.dirname(__file__), '..', 'web'),  # Raíz web para exportación estática
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'out'),  # Fallback
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'public'),
-            os.path.join(os.path.dirname(__file__), '..', 'public'),
-            os.path.join(os.path.dirname(__file__), '..', 'web', '.next', 'static')
+            os.path.join(appimage_root, 'web'),  # Raíz web para exportación estática
+            os.path.join(appimage_root, 'web', 'out'),  # Fallback
+            os.path.join(base_dir, '..', 'web'),  # Ruta relativa
+            os.path.join(base_dir, '..', 'web', 'out'),  # Fallback relativo
         ]
         
         for public_dir in public_paths:
