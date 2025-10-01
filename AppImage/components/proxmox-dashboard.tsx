@@ -46,12 +46,13 @@ export function ProxmoxDashboard() {
   const fetchSystemData = useCallback(async () => {
     console.log("[v0] Fetching system data from Flask server...")
     console.log("[v0] Current window location:", window.location.href)
+    console.log("[v0] Window host:", window.location.host)
+    console.log("[v0] Window hostname:", window.location.hostname)
+    console.log("[v0] Window port:", window.location.port)
 
-    // Usar ruta relativa si estamos en el mismo servidor, sino usar localhost:8008
-    const apiUrl =
-      window.location.hostname === "localhost" && window.location.port === "8008"
-        ? "/api/system" // Ruta relativa cuando estamos en el servidor Flask
-        : "http://localhost:8008/api/system" // URL completa para desarrollo
+    // Esto permite que los clientes se conecten usando la IP del servidor (ej: 192.168.0.52:8008)
+    // en lugar de localhost
+    const apiUrl = `/api/system` // Siempre usar ruta relativa
 
     console.log("[v0] API URL:", apiUrl)
 
@@ -152,12 +153,12 @@ export function ProxmoxDashboard() {
               <p>
                 • Try accessing:{" "}
                 <a
-                  href="http://localhost:8008/api/health"
+                  href={`http://${typeof window !== "undefined" ? window.location.host : "localhost:8008"}/api/health`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline"
                 >
-                  http://localhost:8008/api/health
+                  http://{typeof window !== "undefined" ? window.location.host : "localhost:8008"}/api/health
                 </a>
               </p>
             </div>
@@ -170,7 +171,7 @@ export function ProxmoxDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 relative flex items-center justify-center bg-primary/10 rounded-lg overflow-hidden">
+                <div className="w-10 h-10 relative flex items-center justify-center bg-primary/10 overflow-hidden">
                   <Image
                     src="/images/proxmenux-logo.png"
                     alt="ProxMenux Logo"

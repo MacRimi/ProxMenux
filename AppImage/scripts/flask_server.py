@@ -289,27 +289,10 @@ def get_system_info():
         }
     except Exception as e:
         print(f"Critical error getting system info: {e}")
-        try:
-            # Try to get at least basic info
-            memory = psutil.virtual_memory()
-            return {
-                'cpu_usage': 0,
-                'memory_usage': round(memory.percent, 1),
-                'memory_total': round(memory.total / (1024**3), 1),
-                'memory_used': round(memory.used / (1024**3), 1),
-                'temperature': 0,
-                'uptime': 'unknown',
-                'load_average': [0, 0, 0],
-                'hostname': socket.gethostname(),
-                'node_id': 'unknown',
-                'timestamp': datetime.now().isoformat(),
-                'error': 'Partial system information only'
-            }
-        except:
-            return {
-                'error': 'Unable to access system information',
-                'timestamp': datetime.now().isoformat()
-            }
+        return {
+            'error': f'Unable to access system information: {str(e)}',
+            'timestamp': datetime.now().isoformat()
+        }
 
 def get_storage_info():
     """Get storage and disk information"""
@@ -333,7 +316,7 @@ def get_storage_info():
             try:
                 partition_usage = psutil.disk_usage(partition.mountpoint)
                 
-                disk_temp = 42  # Default fallback
+                disk_temp = 0
                 try:
                     # Try to get disk temperature from sensors
                     if hasattr(psutil, "sensors_temperatures"):
@@ -355,7 +338,7 @@ def get_storage_info():
                     'used': round(partition_usage.used / (1024**3), 1),
                     'available': round(partition_usage.free / (1024**3), 1),
                     'usage_percent': round((partition_usage.used / partition_usage.total) * 100, 1),
-                    'health': 'healthy',  # Would need SMART data for real health
+                    'health': 'unknown',  # Would need SMART data for real health
                     'temperature': disk_temp
                 }
                 storage_data['disks'].append(disk_info)
@@ -367,59 +350,25 @@ def get_storage_info():
                 continue
         
         if not storage_data['disks'] and storage_data['total'] == 0:
-            print("Warning: No storage data available, using fallback values")
             return {
-                'total': 24.5,
-                'used': 4.8,
-                'available': 18.4,
-                'disks': [
-                    {
-                        'name': '/dev/mapper/pve-root',
-                        'mountpoint': '/',
-                        'fstype': 'ext4',
-                        'total': 24.5,
-                        'used': 4.8,
-                        'available': 18.4,
-                        'usage_percent': 19.8,
-                        'health': 'healthy',
-                        'temperature': 42
-                    }
-                ]
+                'error': 'No storage data available - unable to access disk information',
+                'total': 0,
+                'used': 0,
+                'available': 0,
+                'disks': []
             }
         
         return storage_data
         
     except Exception as e:
         print(f"Error getting storage info: {e}")
-        try:
-            disk_usage = psutil.disk_usage('/')
-            return {
-                'total': round(disk_usage.total / (1024**3), 1),
-                'used': round(disk_usage.used / (1024**3), 1),
-                'available': round(disk_usage.free / (1024**3), 1),
-                'disks': [
-                    {
-                        'name': 'root',
-                        'mountpoint': '/',
-                        'fstype': 'unknown',
-                        'total': round(disk_usage.total / (1024**3), 1),
-                        'used': round(disk_usage.used / (1024**3), 1),
-                        'available': round(disk_usage.free / (1024**3), 1),
-                        'usage_percent': round((disk_usage.used / disk_usage.total) * 100, 1),
-                        'health': 'unknown',
-                        'temperature': 0
-                    }
-                ]
-            }
-        except:
-            print("Critical: Cannot access any storage information, using mock data")
-            return {
-                'total': 0,
-                'used': 0,
-                'available': 0,
-                'disks': [],
-                'error': 'Unable to access storage information'
-            }
+        return {
+            'error': f'Unable to access storage information: {str(e)}',
+            'total': 0,
+            'used': 0,
+            'available': 0,
+            'disks': []
+        }
 
 def get_network_info():
     """Get network interface information"""
@@ -465,10 +414,9 @@ def get_network_info():
     except Exception as e:
         print(f"Error getting network info: {e}")
         return {
-            'interfaces': [
-                {'name': 'eth0', 'status': 'up', 'addresses': [{'ip': '192.168.1.100', 'netmask': '255.255.255.0'}]}
-            ],
-            'traffic': {'bytes_sent': 1000000, 'bytes_recv': 2000000}
+            'error': f'Unable to access network information: {str(e)}',
+            'interfaces': [],
+            'traffic': {'bytes_sent': 0, 'bytes_recv': 0, 'packets_sent': 0, 'packets_recv': 0}
         }
 
 def get_proxmox_vms():
@@ -482,23 +430,16 @@ def get_proxmox_vms():
             vms = json.loads(result.stdout)
             return vms
         else:
-            # Fallback to mock data if pvesh is not available
-            return [
-                {
-                    'vmid': 100,
-                    'name': 'web-server-01',
-                    'status': 'running',
-                    'cpu': 0.45,
-                    'mem': 8589934592,  # 8GB in bytes
-                    'maxmem': 17179869184,  # 16GB in bytes
-                    'disk': 53687091200,  # 50GB in bytes
-                    'maxdisk': 107374182400,  # 100GB in bytes
-                    'uptime': 1324800  # seconds
-                }
-            ]
+            return {
+                'error': 'pvesh command not available or failed - Proxmox API not accessible',
+                'vms': []
+            }
     except Exception as e:
         print(f"Error getting VM info: {e}")
-        return []
+        return {
+            'error': f'Unable to access VM information: {str(e)}',
+            'vms': []
+        }
 
 @app.route('/api/system', methods=['GET'])
 def api_system():
@@ -545,19 +486,16 @@ def api_logs():
                         continue
             return jsonify(logs)
         else:
-            # Fallback mock logs
-            return jsonify([
-                {
-                    'timestamp': datetime.now().isoformat(),
-                    'level': 'info',
-                    'service': 'pveproxy',
-                    'message': 'User root@pam authenticated successfully',
-                    'source': 'auth.log'
-                }
-            ])
+            return jsonify({
+                'error': 'journalctl not available or failed',
+                'logs': []
+            })
     except Exception as e:
         print(f"Error getting logs: {e}")
-        return jsonify([])
+        return jsonify({
+            'error': f'Unable to access system logs: {str(e)}',
+            'logs': []
+        })
 
 @app.route('/api/health', methods=['GET'])
 def api_health():
@@ -574,9 +512,9 @@ def api_system_info():
     try:
         hostname = socket.gethostname()
         node_id = f"pve-{hostname}"
+        pve_version = None
         
-        # Try to get Proxmox version and node info
-        pve_version = "PVE 8.1.3"
+        # Try to get Proxmox version
         try:
             result = subprocess.run(['pveversion'], capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
@@ -597,20 +535,25 @@ def api_system_info():
         except:
             pass
         
-        return jsonify({
+        response = {
             'hostname': hostname,
             'node_id': node_id,
-            'pve_version': pve_version,
             'status': 'online',
             'timestamp': datetime.now().isoformat()
-        })
+        }
+        
+        if pve_version:
+            response['pve_version'] = pve_version
+        else:
+            response['error'] = 'Proxmox version not available - pveversion command not found'
+        
+        return jsonify(response)
     except Exception as e:
         print(f"Error getting system info: {e}")
         return jsonify({
-            'hostname': 'proxmox-01',
-            'node_id': 'pve-node-01',
-            'pve_version': 'PVE 8.1.3',
-            'status': 'online',
+            'error': f'Unable to access system information: {str(e)}',
+            'hostname': socket.gethostname(),
+            'status': 'error',
             'timestamp': datetime.now().isoformat()
         })
 
@@ -632,15 +575,8 @@ def api_info():
     })
 
 if __name__ == '__main__':
-    print("🚀 Starting ProxMenux Flask Server on port 8008...")
-    print("📊 Dashboard: http://localhost:8008")
-    print("🔌 API endpoints:")
-    print("  http://localhost:8008/api/system")
-    print("  http://localhost:8008/api/system-info")
-    print("  http://localhost:8008/api/storage")
-    print("  http://localhost:8008/api/network")
-    print("  http://localhost:8008/api/vms")
-    print("  http://localhost:8008/api/logs")
-    print("  http://localhost:8008/api/health")
+    print("Starting ProxMenux Flask Server on port 8008...")
+    print("Server will be accessible on all network interfaces (0.0.0.0:8008)")
+    print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
