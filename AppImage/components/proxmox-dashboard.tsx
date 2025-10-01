@@ -46,18 +46,18 @@ export function ProxmoxDashboard() {
   const fetchSystemData = useCallback(async () => {
     console.log("[v0] Fetching system data from Flask server...")
     console.log("[v0] Current window location:", window.location.href)
-    console.log("[v0] Window host:", window.location.host)
-    console.log("[v0] Window hostname:", window.location.hostname)
-    console.log("[v0] Window port:", window.location.port)
 
-    // Esto permite que los clientes se conecten usando la IP del servidor (ej: 192.168.0.52:8008)
-    // en lugar de localhost
-    const apiUrl = `/api/system` // Siempre usar ruta relativa
+    const apiUrl = "/api/system"
 
     console.log("[v0] API URL:", apiUrl)
 
     try {
-      const response = await fetch(apiUrl)
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
       console.log("[v0] Response status:", response.status)
 
       if (!response.ok) {
@@ -169,44 +169,42 @@ export function ProxmoxDashboard() {
       <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 relative flex items-center justify-center bg-primary/10 overflow-hidden">
-                  <Image
-                    src="/images/proxmenux-logo.png"
-                    alt="ProxMenux Logo"
-                    width={40}
-                    height={40}
-                    className="object-contain"
-                    priority
-                    onError={(e) => {
-                      console.log("[v0] Logo failed to load, using fallback icon")
-                      const target = e.target as HTMLImageElement
-                      target.style.display = "none"
-                      const fallback = target.parentElement?.querySelector(".fallback-icon")
-                      if (fallback) {
-                        fallback.classList.remove("hidden")
-                      }
-                    }}
-                  />
-                  <Server className="h-6 w-6 text-primary absolute fallback-icon hidden" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-foreground">ProxMenux Monitor</h1>
-                  <p className="text-sm text-muted-foreground">Proxmox System Dashboard</p>
-                </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 relative flex items-center justify-center bg-primary/10 overflow-hidden">
+                <Image
+                  src="/images/proxmenux-logo.png"
+                  alt="ProxMenux Logo"
+                  width={40}
+                  height={40}
+                  className="object-contain"
+                  priority
+                  onError={(e) => {
+                    console.log("[v0] Logo failed to load, using fallback icon")
+                    const target = e.target as HTMLImageElement
+                    target.style.display = "none"
+                    const fallback = target.parentElement?.querySelector(".fallback-icon")
+                    if (fallback) {
+                      fallback.classList.remove("hidden")
+                    }
+                  }}
+                />
+                <Server className="h-6 w-6 text-primary absolute fallback-icon hidden" />
               </div>
-              <div className="hidden md:flex items-center ml-6">
-                <div className="server-info flex items-center space-x-2">
-                  <Server className="h-4 w-4 text-muted-foreground" />
-                  <div className="text-sm">
-                    <div className="font-medium text-foreground">{systemStatus.nodeId}</div>
-                  </div>
-                </div>
+              <div>
+                <h1 className="text-xl font-semibold text-foreground">ProxMenux Monitor</h1>
+                <p className="text-sm text-muted-foreground">Proxmox System Dashboard</p>
               </div>
             </div>
 
             <div className="flex items-center space-x-4">
+              <div className="hidden md:flex items-center space-x-2">
+                <Server className="h-4 w-4 text-muted-foreground" />
+                <div className="text-sm">
+                  <div className="font-medium text-foreground">{systemStatus.serverName}</div>
+                  <div className="text-xs text-muted-foreground">{systemStatus.nodeId}</div>
+                </div>
+              </div>
+
               <Badge variant="outline" className={statusColor}>
                 {statusIcon}
                 <span className="ml-1 capitalize">{systemStatus.status}</span>

@@ -50,7 +50,6 @@ const fetchSystemData = async (): Promise<SystemData | null> => {
       headers: {
         "Content-Type": "application/json",
       },
-      signal: AbortSignal.timeout(5000),
     })
 
     if (!response.ok) {
@@ -88,7 +87,6 @@ const fetchVMData = async (): Promise<VMData[]> => {
       headers: {
         "Content-Type": "application/json",
       },
-      signal: AbortSignal.timeout(5000),
     })
 
     if (!response.ok) {
