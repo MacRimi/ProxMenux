@@ -45,14 +45,24 @@ const MAX_HISTORICAL_POINTS = 24 // Store 24 data points for 24h view
 const fetchSystemData = async (): Promise<SystemData | null> => {
   try {
     console.log("[v0] Fetching system data from Flask server...")
-    const response = await fetch("/api/system", {
+
+    const apiUrl = "/api/system"
+    console.log("[v0] Fetching from URL:", apiUrl)
+
+    const response = await fetch(apiUrl, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
+      cache: "no-store",
     })
 
+    console.log("[v0] Response status:", response.status)
+    console.log("[v0] Response ok:", response.ok)
+
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error("[v0] Flask server error response:", errorText)
       throw new Error(`Flask server responded with status: ${response.status}`)
     }
 
@@ -75,6 +85,8 @@ const fetchSystemData = async (): Promise<SystemData | null> => {
     return data
   } catch (error) {
     console.error("[v0] Failed to fetch system data from Flask server:", error)
+    console.error("[v0] Error type:", error instanceof Error ? error.constructor.name : typeof error)
+    console.error("[v0] Error message:", error instanceof Error ? error.message : String(error))
     return null
   }
 }
@@ -82,14 +94,23 @@ const fetchSystemData = async (): Promise<SystemData | null> => {
 const fetchVMData = async (): Promise<VMData[]> => {
   try {
     console.log("[v0] Fetching VM data from Flask server...")
-    const response = await fetch("/api/vms", {
+
+    const apiUrl = "/api/vms"
+    console.log("[v0] Fetching from URL:", apiUrl)
+
+    const response = await fetch(apiUrl, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
+      cache: "no-store",
     })
 
+    console.log("[v0] VM Response status:", response.status)
+
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error("[v0] Flask server error response:", errorText)
       throw new Error(`Flask server responded with status: ${response.status}`)
     }
 
@@ -98,6 +119,8 @@ const fetchVMData = async (): Promise<VMData[]> => {
     return Array.isArray(data) ? data : data.vms || []
   } catch (error) {
     console.error("[v0] Failed to fetch VM data from Flask server:", error)
+    console.error("[v0] Error type:", error instanceof Error ? error.constructor.name : typeof error)
+    console.error("[v0] Error message:", error instanceof Error ? error.message : String(error))
     return []
   }
 }
