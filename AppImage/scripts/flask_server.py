@@ -191,17 +191,31 @@ def serve_static_files(filename):
 def serve_images(filename):
     """Serve image files"""
     try:
+        appimage_root = os.environ.get('APPDIR')
+        if not appimage_root:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            appimage_root = os.path.dirname(base_dir)
+        
         image_paths = [
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'public', 'images'),
-            os.path.join(os.path.dirname(__file__), '..', 'public', 'images'),
-            os.path.dirname(__file__)
+            os.path.join(appimage_root, 'web', 'images'),  # Ruta principal para exportación estática
+            os.path.join(appimage_root, 'usr', 'web', 'images'),  # Fallback con usr/
+            os.path.join(appimage_root, 'web', 'public', 'images'),  # Ruta con public/
+            os.path.join(appimage_root, 'usr', 'web', 'public', 'images'),  # Fallback usr/public/
+            os.path.join(appimage_root, 'public', 'images'),  # Ruta directa a public
+            os.path.join(appimage_root, 'usr', 'public', 'images'),  # Fallback usr/public
         ]
         
+        print(f"[v0] Looking for image: {filename}")
         for image_dir in image_paths:
             file_path = os.path.join(image_dir, filename)
-            if os.path.exists(file_path):
+            abs_path = os.path.abspath(file_path)
+            exists = os.path.exists(abs_path)
+            print(f"[v0]   Checking: {abs_path} - {'FOUND' if exists else 'NOT FOUND'}")
+            if exists:
+                print(f"[v0] Serving image from: {abs_path}")
                 return send_from_directory(image_dir, filename)
-                
+        
+        print(f"[v0] Image not found: {filename}")
         return '', 404
     except Exception as e:
         print(f"Error serving image {filename}: {e}")

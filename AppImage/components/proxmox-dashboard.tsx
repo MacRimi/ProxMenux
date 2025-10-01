@@ -45,11 +45,24 @@ export function ProxmoxDashboard() {
 
   const fetchSystemData = useCallback(async () => {
     console.log("[v0] Fetching system data from Flask server...")
+    console.log("[v0] Current window location:", window.location.href)
+
+    // Usar ruta relativa si estamos en el mismo servidor, sino usar localhost:8008
+    const apiUrl =
+      window.location.hostname === "localhost" && window.location.port === "8008"
+        ? "/api/system" // Ruta relativa cuando estamos en el servidor Flask
+        : "http://localhost:8008/api/system" // URL completa para desarrollo
+
+    console.log("[v0] API URL:", apiUrl)
+
     try {
-      const response = await fetch("http://localhost:8008/api/system")
+      const response = await fetch(apiUrl)
+      console.log("[v0] Response status:", response.status)
+
       if (!response.ok) {
-        throw new Error("Server not responding")
+        throw new Error(`Server responded with status: ${response.status}`)
       }
+
       const data: FlaskSystemData = await response.json()
       console.log("[v0] System data received:", data)
 
@@ -70,6 +83,12 @@ export function ProxmoxDashboard() {
       setIsServerConnected(true)
     } catch (error) {
       console.error("[v0] Failed to fetch system data from Flask server:", error)
+      console.error("[v0] Error details:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        apiUrl,
+        windowLocation: window.location.href,
+      })
+
       setIsServerConnected(false)
       setSystemStatus((prev) => ({
         ...prev,
@@ -122,14 +141,25 @@ export function ProxmoxDashboard() {
     <div className="min-h-screen bg-background">
       {!isServerConnected && (
         <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3">
-          <div className="container mx-auto flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-red-500">
+          <div className="container mx-auto">
+            <div className="flex items-center space-x-2 text-red-500 mb-2">
               <XCircle className="h-5 w-5" />
-              <span className="font-medium">Flask Server Offline</span>
-              <span className="text-sm text-red-500/80">
-                • Start the server:{" "}
-                <code className="bg-red-500/10 px-2 py-1 rounded">python3 AppImage/scripts/flask_server.py</code>
-              </span>
+              <span className="font-medium">Flask Server Connection Failed</span>
+            </div>
+            <div className="text-sm text-red-500/80 space-y-1 ml-7">
+              <p>• Check that the AppImage is running correctly</p>
+              <p>• The Flask server should start automatically on port 8008</p>
+              <p>
+                • Try accessing:{" "}
+                <a
+                  href="http://localhost:8008/api/health"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  http://localhost:8008/api/health
+                </a>
+              </p>
             </div>
           </div>
         </div>
@@ -140,7 +170,7 @@ export function ProxmoxDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 relative flex items-center justify-center bg-primary/10 rounded-lg">
+                <div className="w-10 h-10 relative flex items-center justify-center bg-primary/10 rounded-lg overflow-hidden">
                   <Image
                     src="/images/proxmenux-logo.png"
                     alt="ProxMenux Logo"
@@ -149,9 +179,13 @@ export function ProxmoxDashboard() {
                     className="object-contain"
                     priority
                     onError={(e) => {
+                      console.log("[v0] Logo failed to load, using fallback icon")
                       const target = e.target as HTMLImageElement
                       target.style.display = "none"
-                      document.querySelector(".fallback-icon")?.classList.remove("hidden")
+                      const fallback = target.parentElement?.querySelector(".fallback-icon")
+                      if (fallback) {
+                        fallback.classList.remove("hidden")
+                      }
                     }}
                   />
                   <Server className="h-6 w-6 text-primary absolute fallback-icon hidden" />
