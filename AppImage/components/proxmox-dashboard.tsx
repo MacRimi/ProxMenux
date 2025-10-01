@@ -44,14 +44,15 @@ export function ProxmoxDashboard() {
   const [componentKey, setComponentKey] = useState(0)
 
   const fetchSystemData = useCallback(async () => {
+    console.log("[v0] Fetching system data from Flask server...")
     try {
       const response = await fetch("http://localhost:8008/api/system")
       if (!response.ok) {
         throw new Error("Server not responding")
       }
       const data: FlaskSystemData = await response.json()
+      console.log("[v0] System data received:", data)
 
-      // Determine health status based on system metrics
       let status: "healthy" | "warning" | "critical" = "healthy"
       if (data.cpu_usage > 90 || data.memory_usage > 90) {
         status = "critical"
@@ -68,11 +69,12 @@ export function ProxmoxDashboard() {
       })
       setIsServerConnected(true)
     } catch (error) {
-      console.error("Error fetching system data:", error)
+      console.error("[v0] Failed to fetch system data from Flask server:", error)
       setIsServerConnected(false)
       setSystemStatus((prev) => ({
         ...prev,
         status: "critical",
+        serverName: "Server Offline",
         nodeId: "Server Offline",
         uptime: "N/A",
         lastUpdate: new Date().toLocaleTimeString(),
@@ -118,12 +120,27 @@ export function ProxmoxDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      {!isServerConnected && (
+        <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3">
+          <div className="container mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-red-500">
+              <XCircle className="h-5 w-5" />
+              <span className="font-medium">Flask Server Offline</span>
+              <span className="text-sm text-red-500/80">
+                • Start the server:{" "}
+                <code className="bg-red-500/10 px-2 py-1 rounded">python3 AppImage/scripts/flask_server.py</code>
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 relative">
+                <div className="w-10 h-10 relative flex items-center justify-center bg-primary/10 rounded-lg">
                   <Image
                     src="/images/proxmenux-logo.png"
                     alt="ProxMenux Logo"
@@ -131,7 +148,13 @@ export function ProxmoxDashboard() {
                     height={40}
                     className="object-contain"
                     priority
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.style.display = "none"
+                      document.querySelector(".fallback-icon")?.classList.remove("hidden")
+                    }}
                   />
+                  <Server className="h-6 w-6 text-primary absolute fallback-icon hidden" />
                 </div>
                 <div>
                   <h1 className="text-xl font-semibold text-foreground">ProxMenux Monitor</h1>
