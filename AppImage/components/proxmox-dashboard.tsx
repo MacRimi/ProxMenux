@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
@@ -21,27 +21,80 @@ interface SystemStatus {
   nodeId: string
 }
 
+interface FlaskSystemData {
+  hostname: string
+  node_id: string
+  uptime: string
+  cpu_usage: number
+  memory_usage: number
+  temperature: number
+  load_average: number[]
+}
+
 export function ProxmoxDashboard() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     status: "healthy",
-    uptime: "15d 7h 23m",
+    uptime: "Loading...",
     lastUpdate: new Date().toLocaleTimeString(),
-    serverName: "proxmox-01",
-    nodeId: "pve-node-01",
+    serverName: "Loading...",
+    nodeId: "Loading...",
   })
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isServerConnected, setIsServerConnected] = useState(true)
+  const [componentKey, setComponentKey] = useState(0)
+
+  const fetchSystemData = useCallback(async () => {
+    try {
+      const response = await fetch("http://localhost:8008/api/system")
+      if (!response.ok) {
+        throw new Error("Server not responding")
+      }
+      const data: FlaskSystemData = await response.json()
+
+      // Determine health status based on system metrics
+      let status: "healthy" | "warning" | "critical" = "healthy"
+      if (data.cpu_usage > 90 || data.memory_usage > 90) {
+        status = "critical"
+      } else if (data.cpu_usage > 75 || data.memory_usage > 75) {
+        status = "warning"
+      }
+
+      setSystemStatus({
+        status,
+        uptime: data.uptime,
+        lastUpdate: new Date().toLocaleTimeString(),
+        serverName: data.hostname,
+        nodeId: data.node_id,
+      })
+      setIsServerConnected(true)
+    } catch (error) {
+      console.error("Error fetching system data:", error)
+      setIsServerConnected(false)
+      setSystemStatus((prev) => ({
+        ...prev,
+        status: "critical",
+        nodeId: "Server Offline",
+        uptime: "N/A",
+        lastUpdate: new Date().toLocaleTimeString(),
+      }))
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchSystemData()
+    const interval = setInterval(fetchSystemData, 5000)
+    return () => clearInterval(interval)
+  }, [fetchSystemData])
 
   const refreshData = async () => {
     setIsRefreshing(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setSystemStatus((prev) => ({
-      ...prev,
-      lastUpdate: new Date().toLocaleTimeString(),
-    }))
+    await fetchSystemData()
+    setComponentKey((prev) => prev + 1)
+    await new Promise((resolve) => setTimeout(resolve, 500))
     setIsRefreshing(false)
   }
 
-  const getStatusIcon = () => {
+  const statusIcon = useMemo(() => {
     switch (systemStatus.status) {
       case "healthy":
         return <CheckCircle className="h-4 w-4 text-green-500" />
@@ -50,9 +103,9 @@ export function ProxmoxDashboard() {
       case "critical":
         return <XCircle className="h-4 w-4 text-red-500" />
     }
-  }
+  }, [systemStatus.status])
 
-  const getStatusColor = () => {
+  const statusColor = useMemo(() => {
     switch (systemStatus.status) {
       case "healthy":
         return "bg-green-500/10 text-green-500 border-green-500/20"
@@ -61,11 +114,11 @@ export function ProxmoxDashboard() {
       case "critical":
         return "bg-red-500/10 text-red-500 border-red-500/20"
     }
-  }
+  }, [systemStatus.status])
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-background sticky top-0 z-50">
+      <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -81,27 +134,27 @@ export function ProxmoxDashboard() {
                   />
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold">ProxMenux Monitor</h1>
-                  <p className="text-sm opacity-70">Proxmox System Dashboard</p>
+                  <h1 className="text-xl font-semibold text-foreground">ProxMenux Monitor</h1>
+                  <p className="text-sm text-muted-foreground">Proxmox System Dashboard</p>
                 </div>
               </div>
               <div className="hidden md:flex items-center ml-6">
                 <div className="server-info flex items-center space-x-2">
-                  <Server className="h-4 w-4 opacity-70" />
+                  <Server className="h-4 w-4 text-muted-foreground" />
                   <div className="text-sm">
-                    <div className="font-medium">{systemStatus.nodeId}</div>
+                    <div className="font-medium text-foreground">{systemStatus.nodeId}</div>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center space-x-4">
-              <Badge variant="outline" className={getStatusColor()}>
-                {getStatusIcon()}
+              <Badge variant="outline" className={statusColor}>
+                {statusIcon}
                 <span className="ml-1 capitalize">{systemStatus.status}</span>
               </Badge>
 
-              <div className="text-sm opacity-70">Uptime: {systemStatus.uptime}</div>
+              <div className="text-sm text-muted-foreground">Uptime: {systemStatus.uptime}</div>
 
               <Button
                 variant="outline"
@@ -156,23 +209,23 @@ export function ProxmoxDashboard() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <SystemOverview />
+            <SystemOverview key={`overview-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="storage" className="space-y-6">
-            <StorageMetrics />
+            <StorageMetrics key={`storage-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="network" className="space-y-6">
-            <NetworkMetrics />
+            <NetworkMetrics key={`network-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="vms" className="space-y-6">
-            <VirtualMachines />
+            <VirtualMachines key={`vms-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="logs" className="space-y-6">
-            <SystemLogs />
+            <SystemLogs key={`logs-${componentKey}`} />
           </TabsContent>
         </Tabs>
 
