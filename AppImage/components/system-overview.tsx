@@ -46,7 +46,8 @@ const fetchSystemData = async (): Promise<SystemData | null> => {
   try {
     console.log("[v0] Fetching system data from Flask server...")
 
-    const apiUrl = "/api/system"
+    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+    const apiUrl = `${baseUrl}/api/system`
     console.log("[v0] Fetching from URL:", apiUrl)
 
     const response = await fetch(apiUrl, {
@@ -95,7 +96,8 @@ const fetchVMData = async (): Promise<VMData[]> => {
   try {
     console.log("[v0] Fetching VM data from Flask server...")
 
-    const apiUrl = "/api/vms"
+    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+    const apiUrl = `${baseUrl}/api/vms`
     console.log("[v0] Fetching from URL:", apiUrl)
 
     const response = await fetch(apiUrl, {
