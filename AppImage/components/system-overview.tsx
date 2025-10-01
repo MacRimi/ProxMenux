@@ -60,6 +60,7 @@ const fetchSystemData = async (): Promise<SystemData | null> => {
 
     console.log("[v0] Response status:", response.status)
     console.log("[v0] Response ok:", response.ok)
+    console.log("[v0] Response headers:", Object.fromEntries(response.headers.entries()))
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -67,8 +68,21 @@ const fetchSystemData = async (): Promise<SystemData | null> => {
       throw new Error(`Flask server responded with status: ${response.status}`)
     }
 
-    const data = await response.json()
-    console.log("[v0] Successfully fetched real system data from Flask:", data)
+    const responseText = await response.text()
+    console.log("[v0] Raw response text:", responseText)
+    console.log("[v0] Response text length:", responseText.length)
+    console.log("[v0] First 100 chars:", responseText.substring(0, 100))
+
+    // Try to parse the JSON
+    let data
+    try {
+      data = JSON.parse(responseText)
+      console.log("[v0] Successfully parsed JSON:", data)
+    } catch (parseError) {
+      console.error("[v0] JSON parse error:", parseError)
+      console.error("[v0] Failed to parse response as JSON")
+      throw new Error("Invalid JSON response from server")
+    }
 
     // Store historical data
     historicalDataStore.push({
@@ -88,6 +102,7 @@ const fetchSystemData = async (): Promise<SystemData | null> => {
     console.error("[v0] Failed to fetch system data from Flask server:", error)
     console.error("[v0] Error type:", error instanceof Error ? error.constructor.name : typeof error)
     console.error("[v0] Error message:", error instanceof Error ? error.message : String(error))
+    console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
     return null
   }
 }
