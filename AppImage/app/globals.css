@@ -1,5 +1,5 @@
 @import "tailwindcss";
-/* Removed invalid @import "tw-animate-css" that was causing build errors */
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -75,6 +75,7 @@
 }
 
 @theme inline {
+  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -113,13 +114,11 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* Removed @layer base and applied styles directly for Tailwind CSS v4 compatibility */
-* {
-  border-color: var(--border);
-  outline-color: color-mix(in oklch, var(--ring) 50%, transparent);
-}
-
-body {
-  background-color: var(--background);
-  color: var(--foreground);
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
