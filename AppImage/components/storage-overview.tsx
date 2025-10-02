@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Thermometer } from "lucide-react"
+import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Thermometer, Info } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface DiskInfo {
   name: string
@@ -21,6 +22,9 @@ interface DiskInfo {
   used?: number
   available?: number
   usage_percent?: number
+  reallocated_sectors?: number
+  pending_sectors?: number
+  crc_errors?: number
 }
 
 interface ZFSPool {
@@ -37,12 +41,18 @@ interface StorageData {
   available: number
   disks: DiskInfo[]
   zfs_pools: ZFSPool[]
+  disk_count: number
+  healthy_disks: number
+  warning_disks: number
+  critical_disks: number
   error?: string
 }
 
 export function StorageOverview() {
   const [storageData, setStorageData] = useState<StorageData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [selectedDisk, setSelectedDisk] = useState<DiskInfo | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
   const fetchStorageData = async () => {
     try {
@@ -50,6 +60,7 @@ export function StorageOverview() {
         typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
       const response = await fetch(`${baseUrl}/api/storage`)
       const data = await response.json()
+      console.log("[v0] Storage data received:", data)
       setStorageData(data)
     } catch (error) {
       console.error("Error fetching storage data:", error)
@@ -60,7 +71,7 @@ export function StorageOverview() {
 
   useEffect(() => {
     fetchStorageData()
-    const interval = setInterval(fetchStorageData, 15000) // Update every 15 seconds
+    const interval = setInterval(fetchStorageData, 30000) // Update every 30 seconds
     return () => clearInterval(interval)
   }, [])
 
@@ -105,6 +116,21 @@ export function StorageOverview() {
     return "text-red-500"
   }
 
+  const formatHours = (hours: number) => {
+    if (hours === 0) return "N/A"
+    const years = Math.floor(hours / 8760)
+    const days = Math.floor((hours % 8760) / 24)
+    if (years > 0) {
+      return `${years}y ${days}d`
+    }
+    return `${days}d`
+  }
+
+  const handleDiskClick = (disk: DiskInfo) => {
+    setSelectedDisk(disk)
+    setDetailsOpen(true)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -121,17 +147,23 @@ export function StorageOverview() {
     )
   }
 
+  const avgTemp =
+    storageData.disks.length > 0
+      ? Math.round(storageData.disks.reduce((sum, disk) => sum + disk.temperature, 0) / storageData.disks.length)
+      : 0
+
   return (
     <div className="space-y-6">
       {/* Storage Summary */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Storage</CardTitle>
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{storageData.total} GB</div>
+            <div className="text-2xl font-bold">{storageData.total.toFixed(1)} TB</div>
+            <p className="text-xs text-muted-foreground mt-1">{storageData.disk_count} physical disks</p>
           </CardContent>
         </Card>
 
@@ -141,20 +173,40 @@ export function StorageOverview() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{storageData.used} GB</div>
+            <div className="text-2xl font-bold">{storageData.used.toFixed(1)} GB</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {storageData.total > 0 ? Math.round((storageData.used / storageData.total) * 100) : 0}% used
+              {storageData.total > 0 ? ((storageData.used / (storageData.total * 1024)) * 100).toFixed(1) : 0}% used
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Available Storage</CardTitle>
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Disk Health</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{storageData.available} GB</div>
+            <div className="text-2xl font-bold text-green-500">{storageData.healthy_disks}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {storageData.warning_disks > 0 && (
+                <span className="text-yellow-500">{storageData.warning_disks} warning </span>
+              )}
+              {storageData.critical_disks > 0 && (
+                <span className="text-red-500">{storageData.critical_disks} critical</span>
+              )}
+              {storageData.warning_disks === 0 && storageData.critical_disks === 0 && "All disks healthy"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Temperature</CardTitle>
+            <Thermometer className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${getTempColor(avgTemp)}`}>{avgTemp > 0 ? `${avgTemp}°C` : "N/A"}</div>
+            <p className="text-xs text-muted-foreground mt-1">Across all disks</p>
           </CardContent>
         </Card>
       </div>
@@ -211,7 +263,11 @@ export function StorageOverview() {
         <CardContent>
           <div className="space-y-4">
             {storageData.disks.map((disk) => (
-              <div key={disk.name} className="border rounded-lg p-4">
+              <div
+                key={disk.name}
+                className="border rounded-lg p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => handleDiskClick(disk)}
+              >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <HardDrive className="h-5 w-5 text-muted-foreground" />
@@ -232,6 +288,7 @@ export function StorageOverview() {
                       </div>
                     )}
                     {getHealthBadge(disk.health)}
+                    <Info className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </div>
 
@@ -248,10 +305,10 @@ export function StorageOverview() {
                       <p className="font-medium capitalize">{disk.smart_status}</p>
                     </div>
                   )}
-                  {disk.power_on_hours && disk.power_on_hours > 0 && (
+                  {disk.power_on_hours !== undefined && disk.power_on_hours > 0 && (
                     <div>
-                      <p className="text-muted-foreground">Power On Hours</p>
-                      <p className="font-medium">{disk.power_on_hours.toLocaleString()}h</p>
+                      <p className="text-muted-foreground">Power On Time</p>
+                      <p className="font-medium">{formatHours(disk.power_on_hours)}</p>
                     </div>
                   )}
                   {disk.serial && disk.serial !== "Unknown" && (
@@ -290,6 +347,129 @@ export function StorageOverview() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Disk Details Dialog */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HardDrive className="h-5 w-5" />
+              Disk Details: /dev/{selectedDisk?.name}
+            </DialogTitle>
+            <DialogDescription>Complete SMART information and health status</DialogDescription>
+          </DialogHeader>
+          {selectedDisk && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Model</p>
+                  <p className="font-medium">{selectedDisk.model}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Serial Number</p>
+                  <p className="font-medium">{selectedDisk.serial}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Capacity</p>
+                  <p className="font-medium">{selectedDisk.size}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Health Status</p>
+                  <div className="mt-1">{getHealthBadge(selectedDisk.health)}</div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-3">SMART Attributes</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Temperature</p>
+                    <p className={`font-medium ${getTempColor(selectedDisk.temperature)}`}>
+                      {selectedDisk.temperature > 0 ? `${selectedDisk.temperature}°C` : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Power On Hours</p>
+                    <p className="font-medium">
+                      {selectedDisk.power_on_hours && selectedDisk.power_on_hours > 0
+                        ? `${selectedDisk.power_on_hours.toLocaleString()}h (${formatHours(selectedDisk.power_on_hours)})`
+                        : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">SMART Status</p>
+                    <p className="font-medium capitalize">{selectedDisk.smart_status}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Reallocated Sectors</p>
+                    <p
+                      className={`font-medium ${selectedDisk.reallocated_sectors && selectedDisk.reallocated_sectors > 0 ? "text-yellow-500" : ""}`}
+                    >
+                      {selectedDisk.reallocated_sectors ?? 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pending Sectors</p>
+                    <p
+                      className={`font-medium ${selectedDisk.pending_sectors && selectedDisk.pending_sectors > 0 ? "text-yellow-500" : ""}`}
+                    >
+                      {selectedDisk.pending_sectors ?? 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">CRC Errors</p>
+                    <p
+                      className={`font-medium ${selectedDisk.crc_errors && selectedDisk.crc_errors > 0 ? "text-yellow-500" : ""}`}
+                    >
+                      {selectedDisk.crc_errors ?? 0}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedDisk.mountpoint && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Mount Information</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Mount Point:</span>
+                      <span className="font-medium">{selectedDisk.mountpoint}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Filesystem:</span>
+                      <span className="font-medium">{selectedDisk.fstype}</span>
+                    </div>
+                    {selectedDisk.total && (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Total:</span>
+                          <span className="font-medium">{selectedDisk.total} GB</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Used:</span>
+                          <span className="font-medium">{selectedDisk.used} GB</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Available:</span>
+                          <span className="font-medium">{selectedDisk.available} GB</span>
+                        </div>
+                        {selectedDisk.usage_percent !== undefined && (
+                          <div className="mt-2">
+                            <Progress value={selectedDisk.usage_percent} className="h-2" />
+                            <p className="text-xs text-muted-foreground text-center mt-1">
+                              {selectedDisk.usage_percent}% used
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

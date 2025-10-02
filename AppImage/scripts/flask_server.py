@@ -343,45 +343,70 @@ def get_storage_info():
             'used': 0,
             'available': 0,
             'disks': [],
-            'zfs_pools': []
+            'zfs_pools': [],
+            'disk_count': 0,
+            'healthy_disks': 0,
+            'warning_disks': 0,
+            'critical_disks': 0
         }
         
-        # Get disk usage for root partition
-        disk_usage = psutil.disk_usage('/')
-        storage_data['total'] = round(disk_usage.total / (1024**3), 1)  # GB
-        storage_data['used'] = round(disk_usage.used / (1024**3), 1)    # GB
-        storage_data['available'] = round(disk_usage.free / (1024**3), 1)  # GB
-        
         physical_disks = {}
+        total_disk_size_bytes = 0
+        
         try:
             # List all block devices
-            result = subprocess.run(['lsblk', '-d', '-n', '-o', 'NAME,SIZE,TYPE'], 
+            result = subprocess.run(['lsblk', '-b', '-d', '-n', '-o', 'NAME,SIZE,TYPE'], 
                                   capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
                 for line in result.stdout.strip().split('\n'):
                     parts = line.split()
                     if len(parts) >= 3 and parts[2] == 'disk':
                         disk_name = parts[0]
-                        disk_size = parts[1]
+                        disk_size_bytes = int(parts[1])
+                        disk_size_gb = round(disk_size_bytes / (1024**3), 1)
+                        
+                        total_disk_size_bytes += disk_size_bytes
                         
                         # Get SMART data for this disk
+                        print(f"[v0] Getting SMART data for {disk_name}...")
                         smart_data = get_smart_data(disk_name)
+                        print(f"[v0] SMART data for {disk_name}: {smart_data}")
                         
                         physical_disks[disk_name] = {
                             'name': disk_name,
-                            'size': disk_size,
+                            'size': f"{disk_size_gb}T" if disk_size_gb >= 1000 else f"{disk_size_gb}G",
+                            'size_bytes': disk_size_bytes,
                             'temperature': smart_data.get('temperature', 0),
                             'health': smart_data.get('health', 'unknown'),
                             'power_on_hours': smart_data.get('power_on_hours', 0),
                             'smart_status': smart_data.get('smart_status', 'unknown'),
                             'model': smart_data.get('model', 'Unknown'),
-                            'serial': smart_data.get('serial', 'Unknown')
+                            'serial': smart_data.get('serial', 'Unknown'),
+                            'reallocated_sectors': smart_data.get('reallocated_sectors', 0),
+                            'pending_sectors': smart_data.get('pending_sectors', 0),
+                            'crc_errors': smart_data.get('crc_errors', 0)
                         }
+                        
+                        storage_data['disk_count'] += 1
+                        health = smart_data.get('health', 'unknown').lower()
+                        if health == 'healthy':
+                            storage_data['healthy_disks'] += 1
+                        elif health == 'warning':
+                            storage_data['warning_disks'] += 1
+                        elif health in ['critical', 'failed']:
+                            storage_data['critical_disks'] += 1
+                            
         except Exception as e:
             print(f"Error getting disk list: {e}")
         
+        storage_data['total'] = round(total_disk_size_bytes / (1024**3), 1)
+        
+        # Get disk usage for mounted partitions
         try:
             disk_partitions = psutil.disk_partitions()
+            total_used = 0
+            total_available = 0
+            
             for partition in disk_partitions:
                 try:
                     # Skip special filesystems
@@ -389,37 +414,38 @@ def get_storage_info():
                         continue
                     
                     partition_usage = psutil.disk_usage(partition.mountpoint)
+                    total_used += partition_usage.used
+                    total_available += partition_usage.free
                     
-                    # Extract disk name from partition device (e.g., /dev/sda1 -> sda)
+                    # Extract disk name from partition device
                     device_name = partition.device.replace('/dev/', '')
-                    # Remove partition number (sda1 -> sda, nvme0n1p1 -> nvme0n1)
                     if device_name[-1].isdigit():
                         if 'nvme' in device_name or 'mmcblk' in device_name:
-                            # For nvme and mmc devices: nvme0n1p1 -> nvme0n1
                             base_disk = device_name.rsplit('p', 1)[0]
                         else:
-                            # For regular devices: sda1 -> sda
                             base_disk = device_name.rstrip('0123456789')
                     else:
                         base_disk = device_name
                     
                     # Find corresponding physical disk
                     disk_info = physical_disks.get(base_disk)
-                    if disk_info:
-                        # Add mount information to the physical disk
-                        if 'mountpoint' not in disk_info:
-                            disk_info['mountpoint'] = partition.mountpoint
-                            disk_info['fstype'] = partition.fstype
-                            disk_info['total'] = round(partition_usage.total / (1024**3), 1)
-                            disk_info['used'] = round(partition_usage.used / (1024**3), 1)
-                            disk_info['available'] = round(partition_usage.free / (1024**3), 1)
-                            disk_info['usage_percent'] = round(partition_usage.percent, 1)
+                    if disk_info and 'mountpoint' not in disk_info:
+                        disk_info['mountpoint'] = partition.mountpoint
+                        disk_info['fstype'] = partition.fstype
+                        disk_info['total'] = round(partition_usage.total / (1024**3), 1)
+                        disk_info['used'] = round(partition_usage.used / (1024**3), 1)
+                        disk_info['available'] = round(partition_usage.free / (1024**3), 1)
+                        disk_info['usage_percent'] = round(partition_usage.percent, 1)
                         
                 except PermissionError:
                     continue
                 except Exception as e:
                     print(f"Error accessing partition {partition.device}: {e}")
                     continue
+            
+            storage_data['used'] = round(total_used / (1024**3), 1)
+            storage_data['available'] = round(total_available / (1024**3), 1)
+            
         except Exception as e:
             print(f"Error getting partition info: {e}")
         
@@ -441,6 +467,8 @@ def get_storage_info():
                                 'health': parts[4]
                             }
                             storage_data['zfs_pools'].append(pool_info)
+        except FileNotFoundError:
+            print("Note: ZFS not installed")
         except Exception as e:
             print(f"Note: ZFS not available or no pools: {e}")
         
@@ -454,7 +482,11 @@ def get_storage_info():
             'used': 0,
             'available': 0,
             'disks': [],
-            'zfs_pools': []
+            'zfs_pools': [],
+            'disk_count': 0,
+            'healthy_disks': 0,
+            'warning_disks': 0,
+            'critical_disks': 0
         }
 
 def get_smart_data(disk_name):
@@ -465,15 +497,18 @@ def get_smart_data(disk_name):
         'power_on_hours': 0,
         'smart_status': 'unknown',
         'model': 'Unknown',
-        'serial': 'Unknown'
+        'serial': 'Unknown',
+        'reallocated_sectors': 0,
+        'pending_sectors': 0,
+        'crc_errors': 0
     }
     
     try:
-        # Try to get SMART data using smartctl with JSON output for better parsing
         result = subprocess.run(['smartctl', '-a', '-j', f'/dev/{disk_name}'], 
                               capture_output=True, text=True, timeout=10)
         
-        if result.returncode in [0, 4]:  # 0 = success, 4 = some SMART values exceeded threshold
+        # smartctl returns 0 for success, 4 if some SMART values exceeded threshold (still valid)
+        if result.returncode in [0, 4]:
             try:
                 # Try JSON parsing first (newer smartctl versions)
                 data = json.loads(result.stdout)
@@ -496,13 +531,19 @@ def get_smart_data(disk_name):
                 if 'temperature' in data and 'current' in data['temperature']:
                     smart_data['temperature'] = data['temperature']['current']
                 
-                # Get power on hours from SMART attributes
                 if 'ata_smart_attributes' in data and 'table' in data['ata_smart_attributes']:
                     for attr in data['ata_smart_attributes']['table']:
-                        if attr['id'] == 9:  # Power_On_Hours
+                        attr_id = attr.get('id')
+                        if attr_id == 9:  # Power_On_Hours
                             smart_data['power_on_hours'] = attr['raw']['value']
-                        elif attr['id'] == 194 and smart_data['temperature'] == 0:  # Temperature_Celsius
+                        elif attr_id == 194 and smart_data['temperature'] == 0:  # Temperature_Celsius
                             smart_data['temperature'] = attr['raw']['value']
+                        elif attr_id == 5:  # Reallocated_Sector_Ct
+                            smart_data['reallocated_sectors'] = attr['raw']['value']
+                        elif attr_id == 197:  # Current_Pending_Sector
+                            smart_data['pending_sectors'] = attr['raw']['value']
+                        elif attr_id == 199:  # UDMA_CRC_Error_Count
+                            smart_data['crc_errors'] = attr['raw']['value']
                 
                 # For NVMe drives
                 if 'nvme_smart_health_information_log' in data:
@@ -513,7 +554,6 @@ def get_smart_data(disk_name):
                         smart_data['power_on_hours'] = nvme_data['power_on_hours']
                 
             except json.JSONDecodeError:
-                # Fallback to text parsing if JSON not available
                 output = result.stdout
                 
                 # Parse SMART status
@@ -538,7 +578,6 @@ def get_smart_data(disk_name):
                     elif line.startswith('Model Family:') and smart_data['model'] == 'Unknown':
                         smart_data['model'] = line.split(':', 1)[1].strip()
                 
-                # Parse SMART attributes table
                 in_attributes = False
                 for line in output.split('\n'):
                     line = line.strip()
@@ -547,48 +586,63 @@ def get_smart_data(disk_name):
                         in_attributes = True
                         continue
                     
-                    if in_attributes and line:
+                    if in_attributes and line and not line.startswith('SMART'):
                         parts = line.split()
                         if len(parts) >= 10:
-                            attr_id = parts[0]
-                            attr_name = parts[1]
-                            raw_value = parts[9]
-                            
-                            # Power On Hours (attribute 9)
-                            if attr_id == '9' and 'Power_On_Hours' in attr_name:
-                                try:
+                            try:
+                                attr_id = parts[0]
+                                attr_name = parts[1]
+                                raw_value = parts[9]
+                                
+                                # Power On Hours (attribute 9)
+                                if attr_id == '9':
                                     smart_data['power_on_hours'] = int(raw_value)
-                                except ValueError:
-                                    pass
-                            
-                            # Temperature (attribute 194)
-                            elif attr_id == '194' and 'Temperature' in attr_name:
-                                try:
-                                    # Raw value might be like "32 (Min/Max 18/45)"
-                                    temp_str = raw_value.split()[0]
+                                
+                                # Temperature (attribute 194)
+                                elif attr_id == '194':
+                                    # Raw value might be like "32 (Min/Max 18/45)" or just "32"
+                                    temp_str = raw_value.split()[0] if ' ' in raw_value else raw_value
                                     smart_data['temperature'] = int(temp_str)
-                                except (ValueError, IndexError):
-                                    pass
+                                
+                                # Reallocated Sectors (attribute 5)
+                                elif attr_id == '5':
+                                    smart_data['reallocated_sectors'] = int(raw_value)
+                                
+                                # Current Pending Sector (attribute 197)
+                                elif attr_id == '197':
+                                    smart_data['pending_sectors'] = int(raw_value)
+                                
+                                # UDMA CRC Error Count (attribute 199)
+                                elif attr_id == '199':
+                                    smart_data['crc_errors'] = int(raw_value)
+                                    
+                            except (ValueError, IndexError) as e:
+                                print(f"[v0] Error parsing SMART attribute line '{line}': {e}")
+                                continue
                 
                 # For NVMe drives, look for temperature in different format
                 if smart_data['temperature'] == 0:
                     for line in output.split('\n'):
                         if 'Temperature:' in line:
                             try:
-                                # Format: "Temperature:                        45 Celsius"
                                 temp_str = line.split(':')[1].strip().split()[0]
                                 smart_data['temperature'] = int(temp_str)
                             except (ValueError, IndexError):
                                 pass
             
-            # Determine health based on temperature
-            if smart_data['temperature'] > 0:
+            if smart_data['reallocated_sectors'] > 0 or smart_data['pending_sectors'] > 0:
+                smart_data['health'] = 'warning'
+            if smart_data['reallocated_sectors'] > 10 or smart_data['pending_sectors'] > 10:
+                smart_data['health'] = 'critical'
+            if smart_data['smart_status'] == 'failed':
+                smart_data['health'] = 'critical'
+            
+            # Temperature-based health (only if not already critical/warning from SMART)
+            if smart_data['health'] == 'healthy' and smart_data['temperature'] > 0:
                 if smart_data['temperature'] >= 70:
                     smart_data['health'] = 'critical'
                 elif smart_data['temperature'] >= 60:
                     smart_data['health'] = 'warning'
-                elif smart_data['smart_status'] == 'passed':
-                    smart_data['health'] = 'healthy'
                     
     except FileNotFoundError:
         print(f"smartctl not found - install smartmontools package")
