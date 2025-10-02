@@ -469,57 +469,131 @@ def get_smart_data(disk_name):
     }
     
     try:
-        # Try to get SMART data using smartctl
-        result = subprocess.run(['smartctl', '-a', f'/dev/{disk_name}'], 
+        # Try to get SMART data using smartctl with JSON output for better parsing
+        result = subprocess.run(['smartctl', '-a', '-j', f'/dev/{disk_name}'], 
                               capture_output=True, text=True, timeout=10)
         
         if result.returncode in [0, 4]:  # 0 = success, 4 = some SMART values exceeded threshold
-            output = result.stdout
-            
-            # Parse SMART status
-            if 'SMART overall-health self-assessment test result: PASSED' in output:
-                smart_data['smart_status'] = 'passed'
-                smart_data['health'] = 'healthy'
-            elif 'SMART overall-health self-assessment test result: FAILED' in output:
-                smart_data['smart_status'] = 'failed'
-                smart_data['health'] = 'critical'
-            
-            # Parse temperature
-            for line in output.split('\n'):
-                if 'Temperature_Celsius' in line or 'Temperature' in line:
-                    parts = line.split()
-                    for i, part in enumerate(parts):
-                        if part.isdigit() and int(part) > 0 and int(part) < 100:
-                            smart_data['temperature'] = int(part)
-                            break
+            try:
+                # Try JSON parsing first (newer smartctl versions)
+                data = json.loads(result.stdout)
                 
-                # Parse power on hours
-                if 'Power_On_Hours' in line:
-                    parts = line.split()
-                    for part in parts:
-                        if part.isdigit() and int(part) > 0:
-                            smart_data['power_on_hours'] = int(part)
-                            break
+                # Get model and serial
+                if 'model_name' in data:
+                    smart_data['model'] = data['model_name']
+                elif 'model_family' in data:
+                    smart_data['model'] = data['model_family']
                 
-                # Parse model
-                if 'Device Model:' in line or 'Model Number:' in line:
-                    smart_data['model'] = line.split(':', 1)[1].strip()
+                if 'serial_number' in data:
+                    smart_data['serial'] = data['serial_number']
                 
-                # Parse serial
-                if 'Serial Number:' in line or 'Serial number:' in line:
-                    smart_data['serial'] = line.split(':', 1)[1].strip()
-            
-            # Determine health based on temperature and SMART status
-            if smart_data['temperature'] > 0:
-                if smart_data['temperature'] > 60:
-                    smart_data['health'] = 'warning'
-                elif smart_data['temperature'] > 70:
+                # Get SMART status
+                if 'smart_status' in data and 'passed' in data['smart_status']:
+                    smart_data['smart_status'] = 'passed' if data['smart_status']['passed'] else 'failed'
+                    smart_data['health'] = 'healthy' if data['smart_status']['passed'] else 'critical'
+                
+                # Get temperature
+                if 'temperature' in data and 'current' in data['temperature']:
+                    smart_data['temperature'] = data['temperature']['current']
+                
+                # Get power on hours from SMART attributes
+                if 'ata_smart_attributes' in data and 'table' in data['ata_smart_attributes']:
+                    for attr in data['ata_smart_attributes']['table']:
+                        if attr['id'] == 9:  # Power_On_Hours
+                            smart_data['power_on_hours'] = attr['raw']['value']
+                        elif attr['id'] == 194 and smart_data['temperature'] == 0:  # Temperature_Celsius
+                            smart_data['temperature'] = attr['raw']['value']
+                
+                # For NVMe drives
+                if 'nvme_smart_health_information_log' in data:
+                    nvme_data = data['nvme_smart_health_information_log']
+                    if 'temperature' in nvme_data:
+                        smart_data['temperature'] = nvme_data['temperature']
+                    if 'power_on_hours' in nvme_data:
+                        smart_data['power_on_hours'] = nvme_data['power_on_hours']
+                
+            except json.JSONDecodeError:
+                # Fallback to text parsing if JSON not available
+                output = result.stdout
+                
+                # Parse SMART status
+                if 'SMART overall-health self-assessment test result: PASSED' in output:
+                    smart_data['smart_status'] = 'passed'
+                    smart_data['health'] = 'healthy'
+                elif 'SMART Health Status: OK' in output:  # NVMe
+                    smart_data['smart_status'] = 'passed'
+                    smart_data['health'] = 'healthy'
+                elif 'SMART overall-health self-assessment test result: FAILED' in output:
+                    smart_data['smart_status'] = 'failed'
                     smart_data['health'] = 'critical'
+                
+                # Parse model and serial
+                for line in output.split('\n'):
+                    line = line.strip()
+                    
+                    if line.startswith('Device Model:') or line.startswith('Model Number:'):
+                        smart_data['model'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Serial Number:') or line.startswith('Serial number:'):
+                        smart_data['serial'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Model Family:') and smart_data['model'] == 'Unknown':
+                        smart_data['model'] = line.split(':', 1)[1].strip()
+                
+                # Parse SMART attributes table
+                in_attributes = False
+                for line in output.split('\n'):
+                    line = line.strip()
+                    
+                    if 'ID# ATTRIBUTE_NAME' in line:
+                        in_attributes = True
+                        continue
+                    
+                    if in_attributes and line:
+                        parts = line.split()
+                        if len(parts) >= 10:
+                            attr_id = parts[0]
+                            attr_name = parts[1]
+                            raw_value = parts[9]
+                            
+                            # Power On Hours (attribute 9)
+                            if attr_id == '9' and 'Power_On_Hours' in attr_name:
+                                try:
+                                    smart_data['power_on_hours'] = int(raw_value)
+                                except ValueError:
+                                    pass
+                            
+                            # Temperature (attribute 194)
+                            elif attr_id == '194' and 'Temperature' in attr_name:
+                                try:
+                                    # Raw value might be like "32 (Min/Max 18/45)"
+                                    temp_str = raw_value.split()[0]
+                                    smart_data['temperature'] = int(temp_str)
+                                except (ValueError, IndexError):
+                                    pass
+                
+                # For NVMe drives, look for temperature in different format
+                if smart_data['temperature'] == 0:
+                    for line in output.split('\n'):
+                        if 'Temperature:' in line:
+                            try:
+                                # Format: "Temperature:                        45 Celsius"
+                                temp_str = line.split(':')[1].strip().split()[0]
+                                smart_data['temperature'] = int(temp_str)
+                            except (ValueError, IndexError):
+                                pass
+            
+            # Determine health based on temperature
+            if smart_data['temperature'] > 0:
+                if smart_data['temperature'] >= 70:
+                    smart_data['health'] = 'critical'
+                elif smart_data['temperature'] >= 60:
+                    smart_data['health'] = 'warning'
                 elif smart_data['smart_status'] == 'passed':
                     smart_data['health'] = 'healthy'
                     
     except FileNotFoundError:
         print(f"smartctl not found - install smartmontools package")
+    except subprocess.TimeoutExpired:
+        print(f"Timeout getting SMART data for {disk_name}")
     except Exception as e:
         print(f"Error getting SMART data for {disk_name}: {e}")
     
@@ -530,7 +604,7 @@ def get_network_info():
     try:
         network_data = {
             'interfaces': [],
-            'traffic': {'incoming': 0, 'outgoing': 0}
+            'traffic': {'bytes_sent': 0, 'bytes_recv': 0}
         }
         
         # Get network interfaces
