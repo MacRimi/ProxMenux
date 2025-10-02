@@ -5,7 +5,7 @@ import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { SystemOverview } from "./system-overview"
-import { StorageMetrics } from "./storage-metrics"
+import { StorageOverview } from "./storage-overview"
 import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
 import { SystemLogs } from "./system-logs"
@@ -47,7 +47,8 @@ export function ProxmoxDashboard() {
     console.log("[v0] Fetching system data from Flask server...")
     console.log("[v0] Current window location:", window.location.href)
 
-    const apiUrl = "/api/system"
+    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+    const apiUrl = `${baseUrl}/api/system`
 
     console.log("[v0] API URL:", apiUrl)
 
@@ -57,6 +58,7 @@ export function ProxmoxDashboard() {
         headers: {
           "Content-Type": "application/json",
         },
+        cache: "no-store",
       })
       console.log("[v0] Response status:", response.status)
 
@@ -104,7 +106,7 @@ export function ProxmoxDashboard() {
 
   useEffect(() => {
     fetchSystemData()
-    const interval = setInterval(fetchSystemData, 10000) // Updated interval to 10 seconds
+    const interval = setInterval(fetchSystemData, 10000)
     return () => clearInterval(interval)
   }, [fetchSystemData])
 
@@ -268,7 +270,7 @@ export function ProxmoxDashboard() {
           </TabsContent>
 
           <TabsContent value="storage" className="space-y-6">
-            <StorageMetrics key={`storage-${componentKey}`} />
+            <StorageOverview key={`storage-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="network" className="space-y-6">

@@ -342,7 +342,8 @@ def get_storage_info():
             'total': 0,
             'used': 0,
             'available': 0,
-            'disks': []
+            'disks': [],
+            'zfs_pools': []
         }
         
         # Get disk usage for root partition
@@ -351,27 +352,67 @@ def get_storage_info():
         storage_data['used'] = round(disk_usage.used / (1024**3), 1)    # GB
         storage_data['available'] = round(disk_usage.free / (1024**3), 1)  # GB
         
-        # Get individual disk information
+        try:
+            # List all block devices
+            result = subprocess.run(['lsblk', '-d', '-n', '-o', 'NAME,SIZE,TYPE'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    parts = line.split()
+                    if len(parts) >= 3 and parts[2] == 'disk':
+                        disk_name = parts[0]
+                        disk_size = parts[1]
+                        
+                        # Get SMART data for this disk
+                        smart_data = get_smart_data(disk_name)
+                        
+                        disk_info = {
+                            'name': disk_name,
+                            'size': disk_size,
+                            'temperature': smart_data.get('temperature', 0),
+                            'health': smart_data.get('health', 'unknown'),
+                            'power_on_hours': smart_data.get('power_on_hours', 0),
+                            'smart_status': smart_data.get('smart_status', 'unknown'),
+                            'model': smart_data.get('model', 'Unknown'),
+                            'serial': smart_data.get('serial', 'Unknown')
+                        }
+                        storage_data['disks'].append(disk_info)
+        except Exception as e:
+            print(f"Error getting disk list: {e}")
+        
+        try:
+            result = subprocess.run(['zpool', 'list', '-H', '-o', 'name,size,alloc,free,health'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if line:
+                        parts = line.split('\t')
+                        if len(parts) >= 5:
+                            pool_info = {
+                                'name': parts[0],
+                                'size': parts[1],
+                                'allocated': parts[2],
+                                'free': parts[3],
+                                'health': parts[4]
+                            }
+                            storage_data['zfs_pools'].append(pool_info)
+        except Exception as e:
+            print(f"Note: ZFS not available or no pools: {e}")
+        
+        # Get individual disk partitions
         disk_partitions = psutil.disk_partitions()
         for partition in disk_partitions:
             try:
                 partition_usage = psutil.disk_usage(partition.mountpoint)
                 
+                # Find corresponding disk info
                 disk_temp = 0
-                try:
-                    # Try to get disk temperature from sensors
-                    if hasattr(psutil, "sensors_temperatures"):
-                        temps = psutil.sensors_temperatures()
-                        if temps:
-                            for name, entries in temps.items():
-                                if 'disk' in name.lower() or 'hdd' in name.lower() or 'sda' in name.lower():
-                                    if entries:
-                                        disk_temp = entries[0].current
-                                        break
-                except:
-                    pass
+                for disk in storage_data['disks']:
+                    if disk['name'] in partition.device:
+                        disk_temp = disk['temperature']
+                        break
                 
-                disk_info = {
+                partition_info = {
                     'name': partition.device,
                     'mountpoint': partition.mountpoint,
                     'fstype': partition.fstype,
@@ -379,25 +420,19 @@ def get_storage_info():
                     'used': round(partition_usage.used / (1024**3), 1),
                     'available': round(partition_usage.free / (1024**3), 1),
                     'usage_percent': round((partition_usage.used / partition_usage.total) * 100, 1),
-                    'health': 'unknown',  # Would need SMART data for real health
                     'temperature': disk_temp
                 }
-                storage_data['disks'].append(disk_info)
+                
+                # Add to disks list if not already there
+                if not any(d['name'] == partition.device for d in storage_data['disks']):
+                    storage_data['disks'].append(partition_info)
+                    
             except PermissionError:
                 print(f"Permission denied accessing {partition.mountpoint}")
                 continue
             except Exception as e:
                 print(f"Error accessing partition {partition.device}: {e}")
                 continue
-        
-        if not storage_data['disks'] and storage_data['total'] == 0:
-            return {
-                'error': 'No storage data available - unable to access disk information',
-                'total': 0,
-                'used': 0,
-                'available': 0,
-                'disks': []
-            }
         
         return storage_data
         
@@ -408,8 +443,77 @@ def get_storage_info():
             'total': 0,
             'used': 0,
             'available': 0,
-            'disks': []
+            'disks': [],
+            'zfs_pools': []
         }
+
+def get_smart_data(disk_name):
+    """Get SMART data for a specific disk"""
+    smart_data = {
+        'temperature': 0,
+        'health': 'unknown',
+        'power_on_hours': 0,
+        'smart_status': 'unknown',
+        'model': 'Unknown',
+        'serial': 'Unknown'
+    }
+    
+    try:
+        # Try to get SMART data using smartctl
+        result = subprocess.run(['smartctl', '-a', f'/dev/{disk_name}'], 
+                              capture_output=True, text=True, timeout=10)
+        
+        if result.returncode in [0, 4]:  # 0 = success, 4 = some SMART values exceeded threshold
+            output = result.stdout
+            
+            # Parse SMART status
+            if 'SMART overall-health self-assessment test result: PASSED' in output:
+                smart_data['smart_status'] = 'passed'
+                smart_data['health'] = 'healthy'
+            elif 'SMART overall-health self-assessment test result: FAILED' in output:
+                smart_data['smart_status'] = 'failed'
+                smart_data['health'] = 'critical'
+            
+            # Parse temperature
+            for line in output.split('\n'):
+                if 'Temperature_Celsius' in line or 'Temperature' in line:
+                    parts = line.split()
+                    for i, part in enumerate(parts):
+                        if part.isdigit() and int(part) > 0 and int(part) < 100:
+                            smart_data['temperature'] = int(part)
+                            break
+                
+                # Parse power on hours
+                if 'Power_On_Hours' in line:
+                    parts = line.split()
+                    for part in parts:
+                        if part.isdigit() and int(part) > 0:
+                            smart_data['power_on_hours'] = int(part)
+                            break
+                
+                # Parse model
+                if 'Device Model:' in line or 'Model Number:' in line:
+                    smart_data['model'] = line.split(':', 1)[1].strip()
+                
+                # Parse serial
+                if 'Serial Number:' in line or 'Serial number:' in line:
+                    smart_data['serial'] = line.split(':', 1)[1].strip()
+            
+            # Determine health based on temperature and SMART status
+            if smart_data['temperature'] > 0:
+                if smart_data['temperature'] > 60:
+                    smart_data['health'] = 'warning'
+                elif smart_data['temperature'] > 70:
+                    smart_data['health'] = 'critical'
+                elif smart_data['smart_status'] == 'passed':
+                    smart_data['health'] = 'healthy'
+                    
+    except FileNotFoundError:
+        print(f"smartctl not found - install smartmontools package")
+    except Exception as e:
+        print(f"Error getting SMART data for {disk_name}: {e}")
+    
+    return smart_data
 
 def get_network_info():
     """Get network interface information"""
