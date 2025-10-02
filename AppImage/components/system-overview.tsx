@@ -178,12 +178,7 @@ export function SystemOverview() {
         setLoading(true)
         setError(null)
 
-        const [systemResult, vmResult, storageResult, networkResult] = await Promise.all([
-          fetchSystemData(),
-          fetchVMData(),
-          fetchStorageData(),
-          fetchNetworkData(),
-        ])
+        const systemResult = await fetchSystemData()
 
         if (!systemResult) {
           setError("Flask server not available. Please ensure the server is running.")
@@ -192,11 +187,8 @@ export function SystemOverview() {
         }
 
         setSystemData(systemResult)
-        setVmData(vmResult)
-        setStorageData(storageResult)
-        setNetworkData(networkResult)
       } catch (err) {
-        console.error("[v0] Error fetching data:", err)
+        console.error("[v0] Error fetching system data:", err)
         setError("Failed to connect to Flask server. Please check your connection.")
       } finally {
         setLoading(false)
@@ -205,12 +197,56 @@ export function SystemOverview() {
 
     fetchData()
 
-    const interval = setInterval(() => {
-      fetchData()
-    }, 60000) // Update every 60 seconds instead of 30
+    const systemInterval = setInterval(() => {
+      fetchSystemData().then((data) => {
+        if (data) setSystemData(data)
+      })
+    }, 10000)
 
     return () => {
-      clearInterval(interval)
+      clearInterval(systemInterval)
+    }
+  }, [])
+
+  useEffect(() => {
+    const fetchVMs = async () => {
+      const vmResult = await fetchVMData()
+      setVmData(vmResult)
+    }
+
+    fetchVMs()
+    const vmInterval = setInterval(fetchVMs, 15000)
+
+    return () => {
+      clearInterval(vmInterval)
+    }
+  }, [])
+
+  useEffect(() => {
+    const fetchStorage = async () => {
+      const storageResult = await fetchStorageData()
+      setStorageData(storageResult)
+    }
+
+    fetchStorage()
+    const storageInterval = setInterval(fetchStorage, 15000)
+
+    return () => {
+      clearInterval(storageInterval)
+    }
+  }, [])
+
+  useEffect(() => {
+    const fetchNetwork = async () => {
+      const networkResult = await fetchNetworkData()
+      setNetworkData(networkResult)
+    }
+
+    fetchNetwork()
+    const networkInterval = setInterval(fetchNetwork, 15000)
+
+    return () => {
+      clearInterval(networkInterval)
     }
   }, [])
 

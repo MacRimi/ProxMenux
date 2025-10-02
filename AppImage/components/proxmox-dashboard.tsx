@@ -104,7 +104,7 @@ export function ProxmoxDashboard() {
 
   useEffect(() => {
     fetchSystemData()
-    const interval = setInterval(fetchSystemData, 5000)
+    const interval = setInterval(fetchSystemData, 10000) // Updated interval to 10 seconds
     return () => clearInterval(interval)
   }, [fetchSystemData])
 

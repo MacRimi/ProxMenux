@@ -424,7 +424,13 @@ def get_network_info():
         net_if_stats = psutil.net_if_stats()
         
         for interface_name, interface_addresses in net_if_addrs.items():
-            if interface_name == 'lo':  # Skip loopback
+            # Skip loopback
+            if interface_name == 'lo':
+                continue
+            
+            # Skip virtual interfaces that are not bridges
+            # Keep: physical interfaces (enp*, eth*, wlan*) and bridges (vmbr*, br*)
+            if not (interface_name.startswith(('enp', 'eth', 'wlan', 'vmbr', 'br'))):
                 continue
                 
             interface_info = {
