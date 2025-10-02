@@ -352,6 +352,7 @@ def get_storage_info():
         storage_data['used'] = round(disk_usage.used / (1024**3), 1)    # GB
         storage_data['available'] = round(disk_usage.free / (1024**3), 1)  # GB
         
+        physical_disks = {}
         try:
             # List all block devices
             result = subprocess.run(['lsblk', '-d', '-n', '-o', 'NAME,SIZE,TYPE'], 
@@ -366,7 +367,7 @@ def get_storage_info():
                         # Get SMART data for this disk
                         smart_data = get_smart_data(disk_name)
                         
-                        disk_info = {
+                        physical_disks[disk_name] = {
                             'name': disk_name,
                             'size': disk_size,
                             'temperature': smart_data.get('temperature', 0),
@@ -376,9 +377,53 @@ def get_storage_info():
                             'model': smart_data.get('model', 'Unknown'),
                             'serial': smart_data.get('serial', 'Unknown')
                         }
-                        storage_data['disks'].append(disk_info)
         except Exception as e:
             print(f"Error getting disk list: {e}")
+        
+        try:
+            disk_partitions = psutil.disk_partitions()
+            for partition in disk_partitions:
+                try:
+                    # Skip special filesystems
+                    if partition.fstype in ['tmpfs', 'devtmpfs', 'squashfs', 'overlay']:
+                        continue
+                    
+                    partition_usage = psutil.disk_usage(partition.mountpoint)
+                    
+                    # Extract disk name from partition device (e.g., /dev/sda1 -> sda)
+                    device_name = partition.device.replace('/dev/', '')
+                    # Remove partition number (sda1 -> sda, nvme0n1p1 -> nvme0n1)
+                    if device_name[-1].isdigit():
+                        if 'nvme' in device_name or 'mmcblk' in device_name:
+                            # For nvme and mmc devices: nvme0n1p1 -> nvme0n1
+                            base_disk = device_name.rsplit('p', 1)[0]
+                        else:
+                            # For regular devices: sda1 -> sda
+                            base_disk = device_name.rstrip('0123456789')
+                    else:
+                        base_disk = device_name
+                    
+                    # Find corresponding physical disk
+                    disk_info = physical_disks.get(base_disk)
+                    if disk_info:
+                        # Add mount information to the physical disk
+                        if 'mountpoint' not in disk_info:
+                            disk_info['mountpoint'] = partition.mountpoint
+                            disk_info['fstype'] = partition.fstype
+                            disk_info['total'] = round(partition_usage.total / (1024**3), 1)
+                            disk_info['used'] = round(partition_usage.used / (1024**3), 1)
+                            disk_info['available'] = round(partition_usage.free / (1024**3), 1)
+                            disk_info['usage_percent'] = round(partition_usage.percent, 1)
+                        
+                except PermissionError:
+                    continue
+                except Exception as e:
+                    print(f"Error accessing partition {partition.device}: {e}")
+                    continue
+        except Exception as e:
+            print(f"Error getting partition info: {e}")
+        
+        storage_data['disks'] = list(physical_disks.values())
         
         try:
             result = subprocess.run(['zpool', 'list', '-H', '-o', 'name,size,alloc,free,health'], 
@@ -398,41 +443,6 @@ def get_storage_info():
                             storage_data['zfs_pools'].append(pool_info)
         except Exception as e:
             print(f"Note: ZFS not available or no pools: {e}")
-        
-        # Get individual disk partitions
-        disk_partitions = psutil.disk_partitions()
-        for partition in disk_partitions:
-            try:
-                partition_usage = psutil.disk_usage(partition.mountpoint)
-                
-                # Find corresponding disk info
-                disk_temp = 0
-                for disk in storage_data['disks']:
-                    if disk['name'] in partition.device:
-                        disk_temp = disk['temperature']
-                        break
-                
-                partition_info = {
-                    'name': partition.device,
-                    'mountpoint': partition.mountpoint,
-                    'fstype': partition.fstype,
-                    'total': round(partition_usage.total / (1024**3), 1),
-                    'used': round(partition_usage.used / (1024**3), 1),
-                    'available': round(partition_usage.free / (1024**3), 1),
-                    'usage_percent': round((partition_usage.used / partition_usage.total) * 100, 1),
-                    'temperature': disk_temp
-                }
-                
-                # Add to disks list if not already there
-                if not any(d['name'] == partition.device for d in storage_data['disks']):
-                    storage_data['disks'].append(partition_info)
-                    
-            except PermissionError:
-                print(f"Permission denied accessing {partition.mountpoint}")
-                continue
-            except Exception as e:
-                print(f"Error accessing partition {partition.device}: {e}")
-                continue
         
         return storage_data
         
