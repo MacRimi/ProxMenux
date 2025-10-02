@@ -30,6 +30,7 @@ interface VMData {
   disk: number
   maxdisk: number
   uptime: number
+  type?: string
 }
 
 interface HistoricalData {
@@ -259,7 +260,8 @@ export function SystemOverview() {
     total: vmData.length,
     running: vmData.filter((vm) => vm.status === "running").length,
     stopped: vmData.filter((vm) => vm.status === "stopped").length,
-    lxc: 0,
+    lxc: vmData.filter((vm) => vm.type === "lxc").length,
+    vms: vmData.filter((vm) => vm.type === "qemu" || !vm.type).length,
   }
 
   const getTemperatureStatus = (temp: number) => {
@@ -323,7 +325,7 @@ export function SystemOverview() {
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active VMs</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active VM & LXC</CardTitle>
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -338,7 +340,9 @@ export function SystemOverview() {
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Total: {vmStats.total} VMs configured</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Total: {vmStats.vms} VMs, {vmStats.lxc} LXC
+            </p>
           </CardContent>
         </Card>
       </div>
