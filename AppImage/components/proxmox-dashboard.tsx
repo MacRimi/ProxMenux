@@ -201,7 +201,6 @@ export function ProxmoxDashboard() {
                 <Server className="h-4 w-4 text-muted-foreground" />
                 <div className="text-sm">
                   <div className="font-medium text-foreground">{systemStatus.serverName}</div>
-                  <div className="text-xs text-muted-foreground">{systemStatus.nodeId}</div>
                 </div>
               </div>
 

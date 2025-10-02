@@ -19,6 +19,9 @@ interface SystemData {
   node_id: string
   timestamp: string
   cpu_cores?: number
+  proxmox_version?: string
+  kernel_version?: string
+  available_updates?: number
 }
 
 interface VMData {
@@ -376,10 +379,11 @@ export function SystemOverview() {
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="#60a5fa"
-                    fill="#60a5fa"
-                    fillOpacity={0.3}
+                    stroke="#3b82f6"
+                    fill="#3b82f6"
+                    fillOpacity={0.4}
                     name="CPU %"
+                    strokeWidth={2}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -419,19 +423,21 @@ export function SystemOverview() {
                     type="monotone"
                     dataKey="used"
                     stackId="1"
-                    stroke="#60a5fa"
-                    fill="#60a5fa"
+                    stroke="#3b82f6"
+                    fill="#3b82f6"
                     fillOpacity={0.6}
                     name="Used Memory (GB)"
+                    strokeWidth={2}
                   />
                   <Area
                     type="monotone"
                     dataKey="available"
                     stackId="1"
-                    stroke="#34d399"
-                    fill="#34d399"
+                    stroke="#10b981"
+                    fill="#10b981"
                     fillOpacity={0.6}
                     name="Available Memory (GB)"
+                    strokeWidth={2}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -459,17 +465,21 @@ export function SystemOverview() {
               <span className="text-foreground">{systemData.uptime}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Last Update:</span>
-              <span className="text-foreground">{new Date(systemData.timestamp).toLocaleTimeString()}</span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-muted-foreground">Proxmox Version:</span>
-              <span className="text-foreground">8.x</span>
+              <span className="text-foreground">{systemData.proxmox_version || "N/A"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Kernel:</span>
-              <span className="text-foreground font-mono text-sm">Linux</span>
+              <span className="text-foreground font-mono text-sm">{systemData.kernel_version || "Linux"}</span>
             </div>
+            {systemData.available_updates !== undefined && systemData.available_updates > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Available Updates:</span>
+                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                  {systemData.available_updates} packages
+                </Badge>
+              </div>
+            )}
           </CardContent>
         </Card>
 

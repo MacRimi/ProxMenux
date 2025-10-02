@@ -263,6 +263,37 @@ def get_system_info():
         hostname = socket.gethostname()
         node_id = f"pve-{hostname}"
         
+        proxmox_version = None
+        try:
+            result = subprocess.run(['pveversion'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                # Parse output like "pve-manager/9.0.6/..."
+                version_line = result.stdout.strip().split('\n')[0]
+                if '/' in version_line:
+                    proxmox_version = version_line.split('/')[1]
+        except Exception as e:
+            print(f"Note: pveversion not available: {e}")
+        
+        kernel_version = None
+        try:
+            result = subprocess.run(['uname', '-r'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                kernel_version = result.stdout.strip()
+        except Exception as e:
+            print(f"Note: uname not available: {e}")
+        
+        cpu_cores = psutil.cpu_count(logical=False)  # Physical cores only
+        
+        available_updates = 0
+        try:
+            result = subprocess.run(['apt', 'list', '--upgradable'], capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                # Count lines minus header
+                lines = result.stdout.strip().split('\n')
+                available_updates = max(0, len(lines) - 1)
+        except Exception as e:
+            print(f"Note: apt list not available: {e}")
+        
         # Try to get Proxmox node info if available
         try:
             result = subprocess.run(['pvesh', 'get', '/nodes', '--output-format', 'json'], 
@@ -275,7 +306,7 @@ def get_system_info():
             print(f"Note: pvesh not available or failed: {e}")
             pass  # Use default if pvesh not available
         
-        return {
+        response = {
             'cpu_usage': round(cpu_percent, 1),
             'memory_usage': round(memory.percent, 1),
             'memory_total': round(memory.total / (1024**3), 1),  # GB
@@ -285,8 +316,18 @@ def get_system_info():
             'load_average': list(load_avg),
             'hostname': hostname,
             'node_id': node_id,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'cpu_cores': cpu_cores
         }
+        
+        if proxmox_version:
+            response['proxmox_version'] = proxmox_version
+        if kernel_version:
+            response['kernel_version'] = kernel_version
+        if available_updates > 0:
+            response['available_updates'] = available_updates
+        
+        return response
     except Exception as e:
         print(f"Critical error getting system info: {e}")
         return {
