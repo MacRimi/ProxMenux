@@ -4,8 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend } from "recharts"
-import { Cpu, MemoryStick, Thermometer, Activity, Server, Zap, AlertCircle } from "lucide-react"
+import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Network } from "lucide-react"
 
 interface SystemData {
   cpu_usage: number
@@ -37,23 +36,38 @@ interface VMData {
   type?: string
 }
 
-interface HistoricalData {
-  timestamp: string
-  cpu_usage: number
-  memory_used: number
-  memory_total: number
+interface StorageData {
+  total: number
+  used: number
+  available: number
+  disks: Array<{
+    name: string
+    mountpoint: string
+    total: number
+    used: number
+    available: number
+    usage_percent: number
+  }>
 }
 
-const historicalDataStore: HistoricalData[] = []
-const MAX_HISTORICAL_POINTS = 144 // Store 144 data points for 24h view
+interface NetworkData {
+  interfaces: Array<{
+    name: string
+    status: string
+    addresses: Array<{ ip: string; netmask: string }>
+  }>
+  traffic: {
+    bytes_sent: number
+    bytes_recv: number
+    packets_sent: number
+    packets_recv: number
+  }
+}
 
 const fetchSystemData = async (): Promise<SystemData | null> => {
   try {
-    console.log("[v0] Fetching system data from Flask server...")
-
     const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
     const apiUrl = `${baseUrl}/api/system`
-    console.log("[v0] Fetching from URL:", apiUrl)
 
     const response = await fetch(apiUrl, {
       method: "GET",
@@ -63,62 +77,22 @@ const fetchSystemData = async (): Promise<SystemData | null> => {
       cache: "no-store",
     })
 
-    console.log("[v0] Response status:", response.status)
-    console.log("[v0] Response ok:", response.ok)
-    console.log("[v0] Response headers:", Object.fromEntries(response.headers.entries()))
-
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[v0] Flask server error response:", errorText)
       throw new Error(`Flask server responded with status: ${response.status}`)
     }
 
-    const responseText = await response.text()
-    console.log("[v0] Raw response text:", responseText)
-    console.log("[v0] Response text length:", responseText.length)
-    console.log("[v0] First 100 chars:", responseText.substring(0, 100))
-
-    // Try to parse the JSON
-    let data
-    try {
-      data = JSON.parse(responseText)
-      console.log("[v0] Successfully parsed JSON:", data)
-    } catch (parseError) {
-      console.error("[v0] JSON parse error:", parseError)
-      console.error("[v0] Failed to parse response as JSON")
-      throw new Error("Invalid JSON response from server")
-    }
-
-    // Store historical data
-    historicalDataStore.push({
-      timestamp: data.timestamp,
-      cpu_usage: data.cpu_usage,
-      memory_used: data.memory_used,
-      memory_total: data.memory_total,
-    })
-
-    // Keep only last MAX_HISTORICAL_POINTS
-    if (historicalDataStore.length > MAX_HISTORICAL_POINTS) {
-      historicalDataStore.shift()
-    }
-
+    const data = await response.json()
     return data
   } catch (error) {
-    console.error("[v0] Failed to fetch system data from Flask server:", error)
-    console.error("[v0] Error type:", error instanceof Error ? error.constructor.name : typeof error)
-    console.error("[v0] Error message:", error instanceof Error ? error.message : String(error))
-    console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
+    console.error("[v0] Failed to fetch system data:", error)
     return null
   }
 }
 
 const fetchVMData = async (): Promise<VMData[]> => {
   try {
-    console.log("[v0] Fetching VM data from Flask server...")
-
     const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
     const apiUrl = `${baseUrl}/api/vms`
-    console.log("[v0] Fetching from URL:", apiUrl)
 
     const response = await fetch(apiUrl, {
       method: "GET",
@@ -128,48 +102,73 @@ const fetchVMData = async (): Promise<VMData[]> => {
       cache: "no-store",
     })
 
-    console.log("[v0] VM Response status:", response.status)
-
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[v0] Flask server error response:", errorText)
       throw new Error(`Flask server responded with status: ${response.status}`)
     }
 
     const data = await response.json()
-    console.log("[v0] Successfully fetched VM data from Flask:", data)
     return Array.isArray(data) ? data : data.vms || []
   } catch (error) {
-    console.error("[v0] Failed to fetch VM data from Flask server:", error)
-    console.error("[v0] Error type:", error instanceof Error ? error.constructor.name : typeof error)
-    console.error("[v0] Error message:", error instanceof Error ? error.message : String(error))
+    console.error("[v0] Failed to fetch VM data:", error)
     return []
   }
 }
 
-const generateChartData = () => {
-  if (historicalDataStore.length === 0) {
-    return { cpuData: [], memoryData: [] }
+const fetchStorageData = async (): Promise<StorageData | null> => {
+  try {
+    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+    const apiUrl = `${baseUrl}/api/storage`
+
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      throw new Error(`Flask server responded with status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error("[v0] Failed to fetch storage data:", error)
+    return null
   }
+}
 
-  const cpuData = historicalDataStore.map((point) => ({
-    time: new Date(point.timestamp).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-    value: point.cpu_usage,
-  }))
+const fetchNetworkData = async (): Promise<NetworkData | null> => {
+  try {
+    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+    const apiUrl = `${baseUrl}/api/network`
 
-  const memoryData = historicalDataStore.map((point) => ({
-    time: new Date(point.timestamp).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-    used: point.memory_used,
-    available: point.memory_total - point.memory_used,
-  }))
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    })
 
-  return { cpuData, memoryData }
+    if (!response.ok) {
+      throw new Error(`Flask server responded with status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error("[v0] Failed to fetch network data:", error)
+    return null
+  }
 }
 
 export function SystemOverview() {
   const [systemData, setSystemData] = useState<SystemData | null>(null)
   const [vmData, setVmData] = useState<VMData[]>([])
-  const [chartData, setChartData] = useState(generateChartData())
+  const [storageData, setStorageData] = useState<StorageData | null>(null)
+  const [networkData, setNetworkData] = useState<NetworkData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -179,7 +178,12 @@ export function SystemOverview() {
         setLoading(true)
         setError(null)
 
-        const [systemResult, vmResult] = await Promise.all([fetchSystemData(), fetchVMData()])
+        const [systemResult, vmResult, storageResult, networkResult] = await Promise.all([
+          fetchSystemData(),
+          fetchVMData(),
+          fetchStorageData(),
+          fetchNetworkData(),
+        ])
 
         if (!systemResult) {
           setError("Flask server not available. Please ensure the server is running.")
@@ -189,7 +193,8 @@ export function SystemOverview() {
 
         setSystemData(systemResult)
         setVmData(vmResult)
-        setChartData(generateChartData())
+        setStorageData(storageResult)
+        setNetworkData(networkResult)
       } catch (err) {
         console.error("[v0] Error fetching data:", err)
         setError("Failed to connect to Flask server. Please check your connection.")
@@ -202,7 +207,7 @@ export function SystemOverview() {
 
     const interval = setInterval(() => {
       fetchData()
-    }, 30000) // Update every 30 seconds
+    }, 60000) // Update every 60 seconds instead of 30
 
     return () => {
       clearInterval(interval)
@@ -243,14 +248,6 @@ export function SystemOverview() {
                 <div className="font-semibold text-lg mb-1">Flask Server Not Available</div>
                 <div className="text-sm">
                   {error || "Unable to connect to the Flask server. Please ensure the server is running and try again."}
-                </div>
-                <div className="text-sm mt-2">
-                  <strong>Troubleshooting:</strong>
-                  <ul className="list-disc list-inside mt-1 space-y-1">
-                    <li>Check if the Flask server is running on the correct port</li>
-                    <li>Verify network connectivity</li>
-                    <li>Check server logs for errors</li>
-                  </ul>
                 </div>
               </div>
             </div>
@@ -351,100 +348,92 @@ export function SystemOverview() {
         </Card>
       </div>
 
-      {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Storage Summary */}
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
-              <Activity className="h-5 w-5 mr-2" />
-              CPU Usage (Last 24h)
+              <HardDrive className="h-5 w-5 mr-2" />
+              Storage Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {chartData.cpuData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={chartData.cpuData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis dataKey="time" stroke="hsl(var(--foreground))" fontSize={12} opacity={0.7} />
-                  <YAxis stroke="hsl(var(--foreground))" fontSize={12} opacity={0.7} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      color: "hsl(var(--foreground))",
-                    }}
-                    labelStyle={{ color: "hsl(var(--foreground))" }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
-                    fillOpacity={0.4}
-                    name="CPU %"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                Collecting data... Check back in a few minutes
+            {storageData ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Total Storage:</span>
+                  <span className="text-lg font-semibold text-foreground">{storageData.total} GB</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Used:</span>
+                  <span className="text-lg font-semibold text-foreground">{storageData.used} GB</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Available:</span>
+                  <span className="text-lg font-semibold text-green-500">{storageData.available} GB</span>
+                </div>
+                <Progress value={(storageData.used / storageData.total) * 100} className="mt-2" />
+                <div className="pt-2 border-t border-border">
+                  <p className="text-xs text-muted-foreground">
+                    {storageData.disks.length} disk{storageData.disks.length !== 1 ? "s" : ""} configured
+                  </p>
+                </div>
               </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">Storage data not available</div>
             )}
           </CardContent>
         </Card>
 
+        {/* Network Summary */}
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
-              <MemoryStick className="h-5 w-5 mr-2" />
-              Memory Usage (Last 24h)
+              <Network className="h-5 w-5 mr-2" />
+              Network Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {chartData.memoryData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={chartData.memoryData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis dataKey="time" stroke="hsl(var(--foreground))" fontSize={12} opacity={0.7} />
-                  <YAxis stroke="hsl(var(--foreground))" fontSize={12} opacity={0.7} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      color: "hsl(var(--foreground))",
-                    }}
-                    labelStyle={{ color: "hsl(var(--foreground))" }}
-                  />
-                  <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} iconType="square" />
-                  <Area
-                    type="monotone"
-                    dataKey="used"
-                    stackId="1"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
-                    fillOpacity={0.6}
-                    name="Used Memory (GB)"
-                    strokeWidth={2}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="available"
-                    stackId="1"
-                    stroke="#10b981"
-                    fill="#10b981"
-                    fillOpacity={0.6}
-                    name="Available Memory (GB)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                Collecting data... Check back in a few minutes
+            {networkData ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Active Interfaces:</span>
+                  <span className="text-lg font-semibold text-foreground">
+                    {networkData.interfaces.filter((i) => i.status === "up").length}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Data Sent:</span>
+                  <span className="text-lg font-semibold text-foreground">
+                    {(networkData.traffic.bytes_sent / 1024 ** 3).toFixed(2)} GB
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Data Received:</span>
+                  <span className="text-lg font-semibold text-foreground">
+                    {(networkData.traffic.bytes_recv / 1024 ** 3).toFixed(2)} GB
+                  </span>
+                </div>
+                <div className="pt-2 border-t border-border space-y-1">
+                  {networkData.interfaces.slice(0, 3).map((iface) => (
+                    <div key={iface.name} className="flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">{iface.name}:</span>
+                      <Badge
+                        variant="outline"
+                        className={
+                          iface.status === "up"
+                            ? "bg-green-500/10 text-green-500 border-green-500/20"
+                            : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                        }
+                      >
+                        {iface.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
               </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">Network data not available</div>
             )}
           </CardContent>
         </Card>
