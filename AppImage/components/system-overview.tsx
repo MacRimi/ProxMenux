@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts"
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend } from "recharts"
 import { Cpu, MemoryStick, Thermometer, Activity, Server, Zap, AlertCircle } from "lucide-react"
 
 interface SystemData {
@@ -18,6 +18,7 @@ interface SystemData {
   hostname: string
   node_id: string
   timestamp: string
+  cpu_cores?: number
 }
 
 interface VMData {
@@ -41,7 +42,7 @@ interface HistoricalData {
 }
 
 const historicalDataStore: HistoricalData[] = []
-const MAX_HISTORICAL_POINTS = 24 // Store 24 data points for 24h view
+const MAX_HISTORICAL_POINTS = 144 // Store 144 data points for 24h view
 
 const fetchSystemData = async (): Promise<SystemData | null> => {
   try {
@@ -353,16 +354,16 @@ export function SystemOverview() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Activity className="h-5 w-5 mr-2" />
-              CPU Usage (Last {historicalDataStore.length} readings)
+              CPU Usage (Last 24h)
             </CardTitle>
           </CardHeader>
           <CardContent>
             {chartData.cpuData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={chartData.cpuData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis dataKey="time" stroke="hsl(var(--foreground))" fontSize={12} opacity={0.7} />
+                  <YAxis stroke="hsl(var(--foreground))" fontSize={12} opacity={0.7} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "hsl(var(--card))",
@@ -370,8 +371,16 @@ export function SystemOverview() {
                       borderRadius: "8px",
                       color: "hsl(var(--foreground))",
                     }}
+                    labelStyle={{ color: "hsl(var(--foreground))" }}
                   />
-                  <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#60a5fa"
+                    fill="#60a5fa"
+                    fillOpacity={0.3}
+                    name="CPU %"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
@@ -386,16 +395,16 @@ export function SystemOverview() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <MemoryStick className="h-5 w-5 mr-2" />
-              Memory Usage (Last {historicalDataStore.length} readings)
+              Memory Usage (Last 24h)
             </CardTitle>
           </CardHeader>
           <CardContent>
             {chartData.memoryData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={chartData.memoryData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis dataKey="time" stroke="hsl(var(--foreground))" fontSize={12} opacity={0.7} />
+                  <YAxis stroke="hsl(var(--foreground))" fontSize={12} opacity={0.7} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "hsl(var(--card))",
@@ -403,15 +412,26 @@ export function SystemOverview() {
                       borderRadius: "8px",
                       color: "hsl(var(--foreground))",
                     }}
+                    labelStyle={{ color: "hsl(var(--foreground))" }}
                   />
-                  <Area type="monotone" dataKey="used" stackId="1" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+                  <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} iconType="square" />
+                  <Area
+                    type="monotone"
+                    dataKey="used"
+                    stackId="1"
+                    stroke="#60a5fa"
+                    fill="#60a5fa"
+                    fillOpacity={0.6}
+                    name="Used Memory (GB)"
+                  />
                   <Area
                     type="monotone"
                     dataKey="available"
                     stackId="1"
-                    stroke="#10b981"
-                    fill="#10b981"
+                    stroke="#34d399"
+                    fill="#34d399"
                     fillOpacity={0.6}
+                    name="Available Memory (GB)"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -435,20 +455,20 @@ export function SystemOverview() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Hostname:</span>
-              <span className="text-foreground font-mono">{systemData.hostname}</span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-muted-foreground">Uptime:</span>
               <span className="text-foreground">{systemData.uptime}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Node ID:</span>
-              <span className="text-foreground font-mono">{systemData.node_id}</span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-muted-foreground">Last Update:</span>
               <span className="text-foreground">{new Date(systemData.timestamp).toLocaleTimeString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Proxmox Version:</span>
+              <span className="text-foreground">8.x</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Kernel:</span>
+              <span className="text-foreground font-mono text-sm">Linux</span>
             </div>
           </CardContent>
         </Card>
@@ -461,8 +481,11 @@ export function SystemOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Load Average:</span>
+            <div className="flex justify-between items-start">
+              <div className="flex flex-col">
+                <span className="text-muted-foreground">Load Average:</span>
+                <span className="text-xs text-muted-foreground">(1m, 5m, 15m)</span>
+              </div>
               <span className="text-foreground font-mono">
                 {systemData.load_average.map((avg) => avg.toFixed(2)).join(", ")}
               </span>
@@ -479,7 +502,7 @@ export function SystemOverview() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">CPU Cores:</span>
-              <span className="text-foreground">{navigator.hardwareConcurrency || "N/A"}</span>
+              <span className="text-foreground">{systemData.cpu_cores || "N/A"}</span>
             </div>
           </CardContent>
         </Card>
