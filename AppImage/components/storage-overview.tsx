@@ -147,10 +147,14 @@ export function StorageOverview() {
     )
   }
 
+  const disksWithTemp = storageData.disks.filter((disk) => disk.temperature > 0)
   const avgTemp =
-    storageData.disks.length > 0
-      ? Math.round(storageData.disks.reduce((sum, disk) => sum + disk.temperature, 0) / storageData.disks.length)
+    disksWithTemp.length > 0
+      ? Math.round(disksWithTemp.reduce((sum, disk) => sum + disk.temperature, 0) / disksWithTemp.length)
       : 0
+
+  const usagePercent =
+    storageData.total > 0 ? ((storageData.used / (storageData.total * 1024)) * 100).toFixed(2) : "0.00"
 
   return (
     <div className="space-y-6">
@@ -174,9 +178,7 @@ export function StorageOverview() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{storageData.used.toFixed(1)} GB</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {storageData.total > 0 ? ((storageData.used / (storageData.total * 1024)) * 100).toFixed(1) : 0}% used
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">{usagePercent}% used</p>
           </CardContent>
         </Card>
 
@@ -331,13 +333,15 @@ export function StorageOverview() {
                         <span className="text-sm font-medium">{disk.usage_percent}%</span>
                       )}
                     </div>
-                    {disk.usage_percent !== undefined && <Progress value={disk.usage_percent} className="h-2" />}
-                    {disk.total && disk.used && disk.available && (
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>{disk.used} GB used</span>
-                        <span>
-                          {disk.available} GB free of {disk.total} GB
-                        </span>
+                    {disk.usage_percent !== undefined && (
+                      <div className="space-y-1">
+                        <Progress value={disk.usage_percent} className="h-2" />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span className="text-blue-400">{disk.used} GB used</span>
+                          <span className="text-green-400">
+                            {disk.available} GB free of {disk.total} GB
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -447,11 +451,11 @@ export function StorageOverview() {
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Used:</span>
-                          <span className="font-medium">{selectedDisk.used} GB</span>
+                          <span className="font-medium text-blue-400">{selectedDisk.used} GB</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Available:</span>
-                          <span className="font-medium">{selectedDisk.available} GB</span>
+                          <span className="font-medium text-green-400">{selectedDisk.available} GB</span>
                         </div>
                         {selectedDisk.usage_percent !== undefined && (
                           <div className="mt-2">

@@ -363,7 +363,8 @@ def get_storage_info():
                     if len(parts) >= 3 and parts[2] == 'disk':
                         disk_name = parts[0]
                         disk_size_bytes = int(parts[1])
-                        disk_size_gb = round(disk_size_bytes / (1024**3), 1)
+                        disk_size_gb = disk_size_bytes / (1024**3)
+                        disk_size_tb = disk_size_bytes / (1024**4)
                         
                         total_disk_size_bytes += disk_size_bytes
                         
@@ -372,9 +373,14 @@ def get_storage_info():
                         smart_data = get_smart_data(disk_name)
                         print(f"[v0] SMART data for {disk_name}: {smart_data}")
                         
+                        if disk_size_tb >= 1:
+                            size_str = f"{disk_size_tb:.1f}T"
+                        else:
+                            size_str = f"{disk_size_gb:.1f}G"
+                        
                         physical_disks[disk_name] = {
                             'name': disk_name,
-                            'size': f"{disk_size_gb}T" if disk_size_gb >= 1000 else f"{disk_size_gb}G",
+                            'size': size_str,
                             'size_bytes': disk_size_bytes,
                             'temperature': smart_data.get('temperature', 0),
                             'health': smart_data.get('health', 'unknown'),
@@ -399,7 +405,7 @@ def get_storage_info():
         except Exception as e:
             print(f"Error getting disk list: {e}")
         
-        storage_data['total'] = round(total_disk_size_bytes / (1024**3), 1)
+        storage_data['total'] = round(total_disk_size_bytes / (1024**4), 1)
         
         # Get disk usage for mounted partitions
         try:
@@ -643,6 +649,23 @@ def get_smart_data(disk_name):
                     smart_data['health'] = 'critical'
                 elif smart_data['temperature'] >= 60:
                     smart_data['health'] = 'warning'
+        else:
+            print(f"[v0] smartctl returned code {result.returncode} for {disk_name}")
+            print(f"[v0] stderr: {result.stderr}")
+            # Intentar obtener al menos información básica del disco
+            try:
+                result_info = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
+                                           capture_output=True, text=True, timeout=5)
+                if result_info.returncode in [0, 4]:
+                    output = result_info.stdout
+                    for line in output.split('\n'):
+                        line = line.strip()
+                        if line.startswith('Device Model:') or line.startswith('Model Number:'):
+                            smart_data['model'] = line.split(':', 1)[1].strip()
+                        elif line.startswith('Serial Number:'):
+                            smart_data['serial'] = line.split(':', 1)[1].strip()
+            except Exception as e:
+                print(f"[v0] Error getting basic info for {disk_name}: {e}")
                     
     except FileNotFoundError:
         print(f"smartctl not found - install smartmontools package")
