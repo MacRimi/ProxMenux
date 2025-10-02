@@ -89,7 +89,15 @@
 /* ===== Base (v3): ya sin @theme inline ni @custom-variant ===== */
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+  }
+
+  /* Foco accesible y sutil en elementos interactivos */
+  :is(button,[role="button"],a,input,select,textarea,[tabindex]:not([tabindex="-1"])):focus {
+    @apply outline-none;
+  }
+  :is(button,[role="button"],a,input,select,textarea,[tabindex]:not([tabindex="-1"])):focus-visible {
+    @apply ring-2 ring-ring/50;
   }
   body {
     @apply bg-background text-foreground;
