@@ -4163,6 +4163,18 @@
     "type": "pve"
   },
   {
+    "name": "PVEScriptsLocal",
+    "slug": "pve-scripts-local",
+    "desc": "A modern web-based management interface for Proxmox VE (PVE) helper scripts. This tool provides a user-friendly way to discover, download, and execute community-sourced Proxmox scripts locally with real-time terminal output streaming.",
+    "script": "ct/pve-scripts-local.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/pve-scripts-local.sh",
+    "categories": [
+      1
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "qBittorrent",
     "slug": "qbittorrent",
     "desc": "qBittorrent offers a user-friendly interface that allows users to search for and download torrent files easily. It also supports magnet links, which allow users to start downloading files without the need for a torrent file.",
