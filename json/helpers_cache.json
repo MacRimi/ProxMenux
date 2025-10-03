@@ -3681,18 +3681,6 @@
     "type": "ct"
   },
   {
-    "name": "Petio",
-    "slug": "petio",
-    "desc": "Petio is a third party companion app available to Plex server owners to allow their users to request, review and discover content.",
-    "script": "ct/petio.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/petio.sh",
-    "categories": [
-      13
-    ],
-    "notes": [],
-    "type": "ct"
-  },
-  {
     "name": "Pf2eTools",
     "slug": "pf2etools",
     "desc": "Pf2eTools is an open-source website aiming to provide tools and information for Pathfinder 2nd Edition players and gamemasters. It's built using basic web technologies to ensure wide compatibility, and utilises client-side caching for speed, efficiency, and offline access.",
