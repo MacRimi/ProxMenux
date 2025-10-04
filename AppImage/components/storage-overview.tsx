@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Thermometer, Info } from "lucide-react"
+import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Thermometer } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -429,9 +429,9 @@ export function StorageOverview() {
                 onClick={() => handleDiskClick(disk)}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <HardDrive className="h-5 w-5 text-muted-foreground" />
-                    <div>
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <HardDrive className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">/dev/{disk.name}</h3>
                         <Badge className={getDiskTypeBadge(disk.name, disk.rotation_rate).className}>
@@ -439,11 +439,11 @@ export function StorageOverview() {
                         </Badge>
                       </div>
                       {disk.model && disk.model !== "Unknown" && (
-                        <p className="text-sm text-muted-foreground">{disk.model}</p>
+                        <p className="text-sm text-muted-foreground truncate">{disk.model}</p>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-shrink-0">
                     {disk.temperature > 0 && (
                       <div className="flex items-center gap-1">
                         <Thermometer className={`h-4 w-4 ${getTempColor(disk.temperature)}`} />
@@ -453,7 +453,6 @@ export function StorageOverview() {
                       </div>
                     )}
                     {getHealthBadge(disk.health)}
-                    <Info className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </div>
 
