@@ -865,6 +865,9 @@ show_uninstall_menu() {
     
     msg_success "$(translate "Selected optimizations have been uninstalled.")"
     msg_warn "$(translate "A system reboot is recommended to ensure all changes take effect.")"
+    echo -e
+    msg_success "$(translate "Press Enter to continue...")"
+    read -r
     
     if dialog --backtitle "ProxMenux" \
               --title "$(translate "Reboot Recommended")" \
