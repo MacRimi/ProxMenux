@@ -395,7 +395,9 @@ def get_storage_info():
                             'serial': smart_data.get('serial', 'Unknown'),
                             'reallocated_sectors': smart_data.get('reallocated_sectors', 0),
                             'pending_sectors': smart_data.get('pending_sectors', 0),
-                            'crc_errors': smart_data.get('crc_errors', 0)
+                            'crc_errors': smart_data.get('crc_errors', 0),
+                            'rotation_rate': smart_data.get('rotation_rate', 0), # Added
+                            'power_cycles': smart_data.get('power_cycles', 0) # Added
                         }
                         
                         storage_data['disk_count'] += 1
@@ -511,7 +513,9 @@ def get_smart_data(disk_name):
         'serial': 'Unknown',
         'reallocated_sectors': 0,
         'pending_sectors': 0,
-        'crc_errors': 0
+        'crc_errors': 0,
+        'rotation_rate': 0,  # Added rotation rate (RPM)
+        'power_cycles': 0,   # Added power cycle count
     }
     
     print(f"[v0] ===== Starting SMART data collection for /dev/{disk_name} =====")
@@ -544,9 +548,6 @@ def get_smart_data(disk_name):
                     stderr_preview = result.stderr[:200].replace('\n', ' ')
                     print(f"[v0] stderr: {stderr_preview}")
                 
-                # smartctl returns: 0=OK, 2=SMART disabled, 4=threshold exceeded, 8=error log has errors
-                # 64=device open failed (but sometimes still has partial data)
-                # We'll try to parse ANY output if stdout is not empty
                 has_output = result.stdout and len(result.stdout.strip()) > 50
                 
                 if has_output:
@@ -572,6 +573,10 @@ def get_smart_data(disk_name):
                                 smart_data['serial'] = data['serial_number']
                                 print(f"[v0] Serial: {smart_data['serial']}")
                             
+                            if 'rotation_rate' in data:
+                                smart_data['rotation_rate'] = data['rotation_rate']
+                                print(f"[v0] Rotation Rate: {smart_data['rotation_rate']} RPM")
+                            
                             # Extract SMART status
                             if 'smart_status' in data and 'passed' in data['smart_status']:
                                 smart_data['smart_status'] = 'passed' if data['smart_status']['passed'] else 'failed'
@@ -593,6 +598,9 @@ def get_smart_data(disk_name):
                                     if attr_id == 9:  # Power_On_Hours
                                         smart_data['power_on_hours'] = raw_value
                                         print(f"[v0] Power On Hours (ID 9): {raw_value}")
+                                    elif attr_id == 12:  # Power_Cycle_Count
+                                        smart_data['power_cycles'] = raw_value
+                                        print(f"[v0] Power Cycles (ID 12): {raw_value}")
                                     elif attr_id == 194:  # Temperature_Celsius
                                         if smart_data['temperature'] == 0:
                                             smart_data['temperature'] = raw_value
@@ -621,6 +629,9 @@ def get_smart_data(disk_name):
                                 if 'power_on_hours' in nvme_data:
                                     smart_data['power_on_hours'] = nvme_data['power_on_hours']
                                     print(f"[v0] NVMe Power On Hours: {smart_data['power_on_hours']}")
+                                if 'power_cycles' in nvme_data:
+                                    smart_data['power_cycles'] = nvme_data['power_cycles']
+                                    print(f"[v0] NVMe Power Cycles: {smart_data['power_cycles']}")
                             
                             # If we got good data, break out of the loop
                             if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
@@ -650,6 +661,18 @@ def get_smart_data(disk_name):
                             elif line.startswith('Serial Number:') and smart_data['serial'] == 'Unknown':
                                 smart_data['serial'] = line.split(':', 1)[1].strip()
                                 print(f"[v0] Found serial: {smart_data['serial']}")
+                            
+                            elif line.startswith('Rotation Rate:') and smart_data['rotation_rate'] == 0:
+                                rate_str = line.split(':', 1)[1].strip()
+                                if 'rpm' in rate_str.lower():
+                                    try:
+                                        smart_data['rotation_rate'] = int(rate_str.split()[0])
+                                        print(f"[v0] Found rotation rate: {smart_data['rotation_rate']} RPM")
+                                    except (ValueError, IndexError):
+                                        pass
+                                elif 'Solid State Device' in rate_str:
+                                    smart_data['rotation_rate'] = 0  # SSD
+                                    print(f"[v0] Found SSD (no rotation)")
                             
                             # SMART status detection
                             elif 'SMART overall-health self-assessment test result:' in line:
@@ -706,6 +729,10 @@ def get_smart_data(disk_name):
                                             raw_clean = raw_value.split()[0].replace('h', '').replace(',', '')
                                             smart_data['power_on_hours'] = int(raw_clean)
                                             print(f"[v0] Power On Hours: {smart_data['power_on_hours']}")
+                                        elif attr_id == '12':  # Power Cycle Count
+                                            raw_clean = raw_value.split()[0].replace(',', '')
+                                            smart_data['power_cycles'] = int(raw_clean)
+                                            print(f"[v0] Power Cycles: {smart_data['power_cycles']}")
                                         elif attr_id == '194' and smart_data['temperature'] == 0:  # Temperature
                                             temp_str = raw_value.split()[0]
                                             smart_data['temperature'] = int(temp_str)

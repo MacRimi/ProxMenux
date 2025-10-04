@@ -25,6 +25,8 @@ interface DiskInfo {
   reallocated_sectors?: number
   pending_sectors?: number
   crc_errors?: number
+  rotation_rate?: number // Added rotation rate (RPM)
+  power_cycles?: number // Added power cycle count
 }
 
 interface ZFSPool {
@@ -150,6 +152,40 @@ export function StorageOverview() {
       return `${years}y ${days}d`
     }
     return `${days}d`
+  }
+
+  const formatRotationRate = (rpm: number | undefined) => {
+    if (!rpm || rpm === 0) return "SSD"
+    return `${rpm.toLocaleString()} RPM`
+  }
+
+  const getDiskType = (diskName: string, rotationRate: number | undefined): string => {
+    if (diskName.startsWith("nvme")) {
+      return "NVMe"
+    }
+    if (!rotationRate || rotationRate === 0) {
+      return "SSD"
+    }
+    return "HDD"
+  }
+
+  const getDiskTypeBadge = (diskName: string, rotationRate: number | undefined) => {
+    const diskType = getDiskType(diskName, rotationRate)
+    const badgeStyles: Record<string, { className: string; label: string }> = {
+      NVMe: {
+        className: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+        label: "NVMe",
+      },
+      SSD: {
+        className: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+        label: "SSD",
+      },
+      HDD: {
+        className: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+        label: "HDD",
+      },
+    }
+    return badgeStyles[diskType]
   }
 
   const handleDiskClick = (disk: DiskInfo) => {
@@ -396,7 +432,12 @@ export function StorageOverview() {
                   <div className="flex items-center gap-3">
                     <HardDrive className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <h3 className="font-semibold">/dev/{disk.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">/dev/{disk.name}</h3>
+                        <Badge className={getDiskTypeBadge(disk.name, disk.rotation_rate).className}>
+                          {getDiskTypeBadge(disk.name, disk.rotation_rate).label}
+                        </Badge>
+                      </div>
                       {disk.model && disk.model !== "Unknown" && (
                         <p className="text-sm text-muted-foreground">{disk.model}</p>
                       )}
@@ -493,6 +534,18 @@ export function StorageOverview() {
                     <p className="font-medium">
                       {selectedDisk.power_on_hours && selectedDisk.power_on_hours > 0
                         ? `${selectedDisk.power_on_hours.toLocaleString()}h (${formatHours(selectedDisk.power_on_hours)})`
+                        : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Rotation Rate</p>
+                    <p className="font-medium">{formatRotationRate(selectedDisk.rotation_rate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Power Cycles</p>
+                    <p className="font-medium">
+                      {selectedDisk.power_cycles && selectedDisk.power_cycles > 0
+                        ? selectedDisk.power_cycles.toLocaleString()
                         : "N/A"}
                     </p>
                   </div>
