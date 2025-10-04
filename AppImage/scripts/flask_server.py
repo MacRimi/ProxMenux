@@ -496,7 +496,7 @@ def get_storage_info():
         }
 
 def get_smart_data(disk_name):
-    """Get SMART data for a specific disk"""
+    """Get SMART data for a specific disk - Enhanced with better parsing logic from Home Assistant"""
     smart_data = {
         'temperature': 0,
         'health': 'unknown',
@@ -509,58 +509,93 @@ def get_smart_data(disk_name):
         'crc_errors': 0
     }
     
+    print(f"[v0] ===== Starting SMART data collection for /dev/{disk_name} =====")
+    
     try:
+        print(f"[v0] Step 1: Attempting JSON output for {disk_name}...")
         result = subprocess.run(['smartctl', '-a', '-j', f'/dev/{disk_name}'], 
                               capture_output=True, text=True, timeout=10)
         
-        # smartctl returns 0 for success, 4 if some SMART values exceeded threshold (still valid)
-        if result.returncode in [0, 4]:
+        print(f"[v0] smartctl return code: {result.returncode}")
+        
+        # smartctl returns: 0=OK, 2=SMART disabled, 4=threshold exceeded (still valid), 8=error log has errors
+        if result.returncode in [0, 4, 8] and result.stdout:
             try:
-                # Try JSON parsing first (newer smartctl versions)
+                print(f"[v0] Attempting JSON parse...")
                 data = json.loads(result.stdout)
+                print(f"[v0] JSON parse successful!")
                 
-                # Get model and serial
                 if 'model_name' in data:
                     smart_data['model'] = data['model_name']
+                    print(f"[v0] Model: {smart_data['model']}")
                 elif 'model_family' in data:
                     smart_data['model'] = data['model_family']
+                    print(f"[v0] Model family: {smart_data['model']}")
                 
                 if 'serial_number' in data:
                     smart_data['serial'] = data['serial_number']
+                    print(f"[v0] Serial: {smart_data['serial']}")
                 
-                # Get SMART status
                 if 'smart_status' in data and 'passed' in data['smart_status']:
                     smart_data['smart_status'] = 'passed' if data['smart_status']['passed'] else 'failed'
                     smart_data['health'] = 'healthy' if data['smart_status']['passed'] else 'critical'
+                    print(f"[v0] SMART status: {smart_data['smart_status']}")
                 
-                # Get temperature
                 if 'temperature' in data and 'current' in data['temperature']:
                     smart_data['temperature'] = data['temperature']['current']
+                    print(f"[v0] Temperature: {smart_data['temperature']}°C")
                 
                 if 'ata_smart_attributes' in data and 'table' in data['ata_smart_attributes']:
+                    print(f"[v0] Parsing ATA SMART attributes...")
                     for attr in data['ata_smart_attributes']['table']:
                         attr_id = attr.get('id')
+                        raw_value = attr.get('raw', {}).get('value', 0)
+                        
+                        # ID mapping from Home Assistant coordinator
                         if attr_id == 9:  # Power_On_Hours
-                            smart_data['power_on_hours'] = attr['raw']['value']
-                        elif attr_id == 194 and smart_data['temperature'] == 0:  # Temperature_Celsius
-                            smart_data['temperature'] = attr['raw']['value']
+                            smart_data['power_on_hours'] = raw_value
+                            print(f"[v0] Power On Hours (ID 9): {raw_value}")
+                        elif attr_id == 194:  # Temperature_Celsius
+                            if smart_data['temperature'] == 0:
+                                smart_data['temperature'] = raw_value
+                                print(f"[v0] Temperature (ID 194): {raw_value}°C")
+                        elif attr_id == 190:  # Airflow_Temperature_Cel
+                            if smart_data['temperature'] == 0:
+                                smart_data['temperature'] = raw_value
+                                print(f"[v0] Airflow Temperature (ID 190): {raw_value}°C")
                         elif attr_id == 5:  # Reallocated_Sector_Ct
-                            smart_data['reallocated_sectors'] = attr['raw']['value']
+                            smart_data['reallocated_sectors'] = raw_value
+                            print(f"[v0] Reallocated Sectors (ID 5): {raw_value}")
                         elif attr_id == 197:  # Current_Pending_Sector
-                            smart_data['pending_sectors'] = attr['raw']['value']
+                            smart_data['pending_sectors'] = raw_value
+                            print(f"[v0] Pending Sectors (ID 197): {raw_value}")
                         elif attr_id == 199:  # UDMA_CRC_Error_Count
-                            smart_data['crc_errors'] = attr['raw']['value']
+                            smart_data['crc_errors'] = raw_value
+                            print(f"[v0] CRC Errors (ID 199): {raw_value}")
                 
-                # For NVMe drives
                 if 'nvme_smart_health_information_log' in data:
+                    print(f"[v0] Parsing NVMe SMART data...")
                     nvme_data = data['nvme_smart_health_information_log']
                     if 'temperature' in nvme_data:
                         smart_data['temperature'] = nvme_data['temperature']
+                        print(f"[v0] NVMe Temperature: {smart_data['temperature']}°C")
                     if 'power_on_hours' in nvme_data:
                         smart_data['power_on_hours'] = nvme_data['power_on_hours']
+                        print(f"[v0] NVMe Power On Hours: {smart_data['power_on_hours']}")
                 
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
+                print(f"[v0] JSON parse failed: {e}, falling back to text parsing...")
                 output = result.stdout
+                
+                # Get basic info
+                for line in output.split('\n'):
+                    line = line.strip()
+                    if line.startswith('Device Model:') or line.startswith('Model Number:'):
+                        smart_data['model'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Serial Number:'):
+                        smart_data['serial'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Model Family:') and smart_data['model'] == 'Unknown':
+                        smart_data['model'] = line.split(':', 1)[1].strip()
                 
                 # Parse SMART status
                 if 'SMART overall-health self-assessment test result: PASSED' in output:
@@ -572,17 +607,6 @@ def get_smart_data(disk_name):
                 elif 'SMART overall-health self-assessment test result: FAILED' in output:
                     smart_data['smart_status'] = 'failed'
                     smart_data['health'] = 'critical'
-                
-                # Parse model and serial
-                for line in output.split('\n'):
-                    line = line.strip()
-                    
-                    if line.startswith('Device Model:') or line.startswith('Model Number:'):
-                        smart_data['model'] = line.split(':', 1)[1].strip()
-                    elif line.startswith('Serial Number:') or line.startswith('Serial number:'):
-                        smart_data['serial'] = line.split(':', 1)[1].strip()
-                    elif line.startswith('Model Family:') and smart_data['model'] == 'Unknown':
-                        smart_data['model'] = line.split(':', 1)[1].strip()
                 
                 in_attributes = False
                 for line in output.split('\n'):
@@ -597,36 +621,30 @@ def get_smart_data(disk_name):
                         if len(parts) >= 10:
                             try:
                                 attr_id = parts[0]
-                                attr_name = parts[1]
                                 raw_value = parts[9]
                                 
-                                # Power On Hours (attribute 9)
-                                if attr_id == '9':
-                                    smart_data['power_on_hours'] = int(raw_value)
-                                
-                                # Temperature (attribute 194)
-                                elif attr_id == '194':
-                                    # Raw value might be like "32 (Min/Max 18/45)" or just "32"
-                                    temp_str = raw_value.split()[0] if ' ' in raw_value else raw_value
+                                # Same ID mapping as JSON parsing
+                                if attr_id == '9':  # Power On Hours
+                                    # Handle different formats: "12345", "12345h", "12345 hours"
+                                    raw_clean = raw_value.split()[0].replace('h', '')
+                                    smart_data['power_on_hours'] = int(raw_clean)
+                                elif attr_id == '194':  # Temperature
+                                    temp_str = raw_value.split()[0]
                                     smart_data['temperature'] = int(temp_str)
-                                
-                                # Reallocated Sectors (attribute 5)
-                                elif attr_id == '5':
+                                elif attr_id == '190':  # Airflow Temperature
+                                    if smart_data['temperature'] == 0:
+                                        temp_str = raw_value.split()[0]
+                                        smart_data['temperature'] = int(temp_str)
+                                elif attr_id == '5':  # Reallocated Sectors
                                     smart_data['reallocated_sectors'] = int(raw_value)
-                                
-                                # Current Pending Sector (attribute 197)
-                                elif attr_id == '197':
+                                elif attr_id == '197':  # Pending Sectors
                                     smart_data['pending_sectors'] = int(raw_value)
-                                
-                                # UDMA CRC Error Count (attribute 199)
-                                elif attr_id == '199':
+                                elif attr_id == '199':  # CRC Errors
                                     smart_data['crc_errors'] = int(raw_value)
                                     
                             except (ValueError, IndexError) as e:
-                                print(f"[v0] Error parsing SMART attribute line '{line}': {e}")
                                 continue
                 
-                # For NVMe drives, look for temperature in different format
                 if smart_data['temperature'] == 0:
                     for line in output.split('\n'):
                         if 'Temperature:' in line:
@@ -635,45 +653,44 @@ def get_smart_data(disk_name):
                                 smart_data['temperature'] = int(temp_str)
                             except (ValueError, IndexError):
                                 pass
-            
-            if smart_data['reallocated_sectors'] > 0 or smart_data['pending_sectors'] > 0:
-                smart_data['health'] = 'warning'
-            if smart_data['reallocated_sectors'] > 10 or smart_data['pending_sectors'] > 10:
-                smart_data['health'] = 'critical'
-            if smart_data['smart_status'] == 'failed':
-                smart_data['health'] = 'critical'
-            
-            # Temperature-based health (only if not already critical/warning from SMART)
-            if smart_data['health'] == 'healthy' and smart_data['temperature'] > 0:
-                if smart_data['temperature'] >= 70:
-                    smart_data['health'] = 'critical'
-                elif smart_data['temperature'] >= 60:
-                    smart_data['health'] = 'warning'
+        
         else:
-            print(f"[v0] smartctl returned code {result.returncode} for {disk_name}")
-            print(f"[v0] stderr: {result.stderr}")
-            # Intentar obtener al menos información básica del disco
-            try:
-                result_info = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
-                                           capture_output=True, text=True, timeout=5)
-                if result_info.returncode in [0, 4]:
-                    output = result_info.stdout
-                    for line in output.split('\n'):
-                        line = line.strip()
-                        if line.startswith('Device Model:') or line.startswith('Model Number:'):
-                            smart_data['model'] = line.split(':', 1)[1].strip()
-                        elif line.startswith('Serial Number:'):
-                            smart_data['serial'] = line.split(':', 1)[1].strip()
-            except Exception as e:
-                print(f"[v0] Error getting basic info for {disk_name}: {e}")
-                    
+            print(f"[v0] JSON command failed, trying basic info...")
+            result_info = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
+                                       capture_output=True, text=True, timeout=10)
+            if result_info.stdout:
+                for line in result_info.stdout.split('\n'):
+                    line = line.strip()
+                    if line.startswith('Device Model:') or line.startswith('Model Number:'):
+                        smart_data['model'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Serial Number:'):
+                        smart_data['serial'] = line.split(':', 1)[1].strip()
+        
+        if smart_data['reallocated_sectors'] > 0 or smart_data['pending_sectors'] > 0:
+            smart_data['health'] = 'warning'
+            print(f"[v0] Health: WARNING (reallocated/pending sectors)")
+        if smart_data['reallocated_sectors'] > 10 or smart_data['pending_sectors'] > 10:
+            smart_data['health'] = 'critical'
+            print(f"[v0] Health: CRITICAL (high sector count)")
+        if smart_data['smart_status'] == 'failed':
+            smart_data['health'] = 'critical'
+            print(f"[v0] Health: CRITICAL (SMART failed)")
+        
+        # Temperature-based health
+        if smart_data['health'] == 'healthy' and smart_data['temperature'] > 0:
+            if smart_data['temperature'] >= 70:
+                smart_data['health'] = 'critical'
+            elif smart_data['temperature'] >= 60:
+                smart_data['health'] = 'warning'
+            
     except FileNotFoundError:
-        print(f"smartctl not found - install smartmontools package")
+        print(f"[v0] ERROR: smartctl not found - install smartmontools")
     except subprocess.TimeoutExpired:
-        print(f"Timeout getting SMART data for {disk_name}")
+        print(f"[v0] ERROR: Timeout getting SMART data for {disk_name}")
     except Exception as e:
-        print(f"Error getting SMART data for {disk_name}: {e}")
+        print(f"[v0] ERROR: Exception for {disk_name}: {type(e).__name__}: {e}")
     
+    print(f"[v0] ===== Final SMART data for /dev/{disk_name}: {smart_data} =====")
     return smart_data
 
 def get_network_info():
