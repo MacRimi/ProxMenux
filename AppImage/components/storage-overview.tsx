@@ -202,9 +202,11 @@ export function StorageOverview() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Temperature</CardTitle>
-            <Thermometer className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Thermometer className="h-5 w-5" />
+              Avg Temperature
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${getTempColor(avgTemp)}`}>{avgTemp > 0 ? `${avgTemp}°C` : "N/A"}</div>
@@ -212,6 +214,68 @@ export function StorageOverview() {
           </CardContent>
         </Card>
       </div>
+
+      {storageData.disks.some((disk) => disk.mountpoint) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Mounted Partitions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {storageData.disks
+                .filter((disk) => disk.mountpoint)
+                .map((disk) => (
+                  <div key={disk.name} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h3 className="font-semibold">{disk.mountpoint}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          /dev/{disk.name} ({disk.fstype})
+                        </p>
+                      </div>
+                      {disk.usage_percent !== undefined && (
+                        <span className="text-sm font-medium">{disk.usage_percent}%</span>
+                      )}
+                    </div>
+                    {disk.usage_percent !== undefined && (
+                      <div className="space-y-1">
+                        <Progress
+                          value={disk.usage_percent}
+                          className={`h-2 ${
+                            disk.usage_percent > 90
+                              ? "[&>div]:bg-red-500"
+                              : disk.usage_percent > 75
+                                ? "[&>div]:bg-yellow-500"
+                                : "[&>div]:bg-blue-500"
+                          }`}
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span
+                            className={
+                              disk.usage_percent > 90
+                                ? "text-red-400"
+                                : disk.usage_percent > 75
+                                  ? "text-yellow-400"
+                                  : "text-blue-400"
+                            }
+                          >
+                            {disk.used} GB used
+                          </span>
+                          <span className="text-green-400">
+                            {disk.available} GB free of {disk.total} GB
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ZFS Pools */}
       {storageData.zfs_pools && storageData.zfs_pools.length > 0 && (

@@ -496,7 +496,7 @@ def get_storage_info():
         }
 
 def get_smart_data(disk_name):
-    """Get SMART data for a specific disk - Enhanced with better parsing logic from Home Assistant"""
+    """Get SMART data for a specific disk - Enhanced with multiple device type attempts"""
     smart_data = {
         'temperature': 0,
         'health': 'unknown',
@@ -512,159 +512,212 @@ def get_smart_data(disk_name):
     print(f"[v0] ===== Starting SMART data collection for /dev/{disk_name} =====")
     
     try:
-        print(f"[v0] Step 1: Attempting JSON output for {disk_name}...")
-        result = subprocess.run(['smartctl', '-a', '-j', f'/dev/{disk_name}'], 
-                              capture_output=True, text=True, timeout=10)
+        commands_to_try = [
+            ['smartctl', '-a', '-j', f'/dev/{disk_name}'],  # JSON output (preferred)
+            ['smartctl', '-a', '-j', '-d', 'ata', f'/dev/{disk_name}'],  # JSON with ATA device type
+            ['smartctl', '-a', '-j', '-d', 'sat', f'/dev/{disk_name}'],  # JSON with SAT device type
+            ['smartctl', '-a', '-j', '-d', 'scsi', f'/dev/{disk_name}'],  # JSON with SCSI device type
+            ['smartctl', '-a', f'/dev/{disk_name}'],  # Text output
+            ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # Text with ATA device type
+            ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],  # Text with SAT device type
+            ['smartctl', '-i', '-H', f'/dev/{disk_name}'],  # Basic info + health only
+        ]
         
-        print(f"[v0] smartctl return code: {result.returncode}")
-        
-        # smartctl returns: 0=OK, 2=SMART disabled, 4=threshold exceeded (still valid), 8=error log has errors
-        if result.returncode in [0, 4, 8] and result.stdout:
+        for cmd_index, cmd in enumerate(commands_to_try):
+            print(f"[v0] Attempt {cmd_index + 1}/{len(commands_to_try)}: Running command: {' '.join(cmd)}")
             try:
-                print(f"[v0] Attempting JSON parse...")
-                data = json.loads(result.stdout)
-                print(f"[v0] JSON parse successful!")
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+                print(f"[v0] Command return code: {result.returncode}")
                 
-                if 'model_name' in data:
-                    smart_data['model'] = data['model_name']
-                    print(f"[v0] Model: {smart_data['model']}")
-                elif 'model_family' in data:
-                    smart_data['model'] = data['model_family']
-                    print(f"[v0] Model family: {smart_data['model']}")
+                if result.stderr:
+                    stderr_preview = result.stderr[:300].replace('\n', ' ')
+                    print(f"[v0] stderr: {stderr_preview}")
                 
-                if 'serial_number' in data:
-                    smart_data['serial'] = data['serial_number']
-                    print(f"[v0] Serial: {smart_data['serial']}")
-                
-                if 'smart_status' in data and 'passed' in data['smart_status']:
-                    smart_data['smart_status'] = 'passed' if data['smart_status']['passed'] else 'failed'
-                    smart_data['health'] = 'healthy' if data['smart_status']['passed'] else 'critical'
-                    print(f"[v0] SMART status: {smart_data['smart_status']}")
-                
-                if 'temperature' in data and 'current' in data['temperature']:
-                    smart_data['temperature'] = data['temperature']['current']
-                    print(f"[v0] Temperature: {smart_data['temperature']}°C")
-                
-                if 'ata_smart_attributes' in data and 'table' in data['ata_smart_attributes']:
-                    print(f"[v0] Parsing ATA SMART attributes...")
-                    for attr in data['ata_smart_attributes']['table']:
-                        attr_id = attr.get('id')
-                        raw_value = attr.get('raw', {}).get('value', 0)
-                        
-                        # ID mapping from Home Assistant coordinator
-                        if attr_id == 9:  # Power_On_Hours
-                            smart_data['power_on_hours'] = raw_value
-                            print(f"[v0] Power On Hours (ID 9): {raw_value}")
-                        elif attr_id == 194:  # Temperature_Celsius
-                            if smart_data['temperature'] == 0:
-                                smart_data['temperature'] = raw_value
-                                print(f"[v0] Temperature (ID 194): {raw_value}°C")
-                        elif attr_id == 190:  # Airflow_Temperature_Cel
-                            if smart_data['temperature'] == 0:
-                                smart_data['temperature'] = raw_value
-                                print(f"[v0] Airflow Temperature (ID 190): {raw_value}°C")
-                        elif attr_id == 5:  # Reallocated_Sector_Ct
-                            smart_data['reallocated_sectors'] = raw_value
-                            print(f"[v0] Reallocated Sectors (ID 5): {raw_value}")
-                        elif attr_id == 197:  # Current_Pending_Sector
-                            smart_data['pending_sectors'] = raw_value
-                            print(f"[v0] Pending Sectors (ID 197): {raw_value}")
-                        elif attr_id == 199:  # UDMA_CRC_Error_Count
-                            smart_data['crc_errors'] = raw_value
-                            print(f"[v0] CRC Errors (ID 199): {raw_value}")
-                
-                if 'nvme_smart_health_information_log' in data:
-                    print(f"[v0] Parsing NVMe SMART data...")
-                    nvme_data = data['nvme_smart_health_information_log']
-                    if 'temperature' in nvme_data:
-                        smart_data['temperature'] = nvme_data['temperature']
-                        print(f"[v0] NVMe Temperature: {smart_data['temperature']}°C")
-                    if 'power_on_hours' in nvme_data:
-                        smart_data['power_on_hours'] = nvme_data['power_on_hours']
-                        print(f"[v0] NVMe Power On Hours: {smart_data['power_on_hours']}")
-                
-            except json.JSONDecodeError as e:
-                print(f"[v0] JSON parse failed: {e}, falling back to text parsing...")
-                output = result.stdout
-                
-                # Get basic info
-                for line in output.split('\n'):
-                    line = line.strip()
-                    if line.startswith('Device Model:') or line.startswith('Model Number:'):
-                        smart_data['model'] = line.split(':', 1)[1].strip()
-                    elif line.startswith('Serial Number:'):
-                        smart_data['serial'] = line.split(':', 1)[1].strip()
-                    elif line.startswith('Model Family:') and smart_data['model'] == 'Unknown':
-                        smart_data['model'] = line.split(':', 1)[1].strip()
-                
-                # Parse SMART status
-                if 'SMART overall-health self-assessment test result: PASSED' in output:
-                    smart_data['smart_status'] = 'passed'
-                    smart_data['health'] = 'healthy'
-                elif 'SMART Health Status: OK' in output:  # NVMe
-                    smart_data['smart_status'] = 'passed'
-                    smart_data['health'] = 'healthy'
-                elif 'SMART overall-health self-assessment test result: FAILED' in output:
-                    smart_data['smart_status'] = 'failed'
-                    smart_data['health'] = 'critical'
-                
-                in_attributes = False
-                for line in output.split('\n'):
-                    line = line.strip()
+                # smartctl returns: 0=OK, 2=SMART disabled, 4=threshold exceeded (still valid), 8=error log has errors
+                if result.returncode in [0, 2, 4, 8] and result.stdout:
+                    print(f"[v0] Got output ({len(result.stdout)} bytes)")
                     
-                    if 'ID# ATTRIBUTE_NAME' in line:
-                        in_attributes = True
-                        continue
-                    
-                    if in_attributes and line and not line.startswith('SMART'):
-                        parts = line.split()
-                        if len(parts) >= 10:
-                            try:
-                                attr_id = parts[0]
-                                raw_value = parts[9]
-                                
-                                # Same ID mapping as JSON parsing
-                                if attr_id == '9':  # Power On Hours
-                                    # Handle different formats: "12345", "12345h", "12345 hours"
-                                    raw_clean = raw_value.split()[0].replace('h', '')
-                                    smart_data['power_on_hours'] = int(raw_clean)
-                                elif attr_id == '194':  # Temperature
-                                    temp_str = raw_value.split()[0]
-                                    smart_data['temperature'] = int(temp_str)
-                                elif attr_id == '190':  # Airflow Temperature
-                                    if smart_data['temperature'] == 0:
-                                        temp_str = raw_value.split()[0]
-                                        smart_data['temperature'] = int(temp_str)
-                                elif attr_id == '5':  # Reallocated Sectors
-                                    smart_data['reallocated_sectors'] = int(raw_value)
-                                elif attr_id == '197':  # Pending Sectors
-                                    smart_data['pending_sectors'] = int(raw_value)
-                                elif attr_id == '199':  # CRC Errors
-                                    smart_data['crc_errors'] = int(raw_value)
+                    # Try JSON parsing first
+                    if '-j' in cmd:
+                        try:
+                            print(f"[v0] Attempting JSON parse...")
+                            data = json.loads(result.stdout)
+                            print(f"[v0] JSON parse successful!")
+                            
+                            # Extract model
+                            if 'model_name' in data:
+                                smart_data['model'] = data['model_name']
+                                print(f"[v0] Model: {smart_data['model']}")
+                            elif 'model_family' in data:
+                                smart_data['model'] = data['model_family']
+                                print(f"[v0] Model family: {smart_data['model']}")
+                            
+                            # Extract serial
+                            if 'serial_number' in data:
+                                smart_data['serial'] = data['serial_number']
+                                print(f"[v0] Serial: {smart_data['serial']}")
+                            
+                            # Extract SMART status
+                            if 'smart_status' in data and 'passed' in data['smart_status']:
+                                smart_data['smart_status'] = 'passed' if data['smart_status']['passed'] else 'failed'
+                                smart_data['health'] = 'healthy' if data['smart_status']['passed'] else 'critical'
+                                print(f"[v0] SMART status: {smart_data['smart_status']}, health: {smart_data['health']}")
+                            
+                            # Extract temperature
+                            if 'temperature' in data and 'current' in data['temperature']:
+                                smart_data['temperature'] = data['temperature']['current']
+                                print(f"[v0] Temperature: {smart_data['temperature']}°C")
+                            
+                            # Parse ATA SMART attributes
+                            if 'ata_smart_attributes' in data and 'table' in data['ata_smart_attributes']:
+                                print(f"[v0] Parsing ATA SMART attributes...")
+                                for attr in data['ata_smart_attributes']['table']:
+                                    attr_id = attr.get('id')
+                                    raw_value = attr.get('raw', {}).get('value', 0)
                                     
-                            except (ValueError, IndexError) as e:
+                                    # ID mapping from Home Assistant coordinator
+                                    if attr_id == 9:  # Power_On_Hours
+                                        smart_data['power_on_hours'] = raw_value
+                                        print(f"[v0] Power On Hours (ID 9): {raw_value}")
+                                    elif attr_id == 194:  # Temperature_Celsius
+                                        if smart_data['temperature'] == 0:
+                                            smart_data['temperature'] = raw_value
+                                            print(f"[v0] Temperature (ID 194): {raw_value}°C")
+                                    elif attr_id == 190:  # Airflow_Temperature_Cel
+                                        if smart_data['temperature'] == 0:
+                                            smart_data['temperature'] = raw_value
+                                            print(f"[v0] Airflow Temperature (ID 190): {raw_value}°C")
+                                    elif attr_id == 5:  # Reallocated_Sector_Ct
+                                        smart_data['reallocated_sectors'] = raw_value
+                                        print(f"[v0] Reallocated Sectors (ID 5): {raw_value}")
+                                    elif attr_id == 197:  # Current_Pending_Sector
+                                        smart_data['pending_sectors'] = raw_value
+                                        print(f"[v0] Pending Sectors (ID 197): {raw_value}")
+                                    elif attr_id == 199:  # UDMA_CRC_Error_Count
+                                        smart_data['crc_errors'] = raw_value
+                                        print(f"[v0] CRC Errors (ID 199): {raw_value}")
+                            
+                            # Parse NVMe SMART data
+                            if 'nvme_smart_health_information_log' in data:
+                                print(f"[v0] Parsing NVMe SMART data...")
+                                nvme_data = data['nvme_smart_health_information_log']
+                                if 'temperature' in nvme_data:
+                                    smart_data['temperature'] = nvme_data['temperature']
+                                    print(f"[v0] NVMe Temperature: {smart_data['temperature']}°C")
+                                if 'power_on_hours' in nvme_data:
+                                    smart_data['power_on_hours'] = nvme_data['power_on_hours']
+                                    print(f"[v0] NVMe Power On Hours: {smart_data['power_on_hours']}")
+                            
+                            # If we got good data, break out of the loop
+                            if smart_data['model'] != 'Unknown' or smart_data['serial'] != 'Unknown':
+                                print(f"[v0] Successfully extracted data from JSON (attempt {cmd_index + 1})")
+                                break
+                                
+                        except json.JSONDecodeError as e:
+                            print(f"[v0] JSON parse failed: {e}, will try next command...")
+                    
+                    # Text parsing fallback
+                    if smart_data['model'] == 'Unknown' or smart_data['serial'] == 'Unknown':
+                        print(f"[v0] Parsing text output...")
+                        output = result.stdout
+                        
+                        # Get basic info
+                        for line in output.split('\n'):
+                            line = line.strip()
+                            if line.startswith('Device Model:') or line.startswith('Model Number:'):
+                                smart_data['model'] = line.split(':', 1)[1].strip()
+                                print(f"[v0] Found model: {smart_data['model']}")
+                            elif line.startswith('Serial Number:'):
+                                smart_data['serial'] = line.split(':', 1)[1].strip()
+                                print(f"[v0] Found serial: {smart_data['serial']}")
+                            elif line.startswith('Model Family:') and smart_data['model'] == 'Unknown':
+                                smart_data['model'] = line.split(':', 1)[1].strip()
+                                print(f"[v0] Found model family: {smart_data['model']}")
+                        
+                        # Parse SMART status
+                        if 'SMART overall-health self-assessment test result: PASSED' in output:
+                            smart_data['smart_status'] = 'passed'
+                            smart_data['health'] = 'healthy'
+                            print(f"[v0] SMART status: PASSED")
+                        elif 'SMART Health Status: OK' in output:  # NVMe
+                            smart_data['smart_status'] = 'passed'
+                            smart_data['health'] = 'healthy'
+                            print(f"[v0] NVMe Health: OK")
+                        elif 'SMART overall-health self-assessment test result: FAILED' in output:
+                            smart_data['smart_status'] = 'failed'
+                            smart_data['health'] = 'critical'
+                            print(f"[v0] SMART status: FAILED")
+                        
+                        # Parse SMART attributes table
+                        in_attributes = False
+                        for line in output.split('\n'):
+                            line = line.strip()
+                            
+                            if 'ID# ATTRIBUTE_NAME' in line:
+                                in_attributes = True
+                                print(f"[v0] Found SMART attributes table")
                                 continue
+                            
+                            if in_attributes and line and not line.startswith('SMART'):
+                                parts = line.split()
+                                if len(parts) >= 10:
+                                    try:
+                                        attr_id = parts[0]
+                                        raw_value = parts[9]
+                                        
+                                        # Same ID mapping as JSON parsing
+                                        if attr_id == '9':  # Power On Hours
+                                            # Handle different formats: "12345", "12345h", "12345 hours"
+                                            raw_clean = raw_value.split()[0].replace('h', '')
+                                            smart_data['power_on_hours'] = int(raw_clean)
+                                            print(f"[v0] Power On Hours: {smart_data['power_on_hours']}")
+                                        elif attr_id == '194':  # Temperature
+                                            temp_str = raw_value.split()[0]
+                                            smart_data['temperature'] = int(temp_str)
+                                            print(f"[v0] Temperature: {smart_data['temperature']}°C")
+                                        elif attr_id == '190':  # Airflow Temperature
+                                            if smart_data['temperature'] == 0:
+                                                temp_str = raw_value.split()[0]
+                                                smart_data['temperature'] = int(temp_str)
+                                                print(f"[v0] Airflow Temperature: {smart_data['temperature']}°C")
+                                        elif attr_id == '5':  # Reallocated Sectors
+                                            smart_data['reallocated_sectors'] = int(raw_value)
+                                            print(f"[v0] Reallocated Sectors: {smart_data['reallocated_sectors']}")
+                                        elif attr_id == '197':  # Pending Sectors
+                                            smart_data['pending_sectors'] = int(raw_value)
+                                            print(f"[v0] Pending Sectors: {smart_data['pending_sectors']}")
+                                        elif attr_id == '199':  # CRC Errors
+                                            smart_data['crc_errors'] = int(raw_value)
+                                            print(f"[v0] CRC Errors: {smart_data['crc_errors']}")
+                                            
+                                    except (ValueError, IndexError) as e:
+                                        continue
+                        
+                        # Try to find temperature in other formats
+                        if smart_data['temperature'] == 0:
+                            for line in output.split('\n'):
+                                if 'Temperature:' in line or 'Temperature_Celsius' in line:
+                                    try:
+                                        temp_str = line.split(':')[1].strip().split()[0]
+                                        smart_data['temperature'] = int(temp_str)
+                                        print(f"[v0] Found temperature: {smart_data['temperature']}°C")
+                                        break
+                                    except (ValueError, IndexError):
+                                        pass
+                        
+                        # If we got some data, break
+                        if smart_data['model'] != 'Unknown' or smart_data['serial'] != 'Unknown':
+                            print(f"[v0] Successfully extracted data from text output (attempt {cmd_index + 1})")
+                            break
+                else:
+                    print(f"[v0] Command failed with return code {result.returncode}, trying next...")
                 
-                if smart_data['temperature'] == 0:
-                    for line in output.split('\n'):
-                        if 'Temperature:' in line:
-                            try:
-                                temp_str = line.split(':')[1].strip().split()[0]
-                                smart_data['temperature'] = int(temp_str)
-                            except (ValueError, IndexError):
-                                pass
-        
-        else:
-            print(f"[v0] JSON command failed, trying basic info...")
-            result_info = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
-                                       capture_output=True, text=True, timeout=10)
-            if result_info.stdout:
-                for line in result_info.stdout.split('\n'):
-                    line = line.strip()
-                    if line.startswith('Device Model:') or line.startswith('Model Number:'):
-                        smart_data['model'] = line.split(':', 1)[1].strip()
-                    elif line.startswith('Serial Number:'):
-                        smart_data['serial'] = line.split(':', 1)[1].strip()
+            except subprocess.TimeoutExpired:
+                print(f"[v0] Command timeout for attempt {cmd_index + 1}, trying next...")
+                continue
+            except Exception as e:
+                print(f"[v0] Error in attempt {cmd_index + 1}: {type(e).__name__}: {e}")
+                continue
         
         if smart_data['reallocated_sectors'] > 0 or smart_data['pending_sectors'] > 0:
             smart_data['health'] = 'warning'
@@ -685,10 +738,10 @@ def get_smart_data(disk_name):
             
     except FileNotFoundError:
         print(f"[v0] ERROR: smartctl not found - install smartmontools")
-    except subprocess.TimeoutExpired:
-        print(f"[v0] ERROR: Timeout getting SMART data for {disk_name}")
     except Exception as e:
-        print(f"[v0] ERROR: Exception for {disk_name}: {type(e).__name__}: {e}")
+        print(f"[v0] ERROR: Unexpected exception for {disk_name}: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
     
     print(f"[v0] ===== Final SMART data for /dev/{disk_name}: {smart_data} =====")
     return smart_data
