@@ -138,6 +138,7 @@ remove_subscription_banner() {
     fi
 
     if [[ "$pve_version" -ge 9 ]]; then
+        cleanup
         if ! whiptail --title "Proxmox VE 9.x Subscription Banner Removal" \
         --yesno "Do you want to remove the Proxmox subscription banner from the web interface for PVE $pve_version?" 10 70; then
             msg_warn "Banner removal cancelled by user."
@@ -1012,7 +1013,6 @@ run_complete_optimization() {
     ensure_tools_json
     
     apt_upgrade
-    cleanup
     remove_subscription_banner
     #configure_time_sync
     skip_apt_languages
