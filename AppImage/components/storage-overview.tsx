@@ -428,31 +428,32 @@ export function StorageOverview() {
                 className="border rounded-lg p-4 cursor-pointer hover:bg-accent/50 transition-colors"
                 onClick={() => handleDiskClick(disk)}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="space-y-2 mb-3">
+                  {/* Row 1: Device name and type badge */}
+                  <div className="flex items-center gap-2">
                     <HardDrive className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">/dev/{disk.name}</h3>
-                        <Badge className={getDiskTypeBadge(disk.name, disk.rotation_rate).className}>
-                          {getDiskTypeBadge(disk.name, disk.rotation_rate).label}
-                        </Badge>
-                      </div>
-                      {disk.model && disk.model !== "Unknown" && (
-                        <p className="text-sm text-muted-foreground truncate">{disk.model}</p>
-                      )}
-                    </div>
+                    <h3 className="font-semibold">/dev/{disk.name}</h3>
+                    <Badge className={getDiskTypeBadge(disk.name, disk.rotation_rate).className}>
+                      {getDiskTypeBadge(disk.name, disk.rotation_rate).label}
+                    </Badge>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    {disk.temperature > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Thermometer className={`h-4 w-4 ${getTempColor(disk.temperature)}`} />
-                        <span className={`text-sm font-medium ${getTempColor(disk.temperature)}`}>
-                          {disk.temperature}°C
-                        </span>
-                      </div>
+
+                  {/* Row 2: Model, temperature, and health status */}
+                  <div className="flex items-center justify-between gap-3 pl-7">
+                    {disk.model && disk.model !== "Unknown" && (
+                      <p className="text-sm text-muted-foreground truncate flex-1 min-w-0">{disk.model}</p>
                     )}
-                    {getHealthBadge(disk.health)}
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      {disk.temperature > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Thermometer className={`h-4 w-4 ${getTempColor(disk.temperature)}`} />
+                          <span className={`text-sm font-medium ${getTempColor(disk.temperature)}`}>
+                            {disk.temperature}°C
+                          </span>
+                        </div>
+                      )}
+                      {getHealthBadge(disk.health)}
+                    </div>
                   </div>
                 </div>
 
