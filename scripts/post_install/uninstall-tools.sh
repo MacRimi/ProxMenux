@@ -530,54 +530,77 @@ uninstall_bashrc_custom() {
 ################################################################
 
 uninstall_log2ram() {
-    if [[ ! -f /etc/log2ram.conf ]] && ! systemctl list-units --all | grep -q log2ram; then
-        msg_warn "$(translate "log2ram is not installed.")"
-        return 0
-    fi
+    msg_info "$(translate "Uninstalling log2ram (all versions)...")"
 
-    msg_info "$(translate "Uninstalling log2ram...")"
+    systemctl stop log2ram log2ram-daily.timer log2ram-daily.service >/dev/null 2>&1 || true
+    systemctl disable log2ram log2ram-daily.timer log2ram-daily.service >/dev/null 2>&1 || true
 
-    # Stop and disable services/timers
-    systemctl stop log2ram log2ram-daily.timer >/dev/null 2>&1 || true
-    systemctl disable log2ram log2ram-daily.timer >/dev/null 2>&1 || true
+    rm -f /etc/cron.d/log2ram \
+          /etc/cron.d/log2ram-auto-sync \
+          /etc/cron.d/log2ram-sync \
+          /etc/cron.hourly/log2ram \
+          /etc/cron.daily/log2ram \
+          /etc/cron.weekly/log2ram \
+          /etc/cron.monthly/log2ram 2>/dev/null || true
 
-    # Remove cron jobs (all possible locations)
-    rm -f /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync \
-          /etc/cron.hourly/log2ram /etc/cron.daily/log2ram \
-          /etc/cron.weekly/log2ram /etc/cron.monthly/log2ram 2>/dev/null || true
-
-    # Remove binaries, configs and services
     rm -f /usr/local/bin/log2ram-check.sh \
           /usr/local/bin/log2ram \
+          /usr/local/bin/log2ram-sync \
           /usr/sbin/log2ram \
-          /etc/log2ram.conf* 2>/dev/null || true
+          /usr/bin/log2ram 2>/dev/null || true
+
     rm -f /etc/systemd/system/log2ram.service \
-          /etc/systemd/system/log2ram-daily.* 2>/dev/null || true
+          /etc/systemd/system/log2ram-daily.timer \
+          /etc/systemd/system/log2ram-daily.service \
+          /etc/systemd/system/sysinit.target.wants/log2ram.service \
+          /etc/systemd/system/timers.target.wants/log2ram-daily.timer \
+          /lib/systemd/system/log2ram.service \
+          /lib/systemd/system/log2ram-daily.timer \
+          /lib/systemd/system/log2ram-daily.service 2>/dev/null || true
     rm -rf /etc/systemd/system/log2ram.service.d 2>/dev/null || true
+
+    rm -f /etc/log2ram.conf \
+          /etc/log2ram.conf.dpkg-old \
+          /etc/log2ram.conf.bak \
+          /etc/log2ram.conf.save 2>/dev/null || true
+
     rm -rf /etc/logrotate.d/log2ram 2>/dev/null || true
 
-    # Clean up mount if still active
-    if [ -d /var/log.hdd ]; then
-        if [ -d /var/log ] && mountpoint -q /var/log; then
+    if mountpoint -q /var/log 2>/dev/null; then
+        if [[ -d /var/log.hdd ]]; then
+            msg_info "$(translate "Preserving logs to /var/log.hdd before unmounting...")"
             rsync -a /var/log/ /var/log.hdd/ >/dev/null 2>&1 || true
-            umount /var/log >/dev/null 2>&1 || true
         fi
-        rm -rf /var/log.hdd
+        umount /var/log >/dev/null 2>&1 || true
     fi
 
-    # Reload daemons
-    systemctl daemon-reexec >/dev/null 2>&1
-    systemctl daemon-reload >/dev/null 2>&1
+    [[ -d /var/log.hdd ]] && rm -rf /var/log.hdd
+    [[ -d /tmp/log2ram ]] && rm -rf /tmp/log2ram
+    [[ -d /var/hdd.log ]] && rm -rf /var/hdd.log
+    [[ -f /tmp/log2ram_install.log ]] && rm -f /tmp/log2ram_install.log
+
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    systemctl reset-failed >/dev/null 2>&1 || true
     systemctl restart cron >/dev/null 2>&1 || true
 
-    # Purge package if installed via apt
-    if dpkg -l | grep -q '^ii  log2ram'; then
+    if dpkg -l 2>/dev/null | grep -q '^ii  log2ram'; then
+        msg_info "$(translate "Purging log2ram apt package...")"
         apt-get purge -y log2ram >/dev/null 2>&1 || true
+        apt-get autoremove -y >/dev/null 2>&1 || true
     fi
 
-    msg_ok "$(translate "log2ram completely removed")"
+    if [[ -f /etc/log2ram.conf ]] || \
+       command -v log2ram >/dev/null 2>&1 || \
+       systemctl list-units --all 2>/dev/null | grep -q log2ram || \
+       [[ -f /etc/cron.d/log2ram-auto-sync ]]; then
+        msg_warn "$(translate "Some log2ram files may still exist. Manual cleanup may be required.")"
+    else
+        msg_ok "$(translate "log2ram completely removed from system")"
+    fi
+
     register_tool "log2ram" false
 }
+
 
 
 
