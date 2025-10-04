@@ -8,7 +8,8 @@ import { Wifi, Globe, Shield, Activity, Network, Router, AlertCircle, Zap } from
 import useSWR from "swr"
 
 interface NetworkData {
-  interfaces: NetworkInterface[]
+  physical_interfaces?: NetworkInterface[]
+  bridge_interfaces?: NetworkInterface[]
   vm_lxc_interfaces?: NetworkInterface[]
   traffic: {
     bytes_sent: number
@@ -20,8 +21,10 @@ interface NetworkData {
     dropin?: number
     dropout?: number
   }
-  active_count?: number
-  total_count?: number
+  physical_active_count?: number
+  physical_total_count?: number
+  bridge_active_count?: number
+  bridge_total_count?: number
   vm_lxc_active_count?: number
   vm_lxc_total_count?: number
 }
@@ -189,13 +192,20 @@ export function NetworkMetrics() {
             <Network className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{networkData.active_count ?? 0}</div>
-            <div className="flex items-center mt-2">
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                Online
+            <div className="text-2xl font-bold text-foreground">
+              {(networkData.physical_active_count ?? 0) + (networkData.bridge_active_count ?? 0)}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs">
+                Physical: {networkData.physical_active_count ?? 0}/{networkData.physical_total_count ?? 0}
+              </Badge>
+              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
+                Bridges: {networkData.bridge_active_count ?? 0}/{networkData.bridge_total_count ?? 0}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">{networkData.total_count ?? 0} total interfaces</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              {(networkData.physical_total_count ?? 0) + (networkData.bridge_total_count ?? 0)} total interfaces
+            </p>
           </CardContent>
         </Card>
 
@@ -237,87 +247,177 @@ export function NetworkMetrics() {
         </Card>
       </div>
 
-      {/* Network Interfaces */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center">
-            <Router className="h-5 w-5 mr-2" />
-            Network Interfaces
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {networkData.interfaces.map((interface_, index) => {
-              const typeBadge = getInterfaceTypeBadge(interface_.type)
+      {networkData.physical_interfaces && networkData.physical_interfaces.length > 0 && (
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center">
+              <Router className="h-5 w-5 mr-2" />
+              Physical Interfaces
+              <Badge variant="outline" className="ml-3 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                {networkData.physical_active_count ?? 0} / {networkData.physical_total_count ?? 0} Active
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {networkData.physical_interfaces.map((interface_, index) => {
+                const typeBadge = getInterfaceTypeBadge(interface_.type)
 
-              return (
-                <div
-                  key={index}
-                  className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
-                  onClick={() => setSelectedInterface(interface_)}
-                >
-                  {/* First row: Icon, Name, Type Badge, Status */}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="font-medium text-foreground">{interface_.name}</div>
-                      <Badge variant="outline" className={typeBadge.color}>
-                        {typeBadge.label}
+                return (
+                  <div
+                    key={index}
+                    className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    onClick={() => setSelectedInterface(interface_)}
+                  >
+                    {/* First row: Icon, Name, Type Badge, Status */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="font-medium text-foreground">{interface_.name}</div>
+                        <Badge variant="outline" className={typeBadge.color}>
+                          {typeBadge.label}
+                        </Badge>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          interface_.status === "up"
+                            ? "bg-green-500/10 text-green-500 border-green-500/20 ml-auto"
+                            : "bg-red-500/10 text-red-500 border-red-500/20 ml-auto"
+                        }
+                      >
+                        {interface_.status.toUpperCase()}
                       </Badge>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        interface_.status === "up"
-                          ? "bg-green-500/10 text-green-500 border-green-500/20 ml-auto"
-                          : "bg-red-500/10 text-red-500 border-red-500/20 ml-auto"
-                      }
-                    >
-                      {interface_.status.toUpperCase()}
-                    </Badge>
-                  </div>
 
-                  {/* Second row: Details - Responsive layout */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <div className="text-muted-foreground text-xs">IP Address</div>
-                      <div className="font-medium text-foreground font-mono text-sm truncate">
-                        {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-muted-foreground text-xs">Speed</div>
-                      <div className="font-medium text-foreground flex items-center gap-1">
-                        <Zap className="h-3 w-3" />
-                        {formatSpeed(interface_.speed)}
-                      </div>
-                    </div>
-
-                    <div className="col-span-2 md:col-span-1">
-                      <div className="text-muted-foreground text-xs">Traffic</div>
-                      <div className="font-medium text-foreground text-xs">
-                        <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
-                        {" / "}
-                        <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
-                      </div>
-                    </div>
-
-                    {interface_.mac_address && (
-                      <div className="col-span-2 md:col-span-1">
-                        <div className="text-muted-foreground text-xs">MAC</div>
-                        <div className="font-medium text-foreground font-mono text-xs truncate">
-                          {interface_.mac_address}
+                    {/* Second row: Details - Responsive layout */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground text-xs">IP Address</div>
+                        <div className="font-medium text-foreground font-mono text-sm truncate">
+                          {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
                         </div>
                       </div>
-                    )}
+
+                      <div>
+                        <div className="text-muted-foreground text-xs">Speed</div>
+                        <div className="font-medium text-foreground flex items-center gap-1">
+                          <Zap className="h-3 w-3" />
+                          {formatSpeed(interface_.speed)}
+                        </div>
+                      </div>
+
+                      <div className="col-span-2 md:col-span-1">
+                        <div className="text-muted-foreground text-xs">Traffic</div>
+                        <div className="font-medium text-foreground text-xs">
+                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
+                          {" / "}
+                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
+                        </div>
+                      </div>
+
+                      {interface_.mac_address && (
+                        <div className="col-span-2 md:col-span-1">
+                          <div className="text-muted-foreground text-xs">MAC</div>
+                          <div className="font-medium text-foreground font-mono text-xs truncate">
+                            {interface_.mac_address}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {networkData.bridge_interfaces && networkData.bridge_interfaces.length > 0 && (
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center">
+              <Network className="h-5 w-5 mr-2" />
+              Bridge Interfaces
+              <Badge variant="outline" className="ml-3 bg-green-500/10 text-green-500 border-green-500/20">
+                {networkData.bridge_active_count ?? 0} / {networkData.bridge_total_count ?? 0} Active
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {networkData.bridge_interfaces.map((interface_, index) => {
+                const typeBadge = getInterfaceTypeBadge(interface_.type)
+
+                return (
+                  <div
+                    key={index}
+                    className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    onClick={() => setSelectedInterface(interface_)}
+                  >
+                    {/* First row: Icon, Name, Type Badge, Status */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="font-medium text-foreground">{interface_.name}</div>
+                        <Badge variant="outline" className={typeBadge.color}>
+                          {typeBadge.label}
+                        </Badge>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          interface_.status === "up"
+                            ? "bg-green-500/10 text-green-500 border-green-500/20 ml-auto"
+                            : "bg-red-500/10 text-red-500 border-red-500/20 ml-auto"
+                        }
+                      >
+                        {interface_.status.toUpperCase()}
+                      </Badge>
+                    </div>
+
+                    {/* Second row: Details - Responsive layout */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground text-xs">IP Address</div>
+                        <div className="font-medium text-foreground font-mono text-sm truncate">
+                          {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-muted-foreground text-xs">Speed</div>
+                        <div className="font-medium text-foreground flex items-center gap-1">
+                          <Zap className="h-3 w-3" />
+                          {formatSpeed(interface_.speed)}
+                        </div>
+                      </div>
+
+                      <div className="col-span-2 md:col-span-1">
+                        <div className="text-muted-foreground text-xs">Traffic</div>
+                        <div className="font-medium text-foreground text-xs">
+                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
+                          {" / "}
+                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
+                        </div>
+                      </div>
+
+                      {interface_.mac_address && (
+                        <div className="col-span-2 md:col-span-1">
+                          <div className="text-muted-foreground text-xs">MAC</div>
+                          <div className="font-medium text-foreground font-mono text-xs truncate">
+                            {interface_.mac_address}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {networkData.vm_lxc_interfaces && networkData.vm_lxc_interfaces.length > 0 && (
         <Card className="bg-card border-border">

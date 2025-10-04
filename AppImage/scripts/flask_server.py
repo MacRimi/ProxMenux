@@ -1001,11 +1001,12 @@ def get_bridge_info(bridge_name):
     return bridge_info
 
 def get_network_info():
-    """Get network interface information - Enhanced with VM/LXC interface separation"""
+    """Get network interface information - Enhanced with physical/bridge separation"""
     try:
         network_data = {
-            'interfaces': [],
-            'vm_lxc_interfaces': [],  # Added separate list for VM/LXC interfaces
+            'physical_interfaces': [],  # Added separate list for physical interfaces
+            'bridge_interfaces': [],    # Added separate list for bridge interfaces
+            'vm_lxc_interfaces': [],
             'traffic': {'bytes_sent': 0, 'bytes_recv': 0, 'packets_sent': 0, 'packets_recv': 0}
         }
         
@@ -1021,8 +1022,10 @@ def get_network_info():
             print(f"[v0] Error getting per-NIC stats: {e}")
             net_io_per_nic = {}
         
-        active_count = 0
-        total_count = 0
+        physical_active_count = 0
+        physical_total_count = 0
+        bridge_active_count = 0
+        bridge_total_count = 0
         vm_lxc_active_count = 0
         vm_lxc_total_count = 0
         
@@ -1041,10 +1044,14 @@ def get_network_info():
                 vm_lxc_total_count += 1
                 if stats.isup:
                     vm_lxc_active_count += 1
-            else:
-                total_count += 1
+            elif interface_type == 'physical':
+                physical_total_count += 1
                 if stats.isup:
-                    active_count += 1
+                    physical_active_count += 1
+            elif interface_type == 'bridge':
+                bridge_total_count += 1
+                if stats.isup:
+                    bridge_active_count += 1
                 
             interface_info = {
                 'name': interface_name,
@@ -1115,15 +1122,20 @@ def get_network_info():
             
             if interface_type == 'vm_lxc':
                 network_data['vm_lxc_interfaces'].append(interface_info)
-            else:
-                network_data['interfaces'].append(interface_info)
+            elif interface_type == 'physical':
+                network_data['physical_interfaces'].append(interface_info)
+            elif interface_type == 'bridge':
+                network_data['bridge_interfaces'].append(interface_info)
         
-        network_data['active_count'] = active_count
-        network_data['total_count'] = total_count
+        network_data['physical_active_count'] = physical_active_count
+        network_data['physical_total_count'] = physical_total_count
+        network_data['bridge_active_count'] = bridge_active_count
+        network_data['bridge_total_count'] = bridge_total_count
         network_data['vm_lxc_active_count'] = vm_lxc_active_count
         network_data['vm_lxc_total_count'] = vm_lxc_total_count
         
-        print(f"[v0] Physical interfaces: {active_count} active out of {total_count} total")
+        print(f"[v0] Physical interfaces: {physical_active_count} active out of {physical_total_count} total")
+        print(f"[v0] Bridge interfaces: {bridge_active_count} active out of {bridge_total_count} total")
         print(f"[v0] VM/LXC interfaces: {vm_lxc_active_count} active out of {vm_lxc_total_count} total")
         
         # Get network I/O statistics (global)
@@ -1159,11 +1171,14 @@ def get_network_info():
         traceback.print_exc()
         return {
             'error': f'Unable to access network information: {str(e)}',
-            'interfaces': [],
+            'physical_interfaces': [],
+            'bridge_interfaces': [],
             'vm_lxc_interfaces': [],
             'traffic': {'bytes_sent': 0, 'bytes_recv': 0, 'packets_sent': 0, 'packets_recv': 0},
-            'active_count': 0,
-            'total_count': 0,
+            'physical_active_count': 0,
+            'physical_total_count': 0,
+            'bridge_active_count': 0,
+            'bridge_total_count': 0,
             'vm_lxc_active_count': 0,
             'vm_lxc_total_count': 0
         }
