@@ -191,8 +191,13 @@ export function StorageOverview() {
       ? Math.round(disksWithTemp.reduce((sum, disk) => sum + disk.temperature, 0) / disksWithTemp.length)
       : 0
 
+  const totalProxmoxUsed =
+    proxmoxStorage && proxmoxStorage.storage
+      ? proxmoxStorage.storage.reduce((sum, storage) => sum + storage.used, 0)
+      : 0
+
   const usagePercent =
-    storageData.total > 0 ? ((storageData.used / (storageData.total * 1024)) * 100).toFixed(2) : "0.00"
+    storageData.total > 0 ? ((totalProxmoxUsed / (storageData.total * 1024)) * 100).toFixed(2) : "0.00"
 
   return (
     <div className="space-y-6">
@@ -215,7 +220,7 @@ export function StorageOverview() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{storageData.used.toFixed(1)} GB</div>
+            <div className="text-2xl font-bold">{totalProxmoxUsed.toFixed(1)} GB</div>
             <p className="text-xs text-muted-foreground mt-1">{usagePercent}% used</p>
           </CardContent>
         </Card>
@@ -414,25 +419,25 @@ export function StorageOverview() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   {disk.size && (
                     <div>
-                      <p className="text-muted-foreground">Size</p>
+                      <p className="text-sm text-muted-foreground">Size</p>
                       <p className="font-medium">{disk.size}</p>
                     </div>
                   )}
                   {disk.smart_status && disk.smart_status !== "unknown" && (
                     <div>
-                      <p className="text-muted-foreground">SMART Status</p>
+                      <p className="text-sm text-muted-foreground">SMART Status</p>
                       <p className="font-medium capitalize">{disk.smart_status}</p>
                     </div>
                   )}
                   {disk.power_on_hours !== undefined && disk.power_on_hours > 0 && (
                     <div>
-                      <p className="text-muted-foreground">Power On Time</p>
+                      <p className="text-sm text-muted-foreground">Power On Time</p>
                       <p className="font-medium">{formatHours(disk.power_on_hours)}</p>
                     </div>
                   )}
                   {disk.serial && disk.serial !== "Unknown" && (
                     <div>
-                      <p className="text-muted-foreground">Serial</p>
+                      <p className="text-sm text-muted-foreground">Serial</p>
                       <p className="font-medium text-xs">{disk.serial}</p>
                     </div>
                   )}
