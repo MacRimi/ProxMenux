@@ -624,7 +624,7 @@ EOF
 
 
 
-install_log2ram_auto() {
+install_log2ram_auto_() {
  
      msg_info "$(translate "Checking if system disk is SSD or M.2...")"
 
@@ -779,6 +779,175 @@ EOF
     
     register_tool "log2ram" true
 }
+
+
+
+
+
+
+
+install_log2ram_auto() {
+    msg_info "$(translate "Checking if system disk is SSD or M.2...")"
+
+    local is_ssd=false
+    local pool disks disk byid_path dev rot
+
+    if grep -qE '^root=ZFS=' /etc/kernel/cmdline 2>/dev/null || mount | grep -q 'on / type zfs'; then
+        pool=$(zfs list -Ho name,mountpoint 2>/dev/null | awk '$2=="/"{print $1}' | cut -d/ -f1)
+        disks=$(zpool status "$pool" 2>/dev/null | awk '/ONLINE/ && $1 !~ /:|mirror|raidz|log|spare|config|NAME|rpool|state/ {print $1}' | sort -u)
+        is_ssd=true
+        for disk in $disks; do
+            byid_path=$(readlink -f /dev/disk/by-id/*$disk* 2>/dev/null) || continue
+            dev=$(basename "$byid_path" | sed -E 's|[0-9]+$||' | sed -E 's|p$||')
+            rot=$(cat /sys/block/$dev/queue/rotational 2>/dev/null)
+            [[ "$rot" != "0" ]] && is_ssd=false && break
+        done
+    else
+        ROOT_PART=$(lsblk -no NAME,MOUNTPOINT | grep ' /$' | awk '{print $1}')
+        SYSTEM_DISK=$(lsblk -no PKNAME /dev/$ROOT_PART 2>/dev/null | grep -E '^[a-z]+' | head -n1)
+        SYSTEM_DISK=${SYSTEM_DISK:-sda}
+        if [[ "$SYSTEM_DISK" == nvme* || "$(cat /sys/block/$SYSTEM_DISK/queue/rotational 2>/dev/null)" == "0" ]]; then
+            is_ssd=true
+        fi
+    fi
+
+    if [[ "$is_ssd" == true ]]; then
+        msg_ok "$(translate "System disk is SSD or M.2. Proceeding with Log2RAM setup.")"
+    else
+        if whiptail --yesno "$(translate "Do you want to install Log2RAM anyway to reduce log write load?")" 10 70 --title "Log2RAM"; then
+            msg_ok "$(translate "Proceeding with Log2RAM setup on non-SSD disk as requested by user.")"
+        else
+            msg_info2 "$(translate "Log2RAM installation cancelled by user")"
+            return 0
+        fi
+    fi
+
+    msg_info "$(translate "Cleaning previous Log2RAM installation...")"
+
+    systemctl stop log2ram log2ram-daily.timer >/dev/null 2>&1 || true
+    systemctl disable log2ram log2ram-daily.timer >/dev/null 2>&1 || true
+
+    rm -f /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync \
+          /etc/cron.hourly/log2ram /etc/cron.daily/log2ram \
+          /etc/cron.weekly/log2ram /etc/cron.monthly/log2ram 2>/dev/null || true
+    rm -f /usr/local/bin/log2ram-check.sh /usr/local/bin/log2ram /usr/sbin/log2ram 2>/dev/null || true
+    rm -f /etc/systemd/system/log2ram.service \
+          /etc/systemd/system/log2ram-daily.timer \
+          /etc/systemd/system/log2ram-daily.service \
+          /etc/systemd/system/sysinit.target.wants/log2ram.service 2>/dev/null || true
+    rm -rf /etc/systemd/system/log2ram.service.d 2>/dev/null || true
+    rm -f /etc/log2ram.conf* 2>/dev/null || true
+    rm -rf /etc/logrotate.d/log2ram /var/log.hdd /tmp/log2ram 2>/dev/null || true
+
+    systemctl daemon-reexec >/dev/null 2>&1 || true
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    systemctl restart cron >/dev/null 2>&1 || true
+
+    msg_ok "$(translate "Previous installation cleaned")"
+    msg_info "$(translate "Installing Log2RAM from source...")"
+
+    if ! command -v git >/dev/null 2>&1; then
+        apt-get update -qq >/dev/null 2>&1
+        apt-get install -y git >/dev/null 2>&1
+    fi
+
+    rm -rf /tmp/log2ram 2>/dev/null || true
+    if ! git clone https://github.com/azlux/log2ram.git /tmp/log2ram >/dev/null 2>>/tmp/log2ram_install.log; then
+        msg_error "$(translate "Failed to clone log2ram repository. Check /tmp/log2ram_install.log")"
+        return 1
+    fi
+
+    cd /tmp/log2ram || { msg_error "$(translate "Failed to access log2ram directory")"; return 1; }
+
+    if ! bash install.sh >>/tmp/log2ram_install.log 2>&1; then
+        msg_error "$(translate "Failed to run log2ram installer. Check /tmp/log2ram_install.log")"
+        return 1
+    fi
+
+    systemctl enable --now log2ram >/dev/null 2>&1 || true
+    systemctl daemon-reload >/dev/null 2>&1 || true
+
+    if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1; then
+        msg_ok "$(translate "Log2RAM installed successfully")"
+    else
+        msg_error "$(translate "Log2RAM installation verification failed. Check /tmp/log2ram_install.log")"
+        return 1
+    fi
+
+    RAM_SIZE_GB=$(free -g | awk '/^Mem:/{print $2}')
+    [[ -z "$RAM_SIZE_GB" || "$RAM_SIZE_GB" -eq 0 ]] && RAM_SIZE_GB=4
+
+    if (( RAM_SIZE_GB <= 8 )); then
+        LOG2RAM_SIZE="128M"; CRON_HOURS=1
+    elif (( RAM_SIZE_GB <= 16 )); then
+        LOG2RAM_SIZE="256M"; CRON_HOURS=3
+    else
+        LOG2RAM_SIZE="512M"; CRON_HOURS=6
+    fi
+
+    msg_ok "$(translate "Detected RAM:") $RAM_SIZE_GB GB — $(translate "Log2RAM size set to:") $LOG2RAM_SIZE"
+    sed -i "s/^SIZE=.*/SIZE=$LOG2RAM_SIZE/" /etc/log2ram.conf
+
+    LOG2RAM_BIN="$(command -v log2ram || echo /usr/sbin/log2ram)"
+
+    cat > /etc/cron.d/log2ram <<EOF
+# Log2RAM periodic sync - Created by ProxMenux
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+0 */$CRON_HOURS * * * root $LOG2RAM_BIN write >/dev/null 2>&1
+EOF
+    chmod 0644 /etc/cron.d/log2ram
+    chown root:root /etc/cron.d/log2ram
+    msg_ok "$(translate "Log2RAM write scheduled every") $CRON_HOURS $(translate "hour(s)")"
+
+    cat > /usr/local/bin/log2ram-check.sh <<'EOF'
+#!/usr/bin/env bash
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+CONF_FILE="/etc/log2ram.conf"
+L2R_BIN="$(command -v log2ram || true)"
+[[ -z "$L2R_BIN" && -x /usr/sbin/log2ram ]] && L2R_BIN="/usr/sbin/log2ram"
+[[ -z "$L2R_BIN" ]] && exit 0
+
+SIZE_MiB="$(grep -E '^SIZE=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2 | tr -dc '0-9')"
+[[ -z "$SIZE_MiB" ]] && SIZE_MiB=128
+LIMIT_BYTES=$(( SIZE_MiB * 1024 * 1024 ))
+THRESHOLD_BYTES=$(( LIMIT_BYTES * 90 / 100 ))
+
+USED_BYTES="$(df -B1 --output=used /var/log 2>/dev/null | tail -1 | tr -dc '0-9')"
+[[ -z "$USED_BYTES" ]] && exit 0
+
+LOCK="/run/log2ram-check.lock"
+exec 9>"$LOCK" 2>/dev/null || exit 0
+flock -n 9 || exit 0
+
+if (( USED_BYTES > THRESHOLD_BYTES )); then
+  "$L2R_BIN" write 2>/dev/null || true
+fi
+EOF
+    chmod +x /usr/local/bin/log2ram-check.sh
+
+    cat > /etc/cron.d/log2ram-auto-sync <<'EOF'
+# Log2RAM auto-sync based on /var/log usage - Created by ProxMenux
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+*/5 * * * * root /usr/local/bin/log2ram-check.sh >/dev/null 2>&1
+EOF
+    chmod 0644 /etc/cron.d/log2ram-auto-sync
+    chown root:root /etc/cron.d/log2ram-auto-sync
+
+    systemctl restart cron >/dev/null 2>&1 || true
+    msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 90% of") $LOG2RAM_SIZE"
+
+    register_tool "log2ram" true
+}
+
+
+
+
+
 
 
 
