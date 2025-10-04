@@ -923,24 +923,20 @@ def get_interface_type(interface_name):
         if interface_name == 'lo':
             return 'skip'
         
-        # Check if it's a bridge (but not virbr which we skip above)
-        if interface_name.startswith(('vmbr', 'br')):
-            # Skip virbr (libvirt bridges)
-            if interface_name.startswith('virbr'):
-                return 'skip'
-            return 'bridge'
-        
-        # Check VM/LXC interfaces
         if interface_name.startswith(('veth', 'tap')):
             return 'vm_lxc'
         
         # Skip other virtual interfaces
-        if interface_name.startswith(('tun', 'vnet', 'docker')):
+        if interface_name.startswith(('tun', 'vnet', 'docker', 'virbr')):
             return 'skip'
         
         # Check if it's a bond
         if interface_name.startswith('bond'):
             return 'bond'
+        
+        # Check if it's a bridge (but not virbr which we skip above)
+        if interface_name.startswith(('vmbr', 'br')):
+            return 'bridge'
         
         # Check if it's a VLAN (contains a dot)
         if '.' in interface_name:
@@ -1005,9 +1001,10 @@ def get_bridge_info(bridge_name):
     return bridge_info
 
 def get_network_info():
-    """Get network interface information - Enhanced with physical/bridge separation"""
+    """Get network interface information - Enhanced with VM/LXC interface separation"""
     try:
         network_data = {
+            'interfaces': [],
             'physical_interfaces': [],  # Added separate list for physical interfaces
             'bridge_interfaces': [],    # Added separate list for bridge interfaces
             'vm_lxc_interfaces': [],
@@ -1130,6 +1127,9 @@ def get_network_info():
                 network_data['physical_interfaces'].append(interface_info)
             elif interface_type == 'bridge':
                 network_data['bridge_interfaces'].append(interface_info)
+            else:
+                # Keep other types in the general interfaces list for backward compatibility
+                network_data['interfaces'].append(interface_info)
         
         network_data['physical_active_count'] = physical_active_count
         network_data['physical_total_count'] = physical_total_count
@@ -1137,6 +1137,10 @@ def get_network_info():
         network_data['bridge_total_count'] = bridge_total_count
         network_data['vm_lxc_active_count'] = vm_lxc_active_count
         network_data['vm_lxc_total_count'] = vm_lxc_total_count
+        
+        # Keep old counters for backward compatibility
+        network_data['active_count'] = physical_active_count + bridge_active_count
+        network_data['total_count'] = physical_total_count + bridge_total_count
         
         print(f"[v0] Physical interfaces: {physical_active_count} active out of {physical_total_count} total")
         print(f"[v0] Bridge interfaces: {bridge_active_count} active out of {bridge_total_count} total")
@@ -1175,10 +1179,13 @@ def get_network_info():
         traceback.print_exc()
         return {
             'error': f'Unable to access network information: {str(e)}',
+            'interfaces': [],
             'physical_interfaces': [],
             'bridge_interfaces': [],
             'vm_lxc_interfaces': [],
             'traffic': {'bytes_sent': 0, 'bytes_recv': 0, 'packets_sent': 0, 'packets_recv': 0},
+            'active_count': 0,
+            'total_count': 0,
             'physical_active_count': 0,
             'physical_total_count': 0,
             'bridge_active_count': 0,
