@@ -8,9 +8,8 @@ import { Wifi, Globe, Shield, Activity, Network, Router, AlertCircle, Zap } from
 import useSWR from "swr"
 
 interface NetworkData {
-  physical_interfaces?: NetworkInterface[] // Separated physical interfaces
-  bridge_interfaces?: NetworkInterface[] // Separated bridge interfaces
-  interfaces?: NetworkInterface[] // Keep for backward compatibility
+  physical_interfaces?: NetworkInterface[]
+  bridge_interfaces?: NetworkInterface[]
   vm_lxc_interfaces?: NetworkInterface[]
   traffic: {
     bytes_sent: number
@@ -19,15 +18,11 @@ interface NetworkData {
     packets_recv?: number
     packet_loss_in?: number
     packet_loss_out?: number
-    dropin?: number
-    dropout?: number
   }
-  physical_active_count?: number // Physical interfaces active count
-  physical_total_count?: number // Physical interfaces total count
-  bridge_active_count?: number // Bridge interfaces active count
-  bridge_total_count?: number // Bridge interfaces total count
-  active_count?: number // Keep for backward compatibility
-  total_count?: number // Keep for backward compatibility
+  physical_active_count?: number
+  physical_total_count?: number
+  bridge_active_count?: number
+  bridge_total_count?: number
   vm_lxc_active_count?: number
   vm_lxc_total_count?: number
 }
@@ -74,10 +69,6 @@ const getInterfaceTypeBadge = (type: string) => {
       return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: "Bond" }
     case "vlan":
       return { color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", label: "VLAN" }
-    case "vm_lxc":
-      return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: "Virtual" }
-    case "virtual":
-      return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: "Virtual" }
     default:
       return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: "Unknown" }
   }
@@ -107,7 +98,10 @@ const formatSpeed = (speed: number): string => {
 }
 
 const fetcher = async (url: string): Promise<NetworkData> => {
-  const response = await fetch(url, {
+  const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+  const fullUrl = `${baseUrl}${url}`
+
+  const response = await fetch(fullUrl, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -128,7 +122,7 @@ export function NetworkMetrics() {
     error,
     isLoading,
   } = useSWR<NetworkData>("/api/network", fetcher, {
-    refreshInterval: 30000, // Refresh every 30 seconds
+    refreshInterval: 30000,
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
   })
@@ -257,6 +251,7 @@ export function NetworkMetrics() {
         </Card>
       </div>
 
+      {/* Physical Interfaces */}
       {physicalInterfaces.length > 0 && (
         <Card className="bg-card border-border">
           <CardHeader>
@@ -264,26 +259,25 @@ export function NetworkMetrics() {
               <Router className="h-5 w-5 mr-2" />
               Physical Interfaces
               <Badge variant="outline" className="ml-3 bg-blue-500/10 text-blue-500 border-blue-500/20">
-                {networkData.physical_active_count ?? 0} / {networkData.physical_total_count ?? 0} Active
+                {networkData.physical_active_count ?? 0}/{networkData.physical_total_count ?? 0} Active
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {physicalInterfaces.map((interface_, index) => {
-                const typeBadge = getInterfaceTypeBadge(interface_.type)
+              {physicalInterfaces.map((iface, index) => {
+                const typeBadge = getInterfaceTypeBadge(iface.type)
 
                 return (
                   <div
                     key={index}
                     className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
-                    onClick={() => setSelectedInterface(interface_)}
+                    onClick={() => setSelectedInterface(iface)}
                   >
-                    {/* First row: Icon, Name, Type Badge, Status */}
                     <div className="flex items-center gap-3 flex-wrap">
                       <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="font-medium text-foreground">{interface_.name}</div>
+                        <div className="font-medium text-foreground">{iface.name}</div>
                         <Badge variant="outline" className={typeBadge.color}>
                           {typeBadge.label}
                         </Badge>
@@ -291,21 +285,20 @@ export function NetworkMetrics() {
                       <Badge
                         variant="outline"
                         className={
-                          interface_.status === "up"
+                          iface.status === "up"
                             ? "bg-green-500/10 text-green-500 border-green-500/20 ml-auto"
                             : "bg-red-500/10 text-red-500 border-red-500/20 ml-auto"
                         }
                       >
-                        {interface_.status.toUpperCase()}
+                        {iface.status.toUpperCase()}
                       </Badge>
                     </div>
 
-                    {/* Second row: Details - Responsive layout */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <div className="text-muted-foreground text-xs">IP Address</div>
                         <div className="font-medium text-foreground font-mono text-sm truncate">
-                          {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
+                          {iface.addresses.length > 0 ? iface.addresses[0].ip : "N/A"}
                         </div>
                       </div>
 
@@ -313,24 +306,24 @@ export function NetworkMetrics() {
                         <div className="text-muted-foreground text-xs">Speed</div>
                         <div className="font-medium text-foreground flex items-center gap-1">
                           <Zap className="h-3 w-3" />
-                          {formatSpeed(interface_.speed)}
+                          {formatSpeed(iface.speed)}
                         </div>
                       </div>
 
                       <div className="col-span-2 md:col-span-1">
                         <div className="text-muted-foreground text-xs">Traffic</div>
                         <div className="font-medium text-foreground text-xs">
-                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
+                          <span className="text-green-500">↓ {formatBytes(iface.bytes_recv)}</span>
                           {" / "}
-                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
+                          <span className="text-blue-500">↑ {formatBytes(iface.bytes_sent)}</span>
                         </div>
                       </div>
 
-                      {interface_.mac_address && (
+                      {iface.mac_address && (
                         <div className="col-span-2 md:col-span-1">
                           <div className="text-muted-foreground text-xs">MAC</div>
                           <div className="font-medium text-foreground font-mono text-xs truncate">
-                            {interface_.mac_address}
+                            {iface.mac_address}
                           </div>
                         </div>
                       )}
@@ -343,6 +336,7 @@ export function NetworkMetrics() {
         </Card>
       )}
 
+      {/* Bridge Interfaces */}
       {bridgeInterfaces.length > 0 && (
         <Card className="bg-card border-border">
           <CardHeader>
@@ -350,25 +344,25 @@ export function NetworkMetrics() {
               <Network className="h-5 w-5 mr-2" />
               Bridge Interfaces
               <Badge variant="outline" className="ml-3 bg-green-500/10 text-green-500 border-green-500/20">
-                {networkData.bridge_active_count ?? 0} / {networkData.bridge_total_count ?? 0} Active
+                {networkData.bridge_active_count ?? 0}/{networkData.bridge_total_count ?? 0} Active
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {bridgeInterfaces.map((interface_, index) => {
-                const typeBadge = getInterfaceTypeBadge(interface_.type)
+              {bridgeInterfaces.map((iface, index) => {
+                const typeBadge = getInterfaceTypeBadge(iface.type)
 
                 return (
                   <div
                     key={index}
                     className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
-                    onClick={() => setSelectedInterface(interface_)}
+                    onClick={() => setSelectedInterface(iface)}
                   >
                     <div className="flex items-center gap-3 flex-wrap">
                       <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="font-medium text-foreground">{interface_.name}</div>
+                        <div className="font-medium text-foreground">{iface.name}</div>
                         <Badge variant="outline" className={typeBadge.color}>
                           {typeBadge.label}
                         </Badge>
@@ -376,12 +370,12 @@ export function NetworkMetrics() {
                       <Badge
                         variant="outline"
                         className={
-                          interface_.status === "up"
+                          iface.status === "up"
                             ? "bg-green-500/10 text-green-500 border-green-500/20 ml-auto"
                             : "bg-red-500/10 text-red-500 border-red-500/20 ml-auto"
                         }
                       >
-                        {interface_.status.toUpperCase()}
+                        {iface.status.toUpperCase()}
                       </Badge>
                     </div>
 
@@ -389,7 +383,7 @@ export function NetworkMetrics() {
                       <div>
                         <div className="text-muted-foreground text-xs">IP Address</div>
                         <div className="font-medium text-foreground font-mono text-sm truncate">
-                          {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
+                          {iface.addresses.length > 0 ? iface.addresses[0].ip : "N/A"}
                         </div>
                       </div>
 
@@ -397,24 +391,24 @@ export function NetworkMetrics() {
                         <div className="text-muted-foreground text-xs">Speed</div>
                         <div className="font-medium text-foreground flex items-center gap-1">
                           <Zap className="h-3 w-3" />
-                          {formatSpeed(interface_.speed)}
+                          {formatSpeed(iface.speed)}
                         </div>
                       </div>
 
                       <div className="col-span-2 md:col-span-1">
                         <div className="text-muted-foreground text-xs">Traffic</div>
                         <div className="font-medium text-foreground text-xs">
-                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
+                          <span className="text-green-500">↓ {formatBytes(iface.bytes_recv)}</span>
                           {" / "}
-                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
+                          <span className="text-blue-500">↑ {formatBytes(iface.bytes_sent)}</span>
                         </div>
                       </div>
 
-                      {interface_.mac_address && (
+                      {iface.mac_address && (
                         <div className="col-span-2 md:col-span-1">
                           <div className="text-muted-foreground text-xs">MAC</div>
                           <div className="font-medium text-foreground font-mono text-xs truncate">
-                            {interface_.mac_address}
+                            {iface.mac_address}
                           </div>
                         </div>
                       )}
@@ -435,74 +429,72 @@ export function NetworkMetrics() {
               <Network className="h-5 w-5 mr-2" />
               VM & LXC Network Interfaces
               <Badge variant="outline" className="ml-3 bg-orange-500/10 text-orange-500 border-orange-500/20">
-                {networkData.vm_lxc_active_count ?? 0} / {networkData.vm_lxc_total_count ?? 0} Active
+                {networkData.vm_lxc_active_count ?? 0}/{networkData.vm_lxc_total_count ?? 0} Active
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {vmLxcInterfaces.map((interface_, index) => {
-                const vmTypeBadge = getVMTypeBadge(interface_.vm_type)
+              {vmLxcInterfaces.map((iface, index) => {
+                const vmTypeBadge = getVMTypeBadge(iface.vm_type)
 
                 return (
                   <div
                     key={index}
                     className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
-                    onClick={() => setSelectedInterface(interface_)}
+                    onClick={() => setSelectedInterface(iface)}
                   >
-                    {/* First row: Icon, Name, VM/LXC Badge, VM Name, Status */}
                     <div className="flex items-center gap-3 flex-wrap">
                       <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <div className="font-medium text-foreground">{interface_.name}</div>
+                        <div className="font-medium text-foreground">{iface.name}</div>
                         <Badge variant="outline" className={vmTypeBadge.color}>
                           {vmTypeBadge.label}
                         </Badge>
-                        {interface_.vm_name && (
-                          <div className="text-sm text-muted-foreground truncate">→ {interface_.vm_name}</div>
+                        {iface.vm_name && (
+                          <div className="text-sm text-muted-foreground truncate">→ {iface.vm_name}</div>
                         )}
                       </div>
                       <Badge
                         variant="outline"
                         className={
-                          interface_.status === "up"
+                          iface.status === "up"
                             ? "bg-green-500/10 text-green-500 border-green-500/20"
                             : "bg-red-500/10 text-red-500 border-red-500/20"
                         }
                       >
-                        {interface_.status.toUpperCase()}
+                        {iface.status.toUpperCase()}
                       </Badge>
                     </div>
 
-                    {/* Second row: Details - Responsive layout */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <div className="text-muted-foreground text-xs">VMID</div>
-                        <div className="font-medium text-foreground">{interface_.vmid ?? "N/A"}</div>
+                        <div className="font-medium text-foreground">{iface.vmid ?? "N/A"}</div>
                       </div>
 
                       <div>
                         <div className="text-muted-foreground text-xs">Speed</div>
                         <div className="font-medium text-foreground flex items-center gap-1">
                           <Zap className="h-3 w-3" />
-                          {formatSpeed(interface_.speed)}
+                          {formatSpeed(iface.speed)}
                         </div>
                       </div>
 
                       <div className="col-span-2 md:col-span-1">
                         <div className="text-muted-foreground text-xs">Traffic</div>
                         <div className="font-medium text-foreground text-xs">
-                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
+                          <span className="text-green-500">↓ {formatBytes(iface.bytes_recv)}</span>
                           {" / "}
-                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
+                          <span className="text-blue-500">↑ {formatBytes(iface.bytes_sent)}</span>
                         </div>
                       </div>
 
-                      {interface_.mac_address && (
+                      {iface.mac_address && (
                         <div className="col-span-2 md:col-span-1">
                           <div className="text-muted-foreground text-xs">MAC</div>
                           <div className="font-medium text-foreground font-mono text-xs truncate">
-                            {interface_.mac_address}
+                            {iface.mac_address}
                           </div>
                         </div>
                       )}
@@ -515,6 +507,7 @@ export function NetworkMetrics() {
         </Card>
       )}
 
+      {/* Interface Details Dialog */}
       <Dialog open={!!selectedInterface} onOpenChange={() => setSelectedInterface(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
