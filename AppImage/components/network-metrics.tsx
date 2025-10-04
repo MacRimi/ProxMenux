@@ -1,19 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Wifi, Globe, Shield, Activity, Network, Router, AlertCircle, Zap } from "lucide-react"
+import useSWR from "swr"
 
 interface NetworkData {
   interfaces: NetworkInterface[]
+  vm_lxc_interfaces?: NetworkInterface[]
   traffic: {
     bytes_sent: number
     bytes_recv: number
     packets_sent?: number
     packets_recv?: number
+    packet_loss_in?: number
+    packet_loss_out?: number
+    dropin?: number
+    dropout?: number
   }
+  active_count?: number
+  total_count?: number
+  vm_lxc_active_count?: number
+  vm_lxc_total_count?: number
 }
 
 interface NetworkInterface {
@@ -40,6 +50,12 @@ interface NetworkInterface {
   bond_slaves?: string[]
   bond_active_slave?: string | null
   bridge_members?: string[]
+  packet_loss_in?: number
+  packet_loss_out?: number
+  vmid?: number
+  vm_name?: string
+  vm_type?: string
+  vm_status?: string
 }
 
 const getInterfaceTypeBadge = (type: string) => {
@@ -52,11 +68,22 @@ const getInterfaceTypeBadge = (type: string) => {
       return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: "Bond" }
     case "vlan":
       return { color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", label: "VLAN" }
+    case "vm_lxc":
+      return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: "Virtual" }
     case "virtual":
       return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: "Virtual" }
     default:
       return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: "Unknown" }
   }
+}
+
+const getVMTypeBadge = (vmType: string | undefined) => {
+  if (vmType === "lxc") {
+    return { color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", label: "LXC" }
+  } else if (vmType === "vm") {
+    return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: "VM" }
+  }
+  return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: "Unknown" }
 }
 
 const formatBytes = (bytes: number | undefined): string => {
@@ -73,57 +100,36 @@ const formatSpeed = (speed: number): string => {
   return `${speed} Mbps`
 }
 
-const fetchNetworkData = async (): Promise<NetworkData | null> => {
-  try {
-    console.log("[v0] Fetching network data from Flask server...")
-    const response = await fetch("/api/network", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      signal: AbortSignal.timeout(5000),
-    })
+const fetcher = async (url: string): Promise<NetworkData> => {
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    signal: AbortSignal.timeout(5000),
+  })
 
-    if (!response.ok) {
-      throw new Error(`Flask server responded with status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    console.log("[v0] Successfully fetched network data from Flask:", data)
-    return data
-  } catch (error) {
-    console.error("[v0] Failed to fetch network data from Flask server:", error)
-    return null
+  if (!response.ok) {
+    throw new Error(`Flask server responded with status: ${response.status}`)
   }
+
+  return response.json()
 }
 
 export function NetworkMetrics() {
-  const [networkData, setNetworkData] = useState<NetworkData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    data: networkData,
+    error,
+    isLoading,
+  } = useSWR<NetworkData>("/api/network", fetcher, {
+    refreshInterval: 30000, // Refresh every 30 seconds
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+  })
+
   const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true)
-      setError(null)
-      const result = await fetchNetworkData()
-
-      if (!result) {
-        setError("Flask server not available. Please ensure the server is running.")
-      } else {
-        setNetworkData(result)
-      }
-
-      setLoading(false)
-    }
-
-    fetchData()
-    const interval = setInterval(fetchData, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="text-center py-8">
@@ -143,7 +149,8 @@ export function NetworkMetrics() {
               <div>
                 <div className="font-semibold text-lg mb-1">Flask Server Not Available</div>
                 <div className="text-sm">
-                  {error || "Unable to connect to the Flask server. Please ensure the server is running and try again."}
+                  {error?.message ||
+                    "Unable to connect to the Flask server. Please ensure the server is running and try again."}
                 </div>
               </div>
             </div>
@@ -153,23 +160,24 @@ export function NetworkMetrics() {
     )
   }
 
-  const trafficInMB = (networkData.traffic.bytes_recv / (1024 * 1024)).toFixed(1)
-  const trafficOutMB = (networkData.traffic.bytes_sent / (1024 * 1024)).toFixed(1)
+  const trafficInGB = (networkData.traffic.bytes_recv / 1024 ** 3).toFixed(2)
+  const trafficOutGB = (networkData.traffic.bytes_sent / 1024 ** 3).toFixed(2)
+  const packetsRecvK = networkData.traffic.packets_recv ? (networkData.traffic.packets_recv / 1000).toFixed(0) : "0"
 
   return (
     <div className="space-y-6">
       {/* Network Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Network Traffic</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{trafficInMB} MB</div>
-            <div className="flex items-center space-x-2 mt-2">
-              <span className="text-xs text-green-500">↓ {trafficInMB} MB</span>
-              <span className="text-xs text-blue-500">↑ {trafficOutMB} MB</span>
+            <div className="text-2xl font-bold text-foreground">{trafficInGB} GB</div>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <span className="text-xs text-green-500">↓ {trafficInGB} GB</span>
+              <span className="text-xs text-blue-500">↑ {trafficOutGB} GB</span>
             </div>
             <p className="text-xs text-muted-foreground mt-2">Total data transferred</p>
           </CardContent>
@@ -181,15 +189,13 @@ export function NetworkMetrics() {
             <Network className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {networkData.interfaces.filter((i) => i.status === "up").length}
-            </div>
+            <div className="text-2xl font-bold text-foreground">{networkData.active_count ?? 0}</div>
             <div className="flex items-center mt-2">
               <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                 Online
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">{networkData.interfaces.length} total interfaces</p>
+            <p className="text-xs text-muted-foreground mt-2">{networkData.total_count ?? 0} total interfaces</p>
           </CardContent>
         </Card>
 
@@ -210,22 +216,23 @@ export function NetworkMetrics() {
         </Card>
 
         <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <Globe className="h-5 w-5 mr-2" />
-              Packets
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Packets</CardTitle>
+            <Globe className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {networkData.traffic.packets_recv ? (networkData.traffic.packets_recv / 1000).toFixed(0) : "N/A"}K
-            </div>
+            <div className="text-2xl font-bold text-foreground">{packetsRecvK}K</div>
             <div className="flex items-center mt-2">
               <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                 Received
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Total packets received</p>
+            {networkData.traffic.packet_loss_in !== undefined && networkData.traffic.packet_loss_in > 0 && (
+              <p className="text-xs text-yellow-500 mt-2">Loss: {networkData.traffic.packet_loss_in}%</p>
+            )}
+            {(!networkData.traffic.packet_loss_in || networkData.traffic.packet_loss_in === 0) && (
+              <p className="text-xs text-muted-foreground mt-2">No packet loss</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -249,10 +256,10 @@ export function NetworkMetrics() {
                   className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
                   onClick={() => setSelectedInterface(interface_)}
                 >
-                  {/* First row: Icon, Name, Type Badge */}
-                  <div className="flex items-center gap-3">
+                  {/* First row: Icon, Name, Type Badge, Status */}
+                  <div className="flex items-center gap-3 flex-wrap">
                     <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
                       <div className="font-medium text-foreground">{interface_.name}</div>
                       <Badge variant="outline" className={typeBadge.color}>
                         {typeBadge.label}
@@ -262,48 +269,48 @@ export function NetworkMetrics() {
                       variant="outline"
                       className={
                         interface_.status === "up"
-                          ? "bg-green-500/10 text-green-500 border-green-500/20"
-                          : "bg-red-500/10 text-red-500 border-red-500/20"
+                          ? "bg-green-500/10 text-green-500 border-green-500/20 ml-auto"
+                          : "bg-red-500/10 text-red-500 border-red-500/20 ml-auto"
                       }
                     >
                       {interface_.status.toUpperCase()}
                     </Badge>
                   </div>
 
-                  {/* Second row: Details */}
-                  <div className="flex items-center justify-between gap-6 text-sm">
-                    <div className="flex items-center gap-6">
-                      <div>
-                        <div className="text-muted-foreground">IP Address</div>
-                        <div className="font-medium text-foreground font-mono">
-                          {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
-                        </div>
+                  {/* Second row: Details - Responsive layout */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <div className="text-muted-foreground text-xs">IP Address</div>
+                      <div className="font-medium text-foreground font-mono text-sm truncate">
+                        {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
                       </div>
-
-                      <div>
-                        <div className="text-muted-foreground">Speed</div>
-                        <div className="font-medium text-foreground flex items-center gap-1">
-                          <Zap className="h-3 w-3" />
-                          {formatSpeed(interface_.speed)}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-muted-foreground">Traffic</div>
-                        <div className="font-medium text-foreground">
-                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
-                          {" / "}
-                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
-                        </div>
-                      </div>
-
-                      {interface_.mac_address && (
-                        <div>
-                          <div className="text-muted-foreground">MAC</div>
-                          <div className="font-medium text-foreground font-mono text-xs">{interface_.mac_address}</div>
-                        </div>
-                      )}
                     </div>
+
+                    <div>
+                      <div className="text-muted-foreground text-xs">Speed</div>
+                      <div className="font-medium text-foreground flex items-center gap-1">
+                        <Zap className="h-3 w-3" />
+                        {formatSpeed(interface_.speed)}
+                      </div>
+                    </div>
+
+                    <div className="col-span-2 md:col-span-1">
+                      <div className="text-muted-foreground text-xs">Traffic</div>
+                      <div className="font-medium text-foreground text-xs">
+                        <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
+                        {" / "}
+                        <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
+                      </div>
+                    </div>
+
+                    {interface_.mac_address && (
+                      <div className="col-span-2 md:col-span-1">
+                        <div className="text-muted-foreground text-xs">MAC</div>
+                        <div className="font-medium text-foreground font-mono text-xs truncate">
+                          {interface_.mac_address}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )
@@ -311,6 +318,93 @@ export function NetworkMetrics() {
           </div>
         </CardContent>
       </Card>
+
+      {networkData.vm_lxc_interfaces && networkData.vm_lxc_interfaces.length > 0 && (
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center">
+              <Network className="h-5 w-5 mr-2" />
+              VM & LXC Network Interfaces
+              <Badge variant="outline" className="ml-3 bg-orange-500/10 text-orange-500 border-orange-500/20">
+                {networkData.vm_lxc_active_count ?? 0} / {networkData.vm_lxc_total_count ?? 0} Active
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {networkData.vm_lxc_interfaces.map((interface_, index) => {
+                const vmTypeBadge = getVMTypeBadge(interface_.vm_type)
+
+                return (
+                  <div
+                    key={index}
+                    className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    onClick={() => setSelectedInterface(interface_)}
+                  >
+                    {/* First row: Icon, Name, VM/LXC Badge, VM Name, Status */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="font-medium text-foreground">{interface_.name}</div>
+                        <Badge variant="outline" className={vmTypeBadge.color}>
+                          {vmTypeBadge.label}
+                        </Badge>
+                        {interface_.vm_name && (
+                          <div className="text-sm text-muted-foreground truncate">→ {interface_.vm_name}</div>
+                        )}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          interface_.status === "up"
+                            ? "bg-green-500/10 text-green-500 border-green-500/20"
+                            : "bg-red-500/10 text-red-500 border-red-500/20"
+                        }
+                      >
+                        {interface_.status.toUpperCase()}
+                      </Badge>
+                    </div>
+
+                    {/* Second row: Details - Responsive layout */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground text-xs">VMID</div>
+                        <div className="font-medium text-foreground">{interface_.vmid ?? "N/A"}</div>
+                      </div>
+
+                      <div>
+                        <div className="text-muted-foreground text-xs">Speed</div>
+                        <div className="font-medium text-foreground flex items-center gap-1">
+                          <Zap className="h-3 w-3" />
+                          {formatSpeed(interface_.speed)}
+                        </div>
+                      </div>
+
+                      <div className="col-span-2 md:col-span-1">
+                        <div className="text-muted-foreground text-xs">Traffic</div>
+                        <div className="font-medium text-foreground text-xs">
+                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
+                          {" / "}
+                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
+                        </div>
+                      </div>
+
+                      {interface_.mac_address && (
+                        <div className="col-span-2 md:col-span-1">
+                          <div className="text-muted-foreground text-xs">MAC</div>
+                          <div className="font-medium text-foreground font-mono text-xs truncate">
+                            {interface_.mac_address}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Interface Details Modal */}
       <Dialog open={!!selectedInterface} onOpenChange={() => setSelectedInterface(null)}>
@@ -425,6 +519,26 @@ export function NetworkMetrics() {
                     <div className="text-sm text-muted-foreground">Drops Out</div>
                     <div className="font-medium text-yellow-500">{selectedInterface.drops_out || 0}</div>
                   </div>
+                  {selectedInterface.packet_loss_in !== undefined && (
+                    <div>
+                      <div className="text-sm text-muted-foreground">Packet Loss In</div>
+                      <div
+                        className={`font-medium ${selectedInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
+                      >
+                        {selectedInterface.packet_loss_in}%
+                      </div>
+                    </div>
+                  )}
+                  {selectedInterface.packet_loss_out !== undefined && (
+                    <div>
+                      <div className="text-sm text-muted-foreground">Packet Loss Out</div>
+                      <div
+                        className={`font-medium ${selectedInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
+                      >
+                        {selectedInterface.packet_loss_out}%
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -15,9 +15,55 @@ import os
 import time
 import socket
 from datetime import datetime, timedelta
+import re # Added for regex matching
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
+
+def extract_vmid_from_interface(interface_name):
+    """Extract VMID from virtual interface name (veth100i0 -> 100, tap105i0 -> 105)"""
+    try:
+        match = re.match(r'(veth|tap)(\d+)i\d+', interface_name)
+        if match:
+            vmid = int(match.group(2))
+            interface_type = 'lxc' if match.group(1) == 'veth' else 'vm'
+            return vmid, interface_type
+        return None, None
+    except Exception as e:
+        print(f"[v0] Error extracting VMID from {interface_name}: {e}")
+        return None, None
+
+def get_vm_lxc_names():
+    """Get VM and LXC names from Proxmox API"""
+    vm_lxc_map = {}
+    
+    try:
+        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+                              capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            resources = json.loads(result.stdout)
+            for resource in resources:
+                vmid = resource.get('vmid')
+                name = resource.get('name', f'VM-{vmid}')
+                vm_type = resource.get('type', 'unknown')  # 'qemu' or 'lxc'
+                status = resource.get('status', 'unknown')
+                
+                if vmid:
+                    vm_lxc_map[vmid] = {
+                        'name': name,
+                        'type': 'lxc' if vm_type == 'lxc' else 'vm',
+                        'status': status
+                    }
+                    print(f"[v0] Found {vm_type} {vmid}: {name} ({status})")
+        else:
+            print(f"[v0] pvesh command failed: {result.stderr}")
+    except FileNotFoundError:
+        print("[v0] pvesh command not found - Proxmox not installed")
+    except Exception as e:
+        print(f"[v0] Error getting VM/LXC names: {e}")
+    
+    return vm_lxc_map
 
 @app.route('/')
 def serve_dashboard():
@@ -873,35 +919,38 @@ def get_proxmox_storage():
 def get_interface_type(interface_name):
     """Detect the type of network interface"""
     try:
+        # Skip loopback
+        if interface_name == 'lo':
+            return 'skip'
+        
+        if interface_name.startswith(('veth', 'tap')):
+            return 'vm_lxc'
+        
+        # Skip other virtual interfaces
+        if interface_name.startswith(('tun', 'vnet', 'docker', 'virbr')):
+            return 'skip'
+        
         # Check if it's a bond
         if interface_name.startswith('bond'):
             return 'bond'
         
-        # Check if it's a bridge
-        if interface_name.startswith(('vmbr', 'br', 'virbr')):
+        # Check if it's a bridge (but not virbr which we skip above)
+        if interface_name.startswith(('vmbr', 'br')):
             return 'bridge'
         
         # Check if it's a VLAN (contains a dot)
         if '.' in interface_name:
             return 'vlan'
         
-        # Check if it's NVMe (virtual)
-        if interface_name.startswith('nvme'):
-            return 'virtual'
-        
         # Check if it's a physical interface
-        if interface_name.startswith(('enp', 'eth', 'wlan', 'wlp')):
+        if interface_name.startswith(('enp', 'eth', 'wlan', 'wlp', 'eno', 'ens')):
             return 'physical'
         
-        # Check if it's virtual (veth, tap, tun, etc.)
-        if interface_name.startswith(('veth', 'tap', 'tun', 'vnet')):
-            return 'virtual'
-        
-        # Default to unknown
-        return 'unknown'
+        # Default to skip for unknown types
+        return 'skip'
     except Exception as e:
         print(f"[v0] Error detecting interface type for {interface_name}: {e}")
-        return 'unknown'
+        return 'skip'
 
 def get_bond_info(bond_name):
     """Get detailed information about a bonding interface"""
@@ -952,12 +1001,15 @@ def get_bridge_info(bridge_name):
     return bridge_info
 
 def get_network_info():
-    """Get network interface information - Enhanced with type detection, speed, MAC, bonds, bridges"""
+    """Get network interface information - Enhanced with VM/LXC interface separation"""
     try:
         network_data = {
             'interfaces': [],
-            'traffic': {'bytes_sent': 0, 'bytes_recv': 0}
+            'vm_lxc_interfaces': [],  # Added separate list for VM/LXC interfaces
+            'traffic': {'bytes_sent': 0, 'bytes_recv': 0, 'packets_sent': 0, 'packets_recv': 0}
         }
+        
+        vm_lxc_map = get_vm_lxc_names()
         
         # Get network interfaces
         net_if_addrs = psutil.net_if_addrs()
@@ -969,31 +1021,54 @@ def get_network_info():
             print(f"[v0] Error getting per-NIC stats: {e}")
             net_io_per_nic = {}
         
+        active_count = 0
+        total_count = 0
+        vm_lxc_active_count = 0
+        vm_lxc_total_count = 0
+        
         for interface_name, interface_addresses in net_if_addrs.items():
-            # Skip loopback
-            if interface_name == 'lo':
-                continue
-            
             interface_type = get_interface_type(interface_name)
             
-            # Skip unknown virtual interfaces
-            if interface_type == 'unknown' and not interface_name.startswith(('enp', 'eth', 'wlan', 'vmbr', 'br', 'bond')):
+            if interface_type == 'skip':
+                print(f"[v0] Skipping interface: {interface_name} (type: {interface_type})")
                 continue
             
             stats = net_if_stats.get(interface_name)
             if not stats:
                 continue
+            
+            if interface_type == 'vm_lxc':
+                vm_lxc_total_count += 1
+                if stats.isup:
+                    vm_lxc_active_count += 1
+            else:
+                total_count += 1
+                if stats.isup:
+                    active_count += 1
                 
             interface_info = {
                 'name': interface_name,
-                'type': interface_type,  # Added type
+                'type': interface_type,
                 'status': 'up' if stats.isup else 'down',
-                'speed': stats.speed if stats.speed > 0 else 0,  # Added speed in Mbps
-                'duplex': 'full' if stats.duplex == 2 else 'half' if stats.duplex == 1 else 'unknown',  # Added duplex
-                'mtu': stats.mtu,  # Added MTU
+                'speed': stats.speed if stats.speed > 0 else 0,
+                'duplex': 'full' if stats.duplex == 2 else 'half' if stats.duplex == 1 else 'unknown',
+                'mtu': stats.mtu,
                 'addresses': [],
-                'mac_address': None,  # Added MAC address
+                'mac_address': None,
             }
+            
+            if interface_type == 'vm_lxc':
+                vmid, vm_type = extract_vmid_from_interface(interface_name)
+                if vmid and vmid in vm_lxc_map:
+                    interface_info['vmid'] = vmid
+                    interface_info['vm_name'] = vm_lxc_map[vmid]['name']
+                    interface_info['vm_type'] = vm_lxc_map[vmid]['type']
+                    interface_info['vm_status'] = vm_lxc_map[vmid]['status']
+                elif vmid:
+                    interface_info['vmid'] = vmid
+                    interface_info['vm_name'] = f'{"LXC" if vm_type == "lxc" else "VM"} {vmid}'
+                    interface_info['vm_type'] = vm_type
+                    interface_info['vm_status'] = 'unknown'
             
             for address in interface_addresses:
                 if address.family == 2:  # IPv4
@@ -1014,6 +1089,19 @@ def get_network_info():
                 interface_info['errors_out'] = io_stats.errout
                 interface_info['drops_in'] = io_stats.dropin
                 interface_info['drops_out'] = io_stats.dropout
+                
+                total_packets_in = io_stats.packets_recv + io_stats.dropin
+                total_packets_out = io_stats.packets_sent + io_stats.dropout
+                
+                if total_packets_in > 0:
+                    interface_info['packet_loss_in'] = round((io_stats.dropin / total_packets_in) * 100, 2)
+                else:
+                    interface_info['packet_loss_in'] = 0
+                    
+                if total_packets_out > 0:
+                    interface_info['packet_loss_out'] = round((io_stats.dropout / total_packets_out) * 100, 2)
+                else:
+                    interface_info['packet_loss_out'] = 0
             
             if interface_type == 'bond':
                 bond_info = get_bond_info(interface_name)
@@ -1025,7 +1113,18 @@ def get_network_info():
                 bridge_info = get_bridge_info(interface_name)
                 interface_info['bridge_members'] = bridge_info['members']
             
-            network_data['interfaces'].append(interface_info)
+            if interface_type == 'vm_lxc':
+                network_data['vm_lxc_interfaces'].append(interface_info)
+            else:
+                network_data['interfaces'].append(interface_info)
+        
+        network_data['active_count'] = active_count
+        network_data['total_count'] = total_count
+        network_data['vm_lxc_active_count'] = vm_lxc_active_count
+        network_data['vm_lxc_total_count'] = vm_lxc_total_count
+        
+        print(f"[v0] Physical interfaces: {active_count} active out of {total_count} total")
+        print(f"[v0] VM/LXC interfaces: {vm_lxc_active_count} active out of {vm_lxc_total_count} total")
         
         # Get network I/O statistics (global)
         net_io = psutil.net_io_counters()
@@ -1033,8 +1132,25 @@ def get_network_info():
             'bytes_sent': net_io.bytes_sent,
             'bytes_recv': net_io.bytes_recv,
             'packets_sent': net_io.packets_sent,
-            'packets_recv': net_io.packets_recv
+            'packets_recv': net_io.packets_recv,
+            'errin': net_io.errin,
+            'errout': net_io.errout,
+            'dropin': net_io.dropin,
+            'dropout': net_io.dropout
         }
+        
+        total_packets_in = net_io.packets_recv + net_io.dropin
+        total_packets_out = net_io.packets_sent + net_io.dropout
+        
+        if total_packets_in > 0:
+            network_data['traffic']['packet_loss_in'] = round((net_io.dropin / total_packets_in) * 100, 2)
+        else:
+            network_data['traffic']['packet_loss_in'] = 0
+            
+        if total_packets_out > 0:
+            network_data['traffic']['packet_loss_out'] = round((net_io.dropout / total_packets_out) * 100, 2)
+        else:
+            network_data['traffic']['packet_loss_out'] = 0
         
         return network_data
     except Exception as e:
@@ -1044,7 +1160,12 @@ def get_network_info():
         return {
             'error': f'Unable to access network information: {str(e)}',
             'interfaces': [],
-            'traffic': {'bytes_sent': 0, 'bytes_recv': 0, 'packets_sent': 0, 'packets_recv': 0}
+            'vm_lxc_interfaces': [],
+            'traffic': {'bytes_sent': 0, 'bytes_recv': 0, 'packets_sent': 0, 'packets_recv': 0},
+            'active_count': 0,
+            'total_count': 0,
+            'vm_lxc_active_count': 0,
+            'vm_lxc_total_count': 0
         }
 
 def get_proxmox_vms():
