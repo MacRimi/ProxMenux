@@ -537,39 +537,48 @@ uninstall_log2ram() {
 
     msg_info "$(translate "Uninstalling log2ram...")"
 
-    # Stop and disable services and timers
-    systemctl stop log2ram >/dev/null 2>&1
-    systemctl disable log2ram >/dev/null 2>&1
-    systemctl stop log2ram-daily.timer >/dev/null 2>&1
-    systemctl disable log2ram-daily.timer >/dev/null 2>&1
+    # Stop and disable services/timers
+    systemctl stop log2ram log2ram-daily.timer >/dev/null 2>&1 || true
+    systemctl disable log2ram log2ram-daily.timer >/dev/null 2>&1 || true
 
-    # Remove cron jobs
-    rm -f /etc/cron.d/log2ram
-    rm -f /etc/cron.d/log2ram-auto-sync
+    # Remove cron jobs (all possible locations)
+    rm -f /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync \
+          /etc/cron.hourly/log2ram /etc/cron.daily/log2ram \
+          /etc/cron.weekly/log2ram /etc/cron.monthly/log2ram 2>/dev/null || true
 
-    # Remove config and binaries
-    rm -f /usr/local/bin/log2ram-check.sh
-    rm -f /usr/sbin/log2ram
-    rm -f /etc/log2ram.conf*
-    rm -f /etc/systemd/system/log2ram.service
-    rm -f /etc/systemd/system/log2ram-daily.timer
-    rm -f /etc/systemd/system/log2ram-daily.service
+    # Remove binaries, configs and services
+    rm -f /usr/local/bin/log2ram-check.sh \
+          /usr/local/bin/log2ram \
+          /usr/sbin/log2ram \
+          /etc/log2ram.conf* 2>/dev/null || true
+    rm -f /etc/systemd/system/log2ram.service \
+          /etc/systemd/system/log2ram-daily.* 2>/dev/null || true
+    rm -rf /etc/systemd/system/log2ram.service.d 2>/dev/null || true
+    rm -rf /etc/logrotate.d/log2ram 2>/dev/null || true
 
-    # Clean up log2ram mount if active
+    # Clean up mount if still active
     if [ -d /var/log.hdd ]; then
         if [ -d /var/log ] && mountpoint -q /var/log; then
-            rsync -a /var/log/ /var/log.hdd/ >/dev/null 2>&1
-            umount /var/log >/dev/null 2>&1
+            rsync -a /var/log/ /var/log.hdd/ >/dev/null 2>&1 || true
+            umount /var/log >/dev/null 2>&1 || true
         fi
         rm -rf /var/log.hdd
     fi
 
+    # Reload daemons
     systemctl daemon-reexec >/dev/null 2>&1
     systemctl daemon-reload >/dev/null 2>&1
+    systemctl restart cron >/dev/null 2>&1 || true
+
+    # Purge package if installed via apt
+    if dpkg -l | grep -q '^ii  log2ram'; then
+        apt-get purge -y log2ram >/dev/null 2>&1 || true
+    fi
 
     msg_ok "$(translate "log2ram completely removed")"
     register_tool "log2ram" false
 }
+
 
 
 ################################################################
