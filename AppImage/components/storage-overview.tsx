@@ -48,8 +48,24 @@ interface StorageData {
   error?: string
 }
 
+interface ProxmoxStorage {
+  name: string
+  type: string
+  status: string
+  total: number
+  used: number
+  available: number
+  percent: number
+}
+
+interface ProxmoxStorageData {
+  storage: ProxmoxStorage[]
+  error?: string
+}
+
 export function StorageOverview() {
   const [storageData, setStorageData] = useState<StorageData | null>(null)
+  const [proxmoxStorage, setProxmoxStorage] = useState<ProxmoxStorageData | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedDisk, setSelectedDisk] = useState<DiskInfo | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -58,10 +74,20 @@ export function StorageOverview() {
     try {
       const baseUrl =
         typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-      const response = await fetch(`${baseUrl}/api/storage`)
-      const data = await response.json()
+
+      const [storageResponse, proxmoxResponse] = await Promise.all([
+        fetch(`${baseUrl}/api/storage`),
+        fetch(`${baseUrl}/api/proxmox-storage`),
+      ])
+
+      const data = await storageResponse.json()
+      const proxmoxData = await proxmoxResponse.json()
+
       console.log("[v0] Storage data received:", data)
+      console.log("[v0] Proxmox storage data received:", proxmoxData)
+
       setStorageData(data)
+      setProxmoxStorage(proxmoxData)
     } catch (error) {
       console.error("Error fetching storage data:", error)
     } finally {
@@ -129,6 +155,18 @@ export function StorageOverview() {
   const handleDiskClick = (disk: DiskInfo) => {
     setSelectedDisk(disk)
     setDetailsOpen(true)
+  }
+
+  const getStorageTypeBadge = (type: string) => {
+    const typeColors: Record<string, string> = {
+      pbs: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+      dir: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      lvmthin: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+      zfspool: "bg-green-500/10 text-green-500 border-green-500/20",
+      nfs: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+      cifs: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+    }
+    return typeColors[type.toLowerCase()] || "bg-gray-500/10 text-gray-500 border-gray-500/20"
   }
 
   if (loading) {
@@ -215,63 +253,78 @@ export function StorageOverview() {
         </Card>
       </div>
 
-      {storageData.disks.some((disk) => disk.mountpoint) && (
+      {proxmoxStorage && proxmoxStorage.storage && proxmoxStorage.storage.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
-              Mounted Partitions
+              Proxmox Storage
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {storageData.disks
-                .filter((disk) => disk.mountpoint)
-                .map((disk) => (
-                  <div key={disk.name} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
+              {proxmoxStorage.storage.map((storage) => (
+                <div key={storage.name} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <Database className="h-5 w-5 text-muted-foreground" />
                       <div>
-                        <h3 className="font-semibold">{disk.mountpoint}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          /dev/{disk.name} ({disk.fstype})
+                        <h3 className="font-semibold text-lg">{storage.name}</h3>
+                        <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        className={
+                          storage.status === "active"
+                            ? "bg-green-500/10 text-green-500 border-green-500/20"
+                            : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                        }
+                      >
+                        {storage.status}
+                      </Badge>
+                      <span className="text-sm font-medium">{storage.percent}%</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Progress
+                      value={storage.percent}
+                      className={`h-2 ${
+                        storage.percent > 90
+                          ? "[&>div]:bg-red-500"
+                          : storage.percent > 75
+                            ? "[&>div]:bg-yellow-500"
+                            : "[&>div]:bg-blue-500"
+                      }`}
+                    />
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Total</p>
+                        <p className="font-medium">{storage.total.toLocaleString()} GB</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Used</p>
+                        <p
+                          className={`font-medium ${
+                            storage.percent > 90
+                              ? "text-red-400"
+                              : storage.percent > 75
+                                ? "text-yellow-400"
+                                : "text-blue-400"
+                          }`}
+                        >
+                          {storage.used.toLocaleString()} GB
                         </p>
                       </div>
-                      {disk.usage_percent !== undefined && (
-                        <span className="text-sm font-medium">{disk.usage_percent}%</span>
-                      )}
-                    </div>
-                    {disk.usage_percent !== undefined && (
-                      <div className="space-y-1">
-                        <Progress
-                          value={disk.usage_percent}
-                          className={`h-2 ${
-                            disk.usage_percent > 90
-                              ? "[&>div]:bg-red-500"
-                              : disk.usage_percent > 75
-                                ? "[&>div]:bg-yellow-500"
-                                : "[&>div]:bg-blue-500"
-                          }`}
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span
-                            className={
-                              disk.usage_percent > 90
-                                ? "text-red-400"
-                                : disk.usage_percent > 75
-                                  ? "text-yellow-400"
-                                  : "text-blue-400"
-                            }
-                          >
-                            {disk.used} GB used
-                          </span>
-                          <span className="text-green-400">
-                            {disk.available} GB free of {disk.total} GB
-                          </span>
-                        </div>
+                      <div>
+                        <p className="text-muted-foreground">Available</p>
+                        <p className="font-medium text-green-400">{storage.available.toLocaleString()} GB</p>
                       </div>
-                    )}
+                    </div>
                   </div>
-                ))}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -384,32 +437,6 @@ export function StorageOverview() {
                     </div>
                   )}
                 </div>
-
-                {disk.mountpoint && (
-                  <div className="mt-3 pt-3 border-t">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Mounted at: </span>
-                        <span className="font-medium">{disk.mountpoint}</span>
-                        {disk.fstype && <span className="text-muted-foreground ml-2">({disk.fstype})</span>}
-                      </div>
-                      {disk.usage_percent !== undefined && (
-                        <span className="text-sm font-medium">{disk.usage_percent}%</span>
-                      )}
-                    </div>
-                    {disk.usage_percent !== undefined && (
-                      <div className="space-y-1">
-                        <Progress value={disk.usage_percent} className="h-2" />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span className="text-blue-400">{disk.used} GB used</span>
-                          <span className="text-green-400">
-                            {disk.available} GB free of {disk.total} GB
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -494,46 +521,6 @@ export function StorageOverview() {
                   </div>
                 </div>
               </div>
-
-              {selectedDisk.mountpoint && (
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3">Mount Information</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Mount Point:</span>
-                      <span className="font-medium">{selectedDisk.mountpoint}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Filesystem:</span>
-                      <span className="font-medium">{selectedDisk.fstype}</span>
-                    </div>
-                    {selectedDisk.total && (
-                      <>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Total:</span>
-                          <span className="font-medium">{selectedDisk.total} GB</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Used:</span>
-                          <span className="font-medium text-blue-400">{selectedDisk.used} GB</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Available:</span>
-                          <span className="font-medium text-green-400">{selectedDisk.available} GB</span>
-                        </div>
-                        {selectedDisk.usage_percent !== undefined && (
-                          <div className="mt-2">
-                            <Progress value={selectedDisk.usage_percent} className="h-2" />
-                            <p className="text-xs text-muted-foreground text-center mt-1">
-                              {selectedDisk.usage_percent}% used
-                            </p>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>

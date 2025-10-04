@@ -517,10 +517,16 @@ def get_smart_data(disk_name):
             ['smartctl', '-a', '-j', '-d', 'ata', f'/dev/{disk_name}'],  # JSON with ATA device type
             ['smartctl', '-a', '-j', '-d', 'sat', f'/dev/{disk_name}'],  # JSON with SAT device type
             ['smartctl', '-a', '-j', '-d', 'scsi', f'/dev/{disk_name}'],  # JSON with SCSI device type
+            ['smartctl', '-a', '-j', '-d', 'sat,12', f'/dev/{disk_name}'],  # SAT with 12-byte commands
+            ['smartctl', '-a', '-j', '-d', 'sat,16', f'/dev/{disk_name}'],  # SAT with 16-byte commands
             ['smartctl', '-a', f'/dev/{disk_name}'],  # Text output
             ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # Text with ATA device type
             ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],  # Text with SAT device type
+            ['smartctl', '-a', '-d', 'sat,12', f'/dev/{disk_name}'],  # Text SAT with 12-byte commands
+            ['smartctl', '-a', '-d', 'sat,16', f'/dev/{disk_name}'],  # Text SAT with 16-byte commands
             ['smartctl', '-i', '-H', f'/dev/{disk_name}'],  # Basic info + health only
+            ['smartctl', '-i', '-H', '-d', 'ata', f'/dev/{disk_name}'],  # Basic with ATA
+            ['smartctl', '-i', '-H', '-d', 'sat', f'/dev/{disk_name}'],  # Basic with SAT
         ]
         
         for cmd_index, cmd in enumerate(commands_to_try):
@@ -746,6 +752,75 @@ def get_smart_data(disk_name):
     print(f"[v0] ===== Final SMART data for /dev/{disk_name}: {smart_data} =====")
     return smart_data
 
+def get_proxmox_storage():
+    """Get Proxmox storage information using pvesm status"""
+    try:
+        print("[v0] Getting Proxmox storage with pvesm status...")
+        result = subprocess.run(['pvesm', 'status'], capture_output=True, text=True, timeout=10)
+        
+        if result.returncode != 0:
+            print(f"[v0] pvesm status failed with return code {result.returncode}")
+            print(f"[v0] stderr: {result.stderr}")
+            return {
+                'error': 'pvesm command not available or failed',
+                'storage': []
+            }
+        
+        storage_list = []
+        lines = result.stdout.strip().split('\n')
+        
+        # Skip header line
+        if len(lines) < 2:
+            print("[v0] No storage found in pvesm output")
+            return {'storage': []}
+        
+        # Parse each storage line
+        for line in lines[1:]:  # Skip header
+            parts = line.split()
+            if len(parts) >= 6:
+                name = parts[0]
+                storage_type = parts[1]
+                status = parts[2]
+                total = int(parts[3])
+                used = int(parts[4])
+                available = int(parts[5])
+                percent = float(parts[6].rstrip('%')) if len(parts) > 6 else 0.0
+                
+                # Convert bytes to GB
+                total_gb = round(total / (1024**2), 2)
+                used_gb = round(used / (1024**2), 2)
+                available_gb = round(available / (1024**2), 2)
+                
+                storage_info = {
+                    'name': name,
+                    'type': storage_type,
+                    'status': status,
+                    'total': total_gb,
+                    'used': used_gb,
+                    'available': available_gb,
+                    'percent': round(percent, 2)
+                }
+                
+                print(f"[v0] Found storage: {name} ({storage_type}) - {used_gb}/{total_gb} GB ({percent}%)")
+                storage_list.append(storage_info)
+        
+        return {'storage': storage_list}
+        
+    except FileNotFoundError:
+        print("[v0] pvesm command not found - Proxmox not installed or not in PATH")
+        return {
+            'error': 'pvesm command not found - Proxmox not installed',
+            'storage': []
+        }
+    except Exception as e:
+        print(f"[v0] Error getting Proxmox storage: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'error': f'Unable to get Proxmox storage: {str(e)}',
+            'storage': []
+        }
+
 def get_network_info():
     """Get network interface information"""
     try:
@@ -832,6 +907,11 @@ def api_system():
 def api_storage():
     """Get storage information"""
     return jsonify(get_storage_info())
+
+@app.route('/api/proxmox-storage', methods=['GET'])
+def api_proxmox_storage():
+    """Get Proxmox storage information"""
+    return jsonify(get_proxmox_storage())
 
 @app.route('/api/network', methods=['GET'])
 def api_network():
@@ -949,6 +1029,7 @@ def api_info():
             '/api/system',
             '/api/system-info',
             '/api/storage', 
+            '/api/proxmox-storage',  # Added new endpoint
             '/api/network',
             '/api/vms',
             '/api/logs',
