@@ -923,20 +923,24 @@ def get_interface_type(interface_name):
         if interface_name == 'lo':
             return 'skip'
         
+        # Check if it's a bridge (but not virbr which we skip above)
+        if interface_name.startswith(('vmbr', 'br')):
+            # Skip virbr (libvirt bridges)
+            if interface_name.startswith('virbr'):
+                return 'skip'
+            return 'bridge'
+        
+        # Check VM/LXC interfaces
         if interface_name.startswith(('veth', 'tap')):
             return 'vm_lxc'
         
         # Skip other virtual interfaces
-        if interface_name.startswith(('tun', 'vnet', 'docker', 'virbr')):
+        if interface_name.startswith(('tun', 'vnet', 'docker')):
             return 'skip'
         
         # Check if it's a bond
         if interface_name.startswith('bond'):
             return 'bond'
-        
-        # Check if it's a bridge (but not virbr which we skip above)
-        if interface_name.startswith(('vmbr', 'br')):
-            return 'bridge'
         
         # Check if it's a VLAN (contains a dot)
         if '.' in interface_name:
