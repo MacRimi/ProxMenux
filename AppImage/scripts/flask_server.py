@@ -870,8 +870,89 @@ def get_proxmox_storage():
             'storage': []
         }
 
+def get_interface_type(interface_name):
+    """Detect the type of network interface"""
+    try:
+        # Check if it's a bond
+        if interface_name.startswith('bond'):
+            return 'bond'
+        
+        # Check if it's a bridge
+        if interface_name.startswith(('vmbr', 'br', 'virbr')):
+            return 'bridge'
+        
+        # Check if it's a VLAN (contains a dot)
+        if '.' in interface_name:
+            return 'vlan'
+        
+        # Check if it's NVMe (virtual)
+        if interface_name.startswith('nvme'):
+            return 'virtual'
+        
+        # Check if it's a physical interface
+        if interface_name.startswith(('enp', 'eth', 'wlan', 'wlp')):
+            return 'physical'
+        
+        # Check if it's virtual (veth, tap, tun, etc.)
+        if interface_name.startswith(('veth', 'tap', 'tun', 'vnet')):
+            return 'virtual'
+        
+        # Default to unknown
+        return 'unknown'
+    except Exception as e:
+        print(f"[v0] Error detecting interface type for {interface_name}: {e}")
+        return 'unknown'
+
+def get_bond_info(bond_name):
+    """Get detailed information about a bonding interface"""
+    bond_info = {
+        'mode': 'unknown',
+        'slaves': [],
+        'active_slave': None
+    }
+    
+    try:
+        bond_file = f'/proc/net/bonding/{bond_name}'
+        if os.path.exists(bond_file):
+            with open(bond_file, 'r') as f:
+                content = f.read()
+                
+                # Parse bonding mode
+                for line in content.split('\n'):
+                    if 'Bonding Mode:' in line:
+                        bond_info['mode'] = line.split(':', 1)[1].strip()
+                    elif 'Slave Interface:' in line:
+                        slave_name = line.split(':', 1)[1].strip()
+                        bond_info['slaves'].append(slave_name)
+                    elif 'Currently Active Slave:' in line:
+                        bond_info['active_slave'] = line.split(':', 1)[1].strip()
+                
+                print(f"[v0] Bond {bond_name} info: mode={bond_info['mode']}, slaves={bond_info['slaves']}")
+    except Exception as e:
+        print(f"[v0] Error reading bond info for {bond_name}: {e}")
+    
+    return bond_info
+
+def get_bridge_info(bridge_name):
+    """Get detailed information about a bridge interface"""
+    bridge_info = {
+        'members': []
+    }
+    
+    try:
+        # Try to read bridge members from /sys/class/net/<bridge>/brif/
+        brif_path = f'/sys/class/net/{bridge_name}/brif'
+        if os.path.exists(brif_path):
+            members = os.listdir(brif_path)
+            bridge_info['members'] = members
+            print(f"[v0] Bridge {bridge_name} members: {members}")
+    except Exception as e:
+        print(f"[v0] Error reading bridge info for {bridge_name}: {e}")
+    
+    return bridge_info
+
 def get_network_info():
-    """Get network interface information"""
+    """Get network interface information - Enhanced with type detection, speed, MAC, bonds, bridges"""
     try:
         network_data = {
             'interfaces': [],
@@ -882,20 +963,36 @@ def get_network_info():
         net_if_addrs = psutil.net_if_addrs()
         net_if_stats = psutil.net_if_stats()
         
+        try:
+            net_io_per_nic = psutil.net_io_counters(pernic=True)
+        except Exception as e:
+            print(f"[v0] Error getting per-NIC stats: {e}")
+            net_io_per_nic = {}
+        
         for interface_name, interface_addresses in net_if_addrs.items():
             # Skip loopback
             if interface_name == 'lo':
                 continue
             
-            # Skip virtual interfaces that are not bridges
-            # Keep: physical interfaces (enp*, eth*, wlan*) and bridges (vmbr*, br*)
-            if not (interface_name.startswith(('enp', 'eth', 'wlan', 'vmbr', 'br'))):
+            interface_type = get_interface_type(interface_name)
+            
+            # Skip unknown virtual interfaces
+            if interface_type == 'unknown' and not interface_name.startswith(('enp', 'eth', 'wlan', 'vmbr', 'br', 'bond')):
+                continue
+            
+            stats = net_if_stats.get(interface_name)
+            if not stats:
                 continue
                 
             interface_info = {
                 'name': interface_name,
-                'status': 'up' if net_if_stats[interface_name].isup else 'down',
-                'addresses': []
+                'type': interface_type,  # Added type
+                'status': 'up' if stats.isup else 'down',
+                'speed': stats.speed if stats.speed > 0 else 0,  # Added speed in Mbps
+                'duplex': 'full' if stats.duplex == 2 else 'half' if stats.duplex == 1 else 'unknown',  # Added duplex
+                'mtu': stats.mtu,  # Added MTU
+                'addresses': [],
+                'mac_address': None,  # Added MAC address
             }
             
             for address in interface_addresses:
@@ -904,10 +1001,33 @@ def get_network_info():
                         'ip': address.address,
                         'netmask': address.netmask
                     })
+                elif address.family == 17:  # AF_PACKET (MAC address on Linux)
+                    interface_info['mac_address'] = address.address
+            
+            if interface_name in net_io_per_nic:
+                io_stats = net_io_per_nic[interface_name]
+                interface_info['bytes_sent'] = io_stats.bytes_sent
+                interface_info['bytes_recv'] = io_stats.bytes_recv
+                interface_info['packets_sent'] = io_stats.packets_sent
+                interface_info['packets_recv'] = io_stats.packets_recv
+                interface_info['errors_in'] = io_stats.errin
+                interface_info['errors_out'] = io_stats.errout
+                interface_info['drops_in'] = io_stats.dropin
+                interface_info['drops_out'] = io_stats.dropout
+            
+            if interface_type == 'bond':
+                bond_info = get_bond_info(interface_name)
+                interface_info['bond_mode'] = bond_info['mode']
+                interface_info['bond_slaves'] = bond_info['slaves']
+                interface_info['bond_active_slave'] = bond_info['active_slave']
+            
+            if interface_type == 'bridge':
+                bridge_info = get_bridge_info(interface_name)
+                interface_info['bridge_members'] = bridge_info['members']
             
             network_data['interfaces'].append(interface_info)
         
-        # Get network I/O statistics
+        # Get network I/O statistics (global)
         net_io = psutil.net_io_counters()
         network_data['traffic'] = {
             'bytes_sent': net_io.bytes_sent,
@@ -919,6 +1039,8 @@ def get_network_info():
         return network_data
     except Exception as e:
         print(f"Error getting network info: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             'error': f'Unable to access network information: {str(e)}',
             'interfaces': [],
@@ -936,10 +1058,22 @@ def get_proxmox_vms():
             vms = json.loads(result.stdout)
             return vms
         else:
-            return {
-                'error': 'pvesh command not available or failed - Proxmox API not accessible',
-                'vms': []
-            }
+            # Handle LXC containers as well
+            result_lxc = subprocess.run(['pvesh', 'get', '/nodes/localhost/lxc', '--output-format', 'json'],
+                                        capture_output=True, text=True, timeout=10)
+            if result_lxc.returncode == 0:
+                lxc_vms = json.loads(result_lxc.stdout)
+                # Combine QEMU and LXC for a complete VM list
+                if 'vms' in locals(): # Check if vms were loaded from QEMU
+                    vms.extend(lxc_vms)
+                else:
+                    vms = lxc_vms
+                return vms
+            else:
+                return {
+                    'error': 'pvesh command not available or failed - Proxmox API not accessible for QEMU and LXC',
+                    'vms': []
+                }
     except Exception as e:
         print(f"Error getting VM info: {e}")
         return {

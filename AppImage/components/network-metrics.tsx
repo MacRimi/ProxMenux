@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
-import { Wifi, Globe, Shield, Activity, Network, Router, AlertCircle } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Wifi, Globe, Shield, Activity, Network, Router, AlertCircle, Zap } from "lucide-react"
 
 interface NetworkData {
   interfaces: NetworkInterface[]
@@ -17,11 +18,59 @@ interface NetworkData {
 
 interface NetworkInterface {
   name: string
+  type: string
   status: string
+  speed: number
+  duplex: string
+  mtu: number
+  mac_address: string | null
   addresses: Array<{
     ip: string
     netmask: string
   }>
+  bytes_sent?: number
+  bytes_recv?: number
+  packets_sent?: number
+  packets_recv?: number
+  errors_in?: number
+  errors_out?: number
+  drops_in?: number
+  drops_out?: number
+  bond_mode?: string
+  bond_slaves?: string[]
+  bond_active_slave?: string | null
+  bridge_members?: string[]
+}
+
+const getInterfaceTypeBadge = (type: string) => {
+  switch (type) {
+    case "physical":
+      return { color: "bg-blue-500/10 text-blue-500 border-blue-500/20", label: "Physical" }
+    case "bridge":
+      return { color: "bg-green-500/10 text-green-500 border-green-500/20", label: "Bridge" }
+    case "bond":
+      return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: "Bond" }
+    case "vlan":
+      return { color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", label: "VLAN" }
+    case "virtual":
+      return { color: "bg-orange-500/10 text-orange-500 border-orange-500/20", label: "Virtual" }
+    default:
+      return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: "Unknown" }
+  }
+}
+
+const formatBytes = (bytes: number | undefined): string => {
+  if (!bytes || bytes === 0) return "0 B"
+  const k = 1024
+  const sizes = ["B", "KB", "MB", "GB", "TB"]
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+}
+
+const formatSpeed = (speed: number): string => {
+  if (speed === 0) return "N/A"
+  if (speed >= 1000) return `${(speed / 1000).toFixed(1)} Gbps`
+  return `${speed} Mbps`
 }
 
 const fetchNetworkData = async (): Promise<NetworkData | null> => {
@@ -52,6 +101,7 @@ export function NetworkMetrics() {
   const [networkData, setNetworkData] = useState<NetworkData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -190,50 +240,255 @@ export function NetworkMetrics() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {networkData.interfaces.map((interface_, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-4 rounded-lg border border-border bg-card/50"
-              >
-                <div className="flex items-center space-x-4">
-                  <Wifi className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <div className="font-medium text-foreground">{interface_.name}</div>
-                    <div className="text-sm text-muted-foreground">Network Interface</div>
-                  </div>
-                </div>
+            {networkData.interfaces.map((interface_, index) => {
+              const typeBadge = getInterfaceTypeBadge(interface_.type)
 
-                <div className="flex items-center space-x-6">
-                  <div className="text-center">
-                    <div className="text-sm text-muted-foreground">IP Address</div>
-                    <div className="text-sm font-medium text-foreground font-mono">
-                      {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
+              return (
+                <div
+                  key={index}
+                  className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                  onClick={() => setSelectedInterface(interface_)}
+                >
+                  {/* First row: Icon, Name, Type Badge */}
+                  <div className="flex items-center gap-3">
+                    <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="font-medium text-foreground">{interface_.name}</div>
+                      <Badge variant="outline" className={typeBadge.color}>
+                        {typeBadge.label}
+                      </Badge>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={
+                        interface_.status === "up"
+                          ? "bg-green-500/10 text-green-500 border-green-500/20"
+                          : "bg-red-500/10 text-red-500 border-red-500/20"
+                      }
+                    >
+                      {interface_.status.toUpperCase()}
+                    </Badge>
+                  </div>
+
+                  {/* Second row: Details */}
+                  <div className="flex items-center justify-between gap-6 text-sm">
+                    <div className="flex items-center gap-6">
+                      <div>
+                        <div className="text-muted-foreground">IP Address</div>
+                        <div className="font-medium text-foreground font-mono">
+                          {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-muted-foreground">Speed</div>
+                        <div className="font-medium text-foreground flex items-center gap-1">
+                          <Zap className="h-3 w-3" />
+                          {formatSpeed(interface_.speed)}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-muted-foreground">Traffic</div>
+                        <div className="font-medium text-foreground">
+                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
+                          {" / "}
+                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
+                        </div>
+                      </div>
+
+                      {interface_.mac_address && (
+                        <div>
+                          <div className="text-muted-foreground">MAC</div>
+                          <div className="font-medium text-foreground font-mono text-xs">{interface_.mac_address}</div>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  <div className="text-center">
-                    <div className="text-sm text-muted-foreground">Netmask</div>
-                    <div className="text-sm font-medium text-foreground">
-                      {interface_.addresses.length > 0 ? interface_.addresses[0].netmask : "N/A"}
-                    </div>
-                  </div>
-
-                  <Badge
-                    variant="outline"
-                    className={
-                      interface_.status === "up"
-                        ? "bg-green-500/10 text-green-500 border-green-500/20"
-                        : "bg-red-500/10 text-red-500 border-red-500/20"
-                    }
-                  >
-                    {interface_.status.toUpperCase()}
-                  </Badge>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </CardContent>
       </Card>
+
+      {/* Interface Details Modal */}
+      <Dialog open={!!selectedInterface} onOpenChange={() => setSelectedInterface(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Router className="h-5 w-5" />
+              {selectedInterface?.name} - Interface Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedInterface && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Basic Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Interface Name</div>
+                    <div className="font-medium">{selectedInterface.name}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Type</div>
+                    <Badge variant="outline" className={getInterfaceTypeBadge(selectedInterface.type).color}>
+                      {getInterfaceTypeBadge(selectedInterface.type).label}
+                    </Badge>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Status</div>
+                    <Badge
+                      variant="outline"
+                      className={
+                        selectedInterface.status === "up"
+                          ? "bg-green-500/10 text-green-500 border-green-500/20"
+                          : "bg-red-500/10 text-red-500 border-red-500/20"
+                      }
+                    >
+                      {selectedInterface.status.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Speed</div>
+                    <div className="font-medium">{formatSpeed(selectedInterface.speed)}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Duplex</div>
+                    <div className="font-medium capitalize">{selectedInterface.duplex}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">MTU</div>
+                    <div className="font-medium">{selectedInterface.mtu}</div>
+                  </div>
+                  {selectedInterface.mac_address && (
+                    <div className="col-span-2">
+                      <div className="text-sm text-muted-foreground">MAC Address</div>
+                      <div className="font-medium font-mono">{selectedInterface.mac_address}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* IP Addresses */}
+              {selectedInterface.addresses.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">IP Addresses</h3>
+                  <div className="space-y-2">
+                    {selectedInterface.addresses.map((addr, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <div>
+                          <div className="font-medium font-mono">{addr.ip}</div>
+                          <div className="text-sm text-muted-foreground">Netmask: {addr.netmask}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Traffic Statistics */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Traffic Statistics</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Bytes Received</div>
+                    <div className="font-medium text-green-500">{formatBytes(selectedInterface.bytes_recv)}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Bytes Sent</div>
+                    <div className="font-medium text-blue-500">{formatBytes(selectedInterface.bytes_sent)}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Packets Received</div>
+                    <div className="font-medium">{selectedInterface.packets_recv?.toLocaleString() || "N/A"}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Packets Sent</div>
+                    <div className="font-medium">{selectedInterface.packets_sent?.toLocaleString() || "N/A"}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Errors In</div>
+                    <div className="font-medium text-red-500">{selectedInterface.errors_in || 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Errors Out</div>
+                    <div className="font-medium text-red-500">{selectedInterface.errors_out || 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Drops In</div>
+                    <div className="font-medium text-yellow-500">{selectedInterface.drops_in || 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Drops Out</div>
+                    <div className="font-medium text-yellow-500">{selectedInterface.drops_out || 0}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bond Information */}
+              {selectedInterface.type === "bond" && selectedInterface.bond_slaves && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">Bond Configuration</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Bonding Mode</div>
+                      <div className="font-medium">{selectedInterface.bond_mode || "Unknown"}</div>
+                    </div>
+                    {selectedInterface.bond_active_slave && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Active Slave</div>
+                        <div className="font-medium">{selectedInterface.bond_active_slave}</div>
+                      </div>
+                    )}
+                    <div>
+                      <div className="text-sm text-muted-foreground mb-2">Slave Interfaces</div>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedInterface.bond_slaves.map((slave, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="bg-purple-500/10 text-purple-500 border-purple-500/20"
+                          >
+                            {slave}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bridge Information */}
+              {selectedInterface.type === "bridge" && selectedInterface.bridge_members && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">Bridge Configuration</h3>
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-2">Member Interfaces</div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedInterface.bridge_members.length > 0 ? (
+                        selectedInterface.bridge_members.map((member, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="bg-green-500/10 text-green-500 border-green-500/20"
+                          >
+                            {member}
+                          </Badge>
+                        ))
+                      ) : (
+                        <div className="text-sm text-muted-foreground">No members</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
