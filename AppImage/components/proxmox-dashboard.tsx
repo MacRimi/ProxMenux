@@ -8,10 +8,12 @@ import { SystemOverview } from "./system-overview"
 import { StorageOverview } from "./storage-overview"
 import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
+import { Hardware } from "./hardware"
 import { SystemLogs } from "./system-logs"
-import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Server } from "lucide-react"
+import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Server, Menu } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
+import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet"
 
 interface SystemStatus {
   status: "healthy" | "warning" | "critical"
@@ -42,6 +44,7 @@ export function ProxmoxDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isServerConnected, setIsServerConnected] = useState(true)
   const [componentKey, setComponentKey] = useState(0)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const fetchSystemData = useCallback(async () => {
     console.log("[v0] Fetching system data from Flask server...")
@@ -169,10 +172,11 @@ export function ProxmoxDashboard() {
       )}
 
       <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 relative flex items-center justify-center bg-primary/10 overflow-hidden">
+        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4">
+          <div className="flex items-center justify-between gap-3">
+            {/* Logo and Title */}
+            <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
+              <div className="w-8 h-8 md:w-10 md:h-10 relative flex items-center justify-center bg-primary/10 flex-shrink-0">
                 <Image
                   src="/images/proxmenux-logo.png"
                   alt="ProxMenux Logo"
@@ -190,16 +194,17 @@ export function ProxmoxDashboard() {
                     }
                   }}
                 />
-                <Server className="h-6 w-6 text-primary absolute fallback-icon hidden" />
+                <Server className="h-5 w-5 md:h-6 md:w-6 text-primary absolute fallback-icon hidden" />
               </div>
-              <div>
-                <h1 className="text-xl font-semibold text-foreground">ProxMenux Monitor</h1>
-                <p className="text-sm text-muted-foreground">Proxmox System Dashboard</p>
+              <div className="min-w-0">
+                <h1 className="text-base md:text-xl font-semibold text-foreground truncate">ProxMenux Monitor</h1>
+                <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Proxmox System Dashboard</p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <div className="hidden md:flex items-center space-x-2">
+            {/* Desktop Actions */}
+            <div className="hidden lg:flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
                 <Server className="h-4 w-4 text-muted-foreground" />
                 <div className="text-sm">
                   <div className="font-medium text-foreground">{systemStatus.serverName}</div>
@@ -211,7 +216,7 @@ export function ProxmoxDashboard() {
                 <span className="ml-1 capitalize">{systemStatus.status}</span>
               </Badge>
 
-              <div className="text-sm text-muted-foreground">Uptime: {systemStatus.uptime}</div>
+              <div className="text-sm text-muted-foreground whitespace-nowrap">Uptime: {systemStatus.uptime}</div>
 
               <Button
                 variant="outline"
@@ -226,13 +231,36 @@ export function ProxmoxDashboard() {
 
               <ThemeToggle />
             </div>
+
+            {/* Mobile Actions */}
+            <div className="flex lg:hidden items-center gap-2">
+              <Badge variant="outline" className={`${statusColor} text-xs px-2`}>
+                {statusIcon}
+                <span className="ml-1 capitalize hidden sm:inline">{systemStatus.status}</span>
+              </Badge>
+
+              <Button variant="ghost" size="sm" onClick={refreshData} disabled={isRefreshing} className="h-8 w-8 p-0">
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              </Button>
+
+              <ThemeToggle />
+            </div>
+          </div>
+
+          {/* Mobile Server Info */}
+          <div className="lg:hidden mt-2 flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Server className="h-3 w-3" />
+              <span className="truncate">{systemStatus.serverName}</span>
+            </div>
+            <span className="whitespace-nowrap">Uptime: {systemStatus.uptime}</span>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-6">
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-card border border-border">
+      <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
+        <Tabs defaultValue="overview" className="space-y-4 md:space-y-6">
+          <TabsList className="hidden md:grid w-full grid-cols-6 bg-card border border-border">
             <TabsTrigger
               value="overview"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -258,6 +286,12 @@ export function ProxmoxDashboard() {
               Virtual Machines
             </TabsTrigger>
             <TabsTrigger
+              value="hardware"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              Hardware
+            </TabsTrigger>
+            <TabsTrigger
               value="logs"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
@@ -265,28 +299,89 @@ export function ProxmoxDashboard() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <div className="md:hidden">
+              <SheetTrigger asChild>
+                <Button variant="outline" className="w-full justify-between bg-card border-border">
+                  <span>Navigation Menu</span>
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+            </div>
+            <SheetContent side="top" className="bg-card border-border">
+              <div className="flex flex-col gap-2 mt-4">
+                <TabsTrigger
+                  value="overview"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger
+                  value="storage"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Storage
+                </TabsTrigger>
+                <TabsTrigger
+                  value="network"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Network
+                </TabsTrigger>
+                <TabsTrigger
+                  value="vms"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Virtual Machines
+                </TabsTrigger>
+                <TabsTrigger
+                  value="hardware"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Hardware
+                </TabsTrigger>
+                <TabsTrigger
+                  value="logs"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  System Logs
+                </TabsTrigger>
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <TabsContent value="overview" className="space-y-4 md:space-y-6">
             <SystemOverview key={`overview-${componentKey}`} />
           </TabsContent>
 
-          <TabsContent value="storage" className="space-y-6">
+          <TabsContent value="storage" className="space-y-4 md:space-y-6">
             <StorageOverview key={`storage-${componentKey}`} />
           </TabsContent>
 
-          <TabsContent value="network" className="space-y-6">
+          <TabsContent value="network" className="space-y-4 md:space-y-6">
             <NetworkMetrics key={`network-${componentKey}`} />
           </TabsContent>
 
-          <TabsContent value="vms" className="space-y-6">
+          <TabsContent value="vms" className="space-y-4 md:space-y-6">
             <VirtualMachines key={`vms-${componentKey}`} />
           </TabsContent>
 
-          <TabsContent value="logs" className="space-y-6">
+          <TabsContent value="hardware" className="space-y-4 md:space-y-6">
+            <Hardware key={`hardware-${componentKey}`} />
+          </TabsContent>
+
+          <TabsContent value="logs" className="space-y-4 md:space-y-6">
             <SystemLogs key={`logs-${componentKey}`} />
           </TabsContent>
         </Tabs>
 
-        <footer className="mt-12 pt-6 border-t border-border text-center text-sm text-muted-foreground">
+        <footer className="mt-8 md:mt-12 pt-4 md:pt-6 border-t border-border text-center text-xs md:text-sm text-muted-foreground">
           <p>Last updated: {systemStatus.lastUpdate} • ProxMenux Monitor v1.0.0</p>
         </footer>
       </div>
