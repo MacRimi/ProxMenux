@@ -1295,6 +1295,261 @@ def get_proxmox_vms():
             'vms': []
         }
 
+def get_hardware_info():
+    """Get comprehensive hardware information"""
+    hardware_data = {
+        'cpu': {},
+        'motherboard': {},
+        'memory_modules': [],
+        'storage_devices': [],
+        'network_cards': [],
+        'graphics_cards': [],
+        'sensors': {
+            'temperatures': [],
+            'fans': []
+        },
+        'power': {}
+    }
+    
+    try:
+        # CPU Information
+        try:
+            result = subprocess.run(['lscpu'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                cpu_info = {}
+                for line in result.stdout.split('\n'):
+                    if ':' in line:
+                        key, value = line.split(':', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        
+                        if key == 'Model name':
+                            cpu_info['model'] = value
+                        elif key == 'CPU(s)':
+                            cpu_info['total_threads'] = int(value)
+                        elif key == 'Core(s) per socket':
+                            cpu_info['cores_per_socket'] = int(value)
+                        elif key == 'Socket(s)':
+                            cpu_info['sockets'] = int(value)
+                        elif key == 'CPU MHz':
+                            cpu_info['current_mhz'] = float(value)
+                        elif key == 'CPU max MHz':
+                            cpu_info['max_mhz'] = float(value)
+                        elif key == 'CPU min MHz':
+                            cpu_info['min_mhz'] = float(value)
+                        elif key == 'Virtualization':
+                            cpu_info['virtualization'] = value
+                        elif key == 'L1d cache':
+                            cpu_info['l1d_cache'] = value
+                        elif key == 'L1i cache':
+                            cpu_info['l1i_cache'] = value
+                        elif key == 'L2 cache':
+                            cpu_info['l2_cache'] = value
+                        elif key == 'L3 cache':
+                            cpu_info['l3_cache'] = value
+                
+                hardware_data['cpu'] = cpu_info
+                print(f"[v0] CPU: {cpu_info.get('model', 'Unknown')}")
+        except Exception as e:
+            print(f"[v0] Error getting CPU info: {e}")
+        
+        # Motherboard Information
+        try:
+            result = subprocess.run(['dmidecode', '-t', 'baseboard'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                mb_info = {}
+                for line in result.stdout.split('\n'):
+                    line = line.strip()
+                    if line.startswith('Manufacturer:'):
+                        mb_info['manufacturer'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Product Name:'):
+                        mb_info['model'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Version:'):
+                        mb_info['version'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Serial Number:'):
+                        mb_info['serial'] = line.split(':', 1)[1].strip()
+                
+                hardware_data['motherboard'] = mb_info
+                print(f"[v0] Motherboard: {mb_info.get('manufacturer', 'Unknown')} {mb_info.get('model', 'Unknown')}")
+        except Exception as e:
+            print(f"[v0] Error getting motherboard info: {e}")
+        
+        # BIOS Information
+        try:
+            result = subprocess.run(['dmidecode', '-t', 'bios'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                bios_info = {}
+                for line in result.stdout.split('\n'):
+                    line = line.strip()
+                    if line.startswith('Vendor:'):
+                        bios_info['vendor'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Version:'):
+                        bios_info['version'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Release Date:'):
+                        bios_info['date'] = line.split(':', 1)[1].strip()
+                
+                hardware_data['motherboard']['bios'] = bios_info
+                print(f"[v0] BIOS: {bios_info.get('vendor', 'Unknown')} {bios_info.get('version', 'Unknown')}")
+        except Exception as e:
+            print(f"[v0] Error getting BIOS info: {e}")
+        
+        # Memory Modules
+        try:
+            result = subprocess.run(['dmidecode', '-t', 'memory'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                current_module = {}
+                for line in result.stdout.split('\n'):
+                    line = line.strip()
+                    
+                    if line.startswith('Memory Device'):
+                        if current_module and current_module.get('size') != 'No Module Installed':
+                            hardware_data['memory_modules'].append(current_module)
+                        current_module = {}
+                    elif line.startswith('Size:'):
+                        size = line.split(':', 1)[1].strip()
+                        current_module['size'] = size
+                    elif line.startswith('Type:'):
+                        current_module['type'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Speed:'):
+                        current_module['speed'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Manufacturer:'):
+                        current_module['manufacturer'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Serial Number:'):
+                        current_module['serial'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Locator:'):
+                        current_module['slot'] = line.split(':', 1)[1].strip()
+                
+                if current_module and current_module.get('size') != 'No Module Installed':
+                    hardware_data['memory_modules'].append(current_module)
+                
+                print(f"[v0] Memory modules: {len(hardware_data['memory_modules'])} installed")
+        except Exception as e:
+            print(f"[v0] Error getting memory info: {e}")
+        
+        # Storage Devices (reuse existing function)
+        storage_info = get_storage_info()
+        hardware_data['storage_devices'] = storage_info.get('disks', [])
+        
+        # Network Cards
+        try:
+            result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    if 'Ethernet controller' in line or 'Network controller' in line:
+                        parts = line.split(':', 2)
+                        if len(parts) >= 3:
+                            hardware_data['network_cards'].append({
+                                'name': parts[2].strip(),
+                                'type': 'Ethernet' if 'Ethernet' in line else 'Network'
+                            })
+                
+                print(f"[v0] Network cards: {len(hardware_data['network_cards'])} found")
+        except Exception as e:
+            print(f"[v0] Error getting network cards: {e}")
+        
+        # Graphics Cards
+        try:
+            # Try nvidia-smi first
+            result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,temperature.gpu,power.draw', '--format=csv,noheader'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if line:
+                        parts = line.split(',')
+                        if len(parts) >= 4:
+                            hardware_data['graphics_cards'].append({
+                                'name': parts[0].strip(),
+                                'memory': parts[1].strip(),
+                                'temperature': int(parts[2].strip()) if parts[2].strip().isdigit() else 0,
+                                'power_draw': parts[3].strip(),
+                                'vendor': 'NVIDIA'
+                            })
+            else:
+                # Fallback to lspci
+                result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    for line in result.stdout.split('\n'):
+                        if 'VGA compatible controller' in line or '3D controller' in line:
+                            parts = line.split(':', 2)
+                            if len(parts) >= 3:
+                                hardware_data['graphics_cards'].append({
+                                    'name': parts[2].strip(),
+                                    'vendor': 'Unknown'
+                                })
+            
+            print(f"[v0] Graphics cards: {len(hardware_data['graphics_cards'])} found")
+        except Exception as e:
+            print(f"[v0] Error getting graphics cards: {e}")
+        
+        # Sensors (Temperature and Fans)
+        try:
+            if hasattr(psutil, "sensors_temperatures"):
+                temps = psutil.sensors_temperatures()
+                if temps:
+                    for sensor_name, entries in temps.items():
+                        for entry in entries:
+                            hardware_data['sensors']['temperatures'].append({
+                                'name': f"{sensor_name} - {entry.label}" if entry.label else sensor_name,
+                                'current': entry.current,
+                                'high': entry.high if entry.high else 0,
+                                'critical': entry.critical if entry.critical else 0
+                            })
+                    
+                    print(f"[v0] Temperature sensors: {len(hardware_data['sensors']['temperatures'])} found")
+            
+            if hasattr(psutil, "sensors_fans"):
+                fans = psutil.sensors_fans()
+                if fans:
+                    for fan_name, entries in fans.items():
+                        for entry in entries:
+                            hardware_data['sensors']['fans'].append({
+                                'name': f"{fan_name} - {entry.label}" if entry.label else fan_name,
+                                'current_rpm': entry.current
+                            })
+                    
+                    print(f"[v0] Fan sensors: {len(hardware_data['sensors']['fans'])} found")
+        except Exception as e:
+            print(f"[v0] Error getting sensors: {e}")
+        
+        # Power Supply / UPS
+        try:
+            result = subprocess.run(['apcaccess'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                ups_info = {}
+                for line in result.stdout.split('\n'):
+                    if ':' in line:
+                        key, value = line.split(':', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        
+                        if key == 'MODEL':
+                            ups_info['model'] = value
+                        elif key == 'STATUS':
+                            ups_info['status'] = value
+                        elif key == 'BCHARGE':
+                            ups_info['battery_charge'] = value
+                        elif key == 'TIMELEFT':
+                            ups_info['time_left'] = value
+                        elif key == 'LOADPCT':
+                            ups_info['load_percent'] = value
+                        elif key == 'LINEV':
+                            ups_info['line_voltage'] = value
+                
+                if ups_info:
+                    hardware_data['power'] = ups_info
+                    print(f"[v0] UPS found: {ups_info.get('model', 'Unknown')}")
+        except FileNotFoundError:
+            print("[v0] apcaccess not found - no UPS monitoring")
+        except Exception as e:
+            print(f"[v0] Error getting UPS info: {e}")
+        
+        return hardware_data
+        
+    except Exception as e:
+        print(f"[v0] Error getting hardware info: {e}")
+        return hardware_data
+
+
 @app.route('/api/system', methods=['GET'])
 def api_system():
     """Get system information"""
@@ -1430,7 +1685,8 @@ def api_info():
             '/api/network',
             '/api/vms',
             '/api/logs',
-            '/api/health'
+            '/api/health',
+            '/api/hardware' # Added new endpoint
         ]
     })
 
@@ -1576,6 +1832,6 @@ def api_vm_control(vmid):
 if __name__ == '__main__':
     print("Starting ProxMenux Flask Server on port 8008...")
     print("Server will be accessible on all network interfaces (0.0.0.0:8008)")
-    print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health")
+    print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
