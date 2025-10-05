@@ -1467,7 +1467,7 @@ def api_vm_details(vmid):
 
 @app.route('/api/vms/<int:vmid>/logs', methods=['GET'])
 def api_vm_logs(vmid):
-    """Download logs for a specific VM/LXC"""
+    """Download real logs for a specific VM/LXC (not task history)"""
     try:
         # Get VM type and node
         result = subprocess.run(['pvesh', 'get', f'/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
@@ -1487,29 +1487,32 @@ def api_vm_logs(vmid):
             vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
             node = vm_info.get('node', 'pve')
             
-            # Get task log
+            # Get real logs from the container/VM (last 1000 lines)
             log_result = subprocess.run(
-                ['pvesh', 'get', f'/nodes/{node}/tasks', '--vmid', str(vmid), '--output-format', 'json'],
+                ['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/log', '--limit', '1000', '--output-format', 'json'],
                 capture_output=True, text=True, timeout=10
             )
             
             logs = []
             if log_result.returncode == 0:
-                tasks = json.loads(log_result.stdout)
-                for task in tasks[:50]:  # Last 50 tasks
-                    logs.append({
-                        'upid': task.get('upid'),
-                        'type': task.get('type'),
-                        'status': task.get('status'),
-                        'starttime': task.get('starttime'),
-                        'endtime': task.get('endtime'),
-                        'user': task.get('user')
-                    })
+                try:
+                    log_data = json.loads(log_result.stdout)
+                    # The API returns an array of log line objects
+                    if isinstance(log_data, list):
+                        logs = log_data
+                    else:
+                        # Fallback: parse as text
+                        logs = [{'n': i, 't': line} for i, line in enumerate(log_result.stdout.split('\n')) if line]
+                except json.JSONDecodeError:
+                    # Parse as plain text if JSON fails
+                    logs = [{'n': i, 't': line} for i, line in enumerate(log_result.stdout.split('\n')) if line]
             
             return jsonify({
                 'vmid': vmid,
                 'name': vm_info.get('name'),
                 'type': vm_type,
+                'node': node,
+                'log_lines': len(logs),
                 'logs': logs
             })
         else:
