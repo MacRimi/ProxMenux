@@ -1304,6 +1304,7 @@ def get_hardware_info():
         'storage_devices': [],
         'network_cards': [],
         'graphics_cards': [],
+        'pci_devices': [],
         'sensors': {
             'temperatures': [],
             'fans': []
@@ -1430,7 +1431,7 @@ def get_hardware_info():
         storage_info = get_storage_info()
         hardware_data['storage_devices'] = storage_info.get('disks', [])
         
-        # Graphics Cards
+        # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
         try:
             # Try nvidia-smi first
             result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,temperature.gpu,power.draw', '--format=csv,noheader'], 
@@ -1484,6 +1485,114 @@ def get_hardware_info():
             print(f"[v0] Graphics cards: {len(hardware_data['graphics_cards'])} found")
         except Exception as e:
             print(f"[v0] Error getting graphics cards: {e}")
+        
+        try:
+            print("[v0] Getting all PCI devices...")
+            result = subprocess.run(['lspci', '-vmm'], capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                current_device = {}
+                for line in result.stdout.split('\n'):
+                    line = line.strip()
+                    
+                    if not line:
+                        # Empty line = end of device
+                        if current_device and 'Class' in current_device:
+                            device_class = current_device.get('Class', '')
+                            device_name = current_device.get('Device', '')
+                            vendor = current_device.get('Vendor', '')
+                            
+                            # Categorize and add important devices
+                            device_type = 'Other'
+                            include_device = False
+                            
+                            # Graphics/Display devices
+                            if any(keyword in device_class for keyword in ['VGA', 'Display', '3D']):
+                                device_type = 'Graphics Card'
+                                include_device = True
+                                # Also add to graphics_cards list
+                                gpu_vendor = 'Unknown'
+                                if 'NVIDIA' in vendor or 'NVIDIA' in device_name:
+                                    gpu_vendor = 'NVIDIA'
+                                elif 'AMD' in vendor or 'AMD' in device_name or 'ATI' in vendor:
+                                    gpu_vendor = 'AMD'
+                                elif 'Intel' in vendor or 'Intel' in device_name:
+                                    gpu_vendor = 'Intel'
+                                
+                                # Check if not already in graphics_cards
+                                already_exists = False
+                                for existing_gpu in hardware_data['graphics_cards']:
+                                    if device_name in existing_gpu['name'] or existing_gpu['name'] in device_name:
+                                        already_exists = True
+                                        break
+                                
+                                if not already_exists:
+                                    hardware_data['graphics_cards'].append({
+                                        'name': device_name,
+                                        'vendor': gpu_vendor
+                                    })
+                            
+                            # Storage controllers
+                            elif any(keyword in device_class for keyword in ['SATA', 'RAID', 'Mass storage', 'Non-Volatile memory']):
+                                device_type = 'Storage Controller'
+                                include_device = True
+                            
+                            # Network controllers
+                            elif 'Ethernet' in device_class or 'Network' in device_class:
+                                device_type = 'Network Controller'
+                                include_device = True
+                                # Also add to network_cards if not already there
+                                already_exists = False
+                                for existing_nic in hardware_data['network_cards']:
+                                    if device_name in existing_nic['name'] or existing_nic['name'] in device_name:
+                                        already_exists = True
+                                        break
+                                
+                                if not already_exists:
+                                    hardware_data['network_cards'].append({
+                                        'name': device_name,
+                                        'type': 'Ethernet' if 'Ethernet' in device_class else 'Network'
+                                    })
+                            
+                            # USB controllers
+                            elif 'USB' in device_class:
+                                device_type = 'USB Controller'
+                                include_device = True
+                            
+                            # Audio devices
+                            elif 'Audio' in device_class or 'Multimedia' in device_class:
+                                device_type = 'Audio Controller'
+                                include_device = True
+                            
+                            # Special devices (Coral TPU, etc.)
+                            elif any(keyword in device_name.lower() for keyword in ['coral', 'tpu', 'edge']):
+                                device_type = 'AI Accelerator'
+                                include_device = True
+                            
+                            # PCI bridges (usually not interesting for users)
+                            elif 'Bridge' in device_class:
+                                include_device = False
+                            
+                            if include_device:
+                                pci_device = {
+                                    'slot': current_device.get('Slot', 'Unknown'),
+                                    'type': device_type,
+                                    'vendor': vendor,
+                                    'device': device_name,
+                                    'class': device_class
+                                }
+                                hardware_data['pci_devices'].append(pci_device)
+                                print(f"[v0] PCI Device: {device_type} - {device_name}")
+                        
+                        current_device = {}
+                    elif ':' in line:
+                        key, value = line.split(':', 1)
+                        current_device[key.strip()] = value.strip()
+                
+                print(f"[v0] Total PCI devices found: {len(hardware_data['pci_devices'])}")
+                print(f"[v0] Graphics cards: {len(hardware_data['graphics_cards'])}")
+                print(f"[v0] Network cards: {len(hardware_data['network_cards'])}")
+        except Exception as e:
+            print(f"[v0] Error getting PCI devices: {e}")
         
         # Sensors (Temperature and Fans)
         try:
@@ -1844,3 +1953,4 @@ if __name__ == '__main__':
     print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
+.0', port=8008, debug=False)

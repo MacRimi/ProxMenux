@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Cpu, MemoryStick, HardDrive, Network, Monitor, Thermometer, Fan, Battery, Server } from "lucide-react"
+import { Cpu, MemoryStick, HardDrive, Network, Thermometer, Fan, Battery, Server, CpuIcon } from "lucide-react"
 import useSWR from "swr"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -85,6 +85,14 @@ interface UPSInfo {
   line_voltage?: string
 }
 
+interface PCIDevice {
+  slot: string
+  type: string
+  vendor: string
+  device: string
+  class: string
+}
+
 interface HardwareData {
   cpu: CPUInfo
   motherboard: MotherboardInfo
@@ -92,6 +100,7 @@ interface HardwareData {
   storage_devices: StorageDevice[]
   network_cards: NetworkCard[]
   graphics_cards: GraphicsCard[]
+  pci_devices: PCIDevice[]
   sensors: {
     temperatures: TemperatureSensor[]
     fans: FanSensor[]
@@ -331,7 +340,7 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* Storage Summary - Fixed to show TB */}
+      {/* Storage Summary */}
       {hardwareData.storage_devices.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -373,54 +382,7 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* Graphics Cards */}
-      {hardwareData.graphics_cards.length > 0 && (
-        <Card className="border-border/50 bg-card/50 p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Monitor className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Graphics Cards</h2>
-            <Badge variant="outline" className="ml-auto">
-              {hardwareData.graphics_cards.length} GPU{hardwareData.graphics_cards.length > 1 ? "s" : ""}
-            </Badge>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {hardwareData.graphics_cards.map((gpu, index) => (
-              <Card key={index} className="border-border/30 bg-background/50 p-4">
-                <div className="space-y-2 text-sm">
-                  <div className="font-medium">{gpu.name}</div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Vendor</span>
-                    <span className="font-mono">{gpu.vendor}</span>
-                  </div>
-                  {gpu.memory && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Memory</span>
-                      <span className="font-mono">{gpu.memory}</span>
-                    </div>
-                  )}
-                  {gpu.temperature && gpu.temperature > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Temperature</span>
-                      <span className={`font-mono font-medium ${getTempColor(gpu.temperature)}`}>
-                        {gpu.temperature}°C
-                      </span>
-                    </div>
-                  )}
-                  {gpu.power_draw && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Power Draw</span>
-                      <span className="font-mono">{gpu.power_draw}</span>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* Network Summary - Simplified */}
+      {/* Network Summary */}
       {hardwareData.network_cards.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -448,6 +410,39 @@ export default function Hardware() {
           <p className="mt-4 text-xs text-muted-foreground">
             For detailed network information, see the Network section
           </p>
+        </Card>
+      )}
+
+      {/* PCI Devices */}
+      {hardwareData.pci_devices && hardwareData.pci_devices.length > 0 && (
+        <Card className="border-border/50 bg-card/50 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <CpuIcon className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">PCI Devices</h2>
+            <Badge variant="outline" className="ml-auto">
+              {hardwareData.pci_devices.length} devices
+            </Badge>
+          </div>
+
+          <div className="space-y-3">
+            {hardwareData.pci_devices.map((device, index) => (
+              <div
+                key={index}
+                className="flex items-start justify-between rounded-lg border border-border/30 bg-background/50 p-4"
+              >
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {device.type}
+                    </Badge>
+                    <span className="font-mono text-xs text-muted-foreground">{device.slot}</span>
+                  </div>
+                  <p className="font-medium text-sm">{device.device}</p>
+                  <p className="text-xs text-muted-foreground">{device.vendor}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 
