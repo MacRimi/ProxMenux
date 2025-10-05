@@ -45,6 +45,7 @@ export function ProxmoxDashboard() {
   const [isServerConnected, setIsServerConnected] = useState(true)
   const [componentKey, setComponentKey] = useState(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState("overview")
 
   const fetchSystemData = useCallback(async () => {
     console.log("[v0] Fetching system data from Flask server...")
@@ -259,7 +260,7 @@ export function ProxmoxDashboard() {
       </header>
 
       <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
-        <Tabs defaultValue="overview" className="space-y-4 md:space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
           <TabsList className="hidden md:grid w-full grid-cols-6 bg-card border border-border">
             <TabsTrigger
               value="overview"
@@ -313,8 +314,7 @@ export function ProxmoxDashboard() {
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    const overviewTab = document.querySelector('[value="overview"]') as HTMLButtonElement
-                    overviewTab?.click()
+                    setActiveTab("overview")
                     setMobileMenuOpen(false)
                   }}
                   className="w-full justify-start"
@@ -324,8 +324,7 @@ export function ProxmoxDashboard() {
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    const storageTab = document.querySelector('[value="storage"]') as HTMLButtonElement
-                    storageTab?.click()
+                    setActiveTab("storage")
                     setMobileMenuOpen(false)
                   }}
                   className="w-full justify-start"
@@ -335,8 +334,7 @@ export function ProxmoxDashboard() {
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    const networkTab = document.querySelector('[value="network"]') as HTMLButtonElement
-                    networkTab?.click()
+                    setActiveTab("network")
                     setMobileMenuOpen(false)
                   }}
                   className="w-full justify-start"
@@ -346,8 +344,7 @@ export function ProxmoxDashboard() {
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    const vmsTab = document.querySelector('[value="vms"]') as HTMLButtonElement
-                    vmsTab?.click()
+                    setActiveTab("vms")
                     setMobileMenuOpen(false)
                   }}
                   className="w-full justify-start"
@@ -357,8 +354,7 @@ export function ProxmoxDashboard() {
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    const hardwareTab = document.querySelector('[value="hardware"]') as HTMLButtonElement
-                    hardwareTab?.click()
+                    setActiveTab("hardware")
                     setMobileMenuOpen(false)
                   }}
                   className="w-full justify-start"
@@ -368,8 +364,7 @@ export function ProxmoxDashboard() {
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    const logsTab = document.querySelector('[value="logs"]') as HTMLButtonElement
-                    logsTab?.click()
+                    setActiveTab("logs")
                     setMobileMenuOpen(false)
                   }}
                   className="w-full justify-start"

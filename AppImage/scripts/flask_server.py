@@ -1430,23 +1430,6 @@ def get_hardware_info():
         storage_info = get_storage_info()
         hardware_data['storage_devices'] = storage_info.get('disks', [])
         
-        # Network Cards
-        try:
-            result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                for line in result.stdout.split('\n'):
-                    if 'Ethernet controller' in line or 'Network controller' in line:
-                        parts = line.split(':', 2)
-                        if len(parts) >= 3:
-                            hardware_data['network_cards'].append({
-                                'name': parts[2].strip(),
-                                'type': 'Ethernet' if 'Ethernet' in line else 'Network'
-                            })
-                
-                print(f"[v0] Network cards: {len(hardware_data['network_cards'])} found")
-        except Exception as e:
-            print(f"[v0] Error getting network cards: {e}")
-        
         # Graphics Cards
         try:
             # Try nvidia-smi first
@@ -1464,18 +1447,39 @@ def get_hardware_info():
                                 'power_draw': parts[3].strip(),
                                 'vendor': 'NVIDIA'
                             })
-            else:
-                # Fallback to lspci
-                result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
-                if result.returncode == 0:
-                    for line in result.stdout.split('\n'):
-                        if 'VGA compatible controller' in line or '3D controller' in line:
-                            parts = line.split(':', 2)
-                            if len(parts) >= 3:
+            
+            # Always check lspci for all GPUs (integrated and discrete)
+            result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    # Match VGA, 3D, Display controllers, and specific GPU keywords
+                    if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller', 'Graphics', 'GPU']):
+                        parts = line.split(':', 2)
+                        if len(parts) >= 3:
+                            gpu_name = parts[2].strip()
+                            
+                            # Determine vendor
+                            vendor = 'Unknown'
+                            if 'NVIDIA' in gpu_name or 'nVidia' in gpu_name:
+                                vendor = 'NVIDIA'
+                            elif 'AMD' in gpu_name or 'ATI' in gpu_name or 'Radeon' in gpu_name:
+                                vendor = 'AMD'
+                            elif 'Intel' in gpu_name:
+                                vendor = 'Intel'
+                            
+                            # Check if this GPU is already in the list (from nvidia-smi)
+                            already_exists = False
+                            for existing_gpu in hardware_data['graphics_cards']:
+                                if gpu_name in existing_gpu['name'] or existing_gpu['name'] in gpu_name:
+                                    already_exists = True
+                                    break
+                            
+                            if not already_exists:
                                 hardware_data['graphics_cards'].append({
-                                    'name': parts[2].strip(),
-                                    'vendor': 'Unknown'
+                                    'name': gpu_name,
+                                    'vendor': vendor
                                 })
+                                print(f"[v0] Found GPU: {gpu_name} ({vendor})")
             
             print(f"[v0] Graphics cards: {len(hardware_data['graphics_cards'])} found")
         except Exception as e:

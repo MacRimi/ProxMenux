@@ -170,15 +170,15 @@ export default function Hardware() {
 
   const storageSummary = hardwareData.storage_devices.reduce(
     (acc, disk) => {
-      const sizeMatch = disk.size.match(/(\d+\.?\d*)\s*([KMGT]?B)/)
+      const sizeMatch = disk.size.match(/(\d+\.?\d*)\s*([KMGT]?B?)/)
       if (sizeMatch) {
-        let sizeInGB = Number.parseFloat(sizeMatch[1])
+        let sizeInTB = Number.parseFloat(sizeMatch[1])
         const unit = sizeMatch[2]
-        if (unit === "TB" || unit === "T") sizeInGB *= 1024
-        else if (unit === "GB" || unit === "G") sizeInGB *= 1
-        else if (unit === "MB" || unit === "M") sizeInGB /= 1024
-        else if (unit === "KB" || unit === "K") sizeInGB /= 1024 * 1024
-        acc.totalCapacity += sizeInGB
+        if (unit === "TB" || unit === "T") sizeInTB *= 1
+        else if (unit === "GB" || unit === "G") sizeInTB /= 1024
+        else if (unit === "MB" || unit === "M") sizeInTB /= 1024 * 1024
+        else if (unit === "KB" || unit === "K") sizeInTB /= 1024 * 1024 * 1024
+        acc.totalCapacity += sizeInTB
       }
 
       if (disk.rotation_rate === 0) acc.ssd++
@@ -331,7 +331,7 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* Storage Summary - Improved */}
+      {/* Storage Summary - Fixed to show TB */}
       {hardwareData.storage_devices.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -345,7 +345,11 @@ export default function Hardware() {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Total Capacity</p>
-              <p className="text-2xl font-semibold">{storageSummary.totalCapacity.toFixed(1)} GB</p>
+              <p className="text-2xl font-semibold">
+                {storageSummary.totalCapacity >= 1
+                  ? `${storageSummary.totalCapacity.toFixed(1)} TB`
+                  : `${(storageSummary.totalCapacity * 1024).toFixed(1)} GB`}
+              </p>
             </div>
 
             {storageSummary.ssd > 0 && (
@@ -398,7 +402,9 @@ export default function Hardware() {
                   {gpu.temperature && gpu.temperature > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Temperature</span>
-                      <span className={`font-mono ${getTempColor(gpu.temperature)}`}>{gpu.temperature}°C</span>
+                      <span className={`font-mono font-medium ${getTempColor(gpu.temperature)}`}>
+                        {gpu.temperature}°C
+                      </span>
                     </div>
                   )}
                   {gpu.power_draw && (
