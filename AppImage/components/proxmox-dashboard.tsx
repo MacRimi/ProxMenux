@@ -8,7 +8,7 @@ import { SystemOverview } from "./system-overview"
 import { StorageOverview } from "./storage-overview"
 import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
-import { Hardware } from "./hardware"
+import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Server, Menu } from "lucide-react"
 import Image from "next/image"
@@ -172,11 +172,11 @@ export function ProxmoxDashboard() {
       )}
 
       <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4">
+        <div className="container mx-auto px-4 md:px-6 py-4 md:py-4">
           <div className="flex items-center justify-between gap-3">
             {/* Logo and Title */}
             <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
-              <div className="w-8 h-8 md:w-10 md:h-10 relative flex items-center justify-center bg-primary/10 flex-shrink-0">
+              <div className="w-10 h-10 md:w-10 md:h-10 relative flex items-center justify-center bg-primary/10 flex-shrink-0">
                 <Image
                   src="/images/proxmenux-logo.png"
                   alt="ProxMenux Logo"
@@ -197,8 +197,8 @@ export function ProxmoxDashboard() {
                 <Server className="h-5 w-5 md:h-6 md:w-6 text-primary absolute fallback-icon hidden" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-base md:text-xl font-semibold text-foreground truncate">ProxMenux Monitor</h1>
-                <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Proxmox System Dashboard</p>
+                <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">ProxMenux Monitor</h1>
+                <p className="text-xs md:text-sm text-muted-foreground">Proxmox System Dashboard</p>
               </div>
             </div>
 
