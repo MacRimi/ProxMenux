@@ -291,17 +291,30 @@ export function VirtualMachines() {
     revalidateOnFocus: false,
   })
 
+  console.log("[v0] Overview data:", overviewData)
+  console.log("[v0] Total allocated memory GB:", totalAllocatedMemoryGB)
+
   const physicalMemoryGB = useMemo(() => {
     if (overviewData && overviewData.memory) {
-      return (overviewData.memory.total / 1024 ** 3).toFixed(1)
+      const physicalGB = (overviewData.memory.total / 1024 ** 3).toFixed(1)
+      console.log("[v0] Physical memory GB:", physicalGB)
+      return physicalGB
     }
+    console.log("[v0] No physical memory data available")
     return null
   }, [overviewData])
 
   const isMemoryOvercommit = useMemo(() => {
     if (physicalMemoryGB) {
-      return Number.parseFloat(totalAllocatedMemoryGB) > Number.parseFloat(physicalMemoryGB)
+      const overcommit = Number.parseFloat(totalAllocatedMemoryGB) > Number.parseFloat(physicalMemoryGB)
+      console.log("[v0] Memory overcommit check:", {
+        allocated: totalAllocatedMemoryGB,
+        physical: physicalMemoryGB,
+        isOvercommit: overcommit,
+      })
+      return overcommit
     }
+    console.log("[v0] Cannot check overcommit - no physical memory data")
     return false
   }, [totalAllocatedMemoryGB, physicalMemoryGB])
 
