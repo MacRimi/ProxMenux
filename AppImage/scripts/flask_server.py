@@ -985,7 +985,8 @@ def get_bond_info(bond_name):
 def get_bridge_info(bridge_name):
     """Get detailed information about a bridge interface"""
     bridge_info = {
-        'members': []
+        'members': [],
+        'physical_interface': None
     }
     
     try:
@@ -994,6 +995,13 @@ def get_bridge_info(bridge_name):
         if os.path.exists(brif_path):
             members = os.listdir(brif_path)
             bridge_info['members'] = members
+            
+            for member in members:
+                if member.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
+                    bridge_info['physical_interface'] = member
+                    print(f"[v0] Bridge {bridge_name} physical interface: {member}")
+                    break
+            
             print(f"[v0] Bridge {bridge_name} members: {members}")
     except Exception as e:
         print(f"[v0] Error reading bridge info for {bridge_name}: {e}")
@@ -1120,6 +1128,7 @@ def get_network_info():
             if interface_type == 'bridge':
                 bridge_info = get_bridge_info(interface_name)
                 interface_info['bridge_members'] = bridge_info['members']
+                interface_info['bridge_physical_interface'] = bridge_info['physical_interface']
             
             if interface_type == 'vm_lxc':
                 network_data['vm_lxc_interfaces'].append(interface_info)

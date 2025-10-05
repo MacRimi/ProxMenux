@@ -56,6 +56,7 @@ interface NetworkInterface {
   bond_slaves?: string[]
   bond_active_slave?: string | null
   bridge_members?: string[]
+  bridge_physical_interface?: string
   packet_loss_in?: number
   packet_loss_out?: number
   vmid?: number
@@ -358,21 +359,26 @@ export function NetworkMetrics() {
                     className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
                     onClick={() => setSelectedInterface(interface_)}
                   >
-                    {/* First row: Icon, Name, Type Badge, Status */}
+                    {/* First row: Icon, Name, Type Badge, Physical Interface, Status */}
                     <div className="flex items-center gap-3 flex-wrap">
                       <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div className="font-medium text-foreground">{interface_.name}</div>
                         <Badge variant="outline" className={typeBadge.color}>
                           {typeBadge.label}
                         </Badge>
+                        {interface_.bridge_physical_interface && (
+                          <div className="text-sm text-blue-500 font-medium">
+                            → {interface_.bridge_physical_interface}
+                          </div>
+                        )}
                       </div>
                       <Badge
                         variant="outline"
                         className={
                           interface_.status === "up"
-                            ? "bg-green-500/10 text-green-500 border-green-500/20 ml-auto"
-                            : "bg-red-500/10 text-red-500 border-red-500/20 ml-auto"
+                            ? "bg-green-500/10 text-green-500 border-green-500/20"
+                            : "bg-red-500/10 text-red-500 border-red-500/20"
                         }
                       >
                         {interface_.status.toUpperCase()}
@@ -421,88 +427,6 @@ export function NetworkMetrics() {
           </CardContent>
         </Card>
       )}
-
-      {/* Network Interfaces */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center">
-            <Router className="h-5 w-5 mr-2" />
-            Network Interfaces
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {networkData.interfaces.map((interface_, index) => {
-              const typeBadge = getInterfaceTypeBadge(interface_.type)
-
-              return (
-                <div
-                  key={index}
-                  className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
-                  onClick={() => setSelectedInterface(interface_)}
-                >
-                  {/* First row: Icon, Name, Type Badge, Status */}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="font-medium text-foreground">{interface_.name}</div>
-                      <Badge variant="outline" className={typeBadge.color}>
-                        {typeBadge.label}
-                      </Badge>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        interface_.status === "up"
-                          ? "bg-green-500/10 text-green-500 border-green-500/20 ml-auto"
-                          : "bg-red-500/10 text-red-500 border-red-500/20 ml-auto"
-                      }
-                    >
-                      {interface_.status.toUpperCase()}
-                    </Badge>
-                  </div>
-
-                  {/* Second row: Details - Responsive layout */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <div className="text-muted-foreground text-xs">IP Address</div>
-                      <div className="font-medium text-foreground font-mono text-sm truncate">
-                        {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-muted-foreground text-xs">Speed</div>
-                      <div className="font-medium text-foreground flex items-center gap-1">
-                        <Zap className="h-3 w-3" />
-                        {formatSpeed(interface_.speed)}
-                      </div>
-                    </div>
-
-                    <div className="col-span-2 md:col-span-1">
-                      <div className="text-muted-foreground text-xs">Traffic</div>
-                      <div className="font-medium text-foreground text-xs">
-                        <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
-                        {" / "}
-                        <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
-                      </div>
-                    </div>
-
-                    {interface_.mac_address && (
-                      <div className="col-span-2 md:col-span-1">
-                        <div className="text-muted-foreground text-xs">MAC</div>
-                        <div className="font-medium text-foreground font-mono text-xs truncate">
-                          {interface_.mac_address}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
       {networkData.vm_lxc_interfaces && networkData.vm_lxc_interfaces.length > 0 && (
         <Card className="bg-card border-border">
@@ -554,7 +478,7 @@ export function NetworkMetrics() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <div className="text-muted-foreground text-xs">VMID</div>
-                        <div className="font-medium text-foreground">{interface_.vmid ?? "N/A"}</div>
+                        <div className="font-medium">{interface_.vmid ?? "N/A"}</div>
                       </div>
 
                       <div>
@@ -617,6 +541,27 @@ export function NetworkMetrics() {
                       {getInterfaceTypeBadge(selectedInterface.type).label}
                     </Badge>
                   </div>
+                  {selectedInterface.type === "bridge" && selectedInterface.bridge_physical_interface && (
+                    <div className="col-span-2">
+                      <div className="text-sm text-muted-foreground">Physical Interface</div>
+                      <div className="font-medium text-blue-500 text-lg">
+                        {selectedInterface.bridge_physical_interface}
+                      </div>
+                    </div>
+                  )}
+                  {selectedInterface.type === "vm_lxc" && selectedInterface.vm_name && (
+                    <div className="col-span-2">
+                      <div className="text-sm text-muted-foreground">VM/LXC Name</div>
+                      <div className="font-medium text-orange-500 text-lg flex items-center gap-2">
+                        {selectedInterface.vm_name}
+                        {selectedInterface.vm_type && (
+                          <Badge variant="outline" className={getVMTypeBadge(selectedInterface.vm_type).color}>
+                            {getVMTypeBadge(selectedInterface.vm_type).label}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <div className="text-sm text-muted-foreground">Status</div>
                     <Badge
@@ -765,20 +710,22 @@ export function NetworkMetrics() {
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3">Bridge Configuration</h3>
                   <div>
-                    <div className="text-sm text-muted-foreground mb-2">Member Interfaces</div>
+                    <div className="text-sm text-muted-foreground mb-2">Virtual Member Interfaces</div>
                     <div className="flex flex-wrap gap-2">
                       {selectedInterface.bridge_members.length > 0 ? (
-                        selectedInterface.bridge_members.map((member, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="outline"
-                            className="bg-green-500/10 text-green-500 border-green-500/20"
-                          >
-                            {member}
-                          </Badge>
-                        ))
+                        selectedInterface.bridge_members
+                          .filter((member) => !member.startsWith(("enp", "eth", "eno", "ens", "wlan", "wlp")))
+                          .map((member, idx) => (
+                            <Badge
+                              key={idx}
+                              variant="outline"
+                              className="bg-green-500/10 text-green-500 border-green-500/20"
+                            >
+                              {member}
+                            </Badge>
+                          ))
                       ) : (
-                        <div className="text-sm text-muted-foreground">No members</div>
+                        <div className="text-sm text-muted-foreground">No virtual members</div>
                       )}
                     </div>
                   </div>
