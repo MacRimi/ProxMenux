@@ -255,19 +255,20 @@ export function NetworkMetrics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="space-y-4">
               {networkData.physical_interfaces.map((interface_, index) => {
                 const typeBadge = getInterfaceTypeBadge(interface_.type)
 
                 return (
                   <div
                     key={index}
-                    className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
                     onClick={() => setSelectedInterface(interface_)}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Wifi className="h-5 w-5 text-muted-foreground" />
+                    {/* First row: Icon, Name, Type Badge, Status */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div className="font-medium text-foreground">{interface_.name}</div>
                         <Badge variant="outline" className={typeBadge.color}>
                           {typeBadge.label}
@@ -285,10 +286,11 @@ export function NetworkMetrics() {
                       </Badge>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    {/* Second row: Details - Responsive layout */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <div className="text-muted-foreground text-xs">IP Address</div>
-                        <div className="font-medium text-foreground font-mono text-xs truncate">
+                        <div className="font-medium text-foreground font-mono text-sm truncate">
                           {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
                         </div>
                       </div>
@@ -301,7 +303,7 @@ export function NetworkMetrics() {
                         </div>
                       </div>
 
-                      <div>
+                      <div className="col-span-2 md:col-span-1">
                         <div className="text-muted-foreground text-xs">Traffic</div>
                         <div className="font-medium text-foreground text-xs">
                           <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
@@ -311,7 +313,7 @@ export function NetworkMetrics() {
                       </div>
 
                       {interface_.mac_address && (
-                        <div>
+                        <div className="col-span-2 md:col-span-1">
                           <div className="text-muted-foreground text-xs">MAC</div>
                           <div className="font-medium text-foreground font-mono text-xs truncate">
                             {interface_.mac_address}
