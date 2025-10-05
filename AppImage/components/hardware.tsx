@@ -465,7 +465,10 @@ export default function Hardware() {
                     {sensor.current.toFixed(1)}°C
                   </span>
                 </div>
-                <Progress value={getTempProgress(sensor.current, sensor.critical)} className="h-1.5" />
+                <Progress
+                  value={getTempProgress(sensor.current, sensor.critical)}
+                  className="h-1.5 [&>div]:bg-blue-500"
+                />
               </div>
             ))}
           </div>
