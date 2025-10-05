@@ -368,8 +368,26 @@ export function NetworkMetrics() {
                           {typeBadge.label}
                         </Badge>
                         {interface_.bridge_physical_interface && (
-                          <div className="text-sm text-blue-500 font-medium">
+                          <div className="text-sm text-blue-500 font-medium flex items-center gap-1">
                             → {interface_.bridge_physical_interface}
+                            {interface_.bridge_physical_interface.startsWith("bond") &&
+                              networkData.physical_interfaces && (
+                                <>
+                                  {(() => {
+                                    const bondInterface = networkData.physical_interfaces.find(
+                                      (iface) => iface.name === interface_.bridge_physical_interface,
+                                    )
+                                    if (bondInterface?.bond_slaves && bondInterface.bond_slaves.length > 0) {
+                                      return (
+                                        <span className="text-muted-foreground text-xs">
+                                          ({bondInterface.bond_slaves.join(", ")})
+                                        </span>
+                                      )
+                                    }
+                                    return null
+                                  })()}
+                                </>
+                              )}
                           </div>
                         )}
                       </div>
@@ -477,12 +495,12 @@ export function NetworkMetrics() {
                     {/* Second row: Details - Responsive layout */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <div className="text-muted-foreground text-xs">VMID</div>
+                        <div className="text-sm text-muted-foreground">VMID</div>
                         <div className="font-medium">{interface_.vmid ?? "N/A"}</div>
                       </div>
 
                       <div>
-                        <div className="text-muted-foreground text-xs">Speed</div>
+                        <div className="text-sm text-muted-foreground">Speed</div>
                         <div className="font-medium text-foreground flex items-center gap-1">
                           <Zap className="h-3 w-3" />
                           {formatSpeed(interface_.speed)}
@@ -490,7 +508,7 @@ export function NetworkMetrics() {
                       </div>
 
                       <div className="col-span-2 md:col-span-1">
-                        <div className="text-muted-foreground text-xs">Traffic</div>
+                        <div className="text-sm text-muted-foreground">Traffic</div>
                         <div className="font-medium text-foreground text-xs">
                           <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
                           {" / "}
@@ -500,7 +518,7 @@ export function NetworkMetrics() {
 
                       {interface_.mac_address && (
                         <div className="col-span-2 md:col-span-1">
-                          <div className="text-muted-foreground text-xs">MAC</div>
+                          <div className="text-sm text-muted-foreground">MAC</div>
                           <div className="font-medium text-foreground font-mono text-xs truncate">
                             {interface_.mac_address}
                           </div>

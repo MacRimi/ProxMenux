@@ -6,7 +6,6 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import {
   Server,
   Play,
@@ -427,47 +426,34 @@ export function VirtualMachines() {
           setVMDetails(null)
         }}
       >
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0 pb-4 border-b border-border">
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5" />
-              {selectedVM?.name} - Details
+              {selectedVM?.name}
+              {selectedVM && (
+                <div className="flex items-center gap-2 ml-auto">
+                  <Badge variant="outline" className={getTypeBadge(selectedVM.type).color}>
+                    {getTypeBadge(selectedVM.type).label}
+                  </Badge>
+                  <Badge variant="outline" className={getStatusColor(selectedVM.status)}>
+                    {selectedVM.status.toUpperCase()}
+                  </Badge>
+                </div>
+              )}
             </DialogTitle>
           </DialogHeader>
 
-          {selectedVM && (
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="basic">Basic</TabsTrigger>
-                <TabsTrigger value="resources">Resources</TabsTrigger>
-                <TabsTrigger value="network">Network</TabsTrigger>
-                <TabsTrigger value="options">Options</TabsTrigger>
-              </TabsList>
-
-              {/* Basic Information Tab */}
-              <TabsContent value="basic" className="space-y-6">
+          <div className="flex-1 overflow-y-auto space-y-6 py-4">
+            {selectedVM && (
+              <>
+                {/* Basic Information */}
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3">Basic Information</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Name</div>
-                      <div className="font-medium text-foreground">{selectedVM.name}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Type</div>
-                      <Badge variant="outline" className={getTypeBadge(selectedVM.type).color}>
-                        {getTypeBadge(selectedVM.type).label}
-                      </Badge>
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <div className="text-sm text-muted-foreground">VMID</div>
                       <div className="font-medium text-foreground">{selectedVM.vmid}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Status</div>
-                      <Badge variant="outline" className={getStatusColor(selectedVM.status)}>
-                        {selectedVM.status.toUpperCase()}
-                      </Badge>
                     </div>
                     <div>
                       <div className="text-sm text-muted-foreground">CPU Usage</div>
@@ -491,6 +477,169 @@ export function VirtualMachines() {
                     </div>
                   </div>
                 </div>
+
+                {/* Resources Configuration */}
+                {detailsLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
+                ) : vmDetails?.config ? (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">Resources</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {vmDetails.config.cores && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">CPU Cores</div>
+                            <div className="font-medium text-foreground">{vmDetails.config.cores}</div>
+                          </div>
+                        )}
+                        {vmDetails.config.sockets && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">CPU Sockets</div>
+                            <div className="font-medium text-foreground">{vmDetails.config.sockets}</div>
+                          </div>
+                        )}
+                        {vmDetails.config.memory && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Memory</div>
+                            <div className="font-medium text-foreground">{vmDetails.config.memory} MB</div>
+                          </div>
+                        )}
+                        {vmDetails.config.swap && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Swap</div>
+                            <div className="font-medium text-foreground">{vmDetails.config.swap} MB</div>
+                          </div>
+                        )}
+                        {vmDetails.config.rootfs && (
+                          <div className="col-span-1 sm:col-span-2">
+                            <div className="text-sm text-muted-foreground">Root Filesystem</div>
+                            <div className="font-medium text-foreground text-sm break-all">
+                              {vmDetails.config.rootfs}
+                            </div>
+                          </div>
+                        )}
+                        {vmDetails.config.scsi0 && (
+                          <div className="col-span-1 sm:col-span-2">
+                            <div className="text-sm text-muted-foreground">SCSI Disk 0</div>
+                            <div className="font-medium text-foreground text-sm break-all">
+                              {vmDetails.config.scsi0}
+                            </div>
+                          </div>
+                        )}
+                        {vmDetails.config.ide0 && (
+                          <div className="col-span-1 sm:col-span-2">
+                            <div className="text-sm text-muted-foreground">IDE Disk 0</div>
+                            <div className="font-medium text-foreground text-sm break-all">{vmDetails.config.ide0}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Network Configuration */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">Network</h3>
+                      <div className="grid grid-cols-1 gap-4">
+                        {vmDetails.config.net0 && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Network Interface 0</div>
+                            <div className="font-medium text-foreground text-sm break-all">{vmDetails.config.net0}</div>
+                          </div>
+                        )}
+                        {vmDetails.config.net1 && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Network Interface 1</div>
+                            <div className="font-medium text-foreground text-sm break-all">{vmDetails.config.net1}</div>
+                          </div>
+                        )}
+                        {vmDetails.config.net2 && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Network Interface 2</div>
+                            <div className="font-medium text-foreground text-sm break-all">{vmDetails.config.net2}</div>
+                          </div>
+                        )}
+                        {vmDetails.config.nameserver && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">DNS Nameserver</div>
+                            <div className="font-medium text-foreground">{vmDetails.config.nameserver}</div>
+                          </div>
+                        )}
+                        {vmDetails.config.searchdomain && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Search Domain</div>
+                            <div className="font-medium text-foreground">{vmDetails.config.searchdomain}</div>
+                          </div>
+                        )}
+                        {vmDetails.config.hostname && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Hostname</div>
+                            <div className="font-medium text-foreground">{vmDetails.config.hostname}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Options */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">Options</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {vmDetails.config.onboot !== undefined && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Start on Boot</div>
+                            <Badge
+                              variant="outline"
+                              className={
+                                vmDetails.config.onboot
+                                  ? "bg-green-500/10 text-green-500"
+                                  : "bg-red-500/10 text-red-500"
+                              }
+                            >
+                              {vmDetails.config.onboot ? "Yes" : "No"}
+                            </Badge>
+                          </div>
+                        )}
+                        {vmDetails.config.unprivileged !== undefined && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Unprivileged</div>
+                            <Badge
+                              variant="outline"
+                              className={
+                                vmDetails.config.unprivileged
+                                  ? "bg-green-500/10 text-green-500"
+                                  : "bg-yellow-500/10 text-yellow-500"
+                              }
+                            >
+                              {vmDetails.config.unprivileged ? "Yes" : "No"}
+                            </Badge>
+                          </div>
+                        )}
+                        {vmDetails.config.ostype && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">OS Type</div>
+                            <div className="font-medium text-foreground">{vmDetails.config.ostype}</div>
+                          </div>
+                        )}
+                        {vmDetails.config.arch && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Architecture</div>
+                            <div className="font-medium text-foreground">{vmDetails.config.arch}</div>
+                          </div>
+                        )}
+                        {vmDetails.config.boot && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Boot Order</div>
+                            <div className="font-medium text-foreground">{vmDetails.config.boot}</div>
+                          </div>
+                        )}
+                        {vmDetails.config.features && (
+                          <div className="col-span-1 sm:col-span-2">
+                            <div className="text-sm text-muted-foreground">Features</div>
+                            <div className="font-medium text-foreground text-sm">{vmDetails.config.features}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : null}
 
                 {/* Control Actions */}
                 <div>
@@ -546,181 +695,9 @@ export function VirtualMachines() {
                     Download Logs
                   </Button>
                 </div>
-              </TabsContent>
-
-              {/* Resources Tab */}
-              <TabsContent value="resources" className="space-y-4">
-                {detailsLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
-                ) : vmDetails?.config ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      {vmDetails.config.cores && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">CPU Cores</div>
-                          <div className="font-medium text-foreground">{vmDetails.config.cores}</div>
-                        </div>
-                      )}
-                      {vmDetails.config.sockets && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">CPU Sockets</div>
-                          <div className="font-medium text-foreground">{vmDetails.config.sockets}</div>
-                        </div>
-                      )}
-                      {vmDetails.config.memory && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">Memory</div>
-                          <div className="font-medium text-foreground">{vmDetails.config.memory} MB</div>
-                        </div>
-                      )}
-                      {vmDetails.config.swap && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">Swap</div>
-                          <div className="font-medium text-foreground">{vmDetails.config.swap} MB</div>
-                        </div>
-                      )}
-                      {vmDetails.config.rootfs && (
-                        <div className="col-span-2">
-                          <div className="text-sm text-muted-foreground">Root Filesystem</div>
-                          <div className="font-medium text-foreground text-sm break-all">{vmDetails.config.rootfs}</div>
-                        </div>
-                      )}
-                      {vmDetails.config.scsi0 && (
-                        <div className="col-span-2">
-                          <div className="text-sm text-muted-foreground">SCSI Disk 0</div>
-                          <div className="font-medium text-foreground text-sm break-all">{vmDetails.config.scsi0}</div>
-                        </div>
-                      )}
-                      {vmDetails.config.ide0 && (
-                        <div className="col-span-2">
-                          <div className="text-sm text-muted-foreground">IDE Disk 0</div>
-                          <div className="font-medium text-foreground text-sm break-all">{vmDetails.config.ide0}</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">No configuration data available</div>
-                )}
-              </TabsContent>
-
-              {/* Network Tab */}
-              <TabsContent value="network" className="space-y-4">
-                {detailsLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
-                ) : vmDetails?.config ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4">
-                      {vmDetails.config.net0 && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">Network Interface 0</div>
-                          <div className="font-medium text-foreground text-sm break-all">{vmDetails.config.net0}</div>
-                        </div>
-                      )}
-                      {vmDetails.config.net1 && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">Network Interface 1</div>
-                          <div className="font-medium text-foreground text-sm break-all">{vmDetails.config.net1}</div>
-                        </div>
-                      )}
-                      {vmDetails.config.net2 && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">Network Interface 2</div>
-                          <div className="font-medium text-foreground text-sm break-all">{vmDetails.config.net2}</div>
-                        </div>
-                      )}
-                      {vmDetails.config.nameserver && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">DNS Nameserver</div>
-                          <div className="font-medium text-foreground">{vmDetails.config.nameserver}</div>
-                        </div>
-                      )}
-                      {vmDetails.config.searchdomain && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">Search Domain</div>
-                          <div className="font-medium text-foreground">{vmDetails.config.searchdomain}</div>
-                        </div>
-                      )}
-                      {vmDetails.config.hostname && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">Hostname</div>
-                          <div className="font-medium text-foreground">{vmDetails.config.hostname}</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">No network configuration available</div>
-                )}
-              </TabsContent>
-
-              {/* Options Tab */}
-              <TabsContent value="options" className="space-y-4">
-                {detailsLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
-                ) : vmDetails?.config ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      {vmDetails.config.onboot !== undefined && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">Start on Boot</div>
-                          <Badge
-                            variant="outline"
-                            className={
-                              vmDetails.config.onboot ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
-                            }
-                          >
-                            {vmDetails.config.onboot ? "Yes" : "No"}
-                          </Badge>
-                        </div>
-                      )}
-                      {vmDetails.config.unprivileged !== undefined && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">Unprivileged</div>
-                          <Badge
-                            variant="outline"
-                            className={
-                              vmDetails.config.unprivileged
-                                ? "bg-green-500/10 text-green-500"
-                                : "bg-yellow-500/10 text-yellow-500"
-                            }
-                          >
-                            {vmDetails.config.unprivileged ? "Yes" : "No"}
-                          </Badge>
-                        </div>
-                      )}
-                      {vmDetails.config.ostype && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">OS Type</div>
-                          <div className="font-medium text-foreground">{vmDetails.config.ostype}</div>
-                        </div>
-                      )}
-                      {vmDetails.config.arch && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">Architecture</div>
-                          <div className="font-medium text-foreground">{vmDetails.config.arch}</div>
-                        </div>
-                      )}
-                      {vmDetails.config.boot && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">Boot Order</div>
-                          <div className="font-medium text-foreground">{vmDetails.config.boot}</div>
-                        </div>
-                      )}
-                      {vmDetails.config.features && (
-                        <div className="col-span-2">
-                          <div className="text-sm text-muted-foreground">Features</div>
-                          <div className="font-medium text-foreground text-sm">{vmDetails.config.features}</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">No options available</div>
-                )}
-              </TabsContent>
-            </Tabs>
-          )}
+              </>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

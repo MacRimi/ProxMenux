@@ -1489,23 +1489,16 @@ def api_vm_logs(vmid):
             
             # Get real logs from the container/VM (last 1000 lines)
             log_result = subprocess.run(
-                ['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/log', '--limit', '1000', '--output-format', 'json'],
+                ['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/log', '--start', '0', '--limit', '1000'],
                 capture_output=True, text=True, timeout=10
             )
             
             logs = []
             if log_result.returncode == 0:
-                try:
-                    log_data = json.loads(log_result.stdout)
-                    # The API returns an array of log line objects
-                    if isinstance(log_data, list):
-                        logs = log_data
-                    else:
-                        # Fallback: parse as text
-                        logs = [{'n': i, 't': line} for i, line in enumerate(log_result.stdout.split('\n')) if line]
-                except json.JSONDecodeError:
-                    # Parse as plain text if JSON fails
-                    logs = [{'n': i, 't': line} for i, line in enumerate(log_result.stdout.split('\n')) if line]
+                # Parse as plain text (each line is a log entry)
+                for i, line in enumerate(log_result.stdout.split('\n')):
+                    if line.strip():
+                        logs.append({'n': i, 't': line})
             
             return jsonify({
                 'vmid': vmid,
