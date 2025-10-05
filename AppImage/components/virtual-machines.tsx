@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
@@ -18,6 +18,7 @@ import {
   Power,
   RotateCcw,
   StopCircle,
+  AlertTriangle,
 } from "lucide-react"
 import useSWR from "swr"
 
@@ -227,6 +228,29 @@ export function VirtualMachines() {
   // Safe data handling with default empty array
   const safeVMData = vmData || []
 
+  const totalAllocatedMemoryGB = useMemo(() => {
+    return (safeVMData.reduce((sum, vm) => sum + (vm.maxmem || 0), 0) / 1024 ** 3).toFixed(1)
+  }, [safeVMData])
+
+  const { data: overviewData } = useSWR("/api/overview", fetcher, {
+    refreshInterval: 30000,
+    revalidateOnFocus: false,
+  })
+
+  const physicalMemoryGB = useMemo(() => {
+    if (overviewData && overviewData.memory) {
+      return (overviewData.memory.total / 1024 ** 3).toFixed(1)
+    }
+    return null
+  }, [overviewData])
+
+  const isMemoryOvercommit = useMemo(() => {
+    if (physicalMemoryGB) {
+      return Number.parseFloat(totalAllocatedMemoryGB) > Number.parseFloat(physicalMemoryGB)
+    }
+    return false
+  }, [totalAllocatedMemoryGB, physicalMemoryGB])
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -279,16 +303,26 @@ export function VirtualMachines() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        <Card className={`bg-card ${isMemoryOvercommit ? "border-yellow-500/50" : "border-border"}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Memory</CardTitle>
-            <MemoryStick className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2">
+              {isMemoryOvercommit && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+              <MemoryStick className="h-4 w-4 text-muted-foreground" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {(safeVMData.reduce((sum, vm) => sum + (vm.maxmem || 0), 0) / 1024 ** 3).toFixed(1)} GB
+            <div className={`text-2xl font-bold ${isMemoryOvercommit ? "text-yellow-500" : "text-foreground"}`}>
+              {totalAllocatedMemoryGB} GB
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Allocated RAM</p>
+            {isMemoryOvercommit ? (
+              <p className="text-xs text-yellow-500 mt-2 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Overcommit: Excede memoria física ({physicalMemoryGB} GB)
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-2">Allocated RAM</p>
+            )}
           </CardContent>
         </Card>
 
@@ -339,13 +373,13 @@ export function VirtualMachines() {
                     className="p-6 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
                     onClick={() => handleVMClick(vm)}
                   >
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                       <div className="flex items-center space-x-4">
-                        <Server className="h-6 w-6 text-muted-foreground" />
-                        <div>
-                          <div className="font-semibold text-foreground text-lg flex items-center">
-                            {vm.name}
-                            <Badge variant="outline" className={`ml-2 text-xs ${typeBadge.color}`}>
+                        <Server className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="font-semibold text-foreground text-lg flex items-center flex-wrap gap-2">
+                            <span className="truncate">{vm.name}</span>
+                            <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
                               {typeBadge.label}
                             </Badge>
                           </div>
@@ -353,12 +387,13 @@ export function VirtualMachines() {
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-3">
-                        <Badge variant="outline" className={getStatusColor(vm.status)}>
-                          {getStatusIcon(vm.status)}
-                          {vm.status.toUpperCase()}
-                        </Badge>
-                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`${getStatusColor(vm.status)} flex-shrink-0 self-start sm:self-center`}
+                      >
+                        {getStatusIcon(vm.status)}
+                        {vm.status.toUpperCase()}
+                      </Badge>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -376,7 +411,7 @@ export function VirtualMachines() {
                         <Progress value={Number.parseFloat(memPercent)} className="h-2 [&>div]:bg-blue-500" />
                       </div>
 
-                      <div>
+                      <div className="hidden md:block">
                         <div className="text-sm text-muted-foreground mb-2">Disk I/O</div>
                         <div className="text-sm font-semibold text-foreground">
                           <div className="flex items-center gap-1">
@@ -390,7 +425,7 @@ export function VirtualMachines() {
                         </div>
                       </div>
 
-                      <div>
+                      <div className="hidden md:block">
                         <div className="text-sm text-muted-foreground mb-2">Network I/O</div>
                         <div className="text-sm font-semibold text-foreground">
                           <div className="flex items-center gap-1">
@@ -427,15 +462,17 @@ export function VirtualMachines() {
       >
         <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
           <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="flex items-center gap-2 flex-wrap">
-              <Server className="h-5 w-5" />
-              <span className="text-lg">{selectedVM?.name}</span>
+            <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Server className="h-5 w-5 flex-shrink-0" />
+                <span className="text-lg truncate">{selectedVM?.name}</span>
+              </div>
               {selectedVM && (
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={getTypeBadge(selectedVM.type).color}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className={`${getTypeBadge(selectedVM.type).color} flex-shrink-0`}>
                     {getTypeBadge(selectedVM.type).label}
                   </Badge>
-                  <Badge variant="outline" className={getStatusColor(selectedVM.status)}>
+                  <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
                     {selectedVM.status.toUpperCase()}
                   </Badge>
                 </div>
@@ -446,7 +483,6 @@ export function VirtualMachines() {
           <div className="space-y-6 py-4">
             {selectedVM && (
               <>
-                {/* Basic Information */}
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                     Basic Information
@@ -457,20 +493,8 @@ export function VirtualMachines() {
                       <div className="font-semibold text-foreground">{selectedVM.name}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground mb-1">Type</div>
-                      <Badge variant="outline" className={getTypeBadge(selectedVM.type).color}>
-                        {getTypeBadge(selectedVM.type).label}
-                      </Badge>
-                    </div>
-                    <div>
                       <div className="text-xs text-muted-foreground mb-1">VMID</div>
                       <div className="font-semibold text-foreground">{selectedVM.vmid}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Status</div>
-                      <Badge variant="outline" className={getStatusColor(selectedVM.status)}>
-                        {selectedVM.status.toUpperCase()}
-                      </Badge>
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
@@ -509,6 +533,28 @@ export function VirtualMachines() {
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Uptime</div>
                       <div className="font-semibold text-foreground">{formatUptime(selectedVM.uptime)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
+                      <div className="text-sm font-semibold">
+                        <div className="flex items-center gap-1">
+                          <span className="text-green-500">↓ {formatBytes(selectedVM.diskread)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-blue-500">↑ {formatBytes(selectedVM.diskwrite)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
+                      <div className="text-sm font-semibold">
+                        <div className="flex items-center gap-1">
+                          <span className="text-green-500">↓ {formatBytes(selectedVM.netin)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-blue-500">↑ {formatBytes(selectedVM.netout)}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

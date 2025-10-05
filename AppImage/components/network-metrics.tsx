@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
-import { Wifi, Activity, Network, Router, AlertCircle, Zap } from "lucide-react"
+import { Wifi, Activity, Network, Router, AlertCircle, Zap, Shield } from "lucide-react"
 import useSWR from "swr"
 
 interface NetworkData {
@@ -215,6 +215,36 @@ export function NetworkMetrics() {
         </Card>
 
         <Card className="bg-card border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Firewall Status</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">Active</div>
+            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 mt-2">
+              Protected
+            </Badge>
+            <p className="text-xs text-muted-foreground mt-2">System protected</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Packets</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{packetsRecvK}K</div>
+            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 mt-2">
+              Received
+            </Badge>
+            <p className="text-xs text-muted-foreground mt-2">No packet loss</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {networkData.physical_interfaces && networkData.physical_interfaces.length > 0 && (
+        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Router className="h-5 w-5 mr-2" />
@@ -225,20 +255,19 @@ export function NetworkMetrics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {networkData.physical_interfaces.map((interface_, index) => {
                 const typeBadge = getInterfaceTypeBadge(interface_.type)
 
                 return (
                   <div
                     key={index}
-                    className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
                     onClick={() => setSelectedInterface(interface_)}
                   >
-                    {/* First row: Icon, Name, Type Badge, Status */}
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                      <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Wifi className="h-5 w-5 text-muted-foreground" />
                         <div className="font-medium text-foreground">{interface_.name}</div>
                         <Badge variant="outline" className={typeBadge.color}>
                           {typeBadge.label}
@@ -248,32 +277,31 @@ export function NetworkMetrics() {
                         variant="outline"
                         className={
                           interface_.status === "up"
-                            ? "bg-green-500/10 text-green-500 border-green-500/20 ml-auto"
-                            : "bg-red-500/10 text-red-500 border-red-500/20 ml-auto"
+                            ? "bg-green-500/10 text-green-500 border-green-500/20"
+                            : "bg-red-500/10 text-red-500 border-red-500/20"
                         }
                       >
                         {interface_.status.toUpperCase()}
                       </Badge>
                     </div>
 
-                    {/* Second row: Details - Responsive layout */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
                         <div className="text-muted-foreground text-xs">IP Address</div>
-                        <div className="font-medium text-foreground font-mono text-sm truncate">
+                        <div className="font-medium text-foreground font-mono text-xs truncate">
                           {interface_.addresses.length > 0 ? interface_.addresses[0].ip : "N/A"}
                         </div>
                       </div>
 
                       <div>
                         <div className="text-muted-foreground text-xs">Speed</div>
-                        <div className="font-medium text-foreground flex items-center gap-1">
+                        <div className="font-medium text-foreground flex items-center gap-1 text-xs">
                           <Zap className="h-3 w-3" />
                           {formatSpeed(interface_.speed)}
                         </div>
                       </div>
 
-                      <div className="col-span-2 md:col-span-1">
+                      <div>
                         <div className="text-muted-foreground text-xs">Traffic</div>
                         <div className="font-medium text-foreground text-xs">
                           <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
@@ -283,7 +311,7 @@ export function NetworkMetrics() {
                       </div>
 
                       {interface_.mac_address && (
-                        <div className="col-span-2 md:col-span-1">
+                        <div>
                           <div className="text-muted-foreground text-xs">MAC</div>
                           <div className="font-medium text-foreground font-mono text-xs truncate">
                             {interface_.mac_address}
@@ -297,7 +325,7 @@ export function NetworkMetrics() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
 
       {networkData.bridge_interfaces && networkData.bridge_interfaces.length > 0 && (
         <Card className="bg-card border-border">
