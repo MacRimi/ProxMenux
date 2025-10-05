@@ -986,7 +986,8 @@ def get_bridge_info(bridge_name):
     """Get detailed information about a bridge interface"""
     bridge_info = {
         'members': [],
-        'physical_interface': None
+        'physical_interface': None,
+        'physical_duplex': 'unknown'  # Added physical_duplex field
     }
     
     try:
@@ -1000,6 +1001,17 @@ def get_bridge_info(bridge_name):
                 if member.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
                     bridge_info['physical_interface'] = member
                     print(f"[v0] Bridge {bridge_name} physical interface: {member}")
+                    
+                    # Get duplex from physical interface
+                    try:
+                        net_if_stats = psutil.net_if_stats()
+                        if member in net_if_stats:
+                            stats = net_if_stats[member]
+                            bridge_info['physical_duplex'] = 'full' if stats.duplex == 2 else 'half' if stats.duplex == 1 else 'unknown'
+                            print(f"[v0] Physical interface {member} duplex: {bridge_info['physical_duplex']}")
+                    except Exception as e:
+                        print(f"[v0] Error getting duplex for {member}: {e}")
+                    
                     break
             
             print(f"[v0] Bridge {bridge_name} members: {members}")
@@ -1129,6 +1141,10 @@ def get_network_info():
                 bridge_info = get_bridge_info(interface_name)
                 interface_info['bridge_members'] = bridge_info['members']
                 interface_info['bridge_physical_interface'] = bridge_info['physical_interface']
+                interface_info['bridge_physical_duplex'] = bridge_info['physical_duplex']
+                # Override bridge duplex with physical interface duplex
+                if bridge_info['physical_duplex'] != 'unknown':
+                    interface_info['duplex'] = bridge_info['physical_duplex']
             
             if interface_type == 'vm_lxc':
                 network_data['vm_lxc_interfaces'].append(interface_info)
@@ -1204,32 +1220,49 @@ def get_network_info():
         }
 
 def get_proxmox_vms():
-    """Get Proxmox VM information (requires pvesh command)"""
+    """Get Proxmox VM and LXC information (requires pvesh command)"""
     try:
-        # Try to get VM list using pvesh command
-        result = subprocess.run(['pvesh', 'get', '/nodes/localhost/qemu', '--output-format', 'json'], 
-                              capture_output=True, text=True, timeout=10)
+        all_vms = []
         
-        if result.returncode == 0:
-            vms = json.loads(result.stdout)
-            return vms
-        else:
-            # Handle LXC containers as well
-            result_lxc = subprocess.run(['pvesh', 'get', '/nodes/localhost/lxc', '--output-format', 'json'],
-                                        capture_output=True, text=True, timeout=10)
-            if result_lxc.returncode == 0:
-                lxc_vms = json.loads(result_lxc.stdout)
-                # Combine QEMU and LXC for a complete VM list
-                if 'vms' in locals(): # Check if vms were loaded from QEMU
-                    vms.extend(lxc_vms)
-                else:
-                    vms = lxc_vms
-                return vms
+        try:
+            result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+                                  capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                resources = json.loads(result.stdout)
+                for resource in resources:
+                    vm_data = {
+                        'vmid': resource.get('vmid'),
+                        'name': resource.get('name', f"VM-{resource.get('vmid')}"),
+                        'status': resource.get('status', 'unknown'),
+                        'type': 'lxc' if resource.get('type') == 'lxc' else 'qemu',
+                        'cpu': resource.get('cpu', 0),
+                        'mem': resource.get('mem', 0),
+                        'maxmem': resource.get('maxmem', 0),
+                        'disk': resource.get('disk', 0),
+                        'maxdisk': resource.get('maxdisk', 0),
+                        'uptime': resource.get('uptime', 0),
+                        'netin': resource.get('netin', 0),
+                        'netout': resource.get('netout', 0),
+                        'diskread': resource.get('diskread', 0),
+                        'diskwrite': resource.get('diskwrite', 0)
+                    }
+                    all_vms.append(vm_data)
+                    print(f"[v0] Found {vm_data['type']}: {vm_data['name']} (VMID: {vm_data['vmid']}, Status: {vm_data['status']})")
+                
+                return all_vms
             else:
+                print(f"[v0] pvesh command failed: {result.stderr}")
                 return {
-                    'error': 'pvesh command not available or failed - Proxmox API not accessible for QEMU and LXC',
+                    'error': 'pvesh command not available or failed',
                     'vms': []
                 }
+        except Exception as e:
+            print(f"[v0] Error getting VM/LXC info: {e}")
+            return {
+                'error': f'Unable to access VM information: {str(e)}',
+                'vms': []
+            }
     except Exception as e:
         print(f"Error getting VM info: {e}")
         return {

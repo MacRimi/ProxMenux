@@ -4,18 +4,23 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
-import { Server, Play, Square, Monitor, Cpu, MemoryStick, AlertCircle } from "lucide-react"
+import { Server, Play, Square, Monitor, Cpu, MemoryStick, AlertCircle, HardDrive, Network } from "lucide-react"
 
 interface VMData {
   vmid: number
   name: string
   status: string
+  type: string // Added type field to distinguish VM from LXC
   cpu: number
   mem: number
   maxmem: number
   disk: number
   maxdisk: number
   uptime: number
+  netin?: number // Added network in
+  netout?: number // Added network out
+  diskread?: number // Added disk read
+  diskwrite?: number // Added disk write
 }
 
 const fetchVMData = async (): Promise<VMData[]> => {
@@ -40,6 +45,14 @@ const fetchVMData = async (): Promise<VMData[]> => {
     console.error("[v0] Failed to fetch VM data from Flask server:", error)
     throw error
   }
+}
+
+const formatBytes = (bytes: number | undefined): string => {
+  if (!bytes || bytes === 0) return "0 B"
+  const k = 1024
+  const sizes = ["B", "KB", "MB", "GB", "TB"]
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
 }
 
 export function VirtualMachines() {
@@ -123,6 +136,13 @@ export function VirtualMachines() {
     }
   }
 
+  const getTypeBadge = (type: string) => {
+    if (type === "lxc") {
+      return { color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", label: "LXC" }
+    }
+    return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: "VM" }
+  }
+
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400)
     const hours = Math.floor((seconds % 86400) / 3600)
@@ -159,7 +179,7 @@ export function VirtualMachines() {
             <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{(totalCPU * 100).toFixed(0)}%</div>
+            <div className="text-2xl font-bold text-green-500">{(totalCPU * 100).toFixed(0)}%</div>
             <p className="text-xs text-muted-foreground mt-2">Allocated CPU usage</p>
           </CardContent>
         </Card>
@@ -170,7 +190,7 @@ export function VirtualMachines() {
             <MemoryStick className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{(totalMemory / 1024 ** 3).toFixed(1)} GB</div>
+            <div className="text-2xl font-bold text-blue-500">{(totalMemory / 1024 ** 3).toFixed(1)} GB</div>
             <p className="text-xs text-muted-foreground mt-2">Allocated RAM</p>
           </CardContent>
         </Card>
@@ -181,7 +201,7 @@ export function VirtualMachines() {
             <Monitor className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold text-green-500">
               {runningVMs > 0 ? ((totalCPU / runningVMs) * 100).toFixed(0) : 0}%
             </div>
             <p className="text-xs text-muted-foreground mt-2">Average resource utilization</p>
@@ -194,7 +214,7 @@ export function VirtualMachines() {
         <CardHeader>
           <CardTitle className="text-foreground flex items-center">
             <Server className="h-5 w-5 mr-2" />
-            Virtual Machines
+            Virtual Machines & Containers
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -207,6 +227,7 @@ export function VirtualMachines() {
                 const memPercent = vm.maxmem > 0 ? ((vm.mem / vm.maxmem) * 100).toFixed(1) : "0"
                 const memGB = (vm.mem / 1024 ** 3).toFixed(1)
                 const maxMemGB = (vm.maxmem / 1024 ** 3).toFixed(1)
+                const typeBadge = getTypeBadge(vm.type)
 
                 return (
                   <div key={vm.vmid} className="p-6 rounded-lg border border-border bg-card/50">
@@ -216,11 +237,8 @@ export function VirtualMachines() {
                         <div>
                           <div className="font-semibold text-foreground text-lg flex items-center">
                             {vm.name}
-                            <Badge
-                              variant="outline"
-                              className="ml-2 text-xs bg-purple-500/10 text-purple-500 border-purple-500/20"
-                            >
-                              VM
+                            <Badge variant="outline" className={`ml-2 text-xs ${typeBadge.color}`}>
+                              {typeBadge.label}
                             </Badge>
                           </div>
                           <div className="text-sm text-muted-foreground">ID: {vm.vmid}</div>
@@ -235,25 +253,53 @@ export function VirtualMachines() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       <div>
                         <div className="text-sm text-muted-foreground mb-2">CPU Usage</div>
-                        <div className="text-lg font-semibold text-foreground mb-1">{cpuPercent}%</div>
-                        <Progress value={Number.parseFloat(cpuPercent)} className="h-2" />
+                        <div className="text-lg font-semibold text-green-500 mb-1">{cpuPercent}%</div>
+                        <Progress value={Number.parseFloat(cpuPercent)} className="h-2 [&>div]:bg-green-500" />
                       </div>
 
                       <div>
                         <div className="text-sm text-muted-foreground mb-2">Memory Usage</div>
-                        <div className="text-lg font-semibold text-foreground mb-1">
-                          {memGB} GB / {maxMemGB} GB
+                        <div className="text-lg font-semibold text-blue-500 mb-1">
+                          {memGB} / {maxMemGB} GB
                         </div>
-                        <Progress value={Number.parseFloat(memPercent)} className="h-2" />
+                        <Progress value={Number.parseFloat(memPercent)} className="h-2 [&>div]:bg-blue-500" />
                       </div>
 
                       <div>
-                        <div className="text-sm text-muted-foreground mb-2">Uptime</div>
-                        <div className="text-lg font-semibold text-foreground">{formatUptime(vm.uptime)}</div>
+                        <div className="text-sm text-muted-foreground mb-2">Disk I/O</div>
+                        <div className="text-sm font-semibold text-foreground">
+                          <div className="flex items-center gap-1">
+                            <HardDrive className="h-3 w-3 text-green-500" />
+                            <span className="text-green-500">↓ {formatBytes(vm.diskread)}</span>
+                          </div>
+                          <div className="flex items-center gap-1 mt-1">
+                            <HardDrive className="h-3 w-3 text-blue-500" />
+                            <span className="text-blue-500">↑ {formatBytes(vm.diskwrite)}</span>
+                          </div>
+                        </div>
                       </div>
+
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-2">Network I/O</div>
+                        <div className="text-sm font-semibold text-foreground">
+                          <div className="flex items-center gap-1">
+                            <Network className="h-3 w-3 text-green-500" />
+                            <span className="text-green-500">↓ {formatBytes(vm.netin)}</span>
+                          </div>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Network className="h-3 w-3 text-blue-500" />
+                            <span className="text-blue-500">↑ {formatBytes(vm.netout)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <div className="text-sm text-muted-foreground">Uptime</div>
+                      <div className="text-lg font-semibold text-foreground">{formatUptime(vm.uptime)}</div>
                     </div>
                   </div>
                 )
