@@ -170,13 +170,14 @@ export default function Hardware() {
 
   const storageSummary = hardwareData.storage_devices.reduce(
     (acc, disk) => {
-      const sizeMatch = disk.size.match(/(\d+\.?\d*)\s*([KMGT]B)/)
+      const sizeMatch = disk.size.match(/(\d+\.?\d*)\s*([KMGT]?B)/)
       if (sizeMatch) {
         let sizeInGB = Number.parseFloat(sizeMatch[1])
         const unit = sizeMatch[2]
-        if (unit === "TB") sizeInGB *= 1024
-        else if (unit === "MB") sizeInGB /= 1024
-        else if (unit === "KB") sizeInGB /= 1024 * 1024
+        if (unit === "TB" || unit === "T") sizeInGB *= 1024
+        else if (unit === "GB" || unit === "G") sizeInGB *= 1
+        else if (unit === "MB" || unit === "M") sizeInGB /= 1024
+        else if (unit === "KB" || unit === "K") sizeInGB /= 1024 * 1024
         acc.totalCapacity += sizeInGB
       }
 
@@ -330,7 +331,7 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* Storage Summary - Simplified */}
+      {/* Storage Summary - Improved */}
       {hardwareData.storage_devices.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -349,7 +350,7 @@ export default function Hardware() {
 
             {storageSummary.ssd > 0 && (
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">SSD Drives</p>
+                <p className="text-sm text-muted-foreground">SSD/NVMe Drives</p>
                 <p className="text-2xl font-semibold">{storageSummary.ssd}</p>
               </div>
             )}
@@ -365,67 +366,6 @@ export default function Hardware() {
           <p className="mt-4 text-xs text-muted-foreground">
             For detailed storage information, see the Storage section
           </p>
-        </Card>
-      )}
-
-      {/* Storage Devices */}
-      {hardwareData.storage_devices.length > 0 && (
-        <Card className="border-border/50 bg-card/50 p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <HardDrive className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Storage Devices</h2>
-            <Badge variant="outline" className="ml-auto">
-              {hardwareData.storage_devices.length} devices
-            </Badge>
-          </div>
-
-          <div className="space-y-4">
-            {hardwareData.storage_devices.map((disk, index) => (
-              <Card key={index} className="border-border/30 bg-background/50 p-4">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">/dev/{disk.name}</span>
-                      {getHealthBadge(disk.health)}
-                      {disk.rotation_rate === 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          SSD
-                        </Badge>
-                      )}
-                      {disk.rotation_rate > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          {disk.rotation_rate} RPM
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="grid gap-2 text-sm md:grid-cols-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Model</span>
-                        <span className="font-mono text-xs">{disk.model}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Size</span>
-                        <span className="font-mono">{disk.size}</span>
-                      </div>
-                      {disk.temperature > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Temperature</span>
-                          <span className={`font-mono ${getTempColor(disk.temperature)}`}>{disk.temperature}°C</span>
-                        </div>
-                      )}
-                      {disk.power_on_hours > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Power On Hours</span>
-                          <span className="font-mono">{disk.power_on_hours.toLocaleString()}h</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
         </Card>
       )}
 
@@ -505,80 +445,53 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* Network Cards */}
-      {hardwareData.network_cards.length > 0 && (
+      {/* Thermal Monitoring */}
+      {hardwareData.sensors.temperatures.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <Network className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Network Cards</h2>
-            <Badge variant="outline" className="ml-auto">
-              {hardwareData.network_cards.length} NIC{hardwareData.network_cards.length > 1 ? "s" : ""}
-            </Badge>
+            <Thermometer className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Thermal Monitoring</h2>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            {hardwareData.network_cards.map((nic, index) => (
-              <Card key={index} className="border-border/30 bg-background/50 p-3">
+            {hardwareData.sensors.temperatures.map((sensor, index) => (
+              <div key={index} className="space-y-1">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-mono text-xs">{nic.name}</span>
-                  <Badge variant="outline" className="text-xs">
-                    {nic.type}
-                  </Badge>
+                  <span className="text-muted-foreground">{sensor.name}</span>
+                  <span
+                    className={`font-mono font-medium ${getTempColor(sensor.current, sensor.high, sensor.critical)}`}
+                  >
+                    {sensor.current.toFixed(1)}°C
+                  </span>
                 </div>
-              </Card>
+                <Progress value={getTempProgress(sensor.current, sensor.critical)} className="h-1.5" />
+              </div>
             ))}
           </div>
         </Card>
       )}
 
-      {/* Sensors (Temperature & Fans) */}
-      {hasSensors && (
+      {/* Fan Monitoring */}
+      {hardwareData.sensors.fans.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <Thermometer className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Thermal & Fan Monitoring</h2>
+            <Fan className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Fan Monitoring</h2>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Temperatures */}
-            {hardwareData.sensors.temperatures.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-muted-foreground">Temperatures</h3>
-                <div className="space-y-3">
-                  {hardwareData.sensors.temperatures.map((sensor, index) => (
-                    <div key={index} className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{sensor.name}</span>
-                        <span
-                          className={`font-mono font-medium ${getTempColor(sensor.current, sensor.high, sensor.critical)}`}
-                        >
-                          {sensor.current.toFixed(1)}°C
-                        </span>
-                      </div>
-                      <Progress value={getTempProgress(sensor.current, sensor.critical)} className="h-1.5" />
-                    </div>
-                  ))}
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {hardwareData.sensors.fans.map((fan, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between rounded-lg border border-border/30 bg-background/50 p-3"
+              >
+                <div className="flex items-center gap-2">
+                  <Fan className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">{fan.name}</span>
                 </div>
+                <span className="font-mono font-medium text-sm">{fan.current_rpm} RPM</span>
               </div>
-            )}
-
-            {/* Fans */}
-            {hardwareData.sensors.fans.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-muted-foreground">Fans</h3>
-                <div className="space-y-3">
-                  {hardwareData.sensors.fans.map((fan, index) => (
-                    <div key={index} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <Fan className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">{fan.name}</span>
-                      </div>
-                      <span className="font-mono font-medium">{fan.current_rpm} RPM</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            ))}
           </div>
         </Card>
       )}

@@ -310,48 +310,72 @@ export function ProxmoxDashboard() {
             </div>
             <SheetContent side="top" className="bg-card border-border">
               <div className="flex flex-col gap-2 mt-4">
-                <TabsTrigger
-                  value="overview"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    const overviewTab = document.querySelector('[value="overview"]') as HTMLButtonElement
+                    overviewTab?.click()
+                    setMobileMenuOpen(false)
+                  }}
+                  className="w-full justify-start"
                 >
                   Overview
-                </TabsTrigger>
-                <TabsTrigger
-                  value="storage"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    const storageTab = document.querySelector('[value="storage"]') as HTMLButtonElement
+                    storageTab?.click()
+                    setMobileMenuOpen(false)
+                  }}
+                  className="w-full justify-start"
                 >
                   Storage
-                </TabsTrigger>
-                <TabsTrigger
-                  value="network"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    const networkTab = document.querySelector('[value="network"]') as HTMLButtonElement
+                    networkTab?.click()
+                    setMobileMenuOpen(false)
+                  }}
+                  className="w-full justify-start"
                 >
                   Network
-                </TabsTrigger>
-                <TabsTrigger
-                  value="vms"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    const vmsTab = document.querySelector('[value="vms"]') as HTMLButtonElement
+                    vmsTab?.click()
+                    setMobileMenuOpen(false)
+                  }}
+                  className="w-full justify-start"
                 >
                   Virtual Machines
-                </TabsTrigger>
-                <TabsTrigger
-                  value="hardware"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    const hardwareTab = document.querySelector('[value="hardware"]') as HTMLButtonElement
+                    hardwareTab?.click()
+                    setMobileMenuOpen(false)
+                  }}
+                  className="w-full justify-start"
                 >
                   Hardware
-                </TabsTrigger>
-                <TabsTrigger
-                  value="logs"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    const logsTab = document.querySelector('[value="logs"]') as HTMLButtonElement
+                    logsTab?.click()
+                    setMobileMenuOpen(false)
+                  }}
+                  className="w-full justify-start"
                 >
                   System Logs
-                </TabsTrigger>
+                </Button>
               </div>
             </SheetContent>
           </Sheet>
