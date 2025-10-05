@@ -6,19 +6,7 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
-import {
-  Server,
-  Play,
-  Square,
-  Cpu,
-  MemoryStick,
-  HardDrive,
-  Network,
-  Power,
-  RotateCcw,
-  StopCircle,
-  AlertTriangle,
-} from "lucide-react"
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle } from "lucide-react"
 import useSWR from "swr"
 
 interface VMData {
@@ -303,9 +291,18 @@ export function VirtualMachines() {
 
   const getMemoryUsageColor = (percent: number | null) => {
     if (percent === null) return "bg-blue-500"
-    if (percent >= 80) return "bg-red-500"
+    if (percent >= 90) return "bg-red-500"
+    if (percent >= 80) return "bg-orange-500"
     if (percent >= 60) return "bg-yellow-500"
     return "bg-green-500"
+  }
+
+  const getMemoryPercentTextColor = (percent: number | null) => {
+    if (percent === null) return "text-muted-foreground"
+    if (percent >= 90) return "text-red-500"
+    if (percent >= 80) return "text-orange-500"
+    if (percent >= 60) return "text-yellow-500"
+    return "text-green-500"
   }
 
   console.log("[v0] Memory status:", {
@@ -368,10 +365,7 @@ export function VirtualMachines() {
         <Card className={`bg-card ${isMemoryOvercommit ? "border-yellow-500/50" : "border-border"}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Memory</CardTitle>
-            <div className="flex items-center gap-2">
-              {isMemoryOvercommit && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
-              <MemoryStick className="h-4 w-4 text-muted-foreground" />
-            </div>
+            <MemoryStick className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="space-y-3">
             {/* Memory Usage (current) */}
@@ -379,12 +373,12 @@ export function VirtualMachines() {
               <div>
                 <div className="text-2xl font-bold text-foreground">{usedMemoryGB.toFixed(1)} GB</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {memoryUsagePercent.toFixed(1)}% of {physicalMemoryGB.toFixed(1)} GB
+                  <span className={getMemoryPercentTextColor(memoryUsagePercent)}>
+                    {memoryUsagePercent.toFixed(1)}%
+                  </span>{" "}
+                  of {physicalMemoryGB.toFixed(1)} GB
                 </div>
-                <Progress
-                  value={memoryUsagePercent}
-                  className={`h-2 mt-2 [&>div]:${getMemoryUsageColor(memoryUsagePercent)}`}
-                />
+                <Progress value={memoryUsagePercent} className="h-2 mt-2 [&>div]:bg-blue-500" />
               </div>
             ) : (
               <div>
@@ -404,7 +398,6 @@ export function VirtualMachines() {
                   <div>
                     {isMemoryOvercommit ? (
                       <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
-                        <AlertTriangle className="h-3 w-3 mr-1" />
                         Exceeds Physical
                       </Badge>
                     ) : (
