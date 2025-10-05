@@ -83,7 +83,7 @@ const fetcher = async (url: string) => {
   }
 
   const data = await response.json()
-  return Array.isArray(data) ? data : []
+  return data
 }
 
 const formatBytes = (bytes: number | undefined): string => {
@@ -286,33 +286,33 @@ export function VirtualMachines() {
     return (safeVMData.reduce((sum, vm) => sum + (vm.maxmem || 0), 0) / 1024 ** 3).toFixed(1)
   }, [safeVMData])
 
-  const { data: systemData } = useSWR("/api/system", fetcher, {
-    refreshInterval: 30000,
-    revalidateOnFocus: false,
+  const { data: systemData } = useSWR<{ memory_total: number; memory_used: number; memory_usage: number }>(
+    "/api/system",
+    fetcher,
+    {
+      refreshInterval: 30000,
+      revalidateOnFocus: false,
+    },
+  )
+
+  const physicalMemoryGB = systemData?.memory_total ?? null
+  const usedMemoryGB = systemData?.memory_used ?? null
+  const memoryUsagePercent = systemData?.memory_usage ?? null
+  const allocatedMemoryGB = Number.parseFloat(totalAllocatedMemoryGB)
+  const isMemoryOvercommit = physicalMemoryGB !== null && allocatedMemoryGB > physicalMemoryGB
+
+  const getMemoryUsageColor = (percent: number | null) => {
+    if (percent === null) return "bg-blue-500"
+    if (percent >= 80) return "bg-red-500"
+    if (percent >= 60) return "bg-yellow-500"
+    return "bg-green-500"
+  }
+
+  console.log("[v0] Memory status:", {
+    physical: physicalMemoryGB,
+    allocated: allocatedMemoryGB,
+    isOvercommit: isMemoryOvercommit,
   })
-
-  const physicalMemoryGB = useMemo(() => {
-    if (systemData && systemData.memory_total) {
-      console.log("[v0] Physical memory GB:", systemData.memory_total)
-      return systemData.memory_total.toFixed(1)
-    }
-    console.log("[v0] No physical memory data available")
-    return null
-  }, [systemData])
-
-  const isMemoryOvercommit = useMemo(() => {
-    if (physicalMemoryGB) {
-      const overcommit = Number.parseFloat(totalAllocatedMemoryGB) > Number.parseFloat(physicalMemoryGB)
-      console.log("[v0] Memory overcommit check:", {
-        allocated: totalAllocatedMemoryGB,
-        physical: physicalMemoryGB,
-        isOvercommit: overcommit,
-      })
-      return overcommit
-    }
-    console.log("[v0] Cannot check overcommit - no physical memory data")
-    return false
-  }, [totalAllocatedMemoryGB, physicalMemoryGB])
 
   if (isLoading) {
     return (
@@ -373,19 +373,49 @@ export function VirtualMachines() {
               <MemoryStick className="h-4 w-4 text-muted-foreground" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${isMemoryOvercommit ? "text-yellow-500" : "text-foreground"}`}>
-              {totalAllocatedMemoryGB} GB
-            </div>
-            {isMemoryOvercommit && (
-              <Badge variant="outline" className="mt-2 bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                Overcommit
-              </Badge>
+          <CardContent className="space-y-3">
+            {/* Memory Usage (current) */}
+            {physicalMemoryGB !== null && usedMemoryGB !== null && memoryUsagePercent !== null ? (
+              <div>
+                <div className="text-2xl font-bold text-foreground">{usedMemoryGB.toFixed(1)} GB</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {memoryUsagePercent.toFixed(1)}% of {physicalMemoryGB.toFixed(1)} GB
+                </div>
+                <Progress
+                  value={memoryUsagePercent}
+                  className={`h-2 mt-2 [&>div]:${getMemoryUsageColor(memoryUsagePercent)}`}
+                />
+              </div>
+            ) : (
+              <div>
+                <div className="text-2xl font-bold text-muted-foreground">--</div>
+                <div className="text-xs text-muted-foreground mt-1">Loading memory usage...</div>
+              </div>
             )}
-            <p className="text-xs text-muted-foreground mt-2">
-              {isMemoryOvercommit ? `Excede memoria física (${physicalMemoryGB} GB)` : "Allocated RAM"}
-            </p>
+
+            {/* Allocated RAM (configured) */}
+            <div className="pt-3 border-t border-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-lg font-semibold text-foreground">{totalAllocatedMemoryGB} GB</div>
+                  <div className="text-xs text-muted-foreground">Allocated RAM</div>
+                </div>
+                {physicalMemoryGB !== null && (
+                  <div>
+                    {isMemoryOvercommit ? (
+                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Exceeds Physical
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                        Within Limits
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
