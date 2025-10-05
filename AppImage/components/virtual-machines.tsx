@@ -19,6 +19,7 @@ import {
   RotateCcw,
   StopCircle,
   AlertTriangle,
+  CheckCircle,
 } from "lucide-react"
 import useSWR from "swr"
 
@@ -37,6 +38,7 @@ interface VMData {
   netout?: number
   diskread?: number
   diskwrite?: number
+  ipaddress?: string
 }
 
 interface VMConfig {
@@ -251,6 +253,32 @@ export function VirtualMachines() {
     return false
   }, [totalAllocatedMemoryGB, physicalMemoryGB])
 
+  const getMemoryOvercommitBadge = () => {
+    if (!physicalMemoryGB) return null
+
+    const allocated = Number.parseFloat(totalAllocatedMemoryGB)
+    const physical = Number.parseFloat(physicalMemoryGB)
+    const overcommitPercent = ((allocated / physical) * 100).toFixed(0)
+
+    if (allocated > physical) {
+      return {
+        color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+        icon: <AlertTriangle className="h-3 w-3" />,
+        label: "Overcommit",
+        message: `${overcommitPercent}% de memoria física`,
+      }
+    }
+
+    return {
+      color: "bg-green-500/10 text-green-500 border-green-500/20",
+      icon: <CheckCircle className="h-3 w-3" />,
+      label: "Normal",
+      message: `${overcommitPercent}% de memoria física`,
+    }
+  }
+
+  const memoryBadge = getMemoryOvercommitBadge()
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -306,22 +334,20 @@ export function VirtualMachines() {
         <Card className={`bg-card ${isMemoryOvercommit ? "border-yellow-500/50" : "border-border"}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Memory</CardTitle>
-            <div className="flex items-center gap-2">
-              {isMemoryOvercommit && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
-              <MemoryStick className="h-4 w-4 text-muted-foreground" />
-            </div>
+            <MemoryStick className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${isMemoryOvercommit ? "text-yellow-500" : "text-foreground"}`}>
               {totalAllocatedMemoryGB} GB
             </div>
-            {isMemoryOvercommit ? (
-              <p className="text-xs text-yellow-500 mt-2 flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                Overcommit: Excede memoria física ({physicalMemoryGB} GB)
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-2">Allocated RAM</p>
+            {memoryBadge && (
+              <div className="mt-2 space-y-1">
+                <Badge variant="outline" className={`${memoryBadge.color} text-xs`}>
+                  <span className="mr-1">{memoryBadge.icon}</span>
+                  {memoryBadge.label}
+                </Badge>
+                <p className="text-xs text-muted-foreground">{memoryBadge.message}</p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -395,6 +421,13 @@ export function VirtualMachines() {
                         {vm.status.toUpperCase()}
                       </Badge>
                     </div>
+
+                    {vm.type === "lxc" && vm.ipaddress && (
+                      <div className="mb-4 pb-4 border-b border-border">
+                        <div className="text-sm text-muted-foreground mb-1">IP Address</div>
+                        <div className="text-base font-semibold text-blue-500 font-mono">{vm.ipaddress}</div>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       <div>
@@ -496,6 +529,12 @@ export function VirtualMachines() {
                       <div className="text-xs text-muted-foreground mb-1">VMID</div>
                       <div className="font-semibold text-foreground">{selectedVM.vmid}</div>
                     </div>
+                    {selectedVM.type === "lxc" && selectedVM.ipaddress && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">IP Address</div>
+                        <div className="font-semibold text-blue-500 font-mono">{selectedVM.ipaddress}</div>
+                      </div>
+                    )}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
                       <div
@@ -532,7 +571,7 @@ export function VirtualMachines() {
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Uptime</div>
-                      <div className="font-semibold text-foreground">{formatUptime(selectedVM.uptime)}</div>
+                      <div className="text-lg font-semibold text-foreground">{formatUptime(selectedVM.uptime)}</div>
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
