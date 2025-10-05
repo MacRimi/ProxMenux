@@ -94,6 +94,24 @@ const formatBytes = (bytes: number | undefined): string => {
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
 }
 
+const extractIPFromNetConfig = (netConfig: string | undefined): string => {
+  if (!netConfig) return "N/A"
+
+  // Parse the network config string: name=eth0,bridge=vmbr0,gw=192.168.0.1,hwaddr=...,ip=192.168.0.4/24,type=veth
+  const ipMatch = netConfig.match(/ip=([^,]+)/)
+  if (ipMatch && ipMatch[1]) {
+    const ip = ipMatch[1]
+    // Check if it's DHCP
+    if (ip.toLowerCase() === "dhcp") {
+      return "DHCP"
+    }
+    // Return the IP without the subnet mask for cleaner display
+    return ip.split("/")[0]
+  }
+
+  return "N/A"
+}
+
 export function VirtualMachines() {
   const {
     data: vmData,
@@ -396,7 +414,7 @@ export function VirtualMachines() {
                       </Badge>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                       <div>
                         <div className="text-sm text-muted-foreground mb-2">CPU Usage</div>
                         <div className="text-lg font-semibold text-foreground mb-1">{cpuPercent}%</div>
@@ -624,16 +642,31 @@ export function VirtualMachines() {
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {Object.keys(vmDetails.config)
                           .filter((key) => key.match(/^net\d+$/))
-                          .map((netKey) => (
-                            <div key={netKey} className="col-span-1">
-                              <div className="text-xs text-muted-foreground mb-1">
-                                Network Interface {netKey.replace("net", "")}
+                          .map((netKey) => {
+                            const netConfig = vmDetails.config[netKey]
+                            const ipAddress = selectedVM?.type === "lxc" ? extractIPFromNetConfig(netConfig) : null
+
+                            return (
+                              <div key={netKey} className="col-span-1">
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  Network Interface {netKey.replace("net", "")}
+                                </div>
+                                {ipAddress && (
+                                  <div className="mb-2">
+                                    <span className="text-xs text-muted-foreground">IP Address: </span>
+                                    <span
+                                      className={`font-semibold ${ipAddress === "DHCP" ? "text-yellow-500" : "text-blue-500"}`}
+                                    >
+                                      {ipAddress}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="font-medium text-green-500 text-xs break-all font-mono">
+                                  {netConfig}
+                                </div>
                               </div>
-                              <div className="font-medium text-green-500 text-sm break-all font-mono">
-                                {vmDetails.config[netKey]}
-                              </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         {vmDetails.config.nameserver && (
                           <div>
                             <div className="text-xs text-muted-foreground mb-1">DNS Nameserver</div>
