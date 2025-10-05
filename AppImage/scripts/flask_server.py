@@ -1681,14 +1681,19 @@ def api_info():
             '/api/system',
             '/api/system-info',
             '/api/storage', 
-            '/api/proxmox-storage',  # Added new endpoint
+            '/api/proxmox-storage',
             '/api/network',
             '/api/vms',
             '/api/logs',
             '/api/health',
-            '/api/hardware' # Added new endpoint
+            '/api/hardware'
         ]
     })
+
+@app.route('/api/hardware', methods=['GET'])
+def api_hardware():
+    """Get comprehensive hardware information"""
+    return jsonify(get_hardware_info())
 
 @app.route('/api/vms/<int:vmid>', methods=['GET'])
 def api_vm_details(vmid):
