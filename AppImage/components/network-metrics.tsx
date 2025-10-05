@@ -323,13 +323,13 @@ export function NetworkMetrics() {
                       {/* First row: Icon, Name, Type Badge, Physical Interface, Status */}
                       <div className="flex items-center gap-3 flex-wrap">
                         <Wifi className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                        <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
+                        <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap break-all">
                           <div className="font-medium text-foreground">{interface_.name}</div>
                           <Badge variant="outline" className={typeBadge.color}>
                             {typeBadge.label}
                           </Badge>
                           {interface_.bridge_physical_interface && (
-                            <div className="text-sm text-blue-500 font-medium flex items-center gap-1 flex-wrap">
+                            <div className="text-sm text-blue-500 font-medium flex items-center gap-1 flex-wrap break-all">
                               → {interface_.bridge_physical_interface}
                               {interface_.bridge_physical_interface.startsWith("bond") &&
                                 networkData.physical_interfaces && (
@@ -529,9 +529,54 @@ export function NetworkMetrics() {
                   {selectedInterface.type === "bridge" && selectedInterface.bridge_physical_interface && (
                     <div className="col-span-2">
                       <div className="text-sm text-muted-foreground">Physical Interface</div>
-                      <div className="font-medium text-blue-500 text-lg">
+                      <div className="font-medium text-blue-500 text-lg break-all">
                         {selectedInterface.bridge_physical_interface}
                       </div>
+                      {selectedInterface.bridge_physical_interface.startsWith("bond") &&
+                        networkData?.physical_interfaces && (
+                          <>
+                            {(() => {
+                              const bondInterface = networkData.physical_interfaces.find(
+                                (iface) => iface.name === selectedInterface.bridge_physical_interface,
+                              )
+                              if (bondInterface?.bond_slaves && bondInterface.bond_slaves.length > 0) {
+                                return (
+                                  <div className="mt-2">
+                                    <div className="text-sm text-muted-foreground mb-2">Bond Members</div>
+                                    <div className="flex flex-wrap gap-2">
+                                      {bondInterface.bond_slaves.map((slave, idx) => (
+                                        <Badge
+                                          key={idx}
+                                          variant="outline"
+                                          className="bg-purple-500/10 text-purple-500 border-purple-500/20"
+                                        >
+                                          {slave}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )
+                              }
+                              return null
+                            })()}
+                          </>
+                        )}
+                      {selectedInterface.bridge_bond_slaves && selectedInterface.bridge_bond_slaves.length > 0 && (
+                        <div className="mt-2">
+                          <div className="text-sm text-muted-foreground mb-2">Bond Members</div>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedInterface.bridge_bond_slaves.map((slave, idx) => (
+                              <Badge
+                                key={idx}
+                                variant="outline"
+                                className="bg-purple-500/10 text-purple-500 border-purple-500/20"
+                              >
+                                {slave}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   {selectedInterface.type === "vm_lxc" && selectedInterface.vm_name && (
@@ -691,64 +736,36 @@ export function NetworkMetrics() {
               )}
 
               {/* Bridge Information */}
-              {selectedInterface.type === "bridge" && (
+              {selectedInterface.type === "bridge" && selectedInterface.bridge_members && (
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3">Bridge Configuration</h3>
-                  <div className="space-y-3">
-                    {selectedInterface.bridge_physical_interface && (
-                      <div>
-                        <div className="text-sm text-muted-foreground mb-2">Physical Interface</div>
-                        <div className="font-medium text-blue-500 text-lg">
-                          {selectedInterface.bridge_physical_interface}
-                        </div>
-                      </div>
-                    )}
-                    {selectedInterface.bridge_bond_slaves && selectedInterface.bridge_bond_slaves.length > 0 && (
-                      <div>
-                        <div className="text-sm text-muted-foreground mb-2">Bond Slave Interfaces</div>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedInterface.bridge_bond_slaves.map((slave, idx) => (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-2">Virtual Member Interfaces</div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedInterface.bridge_members.length > 0 ? (
+                        selectedInterface.bridge_members
+                          .filter(
+                            (member) =>
+                              !member.startsWith("enp") &&
+                              !member.startsWith("eth") &&
+                              !member.startsWith("eno") &&
+                              !member.startsWith("ens") &&
+                              !member.startsWith("wlan") &&
+                              !member.startsWith("wlp"),
+                          )
+                          .map((member, idx) => (
                             <Badge
                               key={idx}
                               variant="outline"
-                              className="bg-purple-500/10 text-purple-500 border-purple-500/20"
+                              className="bg-green-500/10 text-green-500 border-green-500/20"
                             >
-                              {slave}
+                              {member}
                             </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {selectedInterface.bridge_members && (
-                      <div>
-                        <div className="text-sm text-muted-foreground mb-2">Virtual Member Interfaces</div>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedInterface.bridge_members.length > 0 ? (
-                            selectedInterface.bridge_members
-                              .filter(
-                                (member) =>
-                                  !member.startsWith("enp") &&
-                                  !member.startsWith("eth") &&
-                                  !member.startsWith("eno") &&
-                                  !member.startsWith("ens") &&
-                                  !member.startsWith("wlan") &&
-                                  !member.startsWith("wlp"),
-                              )
-                              .map((member, idx) => (
-                                <Badge
-                                  key={idx}
-                                  variant="outline"
-                                  className="bg-green-500/10 text-green-500 border-green-500/20"
-                                >
-                                  {member}
-                                </Badge>
-                              ))
-                          ) : (
-                            <div className="text-sm text-muted-foreground">No virtual members</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                          ))
+                      ) : (
+                        <div className="text-sm text-muted-foreground">No virtual members</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
