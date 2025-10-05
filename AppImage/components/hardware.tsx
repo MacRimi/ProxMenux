@@ -198,6 +198,8 @@ export default function Hardware() {
     { totalCapacity: 0, ssd: 0, hdd: 0 },
   )
 
+  const networkControllers = hardwareData.pci_devices?.filter((device) => device.type === "Network Controller") || []
+
   return (
     <div className="space-y-6 p-6">
       {/* System Information */}
@@ -383,25 +385,25 @@ export default function Hardware() {
       )}
 
       {/* Network Summary */}
-      {hardwareData.network_cards.length > 0 && (
+      {networkControllers.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Network className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Network Summary</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.network_cards.length} interfaces
+              {networkControllers.length} interfaces
             </Badge>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {hardwareData.network_cards.map((nic, index) => (
+            {networkControllers.map((nic, index) => (
               <div
                 key={index}
                 className="flex items-center justify-between rounded-lg border border-border/30 bg-background/50 p-3"
               >
-                <span className="font-mono text-sm">{nic.name}</span>
+                <span className="font-mono text-sm">{nic.device}</span>
                 <Badge variant="outline" className="text-xs">
-                  {nic.type}
+                  Ethernet
                 </Badge>
               </div>
             ))}
