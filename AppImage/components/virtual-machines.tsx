@@ -368,14 +368,15 @@ export function VirtualMachines() {
             <div className={`text-2xl font-bold ${isMemoryOvercommit ? "text-yellow-500" : "text-foreground"}`}>
               {totalAllocatedMemoryGB} GB
             </div>
-            {isMemoryOvercommit ? (
-              <p className="text-xs text-yellow-500 mt-2 flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                Overcommit: Excede memoria física ({physicalMemoryGB} GB)
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-2">Allocated RAM</p>
+            {isMemoryOvercommit && (
+              <Badge variant="outline" className="mt-2 bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Overcommit
+              </Badge>
             )}
+            <p className="text-xs text-muted-foreground mt-2">
+              {isMemoryOvercommit ? `Excede memoria física (${physicalMemoryGB} GB)` : "Allocated RAM"}
+            </p>
           </CardContent>
         </Card>
 
