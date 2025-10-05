@@ -10,7 +10,6 @@ import {
   Server,
   Play,
   Square,
-  Monitor,
   Cpu,
   MemoryStick,
   HardDrive,
@@ -92,6 +91,38 @@ const formatBytes = (bytes: number | undefined): string => {
   const sizes = ["B", "KB", "MB", "GB", "TB"]
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+}
+
+const formatUptime = (seconds: number) => {
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  return `${days}d ${hours}h ${minutes}m`
+}
+
+const extractIPFromConfig = (config?: VMConfig): string => {
+  if (!config) return "DHCP"
+
+  // Check net0, net1, net2, etc.
+  for (let i = 0; i < 10; i++) {
+    const netKey = `net${i}`
+    const netConfig = config[netKey]
+
+    if (netConfig && typeof netConfig === "string") {
+      // Look for ip=x.x.x.x/xx pattern
+      const ipMatch = netConfig.match(/ip=([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(\/\d+)?/)
+      if (ipMatch) {
+        return ipMatch[1] // Return just the IP without CIDR
+      }
+
+      // Check if it's explicitly DHCP
+      if (netConfig.includes("ip=dhcp")) {
+        return "DHCP"
+      }
+    }
+  }
+
+  return "DHCP"
 }
 
 export function VirtualMachines() {
@@ -218,13 +249,6 @@ export function VirtualMachines() {
     return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: "VM" }
   }
 
-  const formatUptime = (seconds: number) => {
-    const days = Math.floor(seconds / 86400)
-    const hours = Math.floor((seconds % 86400) / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    return `${days}d ${hours}h ${minutes}m`
-  }
-
   // Safe data handling with default empty array
   const safeVMData = vmData || []
 
@@ -327,448 +351,429 @@ export function VirtualMachines() {
         </Card>
 
         <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Average Load</CardTitle>
-            <Monitor className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center">
+              <Server className="h-5 w-5 mr-2" />
+              Virtual Machines & Containers
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {safeVMData.filter((vm) => vm.status === "running").length > 0
-                ? (
-                    (safeVMData.reduce((sum, vm) => sum + (vm.cpu || 0), 0) /
-                      safeVMData.filter((vm) => vm.status === "running").length) *
-                    100
-                  ).toFixed(0)
-                : 0}
-              %
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">Average resource utilization</p>
+            {safeVMData.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No virtual machines found</div>
+            ) : (
+              <div className="space-y-4">
+                {safeVMData.map((vm) => {
+                  const cpuPercent = (vm.cpu * 100).toFixed(1)
+                  const memPercent = vm.maxmem > 0 ? ((vm.mem / vm.maxmem) * 100).toFixed(1) : "0"
+                  const memGB = (vm.mem / 1024 ** 3).toFixed(1)
+                  const maxMemGB = (vm.maxmem / 1024 ** 3).toFixed(1)
+                  const typeBadge = getTypeBadge(vm.type)
+                  const vmIP = extractIPFromConfig(vm.config)
+
+                  return (
+                    <div
+                      key={vm.vmid}
+                      className="p-6 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                      onClick={() => handleVMClick(vm)}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                        <div className="flex items-center space-x-4">
+                          <Server className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+                          <div className="min-w-0">
+                            <div className="font-semibold text-foreground text-lg flex items-center flex-wrap gap-2">
+                              <span className="truncate">{vm.name}</span>
+                              <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
+                                {typeBadge.label}
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-muted-foreground">ID: {vm.vmid}</div>
+                            <div className="text-sm text-muted-foreground">IP: {vmIP}</div>
+                          </div>
+                        </div>
+
+                        <Badge
+                          variant="outline"
+                          className={`${getStatusColor(vm.status)} flex-shrink-0 self-start sm:self-center`}
+                        >
+                          {getStatusIcon(vm.status)}
+                          {vm.status.toUpperCase()}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div>
+                          <div className="text-sm text-muted-foreground mb-2">CPU Usage</div>
+                          <div className="text-lg font-semibold text-foreground mb-1">{cpuPercent}%</div>
+                          <Progress value={Number.parseFloat(cpuPercent)} className="h-2 [&>div]:bg-blue-500" />
+                        </div>
+
+                        <div>
+                          <div className="text-sm text-muted-foreground mb-2">Memory Usage</div>
+                          <div className="text-lg font-semibold text-foreground mb-1">
+                            {memGB} / {maxMemGB} GB
+                          </div>
+                          <Progress value={Number.parseFloat(memPercent)} className="h-2 [&>div]:bg-blue-500" />
+                        </div>
+
+                        <div className="hidden md:block">
+                          <div className="text-sm text-muted-foreground mb-2">Disk I/O</div>
+                          <div className="text-sm font-semibold text-foreground">
+                            <div className="flex items-center gap-1">
+                              <HardDrive className="h-3 w-3 text-green-500" />
+                              <span className="text-green-500">↓ {formatBytes(vm.diskread)}</span>
+                            </div>
+                            <div className="flex items-center gap-1 mt-1">
+                              <HardDrive className="h-3 w-3 text-blue-500" />
+                              <span className="text-blue-500">↑ {formatBytes(vm.diskwrite)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="hidden md:block">
+                          <div className="text-sm text-muted-foreground mb-2">Network I/O</div>
+                          <div className="text-sm font-semibold text-foreground">
+                            <div className="flex items-center gap-1">
+                              <Network className="h-3 w-3 text-green-500" />
+                              <span className="text-green-500">↓ {formatBytes(vm.netin)}</span>
+                            </div>
+                            <div className="flex items-center gap-1 mt-1">
+                              <Network className="h-3 w-3 text-blue-500" />
+                              <span className="text-blue-500">↑ {formatBytes(vm.netout)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-4 border-t border-border">
+                        <div className="text-sm text-muted-foreground">Uptime</div>
+                        <div className="text-lg font-semibold text-foreground">{formatUptime(vm.uptime)}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* Virtual Machines List */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center">
-            <Server className="h-5 w-5 mr-2" />
-            Virtual Machines & Containers
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {safeVMData.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No virtual machines found</div>
-          ) : (
-            <div className="space-y-4">
-              {safeVMData.map((vm) => {
-                const cpuPercent = (vm.cpu * 100).toFixed(1)
-                const memPercent = vm.maxmem > 0 ? ((vm.mem / vm.maxmem) * 100).toFixed(1) : "0"
-                const memGB = (vm.mem / 1024 ** 3).toFixed(1)
-                const maxMemGB = (vm.maxmem / 1024 ** 3).toFixed(1)
-                const typeBadge = getTypeBadge(vm.type)
-
-                return (
-                  <div
-                    key={vm.vmid}
-                    className="p-6 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
-                    onClick={() => handleVMClick(vm)}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                      <div className="flex items-center space-x-4">
-                        <Server className="h-6 w-6 text-muted-foreground flex-shrink-0" />
-                        <div className="min-w-0">
-                          <div className="font-semibold text-foreground text-lg flex items-center flex-wrap gap-2">
-                            <span className="truncate">{vm.name}</span>
-                            <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
-                              {typeBadge.label}
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-muted-foreground">ID: {vm.vmid}</div>
-                        </div>
-                      </div>
-
-                      <Badge
-                        variant="outline"
-                        className={`${getStatusColor(vm.status)} flex-shrink-0 self-start sm:self-center`}
-                      >
-                        {getStatusIcon(vm.status)}
-                        {vm.status.toUpperCase()}
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <div>
-                        <div className="text-sm text-muted-foreground mb-2">CPU Usage</div>
-                        <div className="text-lg font-semibold text-foreground mb-1">{cpuPercent}%</div>
-                        <Progress value={Number.parseFloat(cpuPercent)} className="h-2 [&>div]:bg-blue-500" />
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-muted-foreground mb-2">Memory Usage</div>
-                        <div className="text-lg font-semibold text-foreground mb-1">
-                          {memGB} / {maxMemGB} GB
-                        </div>
-                        <Progress value={Number.parseFloat(memPercent)} className="h-2 [&>div]:bg-blue-500" />
-                      </div>
-
-                      <div className="hidden md:block">
-                        <div className="text-sm text-muted-foreground mb-2">Disk I/O</div>
-                        <div className="text-sm font-semibold text-foreground">
-                          <div className="flex items-center gap-1">
-                            <HardDrive className="h-3 w-3 text-green-500" />
-                            <span className="text-green-500">↓ {formatBytes(vm.diskread)}</span>
-                          </div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <HardDrive className="h-3 w-3 text-blue-500" />
-                            <span className="text-blue-500">↑ {formatBytes(vm.diskwrite)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="hidden md:block">
-                        <div className="text-sm text-muted-foreground mb-2">Network I/O</div>
-                        <div className="text-sm font-semibold text-foreground">
-                          <div className="flex items-center gap-1">
-                            <Network className="h-3 w-3 text-green-500" />
-                            <span className="text-green-500">↓ {formatBytes(vm.netin)}</span>
-                          </div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Network className="h-3 w-3 text-blue-500" />
-                            <span className="text-blue-500">↑ {formatBytes(vm.netout)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t border-border">
-                      <div className="text-sm text-muted-foreground">Uptime</div>
-                      <div className="text-lg font-semibold text-foreground">{formatUptime(vm.uptime)}</div>
-                    </div>
+        {/* VM Details Modal */}
+        <Dialog
+          open={!!selectedVM}
+          onOpenChange={() => {
+            setSelectedVM(null)
+            setVMDetails(null)
+          }}
+        >
+          <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
+            <DialogHeader className="pb-4 border-b border-border">
+              <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Server className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-lg truncate">{selectedVM?.name}</span>
+                </div>
+                {selectedVM && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className={`${getTypeBadge(selectedVM.type).color} flex-shrink-0`}>
+                      {getTypeBadge(selectedVM.type).label}
+                    </Badge>
+                    <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
+                      {selectedVM.status.toUpperCase()}
+                    </Badge>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                )}
+              </DialogTitle>
+            </DialogHeader>
 
-      {/* VM Details Modal */}
-      <Dialog
-        open={!!selectedVM}
-        onOpenChange={() => {
-          setSelectedVM(null)
-          setVMDetails(null)
-        }}
-      >
-        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
-          <DialogHeader className="pb-4 border-b border-border">
-            <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Server className="h-5 w-5 flex-shrink-0" />
-                <span className="text-lg truncate">{selectedVM?.name}</span>
-              </div>
+            <div className="space-y-6 py-4">
               {selectedVM && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className={`${getTypeBadge(selectedVM.type).color} flex-shrink-0`}>
-                    {getTypeBadge(selectedVM.type).label}
-                  </Badge>
-                  <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
-                    {selectedVM.status.toUpperCase()}
-                  </Badge>
-                </div>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-6 py-4">
-            {selectedVM && (
-              <>
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                    Basic Information
-                  </h3>
-                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Name</div>
-                      <div className="font-semibold text-foreground">{selectedVM.name}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">VMID</div>
-                      <div className="font-semibold text-foreground">{selectedVM.vmid}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
-                      <div
-                        className={`font-semibold ${
-                          (selectedVM.cpu * 100) > 80
-                            ? "text-red-500"
-                            : selectedVM.cpu * 100 > 60
-                              ? "text-yellow-500"
-                              : "text-green-500"
-                        }`}
-                      >
-                        {(selectedVM.cpu * 100).toFixed(1)}%
+                <>
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                      Basic Information
+                    </h3>
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Name</div>
+                        <div className="font-semibold text-foreground">{selectedVM.name}</div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Memory</div>
-                      <div
-                        className={`font-semibold ${
-                          ((selectedVM.mem / selectedVM.maxmem) * 100) > 80
-                            ? "text-red-500"
-                            : (selectedVM.mem / selectedVM.maxmem) * 100 > 60
-                              ? "text-yellow-500"
-                              : "text-blue-500"
-                        }`}
-                      >
-                        {(selectedVM.mem / 1024 ** 3).toFixed(1)} / {(selectedVM.maxmem / 1024 ** 3).toFixed(1)} GB
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">VMID</div>
+                        <div className="font-semibold text-foreground">{selectedVM.vmid}</div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Disk</div>
-                      <div className="font-semibold text-foreground">
-                        {(selectedVM.disk / 1024 ** 3).toFixed(1)} / {(selectedVM.maxdisk / 1024 ** 3).toFixed(1)} GB
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Uptime</div>
-                      <div className="font-semibold text-foreground">{formatUptime(selectedVM.uptime)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
-                      <div className="text-sm font-semibold">
-                        <div className="flex items-center gap-1">
-                          <span className="text-green-500">↓ {formatBytes(selectedVM.diskread)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-blue-500">↑ {formatBytes(selectedVM.diskwrite)}</span>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
+                        <div
+                          className={`font-semibold ${
+                            (selectedVM.cpu * 100) > 80
+                              ? "text-red-500"
+                              : selectedVM.cpu * 100 > 60
+                                ? "text-yellow-500"
+                                : "text-green-500"
+                          }`}
+                        >
+                          {(selectedVM.cpu * 100).toFixed(1)}%
                         </div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
-                      <div className="text-sm font-semibold">
-                        <div className="flex items-center gap-1">
-                          <span className="text-green-500">↓ {formatBytes(selectedVM.netin)}</span>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Memory</div>
+                        <div
+                          className={`font-semibold ${
+                            ((selectedVM.mem / selectedVM.maxmem) * 100) > 80
+                              ? "text-red-500"
+                              : (selectedVM.mem / selectedVM.maxmem) * 100 > 60
+                                ? "text-yellow-500"
+                                : "text-blue-500"
+                          }`}
+                        >
+                          {(selectedVM.mem / 1024 ** 3).toFixed(1)} / {(selectedVM.maxmem / 1024 ** 3).toFixed(1)} GB
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-blue-500">↑ {formatBytes(selectedVM.netout)}</span>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Disk</div>
+                        <div className="font-semibold text-foreground">
+                          {(selectedVM.disk / 1024 ** 3).toFixed(1)} / {(selectedVM.maxdisk / 1024 ** 3).toFixed(1)} GB
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Uptime</div>
+                        <div className="font-semibold text-foreground">{formatUptime(selectedVM.uptime)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
+                        <div className="text-sm font-semibold">
+                          <div className="flex items-center gap-1">
+                            <span className="text-green-500">↓ {formatBytes(selectedVM.diskread)}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-blue-500">↑ {formatBytes(selectedVM.diskwrite)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
+                        <div className="text-sm font-semibold">
+                          <div className="flex items-center gap-1">
+                            <span className="text-green-500">↓ {formatBytes(selectedVM.netin)}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-blue-500">↑ {formatBytes(selectedVM.netout)}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Resources Configuration */}
-                {detailsLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
-                ) : vmDetails?.config ? (
-                  <>
-                    <div>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                        Resources
-                      </h3>
-                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                        {vmDetails.config.cores && (
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">CPU Cores</div>
-                            <div className="font-semibold text-blue-500">{vmDetails.config.cores}</div>
-                          </div>
-                        )}
-                        {vmDetails.config.sockets && (
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">CPU Sockets</div>
-                            <div className="font-semibold text-foreground">{vmDetails.config.sockets}</div>
-                          </div>
-                        )}
-                        {vmDetails.config.memory && (
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">Memory</div>
-                            <div className="font-semibold text-blue-500">{vmDetails.config.memory} MB</div>
-                          </div>
-                        )}
-                        {vmDetails.config.swap && (
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">Swap</div>
-                            <div className="font-semibold text-foreground">{vmDetails.config.swap} MB</div>
-                          </div>
-                        )}
-                        {vmDetails.config.rootfs && (
-                          <div className="col-span-2 lg:col-span-3">
-                            <div className="text-xs text-muted-foreground mb-1">Root Filesystem</div>
-                            <div className="font-medium text-foreground text-sm break-all font-mono">
-                              {vmDetails.config.rootfs}
+                  {/* Resources Configuration */}
+                  {detailsLoading ? (
+                    <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
+                  ) : vmDetails?.config ? (
+                    <>
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                          Resources
+                        </h3>
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                          {vmDetails.config.cores && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">CPU Cores</div>
+                              <div className="font-semibold text-blue-500">{vmDetails.config.cores}</div>
                             </div>
-                          </div>
-                        )}
-                        {Object.keys(vmDetails.config)
-                          .filter((key) => key.match(/^(scsi|sata|ide|virtio)\d+$/))
-                          .map((diskKey) => (
-                            <div key={diskKey} className="col-span-2 lg:col-span-3">
-                              <div className="text-xs text-muted-foreground mb-1">
-                                {diskKey.toUpperCase().replace(/(\d+)/, " $1")}
-                              </div>
+                          )}
+                          {vmDetails.config.sockets && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">CPU Sockets</div>
+                              <div className="font-semibold text-foreground">{vmDetails.config.sockets}</div>
+                            </div>
+                          )}
+                          {vmDetails.config.memory && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">Memory</div>
+                              <div className="font-semibold text-blue-500">{vmDetails.config.memory} MB</div>
+                            </div>
+                          )}
+                          {vmDetails.config.swap && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">Swap</div>
+                              <div className="font-semibold text-foreground">{vmDetails.config.swap} MB</div>
+                            </div>
+                          )}
+                          {vmDetails.config.rootfs && (
+                            <div className="col-span-2 lg:col-span-3">
+                              <div className="text-xs text-muted-foreground mb-1">Root Filesystem</div>
                               <div className="font-medium text-foreground text-sm break-all font-mono">
-                                {vmDetails.config[diskKey]}
+                                {vmDetails.config.rootfs}
                               </div>
                             </div>
-                          ))}
+                          )}
+                          {Object.keys(vmDetails.config)
+                            .filter((key) => key.match(/^(scsi|sata|ide|virtio)\d+$/))
+                            .map((diskKey) => (
+                              <div key={diskKey} className="col-span-2 lg:col-span-3">
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  {diskKey.toUpperCase().replace(/(\d+)/, " $1")}
+                                </div>
+                                <div className="font-medium text-foreground text-sm break-all font-mono">
+                                  {vmDetails.config[diskKey]}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Network Configuration */}
-                    <div>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                        Network
-                      </h3>
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {Object.keys(vmDetails.config)
-                          .filter((key) => key.match(/^net\d+$/))
-                          .map((netKey) => (
-                            <div key={netKey} className="col-span-1">
-                              <div className="text-xs text-muted-foreground mb-1">
-                                Network Interface {netKey.replace("net", "")}
+                      {/* Network Configuration */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                          Network
+                        </h3>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {Object.keys(vmDetails.config)
+                            .filter((key) => key.match(/^net\d+$/))
+                            .map((netKey) => (
+                              <div key={netKey} className="col-span-1">
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  Network Interface {netKey.replace("net", "")}
+                                </div>
+                                <div className="font-medium text-green-500 text-sm break-all font-mono">
+                                  {vmDetails.config[netKey]}
+                                </div>
                               </div>
-                              <div className="font-medium text-green-500 text-sm break-all font-mono">
-                                {vmDetails.config[netKey]}
-                              </div>
+                            ))}
+                          {vmDetails.config.nameserver && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">DNS Nameserver</div>
+                              <div className="font-medium text-foreground font-mono">{vmDetails.config.nameserver}</div>
                             </div>
-                          ))}
-                        {vmDetails.config.nameserver && (
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">DNS Nameserver</div>
-                            <div className="font-medium text-foreground font-mono">{vmDetails.config.nameserver}</div>
-                          </div>
-                        )}
-                        {vmDetails.config.searchdomain && (
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">Search Domain</div>
-                            <div className="font-medium text-foreground">{vmDetails.config.searchdomain}</div>
-                          </div>
-                        )}
-                        {vmDetails.config.hostname && (
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">Hostname</div>
-                            <div className="font-medium text-foreground">{vmDetails.config.hostname}</div>
-                          </div>
-                        )}
+                          )}
+                          {vmDetails.config.searchdomain && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">Search Domain</div>
+                              <div className="font-medium text-foreground">{vmDetails.config.searchdomain}</div>
+                            </div>
+                          )}
+                          {vmDetails.config.hostname && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">Hostname</div>
+                              <div className="font-medium text-foreground">{vmDetails.config.hostname}</div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Options */}
-                    <div>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                        Options
-                      </h3>
-                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                        {vmDetails.config.onboot !== undefined && (
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">Start on Boot</div>
-                            <Badge
-                              variant="outline"
-                              className={
-                                vmDetails.config.onboot
-                                  ? "bg-green-500/10 text-green-500 border-green-500/20"
-                                  : "bg-red-500/10 text-red-500 border-red-500/20"
-                              }
-                            >
-                              {vmDetails.config.onboot ? "Yes" : "No"}
-                            </Badge>
-                          </div>
-                        )}
-                        {vmDetails.config.unprivileged !== undefined && (
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">Unprivileged</div>
-                            <Badge
-                              variant="outline"
-                              className={
-                                vmDetails.config.unprivileged
-                                  ? "bg-green-500/10 text-green-500 border-green-500/20"
-                                  : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                              }
-                            >
-                              {vmDetails.config.unprivileged ? "Yes" : "No"}
-                            </Badge>
-                          </div>
-                        )}
-                        {vmDetails.config.ostype && (
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">OS Type</div>
-                            <div className="font-medium text-foreground">{vmDetails.config.ostype}</div>
-                          </div>
-                        )}
-                        {vmDetails.config.arch && (
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">Architecture</div>
-                            <div className="font-medium text-foreground">{vmDetails.config.arch}</div>
-                          </div>
-                        )}
-                        {vmDetails.config.boot && (
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">Boot Order</div>
-                            <div className="font-medium text-foreground">{vmDetails.config.boot}</div>
-                          </div>
-                        )}
-                        {vmDetails.config.features && (
-                          <div className="col-span-2 lg:col-span-3">
-                            <div className="text-xs text-muted-foreground mb-1">Features</div>
-                            <div className="font-medium text-foreground text-sm">{vmDetails.config.features}</div>
-                          </div>
-                        )}
+                      {/* Options */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                          Options
+                        </h3>
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                          {vmDetails.config.onboot !== undefined && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">Start on Boot</div>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  vmDetails.config.onboot
+                                    ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                    : "bg-red-500/10 text-red-500 border-red-500/20"
+                                }
+                              >
+                                {vmDetails.config.onboot ? "Yes" : "No"}
+                              </Badge>
+                            </div>
+                          )}
+                          {vmDetails.config.unprivileged !== undefined && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">Unprivileged</div>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  vmDetails.config.unprivileged
+                                    ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                    : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                                }
+                              >
+                                {vmDetails.config.unprivileged ? "Yes" : "No"}
+                              </Badge>
+                            </div>
+                          )}
+                          {vmDetails.config.ostype && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">OS Type</div>
+                              <div className="font-medium text-foreground">{vmDetails.config.ostype}</div>
+                            </div>
+                          )}
+                          {vmDetails.config.arch && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">Architecture</div>
+                              <div className="font-medium text-foreground">{vmDetails.config.arch}</div>
+                            </div>
+                          )}
+                          {vmDetails.config.boot && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">Boot Order</div>
+                              <div className="font-medium text-foreground">{vmDetails.config.boot}</div>
+                            </div>
+                          )}
+                          {vmDetails.config.features && (
+                            <div className="col-span-2 lg:col-span-3">
+                              <div className="text-xs text-muted-foreground mb-1">Features</div>
+                              <div className="font-medium text-foreground text-sm">{vmDetails.config.features}</div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </>
-                ) : null}
+                    </>
+                  ) : null}
 
-                {/* Control Actions */}
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                    Control Actions
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      variant="outline"
-                      className="w-full bg-transparent"
-                      disabled={selectedVM.status === "running" || controlLoading}
-                      onClick={() => handleVMControl(selectedVM.vmid, "start")}
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      Start
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full bg-transparent"
-                      disabled={selectedVM.status !== "running" || controlLoading}
-                      onClick={() => handleVMControl(selectedVM.vmid, "shutdown")}
-                    >
-                      <Power className="h-4 w-4 mr-2" />
-                      Shutdown
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full bg-transparent"
-                      disabled={selectedVM.status !== "running" || controlLoading}
-                      onClick={() => handleVMControl(selectedVM.vmid, "reboot")}
-                    >
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      Reboot
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full bg-transparent"
-                      disabled={selectedVM.status !== "running" || controlLoading}
-                      onClick={() => handleVMControl(selectedVM.vmid, "stop")}
-                    >
-                      <StopCircle className="h-4 w-4 mr-2" />
-                      Force Stop
-                    </Button>
+                  {/* Control Actions */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                      Control Actions
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        variant="outline"
+                        className="w-full bg-transparent"
+                        disabled={selectedVM.status === "running" || controlLoading}
+                        onClick={() => handleVMControl(selectedVM.vmid, "start")}
+                      >
+                        <Play className="h-4 w-4 mr-2" />
+                        Start
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full bg-transparent"
+                        disabled={selectedVM.status !== "running" || controlLoading}
+                        onClick={() => handleVMControl(selectedVM.vmid, "shutdown")}
+                      >
+                        <Power className="h-4 w-4 mr-2" />
+                        Shutdown
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full bg-transparent"
+                        disabled={selectedVM.status !== "running" || controlLoading}
+                        onClick={() => handleVMControl(selectedVM.vmid, "reboot")}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Reboot
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full bg-transparent"
+                        disabled={selectedVM.status !== "running" || controlLoading}
+                        onClick={() => handleVMControl(selectedVM.vmid, "stop")}
+                      >
+                        <StopCircle className="h-4 w-4 mr-2" />
+                        Force Stop
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   )
 }
