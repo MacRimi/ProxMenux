@@ -286,23 +286,19 @@ export function VirtualMachines() {
     return (safeVMData.reduce((sum, vm) => sum + (vm.maxmem || 0), 0) / 1024 ** 3).toFixed(1)
   }, [safeVMData])
 
-  const { data: overviewData } = useSWR("/api/overview", fetcher, {
+  const { data: systemData } = useSWR("/api/system", fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: false,
   })
 
-  console.log("[v0] Overview data:", overviewData)
-  console.log("[v0] Total allocated memory GB:", totalAllocatedMemoryGB)
-
   const physicalMemoryGB = useMemo(() => {
-    if (overviewData && overviewData.memory) {
-      const physicalGB = (overviewData.memory.total / 1024 ** 3).toFixed(1)
-      console.log("[v0] Physical memory GB:", physicalGB)
-      return physicalGB
+    if (systemData && systemData.memory_total) {
+      console.log("[v0] Physical memory GB:", systemData.memory_total)
+      return systemData.memory_total.toFixed(1)
     }
     console.log("[v0] No physical memory data available")
     return null
-  }, [overviewData])
+  }, [systemData])
 
   const isMemoryOvercommit = useMemo(() => {
     if (physicalMemoryGB) {
