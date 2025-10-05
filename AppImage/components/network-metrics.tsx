@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
-import { Wifi, Globe, Shield, Activity, Network, Router, AlertCircle, Zap } from "lucide-react"
+import { Wifi, Activity, Network, Router, AlertCircle, Zap } from "lucide-react"
 import useSWR from "swr"
 
 interface NetworkData {
@@ -57,6 +57,7 @@ interface NetworkInterface {
   bond_active_slave?: string | null
   bridge_members?: string[]
   bridge_physical_interface?: string
+  bridge_bond_slaves?: string[]
   packet_loss_in?: number
   packet_loss_out?: number
   vmid?: number
@@ -214,45 +215,6 @@ export function NetworkMetrics() {
         </Card>
 
         <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Firewall Status</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">Active</div>
-            <div className="flex items-center mt-2">
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                Protected
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">System protected</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Packets</CardTitle>
-            <Globe className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{packetsRecvK}K</div>
-            <div className="flex items-center mt-2">
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                Received
-              </Badge>
-            </div>
-            {networkData.traffic.packet_loss_in !== undefined && networkData.traffic.packet_loss_in > 0 && (
-              <p className="text-xs text-yellow-500 mt-2">Loss: {networkData.traffic.packet_loss_in}%</p>
-            )}
-            {(!networkData.traffic.packet_loss_in || networkData.traffic.packet_loss_in === 0) && (
-              <p className="text-xs text-muted-foreground mt-2">No packet loss</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {networkData.physical_interfaces && networkData.physical_interfaces.length > 0 && (
-        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Router className="h-5 w-5 mr-2" />
@@ -335,7 +297,7 @@ export function NetworkMetrics() {
             </div>
           </CardContent>
         </Card>
-      )}
+      </div>
 
       {networkData.bridge_interfaces && networkData.bridge_interfaces.length > 0 && (
         <Card className="bg-card border-border">
@@ -368,7 +330,7 @@ export function NetworkMetrics() {
                           {typeBadge.label}
                         </Badge>
                         {interface_.bridge_physical_interface && (
-                          <div className="text-sm text-blue-500 font-medium flex items-center gap-1">
+                          <div className="text-sm text-blue-500 font-medium flex items-center gap-1 flex-wrap">
                             → {interface_.bridge_physical_interface}
                             {interface_.bridge_physical_interface.startsWith("bond") &&
                               networkData.physical_interfaces && (
@@ -388,6 +350,11 @@ export function NetworkMetrics() {
                                   })()}
                                 </>
                               )}
+                            {interface_.bridge_bond_slaves && interface_.bridge_bond_slaves.length > 0 && (
+                              <span className="text-muted-foreground text-xs">
+                                ({interface_.bridge_bond_slaves.join(", ")})
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -732,7 +699,15 @@ export function NetworkMetrics() {
                     <div className="flex flex-wrap gap-2">
                       {selectedInterface.bridge_members.length > 0 ? (
                         selectedInterface.bridge_members
-                          .filter((member) => !member.startsWith(("enp", "eth", "eno", "ens", "wlan", "wlp")))
+                          .filter(
+                            (member) =>
+                              !member.startsWith("enp") &&
+                              !member.startsWith("eth") &&
+                              !member.startsWith("eno") &&
+                              !member.startsWith("ens") &&
+                              !member.startsWith("wlan") &&
+                              !member.startsWith("wlp"),
+                          )
                           .map((member, idx) => (
                             <Badge
                               key={idx}

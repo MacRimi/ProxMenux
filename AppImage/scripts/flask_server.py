@@ -987,7 +987,9 @@ def get_bridge_info(bridge_name):
     bridge_info = {
         'members': [],
         'physical_interface': None,
-        'physical_duplex': 'unknown'  # Added physical_duplex field
+        'physical_duplex': 'unknown',  # Added physical_duplex field
+        # Added bond_slaves to show physical interfaces
+        'bond_slaves': []
     }
     
     try:
@@ -1003,8 +1005,12 @@ def get_bridge_info(bridge_name):
                     bridge_info['physical_interface'] = member
                     print(f"[v0] Bridge {bridge_name} connected to bond: {member}")
                     
-                    # Get duplex from bond's active slave
                     bond_info = get_bond_info(member)
+                    if bond_info['slaves']:
+                        bridge_info['bond_slaves'] = bond_info['slaves']
+                        print(f"[v0] Bond {member} slaves: {bond_info['slaves']}")
+                    
+                    # Get duplex from bond's active slave
                     if bond_info['active_slave']:
                         try:
                             net_if_stats = psutil.net_if_stats()
@@ -1160,6 +1166,7 @@ def get_network_info():
                 interface_info['bridge_members'] = bridge_info['members']
                 interface_info['bridge_physical_interface'] = bridge_info['physical_interface']
                 interface_info['bridge_physical_duplex'] = bridge_info['physical_duplex']
+                interface_info['bridge_bond_slaves'] = bridge_info['bond_slaves']
                 # Override bridge duplex with physical interface duplex
                 if bridge_info['physical_duplex'] != 'unknown':
                     interface_info['duplex'] = bridge_info['physical_duplex']
