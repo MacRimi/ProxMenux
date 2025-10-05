@@ -998,7 +998,25 @@ def get_bridge_info(bridge_name):
             bridge_info['members'] = members
             
             for member in members:
-                if member.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
+                # Check if member is a bond first
+                if member.startswith('bond'):
+                    bridge_info['physical_interface'] = member
+                    print(f"[v0] Bridge {bridge_name} connected to bond: {member}")
+                    
+                    # Get duplex from bond's active slave
+                    bond_info = get_bond_info(member)
+                    if bond_info['active_slave']:
+                        try:
+                            net_if_stats = psutil.net_if_stats()
+                            if bond_info['active_slave'] in net_if_stats:
+                                stats = net_if_stats[bond_info['active_slave']]
+                                bridge_info['physical_duplex'] = 'full' if stats.duplex == 2 else 'half' if stats.duplex == 1 else 'unknown'
+                                print(f"[v0] Bond {member} active slave {bond_info['active_slave']} duplex: {bridge_info['physical_duplex']}")
+                        except Exception as e:
+                            print(f"[v0] Error getting duplex for bond slave {bond_info['active_slave']}: {e}")
+                    break
+                # Check if member is a physical interface
+                elif member.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
                     bridge_info['physical_interface'] = member
                     print(f"[v0] Bridge {bridge_name} physical interface: {member}")
                     
@@ -1408,6 +1426,149 @@ def api_info():
             '/api/health'
         ]
     })
+
+@app.route('/api/vms/<int:vmid>', methods=['GET'])
+def api_vm_details(vmid):
+    """Get detailed information for a specific VM/LXC"""
+    try:
+        result = subprocess.run(['pvesh', 'get', f'/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+                              capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            resources = json.loads(result.stdout)
+            for resource in resources:
+                if resource.get('vmid') == vmid:
+                    vm_type = 'lxc' if resource.get('type') == 'lxc' else 'qemu'
+                    node = resource.get('node', 'pve')
+                    
+                    # Get detailed config
+                    config_result = subprocess.run(
+                        ['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/config', '--output-format', 'json'],
+                        capture_output=True, text=True, timeout=10
+                    )
+                    
+                    config = {}
+                    if config_result.returncode == 0:
+                        config = json.loads(config_result.stdout)
+                    
+                    return jsonify({
+                        **resource,
+                        'config': config,
+                        'node': node,
+                        'vm_type': vm_type
+                    })
+            
+            return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+        else:
+            return jsonify({'error': 'Failed to get VM details'}), 500
+    except Exception as e:
+        print(f"Error getting VM details: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/vms/<int:vmid>/logs', methods=['GET'])
+def api_vm_logs(vmid):
+    """Download logs for a specific VM/LXC"""
+    try:
+        # Get VM type and node
+        result = subprocess.run(['pvesh', 'get', f'/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+                              capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            resources = json.loads(result.stdout)
+            vm_info = None
+            for resource in resources:
+                if resource.get('vmid') == vmid:
+                    vm_info = resource
+                    break
+            
+            if not vm_info:
+                return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+            
+            vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
+            node = vm_info.get('node', 'pve')
+            
+            # Get task log
+            log_result = subprocess.run(
+                ['pvesh', 'get', f'/nodes/{node}/tasks', '--vmid', str(vmid), '--output-format', 'json'],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            logs = []
+            if log_result.returncode == 0:
+                tasks = json.loads(log_result.stdout)
+                for task in tasks[:50]:  # Last 50 tasks
+                    logs.append({
+                        'upid': task.get('upid'),
+                        'type': task.get('type'),
+                        'status': task.get('status'),
+                        'starttime': task.get('starttime'),
+                        'endtime': task.get('endtime'),
+                        'user': task.get('user')
+                    })
+            
+            return jsonify({
+                'vmid': vmid,
+                'name': vm_info.get('name'),
+                'type': vm_type,
+                'logs': logs
+            })
+        else:
+            return jsonify({'error': 'Failed to get VM logs'}), 500
+    except Exception as e:
+        print(f"Error getting VM logs: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/vms/<int:vmid>/control', methods=['POST'])
+def api_vm_control(vmid):
+    """Control VM/LXC (start, stop, shutdown, reboot)"""
+    try:
+        data = request.get_json()
+        action = data.get('action')  # start, stop, shutdown, reboot
+        
+        if action not in ['start', 'stop', 'shutdown', 'reboot']:
+            return jsonify({'error': 'Invalid action'}), 400
+        
+        # Get VM type and node
+        result = subprocess.run(['pvesh', 'get', f'/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+                              capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            resources = json.loads(result.stdout)
+            vm_info = None
+            for resource in resources:
+                if resource.get('vmid') == vmid:
+                    vm_info = resource
+                    break
+            
+            if not vm_info:
+                return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+            
+            vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
+            node = vm_info.get('node', 'pve')
+            
+            # Execute action
+            control_result = subprocess.run(
+                ['pvesh', 'create', f'/nodes/{node}/{vm_type}/{vmid}/status/{action}'],
+                capture_output=True, text=True, timeout=30
+            )
+            
+            if control_result.returncode == 0:
+                return jsonify({
+                    'success': True,
+                    'vmid': vmid,
+                    'action': action,
+                    'message': f'Successfully executed {action} on {vm_info.get("name")}'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': control_result.stderr
+                }), 500
+        else:
+            return jsonify({'error': 'Failed to control VM'}), 500
+    except Exception as e:
+        print(f"Error controlling VM: {e}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("Starting ProxMenux Flask Server on port 8008...")

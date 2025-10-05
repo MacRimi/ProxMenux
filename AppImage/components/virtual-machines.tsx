@@ -1,50 +1,60 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
-import { Server, Play, Square, Monitor, Cpu, MemoryStick, AlertCircle, HardDrive, Network } from "lucide-react"
+import { Button } from "./ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import {
+  Server,
+  Play,
+  Square,
+  Monitor,
+  Cpu,
+  MemoryStick,
+  AlertCircle,
+  HardDrive,
+  Network,
+  Power,
+  RotateCcw,
+  Download,
+  StopCircle,
+} from "lucide-react"
+import useSWR from "swr"
 
 interface VMData {
   vmid: number
   name: string
   status: string
-  type: string // Added type field to distinguish VM from LXC
+  type: string
   cpu: number
   mem: number
   maxmem: number
   disk: number
   maxdisk: number
   uptime: number
-  netin?: number // Added network in
-  netout?: number // Added network out
-  diskread?: number // Added disk read
-  diskwrite?: number // Added disk write
+  netin?: number
+  netout?: number
+  diskread?: number
+  diskwrite?: number
 }
 
-const fetchVMData = async (): Promise<VMData[]> => {
-  try {
-    console.log("[v0] Fetching VM data from Flask server...")
-    const response = await fetch("/api/vms", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      signal: AbortSignal.timeout(5000),
-    })
+const fetcher = async (url: string) => {
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    signal: AbortSignal.timeout(5000),
+  })
 
-    if (!response.ok) {
-      throw new Error(`Flask server responded with status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    console.log("[v0] Successfully fetched VM data from Flask:", data)
-    return Array.isArray(data) ? data : []
-  } catch (error) {
-    console.error("[v0] Failed to fetch VM data from Flask server:", error)
-    throw error
+  if (!response.ok) {
+    throw new Error(`Flask server responded with status: ${response.status}`)
   }
+
+  const data = await response.json()
+  return Array.isArray(data) ? data : []
 }
 
 const formatBytes = (bytes: number | undefined): string => {
@@ -56,30 +66,64 @@ const formatBytes = (bytes: number | undefined): string => {
 }
 
 export function VirtualMachines() {
-  const [vmData, setVmData] = useState<VMData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    data: vmData,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR<VMData[]>("/api/vms", fetcher, {
+    refreshInterval: 30000, // Refresh every 30 seconds
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+  })
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const result = await fetchVMData()
-        setVmData(result)
-      } catch (err) {
-        setError("Flask server not available. Please ensure the server is running.")
-      } finally {
-        setLoading(false)
+  const [selectedVM, setSelectedVM] = useState<VMData | null>(null)
+  const [controlLoading, setControlLoading] = useState(false)
+
+  const handleVMControl = async (vmid: number, action: string) => {
+    setControlLoading(true)
+    try {
+      const response = await fetch(`/api/vms/${vmid}/control`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action }),
+      })
+
+      if (response.ok) {
+        // Refresh VM data after action
+        mutate()
+        setSelectedVM(null)
+      } else {
+        console.error("Failed to control VM")
       }
+    } catch (error) {
+      console.error("Error controlling VM:", error)
+    } finally {
+      setControlLoading(false)
     }
+  }
 
-    fetchData()
-    const interval = setInterval(fetchData, 30000)
-    return () => clearInterval(interval)
-  }, [])
+  const handleDownloadLogs = async (vmid: number) => {
+    try {
+      const response = await fetch(`/api/vms/${vmid}/logs`)
+      if (response.ok) {
+        const data = await response.json()
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `vm-${vmid}-logs.json`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    } catch (error) {
+      console.error("Error downloading logs:", error)
+    }
+  }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="text-center py-8">
@@ -89,7 +133,7 @@ export function VirtualMachines() {
     )
   }
 
-  if (error) {
+  if (error || !vmData) {
     return (
       <div className="space-y-6">
         <Card className="bg-red-500/10 border-red-500/20">
@@ -99,7 +143,8 @@ export function VirtualMachines() {
               <div>
                 <div className="font-semibold text-lg mb-1">Flask Server Not Available</div>
                 <div className="text-sm">
-                  {error || "Unable to connect to the Flask server. Please ensure the server is running and try again."}
+                  {error?.message ||
+                    "Unable to connect to the Flask server. Please ensure the server is running and try again."}
                 </div>
               </div>
             </div>
@@ -156,7 +201,7 @@ export function VirtualMachines() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total VMs</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total VMs & LXCs</CardTitle>
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -179,7 +224,7 @@ export function VirtualMachines() {
             <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-500">{(totalCPU * 100).toFixed(0)}%</div>
+            <div className="text-2xl font-bold text-foreground">{(totalCPU * 100).toFixed(0)}%</div>
             <p className="text-xs text-muted-foreground mt-2">Allocated CPU usage</p>
           </CardContent>
         </Card>
@@ -190,7 +235,7 @@ export function VirtualMachines() {
             <MemoryStick className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-500">{(totalMemory / 1024 ** 3).toFixed(1)} GB</div>
+            <div className="text-2xl font-bold text-foreground">{(totalMemory / 1024 ** 3).toFixed(1)} GB</div>
             <p className="text-xs text-muted-foreground mt-2">Allocated RAM</p>
           </CardContent>
         </Card>
@@ -201,7 +246,7 @@ export function VirtualMachines() {
             <Monitor className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-500">
+            <div className="text-2xl font-bold text-foreground">
               {runningVMs > 0 ? ((totalCPU / runningVMs) * 100).toFixed(0) : 0}%
             </div>
             <p className="text-xs text-muted-foreground mt-2">Average resource utilization</p>
@@ -230,7 +275,11 @@ export function VirtualMachines() {
                 const typeBadge = getTypeBadge(vm.type)
 
                 return (
-                  <div key={vm.vmid} className="p-6 rounded-lg border border-border bg-card/50">
+                  <div
+                    key={vm.vmid}
+                    className="p-6 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    onClick={() => setSelectedVM(vm)}
+                  >
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center space-x-4">
                         <Server className="h-6 w-6 text-muted-foreground" />
@@ -256,13 +305,13 @@ export function VirtualMachines() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       <div>
                         <div className="text-sm text-muted-foreground mb-2">CPU Usage</div>
-                        <div className="text-lg font-semibold text-green-500 mb-1">{cpuPercent}%</div>
-                        <Progress value={Number.parseFloat(cpuPercent)} className="h-2 [&>div]:bg-green-500" />
+                        <div className="text-lg font-semibold text-foreground mb-1">{cpuPercent}%</div>
+                        <Progress value={Number.parseFloat(cpuPercent)} className="h-2 [&>div]:bg-blue-500" />
                       </div>
 
                       <div>
                         <div className="text-sm text-muted-foreground mb-2">Memory Usage</div>
-                        <div className="text-lg font-semibold text-blue-500 mb-1">
+                        <div className="text-lg font-semibold text-foreground mb-1">
                           {memGB} / {maxMemGB} GB
                         </div>
                         <Progress value={Number.parseFloat(memPercent)} className="h-2 [&>div]:bg-blue-500" />
@@ -308,6 +357,124 @@ export function VirtualMachines() {
           )}
         </CardContent>
       </Card>
+
+      {/* VM Details Modal */}
+      <Dialog open={!!selectedVM} onOpenChange={() => setSelectedVM(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5" />
+              {selectedVM?.name} - Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedVM && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Basic Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Name</div>
+                    <div className="font-medium">{selectedVM.name}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Type</div>
+                    <Badge variant="outline" className={getTypeBadge(selectedVM.type).color}>
+                      {getTypeBadge(selectedVM.type).label}
+                    </Badge>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">VMID</div>
+                    <div className="font-medium">{selectedVM.vmid}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Status</div>
+                    <Badge variant="outline" className={getStatusColor(selectedVM.status)}>
+                      {selectedVM.status.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">CPU Usage</div>
+                    <div className="font-medium">{(selectedVM.cpu * 100).toFixed(1)}%</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Memory</div>
+                    <div className="font-medium">
+                      {(selectedVM.mem / 1024 ** 3).toFixed(1)} / {(selectedVM.maxmem / 1024 ** 3).toFixed(1)} GB
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Disk</div>
+                    <div className="font-medium">
+                      {(selectedVM.disk / 1024 ** 3).toFixed(1)} / {(selectedVM.maxdisk / 1024 ** 3).toFixed(1)} GB
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Uptime</div>
+                    <div className="font-medium">{formatUptime(selectedVM.uptime)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Control Actions */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Control Actions</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    className="w-full bg-transparent"
+                    disabled={selectedVM.status === "running" || controlLoading}
+                    onClick={() => handleVMControl(selectedVM.vmid, "start")}
+                  >
+                    <Play className="h-4 w-4 mr-2" />
+                    Start
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-transparent"
+                    disabled={selectedVM.status !== "running" || controlLoading}
+                    onClick={() => handleVMControl(selectedVM.vmid, "shutdown")}
+                  >
+                    <Power className="h-4 w-4 mr-2" />
+                    Shutdown
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-transparent"
+                    disabled={selectedVM.status !== "running" || controlLoading}
+                    onClick={() => handleVMControl(selectedVM.vmid, "reboot")}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Reboot
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-transparent"
+                    disabled={selectedVM.status !== "running" || controlLoading}
+                    onClick={() => handleVMControl(selectedVM.vmid, "stop")}
+                  >
+                    <StopCircle className="h-4 w-4 mr-2" />
+                    Force Stop
+                  </Button>
+                </div>
+              </div>
+
+              {/* Download Logs */}
+              <div>
+                <Button
+                  variant="outline"
+                  className="w-full bg-transparent"
+                  onClick={() => handleDownloadLogs(selectedVM.vmid)}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Logs
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
