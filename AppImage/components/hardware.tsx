@@ -113,12 +113,6 @@ export default function Hardware() {
     refreshInterval: 5000,
   })
 
-  if (hardwareData) {
-    console.log("[v0] Hardware data received:", hardwareData)
-    console.log("[v0] Network cards:", hardwareData.network_cards)
-    console.log("[v0] Network cards length:", hardwareData.network_cards?.length)
-  }
-
   if (error) {
     return (
       <div className="p-6">

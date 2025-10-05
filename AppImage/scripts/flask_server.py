@@ -72,9 +72,18 @@ def serve_dashboard():
         # Detectar si estamos ejecutándose desde AppImage
         appimage_root = os.environ.get('APPDIR')
         if not appimage_root:
-            # Fallback: intentar detectar desde la ubicación del script
+            # Fallback: detectar desde la ubicación del script
+            # Si el script está en usr/bin/, necesitamos subir 2 niveles para llegar a la raíz
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            appimage_root = os.path.dirname(base_dir)  # Subir un nivel desde usr/bin/
+            # Verificar si estamos en usr/bin/
+            if base_dir.endswith('usr/bin'):
+                # Subir 2 niveles: usr/bin/ -> usr/ -> AppImage root
+                appimage_root = os.path.dirname(os.path.dirname(base_dir))
+            else:
+                # Fallback genérico: subir 1 nivel
+                appimage_root = os.path.dirname(base_dir)
+        
+        print(f"[v0] Detected AppImage root: {appimage_root}")
         
         index_paths = [
             os.path.join(appimage_root, 'web', 'index.html'),  # Ruta principal para AppImage
@@ -189,7 +198,10 @@ def serve_next_static(filename):
         appimage_root = os.environ.get('APPDIR')
         if not appimage_root:
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            appimage_root = os.path.dirname(base_dir)
+            if base_dir.endswith('usr/bin'):
+                appimage_root = os.path.dirname(os.path.dirname(base_dir))
+            else:
+                appimage_root = os.path.dirname(base_dir)
         
         static_paths = [
             os.path.join(appimage_root, 'web', '_next'),  # Ruta principal
@@ -214,7 +226,10 @@ def serve_static_files(filename):
         appimage_root = os.environ.get('APPDIR')
         if not appimage_root:
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            appimage_root = os.path.dirname(base_dir)
+            if base_dir.endswith('usr/bin'):
+                appimage_root = os.path.dirname(os.path.dirname(base_dir))
+            else:
+                appimage_root = os.path.dirname(base_dir)
         
         public_paths = [
             os.path.join(appimage_root, 'web'),  # Raíz web para exportación estática
@@ -240,7 +255,10 @@ def serve_images(filename):
         appimage_root = os.environ.get('APPDIR')
         if not appimage_root:
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            appimage_root = os.path.dirname(base_dir)
+            if base_dir.endswith('usr/bin'):
+                appimage_root = os.path.dirname(os.path.dirname(base_dir))
+            else:
+                appimage_root = os.path.dirname(base_dir)
         
         image_paths = [
             os.path.join(appimage_root, 'web', 'images'),  # Ruta principal para exportación estática
@@ -1806,7 +1824,14 @@ def api_info():
 @app.route('/api/hardware', methods=['GET'])
 def api_hardware():
     """Get comprehensive hardware information"""
-    return jsonify(get_hardware_info())
+    hardware_info = get_hardware_info()
+    
+    network_info = get_network_info()
+    hardware_info['network_interfaces'] = network_info.get('physical_interfaces', []) + network_info.get('bridge_interfaces', [])
+    
+    print(f"[v0] /api/hardware returning {len(hardware_info.get('network_interfaces', []))} network interfaces")
+    
+    return jsonify(hardware_info)
 
 @app.route('/api/vms/<int:vmid>', methods=['GET'])
 def api_vm_details(vmid):
