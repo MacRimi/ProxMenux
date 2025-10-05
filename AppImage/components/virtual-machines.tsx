@@ -96,23 +96,6 @@ const formatBytes = (bytes: number | undefined): string => {
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
 }
 
-const extractIPFromNetConfig = (netConfig: string | undefined): string | null => {
-  if (!netConfig) return null
-
-  // Check for DHCP
-  if (netConfig.includes("ip=dhcp")) {
-    return "DHCP"
-  }
-
-  // Extract static IP (format: ip=192.168.0.4/24)
-  const ipMatch = netConfig.match(/ip=([0-9.]+)/)
-  if (ipMatch && ipMatch[1]) {
-    return ipMatch[1]
-  }
-
-  return null
-}
-
 export function VirtualMachines() {
   const {
     data: vmData,
@@ -296,12 +279,6 @@ export function VirtualMachines() {
 
   const memoryBadge = getMemoryOvercommitBadge()
 
-  console.log("[v0] VM Data:", vmData)
-  console.log("[v0] Physical Memory GB:", physicalMemoryGB)
-  console.log("[v0] Total Allocated Memory GB:", totalAllocatedMemoryGB)
-  console.log("[v0] Is Memory Overcommit:", isMemoryOvercommit)
-  console.log("[v0] Memory Badge:", memoryBadge)
-
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -445,7 +422,7 @@ export function VirtualMachines() {
                       </Badge>
                     </div>
 
-                    {vm.type === "lxc" && vm.ipaddress && (
+                    {vm.ipaddress && (
                       <div className="mb-4 pb-4 border-b border-border">
                         <div className="text-sm text-muted-foreground mb-1">IP Address</div>
                         <div className="text-base font-semibold text-blue-500 font-mono">{vm.ipaddress}</div>
@@ -552,7 +529,7 @@ export function VirtualMachines() {
                       <div className="text-xs text-muted-foreground mb-1">VMID</div>
                       <div className="font-semibold text-foreground">{selectedVM.vmid}</div>
                     </div>
-                    {selectedVM.type === "lxc" && selectedVM.ipaddress && (
+                    {selectedVM.ipaddress && (
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">IP Address</div>
                         <div className="font-semibold text-blue-500 font-mono">{selectedVM.ipaddress}</div>
@@ -600,11 +577,9 @@ export function VirtualMachines() {
                       <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
                       <div className="text-sm font-semibold">
                         <div className="flex items-center gap-1">
-                          <HardDrive className="h-3 w-3 text-green-500" />
                           <span className="text-green-500">↓ {formatBytes(selectedVM.diskread)}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <HardDrive className="h-3 w-3 text-blue-500" />
                           <span className="text-blue-500">↑ {formatBytes(selectedVM.diskwrite)}</span>
                         </div>
                       </div>
@@ -613,11 +588,9 @@ export function VirtualMachines() {
                       <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
                       <div className="text-sm font-semibold">
                         <div className="flex items-center gap-1">
-                          <Network className="h-3 w-3 text-green-500" />
                           <span className="text-green-500">↓ {formatBytes(selectedVM.netin)}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Network className="h-3 w-3 text-blue-500" />
                           <span className="text-blue-500">↑ {formatBytes(selectedVM.netout)}</span>
                         </div>
                       </div>
@@ -690,31 +663,16 @@ export function VirtualMachines() {
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {Object.keys(vmDetails.config)
                           .filter((key) => key.match(/^net\d+$/))
-                          .map((netKey) => {
-                            const netConfig = vmDetails.config[netKey]
-                            const extractedIP = extractIPFromNetConfig(netConfig)
-
-                            return (
-                              <div key={netKey} className="col-span-1 lg:col-span-2">
-                                <div className="text-xs text-muted-foreground mb-1">
-                                  Network Interface {netKey.replace("net", "")}
-                                </div>
-                                <div className="font-medium text-green-500 text-sm break-all font-mono mb-2">
-                                  {netConfig}
-                                </div>
-                                {extractedIP && selectedVM.type === "lxc" && (
-                                  <div className="mt-2">
-                                    <Badge
-                                      variant="outline"
-                                      className="bg-blue-500/10 text-blue-500 border-blue-500/20"
-                                    >
-                                      IP: {extractedIP}
-                                    </Badge>
-                                  </div>
-                                )}
+                          .map((netKey) => (
+                            <div key={netKey} className="col-span-1">
+                              <div className="text-xs text-muted-foreground mb-1">
+                                Network Interface {netKey.replace("net", "")}
                               </div>
-                            )
-                          })}
+                              <div className="font-medium text-green-500 text-sm break-all font-mono">
+                                {vmDetails.config[netKey]}
+                              </div>
+                            </div>
+                          ))}
                         {vmDetails.config.nameserver && (
                           <div>
                             <div className="text-xs text-muted-foreground mb-1">DNS Nameserver</div>
