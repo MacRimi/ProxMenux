@@ -226,6 +226,25 @@ export function VirtualMachines() {
     return `${days}d ${hours}h ${minutes}m`
   }
 
+  // Safe data handling with default empty array
+  const safeVMData = vmData || []
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8 text-muted-foreground">Loading virtual machines...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8 text-red-500">Error loading virtual machines: {error.message}</div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* VM Overview Cards */}
@@ -236,13 +255,13 @@ export function VirtualMachines() {
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{vmData.length}</div>
+            <div className="text-2xl font-bold text-foreground">{safeVMData.length}</div>
             <div className="vm-badges mt-2">
               <Badge variant="outline" className="vm-badge bg-green-500/10 text-green-500 border-green-500/20">
-                {vmData.filter((vm) => vm.status === "running").length} Running
+                {safeVMData.filter((vm) => vm.status === "running").length} Running
               </Badge>
               <Badge variant="outline" className="vm-badge bg-red-500/10 text-red-500 border-red-500/20">
-                {vmData.filter((vm) => vm.status === "stopped").length} Stopped
+                {safeVMData.filter((vm) => vm.status === "stopped").length} Stopped
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-2">Virtual machines configured</p>
@@ -256,7 +275,7 @@ export function VirtualMachines() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {(vmData.reduce((sum, vm) => sum + (vm.cpu || 0), 0) * 100).toFixed(0)}%
+              {(safeVMData.reduce((sum, vm) => sum + (vm.cpu || 0), 0) * 100).toFixed(0)}%
             </div>
             <p className="text-xs text-muted-foreground mt-2">Allocated CPU usage</p>
           </CardContent>
@@ -269,7 +288,7 @@ export function VirtualMachines() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {(vmData.reduce((sum, vm) => sum + (vm.maxmem || 0), 0) / 1024 ** 3).toFixed(1)} GB
+              {(safeVMData.reduce((sum, vm) => sum + (vm.maxmem || 0), 0) / 1024 ** 3).toFixed(1)} GB
             </div>
             <p className="text-xs text-muted-foreground mt-2">Allocated RAM</p>
           </CardContent>
@@ -282,10 +301,10 @@ export function VirtualMachines() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {vmData.filter((vm) => vm.status === "running").length > 0
+              {safeVMData.filter((vm) => vm.status === "running").length > 0
                 ? (
-                    (vmData.reduce((sum, vm) => sum + (vm.cpu || 0), 0) /
-                      vmData.filter((vm) => vm.status === "running").length) *
+                    (safeVMData.reduce((sum, vm) => sum + (vm.cpu || 0), 0) /
+                      safeVMData.filter((vm) => vm.status === "running").length) *
                     100
                   ).toFixed(0)
                 : 0}
@@ -305,11 +324,11 @@ export function VirtualMachines() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {vmData.length === 0 ? (
+          {safeVMData.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No virtual machines found</div>
           ) : (
             <div className="space-y-4">
-              {vmData.map((vm) => {
+              {safeVMData.map((vm) => {
                 const cpuPercent = (vm.cpu * 100).toFixed(1)
                 const memPercent = vm.maxmem > 0 ? ((vm.mem / vm.maxmem) * 100).toFixed(1) : "0"
                 const memGB = (vm.mem / 1024 ** 3).toFixed(1)
