@@ -321,41 +321,72 @@ echo "🔧 Installing hardware monitoring tools..."
 mkdir -p "$WORK_DIR/debs"
 cd "$WORK_DIR/debs"
 
-# Download .deb packages
-echo "📥 Downloading ipmitool..."
-wget -q http://deb.debian.org/debian/pool/main/i/ipmitool/ipmitool_1.8.19-4_amd64.deb -O ipmitool.deb || true
+# Download .deb packages with better error handling
+echo "📥 Downloading hardware monitoring tools..."
 
-echo "📥 Downloading lm-sensors..."
-wget -q http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0-7.1_amd64.deb -O lm-sensors.deb || true
+# Function to download and verify .deb package
+download_deb() {
+    local url=$1
+    local output=$2
+    local name=$3
+    
+    echo "  Downloading $name..."
+    if wget -q --timeout=30 "$url" -O "$output"; then
+        # Verify it's a valid .deb file
+        if file "$output" | grep -q "Debian binary package"; then
+            echo "  ✅ $name downloaded successfully"
+            return 0
+        else
+            echo "  ⚠️  $name: Invalid .deb file, skipping"
+            rm -f "$output"
+            return 1
+        fi
+    else
+        echo "  ⚠️  $name: Download failed, skipping"
+        rm -f "$output"
+        return 1
+    fi
+}
 
-echo "📥 Downloading nut-client..."
-wget -q http://deb.debian.org/debian/pool/main/n/nut/nut-client_2.8.0-7_amd64.deb -O nut-client.deb || true
-wget -q http://deb.debian.org/debian/pool/main/n/nut/libupsclient6_2.8.0-7_amd64.deb -O libupsclient6.deb || true
+# Try to download packages (non-fatal if they fail)
+download_deb "http://deb.debian.org/debian/pool/main/i/ipmitool/ipmitool_1.8.19-4_amd64.deb" "ipmitool.deb" "ipmitool" || true
+download_deb "http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0-7.1_amd64.deb" "lm-sensors.deb" "lm-sensors" || true
+download_deb "http://deb.debian.org/debian/pool/main/n/nut/nut-client_2.8.0-7_amd64.deb" "nut-client.deb" "nut-client" || true
+download_deb "http://deb.debian.org/debian/pool/main/n/nut/libupsclient6_2.8.0-7_amd64.deb" "libupsclient6.deb" "libupsclient6" || true
 
 # Extract binaries from .deb packages
-echo "📦 Extracting binaries..."
+echo "📦 Extracting binaries from downloaded packages..."
+extracted_count=0
 for deb in *.deb; do
-    if [ -f "$deb" ]; then
-        dpkg-deb -x "$deb" "$WORK_DIR/extracted"
+    if [ -f "$deb" ] && file "$deb" | grep -q "Debian binary package"; then
+        echo "  Extracting $deb..."
+        dpkg-deb -x "$deb" "$WORK_DIR/extracted" && extracted_count=$((extracted_count + 1))
     fi
 done
 
-# Copy binaries to AppDir
-if [ -d "$WORK_DIR/extracted/usr/bin" ]; then
-    echo "📋 Copying monitoring tools to AppDir..."
-    cp -r "$WORK_DIR/extracted/usr/bin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
-fi
+if [ $extracted_count -eq 0 ]; then
+    echo "⚠️  No hardware monitoring tools were downloaded successfully"
+    echo "   The AppImage will work but without IPMI/sensors support"
+else
+    echo "✅ Extracted $extracted_count package(s)"
+    
+    # Copy binaries to AppDir
+    if [ -d "$WORK_DIR/extracted/usr/bin" ]; then
+        echo "📋 Copying monitoring tools to AppDir..."
+        cp -r "$WORK_DIR/extracted/usr/bin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
+    fi
 
-if [ -d "$WORK_DIR/extracted/usr/sbin" ]; then
-    cp -r "$WORK_DIR/extracted/usr/sbin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
-fi
+    if [ -d "$WORK_DIR/extracted/usr/sbin" ]; then
+        cp -r "$WORK_DIR/extracted/usr/sbin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
+    fi
 
-if [ -d "$WORK_DIR/extracted/usr/lib" ]; then
-    mkdir -p "$APP_DIR/usr/lib"
-    cp -r "$WORK_DIR/extracted/usr/lib"/* "$APP_DIR/usr/lib/" 2>/dev/null || true
+    if [ -d "$WORK_DIR/extracted/usr/lib" ]; then
+        mkdir -p "$APP_DIR/usr/lib"
+        cp -r "$WORK_DIR/extracted/usr/lib"/* "$APP_DIR/usr/lib/" 2>/dev/null || true
+    fi
+    
+    echo "✅ Hardware monitoring tools installed successfully"
 fi
-
-echo "✅ Hardware monitoring tools installed"
 
 # Build AppImage
 echo "🔨 Building unified AppImage v${VERSION}..."
