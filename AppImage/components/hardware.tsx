@@ -3,8 +3,10 @@
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Cpu, MemoryStick, HardDrive, Network, Thermometer, Fan, Battery, Server, CpuIcon } from "lucide-react"
 import useSWR from "swr"
+import { useState } from "react"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -91,6 +93,12 @@ interface PCIDevice {
   vendor: string
   device: string
   class: string
+  driver?: string
+  kernel_module?: string
+  irq?: string
+  memory_address?: string
+  link_speed?: string
+  capabilities?: string[]
 }
 
 interface HardwareData {
@@ -112,6 +120,8 @@ export default function Hardware() {
   const { data: hardwareData, error } = useSWR<HardwareData>("/api/hardware", fetcher, {
     refreshInterval: 5000,
   })
+
+  const [selectedPCIDevice, setSelectedPCIDevice] = useState<PCIDevice | null>(null)
 
   if (error) {
     return (
@@ -430,7 +440,8 @@ export default function Hardware() {
             {hardwareData.pci_devices.map((device, index) => (
               <div
                 key={index}
-                className="flex items-start justify-between rounded-lg border border-border/30 bg-background/50 p-4"
+                onClick={() => setSelectedPCIDevice(device)}
+                className="flex cursor-pointer items-start justify-between rounded-lg border border-border/30 bg-background/50 p-4 transition-colors hover:border-primary/50 hover:bg-background/80"
               >
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-2">
@@ -550,6 +561,95 @@ export default function Hardware() {
           </div>
         </Card>
       )}
+
+      {/* PCI Device Details Modal */}
+      <Dialog open={!!selectedPCIDevice} onOpenChange={() => setSelectedPCIDevice(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>PCI Device Details</DialogTitle>
+            <DialogDescription>Detailed information about the selected PCI device</DialogDescription>
+          </DialogHeader>
+
+          {selectedPCIDevice && (
+            <div className="space-y-4">
+              <div className="grid gap-3">
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Device Type</span>
+                  <Badge variant="outline">{selectedPCIDevice.type}</Badge>
+                </div>
+
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">PCI Slot</span>
+                  <span className="font-mono text-sm">{selectedPCIDevice.slot}</span>
+                </div>
+
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Device Name</span>
+                  <span className="text-sm text-right">{selectedPCIDevice.device}</span>
+                </div>
+
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Vendor</span>
+                  <span className="text-sm">{selectedPCIDevice.vendor}</span>
+                </div>
+
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Class</span>
+                  <span className="font-mono text-sm">{selectedPCIDevice.class}</span>
+                </div>
+
+                {selectedPCIDevice.driver && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Driver</span>
+                    <span className="font-mono text-sm">{selectedPCIDevice.driver}</span>
+                  </div>
+                )}
+
+                {selectedPCIDevice.kernel_module && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Kernel Module</span>
+                    <span className="font-mono text-sm">{selectedPCIDevice.kernel_module}</span>
+                  </div>
+                )}
+
+                {selectedPCIDevice.irq && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">IRQ</span>
+                    <span className="font-mono text-sm">{selectedPCIDevice.irq}</span>
+                  </div>
+                )}
+
+                {selectedPCIDevice.memory_address && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Memory Address</span>
+                    <span className="font-mono text-sm">{selectedPCIDevice.memory_address}</span>
+                  </div>
+                )}
+
+                {selectedPCIDevice.link_speed && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Link Speed</span>
+                    <span className="font-mono text-sm">{selectedPCIDevice.link_speed}</span>
+                  </div>
+                )}
+
+                {selectedPCIDevice.capabilities && selectedPCIDevice.capabilities.length > 0 && (
+                  <div className="space-y-2 border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Capabilities</span>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedPCIDevice.capabilities.map((cap, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-xs">
+                          {cap}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

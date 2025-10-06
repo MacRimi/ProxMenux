@@ -14,7 +14,7 @@ APPIMAGE_ROOT="$SCRIPT_DIR/.."
 VERSION=$(node -p "require('$APPIMAGE_ROOT/package.json').version")
 APPIMAGE_NAME="ProxMenux-${VERSION}.AppImage"
 
-echo "🚀 Building ProxMenux Monitor AppImage v${VERSION} with translation support..."
+echo "🚀 Building ProxMenux Monitor AppImage v${VERSION} with hardware monitoring tools..."
 
 # Clean and create work directory
 rm -rf "$WORK_DIR"
@@ -316,6 +316,46 @@ def parse_header(value: str) -> Tuple[str, Dict[str, str]]:
             params[item.strip().lower()] = ""
     return key, params
 PYEOF
+
+echo "🔧 Installing hardware monitoring tools..."
+mkdir -p "$WORK_DIR/debs"
+cd "$WORK_DIR/debs"
+
+# Download .deb packages
+echo "📥 Downloading ipmitool..."
+wget -q http://deb.debian.org/debian/pool/main/i/ipmitool/ipmitool_1.8.19-4_amd64.deb -O ipmitool.deb || true
+
+echo "📥 Downloading lm-sensors..."
+wget -q http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0-7.1_amd64.deb -O lm-sensors.deb || true
+
+echo "📥 Downloading nut-client..."
+wget -q http://deb.debian.org/debian/pool/main/n/nut/nut-client_2.8.0-7_amd64.deb -O nut-client.deb || true
+wget -q http://deb.debian.org/debian/pool/main/n/nut/libupsclient6_2.8.0-7_amd64.deb -O libupsclient6.deb || true
+
+# Extract binaries from .deb packages
+echo "📦 Extracting binaries..."
+for deb in *.deb; do
+    if [ -f "$deb" ]; then
+        dpkg-deb -x "$deb" "$WORK_DIR/extracted"
+    fi
+done
+
+# Copy binaries to AppDir
+if [ -d "$WORK_DIR/extracted/usr/bin" ]; then
+    echo "📋 Copying monitoring tools to AppDir..."
+    cp -r "$WORK_DIR/extracted/usr/bin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
+fi
+
+if [ -d "$WORK_DIR/extracted/usr/sbin" ]; then
+    cp -r "$WORK_DIR/extracted/usr/sbin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
+fi
+
+if [ -d "$WORK_DIR/extracted/usr/lib" ]; then
+    mkdir -p "$APP_DIR/usr/lib"
+    cp -r "$WORK_DIR/extracted/usr/lib"/* "$APP_DIR/usr/lib/" 2>/dev/null || true
+fi
+
+echo "✅ Hardware monitoring tools installed"
 
 # Build AppImage
 echo "🔨 Building unified AppImage v${VERSION}..."

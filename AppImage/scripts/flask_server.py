@@ -69,40 +69,39 @@ def get_vm_lxc_names():
 def serve_dashboard():
     """Serve the main dashboard page from Next.js build"""
     try:
-        # Detectar si estamos ejecutándose desde AppImage
         appimage_root = os.environ.get('APPDIR')
         if not appimage_root:
-            # Fallback: detectar desde la ubicación del script
-            # Si el script está en usr/bin/, necesitamos subir 2 niveles para llegar a la raíz
+            # Fallback: detect from script location
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            # Verificar si estamos en usr/bin/
             if base_dir.endswith('usr/bin'):
-                # Subir 2 niveles: usr/bin/ -> usr/ -> AppImage root
+                # We're in usr/bin/, go up 2 levels to AppImage root
                 appimage_root = os.path.dirname(os.path.dirname(base_dir))
             else:
-                # Fallback genérico: subir 1 nivel
+                # Fallback: assume we're in the root
                 appimage_root = os.path.dirname(base_dir)
         
         print(f"[v0] Detected AppImage root: {appimage_root}")
         
-        index_paths = [
-            os.path.join(appimage_root, 'web', 'index.html'),  # Ruta principal para AppImage
-            os.path.join(appimage_root, 'usr', 'web', 'index.html'),  # Fallback con usr/
-            os.path.join(appimage_root, 'web', 'out', 'index.html'),  # Fallback si está en subcarpeta
-            os.path.join(appimage_root, 'usr', 'web', 'out', 'index.html'),  # Fallback con usr/out/
-        ]
+        index_path = os.path.join(appimage_root, 'web', 'index.html')
+        abs_path = os.path.abspath(index_path)
         
-        print(f"[v0] Flask server looking for index.html in:")
-        for path in index_paths:
-            abs_path = os.path.abspath(path)
-            exists = os.path.exists(abs_path)
-            print(f"[v0]   {abs_path} - {'EXISTS' if exists else 'NOT FOUND'}")
-            if exists:
-                print(f"[v0] Found index.html, serving from: {abs_path}")
-                return send_file(abs_path)
+        print(f"[v0] Looking for index.html at: {abs_path}")
         
-        # If no Next.js build found, return error message with actual paths checked
-        actual_paths = [os.path.abspath(path) for path in index_paths]
+        if os.path.exists(abs_path):
+            print(f"[v0] ✅ Found index.html, serving from: {abs_path}")
+            return send_file(abs_path)
+        
+        # If not found, show detailed error
+        print(f"[v0] ❌ index.html NOT found at: {abs_path}")
+        print(f"[v0] Checking web directory contents:")
+        web_dir = os.path.join(appimage_root, 'web')
+        if os.path.exists(web_dir):
+            print(f"[v0] Contents of {web_dir}:")
+            for item in os.listdir(web_dir):
+                print(f"[v0]   - {item}")
+        else:
+            print(f"[v0] Web directory does not exist: {web_dir}")
+        
         return f'''
         <!DOCTYPE html>
         <html>
@@ -110,8 +109,8 @@ def serve_dashboard():
         <body style="font-family: Arial; padding: 2rem; background: #0a0a0a; color: #fff;">
             <h1>🚨 ProxMenux Monitor - Build Error</h1>
             <p>Next.js application not found. The AppImage may not have been built correctly.</p>
-            <p>Expected paths checked:</p>
-            <ul>{''.join([f'<li>{path}</li>' for path in actual_paths])}</ul>
+            <p>Expected path: {abs_path}</p>
+            <p>APPDIR: {appimage_root}</p>
             <p>API endpoints are still available:</p>
             <ul>
                 <li><a href="/api/system" style="color: #4f46e5;">/api/system</a></li>
@@ -203,17 +202,13 @@ def serve_next_static(filename):
             else:
                 appimage_root = os.path.dirname(base_dir)
         
-        static_paths = [
-            os.path.join(appimage_root, 'web', '_next'),  # Ruta principal
-            os.path.join(appimage_root, 'usr', 'web', '_next'),  # Fallback con usr/
-            os.path.join(appimage_root, 'web', 'out', '_next'),  # Fallback con out/
-            os.path.join(appimage_root, 'usr', 'web', 'out', '_next'),  # Fallback con usr/out/
-        ]
+        static_dir = os.path.join(appimage_root, 'web', '_next')
+        file_path = os.path.join(static_dir, filename)
         
-        for static_dir in static_paths:
-            file_path = os.path.join(static_dir, filename)
-            if os.path.exists(file_path):
-                return send_file(file_path)
+        if os.path.exists(file_path):
+            return send_file(file_path)
+        
+        print(f"[v0] ❌ Next.js static file not found: {file_path}")
         return '', 404
     except Exception as e:
         print(f"Error serving Next.js static file {filename}: {e}")
@@ -231,18 +226,12 @@ def serve_static_files(filename):
             else:
                 appimage_root = os.path.dirname(base_dir)
         
-        public_paths = [
-            os.path.join(appimage_root, 'web'),  # Raíz web para exportación estática
-            os.path.join(appimage_root, 'usr', 'web'),  # Fallback con usr/
-            os.path.join(appimage_root, 'web', 'out'),  # Fallback con out/
-            os.path.join(appimage_root, 'usr', 'web', 'out'),  # Fallback con usr/out/
-        ]
+        web_dir = os.path.join(appimage_root, 'web')
+        file_path = os.path.join(web_dir, filename)
         
-        for public_dir in public_paths:
-            file_path = os.path.join(public_dir, filename)
-            if os.path.exists(file_path):
-                return send_from_directory(public_dir, filename)
-            
+        if os.path.exists(file_path):
+            return send_from_directory(web_dir, filename)
+        
         return '', 404
     except Exception as e:
         print(f"Error serving static file {filename}: {e}")
@@ -260,26 +249,17 @@ def serve_images(filename):
             else:
                 appimage_root = os.path.dirname(base_dir)
         
-        image_paths = [
-            os.path.join(appimage_root, 'web', 'images'),  # Ruta principal para exportación estática
-            os.path.join(appimage_root, 'usr', 'web', 'images'),  # Fallback con usr/
-            os.path.join(appimage_root, 'web', 'public', 'images'),  # Ruta con public/
-            os.path.join(appimage_root, 'usr', 'web', 'public', 'images'),  # Fallback usr/public/
-            os.path.join(appimage_root, 'public', 'images'),  # Ruta directa a public
-            os.path.join(appimage_root, 'usr', 'public', 'images'),  # Fallback usr/public
-        ]
+        image_dir = os.path.join(appimage_root, 'web', 'images')
+        file_path = os.path.join(image_dir, filename)
+        abs_path = os.path.abspath(file_path)
         
-        print(f"[v0] Looking for image: {filename}")
-        for image_dir in image_paths:
-            file_path = os.path.join(image_dir, filename)
-            abs_path = os.path.abspath(file_path)
-            exists = os.path.exists(abs_path)
-            print(f"[v0]   Checking: {abs_path} - {'FOUND' if exists else 'NOT FOUND'}")
-            if exists:
-                print(f"[v0] Serving image from: {abs_path}")
-                return send_from_directory(image_dir, filename)
+        print(f"[v0] Looking for image: {filename} at {abs_path}")
         
-        print(f"[v0] Image not found: {filename}")
+        if os.path.exists(abs_path):
+            print(f"[v0] ✅ Serving image from: {abs_path}")
+            return send_from_directory(image_dir, filename)
+        
+        print(f"[v0] ❌ Image not found: {abs_path}")
         return '', 404
     except Exception as e:
         print(f"Error serving image {filename}: {e}")
