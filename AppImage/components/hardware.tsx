@@ -16,6 +16,7 @@ import {
   Cpu,
   MemoryStick,
   Cpu as Gpu,
+  Info,
 } from "lucide-react"
 import useSWR from "swr"
 import { useState } from "react"
@@ -36,6 +37,29 @@ const getDeviceTypeColor = (type: string): string => {
     return "bg-green-500/10 text-green-500 border-green-500/20"
   }
   return "bg-gray-500/10 text-gray-500 border-gray-500/20"
+}
+
+const hasRealtimeData = (gpu: GPU): boolean => {
+  return !!(
+    (gpu.temperature !== undefined && gpu.temperature > 0) ||
+    gpu.utilization_gpu !== undefined ||
+    gpu.memory_total ||
+    gpu.power_draw
+  )
+}
+
+const getMonitoringToolRecommendation = (vendor: string): string => {
+  const lowerVendor = vendor.toLowerCase()
+  if (lowerVendor.includes("intel")) {
+    return "To get extended GPU monitoring information, please install intel-gpu-tools or igt-gpu-tools package."
+  }
+  if (lowerVendor.includes("nvidia")) {
+    return "To get extended GPU monitoring information, please install nvidia-utils or nvidia-smi package."
+  }
+  if (lowerVendor.includes("amd") || lowerVendor.includes("ati")) {
+    return "To get extended GPU monitoring information, please install radeontop package."
+  }
+  return "To get extended GPU monitoring information, please install the appropriate GPU monitoring tools for your hardware."
 }
 
 export default function Hardware() {
@@ -442,49 +466,51 @@ export default function Hardware() {
               )}
 
               {/* Performance */}
-              <div className="space-y-2">
-                <h3 className="font-semibold text-sm">Performance</h3>
-                <div className="grid gap-2">
-                  {selectedGPU.temperature !== undefined && selectedGPU.temperature > 0 && (
-                    <div className="space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Temperature</span>
-                        <span className="text-sm font-semibold text-green-500">{selectedGPU.temperature}°C</span>
+              {hasRealtimeData(selectedGPU) && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm">Performance</h3>
+                  <div className="grid gap-2">
+                    {selectedGPU.temperature !== undefined && selectedGPU.temperature > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Temperature</span>
+                          <span className="text-sm font-semibold text-green-500">{selectedGPU.temperature}°C</span>
+                        </div>
+                        <Progress value={(selectedGPU.temperature / 100) * 100} className="h-2" />
                       </div>
-                      <Progress value={(selectedGPU.temperature / 100) * 100} className="h-2" />
-                    </div>
-                  )}
-                  {selectedGPU.utilization_gpu !== undefined && (
-                    <div className="space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">GPU Utilization</span>
-                        <span className="text-sm font-medium">{selectedGPU.utilization_gpu}%</span>
+                    )}
+                    {selectedGPU.utilization_gpu !== undefined && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">GPU Utilization</span>
+                          <span className="text-sm font-medium">{selectedGPU.utilization_gpu}%</span>
+                        </div>
+                        <Progress value={selectedGPU.utilization_gpu} className="h-2" />
                       </div>
-                      <Progress value={selectedGPU.utilization_gpu} className="h-2" />
-                    </div>
-                  )}
-                  {selectedGPU.power_draw && selectedGPU.power_draw !== "N/A" && (
-                    <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">Power Draw</span>
-                      <span className="text-sm font-medium">{selectedGPU.power_draw}</span>
-                    </div>
-                  )}
-                  {selectedGPU.power_limit && (
-                    <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">Power Limit</span>
-                      <span className="text-sm font-medium">{selectedGPU.power_limit}</span>
-                    </div>
-                  )}
-                  {selectedGPU.fan_speed && (
-                    <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">Fan Speed</span>
-                      <span className="text-sm font-medium">
-                        {selectedGPU.fan_speed} {selectedGPU.fan_unit}
-                      </span>
-                    </div>
-                  )}
+                    )}
+                    {selectedGPU.power_draw && selectedGPU.power_draw !== "N/A" && (
+                      <div className="flex justify-between border-b border-border/50 pb-2">
+                        <span className="text-sm text-muted-foreground">Power Draw</span>
+                        <span className="text-sm font-medium">{selectedGPU.power_draw}</span>
+                      </div>
+                    )}
+                    {selectedGPU.power_limit && (
+                      <div className="flex justify-between border-b border-border/50 pb-2">
+                        <span className="text-sm text-muted-foreground">Power Limit</span>
+                        <span className="text-sm font-medium">{selectedGPU.power_limit}</span>
+                      </div>
+                    )}
+                    {selectedGPU.fan_speed && (
+                      <div className="flex justify-between border-b border-border/50 pb-2">
+                        <span className="text-sm text-muted-foreground">Fan Speed</span>
+                        <span className="text-sm font-medium">
+                          {selectedGPU.fan_speed} {selectedGPU.fan_unit}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Clock Speeds */}
               {(selectedGPU.clock_graphics || selectedGPU.clock_memory) && (
@@ -521,6 +547,20 @@ export default function Hardware() {
                         <p className="mt-1 text-sm">{proc.name}</p>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {!hasRealtimeData(selectedGPU) && (
+                <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4">
+                  <div className="flex gap-3">
+                    <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-blue-500">Extended Monitoring Not Available</p>
+                      <p className="text-xs text-muted-foreground">
+                        {getMonitoringToolRecommendation(selectedGPU.vendor)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
