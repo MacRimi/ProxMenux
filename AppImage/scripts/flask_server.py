@@ -1718,7 +1718,6 @@ def get_detailed_gpu_info(gpu):
             print(f"[v0] Error getting Intel GPU details: {e}")
             import traceback
             traceback.print_exc()
-    # </CHANGE>
     
     # AMD GPU - use radeontop
     elif vendor == 'AMD':
@@ -2601,4 +2600,3 @@ if __name__ == '__main__':
     print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
-8, debug=False)
