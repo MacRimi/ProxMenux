@@ -326,15 +326,13 @@ export default function Hardware() {
             {hardwareData.gpus.map((gpu, index) => {
               const pciDevice = findPCIDeviceForGPU(gpu)
               const fullSlot = pciDevice?.slot || gpu.slot
-              const isClickable = hasRealtimeData(gpu)
+              const isClickable = true
 
               return (
                 <div
                   key={index}
-                  onClick={() => isClickable && setSelectedGPU(gpu)}
-                  className={`rounded-lg border border-border/30 bg-background/50 p-4 transition-colors ${
-                    isClickable ? "cursor-pointer hover:bg-background/80" : "cursor-default"
-                  }`}
+                  onClick={() => setSelectedGPU(gpu)}
+                  className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-4 transition-colors hover:bg-background/80"
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <span className="font-medium text-sm">{gpu.name}</span>
@@ -621,6 +619,101 @@ export default function Hardware() {
                               <p className="mt-1 text-sm">{proc.name}</p>
                             </div>
                           ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )
+            })()}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={selectedGPU !== null && !hasRealtimeData(selectedGPU)} onOpenChange={() => setSelectedGPU(null)}>
+        <DialogContent className="max-w-2xl">
+          {selectedGPU &&
+            !hasRealtimeData(selectedGPU) &&
+            (() => {
+              const pciDevice = findPCIDeviceForGPU(selectedGPU)
+
+              return (
+                <>
+                  <DialogHeader>
+                    <DialogTitle>{selectedGPU.name}</DialogTitle>
+                    <DialogDescription>PCI Device Information</DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm font-medium text-muted-foreground">Device Type</span>
+                      <Badge className={getDeviceTypeColor("graphics")}>Graphics Card</Badge>
+                    </div>
+
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm font-medium text-muted-foreground">PCI Slot</span>
+                      <span className="font-mono text-sm">{pciDevice?.slot || selectedGPU.slot}</span>
+                    </div>
+
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm font-medium text-muted-foreground">Device Name</span>
+                      <span className="text-sm text-right">{selectedGPU.name}</span>
+                    </div>
+
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm font-medium text-muted-foreground">Vendor</span>
+                      <span className="text-sm">{selectedGPU.vendor}</span>
+                    </div>
+
+                    {(pciDevice?.class || selectedGPU.pci_class) && (
+                      <div className="flex justify-between border-b border-border/50 pb-2">
+                        <span className="text-sm font-medium text-muted-foreground">Class</span>
+                        <span className="font-mono text-sm">{pciDevice?.class || selectedGPU.pci_class}</span>
+                      </div>
+                    )}
+
+                    {(pciDevice?.driver || selectedGPU.pci_driver) && (
+                      <div className="flex justify-between border-b border-border/50 pb-2">
+                        <span className="text-sm font-medium text-muted-foreground">Driver</span>
+                        <span className="font-mono text-sm text-green-500">
+                          {pciDevice?.driver || selectedGPU.pci_driver}
+                        </span>
+                      </div>
+                    )}
+
+                    {(pciDevice?.kernel_module || selectedGPU.pci_kernel_module) && (
+                      <div className="flex justify-between border-b border-border/50 pb-2">
+                        <span className="text-sm font-medium text-muted-foreground">Kernel Module</span>
+                        <span className="font-mono text-sm">
+                          {pciDevice?.kernel_module || selectedGPU.pci_kernel_module}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm font-medium text-muted-foreground">Type</span>
+                      <span className="text-sm">{selectedGPU.type}</span>
+                    </div>
+
+                    {selectedGPU.has_monitoring_tool === false && (
+                      <div className="mt-4 rounded-lg bg-blue-500/10 p-4 border border-blue-500/20">
+                        <div className="flex gap-3">
+                          <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path
+                                fillRule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold text-blue-500 mb-1">
+                              Extended Monitoring Not Available
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {getMonitoringToolRecommendation(selectedGPU.vendor)}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     )}
