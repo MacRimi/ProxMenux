@@ -375,67 +375,82 @@ export default function Hardware() {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedGPU?.name}</DialogTitle>
-            <DialogDescription>Detailed GPU Information</DialogDescription>
+            <DialogDescription>PCI Device Information</DialogDescription>
           </DialogHeader>
 
           {selectedGPU && (
             <div className="space-y-4">
-              {/* Basic Info */}
-              <div className="space-y-2">
-                <h3 className="font-semibold text-sm">Basic Information</h3>
-                <div className="grid gap-2">
-                  <div className="flex justify-between border-b border-border/50 pb-2">
-                    <span className="text-sm text-muted-foreground">Vendor</span>
-                    <Badge className={getDeviceTypeColor("graphics")}>{selectedGPU.vendor}</Badge>
-                  </div>
-                  <div className="flex justify-between border-b border-border/50 pb-2">
-                    <span className="text-sm text-muted-foreground">Type</span>
-                    <span className="text-sm font-medium">{selectedGPU.type}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-border/50 pb-2">
-                    <span className="text-sm text-muted-foreground">PCI Slot</span>
-                    <span className="font-mono text-sm">{selectedGPU.slot}</span>
-                  </div>
-                  {selectedGPU.pci_class && (
-                    <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">Class</span>
-                      <span className="font-mono text-sm">{selectedGPU.pci_class}</span>
-                    </div>
-                  )}
-                  {selectedGPU.pci_driver && (
-                    <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">Driver</span>
-                      <span className="font-mono text-sm text-green-500">{selectedGPU.pci_driver}</span>
-                    </div>
-                  )}
-                  {selectedGPU.pci_kernel_module && (
-                    <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">Kernel Module</span>
-                      <span className="font-mono text-sm">{selectedGPU.pci_kernel_module}</span>
-                    </div>
-                  )}
-                  {selectedGPU.driver_version && (
-                    <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">Driver Version</span>
-                      <span className="font-mono text-sm">{selectedGPU.driver_version}</span>
-                    </div>
-                  )}
-                  {selectedGPU.pcie_gen && (
-                    <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">PCIe Generation</span>
-                      <span className="text-sm font-medium">Gen {selectedGPU.pcie_gen}</span>
-                    </div>
-                  )}
-                  {selectedGPU.pcie_width && (
-                    <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm text-muted-foreground">PCIe Width</span>
-                      <span className="text-sm font-medium">{selectedGPU.pcie_width}</span>
-                    </div>
-                  )}
+              {/* Basic PCI Device Information - Same format as PCI Device modal */}
+              <div className="space-y-3">
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Device Type</span>
+                  <Badge className={getDeviceTypeColor("graphics")}>Graphics Card</Badge>
                 </div>
+
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">PCI Slot</span>
+                  <span className="font-mono text-sm">{selectedGPU.slot}</span>
+                </div>
+
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Device Name</span>
+                  <span className="text-sm text-right">{selectedGPU.name}</span>
+                </div>
+
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Vendor</span>
+                  <span className="text-sm">{selectedGPU.vendor}</span>
+                </div>
+
+                {selectedGPU.pci_class && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Class</span>
+                    <span className="font-mono text-sm">{selectedGPU.pci_class}</span>
+                  </div>
+                )}
+
+                {selectedGPU.pci_driver && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Driver</span>
+                    <span className="font-mono text-sm text-green-500">{selectedGPU.pci_driver}</span>
+                  </div>
+                )}
+
+                {selectedGPU.pci_kernel_module && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Kernel Module</span>
+                    <span className="font-mono text-sm">{selectedGPU.pci_kernel_module}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Type</span>
+                  <span className="text-sm font-medium">{selectedGPU.type}</span>
+                </div>
+
+                {selectedGPU.driver_version && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Driver Version</span>
+                    <span className="font-mono text-sm">{selectedGPU.driver_version}</span>
+                  </div>
+                )}
+
+                {selectedGPU.pcie_gen && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">PCIe Generation</span>
+                    <span className="text-sm font-medium">Gen {selectedGPU.pcie_gen}</span>
+                  </div>
+                )}
+
+                {selectedGPU.pcie_width && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">PCIe Width</span>
+                    <span className="text-sm font-medium">{selectedGPU.pcie_width}</span>
+                  </div>
+                )}
               </div>
 
-              {/* Memory Info */}
+              {/* Memory Info - Only show if available */}
               {selectedGPU.memory_total && (
                 <div className="space-y-2">
                   <h3 className="font-semibold text-sm">Memory</h3>
@@ -465,7 +480,7 @@ export default function Hardware() {
                 </div>
               )}
 
-              {/* Performance */}
+              {/* Performance - Only show if realtime data available */}
               {hasRealtimeData(selectedGPU) && (
                 <div className="space-y-2">
                   <h3 className="font-semibold text-sm">Performance</h3>
@@ -512,7 +527,7 @@ export default function Hardware() {
                 </div>
               )}
 
-              {/* Clock Speeds */}
+              {/* Clock Speeds - Only show if available */}
               {(selectedGPU.clock_graphics || selectedGPU.clock_memory) && (
                 <div className="space-y-2">
                   <h3 className="font-semibold text-sm">Clock Speeds</h3>
@@ -533,7 +548,7 @@ export default function Hardware() {
                 </div>
               )}
 
-              {/* Running Processes */}
+              {/* Running Processes - Only show if available */}
               {selectedGPU.processes && selectedGPU.processes.length > 0 && (
                 <div className="space-y-2">
                   <h3 className="font-semibold text-sm">Running Processes</h3>
