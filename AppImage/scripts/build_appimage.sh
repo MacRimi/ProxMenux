@@ -321,100 +321,107 @@ echo "🔧 Installing hardware monitoring tools..."
 mkdir -p "$WORK_DIR/debs"
 cd "$WORK_DIR/debs"
 
-# Download .deb packages with better error handling
-echo "📥 Downloading hardware monitoring tools..."
+echo "📥 Downloading hardware monitoring tools (dynamic via APT)..."
 
-# Function to download and verify .deb package
-download_deb() {
-    local url=$1
-    local output=$2
-    local name=$3
-    
-    echo "  Downloading $name..."
-    if wget -q --timeout=30 "$url" -O "$output"; then
-        # Verify it's a valid .deb file
-        if file "$output" | grep -q "Debian binary package"; then
-            echo "  ✅ $name downloaded successfully"
-            return 0
-        else
-            echo "  ⚠️  $name: Invalid .deb file, skipping"
-            rm -f "$output"
-            return 1
-        fi
-    else
-        echo "  ⚠️  $name: Download failed, skipping"
-        rm -f "$output"
-        return 1
+
+dl_pkg() {
+  local out="$1"; shift
+  local pkg
+  apt-get update -qq || true
+  for pkg in "$@"; do
+    echo "  - trying: $pkg"
+    if apt-get download -y "$pkg" >/dev/null 2>&1; then
+      deb_file="$(ls -1 ${pkg}_*.deb 2>/dev/null | head -n1)"
+      if [ -n "$deb_file" ] && [ -f "$deb_file" ]; then
+        mv "$deb_file" "$out"
+        echo "    ✅ downloaded: $pkg -> $out"
+        return 0
+      fi
     fi
+  done
+  echo "    ⚠️  none of the candidates could be downloaded for $out"
+  return 1
 }
 
-# Try to download packages (non-fatal if they fail)
-download_deb "http://deb.debian.org/debian/pool/main/i/ipmitool/ipmitool_1.8.19-4+deb12u2_amd64.deb" "ipmitool.deb" "ipmitool" || true
-download_deb "http://deb.debian.org/debian/pool/main/f/freeipmi/libfreeipmi17_1.6.10-3_amd64.deb" "libfreeipmi17.deb" "libfreeipmi17" || true
-download_deb "http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0-7.1_amd64.deb" "lm-sensors.deb" "lm-sensors" || true
-download_deb "http://deb.debian.org/debian/pool/main/n/nut/nut-client_2.8.0-7_amd64.deb" "nut-client.deb" "nut-client" || true
-download_deb "http://deb.debian.org/debian/pool/main/n/nut/libupsclient6_2.8.0-7_amd64.deb" "libupsclient6.deb" "libupsclient6" || true
+mkdir -p "$WORK_DIR/debs"
+cd "$WORK_DIR/debs"
 
-# Extract binaries from .deb packages
-echo "📦 Extracting binaries from downloaded packages..."
+# --- Core monitoring (sin versiones fijas) ---
+dl_pkg "ipmitool.deb"        "ipmitool"                         || true
+dl_pkg "libfreeipmi17.deb"   "libfreeipmi17"                    || true
+dl_pkg "lm-sensors.deb"      "lm-sensors"                       || true
+dl_pkg "nut-client.deb"      "nut-client"                       || true
+dl_pkg "libupsclient6.deb"   "libupsclient6"                    || true
+
+# --- GPU monitoring tools ---
+
+dl_pkg "nvidia-smi.deb"      "nvidia-smi" "nvidia-utils" "nvidia-utils-535" "nvidia-utils-550" || true
+# Intel iGPU
+dl_pkg "intel-gpu-tools.deb" "intel-gpu-tools"                  || true
+# AMD
+dl_pkg "radeontop.deb"       "radeontop"                        || true
+
+echo "📦 Extracting .deb packages into AppDir..."
 extracted_count=0
+shopt -s nullglob
 for deb in *.deb; do
-    if [ -f "$deb" ] && file "$deb" | grep -q "Debian binary package"; then
-        echo "  Extracting $deb directly into AppDir..."
-        dpkg-deb -x "$deb" "$APP_DIR" && extracted_count=$((extracted_count + 1))
-    fi
+  echo "  -> $deb"
+  if file "$deb" | grep -q "Debian binary package"; then
+    dpkg-deb -x "$deb" "$APP_DIR" && extracted_count=$((extracted_count + 1))
+  else
+    echo "    ⚠️  $deb is not a valid .deb, skipping"
+  fi
 done
+shopt -u nullglob
 
 if [ $extracted_count -eq 0 ]; then
-    echo "⚠️  No hardware monitoring tools were downloaded successfully"
-    echo "   The AppImage will work but without IPMI/sensors support"
+  echo "⚠️  No packages extracted; hardware/GPU monitoring may be unavailable"
 else
-    echo "✅ Extracted $extracted_count package(s)"
-    
-    # Organizing monitoring tools
-    echo "📋 Organizing monitoring tools..."
-    
-    if [ -d "$APP_DIR/bin" ]; then
-        echo "  Moving binaries from /bin to usr/bin..."
-        cp -r "$APP_DIR/bin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
-        rm -rf "$APP_DIR/bin"
-    fi
-    
-    if [ -d "$APP_DIR/lib" ]; then
-        echo "  Moving libraries from /lib to usr/lib..."
-        mkdir -p "$APP_DIR/usr/lib"
-        cp -r "$APP_DIR/lib"/* "$APP_DIR/usr/lib/" 2>/dev/null || true
-        rm -rf "$APP_DIR/lib"
-    fi
-    
-    if [ -f "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so.17" ]; then
-        echo "  ✅ libfreeipmi.so.17 found at usr/lib/x86_64-linux-gnu/"
-        
-        echo "  Creating library symlinks..."
-        ln -sf "x86_64-linux-gnu/libfreeipmi.so.17" "$APP_DIR/usr/lib/libfreeipmi.so.17" 2>/dev/null || true
-        ln -sf "libfreeipmi.so.17" "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so" 2>/dev/null || true
-        
-        mkdir -p "$APP_DIR/lib/x86_64-linux-gnu"
-        ln -sf "../../usr/lib/x86_64-linux-gnu/libfreeipmi.so.17" "$APP_DIR/lib/x86_64-linux-gnu/libfreeipmi.so.17" 2>/dev/null || true
-    else
-        echo "  ⚠️  libfreeipmi.so.17 NOT found - ipmitool will not work"
-        echo "     Searched in: $APP_DIR/usr/lib/x86_64-linux-gnu/"
-        echo "     Available libraries:"
-        find "$APP_DIR/usr/lib" -name "libfreeipmi*" 2>/dev/null || echo "     None found"
-    fi
-    
-    if [ -f "$APP_DIR/usr/lib/x86_64-linux-gnu/libupsclient.so.6" ]; then
-        echo "  Creating libupsclient symlinks..."
-        ln -sf "x86_64-linux-gnu/libupsclient.so.6" "$APP_DIR/usr/lib/libupsclient.so.6" 2>/dev/null || true
-        ln -sf "libupsclient.so.6" "$APP_DIR/usr/lib/x86_64-linux-gnu/libupsclient.so" 2>/dev/null || true
-    fi
-    
-    echo "✅ Hardware monitoring tools installed successfully"
-    echo "📋 Installed tools:"
-    [ -f "$APP_DIR/usr/bin/ipmitool" ] && echo "  ✅ ipmitool" || echo "  ⚠️  ipmitool not found"
-    [ -f "$APP_DIR/usr/bin/sensors" ] && echo "  ✅ sensors (lm-sensors)" || echo "  ⚠️  sensors not found"
-    [ -f "$APP_DIR/usr/bin/upsc" ] && echo "  ✅ upsc (nut-client)" || echo "  ⚠️  upsc not found"
+  echo "✅ Extracted $extracted_count package(s)"
 fi
+
+
+if [ -d "$APP_DIR/bin" ]; then
+  echo "📋 Normalizing /bin -> /usr/bin"
+  mkdir -p "$APP_DIR/usr/bin"
+  cp -r "$APP_DIR/bin/"* "$APP_DIR/usr/bin/" 2>/dev/null || true
+  rm -rf "$APP_DIR/bin"
+fi
+
+
+echo "🔍 Sanity check (ldd + presence of libfreeipmi)"
+export LD_LIBRARY_PATH="$APP_DIR/lib:$APP_DIR/lib/x86_64-linux-gnu:$APP_DIR/usr/lib:$APP_DIR/usr/lib/x86_64-linux-gnu"
+
+
+if ! find "$APP_DIR/usr/lib" "$APP_DIR/lib" -maxdepth 3 -name 'libfreeipmi.so.17*' | grep -q .; then
+  echo "❌ libfreeipmi.so.17 not found inside AppDir (ipmitool will fail)"
+  exit 1
+fi
+
+
+if [ -x "$APP_DIR/usr/bin/ipmitool" ] && ldd "$APP_DIR/usr/bin/ipmitool" | grep -q 'not found'; then
+  echo "❌ ipmitool has unresolved libs:"
+  ldd "$APP_DIR/usr/bin/ipmitool" | grep 'not found' || true
+  exit 1
+fi
+
+
+if [ -x "$APP_DIR/usr/bin/upsc" ] && ldd "$APP_DIR/usr/bin/upsc" | grep -q 'not found'; then
+  echo "❌ upsc has unresolved libs:"
+  ldd "$APP_DIR/usr/bin/upsc" | grep 'not found' || true
+  exit 1
+fi
+
+echo "✅ Sanity check OK (ipmitool/upsc ready; libfreeipmi present)"
+
+# Info rápida
+[ -x "$APP_DIR/usr/bin/sensors" ]        && echo "  • sensors: OK"            || echo "  • sensors: missing"
+[ -x "$APP_DIR/usr/bin/ipmitool" ]       && echo "  • ipmitool: OK"           || echo "  • ipmitool: missing"
+[ -x "$APP_DIR/usr/bin/upsc" ]           && echo "  • upsc: OK"               || echo "  • upsc: missing"
+[ -x "$APP_DIR/usr/bin/nvidia-smi" ]     && echo "  • nvidia-smi: OK"         || echo "  • nvidia-smi: missing"
+[ -x "$APP_DIR/usr/bin/intel_gpu_top" ]  && echo "  • intel-gpu-tools: OK"    || echo "  • intel-gpu-tools: missing"
+[ -x "$APP_DIR/usr/bin/radeontop" ]      && echo "  • radeontop: OK"          || echo "  • radeontop: missing"
+
 
 # Build AppImage
 echo "🔨 Building unified AppImage v${VERSION}..."
