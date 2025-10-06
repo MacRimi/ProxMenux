@@ -1598,8 +1598,8 @@ def get_detailed_gpu_info(gpu):
         try:
             # Try JSON output first (newer versions of intel_gpu_top)
             result = subprocess.run(
-                ['intel_gpu_top', '-J', '-s', '100'],
-                capture_output=True, text=True, timeout=2
+                ['intel_gpu_top', '-J', '-s', '50'],
+                capture_output=True, text=True, timeout=5
             )
             if result.returncode == 0 and result.stdout.strip():
                 try:
@@ -1614,14 +1614,15 @@ def get_detailed_gpu_info(gpu):
                         detailed_info['engine_blitter'] = engines.get('Blitter', {}).get('busy', 0)
                         detailed_info['engine_video'] = engines.get('Video', {}).get('busy', 0)
                         detailed_info['engine_video_enhance'] = engines.get('VideoEnhance', {}).get('busy', 0)
-                except json.JSONDecodeError:
-                    pass
+                    print(f"[v0] Intel GPU JSON parsed data: {detailed_info}")
+                except json.JSONDecodeError as je:
+                    print(f"[v0] JSON decode error for intel_gpu_top: {je}")
             
             # Fallback to text parsing
             if not detailed_info or len(detailed_info) == 1:  # Only has_monitoring_tool flag
                 result = subprocess.run(
-                    ['intel_gpu_top', '-s', '100'],
-                    capture_output=True, text=True, timeout=2
+                    ['intel_gpu_top', '-s', '50'],
+                    capture_output=True, text=True, timeout=5
                 )
                 if result.returncode == 0:
                     output = result.stdout
@@ -1650,8 +1651,10 @@ def get_detailed_gpu_info(gpu):
                         if match:
                             detailed_info[key] = float(match.group(1))
                     
-                    print(f"[v0] Intel GPU parsed data: {detailed_info}")
+                    print(f"[v0] Intel GPU text parsed data: {detailed_info}")
                     
+        except subprocess.TimeoutExpired:
+            print(f"[v0] intel_gpu_top timed out after 5 seconds")
         except Exception as e:
             print(f"[v0] Error getting Intel GPU details: {e}")
     
