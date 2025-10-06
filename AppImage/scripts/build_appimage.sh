@@ -349,7 +349,8 @@ download_deb() {
 }
 
 # Try to download packages (non-fatal if they fail)
-download_deb "http://deb.debian.org/debian/pool/main/i/ipmitool/ipmitool_1.8.19-4_amd64.deb" "ipmitool.deb" "ipmitool" || true
+download_deb "http://deb.debian.org/debian/pool/main/i/ipmitool/ipmitool_1.8.19-4+deb12u2_amd64.deb" "ipmitool.deb" "ipmitool" || true
+download_deb "http://deb.debian.org/debian/pool/main/f/freeipmi/libfreeipmi17_1.6.10-3_amd64.deb" "libfreeipmi17.deb" "libfreeipmi17" || true
 download_deb "http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0-7.1_amd64.deb" "lm-sensors.deb" "lm-sensors" || true
 download_deb "http://deb.debian.org/debian/pool/main/n/nut/nut-client_2.8.0-7_amd64.deb" "nut-client.deb" "nut-client" || true
 download_deb "http://deb.debian.org/debian/pool/main/n/nut/libupsclient6_2.8.0-7_amd64.deb" "libupsclient6.deb" "libupsclient6" || true
@@ -371,21 +372,50 @@ else
     echo "✅ Extracted $extracted_count package(s)"
     
     # Copy binaries to AppDir
+    echo "📋 Copying monitoring tools to AppDir..."
+    
+    # Copy from usr/bin
     if [ -d "$WORK_DIR/extracted/usr/bin" ]; then
-        echo "📋 Copying monitoring tools to AppDir..."
         cp -r "$WORK_DIR/extracted/usr/bin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
     fi
-
+    
+    # Copy from usr/sbin
     if [ -d "$WORK_DIR/extracted/usr/sbin" ]; then
         cp -r "$WORK_DIR/extracted/usr/sbin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
     fi
-
+    
+    if [ -d "$WORK_DIR/extracted/bin" ]; then
+        echo "  Moving binaries from /bin to usr/bin..."
+        cp -r "$WORK_DIR/extracted/bin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
+    fi
+    
     if [ -d "$WORK_DIR/extracted/usr/lib" ]; then
         mkdir -p "$APP_DIR/usr/lib"
         cp -r "$WORK_DIR/extracted/usr/lib"/* "$APP_DIR/usr/lib/" 2>/dev/null || true
     fi
     
+    if [ -d "$WORK_DIR/extracted/lib" ]; then
+        mkdir -p "$APP_DIR/usr/lib"
+        cp -r "$WORK_DIR/extracted/lib"/* "$APP_DIR/usr/lib/" 2>/dev/null || true
+    fi
+    
+    if [ -d "$APP_DIR/usr/lib/x86_64-linux-gnu" ]; then
+        echo "  Creating library symlinks..."
+        # Link libupsclient
+        if [ -f "$APP_DIR/usr/lib/x86_64-linux-gnu/libupsclient.so.6" ]; then
+            ln -sf "$APP_DIR/usr/lib/x86_64-linux-gnu/libupsclient.so.6" "$APP_DIR/usr/lib/libupsclient.so.6" 2>/dev/null || true
+        fi
+        # Link libfreeipmi
+        if [ -f "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so.17" ]; then
+            ln -sf "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so.17" "$APP_DIR/usr/lib/libfreeipmi.so.17" 2>/dev/null || true
+        fi
+    fi
+    
     echo "✅ Hardware monitoring tools installed successfully"
+    echo "📋 Installed tools:"
+    [ -f "$APP_DIR/usr/bin/ipmitool" ] && echo "  ✅ ipmitool" || echo "  ⚠️  ipmitool not found"
+    [ -f "$APP_DIR/usr/bin/sensors" ] && echo "  ✅ sensors (lm-sensors)" || echo "  ⚠️  sensors not found"
+    [ -f "$APP_DIR/usr/bin/upsc" ] && echo "  ✅ upsc (nut-client)" || echo "  ⚠️  upsc not found"
 fi
 
 # Build AppImage

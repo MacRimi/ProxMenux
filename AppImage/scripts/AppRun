@@ -7,26 +7,11 @@
 APPDIR="$(dirname "$(readlink -f "${0}")")"
 
 export PATH="${APPDIR}/usr/bin:${PATH}"
-export LD_LIBRARY_PATH="${APPDIR}/usr/lib:${LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="${APPDIR}/usr/lib/x86_64-linux-gnu:${APPDIR}/usr/lib:${LD_LIBRARY_PATH}"
 export PYTHONPATH="${APPDIR}/usr/lib/python3/dist-packages:${APPDIR}/usr/lib/python3/site-packages:${PYTHONPATH}"
 
 # Change to the AppImage directory
 cd "${APPDIR}"
-
-# Debug: Print directory structure for troubleshooting
-echo "[v0] AppImage mounted at: ${APPDIR}"
-echo "[v0] Contents of AppImage root:"
-ls -la "${APPDIR}/" || echo "[v0] Cannot list AppImage root"
-
-echo "[v0] Contents of web directory:"
-ls -la "${APPDIR}/web/" || echo "[v0] Web directory not found"
-
-echo "[v0] Looking for index.html:"
-find "${APPDIR}" -name "index.html" -type f || echo "[v0] No index.html found"
-
-echo "[v0] Python path: ${PYTHONPATH}"
-echo "[v0] Checking Flask installation:"
-python3 -c "import flask; print('Flask version:', flask.__version__)" 2>/dev/null || echo "[v0] Flask not found"
 
 # Check for translation argument
 if [[ "$1" == "--translate" ]]; then
@@ -37,6 +22,13 @@ else
     echo "📊 Dashboard will be available at: http://localhost:8008"
     echo "🔌 API endpoints at: http://localhost:8008/api/"
     echo ""
+    
+    echo "🔧 Hardware monitoring tools:"
+    [ -x "${APPDIR}/usr/bin/ipmitool" ] && echo "  ✅ ipmitool available" || echo "  ⚠️  ipmitool not available"
+    [ -x "${APPDIR}/usr/bin/sensors" ] && echo "  ✅ sensors available" || echo "  ⚠️  sensors not available"
+    [ -x "${APPDIR}/usr/bin/upsc" ] && echo "  ✅ upsc available" || echo "  ⚠️  upsc not available"
+    echo ""
+    
     echo "Press Ctrl+C to stop the server"
     echo ""
     
