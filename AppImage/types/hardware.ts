@@ -172,4 +172,12 @@ export interface HardwareData {
   memory_modules?: any[]
 }
 
-export const fetcher = (url: string) => fetch(url).then((res) => res.json())
+export const fetcher = (url: string) => {
+  const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+  const fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`
+  console.log("[v0] Hardware fetcher - Full URL:", fullUrl)
+  return fetch(fullUrl).then((res) => {
+    console.log("[v0] Hardware fetcher - Response status:", res.status)
+    return res.json()
+  })
+}
