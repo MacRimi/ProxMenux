@@ -1581,6 +1581,21 @@ def get_detailed_gpu_info(gpu):
     
     if vendor == 'INTEL':
         try:
+            check_result = subprocess.run(['which', 'intel_gpu_top'], capture_output=True, timeout=1)
+            if check_result.returncode != 0:
+                # Tool not found
+                detailed_info['has_monitoring_tool'] = False
+                print(f"[v0] intel_gpu_top not found for Intel GPU")
+                return detailed_info
+            else:
+                detailed_info['has_monitoring_tool'] = True
+                print(f"[v0] intel_gpu_top found for Intel GPU")
+        except Exception as e:
+            print(f"[v0] Error checking for intel_gpu_top: {e}")
+            detailed_info['has_monitoring_tool'] = False
+            return detailed_info
+        
+        try:
             # Try JSON output first (newer versions of intel_gpu_top)
             result = subprocess.run(
                 ['intel_gpu_top', '-J', '-s', '100'],
@@ -1603,7 +1618,7 @@ def get_detailed_gpu_info(gpu):
                     pass
             
             # Fallback to text parsing
-            if not detailed_info:
+            if not detailed_info or len(detailed_info) == 1:  # Only has_monitoring_tool flag
                 result = subprocess.run(
                     ['intel_gpu_top', '-s', '100'],
                     capture_output=True, text=True, timeout=2
@@ -1642,6 +1657,20 @@ def get_detailed_gpu_info(gpu):
     
     elif vendor == 'AMD' or 'ATI' in vendor:
         try:
+            check_result = subprocess.run(['which', 'radeontop'], capture_output=True, timeout=1)
+            if check_result.returncode != 0:
+                detailed_info['has_monitoring_tool'] = False
+                print(f"[v0] radeontop not found for AMD GPU")
+                return detailed_info
+            else:
+                detailed_info['has_monitoring_tool'] = True
+                print(f"[v0] radeontop found for AMD GPU")
+        except Exception as e:
+            print(f"[v0] Error checking for radeontop: {e}")
+            detailed_info['has_monitoring_tool'] = False
+            return detailed_info
+        
+        try:
             result = subprocess.run(
                 ['radeontop', '-d', '-', '-l', '1'],
                 capture_output=True, text=True, timeout=2
@@ -1674,6 +1703,20 @@ def get_detailed_gpu_info(gpu):
     
     # NVIDIA GPU - use nvidia-smi
     elif vendor == 'NVIDIA':
+        try:
+            check_result = subprocess.run(['which', 'nvidia-smi'], capture_output=True, timeout=1)
+            if check_result.returncode != 0:
+                detailed_info['has_monitoring_tool'] = False
+                print(f"[v0] nvidia-smi not found for NVIDIA GPU")
+                return detailed_info
+            else:
+                detailed_info['has_monitoring_tool'] = True
+                print(f"[v0] nvidia-smi found for NVIDIA GPU")
+        except Exception as e:
+            print(f"[v0] Error checking for nvidia-smi: {e}")
+            detailed_info['has_monitoring_tool'] = False
+            return detailed_info
+        
         try:
             result = subprocess.run(
                 ['nvidia-smi', '--query-gpu=index,name,driver_version,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,utilization.gpu,utilization.memory,clocks.gr,clocks.mem,pcie.link.gen.current,pcie.link.width.current', 
@@ -1872,7 +1915,7 @@ def get_gpu_info():
                     current_adapter = line.replace('Adapter:', '').strip()
                     continue
                 
-                # Look for GPU-related sensors (nouveau, amdgpu, radeon, i915, etc.)
+                # Look for GPU-related sensors (nouveau, amdgpu, radeon, i915)
                 if ':' in line and not line.startswith(' '):
                     parts = line.split(':', 1)
                     sensor_name = parts[0].strip()
@@ -1891,8 +1934,8 @@ def get_gpu_info():
                                 ('i915' in current_adapter.lower() and gpu['vendor'] == 'Intel')):
                                 
                                 # Parse temperature (only if not already set by nvidia-smi)
-                                if '°C' in value_part or 'C' in value_part:
-                                    if 'temperature' not in gpu or gpu['temperature'] is None:
+                                if 'temperature' not in gpu or gpu['temperature'] is None:
+                                    if '°C' in value_part or 'C' in value_part:
                                         temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
                                         if temp_match:
                                             gpu['temperature'] = float(temp_match.group(1))
@@ -1949,7 +1992,7 @@ def get_disk_hardware_info(disk_name):
                             disk_info['serial'] = serial
         except Exception as e:
             print(f"[v0] Error getting disk driver info: {e}")
-        
+            
         # Get SMART data
         try:
             result = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 

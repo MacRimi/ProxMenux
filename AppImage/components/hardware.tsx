@@ -96,8 +96,17 @@ export default function Hardware() {
       combinedData.utilization_gpu !== undefined ||
       combinedData.memory_total ||
       combinedData.power_draw ||
+      // Intel GPU specific fields
       combinedData.engine_render !== undefined ||
-      combinedData.clock_graphics
+      combinedData.engine_blitter !== undefined ||
+      combinedData.engine_video !== undefined ||
+      combinedData.engine_video_enhance !== undefined ||
+      combinedData.clock_graphics ||
+      combinedData.clock_memory ||
+      // AMD GPU specific fields
+      combinedData.utilization_memory !== undefined ||
+      // NVIDIA GPU specific fields
+      combinedData.processes !== undefined
     )
   }
 
@@ -669,18 +678,19 @@ export default function Hardware() {
                       </div>
                     </div>
 
-                    {/* Extended Monitoring Not Available Message */}
-                    <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4">
-                      <div className="flex gap-3">
-                        <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-blue-500">Extended Monitoring Not Available</p>
-                          <p className="text-xs text-muted-foreground">
-                            {getMonitoringToolRecommendation(pciDevice?.vendor || selectedGPU.vendor)}
-                          </p>
+                    {selectedGPU.has_monitoring_tool === false && (
+                      <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4">
+                        <div className="flex gap-3">
+                          <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-blue-500">Extended Monitoring Not Available</p>
+                            <p className="text-xs text-muted-foreground">
+                              {getMonitoringToolRecommendation(pciDevice?.vendor || selectedGPU.vendor)}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </>
               )

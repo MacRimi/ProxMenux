@@ -103,6 +103,10 @@ export interface GPU {
   utilization_memory?: number
   clock_graphics?: string
   clock_memory?: string
+  engine_render?: number
+  engine_blitter?: number
+  engine_video?: number
+  engine_video_enhance?: number
   pcie_gen?: string
   pcie_width?: string
   fan_speed?: number
@@ -112,6 +116,7 @@ export interface GPU {
     name: string
     memory: string
   }>
+  has_monitoring_tool?: boolean
   note?: string
 }
 
