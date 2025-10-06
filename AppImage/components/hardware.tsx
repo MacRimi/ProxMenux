@@ -19,7 +19,7 @@ import {
   Info,
 } from "lucide-react"
 import useSWR from "swr"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { type HardwareData, type GPU, type PCIDevice, type StorageDevice, fetcher } from "../types/hardware"
 
 const getDeviceTypeColor = (type: string): string => {
@@ -64,6 +64,19 @@ export default function Hardware() {
   const [selectedDisk, setSelectedDisk] = useState<StorageDevice | null>(null)
   const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
 
+  useEffect(() => {
+    if (hardwareData?.gpus) {
+      console.log("[v0] GPU data received:", JSON.stringify(hardwareData.gpus, null, 2))
+      hardwareData.gpus.forEach((gpu, index) => {
+        console.log(`[v0] GPU ${index} hasRealtimeData:`, hasRealtimeData(gpu))
+        console.log(`[v0] GPU ${index} has_monitoring_tool:`, gpu.has_monitoring_tool)
+        console.log(`[v0] GPU ${index} temperature:`, gpu.temperature)
+        console.log(`[v0] GPU ${index} utilization_gpu:`, gpu.utilization_gpu)
+        console.log(`[v0] GPU ${index} memory_total:`, gpu.memory_total)
+      })
+    }
+  }, [hardwareData])
+
   const findPCIDeviceForGPU = (gpu: GPU): PCIDevice | null => {
     if (!hardwareData?.pci_devices || !gpu.slot) return null
 
@@ -85,7 +98,7 @@ export default function Hardware() {
   }
 
   const hasRealtimeData = (gpu: GPU): boolean => {
-    return !!(
+    const result = !!(
       (gpu.temperature !== undefined && gpu.temperature > 0) ||
       (gpu.utilization_gpu !== undefined && gpu.utilization_gpu > 0) ||
       gpu.memory_total ||
@@ -99,6 +112,8 @@ export default function Hardware() {
       gpu.utilization_memory !== undefined ||
       (gpu.processes !== undefined && gpu.processes.length > 0)
     )
+    console.log("[v0] hasRealtimeData result:", result, "for GPU:", gpu.name)
+    return result
   }
 
   return (
