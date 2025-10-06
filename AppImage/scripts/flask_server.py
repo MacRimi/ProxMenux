@@ -1696,28 +1696,6 @@ def get_gpu_info():
                             'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated'
                         }
                         
-                        try:
-                            pci_result = subprocess.run(['lspci', '-vmm', '-s', slot], capture_output=True, text=True, timeout=2)
-                            if pci_result.returncode == 0:
-                                for pci_line in pci_result.stdout.split('\n'):
-                                    if ':' in pci_line:
-                                        key, value = pci_line.split(':', 1)
-                                        key = key.strip()
-                                        value = value.strip()
-                                        if key == 'Class':
-                                            gpu['pci_class'] = value
-                            
-                            # Get driver and kernel module info
-                            driver_result = subprocess.run(['lspci', '-k', '-s', slot], capture_output=True, text=True, timeout=2)
-                            if driver_result.returncode == 0:
-                                for driver_line in driver_result.stdout.split('\n'):
-                                    if 'Kernel driver in use:' in driver_line:
-                                        gpu['pci_driver'] = driver_line.split(':', 1)[1].strip()
-                                    elif 'Kernel modules:' in driver_line:
-                                        gpu['pci_kernel_module'] = driver_line.split(':', 1)[1].strip()
-                        except Exception as e:
-                            print(f"[v0] Error getting PCI info for GPU {slot}: {e}")
-                        
                         detailed_info = get_detailed_gpu_info(gpu)
                         gpu.update(detailed_info)
                         
@@ -2493,7 +2471,7 @@ def api_hardware():
     # Format data for frontend
     formatted_data = {
         'cpu': hardware_info.get('cpu', {}),
-        'motherboard': hardware_data.get('motherboard', {}), # Corrected from hardware_info
+        'motherboard': hardware_info.get('motherboard', {}),
         'memory_modules': hardware_info.get('memory_modules', []),
         'storage_devices': hardware_info.get('storage_devices', []),
         'pci_devices': hardware_info.get('pci_devices', []),
