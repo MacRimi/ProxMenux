@@ -87,6 +87,38 @@ interface UPSInfo {
   line_voltage?: string
 }
 
+interface IPMIFan {
+  name: string
+  speed: number
+  unit: string
+}
+
+interface IPMIPowerSupply {
+  name: string
+  watts: number
+  unit: string
+  status: string
+}
+
+interface IPMIPower {
+  power_supplies: IPMIPowerSupply[]
+  power_meter?: {
+    name: string
+    watts: number
+    unit: string
+  }
+}
+
+interface UPSData {
+  model?: string
+  status?: string
+  battery_charge?: string
+  time_left?: string
+  load_percent?: string
+  line_voltage?: string
+  real_power?: string
+}
+
 interface PCIDevice {
   slot: string
   type: string
@@ -114,6 +146,9 @@ interface HardwareData {
     fans: FanSensor[]
   }
   power: UPSInfo
+  ipmi_fans?: IPMIFan[]
+  ipmi_power?: IPMIPower
+  ups?: UPSData
 }
 
 export default function Hardware() {
@@ -186,6 +221,11 @@ export default function Hardware() {
 
   const hasSensors = hardwareData.sensors.temperatures.length > 0 || hardwareData.sensors.fans.length > 0
   const hasUPS = hardwareData.power && Object.keys(hardwareData.power).length > 0
+  const hasIPMIFans = hardwareData.ipmi_fans && hardwareData.ipmi_fans.length > 0
+  const hasIPMIPower =
+    hardwareData.ipmi_power &&
+    (hardwareData.ipmi_power.power_supplies?.length > 0 || hardwareData.ipmi_power.power_meter)
+  const hasUPSData = hardwareData.ups && Object.keys(hardwareData.ups).length > 0
 
   const storageSummary = hardwareData.storage_devices.reduce(
     (acc, disk) => {
@@ -513,6 +553,84 @@ export default function Hardware() {
         </Card>
       )}
 
+      {/* IPMI Fan Monitoring */}
+      {hasIPMIFans && (
+        <Card className="border-border/50 bg-card/50 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Fan className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Server Fans (IPMI)</h2>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {hardwareData.ipmi_fans?.map((fan, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between rounded-lg border border-border/30 bg-background/50 p-3"
+              >
+                <div className="flex items-center gap-2">
+                  <Fan className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">{fan.name}</span>
+                </div>
+                <span className="font-mono font-medium text-sm">
+                  {fan.speed.toFixed(1)} {fan.unit}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* IPMI Power Supplies */}
+      {hasIPMIPower && (
+        <Card className="border-border/50 bg-card/50 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Battery className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Power Supplies (IPMI)</h2>
+          </div>
+
+          <div className="space-y-4">
+            {/* Power Meter */}
+            {hardwareData.ipmi_power?.power_meter && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Total Power Consumption</span>
+                  <span className="text-2xl font-bold text-primary">
+                    {hardwareData.ipmi_power.power_meter.watts.toFixed(0)} W
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Individual Power Supplies */}
+            {hardwareData.ipmi_power?.power_supplies && hardwareData.ipmi_power.power_supplies.length > 0 && (
+              <div className="grid gap-3 md:grid-cols-2">
+                {hardwareData.ipmi_power.power_supplies.map((psu, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between rounded-lg border border-border/30 bg-background/50 p-3"
+                  >
+                    <div className="space-y-1">
+                      <span className="text-sm font-medium">{psu.name}</span>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={psu.status === "ok" ? "border-green-500/50 text-green-500" : "border-muted"}
+                        >
+                          {psu.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    <span className="font-mono text-lg font-semibold">
+                      {psu.watts.toFixed(0)} {psu.unit}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
       {/* Power Supply / UPS */}
       {hasUPS && (
         <Card className="border-border/50 bg-card/50 p-6">
@@ -556,6 +674,61 @@ export default function Hardware() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Line Voltage</span>
                 <span className="font-mono">{hardwareData.power.line_voltage}</span>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* UPS Information */}
+      {hasUPSData && (
+        <Card className="border-border/50 bg-card/50 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Battery className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">UPS / SAI</h2>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {hardwareData.ups?.model && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Model</span>
+                <span className="font-mono">{hardwareData.ups.model}</span>
+              </div>
+            )}
+            {hardwareData.ups?.status && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Status</span>
+                <Badge variant="outline">{hardwareData.ups.status}</Badge>
+              </div>
+            )}
+            {hardwareData.ups?.battery_charge && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Battery Charge</span>
+                <span className="font-mono font-medium text-green-500">{hardwareData.ups.battery_charge}</span>
+              </div>
+            )}
+            {hardwareData.ups?.time_left && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Runtime Left</span>
+                <span className="font-mono">{hardwareData.ups.time_left}</span>
+              </div>
+            )}
+            {hardwareData.ups?.load_percent && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Load</span>
+                <span className="font-mono">{hardwareData.ups.load_percent}</span>
+              </div>
+            )}
+            {hardwareData.ups?.line_voltage && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Input Voltage</span>
+                <span className="font-mono">{hardwareData.ups.line_voltage}</span>
+              </div>
+            )}
+            {hardwareData.ups?.real_power && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Real Power</span>
+                <span className="font-mono font-medium">{hardwareData.ups.real_power}</span>
               </div>
             )}
           </div>

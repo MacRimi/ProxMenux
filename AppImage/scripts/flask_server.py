@@ -1293,6 +1293,143 @@ def get_proxmox_vms():
             'vms': []
         }
 
+def get_ipmi_fans():
+    """Get fan information from IPMI"""
+    fans = []
+    try:
+        result = subprocess.run(['ipmitool', 'sensor'], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                if 'fan' in line.lower() and '|' in line:
+                    parts = [p.strip() for p in line.split('|')]
+                    if len(parts) >= 3:
+                        name = parts[0]
+                        value_str = parts[1]
+                        unit = parts[2] if len(parts) > 2 else ''
+                        
+                        # Skip "DutyCycle" and "Presence" entries
+                        if 'dutycycle' in name.lower() or 'presence' in name.lower():
+                            continue
+                        
+                        try:
+                            value = float(value_str)
+                            fans.append({
+                                'name': name,
+                                'speed': value,
+                                'unit': unit
+                            })
+                            print(f"[v0] IPMI Fan: {name} = {value} {unit}")
+                        except ValueError:
+                            continue
+        
+        print(f"[v0] Found {len(fans)} IPMI fans")
+    except FileNotFoundError:
+        print("[v0] ipmitool not found")
+    except Exception as e:
+        print(f"[v0] Error getting IPMI fans: {e}")
+    
+    return fans
+
+def get_ipmi_power():
+    """Get power supply information from IPMI"""
+    power_supplies = []
+    power_meter = None
+    
+    try:
+        result = subprocess.run(['ipmitool', 'sensor'], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                if ('power supply' in line.lower() or 'power meter' in line.lower()) and '|' in line:
+                    parts = [p.strip() for p in line.split('|')]
+                    if len(parts) >= 3:
+                        name = parts[0]
+                        value_str = parts[1]
+                        unit = parts[2] if len(parts) > 2 else ''
+                        
+                        try:
+                            value = float(value_str)
+                            
+                            if 'power meter' in name.lower():
+                                power_meter = {
+                                    'name': name,
+                                    'watts': value,
+                                    'unit': unit
+                                }
+                                print(f"[v0] IPMI Power Meter: {value} {unit}")
+                            else:
+                                power_supplies.append({
+                                    'name': name,
+                                    'watts': value,
+                                    'unit': unit,
+                                    'status': 'ok' if value > 0 else 'off'
+                                })
+                                print(f"[v0] IPMI PSU: {name} = {value} {unit}")
+                        except ValueError:
+                            continue
+        
+        print(f"[v0] Found {len(power_supplies)} IPMI power supplies")
+    except FileNotFoundError:
+        print("[v0] ipmitool not found")
+    except Exception as e:
+        print(f"[v0] Error getting IPMI power: {e}")
+    
+    return {
+        'power_supplies': power_supplies,
+        'power_meter': power_meter
+    }
+
+def get_ups_info():
+    """Get UPS information from NUT (upsc)"""
+    ups_data = {}
+    
+    try:
+        # First, list available UPS devices
+        result = subprocess.run(['upsc', '-l'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            ups_list = result.stdout.strip().split('\n')
+            if ups_list and ups_list[0]:
+                ups_name = ups_list[0]
+                print(f"[v0] Found UPS: {ups_name}")
+                
+                # Get detailed UPS info
+                result = subprocess.run(['upsc', ups_name], capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    for line in result.stdout.split('\n'):
+                        if ':' in line:
+                            key, value = line.split(':', 1)
+                            key = key.strip()
+                            value = value.strip()
+                            
+                            # Map common UPS variables
+                            if key == 'device.model':
+                                ups_data['model'] = value
+                            elif key == 'ups.status':
+                                ups_data['status'] = value
+                            elif key == 'battery.charge':
+                                ups_data['battery_charge'] = f"{value}%"
+                            elif key == 'battery.runtime':
+                                # Convert seconds to minutes
+                                try:
+                                    runtime_sec = int(value)
+                                    runtime_min = runtime_sec // 60
+                                    ups_data['time_left'] = f"{runtime_min} minutes"
+                                except ValueError:
+                                    ups_data['time_left'] = value
+                            elif key == 'ups.load':
+                                ups_data['load_percent'] = f"{value}%"
+                            elif key == 'input.voltage':
+                                ups_data['line_voltage'] = f"{value}V"
+                            elif key == 'ups.realpower':
+                                ups_data['real_power'] = f"{value}W"
+                    
+                    print(f"[v0] UPS data: {ups_data}")
+    except FileNotFoundError:
+        print("[v0] upsc not found")
+    except Exception as e:
+        print(f"[v0] Error getting UPS info: {e}")
+    
+    return ups_data
+
 def get_hardware_info():
     """Get comprehensive hardware information"""
     hardware_data = {
@@ -1307,7 +1444,10 @@ def get_hardware_info():
             'temperatures': [],
             'fans': []
         },
-        'power': {}
+        'power': {},
+        'ipmi_fans': [],  # Added IPMI fans
+        'ipmi_power': {},  # Added IPMI power
+        'ups': {}  # Added UPS info
     }
     
     try:
@@ -1653,6 +1793,18 @@ def get_hardware_info():
             print("[v0] apcaccess not found - no UPS monitoring")
         except Exception as e:
             print(f"[v0] Error getting UPS info: {e}")
+        
+        ipmi_fans = get_ipmi_fans()
+        if ipmi_fans:
+            hardware_data['ipmi_fans'] = ipmi_fans
+        
+        ipmi_power = get_ipmi_power()
+        if ipmi_power['power_supplies'] or ipmi_power['power_meter']:
+            hardware_data['ipmi_power'] = ipmi_power
+        
+        ups_info = get_ups_info()
+        if ups_info:
+            hardware_data['ups'] = ups_info
         
         return hardware_data
         
