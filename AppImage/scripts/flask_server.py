@@ -1738,8 +1738,8 @@ def get_gpu_info():
                                 ('i915' in current_adapter.lower() and gpu['vendor'] == 'Intel')):
                                 
                                 # Parse temperature (only if not already set by nvidia-smi)
-                                if '°C' in value_part or 'C' in value_part:
-                                    if 'temperature' not in gpu or gpu['temperature'] is None:
+                                if 'temperature' not in gpu or gpu['temperature'] is None:
+                                    if '°C' in value_part or 'C' in value_part:
                                         temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
                                         if temp_match:
                                             gpu['temperature'] = float(temp_match.group(1))
@@ -2459,7 +2459,8 @@ def api_info():
             '/api/vms',
             '/api/logs',
             '/api/health',
-            '/api/hardware'
+            '/api/hardware',
+            '/api/gpu/<slot>'
         ]
     })
 
@@ -2493,6 +2494,48 @@ def api_hardware():
     print(f"[v0] - GPUs: {len(formatted_data['gpus'])} found")
     
     return jsonify(formatted_data)
+
+@app.route('/api/gpu/<slot>', methods=['GET'])
+def api_gpu_detail(slot):
+    """Get detailed real-time GPU information for a specific GPU"""
+    try:
+        # Find the GPU by slot
+        hardware_info = get_hardware_info()
+        gpus = hardware_info.get('gpus', [])
+        
+        gpu = None
+        for g in gpus:
+            if g.get('slot') == slot:
+                gpu = g
+                break
+        
+        if not gpu:
+            return jsonify({'error': 'GPU not found'}), 404
+        
+        # Get PCI device information for this GPU
+        pci_devices = hardware_info.get('pci_devices', [])
+        pci_info = None
+        for device in pci_devices:
+            if device.get('slot') == slot:
+                pci_info = device
+                break
+        
+        # Enrich GPU with PCI information
+        if pci_info:
+            gpu['pci_class'] = pci_info.get('class')
+            gpu['pci_driver'] = pci_info.get('driver')
+            gpu['pci_kernel_module'] = pci_info.get('kernel_module')
+        
+        # Get fresh detailed information
+        detailed_info = get_detailed_gpu_info(gpu)
+        gpu.update(detailed_info)
+        
+        print(f"[v0] /api/gpu/{slot} returning detailed GPU info")
+        return jsonify(gpu)
+        
+    except Exception as e:
+        print(f"[v0] Error getting GPU details: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms/<int:vmid>', methods=['GET'])
 def api_vm_details(vmid):
@@ -2639,3 +2682,4 @@ if __name__ == '__main__':
     print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
+(host='0.0.0.0', port=8008, debug=False)

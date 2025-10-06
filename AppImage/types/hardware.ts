@@ -172,6 +172,8 @@ export interface HardwareData {
   fans?: Fan[]
   power_supplies?: PowerSupply[]
   ups?: UPS
+  disk_hardware_info?: DiskHardwareInfo[]
+  network_hardware_info?: NetworkHardwareInfo[]
 }
 
 export const fetcher = (url: string) => fetch(url).then((res) => res.json())
