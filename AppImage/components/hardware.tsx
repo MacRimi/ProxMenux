@@ -20,7 +20,7 @@ import {
 } from "lucide-react"
 import useSWR from "swr"
 import { useState } from "react"
-import { type HardwareData, fetcher } from "@/types/hardware"
+import { type HardwareData, fetcher } from "../types/hardware"
 
 const getDeviceTypeColor = (type: string): string => {
   const lowerType = type.toLowerCase()

@@ -1,6 +1,6 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Cpu } from "@/components/icons/cpu" // Added import for Cpu
-import type { PCIDevice } from "@/types/pcidevice" // Added import for PCIDevice
+import type { PCIDevice } from "../types/hardware" // Fixed import to use relative path instead of alias
 import { Progress } from "@/components/ui/progress"
 
 function GPUCard({ device }: { device: PCIDevice }) {

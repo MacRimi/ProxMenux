@@ -1512,10 +1512,91 @@ def get_temperature_info():
     }
 
 def get_gpu_info():
-    """Get GPU information from nvidia-smi, intel_gpu_top, and radeontop"""
+    """Get GPU information from lspci and enrich with temperature/fan data from sensors"""
     gpus = []
     
-    # Try NVIDIA GPUs
+    try:
+        result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                # Match VGA, 3D, Display controllers
+                if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
+                    parts = line.split(':', 2)
+                    if len(parts) >= 3:
+                        slot = parts[0].strip()
+                        gpu_name = parts[2].strip()
+                        
+                        # Determine vendor
+                        vendor = 'Unknown'
+                        if 'NVIDIA' in gpu_name or 'nVidia' in gpu_name:
+                            vendor = 'NVIDIA'
+                        elif 'AMD' in gpu_name or 'ATI' in gpu_name or 'Radeon' in gpu_name:
+                            vendor = 'AMD'
+                        elif 'Intel' in gpu_name:
+                            vendor = 'Intel'
+                        
+                        gpu = {
+                            'slot': slot,
+                            'name': gpu_name,
+                            'vendor': vendor,
+                            'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated'
+                        }
+                        
+                        gpus.append(gpu)
+                        print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+    except Exception as e:
+        print(f"[v0] Error detecting GPUs from lspci: {e}")
+    
+    try:
+        result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            current_adapter = None
+            
+            for line in result.stdout.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Detect adapter line
+                if line.startswith('Adapter:'):
+                    current_adapter = line.replace('Adapter:', '').strip()
+                    continue
+                
+                # Look for GPU-related sensors (nouveau, amdgpu, radeon, i915, etc.)
+                if ':' in line and not line.startswith(' '):
+                    parts = line.split(':', 1)
+                    sensor_name = parts[0].strip()
+                    value_part = parts[1].strip()
+                    
+                    # Check if this is a GPU sensor
+                    gpu_sensor_keywords = ['nouveau', 'amdgpu', 'radeon', 'i915']
+                    is_gpu_sensor = any(keyword in current_adapter.lower() if current_adapter else False for keyword in gpu_sensor_keywords)
+                    
+                    if is_gpu_sensor:
+                        # Try to match this sensor to a GPU
+                        for gpu in gpus:
+                            # Match nouveau to NVIDIA, amdgpu/radeon to AMD, i915 to Intel
+                            if (('nouveau' in current_adapter.lower() and gpu['vendor'] == 'NVIDIA') or
+                                (('amdgpu' in current_adapter.lower() or 'radeon' in current_adapter.lower()) and gpu['vendor'] == 'AMD') or
+                                ('i915' in current_adapter.lower() and gpu['vendor'] == 'Intel')):
+                                
+                                # Parse temperature
+                                if '°C' in value_part or 'C' in value_part:
+                                    temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
+                                    if temp_match:
+                                        gpu['temperature'] = float(temp_match.group(1))
+                                        print(f"[v0] GPU {gpu['name']}: Temperature = {gpu['temperature']}°C")
+                                
+                                # Parse fan speed
+                                elif 'RPM' in value_part:
+                                    rpm_match = re.search(r'([\d.]+)\s*RPM', value_part)
+                                    if rpm_match:
+                                        gpu['fan_speed'] = int(float(rpm_match.group(1)))
+                                        gpu['fan_unit'] = 'RPM'
+                                        print(f"[v0] GPU {gpu['name']}: Fan = {gpu['fan_speed']} RPM")
+    except Exception as e:
+        print(f"[v0] Error enriching GPU data from sensors: {e}")
+    
     try:
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=index,name,memory.total,memory.used,memory.free,temperature.gpu,power.draw,utilization.gpu,driver_version', 
@@ -1523,14 +1604,16 @@ def get_gpu_info():
             capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0:
+            nvidia_gpus = []
             for line in result.stdout.strip().split('\n'):
                 if line:
                     parts = [p.strip() for p in line.split(',')]
                     if len(parts) >= 9:
-                        gpus.append({
+                        nvidia_gpu = {
                             'index': int(parts[0]),
                             'name': parts[1],
                             'vendor': 'NVIDIA',
+                            'type': 'Discrete',
                             'memory_total': f"{parts[2]} MB",
                             'memory_used': f"{parts[3]} MB",
                             'memory_free': f"{parts[4]} MB",
@@ -1538,65 +1621,29 @@ def get_gpu_info():
                             'power_draw': f"{parts[6]} W" if parts[6] != '[N/A]' else 'N/A',
                             'utilization': int(float(parts[7])) if parts[7] != '[N/A]' else 0,
                             'driver_version': parts[8]
-                        })
-            print(f"[v0] Found {len(gpus)} NVIDIA GPU(s)")
+                        }
+                        nvidia_gpus.append(nvidia_gpu)
+            
+            # Merge nvidia-smi data with existing GPU data
+            for nvidia_gpu in nvidia_gpus:
+                # Find matching GPU in gpus list
+                matched = False
+                for gpu in gpus:
+                    if gpu['vendor'] == 'NVIDIA' and nvidia_gpu['name'] in gpu['name']:
+                        # Enrich with nvidia-smi data
+                        gpu.update(nvidia_gpu)
+                        matched = True
+                        break
+                
+                # If no match found, add as new GPU
+                if not matched:
+                    gpus.append(nvidia_gpu)
+            
+            print(f"[v0] Enriched {len(nvidia_gpus)} NVIDIA GPU(s) with nvidia-smi data")
     except FileNotFoundError:
         print("[v0] nvidia-smi not found")
     except Exception as e:
-        print(f"[v0] Error getting NVIDIA GPU info: {e}")
-    
-    # Try Intel GPUs
-    try:
-        result = subprocess.run(['intel_gpu_top', '-l'], capture_output=True, text=True, timeout=2)
-        if result.returncode == 0:
-            # Parse intel_gpu_top output
-            # This is a simplified version - intel_gpu_top output is complex
-            gpu_found = False
-            for line in result.stdout.split('\n'):
-                if 'intel' in line.lower() or 'gpu' in line.lower():
-                    gpu_found = True
-                    break
-            
-            if gpu_found:
-                # Get more info from lspci
-                result_lspci = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
-                if result_lspci.returncode == 0:
-                    for line in result_lspci.stdout.split('\n'):
-                        if 'Intel' in line and any(keyword in line for keyword in ['VGA', 'Display', 'Graphics']):
-                            parts = line.split(':', 2)
-                            if len(parts) >= 3:
-                                gpus.append({
-                                    'name': parts[2].strip(),
-                                    'vendor': 'Intel',
-                                    'type': 'Integrated'
-                                })
-                                print(f"[v0] Found Intel GPU: {parts[2].strip()}")
-    except FileNotFoundError:
-        print("[v0] intel_gpu_top not found")
-    except Exception as e:
-        print(f"[v0] Error getting Intel GPU info: {e}")
-    
-    # Try AMD GPUs
-    try:
-        result = subprocess.run(['radeontop', '-d', '-', '-l', '1'], capture_output=True, text=True, timeout=3)
-        if result.returncode == 0:
-            # Get AMD GPU info from lspci
-            result_lspci = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
-            if result_lspci.returncode == 0:
-                for line in result_lspci.stdout.split('\n'):
-                    if any(keyword in line for keyword in ['AMD', 'ATI', 'Radeon']) and any(keyword in line for keyword in ['VGA', 'Display', 'Graphics']):
-                        parts = line.split(':', 2)
-                        if len(parts) >= 3:
-                            gpus.append({
-                                'name': parts[2].strip(),
-                                'vendor': 'AMD',
-                                'type': 'Discrete'
-                            })
-                            print(f"[v0] Found AMD GPU: {parts[2].strip()}")
-    except FileNotFoundError:
-        print("[v0] radeontop not found")
-    except Exception as e:
-        print(f"[v0] Error getting AMD GPU info: {e}")
+        print(f"[v0] Error getting NVIDIA GPU info from nvidia-smi: {e}")
     
     return gpus
 
@@ -1765,7 +1812,7 @@ def get_hardware_info():
             if result.returncode == 0:
                 for line in result.stdout.split('\n'):
                     # Match VGA, 3D, Display controllers, and specific GPU keywords
-                    if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller', 'Graphics controller']):
+                    if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
                         parts = line.split(':', 2)
                         if len(parts) >= 3:
                             gpu_name = parts[2].strip()
@@ -1917,19 +1964,47 @@ def get_hardware_info():
                     
                     print(f"[v0] Temperature sensors: {len(hardware_data['sensors']['temperatures'])} found")
             
-            if hasattr(psutil, "sensors_fans"):
-                fans = psutil.sensors_fans()
-                if fans:
-                    for fan_name, entries in fans.items():
-                        for entry in entries:
-                            hardware_data['sensors']['fans'].append({
-                                'name': f"{fan_name} - {entry.label}" if entry.label else fan_name,
-                                'current_rpm': entry.current
-                            })
+            try:
+                result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    current_adapter = None
+                    fans = []
                     
-                    print(f"[v0] Fan sensors: {len(hardware_data['sensors']['fans'])} found")
+                    for line in result.stdout.split('\n'):
+                        line = line.strip()
+                        if not line:
+                            continue
+                        
+                        # Detect adapter line
+                        if line.startswith('Adapter:'):
+                            current_adapter = line.replace('Adapter:', '').strip()
+                            continue
+                        
+                        # Parse fan sensors
+                        if ':' in line and not line.startswith(' '):
+                            parts = line.split(':', 1)
+                            sensor_name = parts[0].strip()
+                            value_part = parts[1].strip()
+                            
+                            # Look for fan sensors (RPM)
+                            if 'RPM' in value_part:
+                                rpm_match = re.search(r'([\d.]+)\s*RPM', value_part)
+                                if rpm_match:
+                                    fan_speed = int(float(rpm_match.group(1)))
+                                    fans.append({
+                                        'name': sensor_name,
+                                        'speed': fan_speed,
+                                        'unit': 'RPM',
+                                        'adapter': current_adapter
+                                    })
+                                    print(f"[v0] Fan sensor: {sensor_name} = {fan_speed} RPM")
+                    
+                    hardware_data['sensors']['fans'] = fans
+                    print(f"[v0] Found {len(fans)} fan sensor(s)")
+            except Exception as e:
+                print(f"[v0] Error getting fan info: {e}")
         except Exception as e:
-            print(f"[v0] Error getting sensors: {e}")
+            print(f"[v0] Error getting psutil sensors: {e}")
         
         # Power Supply / UPS
         try:
@@ -1964,10 +2039,8 @@ def get_hardware_info():
             print(f"[v0] Error getting UPS info: {e}")
         
         temp_info = get_temperature_info()
-        if temp_info['temperatures']:
-            hardware_data['sensors']['temperatures'] = temp_info['temperatures']
-        if temp_info['power_meter']:
-            hardware_data['power_meter'] = temp_info['power_meter']
+        hardware_data['sensors']['temperatures'] = temp_info['temperatures']
+        hardware_data['power_meter'] = temp_info['power_meter']
         
         ipmi_fans = get_ipmi_fans()
         if ipmi_fans:
@@ -1981,15 +2054,15 @@ def get_hardware_info():
         if ups_info:
             hardware_data['ups'] = ups_info
         
-        gpus = get_gpu_info()
-        if gpus:
-            hardware_data['gpus'] = gpus
+        hardware_data['gpus'] = get_gpu_info()
         
         return hardware_data
         
     except Exception as e:
-        print(f"[v0] Error getting hardware info: {e}")
-        return hardware_data
+        print(f"[v0] Error in get_hardware_info: {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
 
 
 @app.route('/api/system', methods=['GET'])
@@ -2145,8 +2218,8 @@ def api_hardware():
         'storage_devices': hardware_info.get('storage_devices', []),
         'pci_devices': hardware_info.get('pci_devices', []),
         'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
-        'fans': hardware_info.get('ipmi_fans', []),
-        'power_supplies': hardware_info.get('ipmi_power', {}).get('power_supplies', []),
+        'fans': hardware_info.get('sensors', {}).get('fans', []), # Use sensors fans
+        'power_supplies': hardware_info.get('ipmi_power', {}).get('power_supplies', []), # Use IPMI power supplies
         'power_meter': hardware_info.get('power_meter'),
         'ups': hardware_info.get('ups') if hardware_info.get('ups') else None,
         'gpus': hardware_info.get('gpus', []) # Include GPU data
