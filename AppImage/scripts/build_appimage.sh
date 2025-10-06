@@ -360,8 +360,8 @@ echo "📦 Extracting binaries from downloaded packages..."
 extracted_count=0
 for deb in *.deb; do
     if [ -f "$deb" ] && file "$deb" | grep -q "Debian binary package"; then
-        echo "  Extracting $deb..."
-        dpkg-deb -x "$deb" "$WORK_DIR/extracted" && extracted_count=$((extracted_count + 1))
+        echo "  Extracting $deb directly into AppDir..."
+        dpkg-deb -x "$deb" "$APP_DIR" && extracted_count=$((extracted_count + 1))
     fi
 done
 
@@ -371,64 +371,42 @@ if [ $extracted_count -eq 0 ]; then
 else
     echo "✅ Extracted $extracted_count package(s)"
     
-    # Copy binaries to AppDir
-    echo "📋 Copying monitoring tools to AppDir..."
+    # Organizing monitoring tools
+    echo "📋 Organizing monitoring tools..."
     
-    # Copy from usr/bin
-    if [ -d "$WORK_DIR/extracted/usr/bin" ]; then
-        cp -r "$WORK_DIR/extracted/usr/bin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
-    fi
-    
-    # Copy from usr/sbin
-    if [ -d "$WORK_DIR/extracted/usr/sbin" ]; then
-        cp -r "$WORK_DIR/extracted/usr/sbin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
-    fi
-    
-    if [ -d "$WORK_DIR/extracted/bin" ]; then
+    if [ -d "$APP_DIR/bin" ]; then
         echo "  Moving binaries from /bin to usr/bin..."
-        cp -r "$WORK_DIR/extracted/bin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
+        cp -r "$APP_DIR/bin"/* "$APP_DIR/usr/bin/" 2>/dev/null || true
+        rm -rf "$APP_DIR/bin"
     fi
     
-    if [ -d "$WORK_DIR/extracted/usr/lib" ]; then
+    if [ -d "$APP_DIR/lib" ]; then
+        echo "  Moving libraries from /lib to usr/lib..."
         mkdir -p "$APP_DIR/usr/lib"
-        cp -r "$WORK_DIR/extracted/usr/lib"/* "$APP_DIR/usr/lib/" 2>/dev/null || true
+        cp -r "$APP_DIR/lib"/* "$APP_DIR/usr/lib/" 2>/dev/null || true
+        rm -rf "$APP_DIR/lib"
     fi
     
-    if [ -d "$WORK_DIR/extracted/lib" ]; then
-        mkdir -p "$APP_DIR/usr/lib"
-        cp -r "$WORK_DIR/extracted/lib"/* "$APP_DIR/usr/lib/" 2>/dev/null || true
-    fi
-    
-    if [ -d "$APP_DIR/usr/lib/x86_64-linux-gnu" ]; then
+    if [ -f "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so.17" ]; then
+        echo "  ✅ libfreeipmi.so.17 found at usr/lib/x86_64-linux-gnu/"
+        
         echo "  Creating library symlinks..."
+        ln -sf "x86_64-linux-gnu/libfreeipmi.so.17" "$APP_DIR/usr/lib/libfreeipmi.so.17" 2>/dev/null || true
+        ln -sf "libfreeipmi.so.17" "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so" 2>/dev/null || true
         
-        # Link libupsclient
-        if [ -f "$APP_DIR/usr/lib/x86_64-linux-gnu/libupsclient.so.6" ]; then
-            ln -sf "$APP_DIR/usr/lib/x86_64-linux-gnu/libupsclient.so.6" "$APP_DIR/usr/lib/libupsclient.so.6" 2>/dev/null || true
-            ln -sf "x86_64-linux-gnu/libupsclient.so.6" "$APP_DIR/usr/lib/x86_64-linux-gnu/libupsclient.so" 2>/dev/null || true
-        fi
-        
-        # Link libfreeipmi - create multiple symlinks to ensure it's found
-        if [ -f "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so.17" ]; then
-            echo "  ✅ Found libfreeipmi.so.17, creating symlinks..."
-            ln -sf "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so.17" "$APP_DIR/usr/lib/libfreeipmi.so.17" 2>/dev/null || true
-            ln -sf "x86_64-linux-gnu/libfreeipmi.so.17" "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so" 2>/dev/null || true
-            
-            # Also copy to root lib directory as fallback
-            mkdir -p "$APP_DIR/lib/x86_64-linux-gnu"
-            cp "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so.17"* "$APP_DIR/lib/x86_64-linux-gnu/" 2>/dev/null || true
-        else
-            echo "  ⚠️  libfreeipmi.so.17 not found after extraction"
-        fi
-        
-        # Copy all libfreeipmi dependencies
-        if ls "$APP_DIR/usr/lib/x86_64-linux-gnu"/libfreeipmi* 1> /dev/null 2>&1; then
-            echo "  Copying all libfreeipmi libraries..."
-            for lib in "$APP_DIR/usr/lib/x86_64-linux-gnu"/libfreeipmi*; do
-                libname=$(basename "$lib")
-                ln -sf "$APP_DIR/usr/lib/x86_64-linux-gnu/$libname" "$APP_DIR/usr/lib/$libname" 2>/dev/null || true
-            done
-        fi
+        mkdir -p "$APP_DIR/lib/x86_64-linux-gnu"
+        ln -sf "../../usr/lib/x86_64-linux-gnu/libfreeipmi.so.17" "$APP_DIR/lib/x86_64-linux-gnu/libfreeipmi.so.17" 2>/dev/null || true
+    else
+        echo "  ⚠️  libfreeipmi.so.17 NOT found - ipmitool will not work"
+        echo "     Searched in: $APP_DIR/usr/lib/x86_64-linux-gnu/"
+        echo "     Available libraries:"
+        find "$APP_DIR/usr/lib" -name "libfreeipmi*" 2>/dev/null || echo "     None found"
+    fi
+    
+    if [ -f "$APP_DIR/usr/lib/x86_64-linux-gnu/libupsclient.so.6" ]; then
+        echo "  Creating libupsclient symlinks..."
+        ln -sf "x86_64-linux-gnu/libupsclient.so.6" "$APP_DIR/usr/lib/libupsclient.so.6" 2>/dev/null || true
+        ln -sf "libupsclient.so.6" "$APP_DIR/usr/lib/x86_64-linux-gnu/libupsclient.so" 2>/dev/null || true
     fi
     
     echo "✅ Hardware monitoring tools installed successfully"
@@ -436,13 +414,6 @@ else
     [ -f "$APP_DIR/usr/bin/ipmitool" ] && echo "  ✅ ipmitool" || echo "  ⚠️  ipmitool not found"
     [ -f "$APP_DIR/usr/bin/sensors" ] && echo "  ✅ sensors (lm-sensors)" || echo "  ⚠️  sensors not found"
     [ -f "$APP_DIR/usr/bin/upsc" ] && echo "  ✅ upsc (nut-client)" || echo "  ⚠️  upsc not found"
-    
-    echo "📋 Verifying libraries:"
-    if [ -f "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so.17" ]; then
-        echo "  ✅ libfreeipmi.so.17 found"
-    else
-        echo "  ⚠️  libfreeipmi.so.17 NOT found - ipmitool may not work"
-    fi
 fi
 
 # Build AppImage
