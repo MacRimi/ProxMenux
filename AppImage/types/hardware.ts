@@ -89,6 +89,9 @@ export interface GPU {
   name: string
   vendor: string
   type: string
+  pci_class?: string
+  pci_driver?: string
+  pci_kernel_module?: string
   driver_version?: string
   memory_total?: string
   memory_used?: string

@@ -16,7 +16,6 @@ import {
   Cpu,
   MemoryStick,
   Cpu as Gpu,
-  Info,
 } from "lucide-react"
 import useSWR from "swr"
 import { useState } from "react"
@@ -249,7 +248,7 @@ export default function Hardware() {
             </Badge>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             {hardwareData.gpus.map((gpu, index) => (
               <div
                 key={index}
@@ -267,9 +266,30 @@ export default function Hardware() {
                     <span className="font-medium">{gpu.type}</span>
                   </div>
 
-                  {gpu.driver_version && (
+                  {gpu.slot && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">PCI Slot</span>
+                      <span className="font-mono text-xs">{gpu.slot}</span>
+                    </div>
+                  )}
+
+                  {gpu.pci_driver && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Driver</span>
+                      <span className="font-mono text-xs text-green-500">{gpu.pci_driver}</span>
+                    </div>
+                  )}
+
+                  {gpu.pci_kernel_module && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Kernel Module</span>
+                      <span className="font-mono text-xs">{gpu.pci_kernel_module}</span>
+                    </div>
+                  )}
+
+                  {gpu.driver_version && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Driver Version</span>
                       <span className="font-mono text-xs">{gpu.driver_version}</span>
                     </div>
                   )}
@@ -320,11 +340,6 @@ export default function Hardware() {
                     </div>
                   )}
                 </div>
-
-                <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-                  <Info className="h-3 w-3" />
-                  <span>Click for detailed information</span>
-                </div>
               </div>
             ))}
           </div>
@@ -357,6 +372,24 @@ export default function Hardware() {
                     <span className="text-sm text-muted-foreground">PCI Slot</span>
                     <span className="font-mono text-sm">{selectedGPU.slot}</span>
                   </div>
+                  {selectedGPU.pci_class && (
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm text-muted-foreground">Class</span>
+                      <span className="font-mono text-sm">{selectedGPU.pci_class}</span>
+                    </div>
+                  )}
+                  {selectedGPU.pci_driver && (
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm text-muted-foreground">Driver</span>
+                      <span className="font-mono text-sm text-green-500">{selectedGPU.pci_driver}</span>
+                    </div>
+                  )}
+                  {selectedGPU.pci_kernel_module && (
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm text-muted-foreground">Kernel Module</span>
+                      <span className="font-mono text-sm">{selectedGPU.pci_kernel_module}</span>
+                    </div>
+                  )}
                   {selectedGPU.driver_version && (
                     <div className="flex justify-between border-b border-border/50 pb-2">
                       <span className="text-sm text-muted-foreground">Driver Version</span>

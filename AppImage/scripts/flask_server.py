@@ -807,7 +807,7 @@ def get_smart_data(disk_name):
                             print(f"[v0] Extracted partial data from text output, continuing to next attempt...")
                 else:
                     print(f"[v0] No usable output (return code {result.returncode}), trying next command...")
-                
+            
             except subprocess.TimeoutExpired:
                 print(f"[v0] Command timeout for attempt {cmd_index + 1}, trying next...")
                 continue
@@ -1665,6 +1665,22 @@ def get_detailed_gpu_info(gpu):
     
     return detailed_info
 
+def get_pci_device_info(pci_slot):
+    """Get detailed PCI device information for a given slot"""
+    pci_info = {}
+    try:
+        # Use lspci -vmm for detailed information
+        result = subprocess.run(['lspci', '-vmm', '-s', pci_slot], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                line = line.strip()
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    pci_info[key.strip().lower().replace(' ', '_')] = value.strip()
+    except Exception as e:
+        print(f"[v0] Error getting PCI device info for {pci_slot}: {e}")
+    return pci_info
+
 def get_gpu_info():
     """Get GPU information from lspci and enrich with temperature/fan data from sensors"""
     gpus = []
@@ -1695,6 +1711,12 @@ def get_gpu_info():
                             'vendor': vendor,
                             'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated'
                         }
+                        
+                        pci_info = get_pci_device_info(slot)
+                        if pci_info:
+                            gpu['pci_class'] = pci_info.get('class', '')
+                            gpu['pci_driver'] = pci_info.get('driver', '')
+                            gpu['pci_kernel_module'] = pci_info.get('kernel_module', '')
                         
                         detailed_info = get_detailed_gpu_info(gpu)
                         gpu.update(detailed_info)
@@ -2639,3 +2661,4 @@ if __name__ == '__main__':
     print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
+, debug=False)
