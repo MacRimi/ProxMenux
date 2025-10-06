@@ -7,7 +7,7 @@
 APPDIR="$(dirname "$(readlink -f "${0}")")"
 
 export PATH="${APPDIR}/usr/bin:${PATH}"
-export LD_LIBRARY_PATH="${APPDIR}/usr/lib/x86_64-linux-gnu:${APPDIR}/usr/lib:${LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="${APPDIR}/usr/lib/x86_64-linux-gnu:${APPDIR}/usr/lib:${APPDIR}/lib/x86_64-linux-gnu:${APPDIR}/lib:${LD_LIBRARY_PATH}"
 export PYTHONPATH="${APPDIR}/usr/lib/python3/dist-packages:${APPDIR}/usr/lib/python3/site-packages:${PYTHONPATH}"
 
 # Change to the AppImage directory
@@ -27,8 +27,16 @@ else
     [ -x "${APPDIR}/usr/bin/ipmitool" ] && echo "  ✅ ipmitool available" || echo "  ⚠️  ipmitool not available"
     [ -x "${APPDIR}/usr/bin/sensors" ] && echo "  ✅ sensors available" || echo "  ⚠️  sensors not available"
     [ -x "${APPDIR}/usr/bin/upsc" ] && echo "  ✅ upsc available" || echo "  ⚠️  upsc not available"
-    echo ""
     
+    if [ -x "${APPDIR}/usr/bin/ipmitool" ]; then
+        if ldd "${APPDIR}/usr/bin/ipmitool" 2>/dev/null | grep -q "libfreeipmi.so.17 => not found"; then
+            echo "  ⚠️  libfreeipmi.so.17 not found - ipmitool may not work"
+        elif ldd "${APPDIR}/usr/bin/ipmitool" 2>/dev/null | grep -q "libfreeipmi.so.17"; then
+            echo "  ✅ libfreeipmi.so.17 loaded successfully"
+        fi
+    fi
+    
+    echo ""
     echo "Press Ctrl+C to stop the server"
     echo ""
     

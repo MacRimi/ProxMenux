@@ -401,13 +401,33 @@ else
     
     if [ -d "$APP_DIR/usr/lib/x86_64-linux-gnu" ]; then
         echo "  Creating library symlinks..."
+        
         # Link libupsclient
         if [ -f "$APP_DIR/usr/lib/x86_64-linux-gnu/libupsclient.so.6" ]; then
             ln -sf "$APP_DIR/usr/lib/x86_64-linux-gnu/libupsclient.so.6" "$APP_DIR/usr/lib/libupsclient.so.6" 2>/dev/null || true
+            ln -sf "x86_64-linux-gnu/libupsclient.so.6" "$APP_DIR/usr/lib/x86_64-linux-gnu/libupsclient.so" 2>/dev/null || true
         fi
-        # Link libfreeipmi
+        
+        # Link libfreeipmi - create multiple symlinks to ensure it's found
         if [ -f "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so.17" ]; then
+            echo "  ✅ Found libfreeipmi.so.17, creating symlinks..."
             ln -sf "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so.17" "$APP_DIR/usr/lib/libfreeipmi.so.17" 2>/dev/null || true
+            ln -sf "x86_64-linux-gnu/libfreeipmi.so.17" "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so" 2>/dev/null || true
+            
+            # Also copy to root lib directory as fallback
+            mkdir -p "$APP_DIR/lib/x86_64-linux-gnu"
+            cp "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so.17"* "$APP_DIR/lib/x86_64-linux-gnu/" 2>/dev/null || true
+        else
+            echo "  ⚠️  libfreeipmi.so.17 not found after extraction"
+        fi
+        
+        # Copy all libfreeipmi dependencies
+        if ls "$APP_DIR/usr/lib/x86_64-linux-gnu"/libfreeipmi* 1> /dev/null 2>&1; then
+            echo "  Copying all libfreeipmi libraries..."
+            for lib in "$APP_DIR/usr/lib/x86_64-linux-gnu"/libfreeipmi*; do
+                libname=$(basename "$lib")
+                ln -sf "$APP_DIR/usr/lib/x86_64-linux-gnu/$libname" "$APP_DIR/usr/lib/$libname" 2>/dev/null || true
+            done
         fi
     fi
     
@@ -416,6 +436,13 @@ else
     [ -f "$APP_DIR/usr/bin/ipmitool" ] && echo "  ✅ ipmitool" || echo "  ⚠️  ipmitool not found"
     [ -f "$APP_DIR/usr/bin/sensors" ] && echo "  ✅ sensors (lm-sensors)" || echo "  ⚠️  sensors not found"
     [ -f "$APP_DIR/usr/bin/upsc" ] && echo "  ✅ upsc (nut-client)" || echo "  ⚠️  upsc not found"
+    
+    echo "📋 Verifying libraries:"
+    if [ -f "$APP_DIR/usr/lib/x86_64-linux-gnu/libfreeipmi.so.17" ]; then
+        echo "  ✅ libfreeipmi.so.17 found"
+    else
+        echo "  ⚠️  libfreeipmi.so.17 NOT found - ipmitool may not work"
+    fi
 fi
 
 # Build AppImage

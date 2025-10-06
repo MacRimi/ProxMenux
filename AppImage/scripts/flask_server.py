@@ -1430,27 +1430,110 @@ def get_ups_info():
     
     return ups_data
 
-def get_hardware_info():
-    """Get comprehensive hardware information"""
-    hardware_data = {
-        'cpu': {},
-        'motherboard': {},
-        'memory_modules': [],
-        'storage_devices': [],
-        'network_cards': [],
-        'graphics_cards': [],
-        'pci_devices': [],
-        'sensors': {
-            'temperatures': [],
-            'fans': []
-        },
-        'power': {},
-        'ipmi_fans': [],  # Added IPMI fans
-        'ipmi_power': {},  # Added IPMI power
-        'ups': {}  # Added UPS info
-    }
+def get_temperature_info():
+    """Get detailed temperature information from sensors command"""
+    temperatures = []
+    power_meter = None
     
     try:
+        result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            current_adapter = None
+            current_sensor = None
+            
+            for line in result.stdout.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Detect adapter line
+                if line.startswith('Adapter:'):
+                    current_adapter = line.replace('Adapter:', '').strip()
+                    continue
+                
+                # Detect sensor name (lines without ':' at the start are sensor names)
+                if ':' in line and not line.startswith(' '):
+                    parts = line.split(':', 1)
+                    sensor_name = parts[0].strip()
+                    value_part = parts[1].strip()
+                    
+                    if 'power' in sensor_name.lower() and 'W' in value_part:
+                        try:
+                            # Extract power value (e.g., "182.00 W" -> 182.00)
+                            power_match = re.search(r'([\d.]+)\s*W', value_part)
+                            if power_match:
+                                power_value = float(power_match.group(1))
+                                power_meter = {
+                                    'name': sensor_name,
+                                    'watts': power_value,
+                                    'adapter': current_adapter
+                                }
+                                print(f"[v0] Power meter sensor: {sensor_name} = {power_value}W")
+                        except ValueError:
+                            pass
+                    
+                    # Parse temperature sensors
+                    elif '°C' in value_part or 'C' in value_part:
+                        try:
+                            # Extract temperature value
+                            temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
+                            if temp_match:
+                                temp_value = float(temp_match.group(1))
+                                
+                                # Extract high and critical values if present
+                                high_match = re.search(r'high\s*=\s*([+-]?[\d.]+)', value_part)
+                                crit_match = re.search(r'crit\s*=\s*([+-]?[\d.]+)', value_part)
+                                
+                                high_value = float(high_match.group(1)) if high_match else 0
+                                crit_value = float(crit_match.group(1)) if crit_match else 0
+                                
+                                temperatures.append({
+                                    'name': sensor_name,
+                                    'current': temp_value,
+                                    'high': high_value,
+                                    'critical': crit_value,
+                                    'adapter': current_adapter
+                                })
+                        except ValueError:
+                            pass
+        
+        print(f"[v0] Found {len(temperatures)} temperature sensors")
+        if power_meter:
+            print(f"[v0] Found power meter: {power_meter['watts']}W")
+            
+    except FileNotFoundError:
+        print("[v0] sensors command not found")
+    except Exception as e:
+        print(f"[v0] Error getting temperature info: {e}")
+    
+    return {
+        'temperatures': temperatures,
+        'power_meter': power_meter
+    }
+
+def get_hardware_info():
+    """Get comprehensive hardware information"""
+    try:
+        # Initialize with default structure, including the new power_meter field
+        hardware_data = {
+            'cpu': {},
+            'motherboard': {},
+            'memory_modules': [],
+            'storage_devices': [],
+            'network_cards': [],
+            'graphics_cards': [],
+            'pci_devices': [],
+            'sensors': {
+                'temperatures': [],
+                'fans': []
+            },
+            'power': {}, # This might be overwritten by ipmi_power or ups
+            'ipmi_fans': [],  # Added IPMI fans
+            'ipmi_power': {},  # Added IPMI power
+            'ups': {},  # Added UPS info
+            'power_meter': None # Added placeholder for sensors power meter
+        }
+        
         # CPU Information
         try:
             result = subprocess.run(['lscpu'], capture_output=True, text=True, timeout=5)
@@ -1793,6 +1876,12 @@ def get_hardware_info():
             print("[v0] apcaccess not found - no UPS monitoring")
         except Exception as e:
             print(f"[v0] Error getting UPS info: {e}")
+        
+        temp_info = get_temperature_info()
+        if temp_info['temperatures']:
+            hardware_data['sensors']['temperatures'] = temp_info['temperatures']
+        if temp_info['power_meter']:
+            hardware_data['power_meter'] = temp_info['power_meter']
         
         ipmi_fans = get_ipmi_fans()
         if ipmi_fans:
