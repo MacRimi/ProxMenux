@@ -321,13 +321,15 @@ echo "🔧 Installing hardware monitoring tools..."
 mkdir -p "$WORK_DIR/debs"
 cd "$WORK_DIR/debs"
 
-echo "📥 Downloading hardware monitoring tools (dynamic via APT)..."
 
+# ==============================================================
+
+
+echo "📥 Downloading hardware monitoring tools (dynamic via APT)..."
 
 dl_pkg() {
   local out="$1"; shift
-  local pkg
-  apt-get update -qq || true
+  local pkg deb_file
   for pkg in "$@"; do
     echo "  - trying: $pkg"
     if apt-get download -y "$pkg" >/dev/null 2>&1; then
@@ -339,6 +341,22 @@ dl_pkg() {
       fi
     fi
   done
+
+  if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+    echo "  ↻ retry with sudo apt-get update && download"
+    sudo apt-get update -qq || true
+    for pkg in "$@"; do
+      echo "  - trying (sudo): $pkg"
+      if sudo apt-get download -y "$pkg" >/dev/null 2>&1; then
+        deb_file="$(ls -1 ${pkg}_*.deb 2>/dev/null | head -n1)"
+        if [ -n "$deb_file" ] && [ -f "$deb_file" ]; then
+          mv "$deb_file" "$out"
+          echo "    ✅ downloaded (sudo): $pkg -> $out"
+          return 0
+        fi
+      fi
+    done
+  fi
   echo "    ⚠️  none of the candidates could be downloaded for $out"
   return 1
 }
@@ -346,19 +364,16 @@ dl_pkg() {
 mkdir -p "$WORK_DIR/debs"
 cd "$WORK_DIR/debs"
 
-# --- Core monitoring (sin versiones fijas) ---
+
 dl_pkg "ipmitool.deb"        "ipmitool"                         || true
 dl_pkg "libfreeipmi17.deb"   "libfreeipmi17"                    || true
 dl_pkg "lm-sensors.deb"      "lm-sensors"                       || true
 dl_pkg "nut-client.deb"      "nut-client"                       || true
-dl_pkg "libupsclient6.deb"   "libupsclient6"                    || true
+dl_pkg "libupsclient.deb"    "libupsclient6" "libupsclient5" "libupsclient4" || true
 
-# --- GPU monitoring tools ---
 
 dl_pkg "nvidia-smi.deb"      "nvidia-smi" "nvidia-utils" "nvidia-utils-535" "nvidia-utils-550" || true
-# Intel iGPU
 dl_pkg "intel-gpu-tools.deb" "intel-gpu-tools"                  || true
-# AMD
 dl_pkg "radeontop.deb"       "radeontop"                        || true
 
 echo "📦 Extracting .deb packages into AppDir..."
@@ -407,20 +422,51 @@ fi
 
 
 if [ -x "$APP_DIR/usr/bin/upsc" ] && ldd "$APP_DIR/usr/bin/upsc" | grep -q 'not found'; then
-  echo "❌ upsc has unresolved libs:"
-  ldd "$APP_DIR/usr/bin/upsc" | grep 'not found' || true
-  exit 1
+  echo "⚠️ upsc has unresolved libs, trying to auto-fix..."
+  missing="$(ldd "$APP_DIR/usr/bin/upsc" | awk '/not found/{print $1}' | tr -d ' ')"
+  echo "   missing: $missing"
+  case "$missing" in
+    libupsclient.so.6) need_pkg="libupsclient6" ;;
+    libupsclient.so.5) need_pkg="libupsclient5" ;;
+    libupsclient.so.4) need_pkg="libupsclient4" ;;
+    *) need_pkg="" ;;
+  esac
+
+  if [ -n "$need_pkg" ]; then
+    echo "   downloading: $need_pkg"
+    dl_pkg "libupsclient_autofix.deb" "$need_pkg" || true
+    if [ -f "libupsclient_autofix.deb" ]; then
+      dpkg-deb -x "libupsclient_autofix.deb" "$APP_DIR"
+      echo "   re-checking ldd for upsc..."
+      if ldd "$APP_DIR/usr/bin/upsc" | grep -q 'not found'; then
+        echo "❌ upsc still has unresolved libs:"
+        ldd "$APP_DIR/usr/bin/upsc" | grep 'not found' || true
+        exit 1
+      fi
+    else
+      echo "❌ could not download $need_pkg automatically"
+      exit 1
+    fi
+  else
+    echo "❌ unknown missing library for upsc: $missing"
+    exit 1
+  fi
 fi
 
 echo "✅ Sanity check OK (ipmitool/upsc ready; libfreeipmi present)"
 
 # Info rápida
-[ -x "$APP_DIR/usr/bin/sensors" ]        && echo "  • sensors: OK"            || echo "  • sensors: missing"
-[ -x "$APP_DIR/usr/bin/ipmitool" ]       && echo "  • ipmitool: OK"           || echo "  • ipmitool: missing"
-[ -x "$APP_DIR/usr/bin/upsc" ]           && echo "  • upsc: OK"               || echo "  • upsc: missing"
-[ -x "$APP_DIR/usr/bin/nvidia-smi" ]     && echo "  • nvidia-smi: OK"         || echo "  • nvidia-smi: missing"
-[ -x "$APP_DIR/usr/bin/intel_gpu_top" ]  && echo "  • intel-gpu-tools: OK"    || echo "  • intel-gpu-tools: missing"
-[ -x "$APP_DIR/usr/bin/radeontop" ]      && echo "  • radeontop: OK"          || echo "  • radeontop: missing"
+[ -x "$APP_DIR/usr/bin/sensors" ]         && echo "  • sensors: OK"            || echo "  • sensors: missing"
+[ -x "$APP_DIR/usr/bin/ipmitool" ]        && echo "  • ipmitool: OK"           || echo "  • ipmitool: missing"
+[ -x "$APP_DIR/usr/bin/upsc" ]            && echo "  • upsc: OK"               || echo "  • upsc: missing"
+[ -x "$APP_DIR/usr/bin/nvidia-smi" ]      && echo "  • nvidia-smi: OK"         || echo "  • nvidia-smi: missing"
+[ -x "$APP_DIR/usr/bin/intel_gpu_top" ]   && echo "  • intel-gpu-tools: OK"    || echo "  • intel-gpu-tools: missing"
+[ -x "$APP_DIR/usr/bin/radeontop" ]       && echo "  • radeontop: OK"          || echo "  • radeontop: missing"
+
+
+
+# ==============================================================
+
 
 
 # Build AppImage
