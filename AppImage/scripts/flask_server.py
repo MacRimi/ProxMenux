@@ -1579,8 +1579,101 @@ def get_detailed_gpu_info(gpu):
     
     vendor = gpu.get('vendor', '').upper()
     
+    if vendor == 'INTEL':
+        try:
+            # Try JSON output first (newer versions of intel_gpu_top)
+            result = subprocess.run(
+                ['intel_gpu_top', '-J', '-s', '100'],
+                capture_output=True, text=True, timeout=2
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                try:
+                    data = json.loads(result.stdout)
+                    if 'frequency' in data:
+                        detailed_info['clock_graphics'] = f"{data['frequency'].get('actual', 0)} MHz"
+                    if 'power' in data:
+                        detailed_info['power_draw'] = f"{data['power'].get('GPU', 0):.2f} W"
+                    if 'engines' in data:
+                        engines = data['engines']
+                        detailed_info['engine_render'] = engines.get('Render/3D', {}).get('busy', 0)
+                        detailed_info['engine_blitter'] = engines.get('Blitter', {}).get('busy', 0)
+                        detailed_info['engine_video'] = engines.get('Video', {}).get('busy', 0)
+                        detailed_info['engine_video_enhance'] = engines.get('VideoEnhance', {}).get('busy', 0)
+                except json.JSONDecodeError:
+                    pass
+            
+            # Fallback to text parsing
+            if not detailed_info:
+                result = subprocess.run(
+                    ['intel_gpu_top', '-s', '100'],
+                    capture_output=True, text=True, timeout=2
+                )
+                if result.returncode == 0:
+                    output = result.stdout
+                    # Parse frequency: "0/ 0 MHz"
+                    freq_match = re.search(r'(\d+)/\s*(\d+)\s*MHz', output)
+                    if freq_match:
+                        detailed_info['clock_graphics'] = f"{freq_match.group(1)} MHz"
+                        detailed_info['clock_max'] = f"{freq_match.group(2)} MHz"
+                    
+                    # Parse power: "0.00/ 7.23 W"
+                    power_match = re.search(r'([\d.]+)/\s*([\d.]+)\s*W', output)
+                    if power_match:
+                        detailed_info['power_draw'] = f"{power_match.group(1)} W"
+                        detailed_info['power_limit'] = f"{power_match.group(2)} W"
+                    
+                    # Parse engine utilization
+                    engines = {
+                        'Render/3D': 'engine_render',
+                        'Blitter': 'engine_blitter',
+                        'Video': 'engine_video',
+                        'VideoEnhance': 'engine_video_enhance'
+                    }
+                    for engine_name, key in engines.items():
+                        pattern = rf'{engine_name}\s+([\d.]+)%'
+                        match = re.search(pattern, output)
+                        if match:
+                            detailed_info[key] = float(match.group(1))
+                    
+                    print(f"[v0] Intel GPU parsed data: {detailed_info}")
+                    
+        except Exception as e:
+            print(f"[v0] Error getting Intel GPU details: {e}")
+    
+    elif vendor == 'AMD' or 'ATI' in vendor:
+        try:
+            result = subprocess.run(
+                ['radeontop', '-d', '-', '-l', '1'],
+                capture_output=True, text=True, timeout=2
+            )
+            if result.returncode == 0:
+                output = result.stdout
+                # Parse GPU utilization: "gpu 45.00%"
+                gpu_match = re.search(r'gpu\s+([\d.]+)%', output)
+                if gpu_match:
+                    detailed_info['utilization_gpu'] = float(gpu_match.group(1))
+                
+                # Parse memory utilization: "vram 23.45%"
+                vram_match = re.search(r'vram\s+([\d.]+)%', output)
+                if vram_match:
+                    detailed_info['utilization_memory'] = float(vram_match.group(1))
+                
+                # Parse clocks: "sclk 1.20ghz, mclk 0.95ghz"
+                sclk_match = re.search(r'sclk\s+([\d.]+)ghz', output, re.IGNORECASE)
+                if sclk_match:
+                    detailed_info['clock_graphics'] = f"{float(sclk_match.group(1)) * 1000:.0f} MHz"
+                
+                mclk_match = re.search(r'mclk\s+([\d.]+)ghz', output, re.IGNORECASE)
+                if mclk_match:
+                    detailed_info['clock_memory'] = f"{float(mclk_match.group(1)) * 1000:.0f} MHz"
+                
+                print(f"[v0] AMD GPU parsed data: {detailed_info}")
+                
+        except Exception as e:
+            print(f"[v0] Error getting AMD GPU details: {e}")
+    
     # NVIDIA GPU - use nvidia-smi
-    if vendor == 'NVIDIA':
+    elif vendor == 'NVIDIA':
         try:
             result = subprocess.run(
                 ['nvidia-smi', '--query-gpu=index,name,driver_version,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,utilization.gpu,utilization.memory,clocks.gr,clocks.mem,pcie.link.gen.current,pcie.link.width.current', 
@@ -1629,113 +1722,6 @@ def get_detailed_gpu_info(gpu):
                 
         except Exception as e:
             print(f"[v0] Error getting NVIDIA GPU details: {e}")
-    
-    elif vendor == 'INTEL':
-        try:
-            # Try to run intel_gpu_top with JSON output for 1 second
-            result = subprocess.run(
-                ['timeout', '2', 'intel_gpu_top', '-J'],
-                capture_output=True, text=True, timeout=3
-            )
-            
-            if result.returncode == 0 or result.returncode == 124:  # 124 is timeout exit code
-                output = result.stdout.strip()
-                if output:
-                    try:
-                        # Parse JSON output
-                        import json
-                        data = json.loads(output)
-                        
-                        # Extract frequency info
-                        if 'frequency' in data:
-                            freq = data['frequency']
-                            if 'actual' in freq:
-                                detailed_info['clock_graphics'] = f"{freq['actual']} MHz"
-                        
-                        # Extract power info
-                        if 'power' in data:
-                            power = data['power']
-                            if 'GPU' in power:
-                                detailed_info['power_draw'] = f"{power['GPU']:.2f} W"
-                        
-                        # Extract engine utilization
-                        if 'engines' in data:
-                            engines = data['engines']
-                            total_busy = 0
-                            engine_count = 0
-                            
-                            for engine_name, engine_data in engines.items():
-                                if 'busy' in engine_data:
-                                    total_busy += engine_data['busy']
-                                    engine_count += 1
-                            
-                            if engine_count > 0:
-                                detailed_info['utilization_gpu'] = int(total_busy / engine_count)
-                        
-                        print(f"[v0] Intel GPU data parsed from JSON: {detailed_info}")
-                        
-                    except json.JSONDecodeError:
-                        print(f"[v0] Failed to parse intel_gpu_top JSON output")
-            
-            # Fallback: Try text output parsing
-            if not detailed_info:
-                result = subprocess.run(
-                    ['timeout', '2', 'intel_gpu_top', '-s', '1000'],
-                    capture_output=True, text=True, timeout=3
-                )
-                
-                if result.returncode == 0 or result.returncode == 124:
-                    output = result.stdout.strip()
-                    print(f"[v0] Intel GPU top output: {output[:200]}")
-                    
-                    # Parse frequency (e.g., "0/ 0 MHz")
-                    freq_match = re.search(r'(\d+)/\s*(\d+)\s*MHz', output)
-                    if freq_match:
-                        actual_freq = freq_match.group(1)
-                        if int(actual_freq) > 0:
-                            detailed_info['clock_graphics'] = f"{actual_freq} MHz"
-                    
-                    # Parse power (e.g., "0.00/ 7.23 W")
-                    power_match = re.search(r'([\d.]+)/\s*([\d.]+)\s*W', output)
-                    if power_match:
-                        actual_power = float(power_match.group(1))
-                        max_power = float(power_match.group(2))
-                        if actual_power > 0 or max_power > 0:
-                            detailed_info['power_draw'] = f"{actual_power:.2f} W"
-                            detailed_info['power_limit'] = f"{max_power:.2f} W"
-                    
-                    # Parse engine utilization (e.g., "Render/3D    0.00%")
-                    engine_lines = re.findall(r'(Render/3D|Blitter|Video|VideoEnhance)\s+([\d.]+)%', output)
-                    if engine_lines:
-                        total_util = sum(float(util) for _, util in engine_lines)
-                        avg_util = total_util / len(engine_lines)
-                        if avg_util > 0:
-                            detailed_info['utilization_gpu'] = int(avg_util)
-                    
-                    print(f"[v0] Intel GPU data parsed from text: {detailed_info}")
-                    
-        except Exception as e:
-            print(f"[v0] Error getting Intel GPU details: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    # AMD GPU - use radeontop
-    elif vendor == 'AMD':
-        try:
-            result = subprocess.run(
-                ['radeontop', '-d', '-', '-l', '1'],
-                capture_output=True, text=True, timeout=2
-            )
-            if result.returncode == 0:
-                # Parse radeontop output
-                # This is a simplified version, actual parsing would be more complex
-                for line in result.stdout.split('\n'):
-                    if 'gpu' in line.lower():
-                        match = re.search(r'(\d+\.\d+)%', line)
-                        if match:
-                            detailed_info['utilization_gpu'] = float(match.group(1))
-        except Exception as e:
-            print(f"[v0] Error getting AMD GPU details: {e}")
     
     return detailed_info
 
@@ -1825,6 +1811,172 @@ def get_network_hardware_info(pci_slot):
         print(f"[v0] Error getting network hardware info: {e}")
     
     return net_info
+
+def get_gpu_info():
+    """Get GPU information from lspci and enrich with temperature/fan data from sensors"""
+    gpus = []
+    
+    try:
+        result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                # Match VGA, 3D, Display controllers
+                if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
+                    parts = line.split(':', 2)
+                    if len(parts) >= 3:
+                        slot = parts[0].strip()
+                        gpu_name = parts[2].strip()
+                        
+                        # Determine vendor
+                        vendor = 'Unknown'
+                        if 'NVIDIA' in gpu_name or 'nVidia' in gpu_name:
+                            vendor = 'NVIDIA'
+                        elif 'AMD' in gpu_name or 'ATI' in gpu_name or 'Radeon' in gpu_name:
+                            vendor = 'AMD'
+                        elif 'Intel' in gpu_name:
+                            vendor = 'Intel'
+                        
+                        gpu = {
+                            'slot': slot,
+                            'name': gpu_name,
+                            'vendor': vendor,
+                            'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated'
+                        }
+                        
+                        pci_info = get_pci_device_info(slot)
+                        if pci_info:
+                            gpu['pci_class'] = pci_info.get('class', '')
+                            gpu['pci_driver'] = pci_info.get('driver', '')
+                            gpu['pci_kernel_module'] = pci_info.get('kernel_module', '')
+                        
+                        detailed_info = get_detailed_gpu_info(gpu)
+                        gpu.update(detailed_info)
+                        
+                        gpus.append(gpu)
+                        print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+    except Exception as e:
+        print(f"[v0] Error detecting GPUs from lspci: {e}")
+    
+    try:
+        result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            current_adapter = None
+            
+            for line in result.stdout.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Detect adapter line
+                if line.startswith('Adapter:'):
+                    current_adapter = line.replace('Adapter:', '').strip()
+                    continue
+                
+                # Look for GPU-related sensors (nouveau, amdgpu, radeon, i915, etc.)
+                if ':' in line and not line.startswith(' '):
+                    parts = line.split(':', 1)
+                    sensor_name = parts[0].strip()
+                    value_part = parts[1].strip()
+                    
+                    # Check if this is a GPU sensor
+                    gpu_sensor_keywords = ['nouveau', 'amdgpu', 'radeon', 'i915']
+                    is_gpu_sensor = any(keyword in current_adapter.lower() if current_adapter else False for keyword in gpu_sensor_keywords)
+                    
+                    if is_gpu_sensor:
+                        # Try to match this sensor to a GPU
+                        for gpu in gpus:
+                            # Match nouveau to NVIDIA, amdgpu/radeon to AMD, i915 to Intel
+                            if (('nouveau' in current_adapter.lower() and gpu['vendor'] == 'NVIDIA') or
+                                (('amdgpu' in current_adapter.lower() or 'radeon' in current_adapter.lower()) and gpu['vendor'] == 'AMD') or
+                                ('i915' in current_adapter.lower() and gpu['vendor'] == 'Intel')):
+                                
+                                # Parse temperature (only if not already set by nvidia-smi)
+                                if '°C' in value_part or 'C' in value_part:
+                                    if 'temperature' not in gpu or gpu['temperature'] is None:
+                                        temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
+                                        if temp_match:
+                                            gpu['temperature'] = float(temp_match.group(1))
+                                            print(f"[v0] GPU {gpu['name']}: Temperature = {gpu['temperature']}°C")
+                                
+                                # Parse fan speed
+                                elif 'RPM' in value_part:
+                                    rpm_match = re.search(r'([\d.]+)\s*RPM', value_part)
+                                    if rpm_match:
+                                        gpu['fan_speed'] = int(float(rpm_match.group(1)))
+                                        gpu['fan_unit'] = 'RPM'
+                                        print(f"[v0] GPU {gpu['name']}: Fan = {gpu['fan_speed']} RPM")
+    except Exception as e:
+        print(f"[v0] Error enriching GPU data from sensors: {e}")
+    
+    return gpus
+
+def get_disk_hardware_info(disk_name):
+    """Get detailed hardware information for a disk"""
+    disk_info = {}
+    
+    try:
+        # Get disk type (HDD, SSD, NVMe)
+        result = subprocess.run(['lsblk', '-d', '-n', '-o', 'NAME,ROTA,TYPE', f'/dev/{disk_name}'], 
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            parts = result.stdout.strip().split()
+            if len(parts) >= 2:
+                rota = parts[1]
+                disk_info['type'] = 'HDD' if rota == '1' else 'SSD'
+                if disk_name.startswith('nvme'):
+                    disk_info['type'] = 'NVMe SSD'
+        
+        # Get driver/kernel module
+        try:
+            # For NVMe
+            if disk_name.startswith('nvme'):
+                disk_info['driver'] = 'nvme'
+                disk_info['interface'] = 'PCIe/NVMe'
+            # For SATA/SAS
+            else:
+                result = subprocess.run(['udevadm', 'info', '--query=property', f'/dev/{disk_name}'], 
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    for line in result.stdout.split('\n'):
+                        if 'ID_BUS=' in line:
+                            bus = line.split('=')[1].strip()
+                            disk_info['interface'] = bus.upper()
+                        if 'ID_MODEL=' in line:
+                            model = line.split('=')[1].strip()
+                            disk_info['model'] = model
+                        if 'ID_SERIAL_SHORT=' in line:
+                            serial = line.split('=')[1].strip()
+                            disk_info['serial'] = serial
+        except Exception as e:
+            print(f"[v0] Error getting disk driver info: {e}")
+        
+        # Get SMART data
+        try:
+            result = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    if 'Model Family:' in line:
+                        disk_info['family'] = line.split(':', 1)[1].strip()
+                    elif 'Device Model:' in line or 'Model Number:' in line:
+                        disk_info['model'] = line.split(':', 1)[1].strip()
+                    elif 'Serial Number:' in line:
+                        disk_info['serial'] = line.split(':', 1)[1].strip()
+                    elif 'Firmware Version:' in line:
+                        disk_info['firmware'] = line.split(':', 1)[1].strip()
+                    elif 'Rotation Rate:' in line:
+                        disk_info['rotation_rate'] = line.split(':', 1)[1].strip()
+                    elif 'Form Factor:' in line:
+                        disk_info['form_factor'] = line.split(':', 1)[1].strip()
+                    elif 'SATA Version is:' in line:
+                        disk_info['sata_version'] = line.split(':', 1)[1].strip()
+        except Exception as e:
+            print(f"[v0] Error getting SMART info: {e}")
+            
+    except Exception as e:
+        print(f"[v0] Error getting disk hardware info: {e}")
+    
+    return disk_info
 
 def get_hardware_info():
     """Get comprehensive hardware information"""
@@ -1983,7 +2135,7 @@ def get_hardware_info():
                             hardware_data['graphics_cards'].append({
                                 'name': parts[0].strip(),
                                 'memory': parts[1].strip(),
-                                'temperature': int(float(parts[2].strip().split(' ')[0])) if parts[2].strip() != 'N/A' and 'C' in parts[2] else 0,
+                                'temperature': int(parts[2].strip().split(' ')[0]) if parts[2].strip() != 'N/A' and 'C' in parts[2] else 0,
                                 'power_draw': parts[3].strip(),
                                 'vendor': 'NVIDIA'
                             })
