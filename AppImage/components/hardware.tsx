@@ -64,10 +64,18 @@ export default function Hardware() {
   const [selectedDisk, setSelectedDisk] = useState<StorageDevice | null>(null)
   const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
 
-  const { data: realtimeGPUData } = useSWR<any>(selectedGPU ? `/api/gpu/${selectedGPU.slot}/realtime` : null, fetcher, {
-    refreshInterval: 2000, // Update every 2 seconds
+  const realtimeURL = selectedGPU ? `/api/gpu/${selectedGPU.slot}/realtime` : null
+  console.log("[v0] GPU modal opened, selectedGPU:", selectedGPU)
+  console.log("[v0] Realtime URL:", realtimeURL)
+
+  const { data: realtimeGPUData, error: realtimeError } = useSWR<any>(realtimeURL, fetcher, {
+    refreshInterval: 2000,
     revalidateOnFocus: false,
   })
+
+  console.log("[v0] Realtime GPU data:", realtimeGPUData)
+  console.log("[v0] Realtime GPU error:", realtimeError)
+  // </CHANGE>
 
   const findPCIDeviceForGPU = (gpu: GPU): PCIDevice | null => {
     if (!hardwareData?.pci_devices || !gpu.slot) return null
