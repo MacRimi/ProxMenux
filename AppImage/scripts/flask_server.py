@@ -1293,194 +1293,9 @@ def get_proxmox_vms():
             'vms': []
         }
 
-# --- START OF UPDATED CODE ---
-
-def get_gpu_detailed_info():
-    """Get comprehensive GPU information using nvidia-smi, intel_gpu_top, and radeontop"""
-    gpus = []
-    
-    # Get basic GPU info from lspci
-    try:
-        result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            for line in result.stdout.split('\n'):
-                if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
-                    parts = line.split(':', 2)
-                    if len(parts) >= 3:
-                        slot = parts[0].strip()
-                        gpu_name = parts[2].strip()
-                        
-                        vendor = 'Unknown'
-                        if 'NVIDIA' in gpu_name or 'nVidia' in gpu_name:
-                            vendor = 'NVIDIA'
-                        elif 'AMD' in gpu_name or 'ATI' in gpu_name or 'Radeon' in gpu_name:
-                            vendor = 'AMD'
-                        elif 'Intel' in gpu_name:
-                            vendor = 'Intel'
-                        
-                        gpu = {
-                            'slot': slot,
-                            'name': gpu_name,
-                            'vendor': vendor,
-                            'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated',
-                            'processes': []
-                        }
-                        
-                        gpus.append(gpu)
-                        print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
-    except Exception as e:
-        print(f"[v0] Error detecting GPUs from lspci: {e}")
-    
-    try:
-        # Get comprehensive NVIDIA GPU info
-        result = subprocess.run(
-            ['nvidia-smi', '--query-gpu=index,name,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,utilization.gpu,utilization.memory,clocks.gr,clocks.mem,driver_version,pcie.link.gen.current,pcie.link.width.current', 
-             '--format=csv,noheader,nounits'],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
-            for line in result.stdout.strip().split('\n'):
-                if line:
-                    parts = [p.strip() for p in line.split(',')]
-                    if len(parts) >= 15:
-                        nvidia_info = {
-                            'index': int(parts[0]),
-                            'memory_total': f"{parts[2]} MB",
-                            'memory_used': f"{parts[3]} MB",
-                            'memory_free': f"{parts[4]} MB",
-                            'temperature': int(float(parts[5])) if parts[5] != '[N/A]' else 0,
-                            'power_draw': f"{parts[6]} W" if parts[6] != '[N/A]' else 'N/A',
-                            'power_limit': f"{parts[7]} W" if parts[7] != '[N/A]' else 'N/A',
-                            'utilization': int(float(parts[8])) if parts[8] != '[N/A]' else 0,
-                            'memory_utilization': int(float(parts[9])) if parts[9] != '[N/A]' else 0,
-                            'clock_graphics': f"{parts[10]} MHz" if parts[10] != '[N/A]' else 'N/A',
-                            'clock_memory': f"{parts[11]} MHz" if parts[11] != '[N/A]' else 'N/A',
-                            'driver_version': parts[12],
-                            'pcie_gen': parts[13],
-                            'pcie_width': f"x{parts[14]}" if parts[14] != '[N/A]' else 'N/A'
-                        }
-                        
-                        # Match with existing GPU
-                        for gpu in gpus:
-                            if gpu['vendor'] == 'NVIDIA':
-                                gpu.update(nvidia_info)
-                                break
-        
-        # Get NVIDIA GPU processes
-        result = subprocess.run(
-            ['nvidia-smi', '--query-compute-apps=pid,process_name,used_memory', '--format=csv,noheader,nounits'],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
-            processes = []
-            for line in result.stdout.strip().split('\n'):
-                if line:
-                    parts = [p.strip() for p in line.split(',')]
-                    if len(parts) >= 3:
-                        processes.append({
-                            'pid': parts[0],
-                            'name': parts[1],
-                            'memory': f"{parts[2]} MB"
-                        })
-            
-            for gpu in gpus:
-                if gpu['vendor'] == 'NVIDIA':
-                    gpu['processes'] = processes
-                    break
-        
-        print(f"[v0] Enriched NVIDIA GPU(s) with nvidia-smi detailed data")
-    except FileNotFoundError:
-        print("[v0] nvidia-smi not found")
-    except Exception as e:
-        print(f"[v0] Error getting NVIDIA GPU detailed info: {e}")
-    
-    try:
-        result = subprocess.run(['intel_gpu_top', '-l'], capture_output=True, text=True, timeout=2)
-        if result.returncode == 0:
-            for gpu in gpus:
-                if gpu['vendor'] == 'Intel':
-                    gpu['intel_gpu_top_available'] = True
-                    print(f"[v0] Intel GPU tools available for {gpu['name']}")
-    except FileNotFoundError:
-        print("[v0] intel_gpu_top not found")
-    except Exception as e:
-        print(f"[v0] Error checking intel_gpu_top: {e}")
-    
-    try:
-        result = subprocess.run(['radeontop', '-d', '-', '-l', '1'], capture_output=True, text=True, timeout=2)
-        if result.returncode == 0:
-            for gpu in gpus:
-                if gpu['vendor'] == 'AMD':
-                    gpu['radeontop_available'] = True
-                    print(f"[v0] AMD GPU tools available for {gpu['name']}")
-    except FileNotFoundError:
-        print("[v0] radeontop not found")
-    except Exception as e:
-        print(f"[v0] Error checking radeontop: {e}")
-    
-    return gpus
-
-def identify_fan_sensors():
-    """Identify and categorize fan sensors (CPU, Chassis, GPU)"""
+def get_ipmi_fans():
+    """Get fan information from IPMI"""
     fans = []
-    
-    try:
-        result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            current_adapter = None
-            
-            for line in result.stdout.split('\n'):
-                line = line.strip()
-                if not line:
-                    continue
-                
-                if line.startswith('Adapter:'):
-                    current_adapter = line.replace('Adapter:', '').strip()
-                    continue
-                
-                if ':' in line and not line.startswith(' '):
-                    parts = line.split(':', 1)
-                    sensor_name = parts[0].strip()
-                    value_part = parts[1].strip()
-                    
-                    if 'RPM' in value_part:
-                        rpm_match = re.search(r'([\d.]+)\s*RPM', value_part)
-                        if rpm_match:
-                            fan_speed = int(float(rpm_match.group(1)))
-                            
-                            fan_type = 'Unknown'
-                            if 'cpu' in sensor_name.lower() or 'processor' in sensor_name.lower():
-                                fan_type = 'CPU Fan'
-                            elif 'chassis' in sensor_name.lower() or 'case' in sensor_name.lower() or 'sys' in sensor_name.lower():
-                                fan_type = 'Chassis Fan'
-                            elif 'gpu' in sensor_name.lower() or 'video' in sensor_name.lower():
-                                fan_type = 'GPU Fan'
-                            elif current_adapter and ('nouveau' in current_adapter.lower() or 'nvidia' in current_adapter.lower() or 'amdgpu' in current_adapter.lower()):
-                                fan_type = 'GPU Fan'
-                            else:
-                                # Try to infer from fan number
-                                if 'fan1' in sensor_name.lower():
-                                    fan_type = 'CPU Fan'
-                                elif 'fan2' in sensor_name.lower():
-                                    fan_type = 'Chassis Fan'
-                                elif 'fan3' in sensor_name.lower():
-                                    fan_type = 'GPU Fan'
-                                else:
-                                    fan_type = 'System Fan'
-                            
-                            fans.append({
-                                'name': sensor_name,
-                                'type': fan_type,
-                                'speed': fan_speed,
-                                'unit': 'RPM',
-                                'adapter': current_adapter
-                            })
-                            print(f"[v0] Fan sensor: {sensor_name} ({fan_type}) = {fan_speed} RPM")
-        
-        print(f"[v0] Found {len(fans)} fan sensor(s)")
-    except Exception as e:
-        print(f"[v0] Error identifying fan sensors: {e}")
-    
     try:
         result = subprocess.run(['ipmitool', 'sensor'], capture_output=True, text=True, timeout=10)
         if result.returncode == 0:
@@ -1492,28 +1307,22 @@ def identify_fan_sensors():
                         value_str = parts[1]
                         unit = parts[2] if len(parts) > 2 else ''
                         
+                        # Skip "DutyCycle" and "Presence" entries
                         if 'dutycycle' in name.lower() or 'presence' in name.lower():
                             continue
                         
                         try:
                             value = float(value_str)
-                            
-                            fan_type = 'System Fan'
-                            if 'cpu' in name.lower():
-                                fan_type = 'CPU Fan'
-                            elif 'sys' in name.lower() or 'chassis' in name.lower():
-                                fan_type = 'Chassis Fan'
-                            
                             fans.append({
                                 'name': name,
-                                'type': fan_type,
                                 'speed': value,
-                                'unit': unit,
-                                'adapter': 'IPMI'
+                                'unit': unit
                             })
-                            print(f"[v0] IPMI Fan: {name} ({fan_type}) = {value} {unit}")
+                            print(f"[v0] IPMI Fan: {name} = {value} {unit}")
                         except ValueError:
                             continue
+        
+        print(f"[v0] Found {len(fans)} IPMI fans")
     except FileNotFoundError:
         print("[v0] ipmitool not found")
     except Exception as e:
@@ -1521,8 +1330,142 @@ def identify_fan_sensors():
     
     return fans
 
-def identify_temperature_sensors():
-    """Identify and categorize temperature sensors with better labeling"""
+def get_ipmi_power():
+    """Get power supply information from IPMI"""
+    power_supplies = []
+    power_meter = None
+    
+    try:
+        result = subprocess.run(['ipmitool', 'sensor'], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                if ('power supply' in line.lower() or 'power meter' in line.lower()) and '|' in line:
+                    parts = [p.strip() for p in line.split('|')]
+                    if len(parts) >= 3:
+                        name = parts[0]
+                        value_str = parts[1]
+                        unit = parts[2] if len(parts) > 2 else ''
+                        
+                        try:
+                            value = float(value_str)
+                            
+                            if 'power meter' in name.lower():
+                                power_meter = {
+                                    'name': name,
+                                    'watts': value,
+                                    'unit': unit
+                                }
+                                print(f"[v0] IPMI Power Meter: {value} {unit}")
+                            else:
+                                power_supplies.append({
+                                    'name': name,
+                                    'watts': value,
+                                    'unit': unit,
+                                    'status': 'ok' if value > 0 else 'off'
+                                })
+                                print(f"[v0] IPMI PSU: {name} = {value} {unit}")
+                        except ValueError:
+                            continue
+        
+        print(f"[v0] Found {len(power_supplies)} IPMI power supplies")
+    except FileNotFoundError:
+        print("[v0] ipmitool not found")
+    except Exception as e:
+        print(f"[v0] Error getting IPMI power: {e}")
+    
+    return {
+        'power_supplies': power_supplies,
+        'power_meter': power_meter
+    }
+
+def get_ups_info():
+    """Get UPS information from NUT (upsc)"""
+    ups_data = {}
+    
+    try:
+        # First, list available UPS devices
+        result = subprocess.run(['upsc', '-l'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            ups_list = result.stdout.strip().split('\n')
+            if ups_list and ups_list[0]:
+                ups_name = ups_list[0]
+                print(f"[v0] Found UPS: {ups_name}")
+                
+                # Get detailed UPS info
+                result = subprocess.run(['upsc', ups_name], capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    for line in result.stdout.split('\n'):
+                        if ':' in line:
+                            key, value = line.split(':', 1)
+                            key = key.strip()
+                            value = value.strip()
+                            
+                            # Map common UPS variables
+                            if key == 'device.model':
+                                ups_data['model'] = value
+                            elif key == 'ups.status':
+                                ups_data['status'] = value
+                            elif key == 'battery.charge':
+                                ups_data['battery_charge'] = f"{value}%"
+                            elif key == 'battery.runtime':
+                                # Convert seconds to minutes
+                                try:
+                                    runtime_sec = int(value)
+                                    runtime_min = runtime_sec // 60
+                                    ups_data['time_left'] = f"{runtime_min} minutes"
+                                except ValueError:
+                                    ups_data['time_left'] = value
+                            elif key == 'ups.load':
+                                ups_data['load_percent'] = f"{value}%"
+                            elif key == 'input.voltage':
+                                ups_data['line_voltage'] = f"{value}V"
+                            elif key == 'ups.realpower':
+                                ups_data['real_power'] = f"{value}W"
+                    
+                    print(f"[v0] UPS data: {ups_data}")
+    except FileNotFoundError:
+        print("[v0] upsc not found")
+    except Exception as e:
+        print(f"[v0] Error getting UPS info: {e}")
+    
+    return ups_data
+
+def identify_temperature_sensor(sensor_name, adapter):
+    """Identify what a temperature sensor corresponds to"""
+    sensor_lower = sensor_name.lower()
+    adapter_lower = adapter.lower() if adapter else ""
+    
+    # CPU/Package temperatures
+    if "package" in sensor_lower or "tctl" in sensor_lower or "tccd" in sensor_lower:
+        return "CPU Package"
+    if "core" in sensor_lower:
+        core_num = re.search(r'(\d+)', sensor_name)
+        return f"CPU Core {core_num.group(1)}" if core_num else "CPU Core"
+    
+    # Motherboard/Chipset
+    if "temp1" in sensor_lower and ("isa" in adapter_lower or "acpi" in adapter_lower):
+        return "Motherboard/Chipset"
+    if "pch" in sensor_lower or "chipset" in sensor_lower:
+        return "Chipset"
+    
+    # Storage (NVMe, SATA)
+    if "nvme" in sensor_lower or "composite" in sensor_lower:
+        return "NVMe SSD"
+    if "sata" in sensor_lower or "ata" in sensor_lower:
+        return "SATA Drive"
+    
+    # GPU
+    if any(gpu in adapter_lower for gpu in ["nouveau", "amdgpu", "radeon", "i915"]):
+        return "GPU"
+    
+    # Network adapters
+    if "pci" in adapter_lower and "temp" in sensor_lower:
+        return "PCI Device"
+    
+    return sensor_name
+
+def get_temperature_info():
+    """Get detailed temperature information from sensors command"""
     temperatures = []
     power_meter = None
     
@@ -1530,29 +1473,27 @@ def identify_temperature_sensors():
         result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
         if result.returncode == 0:
             current_adapter = None
-            current_chip = None
+            current_sensor = None
             
             for line in result.stdout.split('\n'):
-                line_stripped = line.strip()
-                if not line_stripped:
+                line = line.strip()
+                if not line:
                     continue
                 
-                # Detect chip name (lines without indentation before "Adapter:")
-                if not line.startswith(' ') and not line.startswith('Adapter:') and ':' not in line:
-                    current_chip = line_stripped
+                # Detect adapter line
+                if line.startswith('Adapter:'):
+                    current_adapter = line.replace('Adapter:', '').strip()
                     continue
                 
-                if line_stripped.startswith('Adapter:'):
-                    current_adapter = line_stripped.replace('Adapter:', '').strip()
-                    continue
-                
-                if ':' in line_stripped and not line_stripped.startswith(' '):
-                    parts = line_stripped.split(':', 1)
+                # Detect sensor name (lines without ':' at the start are sensor names)
+                if ':' in line and not line.startswith(' '):
+                    parts = line.split(':', 1)
                     sensor_name = parts[0].strip()
                     value_part = parts[1].strip()
                     
                     if 'power' in sensor_name.lower() and 'W' in value_part:
                         try:
+                            # Extract power value (e.g., "182.00 W" -> 182.00)
                             power_match = re.search(r'([\d.]+)\s*W', value_part)
                             if power_match:
                                 power_value = float(power_match.group(1))
@@ -1565,35 +1506,22 @@ def identify_temperature_sensors():
                         except ValueError:
                             pass
                     
+                    # Parse temperature sensors
                     elif '°C' in value_part or 'C' in value_part:
                         try:
+                            # Extract temperature value
                             temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
                             if temp_match:
                                 temp_value = float(temp_match.group(1))
                                 
+                                # Extract high and critical values if present
                                 high_match = re.search(r'high\s*=\s*([+-]?[\d.]+)', value_part)
                                 crit_match = re.search(r'crit\s*=\s*([+-]?[\d.]+)', value_part)
                                 
                                 high_value = float(high_match.group(1)) if high_match else 0
                                 crit_value = float(crit_match.group(1)) if crit_match else 0
                                 
-                                # Identify sensor type
-                                identified_name = sensor_name
-                                if sensor_name.lower() == 'temp1':
-                                    if current_adapter and 'pci' in current_adapter.lower():
-                                        identified_name = 'PCI adapter'
-                                    elif current_adapter and 'isa' in current_adapter.lower():
-                                        identified_name = 'ISA adapter'
-                                    elif current_chip:
-                                        identified_name = f'{current_chip} sensor'
-                                    else:
-                                        identified_name = 'System temperature'
-                                elif 'composite' in sensor_name.lower():
-                                    identified_name = 'Composite'
-                                elif 'package' in sensor_name.lower():
-                                    identified_name = 'Package id 0'
-                                elif 'core' in sensor_name.lower():
-                                    identified_name = sensor_name
+                                identified_name = identify_temperature_sensor(sensor_name, current_adapter)
                                 
                                 temperatures.append({
                                     'name': identified_name,
@@ -1601,8 +1529,7 @@ def identify_temperature_sensors():
                                     'current': temp_value,
                                     'high': high_value,
                                     'critical': crit_value,
-                                    'adapter': current_adapter,
-                                    'chip': current_chip
+                                    'adapter': current_adapter
                                 })
                         except ValueError:
                             pass
@@ -1614,392 +1541,135 @@ def identify_temperature_sensors():
     except FileNotFoundError:
         print("[v0] sensors command not found")
     except Exception as e:
-        print(f"[v0] Error identifying temperature sensors: {e}")
+        print(f"[v0] Error getting temperature info: {e}")
     
     return {
         'temperatures': temperatures,
         'power_meter': power_meter
     }
 
-def get_network_interface_details(interface_name):
-    """Get detailed information about a network interface"""
-    details = {
-        'name': interface_name,
-        'driver': None,
-        'driver_version': None,
-        'firmware_version': None,
-        'bus_info': None,
-        'link_detected': None,
-        'speed': None,
-        'duplex': None,
-        'mtu': None,
-        'mac_address': None,
-        'ip_addresses': [],
-        'statistics': {}
-    }
+def identify_fan(fan_name, adapter):
+    """Identify what a fan corresponds to"""
+    fan_lower = fan_name.lower()
+    adapter_lower = adapter.lower() if adapter else ""
     
-    try:
-        # Get ethtool information
-        result = subprocess.run(['ethtool', interface_name], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            for line in result.stdout.split('\n'):
-                line = line.strip()
-                if 'Speed:' in line:
-                    details['speed'] = line.split(':', 1)[1].strip()
-                elif 'Duplex:' in line:
-                    details['duplex'] = line.split(':', 1)[1].strip()
-                elif 'Link detected:' in line:
-                    details['link_detected'] = line.split(':', 1)[1].strip()
-        
-        # Get driver information
-        result = subprocess.run(['ethtool', '-i', interface_name], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            for line in result.stdout.split('\n'):
-                line = line.strip()
-                if line.startswith('driver:'):
-                    details['driver'] = line.split(':', 1)[1].strip()
-                elif line.startswith('version:'):
-                    details['driver_version'] = line.split(':', 1)[1].strip()
-                elif line.startswith('firmware-version:'):
-                    details['firmware_version'] = line.split(':', 1)[1].strip()
-                elif line.startswith('bus-info:'):
-                    details['bus_info'] = line.split(':', 1)[1].strip()
-        
-        # Get IP addresses and MAC
-        result = subprocess.run(['ip', 'addr', 'show', interface_name], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            for line in result.stdout.split('\n'):
-                line = line.strip()
-                if line.startswith('link/ether'):
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        details['mac_address'] = parts[1]
-                elif line.startswith('inet '):
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        details['ip_addresses'].append({
-                            'type': 'IPv4',
-                            'address': parts[1]
-                        })
-                elif line.startswith('inet6 '):
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        details['ip_addresses'].append({
-                            'type': 'IPv6',
-                            'address': parts[1]
-                        })
-                elif 'mtu' in line.lower():
-                    mtu_match = re.search(r'mtu\s+(\d+)', line)
-                    if mtu_match:
-                        details['mtu'] = mtu_match.group(1)
-        
-        # Get statistics
-        result = subprocess.run(['ip', '-s', 'link', 'show', interface_name], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            lines = result.stdout.split('\n')
-            for i, line in enumerate(lines):
-                if 'RX:' in line and i + 1 < len(lines):
-                    rx_line = lines[i + 1].strip().split()
-                    if len(rx_line) >= 2:
-                        details['statistics']['rx_bytes'] = rx_line[0]
-                        details['statistics']['rx_packets'] = rx_line[1]
-                elif 'TX:' in line and i + 1 < len(lines):
-                    tx_line = lines[i + 1].strip().split()
-                    if len(tx_line) >= 2:
-                        details['statistics']['tx_bytes'] = tx_line[0]
-                        details['statistics']['tx_packets'] = tx_line[1]
-        
-        print(f"[v0] Got detailed info for network interface {interface_name}")
-    except Exception as e:
-        print(f"[v0] Error getting network interface details for {interface_name}: {e}")
+    # GPU fans
+    if any(gpu in adapter_lower for gpu in ["nouveau", "amdgpu", "radeon", "i915"]):
+        return "GPU Fan"
     
-    return details
+    # CPU fans
+    if "cpu" in fan_lower:
+        return "CPU Fan"
+    
+    # Chassis/System fans
+    if "fan1" in fan_lower and "isa" in adapter_lower:
+        return "CPU Fan"
+    if "fan2" in fan_lower and "isa" in adapter_lower:
+        return "Chassis Fan"
+    if "fan3" in fan_lower and "isa" in adapter_lower:
+        return "Chassis Fan"
+    if "sys" in fan_lower or "chassis" in fan_lower:
+        return "Chassis Fan"
+    
+    return fan_name
 
-def get_disk_details(disk_name):
-    """Get detailed information about a disk"""
-    details = {
-        'name': disk_name,
-        'type': None,
-        'driver': None,
-        'model': None,
-        'serial': None,
-        'size': None,
-        'block_size': None,
-        'scheduler': None,
-        'rotational': None,
-        'removable': None,
-        'read_only': None,
-        'smart_available': False,
-        'smart_enabled': False,
-        'smart_health': None,
-        'temperature': None,
-        'power_on_hours': None,
-        'partitions': []
-    }
+def get_detailed_gpu_info(gpu):
+    """Get detailed GPU information using nvidia-smi, intel_gpu_top, or radeontop"""
+    detailed_info = {}
     
-    try:
-        # Get basic disk information from lsblk
-        result = subprocess.run(['lsblk', '-J', '-o', 'NAME,TYPE,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT', f'/dev/{disk_name}'], 
-                              capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            import json
-            data = json.loads(result.stdout)
-            if 'blockdevices' in data and len(data['blockdevices']) > 0:
-                device = data['blockdevices'][0]
-                details['type'] = device.get('type', 'disk')
-                details['size'] = device.get('size')
-                details['model'] = device.get('model')
-                details['serial'] = device.get('serial')
-                
-                if 'children' in device:
-                    for child in device['children']:
-                        details['partitions'].append({
-                            'name': child.get('name'),
-                            'size': child.get('size'),
-                            'fstype': child.get('fstype'),
-                            'mountpoint': child.get('mountpoint')
-                        })
-        
-        # Get sys information
-        sys_path = f'/sys/block/{disk_name}'
+    vendor = gpu.get('vendor', '').upper()
+    
+    # NVIDIA GPU - use nvidia-smi
+    if vendor == 'NVIDIA':
         try:
-            with open(f'{sys_path}/queue/rotational', 'r') as f:
-                details['rotational'] = f.read().strip() == '1'
-            with open(f'{sys_path}/removable', 'r') as f:
-                details['removable'] = f.read().strip() == '1'
-            with open(f'{sys_path}/ro', 'r') as f:
-                details['read_only'] = f.read().strip() == '1'
-            with open(f'{sys_path}/queue/scheduler', 'r') as f:
-                scheduler_line = f.read().strip()
-                scheduler_match = re.search(r'\[([^\]]+)\]', scheduler_line)
-                if scheduler_match:
-                    details['scheduler'] = scheduler_match.group(1)
-            with open(f'{sys_path}/queue/physical_block_size', 'r') as f:
-                details['block_size'] = f.read().strip()
-        except:
-            pass
-        
-        # Determine disk type
-        if disk_name.startswith('nvme'):
-            details['type'] = 'NVMe'
-            details['driver'] = 'nvme'
-        elif disk_name.startswith('sd'):
-            if details['rotational']:
-                details['type'] = 'HDD'
-            else:
-                details['type'] = 'SSD'
-            details['driver'] = 'sd'
-        elif disk_name.startswith('hd'):
-            details['type'] = 'IDE/PATA'
-            details['driver'] = 'ide'
-        elif disk_name.startswith('mmcblk'):
-            details['type'] = 'MMC/SD'
-            details['driver'] = 'mmc'
-        
-        # Try to get SMART data
-        try:
-            result = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                ['nvidia-smi', '--query-gpu=index,name,driver_version,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,utilization.gpu,utilization.memory,clocks.gr,clocks.mem,pcie.link.gen.current,pcie.link.width.current', 
+                 '--format=csv,noheader,nounits'],
+                capture_output=True, text=True, timeout=5
+            )
             if result.returncode == 0:
-                details['smart_available'] = True
-                for line in result.stdout.split('\n'):
-                    if 'SMART support is:' in line and 'Enabled' in line:
-                        details['smart_enabled'] = True
+                for line in result.stdout.strip().split('\n'):
+                    if line:
+                        parts = [p.strip() for p in line.split(',')]
+                        if len(parts) >= 15:
+                            detailed_info = {
+                                'driver_version': parts[2],
+                                'memory_total': f"{parts[3]} MB",
+                                'memory_used': f"{parts[4]} MB",
+                                'memory_free': f"{parts[5]} MB",
+                                'temperature': int(float(parts[6])) if parts[6] != '[N/A]' else None,
+                                'power_draw': f"{parts[7]} W" if parts[7] != '[N/A]' else None,
+                                'power_limit': f"{parts[8]} W" if parts[8] != '[N/A]' else None,
+                                'utilization_gpu': int(float(parts[9])) if parts[9] != '[N/A]' else None,
+                                'utilization_memory': int(float(parts[10])) if parts[10] != '[N/A]' else None,
+                                'clock_graphics': f"{parts[11]} MHz" if parts[11] != '[N/A]' else None,
+                                'clock_memory': f"{parts[12]} MHz" if parts[12] != '[N/A]' else None,
+                                'pcie_gen': parts[13] if parts[13] != '[N/A]' else None,
+                                'pcie_width': f"x{parts[14]}" if parts[14] != '[N/A]' else None,
+                            }
+                            break
             
-            if details['smart_enabled']:
-                result = subprocess.run(['smartctl', '-H', f'/dev/{disk_name}'], capture_output=True, text=True, timeout=5)
-                if result.returncode == 0:
-                    for line in result.stdout.split('\n'):
-                        if 'SMART overall-health' in line or 'SMART Health Status' in line:
-                            if 'PASSED' in line or 'OK' in line:
-                                details['smart_health'] = 'PASSED'
-                            else:
-                                details['smart_health'] = 'FAILED'
+            # Get running processes
+            result = subprocess.run(
+                ['nvidia-smi', '--query-compute-apps=pid,process_name,used_memory', '--format=csv,noheader'],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                processes = []
+                for line in result.stdout.strip().split('\n'):
+                    if line:
+                        parts = [p.strip() for p in line.split(',')]
+                        if len(parts) >= 3:
+                            processes.append({
+                                'pid': parts[0],
+                                'name': parts[1],
+                                'memory': parts[2]
+                            })
+                detailed_info['processes'] = processes
                 
-                result = subprocess.run(['smartctl', '-A', f'/dev/{disk_name}'], capture_output=True, text=True, timeout=5)
-                if result.returncode == 0:
-                    for line in result.stdout.split('\n'):
-                        if 'Temperature' in line or 'Airflow_Temperature' in line:
-                            parts = line.split()
-                            if len(parts) >= 10:
-                                try:
-                                    details['temperature'] = int(parts[9])
-                                except:
-                                    pass
-                        elif 'Power_On_Hours' in line:
-                            parts = line.split()
-                            if len(parts) >= 10:
-                                try:
-                                    details['power_on_hours'] = int(parts[9])
-                                except:
-                                    pass
-        except FileNotFoundError:
-            print(f"[v0] smartctl not found")
         except Exception as e:
-            print(f"[v0] Error getting SMART data for {disk_name}: {e}")
-        
-        print(f"[v0] Got detailed info for disk {disk_name}")
-    except Exception as e:
-        print(f"[v0] Error getting disk details for {disk_name}: {e}")
+            print(f"[v0] Error getting NVIDIA GPU details: {e}")
     
-    return details
+    # Intel GPU - use intel_gpu_top
+    elif vendor == 'INTEL':
+        try:
+            # intel_gpu_top requires root, so we'll try to get basic info
+            result = subprocess.run(
+                ['intel_gpu_top', '-l'],
+                capture_output=True, text=True, timeout=2
+            )
+            if result.returncode == 0:
+                # Parse intel_gpu_top output
+                # This is a simplified version, actual parsing would be more complex
+                detailed_info['note'] = 'Intel GPU monitoring requires root access'
+        except Exception as e:
+            print(f"[v0] Error getting Intel GPU details: {e}")
+    
+    # AMD GPU - use radeontop
+    elif vendor == 'AMD':
+        try:
+            result = subprocess.run(
+                ['radeontop', '-d', '-', '-l', '1'],
+                capture_output=True, text=True, timeout=2
+            )
+            if result.returncode == 0:
+                # Parse radeontop output
+                # This is a simplified version, actual parsing would be more complex
+                for line in result.stdout.split('\n'):
+                    if 'gpu' in line.lower():
+                        match = re.search(r'(\d+\.\d+)%', line)
+                        if match:
+                            detailed_info['utilization_gpu'] = float(match.group(1))
+        except Exception as e:
+            print(f"[v0] Error getting AMD GPU details: {e}")
+    
+    return detailed_info
 
-# --- END OF UPDATED CODE ---
-
-def get_hardware_info():
-    """Get comprehensive hardware information"""
-    hardware_data = {
-        'cpu': {},
-        'motherboard': {},
-        'memory_modules': [],
-        'temperatures': [],
-        'power_meter': None,
-        'gpus': [],
-        'pci_devices': [],
-        'fans': [],
-        'power_supplies': [],
-        'ups': {},
-        'storage_devices': [],
-        'ipmi_fans': [],
-        'ipmi_power': {}
-    }
+def get_gpu_info():
+    """Get GPU information from lspci and enrich with temperature/fan data from sensors"""
+    gpus = []
     
-    # CPU Information
     try:
-        result = subprocess.run(['lscpu'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            cpu_info = {}
-            for line in result.stdout.split('\n'):
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    key = key.strip()
-                    value = value.strip()
-                    
-                    if key == 'Model name':
-                        cpu_info['model'] = value
-                    elif key == 'CPU(s)':
-                        cpu_info['total_threads'] = int(value)
-                    elif key == 'Core(s) per socket':
-                        cpu_info['cores_per_socket'] = int(value)
-                    elif key == 'Socket(s)':
-                        cpu_info['sockets'] = int(value)
-                    elif key == 'CPU MHz':
-                        cpu_info['current_mhz'] = float(value)
-                    elif key == 'CPU max MHz':
-                        cpu_info['max_mhz'] = float(value)
-                    elif key == 'CPU min MHz':
-                        cpu_info['min_mhz'] = float(value)
-                    elif key == 'Virtualization':
-                        cpu_info['virtualization'] = value
-                    elif key == 'L1d cache':
-                        cpu_info['l1d_cache'] = value
-                    elif key == 'L1i cache':
-                        cpu_info['l1i_cache'] = value
-                    elif key == 'L2 cache':
-                        cpu_info['l2_cache'] = value
-                    elif key == 'L3 cache':
-                        cpu_info['l3_cache'] = value
-            
-            hardware_data['cpu'] = cpu_info
-            print(f"[v0] CPU: {cpu_info.get('model', 'Unknown')}")
-    except Exception as e:
-        print(f"[v0] Error getting CPU info: {e}")
-    
-    # Motherboard Information
-    try:
-        result = subprocess.run(['dmidecode', '-t', 'baseboard'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            mb_info = {}
-            for line in result.stdout.split('\n'):
-                line = line.strip()
-                if line.startswith('Manufacturer:'):
-                    mb_info['manufacturer'] = line.split(':', 1)[1].strip()
-                elif line.startswith('Product Name:'):
-                    mb_info['model'] = line.split(':', 1)[1].strip()
-                elif line.startswith('Version:'):
-                    mb_info['version'] = line.split(':', 1)[1].strip()
-                elif line.startswith('Serial Number:'):
-                    mb_info['serial'] = line.split(':', 1)[1].strip()
-            
-            hardware_data['motherboard'] = mb_info
-            print(f"[v0] Motherboard: {mb_info.get('manufacturer', 'Unknown')} {mb_info.get('model', 'Unknown')}")
-    except Exception as e:
-        print(f"[v0] Error getting motherboard info: {e}")
-    
-    # BIOS Information
-    try:
-        result = subprocess.run(['dmidecode', '-t', 'bios'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            bios_info = {}
-            for line in result.stdout.split('\n'):
-                line = line.strip()
-                if line.startswith('Vendor:'):
-                    bios_info['vendor'] = line.split(':', 1)[1].strip()
-                elif line.startswith('Version:'):
-                    bios_info['version'] = line.split(':', 1)[1].strip()
-                elif line.startswith('Release Date:'):
-                    bios_info['date'] = line.split(':', 1)[1].strip()
-            
-            hardware_data['motherboard']['bios'] = bios_info
-            print(f"[v0] BIOS: {bios_info.get('vendor', 'Unknown')} {bios_info.get('version', 'Unknown')}")
-    except Exception as e:
-        print(f"[v0] Error getting BIOS info: {e}")
-    
-    # Memory Modules
-    try:
-        result = subprocess.run(['dmidecode', '-t', 'memory'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            current_module = {}
-            for line in result.stdout.split('\n'):
-                line = line.strip()
-                
-                if line.startswith('Memory Device'):
-                    if current_module and current_module.get('size') != 'No Module Installed':
-                        hardware_data['memory_modules'].append(current_module)
-                    current_module = {}
-                elif line.startswith('Size:'):
-                    size = line.split(':', 1)[1].strip()
-                    current_module['size'] = size
-                elif line.startswith('Type:'):
-                    current_module['type'] = line.split(':', 1)[1].strip()
-                elif line.startswith('Speed:'):
-                    current_module['speed'] = line.split(':', 1)[1].strip()
-                elif line.startswith('Manufacturer:'):
-                    current_module['manufacturer'] = line.split(':', 1)[1].strip()
-                elif line.startswith('Serial Number:'):
-                    current_module['serial'] = line.split(':', 1)[1].strip()
-                elif line.startswith('Locator:'):
-                    current_module['slot'] = line.split(':', 1)[1].strip()
-            
-            if current_module and current_module.get('size') != 'No Module Installed':
-                hardware_data['memory_modules'].append(current_module)
-            
-            print(f"[v0] Memory modules: {len(hardware_data['memory_modules'])} installed")
-    except Exception as e:
-        print(f"[v0] Error getting memory info: {e}")
-    
-    # Storage Devices (reuse existing function)
-    storage_info = get_storage_info()
-    hardware_data['storage_devices'] = storage_info.get('disks', [])
-    
-    # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
-    try:
-        # Try nvidia-smi first
-        result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,temperature.gpu,power.draw', '--format=csv,noheader'], 
-                              capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            for line in result.stdout.strip().split('\n'):
-                if line:
-                    parts = line.split(',')
-                    if len(parts) >= 4:
-                        hardware_data['gpus'].append({
-                            'name': parts[0].strip(),
-                            'memory': parts[1].strip(),
-                            'temperature': int(parts[2].strip().split(' ')[0]) if parts[2].strip() != 'N/A' and 'C' in parts[2] else 0,
-                            'power_draw': parts[3].strip(),
-                            'vendor': 'NVIDIA'
-                        })
-        
-        # Always check lspci for all GPUs (integrated and discrete)
         result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
         if result.returncode == 0:
             for line in result.stdout.split('\n'):
@@ -2007,6 +1677,7 @@ def get_hardware_info():
                 if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
                     parts = line.split(':', 2)
                     if len(parts) >= 3:
+                        slot = parts[0].strip()
                         gpu_name = parts[2].strip()
                         
                         # Determine vendor
@@ -2018,236 +1689,639 @@ def get_hardware_info():
                         elif 'Intel' in gpu_name:
                             vendor = 'Intel'
                         
-                        # Check if this GPU is already in the list (from nvidia-smi)
-                        already_exists = False
-                        for existing_gpu in hardware_data['gpus']:
-                            if gpu_name in existing_gpu['name'] or existing_gpu['name'] in gpu_name:
-                                already_exists = True
-                                # Update vendor if it was previously unknown
-                                if existing_gpu['vendor'] == 'Unknown':
-                                    existing_gpu['vendor'] = vendor
-                                break
+                        gpu = {
+                            'slot': slot,
+                            'name': gpu_name,
+                            'vendor': vendor,
+                            'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated'
+                        }
                         
-                        if not already_exists:
-                            hardware_data['gpus'].append({
-                                'name': gpu_name,
-                                'vendor': vendor
-                            })
-                            print(f"[v0] Found GPU: {gpu_name} ({vendor})")
-            
-            print(f"[v0] Graphics cards: {len(hardware_data['gpus'])} found")
+                        detailed_info = get_detailed_gpu_info(gpu)
+                        gpu.update(detailed_info)
+                        
+                        gpus.append(gpu)
+                        print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
     except Exception as e:
-        print(f"[v0] Error getting graphics cards: {e}")
+        print(f"[v0] Error detecting GPUs from lspci: {e}")
     
     try:
-        print("[v0] Getting PCI devices with driver information...")
-        # First get basic device info with lspci -vmm
-        result = subprocess.run(['lspci', '-vmm'], capture_output=True, text=True, timeout=10)
+        result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
         if result.returncode == 0:
-            current_device = {}
+            current_adapter = None
+            
             for line in result.stdout.split('\n'):
                 line = line.strip()
-                
                 if not line:
-                    # Empty line = end of device
-                    if current_device and 'Class' in current_device:
-                        device_class = current_device.get('Class', '')
-                        device_name = current_device.get('Device', '')
-                        vendor = current_device.get('Vendor', '')
-                        slot = current_device.get('Slot', 'Unknown')
-                        
-                        # Categorize and add important devices
-                        device_type = 'Other'
-                        include_device = False
-                        
-                        # Graphics/Display devices
-                        if any(keyword in device_class for keyword in ['VGA', 'Display', '3D']):
-                            device_type = 'Graphics Card'
-                            include_device = True
-                        # Storage controllers
-                        elif any(keyword in device_class for keyword in ['SATA', 'RAID', 'Mass storage', 'Non-Volatile memory']):
-                            device_type = 'Storage Controller'
-                            include_device = True
-                        # Network controllers
-                        elif 'Ethernet' in device_class or 'Network' in device_class:
-                            device_type = 'Network Controller'
-                            include_device = True
-                        # USB controllers
-                        elif 'USB' in device_class:
-                            device_type = 'USB Controller'
-                            include_device = True
-                        # Audio devices
-                        elif 'Audio' in device_class or 'Multimedia' in device_class:
-                            device_type = 'Audio Controller'
-                            include_device = True
-                        # Special devices (Coral TPU, etc.)
-                        elif any(keyword in device_name.lower() for keyword in ['coral', 'tpu', 'edge']):
-                            device_type = 'AI Accelerator'
-                            include_device = True
-                        # PCI bridges (usually not interesting for users)
-                        elif 'Bridge' in device_class:
-                            include_device = False
-                        
-                        if include_device:
-                            pci_device = {
-                                'slot': slot,
-                                'type': device_type,
-                                'vendor': vendor,
-                                'device': device_name,
-                                'class': device_class
-                            }
-                            hardware_data['pci_devices'].append(pci_device)
+                    continue
+                
+                # Detect adapter line
+                if line.startswith('Adapter:'):
+                    current_adapter = line.replace('Adapter:', '').strip()
+                    continue
+                
+                # Look for GPU-related sensors (nouveau, amdgpu, radeon, i915, etc.)
+                if ':' in line and not line.startswith(' '):
+                    parts = line.split(':', 1)
+                    sensor_name = parts[0].strip()
+                    value_part = parts[1].strip()
                     
-                    current_device = {}
-                elif ':' in line:
-                    key, value = line.split(':', 1)
-                    current_device[key.strip()] = value.strip()
-        
-        # Now get driver information with lspci -k
-        result_k = subprocess.run(['lspci', '-k'], capture_output=True, text=True, timeout=10)
-        if result_k.returncode == 0:
-            current_slot = None
-            current_driver = None
-            current_module = None
-            
-            for line in result_k.stdout.split('\n'):
-                # Match PCI slot line (e.g., "00:1f.2 SATA controller: ...")
-                if line and not line.startswith('\t'):
-                    parts = line.split(' ', 1)
-                    if parts:
-                        current_slot = parts[0]
-                        current_driver = None
-                        current_module = None
-                # Match driver lines (indented with tab)
-                elif line.startswith('\t'):
-                    line = line.strip()
-                    if line.startswith('Kernel driver in use:'):
-                        current_driver = line.split(':', 1)[1].strip()
-                    elif line.startswith('Kernel modules:'):
-                        current_module = line.split(':', 1)[1].strip()
+                    # Check if this is a GPU sensor
+                    gpu_sensor_keywords = ['nouveau', 'amdgpu', 'radeon', 'i915']
+                    is_gpu_sensor = any(keyword in current_adapter.lower() if current_adapter else False for keyword in gpu_sensor_keywords)
                     
-                    # Update the corresponding PCI device
-                    if current_slot and (current_driver or current_module):
-                        for device in hardware_data['pci_devices']:
-                            if device['slot'] == current_slot:
-                                if current_driver:
-                                    device['driver'] = current_driver
-                                if current_module:
-                                    device['kernel_module'] = current_module
-                                break
-        
-        print(f"[v0] Total PCI devices found: {len(hardware_data['pci_devices'])}")
+                    if is_gpu_sensor:
+                        # Try to match this sensor to a GPU
+                        for gpu in gpus:
+                            # Match nouveau to NVIDIA, amdgpu/radeon to AMD, i915 to Intel
+                            if (('nouveau' in current_adapter.lower() and gpu['vendor'] == 'NVIDIA') or
+                                (('amdgpu' in current_adapter.lower() or 'radeon' in current_adapter.lower()) and gpu['vendor'] == 'AMD') or
+                                ('i915' in current_adapter.lower() and gpu['vendor'] == 'Intel')):
+                                
+                                # Parse temperature (only if not already set by nvidia-smi)
+                                if '°C' in value_part or 'C' in value_part:
+                                    if 'temperature' not in gpu or gpu['temperature'] is None:
+                                        temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
+                                        if temp_match:
+                                            gpu['temperature'] = float(temp_match.group(1))
+                                            print(f"[v0] GPU {gpu['name']}: Temperature = {gpu['temperature']}°C")
+                                
+                                # Parse fan speed
+                                elif 'RPM' in value_part:
+                                    rpm_match = re.search(r'([\d.]+)\s*RPM', value_part)
+                                    if rpm_match:
+                                        gpu['fan_speed'] = int(float(rpm_match.group(1)))
+                                        gpu['fan_unit'] = 'RPM'
+                                        print(f"[v0] GPU {gpu['name']}: Fan = {gpu['fan_speed']} RPM")
     except Exception as e:
-        print(f"[v0] Error getting PCI devices: {e}")
+        print(f"[v0] Error enriching GPU data from sensors: {e}")
     
-    # Sensors (Temperature and Fans)
+    return gpus
+
+def get_disk_hardware_info(disk_name):
+    """Get detailed hardware information for a disk"""
+    disk_info = {}
+    
     try:
-        if hasattr(psutil, "sensors_temperatures"):
-            temps = psutil.sensors_temperatures()
-            if temps:
-                for sensor_name, entries in temps.items():
-                    for entry in entries:
-                        hardware_data['temperatures'].append({
-                            'name': f"{sensor_name} - {entry.label}" if entry.label else sensor_name,
-                            'current': entry.current,
-                            'high': entry.high if entry.high else 0,
-                            'critical': entry.critical if entry.critical else 0
-                        })
-                
-                print(f"[v0] Temperature sensors: {len(hardware_data['temperatures'])} found")
+        # Get disk type (HDD, SSD, NVMe)
+        result = subprocess.run(['lsblk', '-d', '-n', '-o', 'NAME,ROTA,TYPE', f'/dev/{disk_name}'], 
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            parts = result.stdout.strip().split()
+            if len(parts) >= 2:
+                rota = parts[1]
+                disk_info['type'] = 'HDD' if rota == '1' else 'SSD'
+                if disk_name.startswith('nvme'):
+                    disk_info['type'] = 'NVMe SSD'
         
+        # Get driver/kernel module
         try:
-            result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
+            # For NVMe
+            if disk_name.startswith('nvme'):
+                disk_info['driver'] = 'nvme'
+                disk_info['interface'] = 'PCIe/NVMe'
+            # For SATA/SAS
+            else:
+                result = subprocess.run(['udevadm', 'info', '--query=property', f'/dev/{disk_name}'], 
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    for line in result.stdout.split('\n'):
+                        if 'ID_BUS=' in line:
+                            bus = line.split('=')[1].strip()
+                            disk_info['interface'] = bus.upper()
+                        if 'ID_MODEL=' in line:
+                            model = line.split('=')[1].strip()
+                            disk_info['model'] = model
+                        if 'ID_SERIAL_SHORT=' in line:
+                            serial = line.split('=')[1].strip()
+                            disk_info['serial'] = serial
+        except Exception as e:
+            print(f"[v0] Error getting disk driver info: {e}")
+        
+        # Get SMART data
+        try:
+            result = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
+                                  capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
-                current_adapter = None
-                fans = []
+                for line in result.stdout.split('\n'):
+                    if 'Model Family:' in line:
+                        disk_info['family'] = line.split(':', 1)[1].strip()
+                    elif 'Device Model:' in line or 'Model Number:' in line:
+                        disk_info['model'] = line.split(':', 1)[1].strip()
+                    elif 'Serial Number:' in line:
+                        disk_info['serial'] = line.split(':', 1)[1].strip()
+                    elif 'Firmware Version:' in line:
+                        disk_info['firmware'] = line.split(':', 1)[1].strip()
+                    elif 'Rotation Rate:' in line:
+                        disk_info['rotation_rate'] = line.split(':', 1)[1].strip()
+                    elif 'Form Factor:' in line:
+                        disk_info['form_factor'] = line.split(':', 1)[1].strip()
+                    elif 'SATA Version is:' in line:
+                        disk_info['sata_version'] = line.split(':', 1)[1].strip()
+        except Exception as e:
+            print(f"[v0] Error getting SMART info: {e}")
+            
+    except Exception as e:
+        print(f"[v0] Error getting disk hardware info: {e}")
+    
+    return disk_info
+
+def get_network_hardware_info(pci_slot):
+    """Get detailed hardware information for a network interface"""
+    net_info = {}
+    
+    try:
+        # Get detailed PCI info
+        result = subprocess.run(['lspci', '-v', '-s', pci_slot], 
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                if 'Kernel driver in use:' in line:
+                    net_info['driver'] = line.split(':', 1)[1].strip()
+                elif 'Kernel modules:' in line:
+                    net_info['kernel_modules'] = line.split(':', 1)[1].strip()
+                elif 'Subsystem:' in line:
+                    net_info['subsystem'] = line.split(':', 1)[1].strip()
+                elif 'LnkCap:' in line:
+                    # Parse link capabilities
+                    speed_match = re.search(r'Speed (\S+)', line)
+                    width_match = re.search(r'Width x(\d+)', line)
+                    if speed_match:
+                        net_info['max_link_speed'] = speed_match.group(1)
+                    if width_match:
+                        net_info['max_link_width'] = f"x{width_match.group(1)}"
+                elif 'LnkSta:' in line:
+                    # Parse current link status
+                    speed_match = re.search(r'Speed (\S+)', line)
+                    width_match = re.search(r'Width x(\d+)', line)
+                    if speed_match:
+                        net_info['current_link_speed'] = speed_match.group(1)
+                    if width_match:
+                        net_info['current_link_width'] = f"x{width_match.group(1)}"
+        
+        # Get network interface name and status
+        try:
+            result = subprocess.run(['ls', '/sys/class/net/'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                interfaces = result.stdout.strip().split('\n')
+                for iface in interfaces:
+                    # Check if this interface corresponds to the PCI slot
+                    device_path = f"/sys/class/net/{iface}/device"
+                    if os.path.exists(device_path):
+                        real_path = os.path.realpath(device_path)
+                        if pci_slot in real_path:
+                            net_info['interface_name'] = iface
+                            
+                            # Get interface speed
+                            speed_file = f"/sys/class/net/{iface}/speed"
+                            if os.path.exists(speed_file):
+                                with open(speed_file, 'r') as f:
+                                    speed = f.read().strip()
+                                    if speed != '-1':
+                                        net_info['interface_speed'] = f"{speed} Mbps"
+                            
+                            # Get MAC address
+                            mac_file = f"/sys/class/net/{iface}/address"
+                            if os.path.exists(mac_file):
+                                with open(mac_file, 'r') as f:
+                                    net_info['mac_address'] = f.read().strip()
+                            
+                            break
+        except Exception as e:
+            print(f"[v0] Error getting network interface info: {e}")
+            
+    except Exception as e:
+        print(f"[v0] Error getting network hardware info: {e}")
+    
+    return net_info
+
+def get_hardware_info():
+    """Get comprehensive hardware information"""
+    try:
+        # Initialize with default structure, including the new power_meter field
+        hardware_data = {
+            'cpu': {},
+            'motherboard': {},
+            'memory_modules': [],
+            'storage_devices': [],
+            'network_cards': [],
+            'graphics_cards': [],
+            'gpus': [],  # Added dedicated GPU array
+            'pci_devices': [],
+            'sensors': {
+                'temperatures': [],
+                'fans': []
+            },
+            'power': {}, # This might be overwritten by ipmi_power or ups
+            'ipmi_fans': [],  # Added IPMI fans
+            'ipmi_power': {},  # Added IPMI power
+            'ups': {},  # Added UPS info
+            'power_meter': None # Added placeholder for sensors power meter
+        }
+        
+        # CPU Information
+        try:
+            result = subprocess.run(['lscpu'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                cpu_info = {}
+                for line in result.stdout.split('\n'):
+                    if ':' in line:
+                        key, value = line.split(':', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        
+                        if key == 'Model name':
+                            cpu_info['model'] = value
+                        elif key == 'CPU(s)':
+                            cpu_info['total_threads'] = int(value)
+                        elif key == 'Core(s) per socket':
+                            cpu_info['cores_per_socket'] = int(value)
+                        elif key == 'Socket(s)':
+                            cpu_info['sockets'] = int(value)
+                        elif key == 'CPU MHz':
+                            cpu_info['current_mhz'] = float(value)
+                        elif key == 'CPU max MHz':
+                            cpu_info['max_mhz'] = float(value)
+                        elif key == 'CPU min MHz':
+                            cpu_info['min_mhz'] = float(value)
+                        elif key == 'Virtualization':
+                            cpu_info['virtualization'] = value
+                        elif key == 'L1d cache':
+                            cpu_info['l1d_cache'] = value
+                        elif key == 'L1i cache':
+                            cpu_info['l1i_cache'] = value
+                        elif key == 'L2 cache':
+                            cpu_info['l2_cache'] = value
+                        elif key == 'L3 cache':
+                            cpu_info['l3_cache'] = value
                 
+                hardware_data['cpu'] = cpu_info
+                print(f"[v0] CPU: {cpu_info.get('model', 'Unknown')}")
+        except Exception as e:
+            print(f"[v0] Error getting CPU info: {e}")
+        
+        # Motherboard Information
+        try:
+            result = subprocess.run(['dmidecode', '-t', 'baseboard'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                mb_info = {}
                 for line in result.stdout.split('\n'):
                     line = line.strip()
-                    if not line:
-                        continue
-                    
-                    if line.startswith('Adapter:'):
-                        current_adapter = line.replace('Adapter:', '').strip()
-                        continue
-                    
-                    if ':' in line and not line.startswith(' '):
-                        parts = line.split(':', 1)
-                        sensor_name = parts[0].strip()
-                        value_part = parts[1].strip()
-                        
-                        if 'RPM' in value_part:
-                            rpm_match = re.search(r'([\d.]+)\s*RPM', value_part)
-                            if rpm_match:
-                                fan_speed = int(float(rpm_match.group(1)))
-                                fans.append({
-                                    'name': sensor_name,
-                                    'speed': fan_speed,
-                                    'unit': 'RPM',
-                                    'adapter': current_adapter
-                                })
-                                print(f"[v0] Fan sensor: {sensor_name} = {fan_speed} RPM")
+                    if line.startswith('Manufacturer:'):
+                        mb_info['manufacturer'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Product Name:'):
+                        mb_info['model'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Version:'):
+                        mb_info['version'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Serial Number:'):
+                        mb_info['serial'] = line.split(':', 1)[1].strip()
                 
-                hardware_data['sensors']['fans'] = fans
-                print(f"[v0] Found {len(fans)} fan sensor(s)")
+                hardware_data['motherboard'] = mb_info
+                print(f"[v0] Motherboard: {mb_info.get('manufacturer', 'Unknown')} {mb_info.get('model', 'Unknown')}")
         except Exception as e:
-            print(f"[v0] Error getting fan info: {e}")
-    except Exception as e:
-        print(f"[v0] Error getting psutil sensors: {e}")
-    
-    # Power Supply / UPS
-    try:
-        result = subprocess.run(['apcaccess'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            ups_info = {}
-            for line in result.stdout.split('\n'):
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    key = key.strip()
-                    value = value.strip()
+            print(f"[v0] Error getting motherboard info: {e}")
+        
+        # BIOS Information
+        try:
+            result = subprocess.run(['dmidecode', '-t', 'bios'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                bios_info = {}
+                for line in result.stdout.split('\n'):
+                    line = line.strip()
+                    if line.startswith('Vendor:'):
+                        bios_info['vendor'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Version:'):
+                        bios_info['version'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Release Date:'):
+                        bios_info['date'] = line.split(':', 1)[1].strip()
+                
+                hardware_data['motherboard']['bios'] = bios_info
+                print(f"[v0] BIOS: {bios_info.get('vendor', 'Unknown')} {bios_info.get('version', 'Unknown')}")
+        except Exception as e:
+            print(f"[v0] Error getting BIOS info: {e}")
+        
+        # Memory Modules
+        try:
+            result = subprocess.run(['dmidecode', '-t', 'memory'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                current_module = {}
+                for line in result.stdout.split('\n'):
+                    line = line.strip()
                     
-                    if key == 'MODEL':
-                        ups_info['model'] = value
-                    elif key == 'STATUS':
-                        ups_info['status'] = value
-                    elif key == 'BCHARGE':
-                        ups_info['battery_charge'] = value
-                    elif key == 'TIMELEFT':
-                        ups_info['time_left'] = value
-                    elif key == 'LOADPCT':
-                        ups_info['load_percent'] = value
-                    elif key == 'LINEV':
-                        ups_info['line_voltage'] = value
+                    if line.startswith('Memory Device'):
+                        if current_module and current_module.get('size') != 'No Module Installed':
+                            hardware_data['memory_modules'].append(current_module)
+                        current_module = {}
+                    elif line.startswith('Size:'):
+                        size = line.split(':', 1)[1].strip()
+                        current_module['size'] = size
+                    elif line.startswith('Type:'):
+                        current_module['type'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Speed:'):
+                        current_module['speed'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Manufacturer:'):
+                        current_module['manufacturer'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Serial Number:'):
+                        current_module['serial'] = line.split(':', 1)[1].strip()
+                    elif line.startswith('Locator:'):
+                        current_module['slot'] = line.split(':', 1)[1].strip()
+                
+                if current_module and current_module.get('size') != 'No Module Installed':
+                    hardware_data['memory_modules'].append(current_module)
+                
+                print(f"[v0] Memory modules: {len(hardware_data['memory_modules'])} installed")
+        except Exception as e:
+            print(f"[v0] Error getting memory info: {e}")
+        
+        storage_info = get_storage_info()
+        for device in storage_info.get('disks', []):
+            hw_info = get_disk_hardware_info(device['name'])
+            device.update(hw_info)
+        hardware_data['storage_devices'] = storage_info.get('disks', [])
+        
+        # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
+        try:
+            # Try nvidia-smi first
+            result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,temperature.gpu,power.draw', '--format=csv,noheader'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if line:
+                        parts = line.split(',')
+                        if len(parts) >= 4:
+                            hardware_data['graphics_cards'].append({
+                                'name': parts[0].strip(),
+                                'memory': parts[1].strip(),
+                                'temperature': int(parts[2].strip().split(' ')[0]) if parts[2].strip() != 'N/A' and 'C' in parts[2] else 0,
+                                'power_draw': parts[3].strip(),
+                                'vendor': 'NVIDIA'
+                            })
             
-            if ups_info:
-                hardware_data['power'] = ups_info
-                print(f"[v0] UPS found: {ups_info.get('model', 'Unknown')}")
-    except FileNotFoundError:
-        print("[v0] apcaccess not found - no UPS monitoring")
+            # Always check lspci for all GPUs (integrated and discrete)
+            result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    # Match VGA, 3D, Display controllers
+                    if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
+                        parts = line.split(':', 2)
+                        if len(parts) >= 3:
+                            gpu_name = parts[2].strip()
+                            
+                            # Determine vendor
+                            vendor = 'Unknown'
+                            if 'NVIDIA' in gpu_name or 'nVidia' in gpu_name:
+                                vendor = 'NVIDIA'
+                            elif 'AMD' in gpu_name or 'ATI' in gpu_name or 'Radeon' in gpu_name:
+                                vendor = 'AMD'
+                            elif 'Intel' in gpu_name:
+                                vendor = 'Intel'
+                            
+                            # Check if this GPU is already in the list (from nvidia-smi)
+                            already_exists = False
+                            for existing_gpu in hardware_data['graphics_cards']:
+                                if gpu_name in existing_gpu['name'] or existing_gpu['name'] in gpu_name:
+                                    already_exists = True
+                                    # Update vendor if it was previously unknown
+                                    if existing_gpu['vendor'] == 'Unknown':
+                                        existing_gpu['vendor'] = vendor
+                                    break
+                            
+                            if not already_exists:
+                                hardware_data['graphics_cards'].append({
+                                    'name': gpu_name,
+                                    'vendor': vendor
+                                })
+                                print(f"[v0] Found GPU: {gpu_name} ({vendor})")
+            
+            print(f"[v0] Graphics cards: {len(hardware_data['graphics_cards'])} found")
+        except Exception as e:
+            print(f"[v0] Error getting graphics cards: {e}")
+        
+        try:
+            print("[v0] Getting PCI devices with driver information...")
+            # First get basic device info with lspci -vmm
+            result = subprocess.run(['lspci', '-vmm'], capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                current_device = {}
+                for line in result.stdout.split('\n'):
+                    line = line.strip()
+                    
+                    if not line:
+                        # Empty line = end of device
+                        if current_device and 'Class' in current_device:
+                            device_class = current_device.get('Class', '')
+                            device_name = current_device.get('Device', '')
+                            vendor = current_device.get('Vendor', '')
+                            slot = current_device.get('Slot', 'Unknown')
+                            
+                            # Categorize and add important devices
+                            device_type = 'Other'
+                            include_device = False
+                            
+                            # Graphics/Display devices
+                            if any(keyword in device_class for keyword in ['VGA', 'Display', '3D']):
+                                device_type = 'Graphics Card'
+                                include_device = True
+                            # Storage controllers
+                            elif any(keyword in device_class for keyword in ['SATA', 'RAID', 'Mass storage', 'Non-Volatile memory']):
+                                device_type = 'Storage Controller'
+                                include_device = True
+                            # Network controllers
+                            elif 'Ethernet' in device_class or 'Network' in device_class:
+                                device_type = 'Network Controller'
+                                include_device = True
+                            # USB controllers
+                            elif 'USB' in device_class:
+                                device_type = 'USB Controller'
+                                include_device = True
+                            # Audio devices
+                            elif 'Audio' in device_class or 'Multimedia' in device_class:
+                                device_type = 'Audio Controller'
+                                include_device = True
+                            # Special devices (Coral TPU, etc.)
+                            elif any(keyword in device_name.lower() for keyword in ['coral', 'tpu', 'edge']):
+                                device_type = 'AI Accelerator'
+                                include_device = True
+                            # PCI bridges (usually not interesting for users)
+                            elif 'Bridge' in device_class:
+                                include_device = False
+                            
+                            if include_device:
+                                pci_device = {
+                                    'slot': slot,
+                                    'type': device_type,
+                                    'vendor': vendor,
+                                    'device': device_name,
+                                    'class': device_class
+                                }
+                                hardware_data['pci_devices'].append(pci_device)
+                        
+                        current_device = {}
+                    elif ':' in line:
+                        key, value = line.split(':', 1)
+                        current_device[key.strip()] = value.strip()
+            
+            # Now get driver information with lspci -k
+            result_k = subprocess.run(['lspci', '-k'], capture_output=True, text=True, timeout=10)
+            if result_k.returncode == 0:
+                current_slot = None
+                current_driver = None
+                current_module = None
+                
+                for line in result_k.stdout.split('\n'):
+                    # Match PCI slot line (e.g., "00:1f.2 SATA controller: ...")
+                    if line and not line.startswith('\t'):
+                        parts = line.split(' ', 1)
+                        if parts:
+                            current_slot = parts[0]
+                            current_driver = None
+                            current_module = None
+                    # Match driver lines (indented with tab)
+                    elif line.startswith('\t'):
+                        line = line.strip()
+                        if line.startswith('Kernel driver in use:'):
+                            current_driver = line.split(':', 1)[1].strip()
+                        elif line.startswith('Kernel modules:'):
+                            current_module = line.split(':', 1)[1].strip()
+                        
+                        # Update the corresponding PCI device
+                        if current_slot and (current_driver or current_module):
+                            for device in hardware_data['pci_devices']:
+                                if device['slot'] == current_slot:
+                                    if current_driver:
+                                        device['driver'] = current_driver
+                                    if current_module:
+                                        device['kernel_module'] = current_module
+                                    break
+            
+            print(f"[v0] Total PCI devices found: {len(hardware_data['pci_devices'])}")
+        except Exception as e:
+            print(f"[v0] Error getting PCI devices: {e}")
+        
+        # Sensors (Temperature and Fans)
+        try:
+            if hasattr(psutil, "sensors_temperatures"):
+                temps = psutil.sensors_temperatures()
+                if temps:
+                    for sensor_name, entries in temps.items():
+                        for entry in entries:
+                            # Use identify_temperature_sensor to make names more user-friendly
+                            identified_name = identify_temperature_sensor(entry.label if entry.label else sensor_name, sensor_name)
+                            
+                            hardware_data['sensors']['temperatures'].append({
+                                'name': identified_name,
+                                'original_name': entry.label if entry.label else sensor_name,
+                                'current': entry.current,
+                                'high': entry.high if entry.high else 0,
+                                'critical': entry.critical if entry.critical else 0
+                            })
+                    
+                    print(f"[v0] Temperature sensors: {len(hardware_data['sensors']['temperatures'])} found")
+            
+            try:
+                result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    current_adapter = None
+                    fans = []
+                    
+                    for line in result.stdout.split('\n'):
+                        line = line.strip()
+                        if not line:
+                            continue
+                        
+                        # Detect adapter line
+                        if line.startswith('Adapter:'):
+                            current_adapter = line.replace('Adapter:', '').strip()
+                            continue
+                        
+                        # Parse fan sensors
+                        if ':' in line and not line.startswith(' '):
+                            parts = line.split(':', 1)
+                            sensor_name = parts[0].strip()
+                            value_part = parts[1].strip()
+                            
+                            # Look for fan sensors (RPM)
+                            if 'RPM' in value_part:
+                                rpm_match = re.search(r'([\d.]+)\s*RPM', value_part)
+                                if rpm_match:
+                                    fan_speed = int(float(rpm_match.group(1)))
+                                    
+                                    identified_name = identify_fan(sensor_name, current_adapter)
+                                    
+                                    fans.append({
+                                        'name': identified_name,
+                                        'original_name': sensor_name,
+                                        'speed': fan_speed,
+                                        'unit': 'RPM',
+                                        'adapter': current_adapter
+                                    })
+                                    print(f"[v0] Fan sensor: {identified_name} ({sensor_name}) = {fan_speed} RPM")
+                    
+                    hardware_data['sensors']['fans'] = fans
+                    print(f"[v0] Found {len(fans)} fan sensor(s)")
+            except Exception as e:
+                print(f"[v0] Error getting fan info: {e}")
+        except Exception as e:
+            print(f"[v0] Error getting psutil sensors: {e}")
+        
+        # Power Supply / UPS
+        try:
+            result = subprocess.run(['apcaccess'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                ups_info = {}
+                for line in result.stdout.split('\n'):
+                    if ':' in line:
+                        key, value = line.split(':', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        
+                        if key == 'MODEL':
+                            ups_info['model'] = value
+                        elif key == 'STATUS':
+                            ups_info['status'] = value
+                        elif key == 'BCHARGE':
+                            ups_info['battery_charge'] = value
+                        elif key == 'TIMELEFT':
+                            ups_info['time_left'] = value
+                        elif key == 'LOADPCT':
+                            ups_info['load_percent'] = value
+                        elif key == 'LINEV':
+                            ups_info['line_voltage'] = value
+                
+                if ups_info:
+                    hardware_data['power'] = ups_info
+                    print(f"[v0] UPS found: {ups_info.get('model', 'Unknown')}")
+        except FileNotFoundError:
+            print("[v0] apcaccess not found - no UPS monitoring")
+        except Exception as e:
+            print(f"[v0] Error getting UPS info: {e}")
+        
+        temp_info = get_temperature_info()
+        hardware_data['sensors']['temperatures'] = temp_info['temperatures']
+        hardware_data['power_meter'] = temp_info['power_meter']
+        
+        ipmi_fans = get_ipmi_fans()
+        if ipmi_fans:
+            hardware_data['ipmi_fans'] = ipmi_fans
+        
+        ipmi_power = get_ipmi_power()
+        if ipmi_power['power_supplies'] or ipmi_power['power_meter']:
+            hardware_data['ipmi_power'] = ipmi_power
+        
+        ups_info = get_ups_info()
+        if ups_info:
+            hardware_data['ups'] = ups_info
+        
+        hardware_data['gpus'] = get_gpu_info()
+        
+        return hardware_data
+        
     except Exception as e:
-        print(f"[v0] Error getting UPS info: {e}")
-    
-    temp_info = identify_temperature_sensors()
-    hardware_data['temperatures'] = temp_info['temperatures']
-    hardware_data['power_meter'] = temp_info['power_meter']
-    
-    ipmi_fans = get_ipmi_fans()
-    if ipmi_fans:
-        hardware_data['ipmi_fans'] = ipmi_fans
-    
-    ipmi_power = get_ipmi_power()
-    if ipmi_power['power_supplies'] or ipmi_power['power_meter']:
-        hardware_data['ipmi_power'] = ipmi_power
-    
-    ups_info = get_ups_info()
-    if ups_info:
-        hardware_data['ups'] = ups_info
-    
-    hardware_data['gpus'] = get_gpu_detailed_info()
-    
-    hardware_data['fans'] = identify_fan_sensors()
-    
-    return hardware_data
+        print(f"[v0] Error in get_hardware_info: {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
+
 
 @app.route('/api/system', methods=['GET'])
 def api_system():
@@ -2399,8 +2473,10 @@ def api_hardware():
         'cpu': hardware_info.get('cpu', {}),
         'motherboard': hardware_info.get('motherboard', {}),
         'memory_modules': hardware_info.get('memory_modules', []),
-        'temperatures': hardware_info.get('temperatures', []),
-        'fans': hardware_info.get('fans', []), # Use sensors fans
+        'storage_devices': hardware_info.get('storage_devices', []),
+        'pci_devices': hardware_info.get('pci_devices', []),
+        'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
+        'fans': hardware_info.get('sensors', {}).get('fans', []), # Use sensors fans
         'power_supplies': hardware_info.get('ipmi_power', {}).get('power_supplies', []), # Use IPMI power supplies
         'power_meter': hardware_info.get('power_meter'),
         'ups': hardware_info.get('ups') if hardware_info.get('ups') else None,
@@ -2555,26 +2631,6 @@ def api_vm_control(vmid):
             return jsonify({'error': 'Failed to control VM'}), 500
     except Exception as e:
         print(f"Error controlling VM: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/hardware/network/<interface_name>')
-def api_network_interface_details(interface_name):
-    """API endpoint for detailed network interface information"""
-    try:
-        details = get_network_interface_details(interface_name)
-        return jsonify(details)
-    except Exception as e:
-        print(f"[v0] Error in network interface details API: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/hardware/disk/<disk_name>')
-def api_disk_details(disk_name):
-    """API endpoint for detailed disk information"""
-    try:
-        details = get_disk_details(disk_name)
-        return jsonify(details)
-    except Exception as e:
-        print(f"[v0] Error in disk details API: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

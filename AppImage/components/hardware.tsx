@@ -17,12 +17,10 @@ import {
   MemoryStick,
   Cpu as Gpu,
   Info,
-  Activity,
-  Gauge,
 } from "lucide-react"
 import useSWR from "swr"
 import { useState } from "react"
-import { type HardwareData, type GPU, type NetworkInterfaceDetails, type DiskDetails, fetcher } from "../types/hardware"
+import { type HardwareData, type GPU, type PCIDevice, type StorageDevice, fetcher } from "../types/hardware"
 
 const getDeviceTypeColor = (type: string): string => {
   const lowerType = type.toLowerCase()
@@ -47,16 +45,9 @@ export default function Hardware() {
   })
 
   const [selectedGPU, setSelectedGPU] = useState<GPU | null>(null)
-  const [selectedNetworkInterface, setSelectedNetworkInterface] = useState<string | null>(null)
-  const [selectedDisk, setSelectedDisk] = useState<string | null>(null)
-  const [selectedPCIDevice, setSelectedPCIDevice] = useState<any | null>(null)
-
-  const { data: networkDetails } = useSWR<NetworkInterfaceDetails>(
-    selectedNetworkInterface ? `/api/hardware/network/${selectedNetworkInterface}` : null,
-    fetcher,
-  )
-
-  const { data: diskDetails } = useSWR<DiskDetails>(selectedDisk ? `/api/hardware/disk/${selectedDisk}` : null, fetcher)
+  const [selectedPCIDevice, setSelectedPCIDevice] = useState<PCIDevice | null>(null)
+  const [selectedDisk, setSelectedDisk] = useState<StorageDevice | null>(null)
+  const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
 
   return (
     <div className="space-y-6 p-6">
@@ -247,6 +238,7 @@ export default function Hardware() {
         </Card>
       )}
 
+      {/* GPU Information - Enhanced with modal */}
       {hardwareData?.gpus && hardwareData.gpus.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -282,15 +274,6 @@ export default function Hardware() {
                     </div>
                   )}
 
-                  {gpu.memory_total && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Memory</span>
-                      <span className="font-medium">
-                        {gpu.memory_used} / {gpu.memory_total}
-                      </span>
-                    </div>
-                  )}
-
                   {gpu.temperature !== undefined && gpu.temperature > 0 && (
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
@@ -306,15 +289,34 @@ export default function Hardware() {
                     </div>
                   )}
 
-                  {gpu.utilization !== undefined && (
+                  {gpu.memory_total && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Memory</span>
+                      <span className="font-medium">
+                        {gpu.memory_used} / {gpu.memory_total}
+                      </span>
+                    </div>
+                  )}
+
+                  {gpu.utilization_gpu !== undefined && (
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Utilization</span>
-                        <span className="font-medium">{gpu.utilization}%</span>
+                        <span className="text-muted-foreground">GPU Usage</span>
+                        <span className="font-medium">{gpu.utilization_gpu}%</span>
                       </div>
                       <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                        <div className="h-full bg-green-500 transition-all" style={{ width: `${gpu.utilization}%` }} />
+                        <div
+                          className="h-full bg-green-500 transition-all"
+                          style={{ width: `${gpu.utilization_gpu}%` }}
+                        />
                       </div>
+                    </div>
+                  )}
+
+                  {gpu.power_draw && gpu.power_draw !== "N/A" && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Power</span>
+                      <span className="font-medium">{gpu.power_draw}</span>
                     </div>
                   )}
                 </div>
@@ -329,53 +331,46 @@ export default function Hardware() {
         </Card>
       )}
 
-      <Dialog open={selectedGPU !== null} onOpenChange={(open) => !open && setSelectedGPU(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      {/* GPU Detail Modal */}
+      <Dialog open={selectedGPU !== null} onOpenChange={() => setSelectedGPU(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Gpu className="h-5 w-5" />
-              {selectedGPU?.name}
-            </DialogTitle>
-            <DialogDescription>Detailed GPU information and statistics</DialogDescription>
+            <DialogTitle>{selectedGPU?.name}</DialogTitle>
+            <DialogDescription>Detailed GPU Information</DialogDescription>
           </DialogHeader>
 
           {selectedGPU && (
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div>
-                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                  <Info className="h-4 w-4" />
-                  Basic Information
-                </h3>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-3">
+            <div className="space-y-4">
+              {/* Basic Info */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm">Basic Information</h3>
+                <div className="grid gap-2">
+                  <div className="flex justify-between border-b border-border/50 pb-2">
                     <span className="text-sm text-muted-foreground">Vendor</span>
                     <Badge className={getDeviceTypeColor("graphics")}>{selectedGPU.vendor}</Badge>
                   </div>
-                  <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-3">
+                  <div className="flex justify-between border-b border-border/50 pb-2">
                     <span className="text-sm text-muted-foreground">Type</span>
                     <span className="text-sm font-medium">{selectedGPU.type}</span>
                   </div>
-                  {selectedGPU.slot && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-3">
-                      <span className="text-sm text-muted-foreground">PCI Slot</span>
-                      <span className="font-mono text-sm">{selectedGPU.slot}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm text-muted-foreground">PCI Slot</span>
+                    <span className="font-mono text-sm">{selectedGPU.slot}</span>
+                  </div>
                   {selectedGPU.driver_version && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-3">
+                    <div className="flex justify-between border-b border-border/50 pb-2">
                       <span className="text-sm text-muted-foreground">Driver Version</span>
                       <span className="font-mono text-sm">{selectedGPU.driver_version}</span>
                     </div>
                   )}
                   {selectedGPU.pcie_gen && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-3">
+                    <div className="flex justify-between border-b border-border/50 pb-2">
                       <span className="text-sm text-muted-foreground">PCIe Generation</span>
                       <span className="text-sm font-medium">Gen {selectedGPU.pcie_gen}</span>
                     </div>
                   )}
                   {selectedGPU.pcie_width && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-3">
+                    <div className="flex justify-between border-b border-border/50 pb-2">
                       <span className="text-sm text-muted-foreground">PCIe Width</span>
                       <span className="text-sm font-medium">{selectedGPU.pcie_width}</span>
                     </div>
@@ -383,111 +378,96 @@ export default function Hardware() {
                 </div>
               </div>
 
-              {/* Performance Metrics */}
-              {(selectedGPU.utilization !== undefined || selectedGPU.temperature !== undefined) && (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                    <Activity className="h-4 w-4" />
-                    Performance Metrics
-                  </h3>
-                  <div className="space-y-3">
-                    {selectedGPU.utilization !== undefined && (
-                      <div className="rounded-lg border border-border/30 bg-background/50 p-3">
-                        <div className="mb-2 flex justify-between text-sm">
-                          <span className="text-muted-foreground">GPU Utilization</span>
-                          <span className="font-semibold">{selectedGPU.utilization}%</span>
+              {/* Memory Info */}
+              {selectedGPU.memory_total && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm">Memory</h3>
+                  <div className="grid gap-2">
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm text-muted-foreground">Total</span>
+                      <span className="text-sm font-medium">{selectedGPU.memory_total}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm text-muted-foreground">Used</span>
+                      <span className="text-sm font-medium">{selectedGPU.memory_used}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm text-muted-foreground">Free</span>
+                      <span className="text-sm font-medium">{selectedGPU.memory_free}</span>
+                    </div>
+                    {selectedGPU.utilization_memory !== undefined && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Memory Utilization</span>
+                          <span className="text-sm font-medium">{selectedGPU.utilization_memory}%</span>
                         </div>
-                        <Progress value={selectedGPU.utilization} className="h-2" />
-                      </div>
-                    )}
-                    {selectedGPU.memory_utilization !== undefined && (
-                      <div className="rounded-lg border border-border/30 bg-background/50 p-3">
-                        <div className="mb-2 flex justify-between text-sm">
-                          <span className="text-muted-foreground">Memory Utilization</span>
-                          <span className="font-semibold">{selectedGPU.memory_utilization}%</span>
-                        </div>
-                        <Progress value={selectedGPU.memory_utilization} className="h-2" />
-                      </div>
-                    )}
-                    {selectedGPU.temperature !== undefined && selectedGPU.temperature > 0 && (
-                      <div className="rounded-lg border border-border/30 bg-background/50 p-3">
-                        <div className="mb-2 flex justify-between text-sm">
-                          <span className="text-muted-foreground">Temperature</span>
-                          <span className="font-semibold text-green-500">{selectedGPU.temperature}°C</span>
-                        </div>
-                        <Progress value={(selectedGPU.temperature / 100) * 100} className="h-2" />
+                        <Progress value={selectedGPU.utilization_memory} className="h-2" />
                       </div>
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Memory Information */}
-              {selectedGPU.memory_total && (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                    <MemoryStick className="h-4 w-4" />
-                    Memory Information
-                  </h3>
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <div className="rounded-lg border border-border/30 bg-background/50 p-3">
-                      <p className="text-xs text-muted-foreground">Total</p>
-                      <p className="text-lg font-semibold">{selectedGPU.memory_total}</p>
+              {/* Performance */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm">Performance</h3>
+                <div className="grid gap-2">
+                  {selectedGPU.temperature !== undefined && selectedGPU.temperature > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Temperature</span>
+                        <span className="text-sm font-semibold text-green-500">{selectedGPU.temperature}°C</span>
+                      </div>
+                      <Progress value={(selectedGPU.temperature / 100) * 100} className="h-2" />
                     </div>
-                    <div className="rounded-lg border border-border/30 bg-background/50 p-3">
-                      <p className="text-xs text-muted-foreground">Used</p>
-                      <p className="text-lg font-semibold">{selectedGPU.memory_used}</p>
+                  )}
+                  {selectedGPU.utilization_gpu !== undefined && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">GPU Utilization</span>
+                        <span className="text-sm font-medium">{selectedGPU.utilization_gpu}%</span>
+                      </div>
+                      <Progress value={selectedGPU.utilization_gpu} className="h-2" />
                     </div>
-                    <div className="rounded-lg border border-border/30 bg-background/50 p-3">
-                      <p className="text-xs text-muted-foreground">Free</p>
-                      <p className="text-lg font-semibold">{selectedGPU.memory_free}</p>
+                  )}
+                  {selectedGPU.power_draw && selectedGPU.power_draw !== "N/A" && (
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm text-muted-foreground">Power Draw</span>
+                      <span className="text-sm font-medium">{selectedGPU.power_draw}</span>
                     </div>
-                  </div>
+                  )}
+                  {selectedGPU.power_limit && (
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm text-muted-foreground">Power Limit</span>
+                      <span className="text-sm font-medium">{selectedGPU.power_limit}</span>
+                    </div>
+                  )}
+                  {selectedGPU.fan_speed && (
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm text-muted-foreground">Fan Speed</span>
+                      <span className="text-sm font-medium">
+                        {selectedGPU.fan_speed} {selectedGPU.fan_unit}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Clock Speeds */}
               {(selectedGPU.clock_graphics || selectedGPU.clock_memory) && (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                    <Gauge className="h-4 w-4" />
-                    Clock Speeds
-                  </h3>
-                  <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm">Clock Speeds</h3>
+                  <div className="grid gap-2">
                     {selectedGPU.clock_graphics && (
-                      <div className="rounded-lg border border-border/30 bg-background/50 p-3">
-                        <p className="text-xs text-muted-foreground">Graphics Clock</p>
-                        <p className="text-lg font-semibold">{selectedGPU.clock_graphics}</p>
+                      <div className="flex justify-between border-b border-border/50 pb-2">
+                        <span className="text-sm text-muted-foreground">Graphics Clock</span>
+                        <span className="text-sm font-medium">{selectedGPU.clock_graphics}</span>
                       </div>
                     )}
                     {selectedGPU.clock_memory && (
-                      <div className="rounded-lg border border-border/30 bg-background/50 p-3">
-                        <p className="text-xs text-muted-foreground">Memory Clock</p>
-                        <p className="text-lg font-semibold">{selectedGPU.clock_memory}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Power Information */}
-              {(selectedGPU.power_draw || selectedGPU.power_limit) && (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                    <Zap className="h-4 w-4" />
-                    Power Information
-                  </h3>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {selectedGPU.power_draw && selectedGPU.power_draw !== "N/A" && (
-                      <div className="rounded-lg border border-border/30 bg-background/50 p-3">
-                        <p className="text-xs text-muted-foreground">Current Draw</p>
-                        <p className="text-lg font-semibold text-yellow-500">{selectedGPU.power_draw}</p>
-                      </div>
-                    )}
-                    {selectedGPU.power_limit && selectedGPU.power_limit !== "N/A" && (
-                      <div className="rounded-lg border border-border/30 bg-background/50 p-3">
-                        <p className="text-xs text-muted-foreground">Power Limit</p>
-                        <p className="text-lg font-semibold">{selectedGPU.power_limit}</p>
+                      <div className="flex justify-between border-b border-border/50 pb-2">
+                        <span className="text-sm text-muted-foreground">Memory Clock</span>
+                        <span className="text-sm font-medium">{selectedGPU.clock_memory}</span>
                       </div>
                     )}
                   </div>
@@ -496,25 +476,25 @@ export default function Hardware() {
 
               {/* Running Processes */}
               {selectedGPU.processes && selectedGPU.processes.length > 0 && (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                    <CpuIcon className="h-4 w-4" />
-                    Running Processes
-                  </h3>
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm">Running Processes</h3>
                   <div className="space-y-2">
-                    {selectedGPU.processes.map((process, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between rounded-lg border border-border/30 bg-background/50 p-3"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">{process.name}</p>
-                          <p className="text-xs text-muted-foreground">PID: {process.pid}</p>
+                    {selectedGPU.processes.map((proc, idx) => (
+                      <div key={idx} className="rounded-lg border border-border/30 bg-background/50 p-3">
+                        <div className="flex justify-between">
+                          <span className="font-mono text-xs">PID: {proc.pid}</span>
+                          <span className="text-xs font-medium">{proc.memory}</span>
                         </div>
-                        <Badge variant="outline">{process.memory}</Badge>
+                        <p className="mt-1 text-sm">{proc.name}</p>
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {selectedGPU.note && (
+                <div className="rounded-lg bg-muted p-3">
+                  <p className="text-xs text-muted-foreground">{selectedGPU.note}</p>
                 </div>
               )}
             </div>
@@ -522,6 +502,7 @@ export default function Hardware() {
         </DialogContent>
       </Dialog>
 
+      {/* PCI Devices - Changed to modal */}
       {hardwareData?.pci_devices && hardwareData.pci_devices.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -532,37 +513,32 @@ export default function Hardware() {
             </Badge>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {hardwareData.pci_devices.map((device, index) => (
               <div
                 key={index}
                 onClick={() => setSelectedPCIDevice(device)}
-                className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-4 transition-colors hover:bg-background/80"
+                className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-3 transition-colors hover:bg-background/80"
               >
                 <div className="flex items-center justify-between mb-2">
                   <Badge className={getDeviceTypeColor(device.type)}>{device.type}</Badge>
                   <span className="font-mono text-xs text-muted-foreground">{device.slot}</span>
                 </div>
-                <p className="font-medium text-sm mb-1">{device.device}</p>
-                <p className="text-xs text-muted-foreground">{device.vendor}</p>
-                <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                  <Info className="h-3 w-3" />
-                  <span>Click for details</span>
-                </div>
+                <p className="font-medium text-sm truncate">{device.device}</p>
+                <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>
+                {device.driver && <p className="mt-1 font-mono text-xs text-green-500">Driver: {device.driver}</p>}
               </div>
             ))}
           </div>
         </Card>
       )}
 
-      <Dialog open={selectedPCIDevice !== null} onOpenChange={(open) => !open && setSelectedPCIDevice(null)}>
+      {/* PCI Device Detail Modal */}
+      <Dialog open={selectedPCIDevice !== null} onOpenChange={() => setSelectedPCIDevice(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CpuIcon className="h-5 w-5" />
-              {selectedPCIDevice?.device}
-            </DialogTitle>
-            <DialogDescription>PCI device information</DialogDescription>
+            <DialogTitle>{selectedPCIDevice?.device}</DialogTitle>
+            <DialogDescription>PCI Device Information</DialogDescription>
           </DialogHeader>
 
           {selectedPCIDevice && (
@@ -635,6 +611,7 @@ export default function Hardware() {
         </Card>
       )}
 
+      {/* Fans */}
       {hardwareData?.fans && hardwareData.fans.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -653,12 +630,7 @@ export default function Hardware() {
               return (
                 <div key={index} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{fan.name}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {fan.type}
-                      </Badge>
-                    </div>
+                    <span className="text-sm font-medium">{fan.name}</span>
                     <span className="text-sm font-semibold text-blue-500">
                       {fan.speed.toFixed(0)} {fan.unit}
                     </span>
@@ -762,6 +734,7 @@ export default function Hardware() {
         </Card>
       )}
 
+      {/* Network Summary - Clickable */}
       {hardwareData?.pci_devices &&
         hardwareData.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length > 0 && (
           <Card className="border-border/50 bg-card/50 p-6">
@@ -779,7 +752,7 @@ export default function Hardware() {
                 .map((device, index) => (
                   <div
                     key={index}
-                    onClick={() => setSelectedNetworkInterface(device.device.split(" ")[0].toLowerCase())}
+                    onClick={() => setSelectedNetwork(device)}
                     className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-3 transition-colors hover:bg-background/80"
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -787,151 +760,55 @@ export default function Hardware() {
                       <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs">Ethernet</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>
-                    <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                      <Info className="h-3 w-3" />
-                      <span>Click for details</span>
-                    </div>
+                    {device.driver && <p className="mt-1 font-mono text-xs text-green-500">Driver: {device.driver}</p>}
                   </div>
                 ))}
             </div>
+            <p className="mt-4 text-xs text-muted-foreground">Click on an interface for detailed information</p>
           </Card>
         )}
 
-      <Dialog
-        open={selectedNetworkInterface !== null}
-        onOpenChange={(open) => !open && setSelectedNetworkInterface(null)}
-      >
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      {/* Network Detail Modal */}
+      <Dialog open={selectedNetwork !== null} onOpenChange={() => setSelectedNetwork(null)}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Network className="h-5 w-5" />
-              Network Interface: {selectedNetworkInterface}
-            </DialogTitle>
-            <DialogDescription>Detailed network interface information</DialogDescription>
+            <DialogTitle>{selectedNetwork?.device}</DialogTitle>
+            <DialogDescription>Network Interface Information</DialogDescription>
           </DialogHeader>
 
-          {networkDetails && (
-            <div className="space-y-4">
-              {/* Driver Information */}
-              <div>
-                <h3 className="mb-2 text-sm font-semibold">Driver Information</h3>
-                <div className="space-y-2">
-                  {networkDetails.driver && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Driver</span>
-                      <span className="font-mono text-sm">{networkDetails.driver}</span>
-                    </div>
-                  )}
-                  {networkDetails.driver_version && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Version</span>
-                      <span className="font-mono text-sm">{networkDetails.driver_version}</span>
-                    </div>
-                  )}
-                  {networkDetails.firmware_version && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Firmware</span>
-                      <span className="font-mono text-sm">{networkDetails.firmware_version}</span>
-                    </div>
-                  )}
-                  {networkDetails.bus_info && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Bus Info</span>
-                      <span className="font-mono text-sm">{networkDetails.bus_info}</span>
-                    </div>
-                  )}
-                </div>
+          {selectedNetwork && (
+            <div className="space-y-3">
+              <div className="flex justify-between border-b border-border/50 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">Device Type</span>
+                <Badge className={getDeviceTypeColor(selectedNetwork.type)}>{selectedNetwork.type}</Badge>
               </div>
 
-              {/* Connection Status */}
-              <div>
-                <h3 className="mb-2 text-sm font-semibold">Connection Status</h3>
-                <div className="space-y-2">
-                  {networkDetails.link_detected && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Link</span>
-                      <Badge variant={networkDetails.link_detected === "yes" ? "default" : "destructive"}>
-                        {networkDetails.link_detected}
-                      </Badge>
-                    </div>
-                  )}
-                  {networkDetails.speed && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Speed</span>
-                      <span className="text-sm font-medium">{networkDetails.speed}</span>
-                    </div>
-                  )}
-                  {networkDetails.duplex && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Duplex</span>
-                      <span className="text-sm font-medium">{networkDetails.duplex}</span>
-                    </div>
-                  )}
-                  {networkDetails.mtu && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">MTU</span>
-                      <span className="text-sm font-medium">{networkDetails.mtu}</span>
-                    </div>
-                  )}
-                </div>
+              <div className="flex justify-between border-b border-border/50 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">PCI Slot</span>
+                <span className="font-mono text-sm">{selectedNetwork.slot}</span>
               </div>
 
-              {/* Addresses */}
-              {(networkDetails.mac_address ||
-                (networkDetails.ip_addresses && networkDetails.ip_addresses.length > 0)) && (
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold">Addresses</h3>
-                  <div className="space-y-2">
-                    {networkDetails.mac_address && (
-                      <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                        <span className="text-sm text-muted-foreground">MAC Address</span>
-                        <span className="font-mono text-sm">{networkDetails.mac_address}</span>
-                      </div>
-                    )}
-                    {networkDetails.ip_addresses &&
-                      networkDetails.ip_addresses.map((ip, idx) => (
-                        <div
-                          key={idx}
-                          className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2"
-                        >
-                          <span className="text-sm text-muted-foreground">{ip.type}</span>
-                          <span className="font-mono text-sm">{ip.address}</span>
-                        </div>
-                      ))}
-                  </div>
+              <div className="flex justify-between border-b border-border/50 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">Vendor</span>
+                <span className="text-sm">{selectedNetwork.vendor}</span>
+              </div>
+
+              <div className="flex justify-between border-b border-border/50 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">Class</span>
+                <span className="font-mono text-sm">{selectedNetwork.class}</span>
+              </div>
+
+              {selectedNetwork.driver && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Driver</span>
+                  <span className="font-mono text-sm text-green-500">{selectedNetwork.driver}</span>
                 </div>
               )}
 
-              {/* Statistics */}
-              {networkDetails.statistics && Object.keys(networkDetails.statistics).length > 0 && (
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold">Statistics</h3>
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {networkDetails.statistics.rx_bytes && (
-                      <div className="rounded-lg border border-border/30 bg-background/50 p-2">
-                        <p className="text-xs text-muted-foreground">RX Bytes</p>
-                        <p className="text-sm font-medium">{networkDetails.statistics.rx_bytes}</p>
-                      </div>
-                    )}
-                    {networkDetails.statistics.rx_packets && (
-                      <div className="rounded-lg border border-border/30 bg-background/50 p-2">
-                        <p className="text-xs text-muted-foreground">RX Packets</p>
-                        <p className="text-sm font-medium">{networkDetails.statistics.rx_packets}</p>
-                      </div>
-                    )}
-                    {networkDetails.statistics.tx_bytes && (
-                      <div className="rounded-lg border border-border/30 bg-background/50 p-2">
-                        <p className="text-xs text-muted-foreground">TX Bytes</p>
-                        <p className="text-sm font-medium">{networkDetails.statistics.tx_bytes}</p>
-                      </div>
-                    )}
-                    {networkDetails.statistics.tx_packets && (
-                      <div className="rounded-lg border border-border/30 bg-background/50 p-2">
-                        <p className="text-xs text-muted-foreground">TX Packets</p>
-                        <p className="text-sm font-medium">{networkDetails.statistics.tx_packets}</p>
-                      </div>
-                    )}
-                  </div>
+              {selectedNetwork.kernel_module && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Kernel Module</span>
+                  <span className="font-mono text-sm">{selectedNetwork.kernel_module}</span>
                 </div>
               )}
             </div>
@@ -939,6 +816,7 @@ export default function Hardware() {
         </DialogContent>
       </Dialog>
 
+      {/* Storage Summary - Clickable */}
       {hardwareData?.storage_devices && hardwareData.storage_devices.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -953,7 +831,7 @@ export default function Hardware() {
             {hardwareData.storage_devices.map((device, index) => (
               <div
                 key={index}
-                onClick={() => setSelectedDisk(device.name)}
+                onClick={() => setSelectedDisk(device)}
                 className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-3 transition-colors hover:bg-background/80"
               >
                 <div className="flex items-center justify-between mb-2">
@@ -962,163 +840,103 @@ export default function Hardware() {
                 </div>
                 {device.size && <p className="text-sm font-medium">{device.size}</p>}
                 {device.model && <p className="text-xs text-muted-foreground truncate">{device.model}</p>}
-                <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                  <Info className="h-3 w-3" />
-                  <span>Click for details</span>
-                </div>
+                {device.driver && <p className="mt-1 font-mono text-xs text-green-500">Driver: {device.driver}</p>}
               </div>
             ))}
           </div>
+          <p className="mt-4 text-xs text-muted-foreground">Click on a device for detailed hardware information</p>
         </Card>
       )}
 
-      <Dialog open={selectedDisk !== null} onOpenChange={(open) => !open && setSelectedDisk(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      {/* Disk Detail Modal */}
+      <Dialog open={selectedDisk !== null} onOpenChange={() => setSelectedDisk(null)}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <HardDrive className="h-5 w-5" />
-              Disk: {selectedDisk}
-            </DialogTitle>
-            <DialogDescription>Detailed disk information</DialogDescription>
+            <DialogTitle>{selectedDisk?.name}</DialogTitle>
+            <DialogDescription>Storage Device Hardware Information</DialogDescription>
           </DialogHeader>
 
-          {diskDetails && (
-            <div className="space-y-4">
-              {/* Basic Information */}
-              <div>
-                <h3 className="mb-2 text-sm font-semibold">Basic Information</h3>
-                <div className="space-y-2">
-                  {diskDetails.type && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Type</span>
-                      <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">{diskDetails.type}</Badge>
-                    </div>
-                  )}
-                  {diskDetails.driver && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Driver</span>
-                      <span className="font-mono text-sm">{diskDetails.driver}</span>
-                    </div>
-                  )}
-                  {diskDetails.model && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Model</span>
-                      <span className="text-sm">{diskDetails.model}</span>
-                    </div>
-                  )}
-                  {diskDetails.serial && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Serial</span>
-                      <span className="font-mono text-sm">{diskDetails.serial}</span>
-                    </div>
-                  )}
-                  {diskDetails.size && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Size</span>
-                      <span className="text-sm font-medium">{diskDetails.size}</span>
-                    </div>
-                  )}
-                </div>
+          {selectedDisk && (
+            <div className="space-y-3">
+              <div className="flex justify-between border-b border-border/50 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">Device Name</span>
+                <span className="font-mono text-sm">{selectedDisk.name}</span>
               </div>
 
-              {/* Technical Details */}
-              <div>
-                <h3 className="mb-2 text-sm font-semibold">Technical Details</h3>
-                <div className="space-y-2">
-                  {diskDetails.rotational !== undefined && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Rotational</span>
-                      <Badge variant={diskDetails.rotational ? "default" : "outline"}>
-                        {diskDetails.rotational ? "Yes (HDD)" : "No (SSD)"}
-                      </Badge>
-                    </div>
-                  )}
-                  {diskDetails.block_size && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Block Size</span>
-                      <span className="text-sm">{diskDetails.block_size} bytes</span>
-                    </div>
-                  )}
-                  {diskDetails.scheduler && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Scheduler</span>
-                      <span className="text-sm">{diskDetails.scheduler}</span>
-                    </div>
-                  )}
-                  {diskDetails.removable !== undefined && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Removable</span>
-                      <Badge variant={diskDetails.removable ? "default" : "outline"}>
-                        {diskDetails.removable ? "Yes" : "No"}
-                      </Badge>
-                    </div>
-                  )}
-                  {diskDetails.read_only !== undefined && (
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">Read Only</span>
-                      <Badge variant={diskDetails.read_only ? "destructive" : "default"}>
-                        {diskDetails.read_only ? "Yes" : "No"}
-                      </Badge>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* SMART Information */}
-              {diskDetails.smart_available && (
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold">SMART Information</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                      <span className="text-sm text-muted-foreground">SMART Enabled</span>
-                      <Badge variant={diskDetails.smart_enabled ? "default" : "outline"}>
-                        {diskDetails.smart_enabled ? "Yes" : "No"}
-                      </Badge>
-                    </div>
-                    {diskDetails.smart_health && (
-                      <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                        <span className="text-sm text-muted-foreground">Health Status</span>
-                        <Badge variant={diskDetails.smart_health === "PASSED" ? "default" : "destructive"}>
-                          {diskDetails.smart_health}
-                        </Badge>
-                      </div>
-                    )}
-                    {diskDetails.temperature !== undefined && (
-                      <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                        <span className="text-sm text-muted-foreground">Temperature</span>
-                        <span className="text-sm font-semibold text-green-500">{diskDetails.temperature}°C</span>
-                      </div>
-                    )}
-                    {diskDetails.power_on_hours !== undefined && (
-                      <div className="flex justify-between rounded-lg border border-border/30 bg-background/50 p-2">
-                        <span className="text-sm text-muted-foreground">Power On Hours</span>
-                        <span className="text-sm font-medium">{diskDetails.power_on_hours.toLocaleString()} hours</span>
-                      </div>
-                    )}
-                  </div>
+              {selectedDisk.type && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Type</span>
+                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">{selectedDisk.type}</Badge>
                 </div>
               )}
 
-              {/* Partitions */}
-              {diskDetails.partitions && diskDetails.partitions.length > 0 && (
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold">Partitions</h3>
-                  <div className="space-y-2">
-                    {diskDetails.partitions.map((partition, idx) => (
-                      <div key={idx} className="rounded-lg border border-border/30 bg-background/50 p-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-mono text-sm font-medium">{partition.name}</span>
-                          {partition.size && <span className="text-sm text-muted-foreground">{partition.size}</span>}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs">
-                          {partition.fstype && <Badge variant="outline">{partition.fstype}</Badge>}
-                          {partition.mountpoint && (
-                            <span className="text-muted-foreground">→ {partition.mountpoint}</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              {selectedDisk.size && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Capacity</span>
+                  <span className="text-sm font-medium">{selectedDisk.size}</span>
+                </div>
+              )}
+
+              {selectedDisk.model && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Model</span>
+                  <span className="text-sm text-right">{selectedDisk.model}</span>
+                </div>
+              )}
+
+              {selectedDisk.family && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Family</span>
+                  <span className="text-sm text-right">{selectedDisk.family}</span>
+                </div>
+              )}
+
+              {selectedDisk.serial && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Serial Number</span>
+                  <span className="font-mono text-sm">{selectedDisk.serial}</span>
+                </div>
+              )}
+
+              {selectedDisk.firmware && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Firmware</span>
+                  <span className="font-mono text-sm">{selectedDisk.firmware}</span>
+                </div>
+              )}
+
+              {selectedDisk.interface && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Interface</span>
+                  <span className="text-sm font-medium">{selectedDisk.interface}</span>
+                </div>
+              )}
+
+              {selectedDisk.driver && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Driver</span>
+                  <span className="font-mono text-sm text-green-500">{selectedDisk.driver}</span>
+                </div>
+              )}
+
+              {selectedDisk.rotation_rate && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Rotation Rate</span>
+                  <span className="text-sm">{selectedDisk.rotation_rate}</span>
+                </div>
+              )}
+
+              {selectedDisk.form_factor && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Form Factor</span>
+                  <span className="text-sm">{selectedDisk.form_factor}</span>
+                </div>
+              )}
+
+              {selectedDisk.sata_version && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">SATA Version</span>
+                  <span className="text-sm">{selectedDisk.sata_version}</span>
                 </div>
               )}
             </div>

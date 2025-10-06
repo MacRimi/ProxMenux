@@ -5,7 +5,6 @@ export interface Temperature {
   high?: number
   critical?: number
   adapter?: string
-  chip?: string
 }
 
 export interface PowerMeter {
@@ -26,6 +25,14 @@ export interface StorageDevice {
   type: string
   size?: string
   model?: string
+  driver?: string
+  interface?: string
+  serial?: string
+  family?: string
+  firmware?: string
+  rotation_rate?: string
+  form_factor?: string
+  sata_version?: string
 }
 
 export interface PCIDevice {
@@ -53,39 +60,9 @@ export interface PCIDevice {
   gpu_memory_clock?: string
 }
 
-export interface GPUProcess {
-  pid: string
-  name: string
-  memory: string
-}
-
-export interface GPU {
-  slot: string
-  name: string
-  vendor: string
-  type: string
-  index?: number
-  memory_total?: string
-  memory_used?: string
-  memory_free?: string
-  temperature?: number
-  power_draw?: string
-  power_limit?: string
-  utilization?: number
-  memory_utilization?: number
-  clock_graphics?: string
-  clock_memory?: string
-  driver_version?: string
-  pcie_gen?: string
-  pcie_width?: string
-  processes?: GPUProcess[]
-  intel_gpu_top_available?: boolean
-  radeontop_available?: boolean
-}
-
 export interface Fan {
   name: string
-  type: string
+  original_name?: string
   speed: number
   unit: string
   adapter?: string
@@ -107,57 +84,85 @@ export interface UPS {
   output_voltage?: number
 }
 
-export interface DiskPartition {
+export interface GPU {
+  slot: string
   name: string
-  size?: string
-  fstype?: string
-  mountpoint?: string
+  vendor: string
+  type: string
+  driver_version?: string
+  memory_total?: string
+  memory_used?: string
+  memory_free?: string
+  temperature?: number
+  power_draw?: string
+  power_limit?: string
+  utilization_gpu?: number
+  utilization_memory?: number
+  clock_graphics?: string
+  clock_memory?: string
+  pcie_gen?: string
+  pcie_width?: string
+  fan_speed?: number
+  fan_unit?: string
+  processes?: Array<{
+    pid: string
+    name: string
+    memory: string
+  }>
+  note?: string
 }
 
-export interface DiskDetails {
-  name: string
+export interface DiskHardwareInfo {
   type?: string
   driver?: string
+  interface?: string
   model?: string
   serial?: string
-  size?: string
-  block_size?: string
-  scheduler?: string
-  rotational?: boolean
-  removable?: boolean
-  read_only?: boolean
-  smart_available?: boolean
-  smart_enabled?: boolean
-  smart_health?: string
-  temperature?: number
-  power_on_hours?: number
-  partitions?: DiskPartition[]
+  family?: string
+  firmware?: string
+  rotation_rate?: string
+  form_factor?: string
+  sata_version?: string
 }
 
-export interface NetworkInterfaceDetails {
-  name: string
+export interface NetworkHardwareInfo {
   driver?: string
-  driver_version?: string
-  firmware_version?: string
-  bus_info?: string
-  link_detected?: string
-  speed?: string
-  duplex?: string
-  mtu?: string
+  kernel_modules?: string
+  subsystem?: string
+  max_link_speed?: string
+  max_link_width?: string
+  current_link_speed?: string
+  current_link_width?: string
+  interface_name?: string
+  interface_speed?: string
   mac_address?: string
-  ip_addresses?: Array<{
-    type: string
-    address: string
-  }>
-  statistics?: {
-    rx_bytes?: string
-    rx_packets?: string
-    tx_bytes?: string
-    tx_packets?: string
-  }
 }
 
 export interface HardwareData {
+  cpu?: {
+    model?: string
+    cores_per_socket?: number
+    sockets?: number
+    total_threads?: number
+    l3_cache?: string
+    virtualization?: string
+  }
+  motherboard?: {
+    manufacturer?: string
+    model?: string
+    bios?: {
+      vendor?: string
+      version?: string
+      date?: string
+    }
+  }
+  memory_modules?: Array<{
+    slot: string
+    size?: string
+    type?: string
+    speed?: string
+    manufacturer?: string
+  }>
   temperatures?: Temperature[]
   power_meter?: PowerMeter
   network_cards?: NetworkInterface[]
@@ -167,17 +172,6 @@ export interface HardwareData {
   fans?: Fan[]
   power_supplies?: PowerSupply[]
   ups?: UPS
-  cpu?: any
-  motherboard?: any
-  memory_modules?: any[]
 }
 
-export const fetcher = (url: string) => {
-  const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-  const fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`
-  console.log("[v0] Hardware fetcher - Full URL:", fullUrl)
-  return fetch(fullUrl).then((res) => {
-    console.log("[v0] Hardware fetcher - Response status:", res.status)
-    return res.json()
-  })
-}
+export const fetcher = (url: string) => fetch(url).then((res) => res.json())
