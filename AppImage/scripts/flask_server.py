@@ -1670,7 +1670,8 @@ def get_pci_device_info(pci_slot):
     pci_info = {}
     try:
         # Use lspci -vmm for detailed information
-        result = subprocess.run(['lspci', '-vmm', '-s', pci_slot], capture_output=True, text=True, timeout=5)
+        result = subprocess.run(['lspci', '-vmm', '-s', pci_slot], 
+                              capture_output=True, text=True, timeout=5)
         if result.returncode == 0:
             for line in result.stdout.split('\n'):
                 line = line.strip()
@@ -2481,7 +2482,8 @@ def api_info():
             '/api/vms',
             '/api/logs',
             '/api/health',
-            '/api/hardware'
+            '/api/hardware',
+            '/api/gpu/<slot>/realtime' # Added endpoint for GPU monitoring
         ]
     })
 
@@ -2515,6 +2517,35 @@ def api_hardware():
     print(f"[v0] - GPUs: {len(formatted_data['gpus'])} found")
     
     return jsonify(formatted_data)
+
+@app.route('/api/gpu/<slot>/realtime', methods=['GET'])
+def api_gpu_realtime(slot):
+    """Get real-time GPU monitoring data for a specific GPU"""
+    try:
+        # Find the GPU by slot
+        hardware_info = get_hardware_info()
+        gpus = hardware_info.get('gpus', [])
+        
+        gpu = None
+        for g in gpus:
+            if g.get('slot') == slot or g.get('slot', '').startswith(slot):
+                gpu = g
+                break
+        
+        if not gpu:
+            return jsonify({'error': 'GPU not found'}), 404
+        
+        # Get real-time monitoring data
+        realtime_data = get_detailed_gpu_info(gpu)
+        
+        print(f"[v0] /api/gpu/{slot}/realtime returning data")
+        print(f"[v0] - Vendor: {gpu.get('vendor')}")
+        print(f"[v0] - Realtime data: {realtime_data}")
+        
+        return jsonify(realtime_data)
+    except Exception as e:
+        print(f"[v0] Error getting real-time GPU data: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms/<int:vmid>', methods=['GET'])
 def api_vm_details(vmid):

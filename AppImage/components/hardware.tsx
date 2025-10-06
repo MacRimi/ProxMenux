@@ -39,23 +39,15 @@ const getDeviceTypeColor = (type: string): string => {
   return "bg-gray-500/10 text-gray-500 border-gray-500/20"
 }
 
-const hasRealtimeData = (gpu: GPU): boolean => {
-  return !!(
-    (gpu.temperature !== undefined && gpu.temperature > 0) ||
-    gpu.utilization_gpu !== undefined ||
-    gpu.memory_total ||
-    gpu.power_draw
-  )
-}
-
 const getMonitoringToolRecommendation = (vendor: string): string => {
   const lowerVendor = vendor.toLowerCase()
   if (lowerVendor.includes("intel")) {
     return "To get extended GPU monitoring information, please install intel-gpu-tools or igt-gpu-tools package."
   }
   if (lowerVendor.includes("nvidia")) {
-    return "To get extended GPU monitoring information, please install nvidia-utils or nvidia-smi package."
+    return "For NVIDIA GPUs, real-time monitoring requires the proprietary drivers (nvidia-driver package). Install them only if your GPU is used directly by the host."
   }
+
   if (lowerVendor.includes("amd") || lowerVendor.includes("ati")) {
     return "To get extended GPU monitoring information, please install radeontop package."
   }
@@ -71,6 +63,11 @@ export default function Hardware() {
   const [selectedPCIDevice, setSelectedPCIDevice] = useState<PCIDevice | null>(null)
   const [selectedDisk, setSelectedDisk] = useState<StorageDevice | null>(null)
   const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
+
+  const { data: realtimeGPUData } = useSWR<any>(selectedGPU ? `/api/gpu/${selectedGPU.slot}/realtime` : null, fetcher, {
+    refreshInterval: 2000, // Update every 2 seconds
+    revalidateOnFocus: false,
+  })
 
   const findPCIDeviceForGPU = (gpu: GPU): PCIDevice | null => {
     if (!hardwareData?.pci_devices || !gpu.slot) return null
@@ -90,6 +87,16 @@ export default function Hardware() {
     }
 
     return pciDevice || null
+  }
+
+  const hasRealtimeData = (gpu: GPU, realtimeData?: any): boolean => {
+    const combinedData = { ...gpu, ...realtimeData }
+    return !!(
+      (combinedData.temperature !== undefined && combinedData.temperature > 0) ||
+      combinedData.utilization_gpu !== undefined ||
+      combinedData.memory_total ||
+      combinedData.power_draw
+    )
   }
 
   return (
@@ -293,99 +300,104 @@ export default function Hardware() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            {hardwareData.gpus.map((gpu, index) => (
-              <div
-                key={index}
-                onClick={() => setSelectedGPU(gpu)}
-                className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-4 transition-colors hover:bg-background/80"
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="font-medium text-sm">{gpu.name}</span>
-                  <Badge className={getDeviceTypeColor("graphics")}>{gpu.vendor}</Badge>
-                </div>
+            {hardwareData.gpus.map((gpu, index) => {
+              const pciDevice = findPCIDeviceForGPU(gpu)
+              const fullSlot = pciDevice?.slot || gpu.slot
 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Type</span>
-                    <span className="font-medium">{gpu.type}</span>
+              return (
+                <div
+                  key={index}
+                  onClick={() => setSelectedGPU(gpu)}
+                  className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-4 transition-colors hover:bg-background/80"
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="font-medium text-sm">{gpu.name}</span>
+                    <Badge className={getDeviceTypeColor("graphics")}>{gpu.vendor}</Badge>
                   </div>
 
-                  {gpu.slot && (
+                  <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">PCI Slot</span>
-                      <span className="font-mono text-xs">{gpu.slot}</span>
+                      <span className="text-muted-foreground">Type</span>
+                      <span className="font-medium">{gpu.type}</span>
                     </div>
-                  )}
 
-                  {gpu.pci_driver && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Driver</span>
-                      <span className="font-mono text-xs text-green-500">{gpu.pci_driver}</span>
-                    </div>
-                  )}
-
-                  {gpu.pci_kernel_module && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Kernel Module</span>
-                      <span className="font-mono text-xs">{gpu.pci_kernel_module}</span>
-                    </div>
-                  )}
-
-                  {gpu.driver_version && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Driver Version</span>
-                      <span className="font-mono text-xs">{gpu.driver_version}</span>
-                    </div>
-                  )}
-
-                  {gpu.temperature !== undefined && gpu.temperature > 0 && (
-                    <div className="space-y-1">
+                    {fullSlot && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Temperature</span>
-                        <span className="font-semibold text-green-500">{gpu.temperature}°C</span>
+                        <span className="text-muted-foreground">PCI Slot</span>
+                        <span className="font-mono text-xs">{fullSlot}</span>
                       </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                        <div
-                          className="h-full bg-blue-500 transition-all"
-                          style={{ width: `${Math.min((gpu.temperature / 100) * 100, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
+                    )}
 
-                  {gpu.memory_total && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Memory</span>
-                      <span className="font-medium">
-                        {gpu.memory_used} / {gpu.memory_total}
-                      </span>
-                    </div>
-                  )}
-
-                  {gpu.utilization_gpu !== undefined && (
-                    <div className="space-y-1">
+                    {gpu.pci_driver && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">GPU Usage</span>
-                        <span className="font-medium">{gpu.utilization_gpu}%</span>
+                        <span className="text-muted-foreground">Driver</span>
+                        <span className="font-mono text-xs text-green-500">{gpu.pci_driver}</span>
                       </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                        <div
-                          className="h-full bg-green-500 transition-all"
-                          style={{ width: `${gpu.utilization_gpu}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
+                    )}
 
-                  {gpu.power_draw && gpu.power_draw !== "N/A" && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Power</span>
-                      <span className="font-medium">{gpu.power_draw}</span>
-                    </div>
-                  )}
+                    {gpu.pci_kernel_module && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Kernel Module</span>
+                        <span className="font-mono text-xs">{gpu.pci_kernel_module}</span>
+                      </div>
+                    )}
+
+                    {gpu.driver_version && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Driver Version</span>
+                        <span className="font-mono text-xs">{gpu.driver_version}</span>
+                      </div>
+                    )}
+
+                    {gpu.temperature !== undefined && gpu.temperature > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Temperature</span>
+                          <span className="font-semibold text-green-500">{gpu.temperature}°C</span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                          <div
+                            className="h-full bg-blue-500 transition-all"
+                            style={{ width: `${Math.min((gpu.temperature / 100) * 100, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {gpu.memory_total && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Memory</span>
+                        <span className="font-medium">
+                          {gpu.memory_used} / {gpu.memory_total}
+                        </span>
+                      </div>
+                    )}
+
+                    {gpu.utilization_gpu !== undefined && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">GPU Usage</span>
+                          <span className="font-medium">{gpu.utilization_gpu}%</span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                          <div
+                            className="h-full bg-green-500 transition-all"
+                            style={{ width: `${gpu.utilization_gpu}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {gpu.power_draw && gpu.power_draw !== "N/A" && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Power</span>
+                        <span className="font-medium">{gpu.power_draw}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </Card>
       )}
@@ -401,6 +413,7 @@ export default function Hardware() {
           {selectedGPU &&
             (() => {
               const pciDevice = findPCIDeviceForGPU(selectedGPU)
+              const combinedGPU = { ...selectedGPU, ...realtimeGPUData }
 
               return (
                 <div className="space-y-4">
@@ -454,52 +467,52 @@ export default function Hardware() {
                       <span className="text-sm font-medium">{selectedGPU.type}</span>
                     </div>
 
-                    {selectedGPU.driver_version && (
+                    {combinedGPU.driver_version && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
                         <span className="text-sm font-medium text-muted-foreground">Driver Version</span>
-                        <span className="font-mono text-sm">{selectedGPU.driver_version}</span>
+                        <span className="font-mono text-sm">{combinedGPU.driver_version}</span>
                       </div>
                     )}
 
-                    {selectedGPU.pcie_gen && (
+                    {combinedGPU.pcie_gen && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
                         <span className="text-sm font-medium text-muted-foreground">PCIe Generation</span>
-                        <span className="text-sm font-medium">Gen {selectedGPU.pcie_gen}</span>
+                        <span className="text-sm font-medium">Gen {combinedGPU.pcie_gen}</span>
                       </div>
                     )}
 
-                    {selectedGPU.pcie_width && (
+                    {combinedGPU.pcie_width && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
                         <span className="text-sm font-medium text-muted-foreground">PCIe Width</span>
-                        <span className="text-sm font-medium">{selectedGPU.pcie_width}</span>
+                        <span className="text-sm font-medium">{combinedGPU.pcie_width}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Memory Info - Only show if available */}
-                  {selectedGPU.memory_total && (
+                  {combinedGPU.memory_total && (
                     <div className="space-y-2">
                       <h3 className="font-semibold text-sm">Memory</h3>
                       <div className="grid gap-2">
                         <div className="flex justify-between border-b border-border/50 pb-2">
                           <span className="text-sm text-muted-foreground">Total</span>
-                          <span className="text-sm font-medium">{selectedGPU.memory_total}</span>
+                          <span className="text-sm font-medium">{combinedGPU.memory_total}</span>
                         </div>
                         <div className="flex justify-between border-b border-border/50 pb-2">
                           <span className="text-sm text-muted-foreground">Used</span>
-                          <span className="text-sm font-medium">{selectedGPU.memory_used}</span>
+                          <span className="text-sm font-medium">{combinedGPU.memory_used}</span>
                         </div>
                         <div className="flex justify-between border-b border-border/50 pb-2">
                           <span className="text-sm text-muted-foreground">Free</span>
-                          <span className="text-sm font-medium">{selectedGPU.memory_free}</span>
+                          <span className="text-sm font-medium">{combinedGPU.memory_free}</span>
                         </div>
-                        {selectedGPU.utilization_memory !== undefined && (
+                        {combinedGPU.utilization_memory !== undefined && (
                           <div className="space-y-1">
                             <div className="flex justify-between">
                               <span className="text-sm text-muted-foreground">Memory Utilization</span>
-                              <span className="text-sm font-medium">{selectedGPU.utilization_memory}%</span>
+                              <span className="text-sm font-medium">{combinedGPU.utilization_memory}%</span>
                             </div>
-                            <Progress value={selectedGPU.utilization_memory} className="h-2" />
+                            <Progress value={combinedGPU.utilization_memory} className="h-2" />
                           </div>
                         )}
                       </div>
@@ -507,45 +520,45 @@ export default function Hardware() {
                   )}
 
                   {/* Performance - Only show if realtime data available */}
-                  {hasRealtimeData(selectedGPU) && (
+                  {hasRealtimeData(selectedGPU, realtimeGPUData) && (
                     <div className="space-y-2">
                       <h3 className="font-semibold text-sm">Performance</h3>
                       <div className="grid gap-2">
-                        {selectedGPU.temperature !== undefined && selectedGPU.temperature > 0 && (
+                        {combinedGPU.temperature !== undefined && combinedGPU.temperature > 0 && (
                           <div className="space-y-1">
                             <div className="flex justify-between">
                               <span className="text-sm text-muted-foreground">Temperature</span>
-                              <span className="text-sm font-semibold text-green-500">{selectedGPU.temperature}°C</span>
+                              <span className="text-sm font-semibold text-green-500">{combinedGPU.temperature}°C</span>
                             </div>
-                            <Progress value={(selectedGPU.temperature / 100) * 100} className="h-2" />
+                            <Progress value={(combinedGPU.temperature / 100) * 100} className="h-2" />
                           </div>
                         )}
-                        {selectedGPU.utilization_gpu !== undefined && (
+                        {combinedGPU.utilization_gpu !== undefined && (
                           <div className="space-y-1">
                             <div className="flex justify-between">
                               <span className="text-sm text-muted-foreground">GPU Utilization</span>
-                              <span className="text-sm font-medium">{selectedGPU.utilization_gpu}%</span>
+                              <span className="text-sm font-medium">{combinedGPU.utilization_gpu}%</span>
                             </div>
-                            <Progress value={selectedGPU.utilization_gpu} className="h-2" />
+                            <Progress value={combinedGPU.utilization_gpu} className="h-2" />
                           </div>
                         )}
-                        {selectedGPU.power_draw && selectedGPU.power_draw !== "N/A" && (
+                        {combinedGPU.power_draw && combinedGPU.power_draw !== "N/A" && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
                             <span className="text-sm text-muted-foreground">Power Draw</span>
-                            <span className="text-sm font-medium">{selectedGPU.power_draw}</span>
+                            <span className="text-sm font-medium">{combinedGPU.power_draw}</span>
                           </div>
                         )}
-                        {selectedGPU.power_limit && (
+                        {combinedGPU.power_limit && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
                             <span className="text-sm text-muted-foreground">Power Limit</span>
-                            <span className="text-sm font-medium">{selectedGPU.power_limit}</span>
+                            <span className="text-sm font-medium">{combinedGPU.power_limit}</span>
                           </div>
                         )}
-                        {selectedGPU.fan_speed && (
+                        {combinedGPU.fan_speed && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
                             <span className="text-sm text-muted-foreground">Fan Speed</span>
                             <span className="text-sm font-medium">
-                              {selectedGPU.fan_speed} {selectedGPU.fan_unit}
+                              {combinedGPU.fan_speed} {combinedGPU.fan_unit}
                             </span>
                           </div>
                         )}
@@ -554,20 +567,20 @@ export default function Hardware() {
                   )}
 
                   {/* Clock Speeds - Only show if available */}
-                  {(selectedGPU.clock_graphics || selectedGPU.clock_memory) && (
+                  {(combinedGPU.clock_graphics || combinedGPU.clock_memory) && (
                     <div className="space-y-2">
                       <h3 className="font-semibold text-sm">Clock Speeds</h3>
                       <div className="grid gap-2">
-                        {selectedGPU.clock_graphics && (
+                        {combinedGPU.clock_graphics && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
                             <span className="text-sm text-muted-foreground">Graphics Clock</span>
-                            <span className="text-sm font-medium">{selectedGPU.clock_graphics}</span>
+                            <span className="text-sm font-medium">{combinedGPU.clock_graphics}</span>
                           </div>
                         )}
-                        {selectedGPU.clock_memory && (
+                        {combinedGPU.clock_memory && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
                             <span className="text-sm text-muted-foreground">Memory Clock</span>
-                            <span className="text-sm font-medium">{selectedGPU.clock_memory}</span>
+                            <span className="text-sm font-medium">{combinedGPU.clock_memory}</span>
                           </div>
                         )}
                       </div>
@@ -575,11 +588,11 @@ export default function Hardware() {
                   )}
 
                   {/* Running Processes - Only show if available */}
-                  {selectedGPU.processes && selectedGPU.processes.length > 0 && (
+                  {combinedGPU.processes && combinedGPU.processes.length > 0 && (
                     <div className="space-y-2">
                       <h3 className="font-semibold text-sm">Running Processes</h3>
                       <div className="space-y-2">
-                        {selectedGPU.processes.map((proc, idx) => (
+                        {combinedGPU.processes.map((proc: any, idx: number) => (
                           <div key={idx} className="rounded-lg border border-border/30 bg-background/50 p-3">
                             <div className="flex justify-between">
                               <span className="font-mono text-xs">PID: {proc.pid}</span>
@@ -592,7 +605,7 @@ export default function Hardware() {
                     </div>
                   )}
 
-                  {!hasRealtimeData(selectedGPU) && (
+                  {!hasRealtimeData(selectedGPU, realtimeGPUData) && (
                     <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4">
                       <div className="flex gap-3">
                         <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
@@ -606,9 +619,9 @@ export default function Hardware() {
                     </div>
                   )}
 
-                  {selectedGPU.note && (
+                  {combinedGPU.note && (
                     <div className="rounded-lg bg-muted p-3">
-                      <p className="text-xs text-muted-foreground">{selectedGPU.note}</p>
+                      <p className="text-xs text-muted-foreground">{combinedGPU.note}</p>
                     </div>
                   )}
                 </div>
