@@ -15,6 +15,8 @@ import {
   PowerIcon,
   Battery,
   Cpu,
+  MemoryStick,
+  Cpu as Gpu,
 } from "lucide-react"
 import useSWR from "swr"
 import { useState } from "react"
@@ -46,7 +48,7 @@ export default function Hardware() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* CPU & Motherboard Info */}
+      {/* System Information - CPU & Motherboard */}
       {(hardwareData?.cpu || hardwareData?.motherboard) && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -57,43 +59,43 @@ export default function Hardware() {
           <div className="grid gap-6 md:grid-cols-2">
             {/* CPU Info */}
             {hardwareData?.cpu && Object.keys(hardwareData.cpu).length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground">Processor</h3>
-                <div className="space-y-2 rounded-lg border border-border/30 bg-background/50 p-4">
+              <div>
+                <div className="mb-2 flex items-center gap-2">
+                  <CpuIcon className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">CPU</h3>
+                </div>
+                <div className="space-y-2">
                   {hardwareData.cpu.model && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Model</span>
-                      <span className="text-sm font-medium">{hardwareData.cpu.model}</span>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Model</span>
+                      <span className="font-medium text-right">{hardwareData.cpu.model}</span>
                     </div>
                   )}
-                  {hardwareData.cpu.sockets && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Sockets</span>
-                      <span className="text-sm font-medium">{hardwareData.cpu.sockets}</span>
-                    </div>
-                  )}
-                  {hardwareData.cpu.cores_per_socket && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Cores per Socket</span>
-                      <span className="text-sm font-medium">{hardwareData.cpu.cores_per_socket}</span>
+                  {hardwareData.cpu.cores_per_socket && hardwareData.cpu.sockets && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Cores</span>
+                      <span className="font-medium">
+                        {hardwareData.cpu.sockets} × {hardwareData.cpu.cores_per_socket} ={" "}
+                        {hardwareData.cpu.sockets * hardwareData.cpu.cores_per_socket} cores
+                      </span>
                     </div>
                   )}
                   {hardwareData.cpu.total_threads && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Total Threads</span>
-                      <span className="text-sm font-medium">{hardwareData.cpu.total_threads}</span>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Threads</span>
+                      <span className="font-medium">{hardwareData.cpu.total_threads}</span>
                     </div>
                   )}
-                  {hardwareData.cpu.current_mhz && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Current Speed</span>
-                      <span className="text-sm font-medium">{hardwareData.cpu.current_mhz.toFixed(0)} MHz</span>
+                  {hardwareData.cpu.l3_cache && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">L3 Cache</span>
+                      <span className="font-medium">{hardwareData.cpu.l3_cache}</span>
                     </div>
                   )}
-                  {hardwareData.cpu.max_mhz && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Max Speed</span>
-                      <span className="text-sm font-medium">{hardwareData.cpu.max_mhz.toFixed(0)} MHz</span>
+                  {hardwareData.cpu.virtualization && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Virtualization</span>
+                      <span className="font-medium">{hardwareData.cpu.virtualization}</span>
                     </div>
                   )}
                 </div>
@@ -102,51 +104,41 @@ export default function Hardware() {
 
             {/* Motherboard Info */}
             {hardwareData?.motherboard && Object.keys(hardwareData.motherboard).length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground">Motherboard</h3>
-                <div className="space-y-2 rounded-lg border border-border/30 bg-background/50 p-4">
+              <div>
+                <div className="mb-2 flex items-center gap-2">
+                  <Cpu className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">Motherboard</h3>
+                </div>
+                <div className="space-y-2">
                   {hardwareData.motherboard.manufacturer && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Manufacturer</span>
-                      <span className="text-sm font-medium">{hardwareData.motherboard.manufacturer}</span>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Manufacturer</span>
+                      <span className="font-medium text-right">{hardwareData.motherboard.manufacturer}</span>
                     </div>
                   )}
                   {hardwareData.motherboard.model && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Model</span>
-                      <span className="text-sm font-medium">{hardwareData.motherboard.model}</span>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Model</span>
+                      <span className="font-medium text-right">{hardwareData.motherboard.model}</span>
                     </div>
                   )}
-                  {hardwareData.motherboard.version && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Version</span>
-                      <span className="text-sm font-medium">{hardwareData.motherboard.version}</span>
+                  {hardwareData.motherboard.bios?.vendor && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">BIOS</span>
+                      <span className="font-medium text-right">{hardwareData.motherboard.bios.vendor}</span>
                     </div>
                   )}
-                  {hardwareData.motherboard.bios && (
-                    <>
-                      <div className="mt-3 border-t border-border/30 pt-2">
-                        <span className="text-xs font-semibold text-muted-foreground">BIOS</span>
-                      </div>
-                      {hardwareData.motherboard.bios.vendor && (
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Vendor</span>
-                          <span className="text-sm font-medium">{hardwareData.motherboard.bios.vendor}</span>
-                        </div>
-                      )}
-                      {hardwareData.motherboard.bios.version && (
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Version</span>
-                          <span className="text-sm font-medium">{hardwareData.motherboard.bios.version}</span>
-                        </div>
-                      )}
-                      {hardwareData.motherboard.bios.date && (
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Date</span>
-                          <span className="text-sm font-medium">{hardwareData.motherboard.bios.date}</span>
-                        </div>
-                      )}
-                    </>
+                  {hardwareData.motherboard.bios?.version && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Version</span>
+                      <span className="font-medium">{hardwareData.motherboard.bios.version}</span>
+                    </div>
+                  )}
+                  {hardwareData.motherboard.bios?.date && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Date</span>
+                      <span className="font-medium">{hardwareData.motherboard.bios.date}</span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -155,7 +147,54 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* Thermal Monitoring */}
+      {/* Memory Modules */}
+      {hardwareData?.memory_modules && hardwareData.memory_modules.length > 0 && (
+        <Card className="border-border/50 bg-card/50 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <MemoryStick className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Memory Modules</h2>
+            <Badge variant="outline" className="ml-auto">
+              {hardwareData.memory_modules.length} installed
+            </Badge>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {hardwareData.memory_modules.map((module, index) => (
+              <div key={index} className="rounded-lg border border-border/30 bg-background/50 p-4">
+                <div className="mb-2 font-medium text-sm">{module.slot}</div>
+                <div className="space-y-1">
+                  {module.size && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Size</span>
+                      <span className="font-medium">{module.size}</span>
+                    </div>
+                  )}
+                  {module.type && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Type</span>
+                      <span className="font-medium">{module.type}</span>
+                    </div>
+                  )}
+                  {module.speed && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Speed</span>
+                      <span className="font-medium">{module.speed}</span>
+                    </div>
+                  )}
+                  {module.manufacturer && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Manufacturer</span>
+                      <span className="font-medium text-right">{module.manufacturer}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Thermal Monitoring - Restored blue progress bars */}
       {hardwareData?.temperatures && hardwareData.temperatures.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -182,11 +221,99 @@ export default function Hardware() {
                       {temp.current.toFixed(1)}°C
                     </span>
                   </div>
-                  <Progress value={percentage} className="h-2" />
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full bg-blue-500 transition-all"
+                      style={{ width: `${Math.min(percentage, 100)}%` }}
+                    />
+                  </div>
                   {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
                 </div>
               )
             })}
+          </div>
+        </Card>
+      )}
+
+      {/* GPU Information - New dedicated GPU section */}
+      {hardwareData?.gpus && hardwareData.gpus.length > 0 && (
+        <Card className="border-border/50 bg-card/50 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Gpu className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Graphics Cards</h2>
+            <Badge variant="outline" className="ml-auto">
+              {hardwareData.gpus.length} GPU{hardwareData.gpus.length > 1 ? "s" : ""}
+            </Badge>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {hardwareData.gpus.map((gpu, index) => (
+              <div key={index} className="rounded-lg border border-border/30 bg-background/50 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="font-medium">{gpu.name}</span>
+                  <Badge className={getDeviceTypeColor("graphics")}>{gpu.vendor}</Badge>
+                </div>
+
+                <div className="space-y-2">
+                  {gpu.memory_total && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Memory</span>
+                      <span className="font-medium">
+                        {gpu.memory_used} / {gpu.memory_total}
+                      </span>
+                    </div>
+                  )}
+
+                  {gpu.temperature !== undefined && gpu.temperature > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Temperature</span>
+                        <span className="font-semibold text-green-500">{gpu.temperature}°C</span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                        <div
+                          className="h-full bg-blue-500 transition-all"
+                          style={{ width: `${Math.min((gpu.temperature / 100) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {gpu.utilization !== undefined && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Utilization</span>
+                        <span className="font-medium">{gpu.utilization}%</span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                        <div className="h-full bg-green-500 transition-all" style={{ width: `${gpu.utilization}%` }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {gpu.power_draw && gpu.power_draw !== "N/A" && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Power Draw</span>
+                      <span className="font-medium">{gpu.power_draw}</span>
+                    </div>
+                  )}
+
+                  {gpu.driver_version && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Driver</span>
+                      <span className="font-mono text-xs">{gpu.driver_version}</span>
+                    </div>
+                  )}
+
+                  {gpu.type && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Type</span>
+                      <span className="font-medium">{gpu.type}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       )}
@@ -277,7 +404,7 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* Power Consumption */}
+      {/* Power Consumption - Only show if data exists */}
       {hardwareData?.power_meter && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -302,7 +429,7 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* Fans */}
+      {/* Fans - Only show if data exists */}
       {hardwareData?.fans && hardwareData.fans.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -326,7 +453,9 @@ export default function Hardware() {
                       {fan.speed.toFixed(0)} {fan.unit}
                     </span>
                   </div>
-                  <Progress value={percentage} className="h-2" />
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div className="h-full bg-blue-500 transition-all" style={{ width: `${percentage}%` }} />
+                  </div>
                 </div>
               )
             })}
@@ -334,7 +463,7 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* Power Supplies */}
+      {/* Power Supplies - Only show if data exists */}
       {hardwareData?.power_supplies && hardwareData.power_supplies.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -362,8 +491,8 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* UPS - Solo mostrar si hay datos */}
-      {hardwareData?.ups && Object.keys(hardwareData.ups).length > 0 && (
+      {/* UPS - Only show if data exists and has content */}
+      {hardwareData?.ups && Object.keys(hardwareData.ups).length > 0 && hardwareData.ups.model && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Battery className="h-5 w-5 text-primary" />
@@ -373,7 +502,7 @@ export default function Hardware() {
           <div className="space-y-4">
             <div className="rounded-lg border border-border/30 bg-background/50 p-4">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-medium">{hardwareData.ups.model || "UPS"}</span>
+                <span className="text-sm font-medium">{hardwareData.ups.model}</span>
                 <Badge variant={hardwareData.ups.status === "OL" ? "default" : "destructive"}>
                   {hardwareData.ups.status}
                 </Badge>
@@ -439,11 +568,11 @@ export default function Hardware() {
                 .filter((d) => d.type.toLowerCase().includes("network"))
                 .map((device, index) => (
                   <div key={index} className="rounded-lg border border-border/30 bg-background/50 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{device.device}</span>
-                      <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Ethernet</Badge>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium truncate">{device.device}</span>
+                      <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs">Ethernet</Badge>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{device.vendor}</p>
+                    <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>
                   </div>
                 ))}
             </div>
@@ -453,7 +582,7 @@ export default function Hardware() {
           </Card>
         )}
 
-      {/* Storage Summary */}
+      {/* Storage Summary - Larger badges with blue color */}
       {hardwareData?.storage_devices && hardwareData.storage_devices.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -467,14 +596,12 @@ export default function Hardware() {
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {hardwareData.storage_devices.map((device, index) => (
               <div key={index} className="rounded-lg border border-border/30 bg-background/50 p-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">{device.name}</span>
-                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs px-2 py-1">
-                    {device.type}
-                  </Badge>
+                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 px-2.5 py-0.5">{device.type}</Badge>
                 </div>
-                {device.size && <p className="mt-1 text-xs text-muted-foreground">{device.size}</p>}
-                {device.model && <p className="mt-1 text-xs text-muted-foreground">{device.model}</p>}
+                {device.size && <p className="text-sm font-medium">{device.size}</p>}
+                {device.model && <p className="text-xs text-muted-foreground truncate">{device.model}</p>}
               </div>
             ))}
           </div>
