@@ -351,17 +351,6 @@ download_deb() {
 # Try to download packages (non-fatal if they fail)
 download_deb "http://deb.debian.org/debian/pool/main/i/ipmitool/ipmitool_1.8.19-4+deb12u2_amd64.deb" "ipmitool.deb" "ipmitool" || true
 download_deb "http://deb.debian.org/debian/pool/main/f/freeipmi/libfreeipmi17_1.6.10-3_amd64.deb" "libfreeipmi17.deb" "libfreeipmi17" || true
-
-if [ ! -f "libfreeipmi17.deb" ]; then
-  echo "  Fallback: apt-get download libfreeipmi17"
-  apt-get update -qq || true
-  apt-get download -y libfreeipmi17 || true
-  # renombra al nombre esperado si hace falta
-  for f in libfreeipmi17_*_amd64.deb; do
-    [ -f "$f" ] && mv "$f" libfreeipmi17.deb
-  done
-fi
-
 download_deb "http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0-7.1_amd64.deb" "lm-sensors.deb" "lm-sensors" || true
 download_deb "http://deb.debian.org/debian/pool/main/n/nut/nut-client_2.8.0-7_amd64.deb" "nut-client.deb" "nut-client" || true
 download_deb "http://deb.debian.org/debian/pool/main/n/nut/libupsclient6_2.8.0-7_amd64.deb" "libupsclient6.deb" "libupsclient6" || true

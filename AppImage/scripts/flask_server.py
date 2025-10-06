@@ -1708,7 +1708,8 @@ def get_hardware_info():
             print(f"[v0] Error getting graphics cards: {e}")
         
         try:
-            print("[v0] Getting all PCI devices...")
+            print("[v0] Getting PCI devices with driver information...")
+            # First get basic device info with lspci -vmm
             result = subprocess.run(['lspci', '-vmm'], capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
                 current_device = {}
@@ -1721,6 +1722,7 @@ def get_hardware_info():
                             device_class = current_device.get('Class', '')
                             device_name = current_device.get('Device', '')
                             vendor = current_device.get('Vendor', '')
+                            slot = current_device.get('Slot', 'Unknown')
                             
                             # Categorize and add important devices
                             device_type = 'Other'
@@ -1730,88 +1732,79 @@ def get_hardware_info():
                             if any(keyword in device_class for keyword in ['VGA', 'Display', '3D']):
                                 device_type = 'Graphics Card'
                                 include_device = True
-                                # Also add to graphics_cards list
-                                gpu_vendor = 'Unknown'
-                                if 'NVIDIA' in vendor or 'NVIDIA' in device_name:
-                                    gpu_vendor = 'NVIDIA'
-                                elif 'AMD' in vendor or 'AMD' in device_name or 'ATI' in vendor:
-                                    gpu_vendor = 'AMD'
-                                elif 'Intel' in vendor or 'Intel' in device_name:
-                                    gpu_vendor = 'Intel'
-                                
-                                # Check if not already in graphics_cards
-                                already_exists = False
-                                for existing_gpu in hardware_data['graphics_cards']:
-                                    if device_name in existing_gpu['name'] or existing_gpu['name'] in device_name:
-                                        already_exists = True
-                                        break
-                                
-                                if not already_exists:
-                                    hardware_data['graphics_cards'].append({
-                                        'name': device_name,
-                                        'vendor': gpu_vendor
-                                    })
-                            
                             # Storage controllers
                             elif any(keyword in device_class for keyword in ['SATA', 'RAID', 'Mass storage', 'Non-Volatile memory']):
                                 device_type = 'Storage Controller'
                                 include_device = True
-                            
                             # Network controllers
                             elif 'Ethernet' in device_class or 'Network' in device_class:
                                 device_type = 'Network Controller'
                                 include_device = True
-                                # Also add to network_cards if not already there
-                                already_exists = False
-                                for existing_nic in hardware_data['network_cards']:
-                                    if device_name in existing_nic['name'] or existing_nic['name'] in device_name:
-                                        already_exists = True
-                                        break
-                                
-                                if not already_exists:
-                                    hardware_data['network_cards'].append({
-                                        'name': device_name,
-                                        'type': 'Ethernet' if 'Ethernet' in device_class else 'Network'
-                                    })
-                            
                             # USB controllers
                             elif 'USB' in device_class:
                                 device_type = 'USB Controller'
                                 include_device = True
-                            
                             # Audio devices
                             elif 'Audio' in device_class or 'Multimedia' in device_class:
                                 device_type = 'Audio Controller'
                                 include_device = True
-                            
                             # Special devices (Coral TPU, etc.)
                             elif any(keyword in device_name.lower() for keyword in ['coral', 'tpu', 'edge']):
                                 device_type = 'AI Accelerator'
                                 include_device = True
-                            
                             # PCI bridges (usually not interesting for users)
                             elif 'Bridge' in device_class:
                                 include_device = False
                             
                             if include_device:
                                 pci_device = {
-                                    'slot': current_device.get('Slot', 'Unknown'),
+                                    'slot': slot,
                                     'type': device_type,
                                     'vendor': vendor,
                                     'device': device_name,
                                     'class': device_class
                                 }
                                 hardware_data['pci_devices'].append(pci_device)
-                                print(f"[v0] PCI Device: {device_type} - {device_name}")
                         
                         current_device = {}
                     elif ':' in line:
                         key, value = line.split(':', 1)
                         current_device[key.strip()] = value.strip()
+            
+            # Now get driver information with lspci -k
+            result_k = subprocess.run(['lspci', '-k'], capture_output=True, text=True, timeout=10)
+            if result_k.returncode == 0:
+                current_slot = None
+                current_driver = None
+                current_module = None
                 
-                print(f"[v0] Total PCI devices found: {len(hardware_data['pci_devices'])}")
-                print(f"[v0] Graphics cards: {len(hardware_data['graphics_cards'])}")
-                print(f"[v0] Network cards: {len(hardware_data['network_cards'])}")
+                for line in result_k.stdout.split('\n'):
+                    # Match PCI slot line (e.g., "00:1f.2 SATA controller: ...")
+                    if line and not line.startswith('\t'):
+                        parts = line.split(' ', 1)
+                        if parts:
+                            current_slot = parts[0]
+                            current_driver = None
+                            current_module = None
+                    # Match driver lines (indented with tab)
+                    elif line.startswith('\t'):
+                        line = line.strip()
+                        if line.startswith('Kernel driver in use:'):
+                            current_driver = line.split(':', 1)[1].strip()
+                        elif line.startswith('Kernel modules:'):
+                            current_module = line.split(':', 1)[1].strip()
+                        
+                        # Update the corresponding PCI device
+                        if current_slot and (current_driver or current_module):
+                            for device in hardware_data['pci_devices']:
+                                if device['slot'] == current_slot:
+                                    if current_driver:
+                                        device['driver'] = current_driver
+                                    if current_module:
+                                        device['kernel_module'] = current_module
+                                    break
+            
+            print(f"[v0] Total PCI devices found: {len(hardware_data['pci_devices'])}")
         except Exception as e:
             print(f"[v0] Error getting PCI devices: {e}")
         
@@ -2047,12 +2040,29 @@ def api_hardware():
     """Get comprehensive hardware information"""
     hardware_info = get_hardware_info()
     
-    network_info = get_network_info()
-    hardware_info['network_interfaces'] = network_info.get('physical_interfaces', []) + network_info.get('bridge_interfaces', [])
+    # Format data for frontend
+    formatted_data = {
+        'cpu': hardware_info.get('cpu', {}),
+        'motherboard': hardware_info.get('motherboard', {}),
+        'memory_modules': hardware_info.get('memory_modules', []),
+        'storage_devices': hardware_info.get('storage_devices', []),
+        'pci_devices': hardware_info.get('pci_devices', []),
+        'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
+        'fans': hardware_info.get('ipmi_fans', []),
+        'power_supplies': hardware_info.get('ipmi_power', {}).get('power_supplies', []),
+        'power_meter': hardware_info.get('power_meter'),
+        'ups': hardware_info.get('ups') if hardware_info.get('ups') else None
+    }
     
-    print(f"[v0] /api/hardware returning {len(hardware_info.get('network_interfaces', []))} network interfaces")
+    print(f"[v0] /api/hardware returning data")
+    print(f"[v0] - CPU: {formatted_data['cpu'].get('model', 'Unknown')}")
+    print(f"[v0] - Temperatures: {len(formatted_data['temperatures'])} sensors")
+    print(f"[v0] - Fans: {len(formatted_data['fans'])} fans")
+    print(f"[v0] - Power supplies: {len(formatted_data['power_supplies'])} PSUs")
+    print(f"[v0] - Power meter: {'Yes' if formatted_data['power_meter'] else 'No'}")
+    print(f"[v0] - UPS: {'Yes' if formatted_data['ups'] else 'No'}")
     
-    return jsonify(hardware_info)
+    return jsonify(formatted_data)
 
 @app.route('/api/vms/<int:vmid>', methods=['GET'])
 def api_vm_details(vmid):

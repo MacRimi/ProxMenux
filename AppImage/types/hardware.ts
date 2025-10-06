@@ -38,6 +38,17 @@ export interface PCIDevice {
   memory_address?: string
   link_speed?: string
   capabilities?: string[]
+  gpu_memory?: string
+  gpu_driver_version?: string
+  gpu_cuda_version?: string
+  gpu_compute_capability?: string
+  gpu_power_draw?: string
+  gpu_temperature?: number
+  gpu_utilization?: number
+  gpu_memory_used?: string
+  gpu_memory_total?: string
+  gpu_clock_speed?: string
+  gpu_memory_clock?: string
 }
 
 export interface Fan {
