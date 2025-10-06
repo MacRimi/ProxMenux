@@ -1588,41 +1588,44 @@ def get_detailed_gpu_info(gpu):
                 print(f"[v0] intel_gpu_top not found for Intel GPU")
                 return detailed_info
             else:
-                detailed_info['has_monitoring_tool'] = True
                 print(f"[v0] intel_gpu_top found for Intel GPU")
         except Exception as e:
             print(f"[v0] Error checking for intel_gpu_top: {e}")
             detailed_info['has_monitoring_tool'] = False
             return detailed_info
         
+        data_retrieved = False
         try:
             # Try JSON output first (newer versions of intel_gpu_top)
             result = subprocess.run(
                 ['intel_gpu_top', '-J', '-s', '50'],
-                capture_output=True, text=True, timeout=5
+                capture_output=True, text=True, timeout=3
             )
             if result.returncode == 0 and result.stdout.strip():
                 try:
                     data = json.loads(result.stdout)
                     if 'frequency' in data:
                         detailed_info['clock_graphics'] = f"{data['frequency'].get('actual', 0)} MHz"
+                        data_retrieved = True
                     if 'power' in data:
                         detailed_info['power_draw'] = f"{data['power'].get('GPU', 0):.2f} W"
+                        data_retrieved = True
                     if 'engines' in data:
                         engines = data['engines']
                         detailed_info['engine_render'] = engines.get('Render/3D', {}).get('busy', 0)
                         detailed_info['engine_blitter'] = engines.get('Blitter', {}).get('busy', 0)
                         detailed_info['engine_video'] = engines.get('Video', {}).get('busy', 0)
                         detailed_info['engine_video_enhance'] = engines.get('VideoEnhance', {}).get('busy', 0)
+                        data_retrieved = True
                     print(f"[v0] Intel GPU JSON parsed data: {detailed_info}")
                 except json.JSONDecodeError as je:
                     print(f"[v0] JSON decode error for intel_gpu_top: {je}")
             
             # Fallback to text parsing
-            if not detailed_info or len(detailed_info) == 1:  # Only has_monitoring_tool flag
+            if not data_retrieved:
                 result = subprocess.run(
                     ['intel_gpu_top', '-s', '50'],
-                    capture_output=True, text=True, timeout=5
+                    capture_output=True, text=True, timeout=3
                 )
                 if result.returncode == 0:
                     output = result.stdout
@@ -1631,12 +1634,14 @@ def get_detailed_gpu_info(gpu):
                     if freq_match:
                         detailed_info['clock_graphics'] = f"{freq_match.group(1)} MHz"
                         detailed_info['clock_max'] = f"{freq_match.group(2)} MHz"
+                        data_retrieved = True
                     
                     # Parse power: "0.00/ 7.23 W"
                     power_match = re.search(r'([\d.]+)/\s*([\d.]+)\s*W', output)
                     if power_match:
                         detailed_info['power_draw'] = f"{power_match.group(1)} W"
                         detailed_info['power_limit'] = f"{power_match.group(2)} W"
+                        data_retrieved = True
                     
                     # Parse engine utilization
                     engines = {
@@ -1650,59 +1655,23 @@ def get_detailed_gpu_info(gpu):
                         match = re.search(pattern, output)
                         if match:
                             detailed_info[key] = float(match.group(1))
+                            data_retrieved = True
                     
                     print(f"[v0] Intel GPU text parsed data: {detailed_info}")
+            
+            if data_retrieved:
+                detailed_info['has_monitoring_tool'] = True
+                print(f"[v0] Intel GPU monitoring successful")
+            else:
+                detailed_info['has_monitoring_tool'] = False
+                print(f"[v0] Intel GPU monitoring failed - no data retrieved")
                     
         except subprocess.TimeoutExpired:
-            print(f"[v0] intel_gpu_top timed out after 5 seconds")
+            print(f"[v0] intel_gpu_top timed out - marking tool as unavailable")
+            detailed_info['has_monitoring_tool'] = False
         except Exception as e:
             print(f"[v0] Error getting Intel GPU details: {e}")
-    
-    elif vendor == 'AMD' or 'ATI' in vendor:
-        try:
-            check_result = subprocess.run(['which', 'radeontop'], capture_output=True, timeout=1)
-            if check_result.returncode != 0:
-                detailed_info['has_monitoring_tool'] = False
-                print(f"[v0] radeontop not found for AMD GPU")
-                return detailed_info
-            else:
-                detailed_info['has_monitoring_tool'] = True
-                print(f"[v0] radeontop found for AMD GPU")
-        except Exception as e:
-            print(f"[v0] Error checking for radeontop: {e}")
             detailed_info['has_monitoring_tool'] = False
-            return detailed_info
-        
-        try:
-            result = subprocess.run(
-                ['radeontop', '-d', '-', '-l', '1'],
-                capture_output=True, text=True, timeout=2
-            )
-            if result.returncode == 0:
-                output = result.stdout
-                # Parse GPU utilization: "gpu 45.00%"
-                gpu_match = re.search(r'gpu\s+([\d.]+)%', output)
-                if gpu_match:
-                    detailed_info['utilization_gpu'] = float(gpu_match.group(1))
-                
-                # Parse memory utilization: "vram 23.45%"
-                vram_match = re.search(r'vram\s+([\d.]+)%', output)
-                if vram_match:
-                    detailed_info['utilization_memory'] = float(vram_match.group(1))
-                
-                # Parse clocks: "sclk 1.20ghz, mclk 0.95ghz"
-                sclk_match = re.search(r'sclk\s+([\d.]+)ghz', output, re.IGNORECASE)
-                if sclk_match:
-                    detailed_info['clock_graphics'] = f"{float(sclk_match.group(1)) * 1000:.0f} MHz"
-                
-                mclk_match = re.search(r'mclk\s+([\d.]+)ghz', output, re.IGNORECASE)
-                if mclk_match:
-                    detailed_info['clock_memory'] = f"{float(mclk_match.group(1)) * 1000:.0f} MHz"
-                
-                print(f"[v0] AMD GPU parsed data: {detailed_info}")
-                
-        except Exception as e:
-            print(f"[v0] Error getting AMD GPU details: {e}")
     
     # NVIDIA GPU - use nvidia-smi
     elif vendor == 'NVIDIA':
@@ -1721,6 +1690,7 @@ def get_detailed_gpu_info(gpu):
             return detailed_info
         
         try:
+            # nvidia-smi query for real-time data
             result = subprocess.run(
                 ['nvidia-smi', '--query-gpu=index,name,driver_version,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,utilization.gpu,utilization.memory,clocks.gr,clocks.mem,pcie.link.gen.current,pcie.link.width.current', 
                  '--format=csv,noheader,nounits'],
@@ -1733,9 +1703,9 @@ def get_detailed_gpu_info(gpu):
                         if len(parts) >= 15:
                             detailed_info = {
                                 'driver_version': parts[2],
-                                'memory_total': f"{parts[3]} MB",
-                                'memory_used': f"{parts[4]} MB",
-                                'memory_free': f"{parts[5]} MB",
+                                'memory_total': f"{parts[3]} MiB",
+                                'memory_used': f"{parts[4]} MiB",
+                                'memory_free': f"{parts[5]} MiB",
                                 'temperature': int(float(parts[6])) if parts[6] != '[N/A]' else None,
                                 'power_draw': f"{parts[7]} W" if parts[7] != '[N/A]' else None,
                                 'power_limit': f"{parts[8]} W" if parts[8] != '[N/A]' else None,
