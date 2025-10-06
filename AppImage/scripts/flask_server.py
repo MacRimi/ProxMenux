@@ -1596,39 +1596,22 @@ def get_detailed_gpu_info(gpu):
         
         data_retrieved = False
         try:
-            # Try JSON output first (newer versions of intel_gpu_top)
-            result = subprocess.run(
-                ['intel_gpu_top', '-J', '-s', '50'],
-                capture_output=True, text=True, timeout=3
+            # Start intel_gpu_top process
+            process = subprocess.Popen(
+                ['intel_gpu_top', '-s', '100'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
             )
-            if result.returncode == 0 and result.stdout.strip():
-                try:
-                    data = json.loads(result.stdout)
-                    if 'frequency' in data:
-                        detailed_info['clock_graphics'] = f"{data['frequency'].get('actual', 0)} MHz"
-                        data_retrieved = True
-                    if 'power' in data:
-                        detailed_info['power_draw'] = f"{data['power'].get('GPU', 0):.2f} W"
-                        data_retrieved = True
-                    if 'engines' in data:
-                        engines = data['engines']
-                        detailed_info['engine_render'] = engines.get('Render/3D', {}).get('busy', 0)
-                        detailed_info['engine_blitter'] = engines.get('Blitter', {}).get('busy', 0)
-                        detailed_info['engine_video'] = engines.get('Video', {}).get('busy', 0)
-                        detailed_info['engine_video_enhance'] = engines.get('VideoEnhance', {}).get('busy', 0)
-                        data_retrieved = True
-                    print(f"[v0] Intel GPU JSON parsed data: {detailed_info}")
-                except json.JSONDecodeError as je:
-                    print(f"[v0] JSON decode error for intel_gpu_top: {je}")
             
-            # Fallback to text parsing
-            if not data_retrieved:
-                result = subprocess.run(
-                    ['intel_gpu_top', '-s', '50'],
-                    capture_output=True, text=True, timeout=3
-                )
-                if result.returncode == 0:
-                    output = result.stdout
+            # Wait for output with timeout
+            try:
+                stdout, stderr = process.communicate(timeout=2)
+                
+                if stdout:
+                    output = stdout
+                    print(f"[v0] intel_gpu_top output received: {output[:200]}...")
+                    
                     # Parse frequency: "0/ 0 MHz"
                     freq_match = re.search(r'(\d+)/\s*(\d+)\s*MHz', output)
                     if freq_match:
@@ -1641,6 +1624,12 @@ def get_detailed_gpu_info(gpu):
                     if power_match:
                         detailed_info['power_draw'] = f"{power_match.group(1)} W"
                         detailed_info['power_limit'] = f"{power_match.group(2)} W"
+                        data_retrieved = True
+                    
+                    # Parse RC6 (power saving state): "100% RC6"
+                    rc6_match = re.search(r'(\d+)%\s*RC6', output)
+                    if rc6_match:
+                        detailed_info['power_state'] = f"RC6: {rc6_match.group(1)}%"
                         data_retrieved = True
                     
                     # Parse engine utilization
@@ -1657,7 +1646,25 @@ def get_detailed_gpu_info(gpu):
                             detailed_info[key] = float(match.group(1))
                             data_retrieved = True
                     
-                    print(f"[v0] Intel GPU text parsed data: {detailed_info}")
+                    # Parse IRQ rate
+                    irq_match = re.search(r'(\d+)\s*irqs/s', output)
+                    if irq_match:
+                        detailed_info['irq_rate'] = int(irq_match.group(1))
+                        data_retrieved = True
+                    
+                    print(f"[v0] Intel GPU parsed data: {detailed_info}")
+                    
+            except subprocess.TimeoutExpired:
+                print(f"[v0] intel_gpu_top process timed out, terminating...")
+                process.terminate()
+                try:
+                    process.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+                detailed_info['has_monitoring_tool'] = False
+                print(f"[v0] intel_gpu_top timed out - marking tool as unavailable")
+                return detailed_info
             
             if data_retrieved:
                 detailed_info['has_monitoring_tool'] = True
@@ -1666,14 +1673,10 @@ def get_detailed_gpu_info(gpu):
                 detailed_info['has_monitoring_tool'] = False
                 print(f"[v0] Intel GPU monitoring failed - no data retrieved")
                     
-        except subprocess.TimeoutExpired:
-            print(f"[v0] intel_gpu_top timed out - marking tool as unavailable")
-            detailed_info['has_monitoring_tool'] = False
         except Exception as e:
             print(f"[v0] Error getting Intel GPU details: {e}")
             detailed_info['has_monitoring_tool'] = False
     
-    # NVIDIA GPU - use nvidia-smi
     elif vendor == 'NVIDIA':
         try:
             check_result = subprocess.run(['which', 'nvidia-smi'], capture_output=True, timeout=1)
@@ -1682,40 +1685,44 @@ def get_detailed_gpu_info(gpu):
                 print(f"[v0] nvidia-smi not found for NVIDIA GPU")
                 return detailed_info
             else:
-                detailed_info['has_monitoring_tool'] = True
                 print(f"[v0] nvidia-smi found for NVIDIA GPU")
         except Exception as e:
             print(f"[v0] Error checking for nvidia-smi: {e}")
             detailed_info['has_monitoring_tool'] = False
             return detailed_info
         
+        data_retrieved = False
         try:
             # nvidia-smi query for real-time data
+            print(f"[v0] Executing nvidia-smi to get GPU data...")
             result = subprocess.run(
                 ['nvidia-smi', '--query-gpu=index,name,driver_version,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,utilization.gpu,utilization.memory,clocks.gr,clocks.mem,pcie.link.gen.current,pcie.link.width.current', 
                  '--format=csv,noheader,nounits'],
                 capture_output=True, text=True, timeout=5
             )
-            if result.returncode == 0:
+            print(f"[v0] nvidia-smi return code: {result.returncode}")
+            print(f"[v0] nvidia-smi output: {result.stdout[:200] if result.stdout else 'No output'}")
+            
+            if result.returncode == 0 and result.stdout.strip():
                 for line in result.stdout.strip().split('\n'):
                     if line:
                         parts = [p.strip() for p in line.split(',')]
                         if len(parts) >= 15:
-                            detailed_info = {
-                                'driver_version': parts[2],
-                                'memory_total': f"{parts[3]} MiB",
-                                'memory_used': f"{parts[4]} MiB",
-                                'memory_free': f"{parts[5]} MiB",
-                                'temperature': int(float(parts[6])) if parts[6] != '[N/A]' else None,
-                                'power_draw': f"{parts[7]} W" if parts[7] != '[N/A]' else None,
-                                'power_limit': f"{parts[8]} W" if parts[8] != '[N/A]' else None,
-                                'utilization_gpu': int(float(parts[9])) if parts[9] != '[N/A]' else None,
-                                'utilization_memory': int(float(parts[10])) if parts[10] != '[N/A]' else None,
-                                'clock_graphics': f"{parts[11]} MHz" if parts[11] != '[N/A]' else None,
-                                'clock_memory': f"{parts[12]} MHz" if parts[12] != '[N/A]' else None,
-                                'pcie_gen': parts[13] if parts[13] != '[N/A]' else None,
-                                'pcie_width': f"x{parts[14]}" if parts[14] != '[N/A]' else None,
-                            }
+                            detailed_info['driver_version'] = parts[2] if parts[2] != '[N/A]' else None
+                            detailed_info['memory_total'] = int(float(parts[3])) if parts[3] != '[N/A]' else None
+                            detailed_info['memory_used'] = int(float(parts[4])) if parts[4] != '[N/A]' else None
+                            detailed_info['memory_free'] = int(float(parts[5])) if parts[5] != '[N/A]' else None
+                            detailed_info['temperature'] = int(float(parts[6])) if parts[6] != '[N/A]' else None
+                            detailed_info['power_draw'] = float(parts[7]) if parts[7] != '[N/A]' else None
+                            detailed_info['power_limit'] = float(parts[8]) if parts[8] != '[N/A]' else None
+                            detailed_info['utilization_gpu'] = int(float(parts[9])) if parts[9] != '[N/A]' else None
+                            detailed_info['utilization_memory'] = int(float(parts[10])) if parts[10] != '[N/A]' else None
+                            detailed_info['clock_graphics'] = int(float(parts[11])) if parts[11] != '[N/A]' else None
+                            detailed_info['clock_memory'] = int(float(parts[12])) if parts[12] != '[N/A]' else None
+                            detailed_info['pcie_gen'] = parts[13] if parts[13] != '[N/A]' else None
+                            detailed_info['pcie_width'] = f"x{parts[14]}" if parts[14] != '[N/A]' else None
+                            data_retrieved = True
+                            print(f"[v0] NVIDIA GPU data retrieved successfully: {detailed_info}")
                             break
             
             # Get running processes
@@ -1735,9 +1742,38 @@ def get_detailed_gpu_info(gpu):
                                 'memory': parts[2]
                             })
                 detailed_info['processes'] = processes
+                print(f"[v0] NVIDIA GPU processes: {len(processes)} found")
+            
+            if data_retrieved:
+                detailed_info['has_monitoring_tool'] = True
+                print(f"[v0] NVIDIA GPU monitoring successful")
+            else:
+                detailed_info['has_monitoring_tool'] = False
+                print(f"[v0] NVIDIA GPU monitoring failed - no data retrieved")
                 
+        except subprocess.TimeoutExpired:
+            print(f"[v0] nvidia-smi timed out - marking tool as unavailable")
+            detailed_info['has_monitoring_tool'] = False
         except Exception as e:
             print(f"[v0] Error getting NVIDIA GPU details: {e}")
+            import traceback
+            traceback.print_exc()
+            detailed_info['has_monitoring_tool'] = False
+    
+    elif vendor == 'AMD':
+        try:
+            check_result = subprocess.run(['which', 'radeontop'], capture_output=True, timeout=1)
+            if check_result.returncode != 0:
+                detailed_info['has_monitoring_tool'] = False
+                print(f"[v0] radeontop not found for AMD GPU")
+                return detailed_info
+            else:
+                print(f"[v0] radeontop found for AMD GPU")
+                detailed_info['has_monitoring_tool'] = True
+        except Exception as e:
+            print(f"[v0] Error checking for radeontop: {e}")
+            detailed_info['has_monitoring_tool'] = False
+            return detailed_info
     
     return detailed_info
 
@@ -2768,3 +2804,4 @@ if __name__ == '__main__':
     print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
+.0.0', port=8008, debug=False)

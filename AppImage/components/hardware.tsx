@@ -16,7 +16,6 @@ import {
   Cpu,
   MemoryStick,
   Cpu as Gpu,
-  Info,
 } from "lucide-react"
 import useSWR from "swr"
 import { useState, useEffect } from "react"
@@ -66,14 +65,22 @@ export default function Hardware() {
 
   useEffect(() => {
     if (hardwareData?.gpus) {
-      console.log("[v0] GPU data received:", JSON.stringify(hardwareData.gpus, null, 2))
+      console.log("[v0] ===== GPU DATA DEBUG =====")
+      console.log("[v0] Total GPUs:", hardwareData.gpus.length)
+      console.log("[v0] Full GPU data:", JSON.stringify(hardwareData.gpus, null, 2))
+
       hardwareData.gpus.forEach((gpu, index) => {
-        console.log(`[v0] GPU ${index} hasRealtimeData:`, hasRealtimeData(gpu))
+        console.log(`[v0] ----- GPU ${index}: ${gpu.name} -----`)
+        console.log(`[v0] GPU ${index} vendor:`, gpu.vendor)
         console.log(`[v0] GPU ${index} has_monitoring_tool:`, gpu.has_monitoring_tool)
         console.log(`[v0] GPU ${index} temperature:`, gpu.temperature)
         console.log(`[v0] GPU ${index} utilization_gpu:`, gpu.utilization_gpu)
         console.log(`[v0] GPU ${index} memory_total:`, gpu.memory_total)
+        console.log(`[v0] GPU ${index} power_draw:`, gpu.power_draw)
+        console.log(`[v0] GPU ${index} hasRealtimeData:`, hasRealtimeData(gpu))
+        console.log(`[v0] GPU ${index} will show modal:`, hasRealtimeData(gpu) ? "ADVANCED" : "BASIC")
       })
+      console.log("[v0] ===== END GPU DATA DEBUG =====")
     }
   }, [hardwareData])
 
@@ -112,7 +119,6 @@ export default function Hardware() {
       gpu.utilization_memory !== undefined ||
       (gpu.processes !== undefined && gpu.processes.length > 0)
     )
-    console.log("[v0] hasRealtimeData result:", result, "for GPU:", gpu.name)
     return result
   }
 
@@ -320,12 +326,15 @@ export default function Hardware() {
             {hardwareData.gpus.map((gpu, index) => {
               const pciDevice = findPCIDeviceForGPU(gpu)
               const fullSlot = pciDevice?.slot || gpu.slot
+              const isClickable = hasRealtimeData(gpu)
 
               return (
                 <div
                   key={index}
-                  onClick={() => setSelectedGPU(gpu)}
-                  className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-4 transition-colors hover:bg-background/80"
+                  onClick={() => isClickable && setSelectedGPU(gpu)}
+                  className={`rounded-lg border border-border/30 bg-background/50 p-4 transition-colors ${
+                    isClickable ? "cursor-pointer hover:bg-background/80" : "cursor-default"
+                  }`}
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <span className="font-medium text-sm">{gpu.name}</span>
@@ -612,94 +621,6 @@ export default function Hardware() {
                               <p className="mt-1 text-sm">{proc.name}</p>
                             </div>
                           ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )
-            })()}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={selectedGPU !== null && !hasRealtimeData(selectedGPU)} onOpenChange={() => setSelectedGPU(null)}>
-        <DialogContent className="max-w-2xl">
-          {selectedGPU &&
-            !hasRealtimeData(selectedGPU) &&
-            (() => {
-              const pciDevice = findPCIDeviceForGPU(selectedGPU)
-
-              return (
-                <>
-                  <DialogHeader>
-                    <DialogTitle>{selectedGPU.name}</DialogTitle>
-                    <DialogDescription>PCI Device Information</DialogDescription>
-                  </DialogHeader>
-
-                  <div className="space-y-4">
-                    {/* Basic PCI Device Information */}
-                    <div className="space-y-3">
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Device Type</span>
-                        <Badge className={getDeviceTypeColor("graphics")}>Graphics Card</Badge>
-                      </div>
-
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">PCI Slot</span>
-                        <span className="font-mono text-sm">{pciDevice?.slot || selectedGPU.slot}</span>
-                      </div>
-
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Device Name</span>
-                        <span className="text-sm text-right">{pciDevice?.device || selectedGPU.name}</span>
-                      </div>
-
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Vendor</span>
-                        <span className="text-sm">{pciDevice?.vendor || selectedGPU.vendor}</span>
-                      </div>
-
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Class</span>
-                        <span className="font-mono text-sm">
-                          {pciDevice?.class || selectedGPU.pci_class || "VGA compatible controller"}
-                        </span>
-                      </div>
-
-                      {(pciDevice?.driver || selectedGPU.pci_driver) && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm font-medium text-muted-foreground">Driver</span>
-                          <span className="font-mono text-sm text-green-500">
-                            {pciDevice?.driver || selectedGPU.pci_driver}
-                          </span>
-                        </div>
-                      )}
-
-                      {(pciDevice?.kernel_module || selectedGPU.pci_kernel_module) && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm font-medium text-muted-foreground">Kernel Module</span>
-                          <span className="font-mono text-sm">
-                            {pciDevice?.kernel_module || selectedGPU.pci_kernel_module}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Type</span>
-                        <span className="text-sm font-medium">{selectedGPU.type}</span>
-                      </div>
-                    </div>
-
-                    {selectedGPU.has_monitoring_tool === false && (
-                      <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4">
-                        <div className="flex gap-3">
-                          <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium text-blue-500">Extended Monitoring Not Available</p>
-                            <p className="text-xs text-muted-foreground">
-                              {getMonitoringToolRecommendation(pciDevice?.vendor || selectedGPU.vendor)}
-                            </p>
-                          </div>
                         </div>
                       </div>
                     )}
