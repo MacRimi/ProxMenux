@@ -1991,7 +1991,7 @@ def get_hardware_info():
                 if line:
                     parts = line.split(',')
                     if len(parts) >= 4:
-                        hardware_data['graphics_cards'].append({
+                        hardware_data['gpus'].append({
                             'name': parts[0].strip(),
                             'memory': parts[1].strip(),
                             'temperature': int(parts[2].strip().split(' ')[0]) if parts[2].strip() != 'N/A' and 'C' in parts[2] else 0,
@@ -2020,7 +2020,7 @@ def get_hardware_info():
                         
                         # Check if this GPU is already in the list (from nvidia-smi)
                         already_exists = False
-                        for existing_gpu in hardware_data['graphics_cards']:
+                        for existing_gpu in hardware_data['gpus']:
                             if gpu_name in existing_gpu['name'] or existing_gpu['name'] in gpu_name:
                                 already_exists = True
                                 # Update vendor if it was previously unknown
@@ -2029,13 +2029,13 @@ def get_hardware_info():
                                 break
                         
                         if not already_exists:
-                            hardware_data['graphics_cards'].append({
+                            hardware_data['gpus'].append({
                                 'name': gpu_name,
                                 'vendor': vendor
                             })
                             print(f"[v0] Found GPU: {gpu_name} ({vendor})")
             
-            print(f"[v0] Graphics cards: {len(hardware_data['graphics_cards'])} found")
+            print(f"[v0] Graphics cards: {len(hardware_data['gpus'])} found")
     except Exception as e:
         print(f"[v0] Error getting graphics cards: {e}")
     
@@ -2583,4 +2583,3 @@ if __name__ == '__main__':
     print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
-.0.0.0', port=8008, debug=False)
