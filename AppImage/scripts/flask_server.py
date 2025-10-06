@@ -1697,7 +1697,6 @@ def get_gpu_info():
                         }
                         
                         try:
-                            # Get detailed PCI info for this slot
                             pci_result = subprocess.run(['lspci', '-vmm', '-s', slot], capture_output=True, text=True, timeout=2)
                             if pci_result.returncode == 0:
                                 for pci_line in pci_result.stdout.split('\n'):
@@ -1724,8 +1723,8 @@ def get_gpu_info():
                         
                         gpus.append(gpu)
                         print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
-        except Exception as e:
-            print(f"[v0] Error detecting GPUs from lspci: {e}")
+    except Exception as e:
+        print(f"[v0] Error detecting GPUs from lspci: {e}")
     
     try:
         result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
@@ -2494,7 +2493,7 @@ def api_hardware():
     # Format data for frontend
     formatted_data = {
         'cpu': hardware_info.get('cpu', {}),
-        'motherboard': hardware_info.get('motherboard', {}),
+        'motherboard': hardware_data.get('motherboard', {}), # Corrected from hardware_info
         'memory_modules': hardware_info.get('memory_modules', []),
         'storage_devices': hardware_info.get('storage_devices', []),
         'pci_devices': hardware_info.get('pci_devices', []),
