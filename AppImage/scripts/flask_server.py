@@ -1615,7 +1615,7 @@ def get_detailed_gpu_info(gpu):
                 return detailed_info
             
             print(f"[v0] GPU device {gpu_device} is accessible")
-            
+        
         except Exception as e:
             print(f"[v0] Error checking for intel_gpu_top: {e}")
             detailed_info['has_monitoring_tool'] = False
@@ -1652,49 +1652,38 @@ def get_detailed_gpu_info(gpu):
                         output_lines.append(line)
                         output = ''.join(output_lines)
                         
-                        if len(output_lines) <= 5:
+                        if len(output_lines) <= 10:
                             print(f"[v0] Received line {len(output_lines)}: {line.strip()[:100]}")
                         
-                        # intel_gpu_top -J outputs: [\n{\n...\n},\n{\n...\n}\n]
-                        # We need to find the first complete object inside the array
+                        # intel_gpu_top outputs individual JSON objects, not necessarily wrapped in array
                         
-                        # First, check if we have the array start
-                        if '[' not in output:
+                        # Find the first opening brace
+                        object_start = output.find('{')
+                        if object_start == -1:
                             continue
                         
-                        print(f"[v0] Found array start bracket, total output length: {len(output)}")
-                        
-                        # Find the start of the array
-                        array_start = output.index('[')
-                        after_array_start = output[array_start + 1:]
-                        
-                        # Now look for the first complete object inside the array
+                        # Count braces to find complete object
                         brace_count = 0
-                        in_object = False
-                        object_start = -1
                         object_end = -1
                         
-                        for i, char in enumerate(after_array_start):
-                            if char == '{':
-                                if brace_count == 0:
-                                    object_start = i
-                                    in_object = True
+                        for i in range(object_start, len(output)):
+                            if output[i] == '{':
                                 brace_count += 1
-                            elif char == '}':
+                            elif output[i] == '}':
                                 brace_count -= 1
-                                if brace_count == 0 and in_object:
+                                if brace_count == 0:
                                     object_end = i + 1
                                     break
                         
-                        print(f"[v0] Object parsing: start={object_start}, end={object_end}, brace_count={brace_count}")
-                        
-                        if object_start >= 0 and object_end > object_start:
+                        if object_end > object_start:
                             # Extract the first complete JSON object
-                            json_str = after_array_start[object_start:object_end]
-                            print(f"[v0] Extracted JSON string (first 200 chars): {json_str[:200]}")
+                            json_str = output[object_start:object_end]
+                            print(f"[v0] Found complete JSON object ({len(json_str)} chars)")
+                            print(f"[v0] JSON preview (first 300 chars): {json_str[:300]}")
+                            
                             try:
                                 json_data = json.loads(json_str)
-                                print(f"[v0] Successfully parsed JSON object from intel_gpu_top array")
+                                print(f"[v0] Successfully parsed JSON from intel_gpu_top")
                                 print(f"[v0] JSON keys: {list(json_data.keys())}")
 
                                 # Parse frequency data
