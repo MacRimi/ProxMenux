@@ -1588,6 +1588,21 @@ def get_detailed_gpu_info(gpu):
             else:
                 print(f"[v0] intel_gpu_top found for Intel GPU")
             
+            slot = gpu.get('slot', '')
+            if slot:
+                sys_link = f"/sys/bus/pci/devices/0000:{slot}"
+                if os.path.exists(sys_link):
+                    sys_real = os.path.realpath(sys_link)
+                    print(f"[v0] Resolved GPU sysfs path: {sys_link} -> {sys_real}")
+                else:
+                    print(f"[v0] GPU sysfs path not found: {sys_link}")
+                    detailed_info['has_monitoring_tool'] = False
+                    return detailed_info
+            else:
+                print(f"[v0] GPU slot not provided")
+                detailed_info['has_monitoring_tool'] = False
+                return detailed_info
+            
             gpu_device = '/dev/dri/card0'
             if not os.path.exists(gpu_device):
                 print(f"[v0] GPU device {gpu_device} not found - marking tool as unavailable")
@@ -1609,9 +1624,11 @@ def get_detailed_gpu_info(gpu):
         data_retrieved = False
         process = None
         try:
-            # Start intel_gpu_top process
+            cmd = ['intel_gpu_top', '-J', '-s', '250', '-o', '-', '-d', f'sys:{sys_real}']
+            print(f"[v0] Starting intel_gpu_top with command: {' '.join(cmd)}")
+            
             process = subprocess.Popen(
-                ['intel_gpu_top', '-J', '-s', '500', '-o', '-'],
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -1619,7 +1636,7 @@ def get_detailed_gpu_info(gpu):
             )
             
             print(f"[v0] intel_gpu_top process started, reading output...")
-            
+
             # Read output with timeout
             output_lines = []
             start_time = time.time()
