@@ -2696,7 +2696,7 @@ def api_hardware():
         'cpu': hardware_info.get('cpu', {}),
         'motherboard': hardware_info.get('motherboard', {}),
         'memory_modules': hardware_info.get('memory_modules', []),
-        'storage_devices': hardware_data.get('storage_devices', []),
+        'storage_devices': hardware_info.get('storage_devices', []),
         'pci_devices': hardware_info.get('pci_devices', []),
         'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
         'fans': all_fans, # Return combined fans (sensors + IPMI)
@@ -2907,5 +2907,8 @@ if __name__ == '__main__':
     print("Starting ProxMenux Flask Server on port 8008...")
     print("Server will be accessible on all network interfaces (0.0.0.0:8008)")
     print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
+    
+    app.run(host='0.0.0.0', port=8008, debug=False)
+ms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
