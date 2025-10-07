@@ -806,6 +806,7 @@ def get_smart_data(disk_name):
                             break
                         elif smart_data['model'] != 'Unknown' or smart_data['serial'] != 'Unknown':
                             print(f"[v0] Extracted partial data from text output, continuing to next attempt...")
+                
                 else:
                     print(f"[v0] No usable output (return code {result.returncode}), trying next command...")
             
@@ -1640,7 +1641,7 @@ def get_detailed_gpu_info(gpu):
             # Read output with timeout
             output_lines = []
             start_time = time.time()
-            timeout_seconds = 3.0
+            timeout_seconds = 5.0
             json_objects_found = 0
             
             while time.time() - start_time < timeout_seconds:
@@ -1659,7 +1660,15 @@ def get_detailed_gpu_info(gpu):
                         # Find all complete JSON objects
                         search_start = 0
                         while True:
-                            object_start = output.find('{', search_start)
+                            object_start = -1
+                            for i in range(search_start, len(output)):
+                                if output[i] == '{':
+                                    object_start = i
+                                    break
+                                elif output[i] not in [',', '\n', '\r', ' ', '\t']:
+                                    # Si encontramos algo que no es separador ni llave, salir
+                                    break
+                            
                             if object_start == -1:
                                 break
                             
@@ -1683,6 +1692,9 @@ def get_detailed_gpu_info(gpu):
                                 if json_objects_found == 1:
                                     print(f"[v0] Found first JSON object ({len(json_str)} chars) - skipping (baseline)")
                                     search_start = object_end
+                                    # Saltar comas y espacios después del primer objeto
+                                    while search_start < len(output) and output[search_start] in [',', '\n', '\r', ' ', '\t']:
+                                        search_start += 1
                                     continue
                                 
                                 print(f"[v0] Found second JSON object ({len(json_str)} chars) - using this one")
@@ -1782,6 +1794,8 @@ def get_detailed_gpu_info(gpu):
                                 except json.JSONDecodeError as e:
                                     print(f"[v0] JSON decode error: {e}")
                                     search_start = object_end
+                                    while search_start < len(output) and output[search_start] in [',', '\n', '\r', ' ', '\t']:
+                                        search_start += 1
                                     continue
                             else:
                                 break
@@ -1790,7 +1804,7 @@ def get_detailed_gpu_info(gpu):
                         if json_objects_found >= 2 and data_retrieved:
                             break
                     else:
-                        time.sleep(0.1)
+                        time.sleep(0.05)
                         
                 except Exception as e:
                     print(f"[v0] Error reading intel_gpu_top output: {e}")
