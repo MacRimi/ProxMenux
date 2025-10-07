@@ -74,7 +74,7 @@ export default function Hardware() {
     try {
       console.log("[v0] Fetching real-time GPU data for slot:", gpu.slot)
       const response = await fetch(`http://localhost:8008/api/gpu/${gpu.slot}/realtime`, {
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(6000),
       })
       if (response.ok) {
         const data = await response.json()

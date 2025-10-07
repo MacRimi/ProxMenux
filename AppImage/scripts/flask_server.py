@@ -1625,7 +1625,7 @@ def get_detailed_gpu_info(gpu):
         data_retrieved = False
         process = None
         try:
-            cmd = ['intel_gpu_top', '-J', '-s', '250', '-o', '-', '-d', f'sys:{sys_real}']
+            cmd = ['intel_gpu_top', '-J', '-s', '1000', '-o', '-', '-d', f'sys:{sys_real}']
             print(f"[v0] Starting intel_gpu_top with command: {' '.join(cmd)}")
             
             process = subprocess.Popen(
@@ -1638,174 +1638,177 @@ def get_detailed_gpu_info(gpu):
             
             print(f"[v0] intel_gpu_top process started, reading output...")
 
-            # Read output with timeout
             output_lines = []
             start_time = time.time()
-            timeout_seconds = 5.0
+            timeout_seconds = 8.0
             json_objects_found = 0
+            valid_data_found = False
             
             while time.time() - start_time < timeout_seconds:
                 if process.poll() is not None:
                     break
-                
-                try:
-                    line = process.stdout.readline()
-                    if line:
-                        output_lines.append(line)
-                        output = ''.join(output_lines)
-                        
-                        if len(output_lines) <= 10:
-                            print(f"[v0] Received line {len(output_lines)}: {line.strip()[:100]}")
-                        
-                        # Find all complete JSON objects
-                        search_start = 0
-                        while True:
-                            object_start = -1
-                            for i in range(search_start, len(output)):
-                                if output[i] == '{':
-                                    object_start = i
-                                    break
-                                elif output[i] not in [',', '\n', '\r', ' ', '\t']:
-                                    # Si encontramos algo que no es separador ni llave, salir
-                                    break
-                            
-                            if object_start == -1:
-                                break
-                            
-                            # Count braces to find complete object
-                            brace_count = 0
-                            object_end = -1
-                            
-                            for i in range(object_start, len(output)):
-                                if output[i] == '{':
-                                    brace_count += 1
-                                elif output[i] == '}':
-                                    brace_count -= 1
-                                    if brace_count == 0:
-                                        object_end = i + 1
-                                        break
-                            
-                            if object_end > object_start:
-                                json_objects_found += 1
-                                json_str = output[object_start:object_end]
-                                
-                                if json_objects_found == 1:
-                                    print(f"[v0] Found first JSON object ({len(json_str)} chars) - skipping (baseline)")
-                                    search_start = object_end
-                                    # Saltar comas y espacios después del primer objeto
-                                    while search_start < len(output) and output[search_start] in [',', '\n', '\r', ' ', '\t']:
-                                        search_start += 1
-                                    continue
-                                
-                                print(f"[v0] Found second JSON object ({len(json_str)} chars) - using this one")
-                                print(f"[v0] JSON preview (first 300 chars): {json_str[:300]}")
-                                
-                                try:
-                                    json_data = json.loads(json_str)
-                                    print(f"[v0] Successfully parsed JSON from intel_gpu_top")
-                                    print(f"[v0] JSON keys: {list(json_data.keys())}")
 
-                                    # Parse frequency data
-                                    if 'frequency' in json_data:
-                                        freq = json_data['frequency']
-                                        if 'actual' in freq:
-                                            detailed_info['clock_graphics'] = f"{freq['actual']:.0f} MHz"
-                                            data_retrieved = True
-                                        if 'requested' in freq:
-                                            detailed_info['clock_max'] = f"{freq['requested']:.0f} MHz"
-                                            data_retrieved = True
+                try:
+                    # Use select for non-blocking read to avoid hanging
+                    ready_fds, _, _ = select.select([process.stdout], [], [], 0.1)
+                    if ready_fds:
+                        line = process.stdout.readline()
+                        if line:
+                            output_lines.append(line)
+                            output = ''.join(output_lines)
+                            
+                            if len(output_lines) <= 10:
+                                print(f"[v0] Received line {len(output_lines)}: {line.strip()[:100]}")
+                            
+                            # Find all complete JSON objects
+                            search_start = 0
+                            while True:
+                                object_start = -1
+                                for i in range(search_start, len(output)):
+                                    if output[i] == '{':
+                                        object_start = i
+                                        break
+                                    elif output[i] not in [',', '\n', '\r', ' ', '\t']:
+                                        # Si encontramos algo que no es separador ni llave, salir
+                                        break
+                                
+                                if object_start == -1:
+                                    break
+                                
+                                # Count braces to find complete object
+                                brace_count = 0
+                                object_end = -1
+                                
+                                for i in range(object_start, len(output)):
+                                    if output[i] == '{':
+                                        brace_count += 1
+                                    elif output[i] == '}':
+                                        brace_count -= 1
+                                        if brace_count == 0:
+                                            object_end = i + 1
+                                            break
+                                
+                                if object_end > object_start:
+                                    json_objects_found += 1
+                                    json_str = output[object_start:object_end]
                                     
-                                    # Parse power data
-                                    if 'power' in json_data:
-                                        power = json_data['power']
-                                        if 'GPU' in power:
-                                            detailed_info['power_draw'] = f"{power['GPU']:.2f} W"
-                                            data_retrieved = True
-                                        if 'Package' in power:
-                                            detailed_info['power_limit'] = f"{power['Package']:.2f} W"
-                                            data_retrieved = True
+                                    if json_objects_found == 1:
+                                        print(f"[v0] Found first JSON object ({len(json_str)} chars) - skipping (baseline)")
+                                        search_start = object_end
+                                        # Saltar comas y espacios después del primer objeto
+                                        while search_start < len(output) and output[search_start] in [',', '\n', '\r', ' ', '\t']:
+                                            search_start += 1
+                                        continue
                                     
-                                    # Parse RC6 state
-                                    if 'rc6' in json_data:
-                                        rc6_value = json_data['rc6'].get('value', 0)
-                                        detailed_info['power_state'] = f"RC6: {rc6_value:.1f}%"
-                                        data_retrieved = True
+                                    print(f"[v0] Found second JSON object ({len(json_str)} chars) - using this one")
+                                    print(f"[v0] JSON preview (first 300 chars): {json_str[:300]}")
                                     
-                                    # Parse interrupts
-                                    if 'interrupts' in json_data:
-                                        irq_count = json_data['interrupts'].get('count', 0)
-                                        detailed_info['irq_rate'] = int(irq_count)
-                                        data_retrieved = True
-                                    
-                                    # Parse engines and calculate utilization
-                                    if 'engines' in json_data:
-                                        engines_data = json_data['engines']
-                                        engine_map = {
-                                            'Render/3D': 'engine_render',
-                                            'Blitter': 'engine_blitter',
-                                            'Video': 'engine_video',
-                                            'VideoEnhance': 'engine_video_enhance'
-                                        }
-                                        
-                                        engine_values = []
-                                        for engine_name, key in engine_map.items():
-                                            if engine_name in engines_data:
-                                                busy_value = engines_data[engine_name].get('busy', 0)
-                                                detailed_info[key] = float(busy_value)
-                                                engine_values.append(busy_value)
+                                    try:
+                                        json_data = json.loads(json_str)
+                                        print(f"[v0] Successfully parsed JSON from intel_gpu_top")
+                                        print(f"[v0] JSON keys: {list(json_data.keys())}")
+
+                                        # Parse frequency data
+                                        if 'frequency' in json_data:
+                                            freq = json_data['frequency']
+                                            if 'actual' in freq:
+                                                detailed_info['clock_graphics'] = f"{freq['actual']:.0f} MHz"
+                                                data_retrieved = True
+                                            if 'requested' in freq:
+                                                detailed_info['clock_max'] = f"{freq['requested']:.0f} MHz"
                                                 data_retrieved = True
                                         
-                                        # Calculate overall GPU utilization
-                                        if engine_values:
-                                            avg_utilization = sum(engine_values) / len(engine_values)
-                                            detailed_info['utilization_gpu'] = f"{avg_utilization:.1f}%"
-                                    
-                                    # Parse client processes
-                                    if 'clients' in json_data:
-                                        clients_data = json_data['clients']
-                                        processes = []
-                                        for client_id, client_info in clients_data.items():
-                                            process_info = {
-                                                'name': client_info.get('name', 'Unknown'),
-                                                'pid': client_info.get('pid', 'N/A')
+                                        # Parse power data
+                                        if 'power' in json_data:
+                                            power = json_data['power']
+                                            if 'GPU' in power:
+                                                detailed_info['power_draw'] = f"{power['GPU']:.2f} W"
+                                                data_retrieved = True
+                                            if 'Package' in power:
+                                                detailed_info['power_limit'] = f"{power['Package']:.2f} W"
+                                                data_retrieved = True
+                                        
+                                        # Parse RC6 state
+                                        if 'rc6' in json_data:
+                                            rc6_value = json_data['rc6'].get('value', 0)
+                                            detailed_info['power_state'] = f"RC6: {rc6_value:.1f}%"
+                                            data_retrieved = True
+                                        
+                                        # Parse interrupts
+                                        if 'interrupts' in json_data:
+                                            irq_count = json_data['interrupts'].get('count', 0)
+                                            detailed_info['irq_rate'] = int(irq_count)
+                                            data_retrieved = True
+                                        
+                                        # Parse engines and calculate utilization
+                                        if 'engines' in json_data:
+                                            engines_data = json_data['engines']
+                                            engine_map = {
+                                                'Render/3D': 'engine_render',
+                                                'Blitter': 'engine_blitter',
+                                                'Video': 'engine_video',
+                                                'VideoEnhance': 'engine_video_enhance'
                                             }
                                             
-                                            if 'memory' in client_info and 'system' in client_info['memory']:
-                                                mem_info = client_info['memory']['system']
-                                                if 'resident' in mem_info:
-                                                    mem_mb = int(mem_info['resident']) / (1024 * 1024)
-                                                    process_info['memory_used'] = f"{mem_mb:.0f} MB"
+                                            engine_values = []
+                                            for engine_name, key in engine_map.items():
+                                                if engine_name in engines_data:
+                                                    busy_value = engines_data[engine_name].get('busy', 0)
+                                                    detailed_info[key] = float(busy_value)
+                                                    engine_values.append(busy_value)
+                                                    data_retrieved = True
                                             
-                                            if 'engine-classes' in client_info:
-                                                engine_classes = client_info['engine-classes']
-                                                if 'Render/3D' in engine_classes:
-                                                    render_busy = engine_classes['Render/3D'].get('busy', '0')
-                                                    process_info['gpu_utilization'] = f"{float(render_busy):.1f}%"
-                                            
-                                            processes.append(process_info)
+                                            # Calculate overall GPU utilization
+                                            if engine_values:
+                                                avg_utilization = sum(engine_values) / len(engine_values)
+                                                detailed_info['utilization_gpu'] = f"{avg_utilization:.1f}%"
                                         
-                                        if processes:
-                                            detailed_info['processes'] = processes
-                                            data_retrieved = True
-                                    
-                                    print(f"[v0] Intel GPU data retrieved successfully")
+                                        # Parse client processes
+                                        if 'clients' in json_data:
+                                            clients_data = json_data['clients']
+                                            processes = []
+                                            for client_id, client_info in clients_data.items():
+                                                process_info = {
+                                                    'name': client_info.get('name', 'Unknown'),
+                                                    'pid': client_info.get('pid', 'N/A')
+                                                }
+                                                
+                                                if 'memory' in client_info and 'system' in client_info['memory']:
+                                                    mem_info = client_info['memory']['system']
+                                                    if 'resident' in mem_info:
+                                                        mem_mb = int(mem_info['resident']) / (1024 * 1024)
+                                                        process_info['memory_used'] = f"{mem_mb:.0f} MB"
+                                                
+                                                if 'engine-classes' in client_info:
+                                                    engine_classes = client_info['engine-classes']
+                                                    if 'Render/3D' in engine_classes:
+                                                        render_busy = engine_classes['Render/3D'].get('busy', '0')
+                                                        process_info['gpu_utilization'] = f"{float(render_busy):.1f}%"
+                                                
+                                                processes.append(process_info)
+                                            
+                                            if processes:
+                                                detailed_info['processes'] = processes
+                                                data_retrieved = True
+                                        
+                                        print(f"[v0] Intel GPU data retrieved successfully")
+                                        break
+                                        
+                                    except json.JSONDecodeError as e:
+                                        print(f"[v0] JSON decode error: {e}")
+                                        search_start = object_end
+                                        while search_start < len(output) and output[search_start] in [',', '\n', '\r', ' ', '\t']:
+                                            search_start += 1
+                                        continue
+                                else:
                                     break
-                                    
-                                except json.JSONDecodeError as e:
-                                    print(f"[v0] JSON decode error: {e}")
-                                    search_start = object_end
-                                    while search_start < len(output) and output[search_start] in [',', '\n', '\r', ' ', '\t']:
-                                        search_start += 1
-                                    continue
-                            else:
+                            
+                            # If we found and parsed the second object, break out of the main loop
+                            if json_objects_found >= 2 and data_retrieved:
                                 break
-                        
-                        # If we found and parsed the second object, break out of the main loop
-                        if json_objects_found >= 2 and data_retrieved:
-                            break
-                    else:
-                        time.sleep(0.05)
-                        
+                        else:
+                            time.sleep(0.05) # Sleep briefly if no output, to avoid busy-waiting
+                            
                 except Exception as e:
                     print(f"[v0] Error reading intel_gpu_top output: {e}")
                     break
@@ -2349,7 +2352,7 @@ def get_hardware_info():
         # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
         try:
             # Try nvidia-smi first
-            result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,temperature.gpu,power.draw', '--format=csv,noheader'], 
+            result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,temperature.gpu,power.draw', '--format=csv,noheader,nounits'], 
                                   capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
                 for line in result.stdout.strip().split('\n'):
@@ -2785,7 +2788,7 @@ def api_hardware():
         formatted_data = {
             'cpu': hardware_info.get('cpu', {}),
             'motherboard': hardware_info.get('motherboard', {}),
-            'bios': hardware_info.get('bios', {}),
+            'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
             'storage_devices': hardware_info.get('storage_devices', []),
             'pci_devices': hardware_info.get('pci_devices', []),
