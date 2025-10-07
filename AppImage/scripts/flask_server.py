@@ -16,6 +16,7 @@ import time
 import socket
 from datetime import datetime, timedelta
 import re # Added for regex matching
+import select # Added for non-blocking read
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
@@ -1583,12 +1584,17 @@ def get_detailed_gpu_info(gpu):
         try:
             check_result = subprocess.run(['which', 'intel_gpu_top'], capture_output=True, timeout=1)
             if check_result.returncode != 0:
-                # Tool not found
                 detailed_info['has_monitoring_tool'] = False
                 print(f"[v0] intel_gpu_top not found for Intel GPU")
                 return detailed_info
-            else:
-                print(f"[v0] intel_gpu_top found for Intel GPU")
+            
+            import os
+            if not os.path.exists('/dev/dri/card0'):
+                detailed_info['has_monitoring_tool'] = False
+                print(f"[v0] /dev/dri/card0 not accessible - intel_gpu_top cannot run")
+                return detailed_info
+            
+            print(f"[v0] intel_gpu_top found and /dev/dri/card0 accessible")
         except Exception as e:
             print(f"[v0] Error checking for intel_gpu_top: {e}")
             detailed_info['has_monitoring_tool'] = False
@@ -1596,43 +1602,37 @@ def get_detailed_gpu_info(gpu):
         
         data_retrieved = False
         try:
-            # Start intel_gpu_top process with JSON output to stdout
-            process = subprocess.Popen(
-                ['intel_gpu_top', '-J', '-s', '1000', '-o', '-'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+            result = subprocess.run(
+                ['intel_gpu_top', '-J', '-s', '500', '-o', '-'],
+                capture_output=True,
+                text=True,
+                timeout=1.5  # Reduced from 2 seconds
             )
             
-            # Wait for output with increased timeout
-            try:
-                stdout, stderr = process.communicate(timeout=15)
+            output = result.stdout.strip()
+            
+            if output and result.returncode == 0:
+                print(f"[v0] intel_gpu_top output received ({len(output)} chars)")
+                print(f"[v0] First 500 chars: {output[:500]}")
                 
-                if stdout:
-                    output = stdout.strip()
-                    print(f"[v0] intel_gpu_top output received: {output[:300]}...")
+                # Try to parse as JSON
+                try:
+                    # Find first complete JSON object
+                    brace_count = 0
+                    json_end = -1
+                    for i, char in enumerate(output):
+                        if char == '{':
+                            brace_count += 1
+                        elif char == '}':
+                            brace_count -= 1
+                            if brace_count == 0:
+                                json_end = i + 1
+                                break
                     
-                    # Try to parse as JSON
-                    try:
-                        import json
-                        # The output may contain multiple JSON objects, get the first one
-                        json_str = output
-                        # Find first complete JSON object
-                        brace_count = 0
-                        json_end = -1
-                        for i, char in enumerate(output):
-                            if char == '{':
-                                brace_count += 1
-                            elif char == '}':
-                                brace_count -= 1
-                                if brace_count == 0:
-                                    json_end = i + 1
-                                    break
-                        
-                        if json_end > 0:
-                            json_str = output[:json_end]
-                        
+                    if json_end > 0:
+                        json_str = output[:json_end]
                         json_data = json.loads(json_str)
+                        print(f"[v0] Parsed JSON successfully with keys: {list(json_data.keys())}")
                         
                         # Parse frequency data
                         if 'frequency' in json_data:
@@ -1681,63 +1681,52 @@ def get_detailed_gpu_info(gpu):
                                     detailed_info[key] = float(busy_value)
                                     data_retrieved = True
                         
-                        print(f"[v0] Intel GPU parsed JSON data successfully: {detailed_info}")
+                        print(f"[v0] Intel GPU data retrieved successfully")
                         
-                    except (json.JSONDecodeError, ValueError) as e:
-                        print(f"[v0] JSON parsing failed: {e}, using text parsing")
-                        
-                        # Fallback to text parsing if JSON fails
-                        # Parse frequency: "0/ 0 MHz"
-                        freq_match = re.search(r'(\d+)/\s*(\d+)\s*MHz', output)
-                        if freq_match:
-                            detailed_info['clock_graphics'] = f"{freq_match.group(1)} MHz"
-                            detailed_info['clock_max'] = f"{freq_match.group(2)} MHz"
-                            data_retrieved = True
-                        
-                        # Parse power: "0.00/ 7.23 W"
-                        power_match = re.search(r'([\d.]+)/\s*([\d.]+)\s*W', output)
-                        if power_match:
-                            detailed_info['power_draw'] = f"{power_match.group(1)} W"
-                            detailed_info['power_limit'] = f"{power_match.group(2)} W"
-                            data_retrieved = True
-                        
-                        # Parse RC6 (power saving state): "100% RC6"
-                        rc6_match = re.search(r'(\d+)%\s*RC6', output)
-                        if rc6_match:
-                            detailed_info['power_state'] = f"RC6: {rc6_match.group(1)}%"
-                            data_retrieved = True
-                        
-                        # Parse engine utilization
-                        engines = {
-                            'Render/3D': 'engine_render',
-                            'Blitter': 'engine_blitter',
-                            'Video': 'engine_video',
-                            'VideoEnhance': 'engine_video_enhance'
-                        }
-                        for engine_name, key in engines.items():
-                            pattern = rf'{engine_name}\s+([\d.]+)%'
-                            match = re.search(pattern, output)
-                            if match:
-                                detailed_info[key] = float(match.group(1))
-                                data_retrieved = True
-                        
-                        # Parse IRQ rate
-                        irq_match = re.search(r'(\d+)\s*irqs/s', output)
-                        if irq_match:
-                            detailed_info['irq_rate'] = int(irq_match.group(1))
+                except (json.JSONDecodeError, ValueError) as e:
+                    print(f"[v0] JSON parsing failed: {e}")
+                    # Fallback to text parsing
+                    # Parse frequency: "0/ 0 MHz"
+                    freq_match = re.search(r'(\d+)/\s*(\d+)\s*MHz', output)
+                    if freq_match:
+                        detailed_info['clock_graphics'] = f"{freq_match.group(1)} MHz"
+                        detailed_info['clock_max'] = f"{freq_match.group(2)} MHz"
+                        data_retrieved = True
+                    
+                    # Parse power: "0.00/ 7.23 W"
+                    power_match = re.search(r'([\d.]+)/\s*([\d.]+)\s*W', output)
+                    if power_match:
+                        detailed_info['power_draw'] = f"{power_match.group(1)} W"
+                        detailed_info['power_limit'] = f"{power_match.group(2)} W"
+                        data_retrieved = True
+                    
+                    # Parse RC6 (power saving state): "100% RC6"
+                    rc6_match = re.search(r'(\d+)%\s*RC6', output)
+                    if rc6_match:
+                        detailed_info['power_state'] = f"RC6: {rc6_match.group(1)}%"
+                        data_retrieved = True
+                    
+                    # Parse engine utilization
+                    engines = {
+                        'Render/3D': 'engine_render',
+                        'Blitter': 'engine_blitter',
+                        'Video': 'engine_video',
+                        'VideoEnhance': 'engine_video_enhance'
+                    }
+                    for engine_name, key in engines.items():
+                        pattern = rf'{engine_name}\s+([\d.]+)%'
+                        match = re.search(pattern, output)
+                        if match:
+                            detailed_info[key] = float(match.group(1))
                             data_retrieved = True
                     
-            except subprocess.TimeoutExpired:
-                print(f"[v0] intel_gpu_top process timed out after 15 seconds, terminating...")
-                process.terminate()
-                try:
-                    process.wait(timeout=1)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
-                detailed_info['has_monitoring_tool'] = False
-                print(f"[v0] intel_gpu_top timed out - marking tool as unavailable")
-                return detailed_info
+                    # Parse IRQ rate
+                    irq_match = re.search(r'(\d+)\s*irqs/s', output)
+                    if irq_match:
+                        detailed_info['irq_rate'] = int(irq_match.group(1))
+                        data_retrieved = True
+            else:
+                print(f"[v0] No output received from intel_gpu_top (return code: {result.returncode})")
             
             if data_retrieved:
                 detailed_info['has_monitoring_tool'] = True
@@ -1745,9 +1734,14 @@ def get_detailed_gpu_info(gpu):
             else:
                 detailed_info['has_monitoring_tool'] = False
                 print(f"[v0] Intel GPU monitoring failed - no data retrieved")
-                    
+        
+        except subprocess.TimeoutExpired:
+            print(f"[v0] intel_gpu_top timed out after 1.5 seconds - marking tool as unavailable")
+            detailed_info['has_monitoring_tool'] = False
         except Exception as e:
             print(f"[v0] Error getting Intel GPU details: {e}")
+            import traceback
+            traceback.print_exc()
             detailed_info['has_monitoring_tool'] = False
     
     elif vendor == 'NVIDIA':
@@ -2875,5 +2869,8 @@ if __name__ == '__main__':
     print("Starting ProxMenux Flask Server on port 8008...")
     print("Server will be accessible on all network interfaces (0.0.0.0:8008)")
     print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
+    
+    app.run(host='0.0.0.0', port=8008, debug=False)
+, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
