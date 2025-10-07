@@ -1615,7 +1615,7 @@ def get_detailed_gpu_info(gpu):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                bufsize=1  # Line buffered
+                bufsize=1
             )
             
             print(f"[v0] intel_gpu_top process started, reading output...")
@@ -1626,38 +1626,50 @@ def get_detailed_gpu_info(gpu):
             timeout_seconds = 3.0
             
             while time.time() - start_time < timeout_seconds:
-                # Check if process has output ready
                 if process.poll() is not None:
-                    # Process ended
                     break
                 
                 try:
-                    # Read one line with short timeout
                     line = process.stdout.readline()
                     if line:
                         output_lines.append(line)
-                        
-                        # Try to parse accumulated output as JSON
                         output = ''.join(output_lines)
                         
-                        # Check if we have a complete JSON object
+                        # intel_gpu_top -J outputs: [\n{\n...\n},\n{\n...\n}\n]
+                        # We need to find the first complete object inside the array
+                        
+                        # First, check if we have the array start
+                        if '[' not in output:
+                            continue
+                        
+                        # Find the start of the array
+                        array_start = output.index('[')
+                        after_array_start = output[array_start + 1:]
+                        
+                        # Now look for the first complete object inside the array
                         brace_count = 0
-                        json_end = -1
-                        for i, char in enumerate(output):
+                        in_object = False
+                        object_start = -1
+                        object_end = -1
+                        
+                        for i, char in enumerate(after_array_start):
                             if char == '{':
+                                if brace_count == 0:
+                                    object_start = i
+                                    in_object = True
                                 brace_count += 1
                             elif char == '}':
                                 brace_count -= 1
-                                if brace_count == 0:
-                                    json_end = i + 1
+                                if brace_count == 0 and in_object:
+                                    object_end = i + 1
                                     break
                         
-                        if json_end > 0:
-                            # We have a complete JSON object
-                            json_str = output[:json_end]
+                        if object_start >= 0 and object_end > object_start:
+                            # Extract the first complete JSON object
+                            json_str = after_array_start[object_start:object_end]
                             try:
                                 json_data = json.loads(json_str)
-                                print(f"[v0] Successfully parsed JSON from intel_gpu_top")
+                                print(f"[v0] Successfully parsed JSON object from intel_gpu_top array")
                                 
                                 # Parse frequency data
                                 if 'frequency' in json_data:
@@ -1691,6 +1703,7 @@ def get_detailed_gpu_info(gpu):
                                     detailed_info['irq_rate'] = int(irq_count)
                                     data_retrieved = True
                                 
+                                # Parse engines and calculate utilization
                                 if 'engines' in json_data:
                                     engines_data = json_data['engines']
                                     engine_map = {
@@ -1700,7 +1713,6 @@ def get_detailed_gpu_info(gpu):
                                         'VideoEnhance': 'engine_video_enhance'
                                     }
                                     
-                                    # Store individual engine utilization
                                     engine_values = []
                                     for engine_name, key in engine_map.items():
                                         if engine_name in engines_data:
@@ -1709,50 +1721,46 @@ def get_detailed_gpu_info(gpu):
                                             engine_values.append(busy_value)
                                             data_retrieved = True
                                     
-                                    # Calculate overall GPU utilization (average of all engines)
+                                    # Calculate overall GPU utilization
                                     if engine_values:
                                         avg_utilization = sum(engine_values) / len(engine_values)
                                         detailed_info['utilization_gpu'] = f"{avg_utilization:.1f}%"
                                 
+                                # Parse client processes
                                 if 'clients' in json_data:
                                     clients_data = json_data['clients']
                                     processes = []
                                     for client_id, client_info in clients_data.items():
-                                        process = {
+                                        process_info = {
                                             'name': client_info.get('name', 'Unknown'),
                                             'pid': client_info.get('pid', 'N/A')
                                         }
                                         
-                                        # Get memory usage if available
                                         if 'memory' in client_info and 'system' in client_info['memory']:
                                             mem_info = client_info['memory']['system']
                                             if 'resident' in mem_info:
-                                                # Convert bytes to MB
                                                 mem_mb = int(mem_info['resident']) / (1024 * 1024)
-                                                process['memory_used'] = f"{mem_mb:.0f} MB"
+                                                process_info['memory_used'] = f"{mem_mb:.0f} MB"
                                         
-                                        # Get engine utilization for this process
                                         if 'engine-classes' in client_info:
                                             engine_classes = client_info['engine-classes']
-                                            # Use Render/3D as primary utilization metric
                                             if 'Render/3D' in engine_classes:
                                                 render_busy = engine_classes['Render/3D'].get('busy', '0')
-                                                process['gpu_utilization'] = f"{float(render_busy):.1f}%"
+                                                process_info['gpu_utilization'] = f"{float(render_busy):.1f}%"
                                         
-                                        processes.append(process)
+                                        processes.append(process_info)
                                     
                                     if processes:
                                         detailed_info['processes'] = processes
                                         data_retrieved = True
                                 
                                 print(f"[v0] Intel GPU data retrieved successfully")
-                                break  # Exit loop, we got the data
+                                break
                                 
-                            except json.JSONDecodeError:
-                                # Not a complete JSON yet, continue reading
+                            except json.JSONDecodeError as e:
+                                print(f"[v0] JSON decode error: {e}")
                                 pass
                     else:
-                        # No more output, wait a bit
                         time.sleep(0.1)
                         
                 except Exception as e:
@@ -1770,7 +1778,6 @@ def get_detailed_gpu_info(gpu):
             print(f"[v0] Error getting Intel GPU details: {e}")
             detailed_info['has_monitoring_tool'] = False
         finally:
-            # Always terminate the process
             if process and process.poll() is None:
                 process.terminate()
                 try:
@@ -1778,7 +1785,7 @@ def get_detailed_gpu_info(gpu):
                 except subprocess.TimeoutExpired:
                     process.kill()
                 print(f"[v0] intel_gpu_top process terminated")
-    
+
     elif vendor == 'NVIDIA':
         try:
             check_result = subprocess.run(['which', 'nvidia-smi'], capture_output=True, timeout=1)
@@ -2734,7 +2741,7 @@ def api_hardware():
     formatted_data = {
         'cpu': hardware_info.get('cpu', {}),
         'motherboard': hardware_info.get('motherboard', {}),
-        'memory_modules': hardware_info.get('memory_modules', []),
+        'memory_modules': hardware_data.get('memory_modules', []),
         'storage_devices': hardware_info.get('storage_devices', []),
         'pci_devices': hardware_info.get('pci_devices', []),
         'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
