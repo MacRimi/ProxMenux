@@ -823,6 +823,34 @@ export default function Hardware() {
         </Card>
       )}
 
+      {/* Power Supplies */}
+      {hardwareData?.power_supplies && hardwareData.power_supplies.length > 0 && (
+        <Card className="border-border/50 bg-card/50 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <PowerIcon className="h-5 w-5 text-green-500" />
+            <h2 className="text-lg font-semibold">Power Supplies</h2>
+            <Badge variant="outline" className="ml-auto">
+              {hardwareData.power_supplies.length} PSUs
+            </Badge>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {hardwareData.power_supplies.map((psu, index) => (
+              <div key={index} className="rounded-lg border border-border/30 bg-background/50 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{psu.name}</span>
+                  {psu.status && (
+                    <Badge variant={psu.status.toLowerCase() === "ok" ? "default" : "destructive"}>{psu.status}</Badge>
+                  )}
+                </div>
+                <p className="mt-2 text-2xl font-bold text-green-500">{psu.watts} W</p>
+                <p className="text-xs text-muted-foreground">Current Output</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Fans */}
       {hardwareData?.fans && hardwareData.fans.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
@@ -859,32 +887,7 @@ export default function Hardware() {
       )}
 
       {/* Power Supplies */}
-      {hardwareData?.power_supplies && hardwareData.power_supplies.length > 0 && (
-        <Card className="border-border/50 bg-card/50 p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <PowerIcon className="h-5 w-5 text-green-500" />
-            <h2 className="text-lg font-semibold">Power Supplies</h2>
-            <Badge variant="outline" className="ml-auto">
-              {hardwareData.power_supplies.length} PSUs
-            </Badge>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            {hardwareData.power_supplies.map((psu, index) => (
-              <div key={index} className="rounded-lg border border-border/30 bg-background/50 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{psu.name}</span>
-                  {psu.status && (
-                    <Badge variant={psu.status.toLowerCase() === "ok" ? "default" : "destructive"}>{psu.status}</Badge>
-                  )}
-                </div>
-                <p className="mt-2 text-2xl font-bold text-green-500">{psu.watts} W</p>
-                <p className="text-xs text-muted-foreground">Current Output</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      {/* This section was moved to be grouped with Power Consumption */}
 
       {/* UPS */}
       {hardwareData?.ups && Object.keys(hardwareData.ups).length > 0 && hardwareData.ups.model && (
