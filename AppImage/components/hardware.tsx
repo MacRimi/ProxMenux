@@ -16,6 +16,7 @@ import {
   Cpu,
   MemoryStick,
   Cpu as Gpu,
+  Loader2,
 } from "lucide-react"
 import useSWR from "swr"
 import { useState } from "react"
@@ -60,12 +61,14 @@ export default function Hardware() {
 
   const [selectedGPU, setSelectedGPU] = useState<GPU | null>(null)
   const [realtimeGPUData, setRealtimeGPUData] = useState<any>(null)
+  const [loadingGPUData, setLoadingGPUData] = useState(false)
   const [selectedPCIDevice, setSelectedPCIDevice] = useState<PCIDevice | null>(null)
   const [selectedDisk, setSelectedDisk] = useState<StorageDevice | null>(null)
   const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
 
   const handleGPUClick = async (gpu: GPU) => {
-    // Don't open modal yet - wait for data first
+    setLoadingGPUData(true)
+    setSelectedGPU(gpu)
     setRealtimeGPUData(null)
 
     try {
@@ -82,9 +85,9 @@ export default function Hardware() {
     } catch (error) {
       console.error("[v0] Error fetching real-time GPU data:", error)
       setRealtimeGPUData({ has_monitoring_tool: false })
+    } finally {
+      setLoadingGPUData(false)
     }
-
-    setSelectedGPU(gpu)
   }
 
   const findPCIDeviceForGPU = (gpu: GPU): PCIDevice | null => {
@@ -378,7 +381,30 @@ export default function Hardware() {
       )}
 
       <Dialog
-        open={selectedGPU !== null}
+        open={loadingGPUData}
+        onOpenChange={() => {
+          if (!loadingGPUData) {
+            setSelectedGPU(null)
+            setRealtimeGPUData(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              Loading GPU Data
+            </DialogTitle>
+            <DialogDescription>Fetching real-time monitoring information...</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={selectedGPU !== null && !loadingGPUData}
         onOpenChange={() => {
           setSelectedGPU(null)
           setRealtimeGPUData(null)
@@ -775,7 +801,7 @@ export default function Hardware() {
       {hardwareData?.power_meter && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <Zap className="h-5 w-5 text-yellow-500" />
+            <Zap className="h-5 w-5 text-blue-500" />
             <h2 className="text-lg font-semibold">Power Consumption</h2>
           </div>
 
@@ -788,7 +814,7 @@ export default function Hardware() {
                 )}
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-yellow-500">{hardwareData.power_meter.watts.toFixed(1)} W</p>
+                <p className="text-2xl font-bold text-blue-500">{hardwareData.power_meter.watts.toFixed(1)} W</p>
                 <p className="text-xs text-muted-foreground">Current Draw</p>
               </div>
             </div>
@@ -835,7 +861,7 @@ export default function Hardware() {
       {hardwareData?.power_supplies && hardwareData.power_supplies.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <PowerIcon className="h-5 w-5 text-primary" />
+            <PowerIcon className="h-5 w-5 text-green-500" />
             <h2 className="text-lg font-semibold">Power Supplies</h2>
             <Badge variant="outline" className="ml-auto">
               {hardwareData.power_supplies.length} PSUs
@@ -851,7 +877,7 @@ export default function Hardware() {
                     <Badge variant={psu.status.toLowerCase() === "ok" ? "default" : "destructive"}>{psu.status}</Badge>
                   )}
                 </div>
-                <p className="mt-2 text-2xl font-bold text-primary">{psu.watts} W</p>
+                <p className="mt-2 text-2xl font-bold text-green-500">{psu.watts} W</p>
                 <p className="text-xs text-muted-foreground">Current Output</p>
               </div>
             ))}
