@@ -1941,10 +1941,19 @@ def get_gpu_info():
             for line in result.stdout.split('\n'):
                 # Match VGA, 3D, Display controllers
                 if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
-                    parts = line.split(':', 2)
-                    if len(parts) >= 3:
-                        slot = parts[0].strip()
-                        gpu_name = parts[2].strip()
+                    # Line format: "00:02.0 VGA compatible controller: Intel Corporation ..."
+                    # Split on first space to get slot, then split remaining on first colon to separate class from name
+                    parts = line.split(' ', 1)
+                    if len(parts) >= 2:
+                        slot = parts[0].strip()  # Now captures full slot like "00:02.0"
+                        remaining = parts[1]
+                        
+                        # Split remaining part to get GPU name (after the class description)
+                        if ':' in remaining:
+                            class_and_name = remaining.split(':', 1)
+                            gpu_name = class_and_name[1].strip() if len(class_and_name) > 1 else remaining.strip()
+                        else:
+                            gpu_name = remaining.strip()
                         
                         # Determine vendor
                         vendor = 'Unknown'
@@ -1973,6 +1982,7 @@ def get_gpu_info():
                         
                         gpus.append(gpu)
                         print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+
     except Exception as e:
         print(f"[v0] Error detecting GPUs from lspci: {e}")
     
