@@ -3011,4 +3011,3 @@ if __name__ == '__main__':
     print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
- port=8008, debug=False)
