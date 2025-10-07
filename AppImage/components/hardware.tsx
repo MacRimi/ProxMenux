@@ -115,6 +115,11 @@ export default function Hardware() {
   const hasRealtimeData = (): boolean => {
     if (!realtimeGPUData) return false
 
+    if (realtimeGPUData.has_monitoring_tool === true) {
+      return true
+    }
+
+    // Fallback: check if there's actual data
     const result = !!(
       (realtimeGPUData.temperature !== undefined && realtimeGPUData.temperature > 0) ||
       (realtimeGPUData.utilization_gpu !== undefined && realtimeGPUData.utilization_gpu > 0) ||
