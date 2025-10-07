@@ -2671,6 +2671,10 @@ def api_hardware():
     """Get comprehensive hardware information"""
     hardware_info = get_hardware_info()
     
+    all_fans = hardware_info.get('sensors', {}).get('fans', [])
+    ipmi_fans = hardware_info.get('ipmi_fans', [])
+    all_fans.extend(ipmi_fans)
+    
     # Format data for frontend
     formatted_data = {
         'cpu': hardware_info.get('cpu', {}),
@@ -2679,17 +2683,17 @@ def api_hardware():
         'storage_devices': hardware_info.get('storage_devices', []),
         'pci_devices': hardware_info.get('pci_devices', []),
         'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
-        'fans': hardware_info.get('sensors', {}).get('fans', []), # Use sensors fans
-        'power_supplies': hardware_info.get('ipmi_power', {}).get('power_supplies', []), # Use IPMI power supplies
+        'fans': all_fans, # Return combined fans (sensors + IPMI)
+        'power_supplies': hardware_info.get('ipmi_power', {}).get('power_supplies', []),
         'power_meter': hardware_info.get('power_meter'),
         'ups': hardware_info.get('ups') if hardware_info.get('ups') else None,
-        'gpus': hardware_info.get('gpus', []) # Include GPU data
+        'gpus': hardware_info.get('gpus', [])
     }
     
     print(f"[v0] /api/hardware returning data")
     print(f"[v0] - CPU: {formatted_data['cpu'].get('model', 'Unknown')}")
     print(f"[v0] - Temperatures: {len(formatted_data['temperatures'])} sensors")
-    print(f"[v0] - Fans: {len(formatted_data['fans'])} fans")
+    print(f"[v0] - Fans: {len(formatted_data['fans'])} fans") # Now includes IPMI fans
     print(f"[v0] - Power supplies: {len(formatted_data['power_supplies'])} PSUs")
     print(f"[v0] - Power meter: {'Yes' if formatted_data['power_meter'] else 'No'}")
     print(f"[v0] - UPS: {'Yes' if formatted_data['ups'] else 'No'}")

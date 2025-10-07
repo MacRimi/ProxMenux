@@ -383,6 +383,7 @@ export default function Hardware() {
       <Dialog
         open={loadingGPUData}
         onOpenChange={() => {
+          // Prevent closing while loading
           if (!loadingGPUData) {
             setSelectedGPU(null)
             setRealtimeGPUData(null)
@@ -404,7 +405,7 @@ export default function Hardware() {
       </Dialog>
 
       <Dialog
-        open={selectedGPU !== null && !loadingGPUData}
+        open={selectedGPU !== null && !loadingGPUData && realtimeGPUData !== null}
         onOpenChange={() => {
           setSelectedGPU(null)
           setRealtimeGPUData(null)
