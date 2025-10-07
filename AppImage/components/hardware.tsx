@@ -126,26 +126,8 @@ export default function Hardware() {
   const hasRealtimeData = (): boolean => {
     if (!realtimeGPUData) return false
 
-    if (realtimeGPUData.has_monitoring_tool === true) {
-      return true
-    }
-
-    // Fallback: check if there's actual data
-    const result = !!(
-      (realtimeGPUData.temperature !== undefined && realtimeGPUData.temperature > 0) ||
-      (realtimeGPUData.utilization_gpu !== undefined && realtimeGPUData.utilization_gpu > 0) ||
-      realtimeGPUData.memory_total ||
-      realtimeGPUData.power_draw ||
-      realtimeGPUData.engine_render !== undefined ||
-      realtimeGPUData.engine_blitter !== undefined ||
-      realtimeGPUData.engine_video !== undefined ||
-      realtimeGPUData.engine_video_enhance !== undefined ||
-      realtimeGPUData.clock_graphics ||
-      realtimeGPUData.clock_memory ||
-      realtimeGPUData.utilization_memory !== undefined ||
-      (realtimeGPUData.processes !== undefined && realtimeGPUData.processes.length > 0)
-    )
-    return result
+    // Esto permite mostrar datos incluso cuando la GPU está inactiva (valores en 0 o null)
+    return realtimeGPUData.has_monitoring_tool === true
   }
 
   return (
@@ -484,7 +466,7 @@ export default function Hardware() {
                           <div className="space-y-2">
                             <h3 className="font-semibold text-sm">Real-Time Metrics</h3>
                             <div className="grid gap-2">
-                              {realtimeGPUData.temperature !== undefined && (
+                              {realtimeGPUData.temperature !== undefined && realtimeGPUData.temperature !== null ? (
                                 <div className="space-y-1">
                                   <div className="flex justify-between">
                                     <span className="text-sm text-muted-foreground">Temperature</span>
@@ -494,8 +476,15 @@ export default function Hardware() {
                                   </div>
                                   <Progress value={(realtimeGPUData.temperature / 100) * 100} className="h-2" />
                                 </div>
+                              ) : (
+                                <div className="flex justify-between border-b border-border/50 pb-2">
+                                  <span className="text-sm text-muted-foreground">Temperature</span>
+                                  <span className="text-sm font-medium text-muted-foreground">N/A</span>
+                                </div>
                               )}
-                              {realtimeGPUData.utilization_gpu !== undefined && (
+
+                              {realtimeGPUData.utilization_gpu !== undefined &&
+                              realtimeGPUData.utilization_gpu !== null ? (
                                 <div className="space-y-1">
                                   <div className="flex justify-between">
                                     <span className="text-sm text-muted-foreground">GPU Utilization</span>
@@ -514,7 +503,16 @@ export default function Hardware() {
                                     className="h-2"
                                   />
                                 </div>
+                              ) : (
+                                <div className="space-y-1">
+                                  <div className="flex justify-between">
+                                    <span className="text-sm text-muted-foreground">GPU Utilization</span>
+                                    <span className="text-sm font-medium">0.0%</span>
+                                  </div>
+                                  <Progress value={0} className="h-2" />
+                                </div>
                               )}
+
                               {realtimeGPUData.clock_graphics && (
                                 <div className="flex justify-between border-b border-border/50 pb-2">
                                   <span className="text-sm text-muted-foreground">Graphics Clock</span>

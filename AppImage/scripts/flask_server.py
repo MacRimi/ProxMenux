@@ -1756,13 +1756,15 @@ def get_detailed_gpu_info(gpu):
                                                     busy_value = engines_data[engine_name].get('busy', 0)
                                                     detailed_info[key] = float(busy_value)
                                                     engine_values.append(busy_value)
-                                                    data_retrieved = True
                                             
                                             # Calculate overall GPU utilization
                                             if engine_values:
                                                 avg_utilization = sum(engine_values) / len(engine_values)
-                                                detailed_info['utilization_gpu'] = f"{avg_utilization:.1f}%"
-                                                data_retrieved = True
+                                            else:
+                                                avg_utilization = 0.0
+                                            
+                                            detailed_info['utilization_gpu'] = f"{avg_utilization:.1f}%"
+                                            data_retrieved = True
                                         
                                         # Parse client processes
                                         if 'clients' in json_data:
@@ -3009,3 +3011,4 @@ if __name__ == '__main__':
     print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
+ port=8008, debug=False)
