@@ -1635,12 +1635,17 @@ def get_detailed_gpu_info(gpu):
                         output_lines.append(line)
                         output = ''.join(output_lines)
                         
+                        if len(output_lines) <= 5:
+                            print(f"[v0] Received line {len(output_lines)}: {line.strip()[:100]}")
+                        
                         # intel_gpu_top -J outputs: [\n{\n...\n},\n{\n...\n}\n]
                         # We need to find the first complete object inside the array
                         
                         # First, check if we have the array start
                         if '[' not in output:
                             continue
+                        
+                        print(f"[v0] Found array start bracket, total output length: {len(output)}")
                         
                         # Find the start of the array
                         array_start = output.index('[')
@@ -1664,13 +1669,17 @@ def get_detailed_gpu_info(gpu):
                                     object_end = i + 1
                                     break
                         
+                        print(f"[v0] Object parsing: start={object_start}, end={object_end}, brace_count={brace_count}")
+                        
                         if object_start >= 0 and object_end > object_start:
                             # Extract the first complete JSON object
                             json_str = after_array_start[object_start:object_end]
+                            print(f"[v0] Extracted JSON string (first 200 chars): {json_str[:200]}")
                             try:
                                 json_data = json.loads(json_str)
                                 print(f"[v0] Successfully parsed JSON object from intel_gpu_top array")
-                                
+                                print(f"[v0] JSON keys: {list(json_data.keys())}")
+
                                 # Parse frequency data
                                 if 'frequency' in json_data:
                                     freq = json_data['frequency']
@@ -2730,38 +2739,45 @@ def api_info():
 
 @app.route('/api/hardware', methods=['GET'])
 def api_hardware():
-    """Get comprehensive hardware information"""
-    hardware_info = get_hardware_info()
-    
-    all_fans = hardware_info.get('sensors', {}).get('fans', [])
-    ipmi_fans = hardware_info.get('ipmi_fans', [])
-    all_fans.extend(ipmi_fans)
-    
-    # Format data for frontend
-    formatted_data = {
-        'cpu': hardware_info.get('cpu', {}),
-        'motherboard': hardware_info.get('motherboard', {}),
-        'memory_modules': hardware_data.get('memory_modules', []),
-        'storage_devices': hardware_info.get('storage_devices', []),
-        'pci_devices': hardware_info.get('pci_devices', []),
-        'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
-        'fans': all_fans, # Return combined fans (sensors + IPMI)
-        'power_supplies': hardware_info.get('ipmi_power', {}).get('power_supplies', []),
-        'power_meter': hardware_info.get('power_meter'),
-        'ups': hardware_info.get('ups') if hardware_info.get('ups') else None,
-        'gpus': hardware_info.get('gpus', [])
-    }
-    
-    print(f"[v0] /api/hardware returning data")
-    print(f"[v0] - CPU: {formatted_data['cpu'].get('model', 'Unknown')}")
-    print(f"[v0] - Temperatures: {len(formatted_data['temperatures'])} sensors")
-    print(f"[v0] - Fans: {len(formatted_data['fans'])} fans") # Now includes IPMI fans
-    print(f"[v0] - Power supplies: {len(formatted_data['power_supplies'])} PSUs")
-    print(f"[v0] - Power meter: {'Yes' if formatted_data['power_meter'] else 'No'}")
-    print(f"[v0] - UPS: {'Yes' if formatted_data['ups'] else 'No'}")
-    print(f"[v0] - GPUs: {len(formatted_data['gpus'])} found")
-    
-    return jsonify(formatted_data)
+    """Get hardware information"""
+    try:
+        hardware_info = get_hardware_info()
+        
+        all_fans = hardware_info.get('sensors', {}).get('fans', [])
+        ipmi_fans = hardware_info.get('ipmi_fans', [])
+        all_fans.extend(ipmi_fans)
+        
+        # Format data for frontend
+        formatted_data = {
+            'cpu': hardware_info.get('cpu', {}),
+            'motherboard': hardware_info.get('motherboard', {}),
+            'bios': hardware_info.get('bios', {}),
+            'memory_modules': hardware_info.get('memory_modules', []),
+            'storage_devices': hardware_info.get('storage_devices', []),
+            'pci_devices': hardware_info.get('pci_devices', []),
+            'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
+            'fans': all_fans, # Return combined fans (sensors + IPMI)
+            'power_supplies': hardware_info.get('ipmi_power', {}).get('power_supplies', []),
+            'power_meter': hardware_info.get('power_meter'),
+            'ups': hardware_info.get('ups') if hardware_info.get('ups') else None,
+            'gpus': hardware_info.get('gpus', [])
+        }
+        
+        print(f"[v0] /api/hardware returning data")
+        print(f"[v0] - CPU: {formatted_data['cpu'].get('model', 'Unknown')}")
+        print(f"[v0] - Temperatures: {len(formatted_data['temperatures'])} sensors")
+        print(f"[v0] - Fans: {len(formatted_data['fans'])} fans") # Now includes IPMI fans
+        print(f"[v0] - Power supplies: {len(formatted_data['power_supplies'])} PSUs")
+        print(f"[v0] - Power meter: {'Yes' if formatted_data['power_meter'] else 'No'}")
+        print(f"[v0] - UPS: {'Yes' if formatted_data['ups'] else 'No'}")
+        print(f"[v0] - GPUs: {len(formatted_data['gpus'])} found")
+        
+        return jsonify(formatted_data)
+    except Exception as e:
+        print(f"[v0] Error in api_hardware: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/gpu/<slot>/realtime', methods=['GET'])
 def api_gpu_realtime(slot):
