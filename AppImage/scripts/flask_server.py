@@ -1691,7 +1691,6 @@ def get_detailed_gpu_info(gpu):
                                     detailed_info['irq_rate'] = int(irq_count)
                                     data_retrieved = True
                                 
-                                # Parse engine utilization
                                 if 'engines' in json_data:
                                     engines_data = json_data['engines']
                                     engine_map = {
@@ -1700,11 +1699,51 @@ def get_detailed_gpu_info(gpu):
                                         'Video': 'engine_video',
                                         'VideoEnhance': 'engine_video_enhance'
                                     }
+                                    
+                                    # Store individual engine utilization
+                                    engine_values = []
                                     for engine_name, key in engine_map.items():
                                         if engine_name in engines_data:
                                             busy_value = engines_data[engine_name].get('busy', 0)
                                             detailed_info[key] = float(busy_value)
+                                            engine_values.append(busy_value)
                                             data_retrieved = True
+                                    
+                                    # Calculate overall GPU utilization (average of all engines)
+                                    if engine_values:
+                                        avg_utilization = sum(engine_values) / len(engine_values)
+                                        detailed_info['utilization_gpu'] = f"{avg_utilization:.1f}%"
+                                
+                                if 'clients' in json_data:
+                                    clients_data = json_data['clients']
+                                    processes = []
+                                    for client_id, client_info in clients_data.items():
+                                        process = {
+                                            'name': client_info.get('name', 'Unknown'),
+                                            'pid': client_info.get('pid', 'N/A')
+                                        }
+                                        
+                                        # Get memory usage if available
+                                        if 'memory' in client_info and 'system' in client_info['memory']:
+                                            mem_info = client_info['memory']['system']
+                                            if 'resident' in mem_info:
+                                                # Convert bytes to MB
+                                                mem_mb = int(mem_info['resident']) / (1024 * 1024)
+                                                process['memory_used'] = f"{mem_mb:.0f} MB"
+                                        
+                                        # Get engine utilization for this process
+                                        if 'engine-classes' in client_info:
+                                            engine_classes = client_info['engine-classes']
+                                            # Use Render/3D as primary utilization metric
+                                            if 'Render/3D' in engine_classes:
+                                                render_busy = engine_classes['Render/3D'].get('busy', '0')
+                                                process['gpu_utilization'] = f"{float(render_busy):.1f}%"
+                                        
+                                        processes.append(process)
+                                    
+                                    if processes:
+                                        detailed_info['processes'] = processes
+                                        data_retrieved = True
                                 
                                 print(f"[v0] Intel GPU data retrieved successfully")
                                 break  # Exit loop, we got the data
