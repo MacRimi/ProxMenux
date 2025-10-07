@@ -71,9 +71,20 @@ export default function Hardware() {
     setSelectedGPU(gpu)
     setRealtimeGPUData(null)
 
+    const pciDevice = findPCIDeviceForGPU(gpu)
+    const fullSlot = pciDevice?.slot || gpu.slot
+
+    // Validar que el slot no esté vacío
+    if (!fullSlot) {
+      console.error("[v0] GPU slot is empty, cannot fetch real-time data")
+      setRealtimeGPUData({ has_monitoring_tool: false })
+      setLoadingGPUData(false)
+      return
+    }
+
     try {
-      console.log("[v0] Fetching real-time GPU data for slot:", gpu.slot)
-      const response = await fetch(`http://localhost:8008/api/gpu/${gpu.slot}/realtime`, {
+      console.log("[v0] Fetching real-time GPU data for slot:", fullSlot)
+      const response = await fetch(`http://localhost:8008/api/gpu/${fullSlot}/realtime`, {
         signal: AbortSignal.timeout(6000),
       })
       if (response.ok) {
@@ -473,7 +484,7 @@ export default function Hardware() {
                           <div className="space-y-2">
                             <h3 className="font-semibold text-sm">Real-Time Metrics</h3>
                             <div className="grid gap-2">
-                              {realtimeGPUData.temperature !== undefined && realtimeGPUData.temperature > 0 && (
+                              {realtimeGPUData.temperature !== undefined && (
                                 <div className="space-y-1">
                                   <div className="flex justify-between">
                                     <span className="text-sm text-muted-foreground">Temperature</span>
@@ -488,9 +499,20 @@ export default function Hardware() {
                                 <div className="space-y-1">
                                   <div className="flex justify-between">
                                     <span className="text-sm text-muted-foreground">GPU Utilization</span>
-                                    <span className="text-sm font-medium">{realtimeGPUData.utilization_gpu}%</span>
+                                    <span className="text-sm font-medium">
+                                      {typeof realtimeGPUData.utilization_gpu === "string"
+                                        ? realtimeGPUData.utilization_gpu
+                                        : `${realtimeGPUData.utilization_gpu}%`}
+                                    </span>
                                   </div>
-                                  <Progress value={realtimeGPUData.utilization_gpu} className="h-2" />
+                                  <Progress
+                                    value={
+                                      typeof realtimeGPUData.utilization_gpu === "string"
+                                        ? Number.parseFloat(realtimeGPUData.utilization_gpu)
+                                        : realtimeGPUData.utilization_gpu
+                                    }
+                                    className="h-2"
+                                  />
                                 </div>
                               )}
                               {realtimeGPUData.clock_graphics && (
