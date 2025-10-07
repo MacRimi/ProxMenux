@@ -1762,6 +1762,7 @@ def get_detailed_gpu_info(gpu):
                                             if engine_values:
                                                 avg_utilization = sum(engine_values) / len(engine_values)
                                                 detailed_info['utilization_gpu'] = f"{avg_utilization:.1f}%"
+                                                data_retrieved = True
                                         
                                         # Parse client processes
                                         if 'clients' in json_data:
