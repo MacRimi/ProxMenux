@@ -1567,8 +1567,6 @@ def identify_fan(fan_name, adapter):
         return "CPU Fan"
     if "fan2" in fan_lower and "isa" in adapter_lower:
         return "Chassis Fan"
-    if "fan3" in fan_lower and "isa" in adapter_lower:
-        return "Chassis Fan"
     if "sys" in fan_lower or "chassis" in fan_lower:
         return "Chassis Fan"
     
@@ -1587,14 +1585,22 @@ def get_detailed_gpu_info(gpu):
                 detailed_info['has_monitoring_tool'] = False
                 print(f"[v0] intel_gpu_top not found for Intel GPU")
                 return detailed_info
+            else:
+                print(f"[v0] intel_gpu_top found for Intel GPU")
             
-            import os
-            if not os.path.exists('/dev/dri/card0'):
+            gpu_device = '/dev/dri/card0'
+            if not os.path.exists(gpu_device):
+                print(f"[v0] GPU device {gpu_device} not found - marking tool as unavailable")
                 detailed_info['has_monitoring_tool'] = False
-                print(f"[v0] /dev/dri/card0 not accessible - intel_gpu_top cannot run")
                 return detailed_info
             
-            print(f"[v0] intel_gpu_top found and /dev/dri/card0 accessible")
+            if not os.access(gpu_device, os.R_OK):
+                print(f"[v0] GPU device {gpu_device} not accessible - marking tool as unavailable")
+                detailed_info['has_monitoring_tool'] = False
+                return detailed_info
+            
+            print(f"[v0] GPU device {gpu_device} is accessible")
+            
         except Exception as e:
             print(f"[v0] Error checking for intel_gpu_top: {e}")
             detailed_info['has_monitoring_tool'] = False
@@ -1606,14 +1612,13 @@ def get_detailed_gpu_info(gpu):
                 ['intel_gpu_top', '-J', '-s', '500', '-o', '-'],
                 capture_output=True,
                 text=True,
-                timeout=1.5  # Reduced from 2 seconds
+                timeout=1.5
             )
             
             output = result.stdout.strip()
             
             if output and result.returncode == 0:
                 print(f"[v0] intel_gpu_top output received ({len(output)} chars)")
-                print(f"[v0] First 500 chars: {output[:500]}")
                 
                 # Try to parse as JSON
                 try:
@@ -1632,7 +1637,6 @@ def get_detailed_gpu_info(gpu):
                     if json_end > 0:
                         json_str = output[:json_end]
                         json_data = json.loads(json_str)
-                        print(f"[v0] Parsed JSON successfully with keys: {list(json_data.keys())}")
                         
                         # Parse frequency data
                         if 'frequency' in json_data:
@@ -1681,32 +1685,28 @@ def get_detailed_gpu_info(gpu):
                                     detailed_info[key] = float(busy_value)
                                     data_retrieved = True
                         
-                        print(f"[v0] Intel GPU data retrieved successfully")
+                        print(f"[v0] Intel GPU data retrieved successfully via JSON")
                         
                 except (json.JSONDecodeError, ValueError) as e:
-                    print(f"[v0] JSON parsing failed: {e}")
+                    print(f"[v0] JSON parsing failed, trying text parsing: {e}")
                     # Fallback to text parsing
-                    # Parse frequency: "0/ 0 MHz"
                     freq_match = re.search(r'(\d+)/\s*(\d+)\s*MHz', output)
                     if freq_match:
                         detailed_info['clock_graphics'] = f"{freq_match.group(1)} MHz"
                         detailed_info['clock_max'] = f"{freq_match.group(2)} MHz"
                         data_retrieved = True
                     
-                    # Parse power: "0.00/ 7.23 W"
                     power_match = re.search(r'([\d.]+)/\s*([\d.]+)\s*W', output)
                     if power_match:
                         detailed_info['power_draw'] = f"{power_match.group(1)} W"
                         detailed_info['power_limit'] = f"{power_match.group(2)} W"
                         data_retrieved = True
                     
-                    # Parse RC6 (power saving state): "100% RC6"
                     rc6_match = re.search(r'(\d+)%\s*RC6', output)
                     if rc6_match:
                         detailed_info['power_state'] = f"RC6: {rc6_match.group(1)}%"
                         data_retrieved = True
                     
-                    # Parse engine utilization
                     engines = {
                         'Render/3D': 'engine_render',
                         'Blitter': 'engine_blitter',
@@ -1720,13 +1720,15 @@ def get_detailed_gpu_info(gpu):
                             detailed_info[key] = float(match.group(1))
                             data_retrieved = True
                     
-                    # Parse IRQ rate
                     irq_match = re.search(r'(\d+)\s*irqs/s', output)
                     if irq_match:
                         detailed_info['irq_rate'] = int(irq_match.group(1))
                         data_retrieved = True
+                    
+                    if data_retrieved:
+                        print(f"[v0] Intel GPU data retrieved successfully via text parsing")
             else:
-                print(f"[v0] No output received from intel_gpu_top (return code: {result.returncode})")
+                print(f"[v0] No output from intel_gpu_top (return code: {result.returncode})")
             
             if data_retrieved:
                 detailed_info['has_monitoring_tool'] = True
@@ -1740,8 +1742,6 @@ def get_detailed_gpu_info(gpu):
             detailed_info['has_monitoring_tool'] = False
         except Exception as e:
             print(f"[v0] Error getting Intel GPU details: {e}")
-            import traceback
-            traceback.print_exc()
             detailed_info['has_monitoring_tool'] = False
     
     elif vendor == 'NVIDIA':
@@ -2676,7 +2676,7 @@ def api_hardware():
         'cpu': hardware_info.get('cpu', {}),
         'motherboard': hardware_info.get('motherboard', {}),
         'memory_modules': hardware_info.get('memory_modules', []),
-        'storage_devices': hardware_data.get('storage_devices', []), # Corrected variable name
+        'storage_devices': hardware_info.get('storage_devices', []),
         'pci_devices': hardware_info.get('pci_devices', []),
         'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
         'fans': hardware_info.get('sensors', {}).get('fans', []), # Use sensors fans
@@ -2871,3 +2871,4 @@ if __name__ == '__main__':
     print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
+ port=8008, debug=False)
