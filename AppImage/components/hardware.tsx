@@ -73,7 +73,9 @@ export default function Hardware() {
 
     try {
       console.log("[v0] Fetching real-time GPU data for slot:", gpu.slot)
-      const response = await fetch(`http://localhost:8008/api/gpu/${gpu.slot}/realtime`)
+      const response = await fetch(`http://localhost:8008/api/gpu/${gpu.slot}/realtime`, {
+        signal: AbortSignal.timeout(3000),
+      })
       if (response.ok) {
         const data = await response.json()
         console.log("[v0] Real-time GPU data received:", data)
@@ -725,20 +727,22 @@ export default function Hardware() {
             </Badge>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {hardwareData.pci_devices.map((device, index) => (
               <div
                 key={index}
                 onClick={() => setSelectedPCIDevice(device)}
                 className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-3 transition-colors hover:bg-background/80"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className={getDeviceTypeColor(device.type)}>{device.type}</Badge>
-                  <span className="font-mono text-xs text-muted-foreground">{device.slot}</span>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{device.type}</Badge>
+                  <span className="font-mono text-xs text-muted-foreground shrink-0">{device.slot}</span>
                 </div>
-                <p className="font-medium text-sm truncate">{device.device}</p>
+                <p className="font-medium text-sm line-clamp-2 break-words">{device.device}</p>
                 <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>
-                {device.driver && <p className="mt-1 font-mono text-xs text-green-500">Driver: {device.driver}</p>}
+                {device.driver && (
+                  <p className="mt-1 font-mono text-xs text-green-500 truncate">Driver: {device.driver}</p>
+                )}
               </div>
             ))}
           </div>
@@ -864,15 +868,15 @@ export default function Hardware() {
 
           <div className="grid gap-4 md:grid-cols-2">
             {hardwareData.fans.map((fan, index) => {
-              const maxRPM = 5000
-              const percentage = Math.min((fan.speed / maxRPM) * 100, 100)
+              const isPercentage = fan.unit === "percent" || fan.unit === "%"
+              const percentage = isPercentage ? fan.speed : Math.min((fan.speed / 5000) * 100, 100)
 
               return (
                 <div key={index} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{fan.name}</span>
                     <span className="text-sm font-semibold text-blue-500">
-                      {fan.speed.toFixed(0)} {fan.unit}
+                      {isPercentage ? `${fan.speed.toFixed(0)} percent` : `${fan.speed.toFixed(0)} ${fan.unit}`}
                     </span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
@@ -961,7 +965,7 @@ export default function Hardware() {
               </Badge>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {hardwareData.pci_devices
                 .filter((d) => d.type.toLowerCase().includes("network"))
                 .map((device, index) => (
@@ -970,12 +974,16 @@ export default function Hardware() {
                     onClick={() => setSelectedNetwork(device)}
                     className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-3 transition-colors hover:bg-background/80"
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium truncate">{device.device}</span>
-                      <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs">Ethernet</Badge>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-sm font-medium line-clamp-2 break-words flex-1">{device.device}</span>
+                      <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs shrink-0">
+                        Ethernet
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>
-                    {device.driver && <p className="mt-1 font-mono text-xs text-green-500">Driver: {device.driver}</p>}
+                    {device.driver && (
+                      <p className="mt-1 font-mono text-xs text-green-500 truncate">Driver: {device.driver}</p>
+                    )}
                   </div>
                 ))}
             </div>
@@ -1042,20 +1050,26 @@ export default function Hardware() {
             </Badge>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {hardwareData.storage_devices.map((device, index) => (
               <div
                 key={index}
                 onClick={() => setSelectedDisk(device)}
                 className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-3 transition-colors hover:bg-background/80"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">{device.name}</span>
-                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 px-2.5 py-0.5">{device.type}</Badge>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-sm font-medium truncate flex-1">{device.name}</span>
+                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 px-2.5 py-0.5 shrink-0">
+                    {device.type}
+                  </Badge>
                 </div>
                 {device.size && <p className="text-sm font-medium">{device.size}</p>}
-                {device.model && <p className="text-xs text-muted-foreground truncate">{device.model}</p>}
-                {device.driver && <p className="mt-1 font-mono text-xs text-green-500">Driver: {device.driver}</p>}
+                {device.model && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 break-words">{device.model}</p>
+                )}
+                {device.driver && (
+                  <p className="mt-1 font-mono text-xs text-green-500 truncate">Driver: {device.driver}</p>
+                )}
               </div>
             ))}
           </div>
