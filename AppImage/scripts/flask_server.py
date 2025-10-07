@@ -319,6 +319,14 @@ def get_system_info():
         except Exception as e:
             print(f"Note: pveversion not available: {e}")
         
+        kernel_version = None
+        try:
+            result = subprocess.run(['uname', '-r'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                kernel_version = result.stdout.strip()
+        except Exception as e:
+            print(f"Note: uname not available: {e}")
+        
         cpu_cores = psutil.cpu_count(logical=False)  # Physical cores only
         
         available_updates = 0
@@ -1564,63 +1572,6 @@ def identify_fan(fan_name, adapter):
     
     return fan_name
 
-def get_gpu_info():
-    """Get GPU information using various tools (nvidia-smi, intel_gpu_top, radeontop)"""
-    gpus = []
-    try:
-        # Get basic GPU info from lspci first
-        result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            for line in result.stdout.split('\n'):
-                if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
-                    parts = line.split(':', 2)
-                    if len(parts) >= 3:
-                        gpu_name = parts[2].strip()
-                        slot = parts[0]
-                        
-                        vendor = 'Unknown'
-                        if 'NVIDIA' in gpu_name or 'nVidia' in gpu_name:
-                            vendor = 'NVIDIA'
-                        elif 'AMD' in gpu_name or 'ATI' in gpu_name or 'Radeon' in gpu_name:
-                            vendor = 'AMD'
-                        elif 'Intel' in gpu_name:
-                            vendor = 'Intel'
-                        
-                        gpu_data = {
-                            'name': gpu_name,
-                            'vendor': vendor,
-                            'slot': slot
-                        }
-                        
-                        # Attempt to get detailed info based on vendor
-                        if vendor == 'NVIDIA':
-                            detailed_info = get_detailed_gpu_info(gpu_data)
-                            gpu_data.update(detailed_info)
-                        elif vendor == 'Intel':
-                            detailed_info = get_detailed_gpu_info(gpu_data)
-                            gpu_data.update(detailed_info)
-                        elif vendor == 'AMD':
-                            # Placeholder for AMD monitoring if radeontop is available and integrated
-                            try:
-                                check_result = subprocess.run(['which', 'radeontop'], capture_output=True, timeout=1)
-                                if check_result.returncode == 0:
-                                    gpu_data['has_monitoring_tool'] = True
-                                else:
-                                    gpu_data['has_monitoring_tool'] = False
-                            except Exception as e:
-                                print(f"[v0] Error checking for radeontop: {e}")
-                                gpu_data['has_monitoring_tool'] = False
-                        
-                        gpus.append(gpu_data)
-                        print(f"[v0] Detected GPU: {gpu_name} ({vendor}) in slot {slot}")
-        print(f"[v0] Total GPUs detected: {len(gpus)}")
-    except Exception as e:
-        print(f"[v0] Error getting GPU info: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    return gpus
-
 def get_detailed_gpu_info(gpu):
     """Get detailed GPU information using nvidia-smi, intel_gpu_top, or radeontop"""
     detailed_info = {}
@@ -1637,7 +1588,7 @@ def get_detailed_gpu_info(gpu):
             else:
                 print(f"[v0] intel_gpu_top found for Intel GPU")
             
-            gpu_device = '/dev/dri/card0' # Assume first DRI card is the target
+            gpu_device = '/dev/dri/card0'
             if not os.path.exists(gpu_device):
                 print(f"[v0] GPU device {gpu_device} not found - marking tool as unavailable")
                 detailed_info['has_monitoring_tool'] = False
@@ -1894,7 +1845,7 @@ def get_detailed_gpu_info(gpu):
     return detailed_info
 
 def get_pci_device_info(pci_slot):
-    """Get detailed PCI device information for a given slot"""
+    """Get detailed PCI device information for a given slot including driver info"""
     pci_info = {}
     try:
         # Use lspci -vmm for detailed information
@@ -1906,6 +1857,18 @@ def get_pci_device_info(pci_slot):
                 if ':' in line:
                     key, value = line.split(':', 1)
                     pci_info[key.strip().lower().replace(' ', '_')] = value.strip()
+        
+        # Now get driver information with lspci -k
+        result_k = subprocess.run(['lspci', '-k', '-s', pci_slot], 
+                                capture_output=True, text=True, timeout=5)
+        if result_k.returncode == 0:
+            for line in result_k.stdout.split('\n'):
+                line = line.strip()
+                if line.startswith('Kernel driver in use:'):
+                    pci_info['driver'] = line.split(':', 1)[1].strip()
+                elif line.startswith('Kernel modules:'):
+                    pci_info['kernel_module'] = line.split(':', 1)[1].strip()
+                    
     except Exception as e:
         print(f"[v0] Error getting PCI device info for {pci_slot}: {e}")
     return pci_info
@@ -1979,6 +1942,112 @@ def get_network_hardware_info(pci_slot):
         print(f"[v0] Error getting network hardware info: {e}")
     
     return net_info
+
+def get_gpu_info():
+    """Get GPU information from lspci and enrich with temperature/fan data from sensors"""
+    gpus = []
+    
+    try:
+        result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                # Match VGA, 3D, Display controllers
+                if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
+
+                    parts = line.split(' ', 1)
+                    if len(parts) >= 2:
+                        slot = parts[0].strip()  
+                        remaining = parts[1]
+                        
+                        if ':' in remaining:
+                            class_and_name = remaining.split(':', 1)
+                            gpu_name = class_and_name[1].strip() if len(class_and_name) > 1 else remaining.strip()
+                        else:
+                            gpu_name = remaining.strip()
+                        
+                        # Determine vendor
+                        vendor = 'Unknown'
+                        if 'NVIDIA' in gpu_name or 'nVidia' in gpu_name:
+                            vendor = 'NVIDIA'
+                        elif 'AMD' in gpu_name or 'ATI' in gpu_name or 'Radeon' in gpu_name:
+                            vendor = 'AMD'
+                        elif 'Intel' in gpu_name:
+                            vendor = 'Intel'
+                        
+                        gpu = {
+                            'slot': slot,
+                            'name': gpu_name,
+                            'vendor': vendor,
+                            'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated'
+                        }
+                        
+                        pci_info = get_pci_device_info(slot)
+                        if pci_info:
+                            gpu['pci_class'] = pci_info.get('class', '')
+                            gpu['pci_driver'] = pci_info.get('driver', '')
+                            gpu['pci_kernel_module'] = pci_info.get('kernel_module', '')
+                        
+                        detailed_info = get_detailed_gpu_info(gpu)
+                        gpu.update(detailed_info)
+                        
+                        gpus.append(gpu)
+                        print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+
+    except Exception as e:
+        print(f"[v0] Error detecting GPUs from lspci: {e}")
+    
+    try:
+        result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            current_adapter = None
+            
+            for line in result.stdout.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Detect adapter line
+                if line.startswith('Adapter:'):
+                    current_adapter = line.replace('Adapter:', '').strip()
+                    continue
+                
+                # Look for GPU-related sensors (nouveau, amdgpu, radeon, i915)
+                if ':' in line and not line.startswith(' '):
+                    parts = line.split(':', 1)
+                    sensor_name = parts[0].strip()
+                    value_part = parts[1].strip()
+                    
+                    # Check if this is a GPU sensor
+                    gpu_sensor_keywords = ['nouveau', 'amdgpu', 'radeon', 'i915']
+                    is_gpu_sensor = any(keyword in current_adapter.lower() if current_adapter else False for keyword in gpu_sensor_keywords)
+                    
+                    if is_gpu_sensor:
+                        # Try to match this sensor to a GPU
+                        for gpu in gpus:
+                            # Match nouveau to NVIDIA, amdgpu/radeon to AMD, i915 to Intel
+                            if (('nouveau' in current_adapter.lower() and gpu['vendor'] == 'NVIDIA') or
+                                (('amdgpu' in current_adapter.lower() or 'radeon' in current_adapter.lower()) and gpu['vendor'] == 'AMD') or
+                                ('i915' in current_adapter.lower() and gpu['vendor'] == 'Intel')):
+                                
+                                # Parse temperature (only if not already set by nvidia-smi)
+                                if 'temperature' not in gpu or gpu['temperature'] is None:
+                                    if '°C' in value_part or 'C' in value_part:
+                                        temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
+                                        if temp_match:
+                                            gpu['temperature'] = float(temp_match.group(1))
+                                            print(f"[v0] GPU {gpu['name']}: Temperature = {gpu['temperature']}°C")
+                                
+                                # Parse fan speed
+                                elif 'RPM' in value_part:
+                                    rpm_match = re.search(r'([\d.]+)\s*RPM', value_part)
+                                    if rpm_match:
+                                        gpu['fan_speed'] = int(float(rpm_match.group(1)))
+                                        gpu['fan_unit'] = 'RPM'
+                                        print(f"[v0] GPU {gpu['name']}: Fan = {gpu['fan_speed']} RPM")
+    except Exception as e:
+        print(f"[v0] Error enriching GPU data from sensors: {e}")
+    
+    return gpus
 
 def get_disk_hardware_info(disk_name):
     """Get detailed hardware information for a disk"""
@@ -2629,10 +2698,10 @@ def api_hardware():
     # Format data for frontend
     formatted_data = {
         'cpu': hardware_info.get('cpu', {}),
-        'motherboard': hardware_data.get('motherboard', {}),
+        'motherboard': hardware_info.get('motherboard', {}),
         'memory_modules': hardware_info.get('memory_modules', []),
         'storage_devices': hardware_info.get('storage_devices', []),
-        'pci_devices': hardware_info.get('pci_devices', []),  # No filtering - include all PCI devices including GPUs
+        'pci_devices': hardware_info.get('pci_devices', []),
         'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
         'fans': all_fans, # Return combined fans (sensors + IPMI)
         'power_supplies': hardware_info.get('ipmi_power', {}).get('power_supplies', []),
@@ -2656,41 +2725,41 @@ def api_hardware():
 def api_gpu_realtime(slot):
     """Get real-time GPU monitoring data for a specific GPU"""
     try:
-        print(f"[v0] Getting real-time data for GPU slot {slot}")
+        print(f"[v0] /api/gpu/{slot}/realtime - Getting GPU info...")
+        
+        # Only get GPU info, not all hardware info (much faster)
         gpus = get_gpu_info()
         
         gpu = None
         for g in gpus:
-            if g.get('slot') == slot:
+            if g.get('slot') == slot or g.get('slot', '').startswith(slot):
                 gpu = g
                 break
         
         if not gpu:
-            print(f"[v0] GPU not found for slot {slot}")
+            print(f"[v0] GPU with slot {slot} not found")
             return jsonify({'error': 'GPU not found'}), 404
         
         # Extract only the monitoring-related fields
         realtime_data = {
-            'has_monitoring_tool': gpu.get('has_monitoring_tool', False)
+            'has_monitoring_tool': gpu.get('has_monitoring_tool', False),
+            'temperature': gpu.get('temperature'),
+            'fan_speed': gpu.get('fan_speed'),
+            'fan_unit': gpu.get('fan_unit'),
+            'utilization_gpu': gpu.get('utilization_gpu'), # Changed from 'utilization'
+            'utilization_memory': gpu.get('utilization_memory'),
+            'memory_used': gpu.get('memory_used'),
+            'memory_total': gpu.get('memory_total'),
+            'power_draw': gpu.get('power_draw'),
+            'power_limit': gpu.get('power_limit'),
+            'clock_graphics': gpu.get('clock_graphics'),
+            'clock_memory': gpu.get('clock_memory'),
+            'processes': gpu.get('processes', [])
         }
-        
-        # Add monitoring data if available
-        monitoring_fields = [
-            'temperature', 'power_draw', 'power_limit', 'utilization_gpu', 
-            'utilization_memory', 'clock_graphics', 'clock_memory', 'clock_max',
-            'memory_total', 'memory_used', 'memory_free', 'fan_speed', 'fan_unit',
-            'driver_version', 'pcie_gen', 'pcie_width', 'power_state', 'irq_rate',
-            'engine_render', 'engine_blitter', 'engine_video', 'engine_video_enhance',
-            'processes'
-        ]
-        
-        for field in monitoring_fields:
-            if field in gpu and gpu[field] is not None:
-                realtime_data[field] = gpu[field]
         
         print(f"[v0] /api/gpu/{slot}/realtime returning data")
         print(f"[v0] - Vendor: {gpu.get('vendor')}")
-        print(f"[v0] - Has monitoring tool: {realtime_data.get('has_monitoring_tool')}")
+        print(f"[v0] - has_monitoring_tool: {realtime_data['has_monitoring_tool']}")
         
         return jsonify(realtime_data)
     except Exception as e:
