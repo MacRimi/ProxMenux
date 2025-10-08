@@ -1743,6 +1743,7 @@ def get_detailed_gpu_info(gpu):
                                         # Parse engines and calculate utilization
                                         if 'engines' in json_data:
                                             engines_data = json_data['engines']
+                                            print(f"[v0] Parsing engines data: {list(engines_data.keys())}")
                                             engine_map = {
                                                 'Render/3D': 'engine_render',
                                                 'Blitter': 'engine_blitter',
@@ -1756,6 +1757,7 @@ def get_detailed_gpu_info(gpu):
                                                     busy_value = engines_data[engine_name].get('busy', 0)
                                                     detailed_info[key] = float(busy_value)
                                                     engine_values.append(busy_value)
+                                                    print(f"[v0] Engine {engine_name}: {busy_value}%")
                                             
                                             # Calculate overall GPU utilization
                                             if engine_values:
@@ -1764,8 +1766,14 @@ def get_detailed_gpu_info(gpu):
                                                 avg_utilization = 0.0
                                             
                                             detailed_info['utilization_gpu'] = f"{avg_utilization:.1f}%"
+                                            print(f"[v0] Calculated utilization_gpu: {detailed_info['utilization_gpu']}")
                                             data_retrieved = True
                                         
+                                        if 'utilization_gpu' not in detailed_info:
+                                            print(f"[v0] No engines data found in JSON, setting utilization to 0")
+                                            detailed_info['utilization_gpu'] = "0.0%"
+                                            data_retrieved = True
+
                                         # Parse client processes
                                         if 'clients' in json_data:
                                             clients_data = json_data['clients']
@@ -1817,6 +1825,9 @@ def get_detailed_gpu_info(gpu):
                     break
             
             if data_retrieved:
+                if 'utilization_gpu' not in detailed_info:
+                    detailed_info['utilization_gpu'] = "0.0%"
+                    print(f"[v0] Set default utilization_gpu to 0.0%")
                 detailed_info['has_monitoring_tool'] = True
                 print(f"[v0] Intel GPU monitoring successful")
             else:
