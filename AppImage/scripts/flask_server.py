@@ -1880,7 +1880,7 @@ def get_detailed_gpu_info(gpu):
                             detailed_info['driver_version'] = parts[2] if parts[2] != '[N/A]' else None
                             detailed_info['memory_total'] = int(float(parts[3])) if parts[3] != '[N/A]' else None
                             detailed_info['memory_used'] = int(float(parts[4])) if parts[4] != '[N/A]' else None
-                            detailed_info['memory_free'] = int(float(parts[5])) if parts[5] != '[N/A]' else None
+                            detailed_info['memory_free'] = int(float(parts[5])) if parts[5] != '[N/A]' else None # Added memory_free
                             detailed_info['temperature'] = int(float(parts[6])) if parts[6] != '[N/A]' else None
                             detailed_info['power_draw'] = float(parts[7]) if parts[7] != '[N/A]' else None
                             detailed_info['power_limit'] = float(parts[8]) if parts[8] != '[N/A]' else None
@@ -2804,7 +2804,7 @@ def api_hardware():
             'motherboard': hardware_info.get('motherboard', {}),
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
-            'storage_devices': hardware_info.get('storage_devices', []),
+            'storage_devices': hardware_data.get('storage_devices', []), # Corrected to use hardware_info
             'pci_devices': hardware_info.get('pci_devices', []),
             'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
             'fans': all_fans, # Return combined fans (sensors + IPMI)
@@ -2855,20 +2855,29 @@ def api_gpu_realtime(slot):
             'temperature': gpu.get('temperature'),
             'fan_speed': gpu.get('fan_speed'),
             'fan_unit': gpu.get('fan_unit'),
-            'utilization_gpu': gpu.get('utilization_gpu'), # Changed from 'utilization'
+            'utilization_gpu': gpu.get('utilization_gpu'),
             'utilization_memory': gpu.get('utilization_memory'),
             'memory_used': gpu.get('memory_used'),
             'memory_total': gpu.get('memory_total'),
+            'memory_free': gpu.get('memory_free'), # Added memory_free
             'power_draw': gpu.get('power_draw'),
             'power_limit': gpu.get('power_limit'),
             'clock_graphics': gpu.get('clock_graphics'),
             'clock_memory': gpu.get('clock_memory'),
-            'processes': gpu.get('processes', [])
+            'processes': gpu.get('processes', []),
+            # Intel/AMD specific engine utilization
+            'engine_render': gpu.get('engine_render'),
+            'engine_blitter': gpu.get('engine_blitter'),
+            'engine_video': gpu.get('engine_video'),
+            'engine_video_enhance': gpu.get('engine_video_enhance')
         }
         
         print(f"[v0] /api/gpu/{slot}/realtime returning data")
         print(f"[v0] - Vendor: {gpu.get('vendor')}")
         print(f"[v0] - has_monitoring_tool: {realtime_data['has_monitoring_tool']}")
+        print(f"[v0] - utilization_gpu: {realtime_data['utilization_gpu']}")
+        print(f"[v0] - temperature: {realtime_data['temperature']}")
+        print(f"[v0] - engines: render={realtime_data['engine_render']}, blitter={realtime_data['engine_blitter']}, video={realtime_data['engine_video']}, video_enhance={realtime_data['engine_video_enhance']}")
         
         return jsonify(realtime_data)
     except Exception as e:
@@ -3020,5 +3029,8 @@ if __name__ == '__main__':
     print("Starting ProxMenux Flask Server on port 8008...")
     print("Server will be accessible on all network interfaces (0.0.0.0:8008)")
     print("API endpoints available at: /api/system, /api/storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
+    
+    app.run(host='0.0.0.0', port=8008, debug=False)
+, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
