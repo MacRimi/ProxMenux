@@ -1626,21 +1626,33 @@ def get_detailed_gpu_info(gpu):
                 print(f"[v0] Current user: {os.getenv('USER', 'unknown')}", flush=True)
                 print(f"[v0] Current working directory: {os.getcwd()}", flush=True)
                 
-                cmd = ['intel_gpu_top', '-J']
-                print(f"[v0] Executing command: {' '.join(cmd)}", flush=True)
+                cmd = 'intel_gpu_top -J'
+                print(f"[v0] Executing command: {cmd}", flush=True)
+                
+                drm_devices = ['/dev/dri/card0', '/dev/dri/renderD128']
+                for drm_dev in drm_devices:
+                    if os.path.exists(drm_dev):
+                        readable = os.access(drm_dev, os.R_OK)
+                        writable = os.access(drm_dev, os.W_OK)
+                        print(f"[v0] {drm_dev}: readable={readable}, writable={writable}", flush=True)
                 
                 process = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                    bufsize=1
+                    bufsize=1,
+                    shell=True,  # Use shell=True for proper context
+                    env=os.environ.copy()  # Copy all environment variables
                 )
                 
                 print(f"[v0] Process started with PID: {process.pid}", flush=True)
                 
+                print(f"[v0] Waiting 2 seconds for intel_gpu_top to initialize...", flush=True)
+                time.sleep(2)
+                
                 start_time = time.time()
-                timeout = 5  # 5 seconds timeout
+                timeout = 3  # Reduced timeout to 3 seconds
                 json_objects = []
                 buffer = ""
                 brace_count = 0
@@ -1687,9 +1699,8 @@ def get_detailed_gpu_info(gpu):
                                         else:
                                             print(f"[v0] No 'clients' key in this JSON object", flush=True)
                                         
-                                        # Stop after finding 5 JSON objects
-                                        if len(json_objects) >= 5:
-                                            print(f"[v0] Collected 5 JSON objects, stopping...", flush=True)
+                                        if len(json_objects) >= 10:
+                                            print(f"[v0] Collected 10 JSON objects, stopping...", flush=True)
                                             break
                                     except json.JSONDecodeError:
                                         pass
@@ -1705,6 +1716,14 @@ def get_detailed_gpu_info(gpu):
                 process.wait(timeout=1)
                 
                 print(f"[v0] Collected {len(json_objects)} JSON objects total", flush=True)
+                
+                if not any('clients' in obj for obj in json_objects):
+                    try:
+                        stderr_output = process.stderr.read()
+                        if stderr_output:
+                            print(f"[v0] intel_gpu_top stderr (no clients found): {stderr_output}", flush=True)
+                    except:
+                        pass
                 
                 best_json = None
                 for json_obj in json_objects:
@@ -1823,9 +1842,12 @@ def get_detailed_gpu_info(gpu):
                 else:
                     print(f"[v0] WARNING: No valid JSON objects found", flush=True)
                     # Check stderr for errors
-                    stderr_output = process.stderr.read()
-                    if stderr_output:
-                        print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
+                    try:
+                        stderr_output = process.stderr.read()
+                        if stderr_output:
+                            print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
+                    except:
+                        pass
             
             except Exception as e:
                 print(f"[v0] Error running intel_gpu_top: {e}", flush=True)
@@ -2794,7 +2816,7 @@ def api_hardware():
             'motherboard': hardware_info.get('motherboard', {}),
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
-            'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_data
+            'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_info
             'pci_devices': hardware_info.get('pci_devices', []),
             'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
             'fans': all_fans, # Return combined fans (sensors + IPMI)
