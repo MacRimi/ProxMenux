@@ -3,7 +3,7 @@
 ProxMenux Flask Server
 Provides REST API endpoints for Proxmox monitoring data
 Runs on port 8008 and serves system metrics, storage info, network stats, etc.
-Also serves the Next.js dashboard as static files
+Also serves the Next.js dashboard as static files.
 """
 
 from flask import Flask, jsonify, request, send_from_directory, send_file
