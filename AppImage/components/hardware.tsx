@@ -19,7 +19,7 @@ import {
   Loader2,
 } from "lucide-react"
 import useSWR from "swr"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { type HardwareData, type GPU, type PCIDevice, type StorageDevice, fetcher } from "../types/hardware"
 
 const getDeviceTypeColor = (type: string): string => {
@@ -62,6 +62,7 @@ export default function Hardware() {
   const [selectedGPU, setSelectedGPU] = useState<GPU | null>(null)
   const [realtimeGPUData, setRealtimeGPUData] = useState<any>(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
+  const [isPolling, setIsPolling] = useState(false)
   const [selectedPCIDevice, setSelectedPCIDevice] = useState<PCIDevice | null>(null)
   const [selectedDisk, setSelectedDisk] = useState<StorageDevice | null>(null)
   const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
@@ -78,12 +79,14 @@ export default function Hardware() {
     setSelectedGPU(gpu)
     setDetailsLoading(true)
     setRealtimeGPUData(null)
+    setIsPolling(true)
 
     console.log("[v0] Modal opened, fetching realtime data...")
 
     if (!fullSlot) {
       console.log("[v0] No slot found, showing basic info only")
       setDetailsLoading(false)
+      setIsPolling(false)
       return
     }
 
@@ -107,11 +110,48 @@ export default function Hardware() {
     } catch (error) {
       console.error("[v0] Error fetching GPU realtime data:", error)
       setRealtimeGPUData({ has_monitoring_tool: false })
+      setIsPolling(false)
     } finally {
       setDetailsLoading(false)
       console.log("[v0] Finished loading GPU data")
     }
   }
+
+  useEffect(() => {
+    if (!isPolling || !selectedGPU || !realtimeGPUData?.has_monitoring_tool) {
+      return
+    }
+
+    const pciDevice = findPCIDeviceForGPU(selectedGPU)
+    const fullSlot = pciDevice?.slot || selectedGPU.slot
+
+    if (!fullSlot) {
+      return
+    }
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`http://localhost:8008/api/gpu/${fullSlot}/realtime`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          signal: AbortSignal.timeout(5000),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setRealtimeGPUData(data)
+        }
+      } catch (error) {
+        console.error("[v0] Error polling GPU data:", error)
+      }
+    }, 2000) // Poll every 2 seconds
+
+    return () => {
+      clearInterval(pollInterval)
+    }
+  }, [isPolling, selectedGPU, realtimeGPUData?.has_monitoring_tool])
 
   const findPCIDeviceForGPU = (gpu: GPU): PCIDevice | null => {
     if (!hardwareData?.pci_devices || !gpu.slot) return null
@@ -396,6 +436,7 @@ export default function Hardware() {
         onOpenChange={() => {
           setSelectedGPU(null)
           setRealtimeGPUData(null)
+          setIsPolling(false)
         }}
       >
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -404,7 +445,11 @@ export default function Hardware() {
               <DialogHeader className="pb-4 border-b border-border">
                 <DialogTitle>{selectedGPU.name}</DialogTitle>
                 <DialogDescription>
-                  {detailsLoading ? "Loading real-time monitoring data..." : "GPU Information"}
+                  {detailsLoading
+                    ? "Loading real-time monitoring data..."
+                    : isPolling && realtimeGPUData?.has_monitoring_tool
+                      ? "Live monitoring (updates every 2s)"
+                      : "GPU Information"}
                 </DialogDescription>
               </DialogHeader>
 
@@ -454,6 +499,13 @@ export default function Hardware() {
                   </div>
                 ) : realtimeGPUData?.has_monitoring_tool === true ? (
                   <>
+                    {isPolling && (
+                      <div className="flex items-center gap-2 text-xs text-green-500">
+                        <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                        <span>Live monitoring active</span>
+                      </div>
+                    )}
+
                     <div>
                       <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                         Real-Time Metrics
@@ -469,61 +521,37 @@ export default function Hardware() {
                             </div>
                             <Progress value={(realtimeGPUData.temperature / 100) * 100} className="h-2" />
                           </div>
-                        ) : (
-                          <div className="flex justify-between border-b border-border/50 pb-2">
-                            <span className="text-sm text-muted-foreground">Temperature</span>
-                            <span className="text-sm font-medium text-muted-foreground">N/A</span>
-                          </div>
-                        )}
+                        ) : null}
 
-                        {realtimeGPUData.utilization_gpu !== undefined && realtimeGPUData.utilization_gpu !== null ? (
-                          <div className="space-y-1">
-                            <div className="flex justify-between">
-                              <span className="text-sm text-muted-foreground">GPU Utilization</span>
-                              <span className="text-sm font-medium">
-                                {typeof realtimeGPUData.utilization_gpu === "string"
-                                  ? realtimeGPUData.utilization_gpu
-                                  : `${realtimeGPUData.utilization_gpu}%`}
-                              </span>
-                            </div>
-                            <Progress
-                              value={
-                                typeof realtimeGPUData.utilization_gpu === "string"
-                                  ? Number.parseFloat(realtimeGPUData.utilization_gpu)
-                                  : realtimeGPUData.utilization_gpu
-                              }
-                              className="h-2"
-                            />
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">GPU Utilization</span>
+                            <span className="text-sm font-medium">{realtimeGPUData.utilization_gpu || "0.0%"}</span>
                           </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <div className="flex justify-between">
-                              <span className="text-sm text-muted-foreground">GPU Utilization</span>
-                              <span className="text-sm font-medium">0.0%</span>
-                            </div>
-                            <Progress value={0} className="h-2" />
-                          </div>
-                        )}
+                          <Progress
+                            value={
+                              typeof realtimeGPUData.utilization_gpu === "string"
+                                ? Number.parseFloat(realtimeGPUData.utilization_gpu)
+                                : realtimeGPUData.utilization_gpu || 0
+                            }
+                            className="h-2"
+                          />
+                        </div>
 
-                        {realtimeGPUData.clock_graphics && (
+                        {realtimeGPUData.clock_graphics !== undefined && realtimeGPUData.clock_graphics !== null && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
                             <span className="text-sm text-muted-foreground">Graphics Clock</span>
                             <span className="text-sm font-medium">{realtimeGPUData.clock_graphics}</span>
                           </div>
                         )}
-                        {realtimeGPUData.clock_memory && (
-                          <div className="flex justify-between border-b border-border/50 pb-2">
-                            <span className="text-sm text-muted-foreground">Memory Clock</span>
-                            <span className="text-sm font-medium">{realtimeGPUData.clock_memory}</span>
-                          </div>
-                        )}
-                        {realtimeGPUData.power_draw && realtimeGPUData.power_draw !== "N/A" && (
+
+                        {realtimeGPUData.power_draw !== undefined && realtimeGPUData.power_draw !== null && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
                             <span className="text-sm text-muted-foreground">Power Draw</span>
                             <span className="text-sm font-medium">{realtimeGPUData.power_draw}</span>
                           </div>
                         )}
-                        {realtimeGPUData.power_limit && (
+                        {realtimeGPUData.power_limit !== undefined && realtimeGPUData.power_limit !== null && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
                             <span className="text-sm text-muted-foreground">Power Limit</span>
                             <span className="text-sm font-medium">{realtimeGPUData.power_limit}</span>
@@ -532,7 +560,7 @@ export default function Hardware() {
                       </div>
                     </div>
 
-                    {/* Engine Utilization (Intel/AMD) */}
+                    {/* Engine Utilization (Intel/AMD) - Always show even if 0% */}
                     {(realtimeGPUData.engine_render !== undefined ||
                       realtimeGPUData.engine_blitter !== undefined ||
                       realtimeGPUData.engine_video !== undefined ||
@@ -546,9 +574,20 @@ export default function Hardware() {
                             <div className="space-y-1">
                               <div className="flex justify-between">
                                 <span className="text-sm text-muted-foreground">Render/3D</span>
-                                <span className="text-sm font-medium">{realtimeGPUData.engine_render.toFixed(2)}%</span>
+                                <span className="text-sm font-medium">
+                                  {typeof realtimeGPUData.engine_render === "string"
+                                    ? realtimeGPUData.engine_render
+                                    : `${realtimeGPUData.engine_render.toFixed(1)}%`}
+                                </span>
                               </div>
-                              <Progress value={realtimeGPUData.engine_render} className="h-2" />
+                              <Progress
+                                value={
+                                  typeof realtimeGPUData.engine_render === "string"
+                                    ? Number.parseFloat(realtimeGPUData.engine_render)
+                                    : realtimeGPUData.engine_render
+                                }
+                                className="h-2"
+                              />
                             </div>
                           )}
                           {realtimeGPUData.engine_blitter !== undefined && (
@@ -556,19 +595,39 @@ export default function Hardware() {
                               <div className="flex justify-between">
                                 <span className="text-sm text-muted-foreground">Blitter</span>
                                 <span className="text-sm font-medium">
-                                  {realtimeGPUData.engine_blitter.toFixed(2)}%
+                                  {typeof realtimeGPUData.engine_blitter === "string"
+                                    ? realtimeGPUData.engine_blitter
+                                    : `${realtimeGPUData.engine_blitter.toFixed(1)}%`}
                                 </span>
                               </div>
-                              <Progress value={realtimeGPUData.engine_blitter} className="h-2" />
+                              <Progress
+                                value={
+                                  typeof realtimeGPUData.engine_blitter === "string"
+                                    ? Number.parseFloat(realtimeGPUData.engine_blitter)
+                                    : realtimeGPUData.engine_blitter
+                                }
+                                className="h-2"
+                              />
                             </div>
                           )}
                           {realtimeGPUData.engine_video !== undefined && (
                             <div className="space-y-1">
                               <div className="flex justify-between">
                                 <span className="text-sm text-muted-foreground">Video</span>
-                                <span className="text-sm font-medium">{realtimeGPUData.engine_video.toFixed(2)}%</span>
+                                <span className="text-sm font-medium">
+                                  {typeof realtimeGPUData.engine_video === "string"
+                                    ? realtimeGPUData.engine_video
+                                    : `${realtimeGPUData.engine_video.toFixed(1)}%`}
+                                </span>
                               </div>
-                              <Progress value={realtimeGPUData.engine_video} className="h-2" />
+                              <Progress
+                                value={
+                                  typeof realtimeGPUData.engine_video === "string"
+                                    ? Number.parseFloat(realtimeGPUData.engine_video)
+                                    : realtimeGPUData.engine_video
+                                }
+                                className="h-2"
+                              />
                             </div>
                           )}
                           {realtimeGPUData.engine_video_enhance !== undefined && (
@@ -576,10 +635,19 @@ export default function Hardware() {
                               <div className="flex justify-between">
                                 <span className="text-sm text-muted-foreground">VideoEnhance</span>
                                 <span className="text-sm font-medium">
-                                  {realtimeGPUData.engine_video_enhance.toFixed(2)}%
+                                  {typeof realtimeGPUData.engine_video_enhance === "string"
+                                    ? realtimeGPUData.engine_video_enhance
+                                    : `${realtimeGPUData.engine_video_enhance.toFixed(1)}%`}
                                 </span>
                               </div>
-                              <Progress value={realtimeGPUData.engine_video_enhance} className="h-2" />
+                              <Progress
+                                value={
+                                  typeof realtimeGPUData.engine_video_enhance === "string"
+                                    ? Number.parseFloat(realtimeGPUData.engine_video_enhance)
+                                    : realtimeGPUData.engine_video_enhance
+                                }
+                                className="h-2"
+                              />
                             </div>
                           )}
                         </div>

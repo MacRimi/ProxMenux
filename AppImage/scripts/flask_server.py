@@ -3,7 +3,7 @@
 ProxMenux Flask Server
 Provides REST API endpoints for Proxmox monitoring data
 Runs on port 8008 and serves system metrics, storage info, network stats, etc.
-Also serves the Next.js dashboard as static files.
+Also serves the Next.js dashboard as static files
 """
 
 from flask import Flask, jsonify, request, send_from_directory, send_file
@@ -1626,25 +1626,46 @@ def get_detailed_gpu_info(gpu):
                 print(f"[v0] Current user: {os.getenv('USER', 'unknown')}", flush=True)
                 print(f"[v0] Current working directory: {os.getcwd()}", flush=True)
                 
-                cmd = ['intel_gpu_top', '-J']
-                print(f"[v0] Executing command: {' '.join(cmd)}", flush=True)
+                try:
+                    version_result = subprocess.run(['intel_gpu_top', '--version'], 
+                                                   capture_output=True, text=True, timeout=2)
+                    if version_result.returncode == 0:
+                        version_info = version_result.stdout.strip()
+                        print(f"[v0] intel_gpu_top version: {version_info}", flush=True)
+                except Exception as e:
+                    print(f"[v0] Could not get intel_gpu_top version: {e}", flush=True)
+                
+                # Check DRM device permissions
+                drm_devices = ['/dev/dri/card0', '/dev/dri/renderD128']
+                for drm_dev in drm_devices:
+                    if os.path.exists(drm_dev):
+                        can_read = os.access(drm_dev, os.R_OK)
+                        can_write = os.access(drm_dev, os.W_OK)
+                        print(f"[v0] {drm_dev}: read={can_read}, write={can_write}", flush=True)
+                    else:
+                        print(f"[v0] {drm_dev}: does not exist", flush=True)
+                
+                cmd = 'intel_gpu_top -J'
+                print(f"[v0] Executing command: {cmd}", flush=True)
                 
                 process = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                    bufsize=1
+                    bufsize=1,
+                    shell=True,
+                    env=os.environ.copy()
                 )
                 
                 print(f"[v0] Process started with PID: {process.pid}", flush=True)
                 
-                print(f"[v0] Waiting 1 second for intel_gpu_top to initialize...", flush=True)
-                time.sleep(1)
+                print(f"[v0] Waiting 2 seconds for intel_gpu_top to initialize...", flush=True)
+                time.sleep(2)
                 print(f"[v0] Starting to read JSON objects...", flush=True)
                 
                 start_time = time.time()
-                timeout = 8  # Increased timeout from 5 to 8 seconds
+                timeout = 3  # Reduced timeout for faster has_monitoring_tool detection
                 json_objects = []
                 buffer = ""
                 brace_count = 0
@@ -1708,6 +1729,14 @@ def get_detailed_gpu_info(gpu):
                 process.wait(timeout=1)
                 
                 print(f"[v0] Collected {len(json_objects)} JSON objects total", flush=True)
+                
+                if not any('clients' in obj for obj in json_objects):
+                    try:
+                        stderr_output = process.stderr.read()
+                        if stderr_output:
+                            print(f"[v0] intel_gpu_top stderr: {stderr_output[:500]}", flush=True)
+                    except:
+                        pass
                 
                 best_json = None
                 for json_obj in json_objects:
@@ -1825,10 +1854,6 @@ def get_detailed_gpu_info(gpu):
                         print(f"[v0] WARNING: No data retrieved from intel_gpu_top", flush=True)
                 else:
                     print(f"[v0] WARNING: No valid JSON objects found", flush=True)
-                    # Check stderr for errors
-                    stderr_output = process.stderr.read()
-                    if stderr_output:
-                        print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
             
             except Exception as e:
                 print(f"[v0] Error running intel_gpu_top: {e}", flush=True)
@@ -2143,74 +2168,6 @@ def get_gpu_info():
         print(f"[v0] Error enriching GPU data from sensors: {e}")
     
     return gpus
-
-def get_disk_hardware_info(disk_name):
-    """Get detailed hardware information for a disk"""
-    disk_info = {}
-    
-    try:
-        # Get disk type (HDD, SSD, NVMe)
-        result = subprocess.run(['lsblk', '-d', '-n', '-o', 'NAME,ROTA,TYPE', f'/dev/{disk_name}'], 
-                              capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            parts = result.stdout.strip().split()
-            if len(parts) >= 2:
-                rota = parts[1]
-                disk_info['type'] = 'HDD' if rota == '1' else 'SSD'
-                if disk_name.startswith('nvme'):
-                    disk_info['type'] = 'NVMe SSD'
-        
-        # Get driver/kernel module
-        try:
-            # For NVMe
-            if disk_name.startswith('nvme'):
-                disk_info['driver'] = 'nvme'
-                disk_info['interface'] = 'PCIe/NVMe'
-            # For SATA/SAS
-            else:
-                result = subprocess.run(['udevadm', 'info', '--query=property', f'/dev/{disk_name}'], 
-                                      capture_output=True, text=True, timeout=5)
-                if result.returncode == 0:
-                    for line in result.stdout.split('\n'):
-                        if 'ID_BUS=' in line:
-                            bus = line.split('=')[1].strip()
-                            disk_info['interface'] = bus.upper()
-                        if 'ID_MODEL=' in line:
-                            model = line.split('=')[1].strip()
-                            disk_info['model'] = model
-                        if 'ID_SERIAL_SHORT=' in line:
-                            serial = line.split('=')[1].strip()
-                            disk_info['serial'] = serial
-        except Exception as e:
-            print(f"[v0] Error getting disk driver info: {e}")
-            
-        # Get SMART data
-        try:
-            result = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
-                                  capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                for line in result.stdout.split('\n'):
-                    if 'Model Family:' in line:
-                        disk_info['family'] = line.split(':', 1)[1].strip()
-                    elif 'Device Model:' in line or 'Model Number:' in line:
-                        disk_info['model'] = line.split(':', 1)[1].strip()
-                    elif 'Serial Number:' in line:
-                        disk_info['serial'] = line.split(':', 1)[1].strip()
-                    elif 'Firmware Version:' in line:
-                        disk_info['firmware'] = line.split(':', 1)[1].strip()
-                    elif 'Rotation Rate:' in line:
-                        disk_info['rotation_rate'] = line.split(':', 1)[1].strip()
-                    elif 'Form Factor:' in line:
-                        disk_info['form_factor'] = line.split(':', 1)[1].strip()
-                    elif 'SATA Version is:' in line:
-                        disk_info['sata_version'] = line.split(':', 1)[1].strip()
-        except Exception as e:
-            print(f"[v0] Error getting SMART info: {e}")
-            
-    except Exception as e:
-        print(f"[v0] Error getting disk hardware info: {e}")
-    
-    return disk_info
 
 def get_hardware_info():
     """Get comprehensive hardware information"""
