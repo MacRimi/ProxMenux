@@ -1705,7 +1705,6 @@ def get_detailed_gpu_info(gpu):
     if 'intel' in vendor:
         print(f"[v0] Intel GPU detected, checking for intel_gpu_top...", flush=True)
         
-        # Try to find system intel_gpu_top first (not the one in AppImage)
         intel_gpu_top_path = None
         system_paths = ['/usr/bin/intel_gpu_top', '/usr/local/bin/intel_gpu_top']
         for path in system_paths:
@@ -1723,7 +1722,6 @@ def get_detailed_gpu_info(gpu):
         if intel_gpu_top_path:
             print(f"[v0] intel_gpu_top found, executing...", flush=True)
             try:
-                import os
                 print(f"[v0] Current user: {os.getenv('USER', 'unknown')}, UID: {os.getuid()}, GID: {os.getgid()}", flush=True)
                 print(f"[v0] Current working directory: {os.getcwd()}", flush=True)
                 
@@ -1734,11 +1732,6 @@ def get_detailed_gpu_info(gpu):
                         readable = os.access(drm_dev, os.R_OK)
                         writable = os.access(drm_dev, os.W_OK)
                         print(f"[v0] {drm_dev}: mode={oct(stat_info.st_mode)}, uid={stat_info.st_uid}, gid={stat_info.st_gid}, readable={readable}, writable={writable}", flush=True)
-                
-                # intel_gpu_top_path = shutil.which('intel_gpu_top') # This line is now redundant
-                # print(f"[v0] intel_gpu_top path: {intel_gpu_top_path}", flush=True) # This line is now redundant
-                
-                # intel_gpu_top_path already set above
                 
                 # Prepare environment with all necessary variables
                 env = os.environ.copy()
