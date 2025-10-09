@@ -17,6 +17,7 @@ import socket
 from datetime import datetime, timedelta
 import re # Added for regex matching
 import select # Added for non-blocking read
+import shutil # Added for shutil.which
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
@@ -583,26 +584,30 @@ def get_smart_data(disk_name):
             ['smartctl', '-a', '-d', 'sat,16', f'/dev/{disk_name}'],  # Text SAT with 16-byte commands
         ]
         
+        process = None # Initialize process to None
         for cmd_index, cmd in enumerate(commands_to_try):
             print(f"[v0] Attempt {cmd_index + 1}/{len(commands_to_try)}: Running command: {' '.join(cmd)}")
             try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-                print(f"[v0] Command return code: {result.returncode}")
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                stdout, stderr = process.communicate(timeout=15)
+                result_code = process.returncode
                 
-                if result.stderr:
-                    stderr_preview = result.stderr[:200].replace('\n', ' ')
+                print(f"[v0] Command return code: {result_code}")
+                
+                if stderr:
+                    stderr_preview = stderr[:200].replace('\n', ' ')
                     print(f"[v0] stderr: {stderr_preview}")
                 
-                has_output = result.stdout and len(result.stdout.strip()) > 50
+                has_output = stdout and len(stdout.strip()) > 50
                 
                 if has_output:
-                    print(f"[v0] Got output ({len(result.stdout)} bytes), attempting to parse...")
+                    print(f"[v0] Got output ({len(stdout)} bytes), attempting to parse...")
                     
                     # Try JSON parsing first (if -j flag was used)
                     if '-j' in cmd:
                         try:
                             print(f"[v0] Attempting JSON parse...")
-                            data = json.loads(result.stdout)
+                            data = json.loads(stdout)
                             print(f"[v0] JSON parse successful!")
                             
                             # Extract model
@@ -688,7 +693,7 @@ def get_smart_data(disk_name):
                     
                     if smart_data['model'] == 'Unknown' or smart_data['serial'] == 'Unknown' or smart_data['temperature'] == 0:
                         print(f"[v0] Parsing text output (model={smart_data['model']}, serial={smart_data['serial']}, temp={smart_data['temperature']})...")
-                        output = result.stdout
+                        output = stdout
                         
                         # Get basic info
                         for line in output.split('\n'):
@@ -808,7 +813,7 @@ def get_smart_data(disk_name):
                             print(f"[v0] Extracted partial data from text output, continuing to next attempt...")
                 
                 else:
-                    print(f"[v0] No usable output (return code {result.returncode}), trying next command...")
+                    print(f"[v0] No usable output (return code {result_code}), trying next command...")
             
             except subprocess.TimeoutExpired:
                 print(f"[v0] Command timeout for attempt {cmd_index + 1}, trying next...")
@@ -816,7 +821,15 @@ def get_smart_data(disk_name):
             except Exception as e:
                 print(f"[v0] Error in attempt {cmd_index + 1}: {type(e).__name__}: {e}")
                 continue
-        
+            finally:
+                if process and process.returncode is None: # If process is still running after error
+                    try:
+                        process.kill()
+                        print(f"[v0] Process killed for command: {' '.join(cmd)}")
+                    except Exception as kill_err:
+                        print(f"[v0] Error killing process: {kill_err}")
+
+
         if smart_data['reallocated_sectors'] > 0 or smart_data['pending_sectors'] > 0:
             if smart_data['health'] == 'healthy':
                 smart_data['health'] = 'warning'
@@ -1573,433 +1586,358 @@ def identify_fan(fan_name, adapter):
     
     return fan_name
 
+# --- GPU Monitoring Functions ---
+
 def get_detailed_gpu_info(gpu):
-    """Get detailed GPU information using nvidia-smi, intel_gpu_top, or radeontop"""
-    detailed_info = {}
+    """Get detailed monitoring information for a GPU"""
+    vendor = gpu.get('vendor', '').lower()
+    slot = gpu.get('slot', '')
     
-    vendor = gpu.get('vendor', '').upper()
+    print(f"[v0] ===== get_detailed_gpu_info called for GPU {slot} (vendor: {vendor}) =====", flush=True)
     
-    if vendor == 'INTEL':
-        try:
-            check_result = subprocess.run(['which', 'intel_gpu_top'], capture_output=True, timeout=1)
-            if check_result.returncode != 0:
-                detailed_info['has_monitoring_tool'] = False
-                print(f"[v0] intel_gpu_top not found for Intel GPU")
-                return detailed_info
-            else:
-                print(f"[v0] intel_gpu_top found for Intel GPU")
-            
-            gpu_device = '/dev/dri/card0'
-            if not os.path.exists(gpu_device):
-                print(f"[v0] GPU device {gpu_device} not found - marking tool as unavailable")
-                detailed_info['has_monitoring_tool'] = False
-                return detailed_info
-            
-            if not os.access(gpu_device, os.R_OK):
-                print(f"[v0] GPU device {gpu_device} not accessible - marking tool as unavailable")
-                detailed_info['has_monitoring_tool'] = False
-                return detailed_info
-            
-            print(f"[v0] GPU device {gpu_device} is accessible")
-        
-        except Exception as e:
-            print(f"[v0] Error checking for intel_gpu_top: {e}")
-            detailed_info['has_monitoring_tool'] = False
-            return detailed_info
-        
-        data_retrieved = False
-        process = None
-        try:
-            cmd = ['intel_gpu_top', '-J']
-            print(f"[v0] Starting intel_gpu_top with command: {' '.join(cmd)}")
-            
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1
-            )
-            
-            print(f"[v0] intel_gpu_top process started, reading output...")
-
-            output_lines = []
-            start_time = time.time()
-            timeout_seconds = 5.0
-            json_objects_found = 0
-            valid_data_found = False
-            best_json_data = None  # Store the best JSON object found (one with clients if available)
-            
-            while time.time() - start_time < timeout_seconds:
-                if process.poll() is not None:
-                    break
-
-                try:
-                    # Use select for non-blocking read to avoid hanging
-                    ready_fds, _, _ = select.select([process.stdout], [], [], 0.1)
-                    if ready_fds:
-                        line = process.stdout.readline()
-                        if line:
-                            output_lines.append(line)
-                            output = ''.join(output_lines)
-                            
-                            if len(output_lines) <= 20:
-                                print(f"[v0] Received line {len(output_lines)}: {line.strip()[:150]}")
-                            
-                            # Find all complete JSON objects
-                            search_start = 0
-                            while True:
-                                object_start = -1
-                                for i in range(search_start, len(output)):
-                                    if output[i] == '{':
-                                        object_start = i
-                                        break
-                                    elif output[i] not in [',', '\n', '\r', ' ', '\t']:
-                                        break
-                                
-                                if object_start == -1:
-                                    break
-                                
-                                # Count braces to find complete object
-                                brace_count = 0
-                                object_end = -1
-                                
-                                for i in range(object_start, len(output)):
-                                    if output[i] == '{':
-                                        brace_count += 1
-                                    elif output[i] == '}':
-                                        brace_count -= 1
-                                        if brace_count == 0:
-                                            object_end = i + 1
-                                            break
-                                
-                                if object_end > object_start:
-                                    json_objects_found += 1
-                                    json_str = output[object_start:object_end]
-                                    
-                                    if json_objects_found == 1:
-                                        print(f"[v0] Found first JSON object ({len(json_str)} chars) - skipping (baseline)")
-                                        search_start = object_end
-                                        while search_start < len(output) and output[search_start] in [',', '\n', '\r', ' ', '\t']:
-                                            search_start += 1
-                                        continue
-                                    
-                                    print(f"[v0] Found JSON object #{json_objects_found} ({len(json_str)} chars)")
-                                    
-                                    try:
-                                        json_data = json.loads(json_str)
-                                        print(f"[v0] Successfully parsed JSON object #{json_objects_found}")
-                                        print(f"[v0] JSON keys: {list(json_data.keys())}")
-                                        
-                                        has_clients = 'clients' in json_data and json_data['clients']
-                                        if has_clients:
-                                            client_names = [client.get('name', 'Unknown') for client in json_data['clients'].values()]
-                                            print(f"[v0] ✓ JSON object #{json_objects_found} has clients data with {len(json_data['clients'])} client(s): {client_names}")
-                                            best_json_data = json_data
-                                            valid_data_found = True
-                                            break
-                                        elif best_json_data is None:
-                                            best_json_data = json_data
-                                            print(f"[v0] ✗ JSON object #{json_objects_found} has no clients data, storing as fallback")
-                                        else:
-                                            print(f"[v0] ✗ JSON object #{json_objects_found} has no clients data")
-                                        
-                                        if json_objects_found >= 5:
-                                            print(f"[v0] Read 5 JSON objects without clients, using fallback")
-                                            valid_data_found = True
-                                            break
-                                        
-                                    except json.JSONDecodeError as e:
-                                        print(f"[v0] Failed to parse JSON object #{json_objects_found}: {e}")
-                                    
-                                    search_start = object_end
-                                    while search_start < len(output) and output[search_start] in [',', '\n', '\r', ' ', '\t']:
-                                        search_start += 1
-                                else:
-                                    break
-                            
-                            if valid_data_found:
-                                break
-                                
-                except Exception as e:
-                    print(f"[v0] Error reading intel_gpu_top output: {e}")
-                    break
-            
-            if best_json_data:
-                json_data = best_json_data
-                has_clients = 'clients' in json_data and json_data['clients']
-                print(f"[v0] Using JSON data with keys: {list(json_data.keys())}")
-                print(f"[v0] Has clients: {has_clients}")
-                if has_clients:
-                    print(f"[v0] Number of clients: {len(json_data['clients'])}")
-                else:
-                    print(f"[v0] WARNING: No clients found in any of the {json_objects_found} JSON objects read")
-
-                # Parse frequency data
-                if 'frequency' in json_data:
-                    freq = json_data['frequency']
-                    if 'actual' in freq:
-                        detailed_info['clock_graphics'] = f"{freq['actual']:.0f} MHz"
-                        data_retrieved = True
-                    if 'requested' in freq:
-                        detailed_info['clock_max'] = f"{freq['requested']:.0f} MHz"
-                        data_retrieved = True
+    detailed_info = {
+        'has_monitoring_tool': False,
+        'temperature': None,
+        'fan_speed': None,
+        'fan_unit': None,
+        'utilization_gpu': None,
+        'utilization_memory': None,
+        'memory_used': None,
+        'memory_total': None,
+        'memory_free': None,
+        'power_draw': None,
+        'power_limit': None,
+        'clock_graphics': None,
+        'clock_memory': None,
+        'processes': [],
+        'engine_render': None,
+        'engine_blitter': None,
+        'engine_video': None,
+        'engine_video_enhance': None
+    }
+    
+    # Intel GPU monitoring with intel_gpu_top
+    if 'intel' in vendor:
+        print(f"[v0] Intel GPU detected, checking for intel_gpu_top...", flush=True)
+        if shutil.which('intel_gpu_top'):
+            print(f"[v0] intel_gpu_top found, executing...", flush=True)
+            try:
+                import os
+                print(f"[v0] Current user: {os.getenv('USER', 'unknown')}", flush=True)
+                print(f"[v0] Current working directory: {os.getcwd()}", flush=True)
                 
-                # Parse power data
-                if 'power' in json_data:
-                    power = json_data['power']
-                    if 'GPU' in power:
-                        detailed_info['power_draw'] = f"{power['GPU']:.2f} W"
-                        data_retrieved = True
-                    if 'Package' in power:
-                        detailed_info['power_limit'] = f"{power['Package']:.2f} W"
-                        data_retrieved = True
+                cmd = ['intel_gpu_top', '-J']
+                print(f"[v0] Executing command: {' '.join(cmd)}", flush=True)
                 
-                # Parse RC6 state
-                if 'rc6' in json_data:
-                    rc6_value = json_data['rc6'].get('value', 0)
-                    detailed_info['power_state'] = f"RC6: {rc6_value:.1f}%"
-                    data_retrieved = True
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1
+                )
                 
-                # Parse interrupts
-                if 'interrupts' in json_data:
-                    irq_count = json_data['interrupts'].get('count', 0)
-                    detailed_info['irq_rate'] = int(irq_count)
-                    data_retrieved = True
+                print(f"[v0] Process started with PID: {process.pid}", flush=True)
                 
-                engine_totals = {
-                    'engine_render': 0.0,
-                    'engine_blitter': 0.0,
-                    'engine_video': 0.0,
-                    'engine_video_enhance': 0.0
-                }
+                print(f"[v0] Waiting 1 second for intel_gpu_top to initialize...", flush=True)
+                time.sleep(1)
+                print(f"[v0] Starting to read JSON objects...", flush=True)
                 
-                client_engine_totals = {
-                    'engine_render': 0.0,
-                    'engine_blitter': 0.0,
-                    'engine_video': 0.0,
-                    'engine_video_enhance': 0.0
-                }
+                start_time = time.time()
+                timeout = 8  # Increased timeout from 5 to 8 seconds
+                json_objects = []
+                buffer = ""
+                brace_count = 0
+                in_json = False
                 
-                if 'engines' in json_data:
-                    engines_data = json_data['engines']
-                    print(f"[v0] Parsing engines data: {list(engines_data.keys())}")
+                print(f"[v0] Reading output from intel_gpu_top...", flush=True)
+                
+                while time.time() - start_time < timeout:
+                    if process.poll() is not None:
+                        print(f"[v0] Process terminated early with code: {process.poll()}", flush=True)
+                        break
                     
-                    engine_map = {
-                        'Render/3D': 'engine_render',
-                        'Blitter': 'engine_blitter',
-                        'Video': 'engine_video',
-                        'VideoEnhance': 'engine_video_enhance'
+                    try:
+                        line = process.stdout.readline()
+                        if not line:
+                            time.sleep(0.1)
+                            continue
+                        
+                        for char in line:
+                            if char == '{':
+                                if brace_count == 0:
+                                    in_json = True
+                                    buffer = char
+                                else:
+                                    buffer += char
+                                brace_count += 1
+                            elif char == '}':
+                                buffer += char
+                                brace_count -= 1
+                                if brace_count == 0 and in_json:
+                                    try:
+                                        json_data = json.loads(buffer)
+                                        json_objects.append(json_data)
+                                        print(f"[v0] Found JSON object #{len(json_objects)} ({len(buffer)} chars)", flush=True)
+                                        print(f"[v0] JSON keys: {list(json_data.keys())}", flush=True)
+                                        
+                                        if 'clients' in json_data:
+                                            client_count = len(json_data['clients'])
+                                            print(f"[v0] *** FOUND CLIENTS SECTION with {client_count} client(s) ***", flush=True)
+                                            for client_id, client_data in json_data['clients'].items():
+                                                client_name = client_data.get('name', 'Unknown')
+                                                client_pid = client_data.get('pid', 'Unknown')
+                                                print(f"[v0]   - Client: {client_name} (PID: {client_pid})", flush=True)
+                                        else:
+                                            print(f"[v0] No 'clients' key in this JSON object", flush=True)
+                                        
+                                        if len(json_objects) >= 10:
+                                            print(f"[v0] Collected 10 JSON objects, stopping...", flush=True)
+                                            break
+                                    except json.JSONDecodeError:
+                                        pass
+                                    buffer = ""
+                                    in_json = False
+                            elif in_json:
+                                buffer += char
+                    except Exception as e:
+                        print(f"[v0] Error reading line: {e}", flush=True)
+                        break
+                
+                process.terminate()
+                process.wait(timeout=1)
+                
+                print(f"[v0] Collected {len(json_objects)} JSON objects total", flush=True)
+                
+                best_json = None
+                for json_obj in json_objects:
+                    if 'clients' in json_obj and len(json_obj['clients']) > 0:
+                        best_json = json_obj
+                        print(f"[v0] Using JSON object with {len(json_obj['clients'])} client(s)", flush=True)
+                        break
+                
+                if not best_json and json_objects:
+                    best_json = json_objects[0]
+                    print(f"[v0] No JSON with clients found, using first JSON object as fallback", flush=True)
+                
+                if best_json:
+                    print(f"[v0] Parsing selected JSON object...", flush=True)
+                    data_retrieved = False
+                    
+                    # Initialize engine totals
+                    engine_totals = {
+                        'Render/3D': 0.0,
+                        'Blitter': 0.0,
+                        'Video': 0.0,
+                        'VideoEnhance': 0.0
+                    }
+                    client_engine_totals = {
+                        'Render/3D': 0.0,
+                        'Blitter': 0.0,
+                        'Video': 0.0,
+                        'VideoEnhance': 0.0
                     }
                     
-                    for engine_key in engines_data.keys():
-                        engine_base = engine_key.rsplit('/', 1)[0] if '/' in engine_key and engine_key[-1].isdigit() else engine_key
-                        
-                        if engine_base in engine_map:
-                            busy_value = engines_data[engine_key].get('busy', 0)
-                            key = engine_map[engine_base]
-                            engine_totals[key] = busy_value
-                            print(f"[v0] Global engine {engine_key}: {busy_value}%")
-                
-                if 'clients' in json_data:
-                    clients_data = json_data['clients']
-                    processes = []
-                    print(f"[v0] Found {len(clients_data)} clients in intel_gpu_top output")
-                    
-                    for client_id, client_info in clients_data.items():
-                        process_info = {
-                            'name': client_info.get('name', 'Unknown'),
-                            'pid': str(client_info.get('pid', 'N/A'))
-                        }
-                        
-                        # Extract memory usage
-                        if 'memory' in client_info:
-                            if 'system' in client_info['memory'] and 'resident' in client_info['memory']['system']:
-                                mem_bytes = int(client_info['memory']['system']['resident'])
-                                mem_mb = mem_bytes / (1024 * 1024)
-                                process_info['memory_used'] = f"{mem_mb:.0f} MB"
-                            elif 'resident' in client_info['memory']:
-                                mem_bytes = int(client_info['memory']['resident'])
-                                mem_mb = mem_bytes / (1024 * 1024)
-                                process_info['memory_used'] = f"{mem_mb:.0f} MB"
-                        
-                        # Extract GPU utilization from engine classes
-                        if 'engine-classes' in client_info:
-                            engine_classes = client_info['engine-classes']
-                            
-                            engine_map_client = {
-                                'Render/3D': 'engine_render',
-                                'Blitter': 'engine_blitter',
-                                'Video': 'engine_video',
-                                'VideoEnhance': 'engine_video_enhance'
+                    # Parse clients section (processes using GPU)
+                    if 'clients' in best_json:
+                        print(f"[v0] Parsing clients section...", flush=True)
+                        clients = best_json['clients']
+                        processes = []
+
+                        for client_id, client_data in clients.items():
+                            process_info = {
+                                'name': client_data.get('name', 'Unknown'),
+                                'pid': client_data.get('pid', 'Unknown'),
+                                'memory': {
+                                    'total': client_data.get('memory', {}).get('system', {}).get('total', 0),
+                                    'shared': client_data.get('memory', {}).get('system', {}).get('shared', 0),
+                                    'resident': client_data.get('memory', {}).get('system', {}).get('resident', 0)
+                                },
+                                'engines': {}
                             }
                             
-                            max_utilization = 0.0
-                            for engine_name, engine_key in engine_map_client.items():
-                                if engine_name in engine_classes:
-                                    busy = float(engine_classes[engine_name].get('busy', 0))
-                                    # For individual process, use Render/3D as primary indicator if available
-                                    if engine_name == 'Render/3D' and busy > 0:
-                                        process_info['gpu_utilization'] = f"{busy:.1f}%"
-                                        max_utilization = max(max_utilization, busy)
-                                    elif engine_name != 'Render/3D': # For other engines, update if higher and no Render/3D found
-                                        if 'gpu_utilization' not in process_info and busy > 0:
-                                            process_info['gpu_utilization'] = f"{busy:.1f}%"
-                                            max_utilization = max(max_utilization, busy)
-                                    
-                                    client_engine_totals[engine_key] = max(client_engine_totals[engine_key], busy) # Track for overall GPU util
+                            # Parse engine utilization for this process
+                            engine_classes = client_data.get('engine-classes', {})
+                            for engine_name, engine_data in engine_classes.items():
+                                busy_value = float(engine_data.get('busy', 0))
+                                process_info['engines'][engine_name] = f"{busy_value:.1f}%"
+                                
+                                # Sum up engine utilization across all processes
+                                if engine_name in client_engine_totals:
+                                    client_engine_totals[engine_name] += busy_value
+                            
+                            processes.append(process_info)
+                            print(f"[v0] Added process: {process_info['name']} (PID: {process_info['pid']})", flush=True)
                         
-                        processes.append(process_info)
-                        print(f"[v0] Process: {process_info['name']} (PID: {process_info['pid']})")
-                    
-                    if processes:
                         detailed_info['processes'] = processes
+                        print(f"[v0] Total processes found: {len(processes)}", flush=True)
+                    else:
+                        print(f"[v0] WARNING: No 'clients' section in selected JSON", flush=True)
+                    
+                    # Parse global engines section
+                    if 'engines' in best_json:
+                        print(f"[v0] Parsing engines section...", flush=True)
+                        engines = best_json['engines']
+                        
+                        for engine_name, engine_data in engines.items():
+                            # Remove the /0 suffix if present
+                            clean_name = engine_name.replace('/0', '')
+                            busy_value = float(engine_data.get('busy', 0))
+                            
+                            if clean_name in engine_totals:
+                                engine_totals[clean_name] = busy_value
+                    
+                    # Use client engine totals if available, otherwise use global engines
+                    final_engines = client_engine_totals if any(v > 0 for v in client_engine_totals.values()) else engine_totals
+                    
+                    detailed_info['engine_render'] = f"{final_engines['Render/3D']:.1f}%"
+                    detailed_info['engine_blitter'] = f"{final_engines['Blitter']:.1f}%"
+                    detailed_info['engine_video'] = f"{final_engines['Video']:.1f}%"
+                    detailed_info['engine_video_enhance'] = f"{final_engines['VideoEnhance']:.1f}%"
+                    
+                    # Calculate overall GPU utilization (max of all engines)
+                    max_utilization = max(final_engines.values())
+                    detailed_info['utilization_gpu'] = f"{max_utilization:.1f}%"
+                    
+                    # Parse frequency
+                    if 'frequency' in best_json:
+                        freq_data = best_json['frequency']
+                        actual_freq = freq_data.get('actual', 0)
+                        detailed_info['clock_graphics'] = f"{actual_freq} MHz"
                         data_retrieved = True
-                
-                for key in engine_totals:
-                    if client_engine_totals[key] > engine_totals[key]:
-                        engine_totals[key] = client_engine_totals[key]
-                
-                if 'engines' in json_data or 'clients' in json_data:
-                    detailed_info['engine_render'] = f"{engine_totals['engine_render']:.1f}%"
-                    detailed_info['engine_blitter'] = f"{engine_totals['engine_blitter']:.1f}%"
-                    detailed_info['engine_video'] = f"{engine_totals['engine_video']:.1f}%"
-                    detailed_info['engine_video_enhance'] = f"{engine_totals['engine_video_enhance']:.1f}%"
-
-                if 'utilization_gpu' not in detailed_info:
-                    print(f"[v0] No engines or clients data found, setting utilization to 0")
-                    detailed_info['utilization_gpu'] = "0.0%"
-                    detailed_info['engine_render'] = "0.0%"
-                    detailed_info['engine_blitter'] = "0.0%"
-                    detailed_info['engine_video'] = "0.0%"
-                    detailed_info['engine_video_enhance'] = "0.0%"
-                    data_retrieved = True
-
-            else: # If no JSON data was successfully parsed
-                print(f"[v0] No valid JSON data found from intel_gpu_top.")
-                detailed_info['has_monitoring_tool'] = False
-        
-            if data_retrieved:
-                detailed_info['has_monitoring_tool'] = True
-                print(f"[v0] Intel GPU monitoring successful")
-            else:
-                # If data_retrieved is still False, it means even with a parsed JSON, essential data wasn't found
-                detailed_info['has_monitoring_tool'] = False
-                print(f"[v0] Intel GPU monitoring failed - essential data not retrieved")
-        
-        except Exception as e:
-            print(f"[v0] Error getting Intel GPU details: {e}")
-            import traceback
-            traceback.print_exc()
-            detailed_info['has_monitoring_tool'] = False
-        finally:
-            if process and process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=1)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                print(f"[v0] intel_gpu_top process terminated")
-
-    elif vendor == 'NVIDIA':
-        try:
-            check_result = subprocess.run(['which', 'nvidia-smi'], capture_output=True, timeout=1)
-            if check_result.returncode != 0:
-                detailed_info['has_monitoring_tool'] = False
-                print(f"[v0] nvidia-smi not found for NVIDIA GPU")
-                return detailed_info
-            else:
-                print(f"[v0] nvidia-smi found for NVIDIA GPU")
-        except Exception as e:
-            print(f"[v0] Error checking for nvidia-smi: {e}")
-            detailed_info['has_monitoring_tool'] = False
-            return detailed_info
-        
-        data_retrieved = False
-        try:
-            # nvidia-smi query for real-time data
-            print(f"[v0] Executing nvidia-smi to get GPU data...")
-            result = subprocess.run(
-                ['nvidia-smi', '--query-gpu=index,name,driver_version,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,utilization.gpu,utilization.memory,clocks.gr,clocks.mem,pcie.link.gen.current,pcie.link.width.current', 
-                 '--format=csv,noheader,nounits'],
-                capture_output=True, text=True, timeout=5
-            )
-            print(f"[v0] nvidia-smi return code: {result.returncode}")
-            print(f"[v0] nvidia-smi output: {result.stdout[:200] if result.stdout else 'No output'}")
+                    
+                    # Parse power
+                    if 'power' in best_json:
+                        power_data = best_json['power']
+                        gpu_power = power_data.get('GPU', 0)
+                        package_power = power_data.get('Package', 0)
+                        detailed_info['power_draw'] = f"{gpu_power:.2f} W"
+                        detailed_info['power_limit'] = f"{package_power:.2f} W"
+                        data_retrieved = True
+                    
+                    if data_retrieved:
+                        detailed_info['has_monitoring_tool'] = True
+                        print(f"[v0] Intel GPU monitoring successful", flush=True)
+                        print(f"[v0] - Utilization: {detailed_info['utilization_gpu']}", flush=True)
+                        print(f"[v0] - Engines: R={detailed_info['engine_render']}, B={detailed_info['engine_blitter']}, V={detailed_info['engine_video']}, VE={detailed_info['engine_video_enhance']}", flush=True)
+                        print(f"[v0] - Processes: {len(detailed_info['processes'])}", flush=True)
+                    else:
+                        print(f"[v0] WARNING: No data retrieved from intel_gpu_top", flush=True)
+                else:
+                    print(f"[v0] WARNING: No valid JSON objects found", flush=True)
+                    # Check stderr for errors
+                    stderr_output = process.stderr.read()
+                    if stderr_output:
+                        print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
             
-            if result.returncode == 0 and result.stdout.strip():
-                for line in result.stdout.strip().split('\n'):
-                    if line:
-                        parts = [p.strip() for p in line.split(',')]
-                        if len(parts) >= 15:
-                            detailed_info['driver_version'] = parts[2] if parts[2] != '[N/A]' else None
-                            detailed_info['memory_total'] = int(float(parts[3])) if parts[3] != '[N/A]' else None
-                            detailed_info['memory_used'] = int(float(parts[4])) if parts[4] != '[N/A]' else None
-                            detailed_info['memory_free'] = int(float(parts[5])) if parts[5] != '[N/A]' else None # Added memory_free
-                            detailed_info['temperature'] = int(float(parts[6])) if parts[6] != '[N/A]' else None
-                            detailed_info['power_draw'] = float(parts[7]) if parts[7] != '[N/A]' else None
-                            detailed_info['power_limit'] = float(parts[8]) if parts[8] != '[N/A]' else None
-                            detailed_info['utilization_gpu'] = int(float(parts[9])) if parts[9] != '[N/A]' else None
-                            detailed_info['utilization_memory'] = int(float(parts[10])) if parts[10] != '[N/A]' else None
-                            detailed_info['clock_graphics'] = int(float(parts[11])) if parts[11] != '[N/A]' else None
-                            detailed_info['clock_memory'] = int(float(parts[12])) if parts[12] != '[N/A]' else None
-                            detailed_info['pcie_gen'] = parts[13] if parts[13] != '[N/A]' else None
-                            detailed_info['pcie_width'] = f"x{parts[14]}" if parts[14] != '[N/A]' else None
-                            data_retrieved = True
-                            print(f"[v0] NVIDIA GPU data retrieved successfully: {detailed_info}")
-                            break
-            
-            # Get running processes
-            result = subprocess.run(
-                ['nvidia-smi', '--query-compute-apps=pid,process_name,used_memory', '--format=csv,noheader'],
-                capture_output=True, text=True, timeout=5
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                processes = []
-                for line in result.stdout.strip().split('\n'):
-                    if line:
-                        parts = [p.strip() for p in line.split(',')]
-                        if len(parts) >= 3:
-                            processes.append({
-                                'pid': parts[0],
-                                'name': parts[1],
-                                'memory': parts[2]
-                            })
-                detailed_info['processes'] = processes
-                print(f"[v0] NVIDIA GPU processes: {len(processes)} found")
-            
-            if data_retrieved:
-                detailed_info['has_monitoring_tool'] = True
-                print(f"[v0] NVIDIA GPU monitoring successful")
-            else:
-                detailed_info['has_monitoring_tool'] = False
-                print(f"[v0] NVIDIA GPU monitoring failed - no data retrieved")
-                
-        except subprocess.TimeoutExpired:
-            print(f"[v0] nvidia-smi timed out - marking tool as unavailable")
-            detailed_info['has_monitoring_tool'] = False
-        except Exception as e:
-            print(f"[v0] Error getting NVIDIA GPU details: {e}")
-            import traceback
-            traceback.print_exc()
-            detailed_info['has_monitoring_tool'] = False
+            except Exception as e:
+                print(f"[v0] Error running intel_gpu_top: {e}", flush=True)
+                import traceback
+                traceback.print_exc()
+        else:
+            print(f"[v0] intel_gpu_top not found in PATH", flush=True)
     
-    elif vendor == 'AMD':
-        try:
-            check_result = subprocess.run(['which', 'radeontop'], capture_output=True, timeout=1)
-            if check_result.returncode != 0:
-                detailed_info['has_monitoring_tool'] = False
-                print(f"[v0] radeontop not found for AMD GPU")
-                return detailed_info
-            else:
-                print(f"[v0] radeontop found for AMD GPU")
-                detailed_info['has_monitoring_tool'] = True
-        except Exception as e:
-            print(f"[v0] Error checking for radeontop: {e}")
-            detailed_info['has_monitoring_tool'] = False
-            return detailed_info
-    
+    # NVIDIA GPU monitoring with nvidia-smi
+    elif 'nvidia' in vendor:
+        print(f"[v0] NVIDIA GPU detected, checking for nvidia-smi...", flush=True)
+        if shutil.which('nvidia-smi'):
+            print(f"[v0] nvidia-smi found, executing...", flush=True)
+            try:
+                # Basic GPU stats
+                query_gpu = 'index,name,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,utilization.gpu,utilization.memory,clocks.gr,clocks.mem,pcie.link.gen.current,pcie.link.width.current'
+                cmd_gpu = ['nvidia-smi', f'--query-gpu={query_gpu}', '--format=csv,noheader,nounits']
+                print(f"[v0] Executing command: {' '.join(cmd_gpu)}", flush=True)
+                result_gpu = subprocess.run(cmd_gpu, capture_output=True, text=True, timeout=5)
+                
+                if result_gpu.returncode == 0 and result_gpu.stdout.strip():
+                    output_lines = result_gpu.stdout.strip().split('\n')
+                    # Assuming only one GPU, or taking the first one if multiple are returned
+                    gpu_data_line = output_lines[0] 
+                    parts = [p.strip() for p in gpu_data_line.split(',')]
+                    
+                    if len(parts) >= 14: # Check if we have enough parts
+                        try:
+                            detailed_info['temperature'] = int(parts[5]) if parts[5].isdigit() else None
+                            detailed_info['power_draw'] = float(parts[6]) if parts[6].replace('.', '', 1).isdigit() else None
+                            detailed_info['power_limit'] = float(parts[7]) if parts[7].replace('.', '', 1).isdigit() else None
+                            detailed_info['utilization_gpu'] = int(parts[8]) if parts[8].isdigit() else None
+                            detailed_info['utilization_memory'] = int(parts[9]) if parts[9].isdigit() else None
+                            detailed_info['clock_graphics'] = int(parts[10]) if parts[10].isdigit() else None
+                            detailed_info['clock_memory'] = int(parts[11]) if parts[11].isdigit() else None
+                            detailed_info['memory_total'] = int(parts[2]) if parts[2].isdigit() else None
+                            detailed_info['memory_used'] = int(parts[3]) if parts[3].isdigit() else None
+                            detailed_info['memory_free'] = int(parts[4]) if parts[4].isdigit() else None
+                            
+                            print(f"[v0] NVIDIA GPU Basic Stats: Temp={detailed_info['temperature']}C, Power={detailed_info['power_draw']}W, Util={detailed_info['utilization_gpu']}%", flush=True)
+                            detailed_info['has_monitoring_tool'] = True
+                        except (ValueError, IndexError) as e:
+                            print(f"[v0] Error parsing NVIDIA GPU stats: {e}", flush=True)
+                            detailed_info['has_monitoring_tool'] = False
+
+                # Compute processes using GPU
+                query_apps = 'pid,process_name,used_memory'
+                cmd_apps = ['nvidia-smi', f'--query-compute-apps={query_apps}', '--format=csv,noheader']
+                print(f"[v0] Executing command: {' '.join(cmd_apps)}", flush=True)
+                result_apps = subprocess.run(cmd_apps, capture_output=True, text=True, timeout=5)
+
+                if result_apps.returncode == 0 and result_apps.stdout.strip():
+                    processes = []
+                    for line in result_apps.stdout.strip().split('\n'):
+                        if line:
+                            parts = [p.strip() for p in line.split(',')]
+                            if len(parts) >= 3:
+                                # Convert memory to MB
+                                mem_str = parts[2]
+                                mem_mb = 0
+                                if 'MiB' in mem_str:
+                                    try:
+                                        mem_mb = int(float(mem_str.replace('MiB', '').strip()))
+                                    except ValueError:
+                                        pass
+                                elif 'GiB' in mem_str:
+                                    try:
+                                        mem_mb = int(float(mem_str.replace('GiB', '').strip()) * 1024)
+                                    except ValueError:
+                                        pass
+                                
+                                processes.append({
+                                    'pid': parts[0],
+                                    'name': parts[1],
+                                    'memory_used_mb': mem_mb
+                                })
+                    detailed_info['processes'] = processes
+                    print(f"[v0] Found {len(processes)} NVIDIA GPU processes", flush=True)
+
+                if detailed_info['has_monitoring_tool']:
+                    print(f"[v0] NVIDIA GPU monitoring successful", flush=True)
+                else:
+                    print(f"[v0] NVIDIA GPU monitoring failed - essential data not retrieved", flush=True)
+
+            except subprocess.TimeoutExpired:
+                print(f"[v0] nvidia-smi timed out - marking tool as unavailable", flush=True)
+            except Exception as e:
+                print(f"[v0] Error running nvidia-smi: {e}", flush=True)
+                import traceback
+                traceback.print_exc()
+        else:
+            print(f"[v0] nvidia-smi not found in PATH", flush=True)
+
+    # AMD GPU monitoring (placeholder, requires radeontop or similar)
+    elif 'amd' in vendor:
+        print(f"[v0] AMD GPU detected. Monitoring tools like radeontop are needed for detailed info.", flush=True)
+        if shutil.which('radeontop'):
+            print(f"[v0] radeontop found, but integration is not yet implemented.", flush=True)
+        else:
+            print(f"[v0] radeontop not found in PATH.", flush=True)
+        # Placeholder: return basic info if available from lspci or sensors
+        # No detailed monitoring implemented yet for AMD
+        
+    else:
+        print(f"[v0] Unsupported GPU vendor: {vendor}", flush=True)
+
+    print(f"[v0] ===== Exiting get_detailed_gpu_info for GPU {slot} =====", flush=True)
     return detailed_info
+
 
 def get_pci_device_info(pci_slot):
     """Get detailed PCI device information for a given slot"""
@@ -2144,8 +2082,8 @@ def get_gpu_info():
                             gpu['pci_driver'] = pci_info.get('driver', '')
                             gpu['pci_kernel_module'] = pci_info.get('kernel_module', '')
                         
-                        # detailed_info = get_detailed_gpu_info(gpu)
-                        # gpu.update(detailed_info)
+                        # detailed_info = get_detailed_gpu_info(gpu) # Removed this call here
+                        # gpu.update(detailed_info)             # It will be called later in api_gpu_realtime
                         
                         gpus.append(gpu)
                         print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
@@ -2859,7 +2797,7 @@ def api_hardware():
             'motherboard': hardware_info.get('motherboard', {}),
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
-            'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_data
+            'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_info
             'pci_devices': hardware_info.get('pci_devices', []),
             'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
             'fans': all_fans, # Return combined fans (sensors + IPMI)
@@ -2895,15 +2833,16 @@ def api_gpu_realtime(slot):
         
         gpu = None
         for g in gpus:
-            if g.get('slot') == slot or g.get('slot', '').startswith(slot):
+            # Match by slot or if the slot is a substring of the GPU's slot (e.g., '00:01.0' matching '00:01')
+            if g.get('slot') == slot or slot in g.get('slot', ''):
                 gpu = g
                 break
         
         if not gpu:
-            print(f"[v0] GPU with slot {slot} not found")
+            print(f"[v0] GPU with slot matching '{slot}' not found")
             return jsonify({'error': 'GPU not found'}), 404
         
-        print(f"[v0] Getting detailed monitoring data for GPU {slot}...")
+        print(f"[v0] Getting detailed monitoring data for GPU at slot {gpu.get('slot')}...")
         detailed_info = get_detailed_gpu_info(gpu)
         gpu.update(detailed_info)
         
