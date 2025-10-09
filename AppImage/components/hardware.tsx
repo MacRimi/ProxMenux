@@ -22,6 +22,39 @@ import useSWR from "swr"
 import { useState, useEffect } from "react"
 import { type HardwareData, type GPU, type PCIDevice, type StorageDevice, fetcher } from "../types/hardware"
 
+const formatMemory = (memoryMB: number | string): string => {
+  const mb = typeof memoryMB === "string" ? Number.parseFloat(memoryMB) : memoryMB
+
+  if (isNaN(mb)) return "N/A"
+
+  // Convert to GB if >= 1024 MB
+  if (mb >= 1024) {
+    const gb = mb / 1024
+    return `${gb.toFixed(1)} GB`
+  }
+
+  // Keep in MB if < 1024 MB
+  return `${mb.toFixed(0)} MB`
+}
+
+const formatClock = (clockString: string): string => {
+  // Extract numeric value from string like "1138.179107 MHz"
+  const match = clockString.match(/([\d.]+)\s*MHz/i)
+  if (!match) return clockString
+
+  const mhz = Number.parseFloat(match[1])
+  if (isNaN(mhz)) return clockString
+
+  // Convert to GHz if >= 1000 MHz
+  if (mhz >= 1000) {
+    const ghz = mhz / 1000
+    return `${ghz.toFixed(2)} GHz`
+  }
+
+  // Keep in MHz if < 1000 MHz
+  return `${mhz.toFixed(0)} MHz`
+}
+
 const getDeviceTypeColor = (type: string): string => {
   const lowerType = type.toLowerCase()
   if (lowerType.includes("storage") || lowerType.includes("sata") || lowerType.includes("raid")) {
@@ -82,7 +115,6 @@ export default function Hardware() {
         abortController = new AbortController()
 
         const apiUrl = `http://${window.location.hostname}:8008/api/gpu/${fullSlot}/realtime`
-        console.log("[v0] Fetching GPU realtime data from:", apiUrl)
 
         const response = await fetch(apiUrl, {
           method: "GET",
@@ -97,10 +129,6 @@ export default function Hardware() {
         }
 
         const data = await response.json()
-        console.log("[v0] GPU realtime data received:", data)
-        console.log("[v0] has_monitoring_tool value:", data.has_monitoring_tool)
-        console.log("[v0] has_monitoring_tool type:", typeof data.has_monitoring_tool)
-        console.log("[v0] has_monitoring_tool === true:", data.has_monitoring_tool === true)
         setRealtimeGPUData(data)
         setDetailsLoading(false)
       } catch (error) {
@@ -126,7 +154,6 @@ export default function Hardware() {
   }, [selectedGPU])
 
   const handleGPUClick = async (gpu: GPU) => {
-    console.log("[v0] GPU clicked:", gpu.name)
     setSelectedGPU(gpu)
     setDetailsLoading(true)
     setRealtimeGPUData(null)
@@ -154,9 +181,6 @@ export default function Hardware() {
 
   const hasRealtimeData = (): boolean => {
     if (!realtimeGPUData) return false
-
-    console.log("[v0] hasRealtimeData check - realtimeGPUData:", realtimeGPUData)
-    console.log("[v0] hasRealtimeData check - has_monitoring_tool:", realtimeGPUData.has_monitoring_tool)
 
     // Esto permite mostrar datos incluso cuando la GPU está inactiva (valores en 0 o null)
     return realtimeGPUData.has_monitoring_tool === true
@@ -282,7 +306,7 @@ export default function Hardware() {
                   {module.size && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Size</span>
-                      <span className="font-medium">{module.size}</span>
+                      <span className="font-medium">{formatMemory(module.size)}</span>
                     </div>
                   )}
                   {module.type && (
@@ -425,9 +449,7 @@ export default function Hardware() {
             <>
               <DialogHeader className="pb-4 border-b border-border">
                 <DialogTitle>{selectedGPU.name}</DialogTitle>
-                <DialogDescription>
-                  {detailsLoading ? "Loading real-time monitoring data..." : "GPU Real-Time Monitoring"}
-                </DialogDescription>
+                <DialogDescription>GPU Real-Time Monitoring</DialogDescription>
               </DialogHeader>
 
               <div className="space-y-6 py-4">
@@ -472,7 +494,7 @@ export default function Hardware() {
                 {detailsLoading ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
-                    <p>Loading real-time monitoring data...</p>
+                    <p className="text-sm">Loading real-time data...</p>
                   </div>
                 ) : realtimeGPUData?.has_monitoring_tool === true ? (
                   <>
@@ -489,13 +511,13 @@ export default function Hardware() {
                         {realtimeGPUData.clock_graphics && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
                             <span className="text-sm text-muted-foreground">Graphics Clock</span>
-                            <span className="text-sm font-medium">{realtimeGPUData.clock_graphics}</span>
+                            <span className="text-sm font-medium">{formatClock(realtimeGPUData.clock_graphics)}</span>
                           </div>
                         )}
                         {realtimeGPUData.clock_memory && (
                           <div className="flex justify-between border-b border-border/50 pb-2">
                             <span className="text-sm text-muted-foreground">Memory Clock</span>
-                            <span className="text-sm font-medium">{realtimeGPUData.clock_memory}</span>
+                            <span className="text-sm font-medium">{formatClock(realtimeGPUData.clock_memory)}</span>
                           </div>
                         )}
                         {realtimeGPUData.power_draw && realtimeGPUData.power_draw !== "0.00 W" && (
@@ -625,8 +647,8 @@ export default function Hardware() {
                                 {proc.memory && (
                                   <Badge variant="outline" className="font-mono text-xs">
                                     {typeof proc.memory === "object"
-                                      ? `${(proc.memory.resident / 1024).toFixed(0)} MB`
-                                      : proc.memory}
+                                      ? formatMemory(proc.memory.resident / 1024)
+                                      : formatMemory(proc.memory)}
                                   </Badge>
                                 )}
                               </div>
@@ -1072,7 +1094,7 @@ export default function Hardware() {
                     {device.type}
                   </Badge>
                 </div>
-                {device.size && <p className="text-sm font-medium">{device.size}</p>}
+                {device.size && <p className="text-sm font-medium">{formatMemory(device.size)}</p>}
                 {device.model && (
                   <p className="text-xs text-muted-foreground line-clamp-2 break-words">{device.model}</p>
                 )}
@@ -1111,7 +1133,7 @@ export default function Hardware() {
               {selectedDisk.size && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-sm font-medium text-muted-foreground">Capacity</span>
-                  <span className="text-sm font-medium">{selectedDisk.size}</span>
+                  <span className="text-sm font-medium">{formatMemory(selectedDisk.size)}</span>
                 </div>
               )}
 
