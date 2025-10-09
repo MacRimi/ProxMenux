@@ -1753,11 +1753,11 @@ def get_detailed_gpu_info(gpu):
                 
                 print(f"[v0] Process started with PID: {process.pid}", flush=True)
                 
-                print(f"[v0] Waiting 5 seconds for intel_gpu_top to initialize and detect processes...", flush=True)
-                time.sleep(5)
+                print(f"[v0] Waiting 1 second for intel_gpu_top to initialize and detect processes...", flush=True)
+                time.sleep(1)
                 
                 start_time = time.time()
-                timeout = 6  # Aumentar timeout a 6 segundos
+                timeout = 3
                 json_objects = []
                 buffer = ""
                 brace_count = 0
@@ -1810,8 +1810,8 @@ def get_detailed_gpu_info(gpu):
                                         else:
                                             print(f"[v0] No 'clients' key in this JSON object", flush=True)
                                         
-                                        if len(json_objects) >= 15:
-                                            print(f"[v0] Collected 15 JSON objects, stopping...", flush=True)
+                                        if len(json_objects) >= 5:
+                                            print(f"[v0] Collected 5 JSON objects, stopping...", flush=True)
                                             break
                                     except json.JSONDecodeError:
                                         pass
