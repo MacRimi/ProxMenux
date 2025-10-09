@@ -1857,13 +1857,7 @@ def get_detailed_gpu_info(gpu):
                     detailed_info['engine_blitter'] = f"{engine_totals['engine_blitter']:.1f}%"
                     detailed_info['engine_video'] = f"{engine_totals['engine_video']:.1f}%"
                     detailed_info['engine_video_enhance'] = f"{engine_totals['engine_video_enhance']:.1f}%"
-                    
-                    # Calculate overall GPU utilization as max of all engines
-                    max_engine = max(engine_totals.values()) if engine_totals else 0.0
-                    detailed_info['utilization_gpu'] = f"{max_engine:.1f}%"
-                    print(f"[v0] Final GPU utilization: {detailed_info['utilization_gpu']}, Engines: {detailed_info['engine_render']}, {detailed_info['engine_blitter']}, {detailed_info['engine_video']}, {detailed_info['engine_video_enhance']}")
-                    data_retrieved = True
-                
+
                 if 'utilization_gpu' not in detailed_info:
                     print(f"[v0] No engines or clients data found, setting utilization to 0")
                     detailed_info['utilization_gpu'] = "0.0%"
@@ -2000,7 +1994,7 @@ def get_detailed_gpu_info(gpu):
     return detailed_info
 
 def get_pci_device_info(pci_slot):
-    """Get detailed PCI device information for a given slot including driver info"""
+    """Get detailed PCI device information for a given slot"""
     pci_info = {}
     try:
         # Use lspci -vmm for detailed information
@@ -2857,7 +2851,7 @@ def api_hardware():
             'motherboard': hardware_info.get('motherboard', {}),
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
-            'storage_devices': hardware_info.get('storage_devices', []), # Corrected to use hardware_data
+            'storage_devices': hardware_info.get('storage_devices', []),
             'pci_devices': hardware_info.get('pci_devices', []),
             'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
             'fans': all_fans, # Return combined fans (sensors + IPMI)
@@ -2889,7 +2883,6 @@ def api_gpu_realtime(slot):
     try:
         print(f"[v0] /api/gpu/{slot}/realtime - Getting GPU info...")
         
-        # Only get GPU info, not all hardware info (much faster)
         gpus = get_gpu_info()
         
         gpu = None
@@ -2902,6 +2895,10 @@ def api_gpu_realtime(slot):
             print(f"[v0] GPU with slot {slot} not found")
             return jsonify({'error': 'GPU not found'}), 404
         
+        print(f"[v0] Getting detailed monitoring data for GPU {slot}...")
+        detailed_info = get_detailed_gpu_info(gpu)
+        gpu.update(detailed_info)
+        
         # Extract only the monitoring-related fields
         realtime_data = {
             'has_monitoring_tool': gpu.get('has_monitoring_tool', False),
@@ -2912,7 +2909,7 @@ def api_gpu_realtime(slot):
             'utilization_memory': gpu.get('utilization_memory'),
             'memory_used': gpu.get('memory_used'),
             'memory_total': gpu.get('memory_total'),
-            'memory_free': gpu.get('memory_free'), # Added memory_free
+            'memory_free': gpu.get('memory_free'),
             'power_draw': gpu.get('power_draw'),
             'power_limit': gpu.get('power_limit'),
             'clock_graphics': gpu.get('clock_graphics'),
@@ -2930,6 +2927,7 @@ def api_gpu_realtime(slot):
         print(f"[v0] - has_monitoring_tool: {realtime_data['has_monitoring_tool']}")
         print(f"[v0] - utilization_gpu: {realtime_data['utilization_gpu']}")
         print(f"[v0] - temperature: {realtime_data['temperature']}")
+        print(f"[v0] - processes: {len(realtime_data['processes'])} found")
         print(f"[v0] - engines: render={realtime_data['engine_render']}, blitter={realtime_data['engine_blitter']}, video={realtime_data['engine_video']}, video_enhance={realtime_data['engine_video_enhance']}")
         
         return jsonify(realtime_data)
