@@ -1889,13 +1889,13 @@ def get_detailed_gpu_info(gpu):
                 print(f"[v0] No valid JSON data found from intel_gpu_top.")
                 detailed_info['has_monitoring_tool'] = False
         
-        if data_retrieved:
-            detailed_info['has_monitoring_tool'] = True
-            print(f"[v0] Intel GPU monitoring successful")
-        else:
-            # If data_retrieved is still False, it means even with a parsed JSON, essential data wasn't found
-            detailed_info['has_monitoring_tool'] = False
-            print(f"[v0] Intel GPU monitoring failed - essential data not retrieved")
+            if data_retrieved:
+                detailed_info['has_monitoring_tool'] = True
+                print(f"[v0] Intel GPU monitoring successful")
+            else:
+                # If data_retrieved is still False, it means even with a parsed JSON, essential data wasn't found
+                detailed_info['has_monitoring_tool'] = False
+                print(f"[v0] Intel GPU monitoring failed - essential data not retrieved")
         
         except Exception as e:
             print(f"[v0] Error getting Intel GPU details: {e}")
@@ -2869,7 +2869,7 @@ def api_hardware():
             'motherboard': hardware_info.get('motherboard', {}),
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
-            'storage_devices': hardware_info.get('storage_devices', []),
+            'storage_devices': hardware_info.get('storage_devices', []), # Corrected to use hardware_data
             'pci_devices': hardware_info.get('pci_devices', []),
             'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
             'fans': all_fans, # Return combined fans (sensors + IPMI)
