@@ -1704,7 +1704,23 @@ def get_detailed_gpu_info(gpu):
     # Intel GPU monitoring with intel_gpu_top
     if 'intel' in vendor:
         print(f"[v0] Intel GPU detected, checking for intel_gpu_top...", flush=True)
-        if shutil.which('intel_gpu_top'):
+        
+        # Try to find system intel_gpu_top first (not the one in AppImage)
+        intel_gpu_top_path = None
+        system_paths = ['/usr/bin/intel_gpu_top', '/usr/local/bin/intel_gpu_top']
+        for path in system_paths:
+            if os.path.exists(path):
+                intel_gpu_top_path = path
+                print(f"[v0] Found system intel_gpu_top at: {path}", flush=True)
+                break
+        
+        # Fallback to shutil.which if not found in system paths
+        if not intel_gpu_top_path:
+            intel_gpu_top_path = shutil.which('intel_gpu_top')
+            if intel_gpu_top_path:
+                print(f"[v0] Using intel_gpu_top from PATH: {intel_gpu_top_path}", flush=True)
+        
+        if intel_gpu_top_path:
             print(f"[v0] intel_gpu_top found, executing...", flush=True)
             try:
                 import os
@@ -1719,14 +1735,16 @@ def get_detailed_gpu_info(gpu):
                         writable = os.access(drm_dev, os.W_OK)
                         print(f"[v0] {drm_dev}: mode={oct(stat_info.st_mode)}, uid={stat_info.st_uid}, gid={stat_info.st_gid}, readable={readable}, writable={writable}", flush=True)
                 
-                intel_gpu_top_path = shutil.which('intel_gpu_top')
-                print(f"[v0] intel_gpu_top path: {intel_gpu_top_path}", flush=True)
+                # intel_gpu_top_path = shutil.which('intel_gpu_top') # This line is now redundant
+                # print(f"[v0] intel_gpu_top path: {intel_gpu_top_path}", flush=True) # This line is now redundant
+                
+                # intel_gpu_top_path already set above
                 
                 # Prepare environment with all necessary variables
                 env = os.environ.copy()
                 env['TERM'] = 'xterm'  # Ensure terminal type is set
                 
-                cmd = f'{intel_gpu_top_path} -J'
+                cmd = f'{intel_gpu_top_path} -J' # Use the found path
                 print(f"[v0] Executing command: {cmd}", flush=True)
                 
                 process = subprocess.Popen(
