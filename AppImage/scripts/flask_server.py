@@ -1755,7 +1755,7 @@ def get_detailed_gpu_info(gpu):
                                             for engine_name, key in engine_map.items():
                                                 if engine_name in engines_data:
                                                     busy_value = engines_data[engine_name].get('busy', 0)
-                                                    detailed_info[key] = float(busy_value)
+                                                    detailed_info[key] = f"{busy_value:.1f}%"
                                                     engine_values.append(busy_value)
                                                     print(f"[v0] Engine {engine_name}: {busy_value}%")
                                             
@@ -1772,6 +1772,10 @@ def get_detailed_gpu_info(gpu):
                                         if 'utilization_gpu' not in detailed_info:
                                             print(f"[v0] No engines data found in JSON, setting utilization to 0")
                                             detailed_info['utilization_gpu'] = "0.0%"
+                                            detailed_info['engine_render'] = "0.0%"
+                                            detailed_info['engine_blitter'] = "0.0%"
+                                            detailed_info['engine_video'] = "0.0%"
+                                            detailed_info['engine_video_enhance'] = "0.0%"
                                             data_retrieved = True
 
                                         # Parse client processes
