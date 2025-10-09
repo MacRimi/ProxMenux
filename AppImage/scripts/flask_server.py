@@ -1569,29 +1569,6 @@ def get_temperature_info():
         'power_meter': power_meter
     }
 
-def identify_fan(fan_name, adapter):
-    """Identify what a fan corresponds to"""
-    fan_lower = fan_name.lower()
-    adapter_lower = adapter.lower() if adapter else ""
-    
-    # GPU fans
-    if any(gpu in adapter_lower for gpu in ["nouveau", "amdgpu", "radeon", "i915"]):
-        return "GPU Fan"
-    
-    # CPU fans
-    if "cpu" in fan_lower:
-        return "CPU Fan"
-    
-    # Chassis/System fans
-    if "fan1" in fan_lower and "isa" in adapter_lower:
-        return "CPU Fan"
-    if "fan2" in fan_lower and "isa" in adapter_lower:
-        return "Chassis Fan"
-    if "sys" in fan_lower or "chassis" in fan_lower:
-        return "Chassis Fan"
-    
-    return fan_name
-
 # --- GPU Monitoring Functions ---
 
 def get_detailed_gpu_info(gpu):
@@ -1654,11 +1631,11 @@ def get_detailed_gpu_info(gpu):
                 
                 print(f"[v0] Process started with PID: {process.pid}", flush=True)
                 
-                print(f"[v0] Waiting 2 seconds for intel_gpu_top to initialize...", flush=True)
-                time.sleep(2)
+                print(f"[v0] Waiting 4 seconds for intel_gpu_top to initialize...", flush=True)
+                time.sleep(4)
                 
                 start_time = time.time()
-                timeout = 3  # Reduced timeout to 3 seconds
+                timeout = 6
                 json_objects = []
                 buffer = ""
                 brace_count = 0
@@ -1753,15 +1730,21 @@ def get_detailed_gpu_info(gpu):
                         print(f"[v0] Error reading stderr: {e}", flush=True)
                 
                 best_json = None
-                for json_obj in json_objects:
-                    if 'clients' in json_obj and len(json_obj['clients']) > 0:
-                        best_json = json_obj
-                        print(f"[v0] Using JSON object with {len(json_obj['clients'])} client(s)", flush=True)
-                        break
+                for json_obj in reversed(json_objects):
+                    json_keys = list(json_obj.keys())
+                    print(f"[v0] Checking JSON object with keys: {json_keys}", flush=True)
+                    if 'clients' in json_obj:
+                        clients_data = json_obj['clients']
+                        if clients_data and len(clients_data) > 0:
+                            print(f"[v0] Found JSON with {len(clients_data)} client(s)!", flush=True)
+                            best_json = json_obj
+                            break
+                        else:
+                            print(f"[v0] Found 'clients' key but it's empty", flush=True)
                 
                 if not best_json and json_objects:
-                    best_json = json_objects[0]
-                    print(f"[v0] No JSON with clients found, using first JSON object as fallback", flush=True)
+                    best_json = json_objects[-1]
+                    print(f"[v0] No JSON with populated clients found, using most recent JSON object as fallback", flush=True)
                 
                 if best_json:
                     print(f"[v0] Parsing selected JSON object...", flush=True)
@@ -1854,7 +1837,9 @@ def get_detailed_gpu_info(gpu):
                         power_data = best_json['power']
                         gpu_power = power_data.get('GPU', 0)
                         package_power = power_data.get('Package', 0)
-                        detailed_info['power_draw'] = f"{gpu_power:.2f} W"
+                        # Use Package power as the main power draw since GPU is always 0.0 for integrated GPUs
+                        detailed_info['power_draw'] = f"{package_power:.2f} W"
+                        # Keep power_limit as a separate field (could be used for TDP limit in the future)
                         detailed_info['power_limit'] = f"{package_power:.2f} W"
                         data_retrieved = True
                     
