@@ -22,6 +22,108 @@ import shutil # Added for shutil.which
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
 
+# AGREGANDO FUNCIÓN PARA PARSEAR PROCESOS DE INTEL_GPU_TOP (SIN -J)
+def get_intel_gpu_processes_from_text():
+    """Parse processes from intel_gpu_top text output (more reliable than JSON)"""
+    try:
+        print(f"[v0] Executing intel_gpu_top (text mode) to capture processes...", flush=True)
+        process = subprocess.Popen(
+            ['intel_gpu_top'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1
+        )
+        
+        # Wait 2 seconds for intel_gpu_top to collect data
+        time.sleep(2)
+        
+        # Terminate and get output
+        process.terminate()
+        try:
+            stdout, _ = process.communicate(timeout=1)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            stdout, _ = process.communicate()
+        
+        processes = []
+        lines = stdout.split('\n')
+        
+        # Find the process table header
+        header_found = False
+        for i, line in enumerate(lines):
+            if 'PID' in line and 'NAME' in line and 'Render/3D' in line:
+                header_found = True
+                # Process lines after header
+                for proc_line in lines[i+1:]:
+                    proc_line = proc_line.strip()
+                    if not proc_line or proc_line.startswith('intel-gpu-top'):
+                        continue
+                    
+                    # Parse process line
+                    # Format: PID MEM RSS Render/3D Blitter Video VideoEnhance NAME
+                    parts = proc_line.split()
+                    if len(parts) >= 8:
+                        try:
+                            pid = parts[0]
+                            mem_str = parts[1]  # e.g., "177568K"
+                            rss_str = parts[2]  # e.g., "116500K"
+                            
+                            # Convert memory values (remove 'K' and convert to bytes)
+                            mem_total = int(mem_str.replace('K', '')) * 1024 if 'K' in mem_str else 0
+                            mem_resident = int(rss_str.replace('K', '')) * 1024 if 'K' in rss_str else 0
+                            
+                            # Find the process name (last element)
+                            name = parts[-1]
+                            
+                            # Parse engine utilization from the bars
+                            # The bars are between the memory and name
+                            # We'll estimate utilization based on bar characters
+                            bar_section = ' '.join(parts[3:-1])
+                            
+                            # Simple heuristic: count █ characters for each engine section
+                            engines = {}
+                            engine_names = ['Render/3D', 'Blitter', 'Video', 'VideoEnhance']
+                            bar_sections = bar_section.split('||')
+                            
+                            for idx, engine_name in enumerate(engine_names):
+                                if idx < len(bar_sections):
+                                    bar_str = bar_sections[idx]
+                                    # Count filled bar characters
+                                    filled_chars = bar_str.count('█') + bar_str.count('▎') * 0.25
+                                    # Estimate percentage (assuming ~50 chars = 100%)
+                                    utilization = min(100.0, (filled_chars / 50.0) * 100.0)
+                                    if utilization > 0:
+                                        engines[engine_name] = f"{utilization:.1f}%"
+                            
+                            if engines:  # Only add if there's some GPU activity
+                                process_info = {
+                                    'name': name,
+                                    'pid': pid,
+                                    'memory': {
+                                        'total': mem_total,
+                                        'shared': 0,  # Not available in text output
+                                        'resident': mem_resident
+                                    },
+                                    'engines': engines
+                                }
+                                processes.append(process_info)
+                                print(f"[v0] Found process from text: {name} (PID: {pid}) with {len(engines)} active engines", flush=True)
+                        except (ValueError, IndexError) as e:
+                            print(f"[v0] Error parsing process line: {e}", flush=True)
+                            continue
+                break
+        
+        if not header_found:
+            print(f"[v0] No process table found in intel_gpu_top output", flush=True)
+        
+        return processes
+    except Exception as e:
+        print(f"[v0] Error getting processes from intel_gpu_top text: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return []
+
 def extract_vmid_from_interface(interface_name):
     """Extract VMID from virtual interface name (veth100i0 -> 100, tap105i0 -> 105)"""
     try:
@@ -1606,18 +1708,26 @@ def get_detailed_gpu_info(gpu):
             print(f"[v0] intel_gpu_top found, executing...", flush=True)
             try:
                 import os
-                print(f"[v0] Current user: {os.getenv('USER', 'unknown')}", flush=True)
+                print(f"[v0] Current user: {os.getenv('USER', 'unknown')}, UID: {os.getuid()}, GID: {os.getgid()}", flush=True)
                 print(f"[v0] Current working directory: {os.getcwd()}", flush=True)
-                
-                cmd = 'intel_gpu_top -J'
-                print(f"[v0] Executing command: {cmd}", flush=True)
                 
                 drm_devices = ['/dev/dri/card0', '/dev/dri/renderD128']
                 for drm_dev in drm_devices:
                     if os.path.exists(drm_dev):
+                        stat_info = os.stat(drm_dev)
                         readable = os.access(drm_dev, os.R_OK)
                         writable = os.access(drm_dev, os.W_OK)
-                        print(f"[v0] {drm_dev}: readable={readable}, writable={writable}", flush=True)
+                        print(f"[v0] {drm_dev}: mode={oct(stat_info.st_mode)}, uid={stat_info.st_uid}, gid={stat_info.st_gid}, readable={readable}, writable={writable}", flush=True)
+                
+                intel_gpu_top_path = shutil.which('intel_gpu_top')
+                print(f"[v0] intel_gpu_top path: {intel_gpu_top_path}", flush=True)
+                
+                # Prepare environment with all necessary variables
+                env = os.environ.copy()
+                env['TERM'] = 'xterm'  # Ensure terminal type is set
+                
+                cmd = f'{intel_gpu_top_path} -J'
+                print(f"[v0] Executing command: {cmd}", flush=True)
                 
                 process = subprocess.Popen(
                     cmd,
@@ -1625,17 +1735,18 @@ def get_detailed_gpu_info(gpu):
                     stderr=subprocess.PIPE,
                     text=True,
                     bufsize=1,
-                    shell=True,  # Use shell=True for proper context
-                    env=os.environ.copy()  # Copy all environment variables
+                    shell=True,
+                    env=env,
+                    cwd='/'  # Ejecutar desde root en lugar de dentro del AppImage
                 )
                 
                 print(f"[v0] Process started with PID: {process.pid}", flush=True)
                 
-                print(f"[v0] Waiting 4 seconds for intel_gpu_top to initialize...", flush=True)
-                time.sleep(4)
+                print(f"[v0] Waiting 5 seconds for intel_gpu_top to initialize and detect processes...", flush=True)
+                time.sleep(5)
                 
                 start_time = time.time()
-                timeout = 10
+                timeout = 6  # Aumentar timeout a 6 segundos
                 json_objects = []
                 buffer = ""
                 brace_count = 0
@@ -1654,11 +1765,11 @@ def get_detailed_gpu_info(gpu):
                         if process.stdout in ready:
                             line = process.stdout.readline()
                             if not line:
-                                time.sleep(0.01) # Small sleep if line is empty but stdout is still open
+                                time.sleep(0.01)
                                 continue
                         else:
                             time.sleep(0.01)
-                            continue # No data available yet
+                            continue
 
                         for char in line:
                             if char == '{':
@@ -1688,8 +1799,8 @@ def get_detailed_gpu_info(gpu):
                                         else:
                                             print(f"[v0] No 'clients' key in this JSON object", flush=True)
                                         
-                                        if len(json_objects) >= 30:
-                                            print(f"[v0] Collected 30 JSON objects, stopping...", flush=True)
+                                        if len(json_objects) >= 15:
+                                            print(f"[v0] Collected 15 JSON objects, stopping...", flush=True)
                                             break
                                     except json.JSONDecodeError:
                                         pass
@@ -1701,35 +1812,21 @@ def get_detailed_gpu_info(gpu):
                         print(f"[v0] Error reading line: {e}", flush=True)
                         break
                 
-                # Terminate process and get remaining output/errors
+                # Terminate process
                 try:
                     process.terminate()
-                    # Use communicate with a short timeout to ensure termination and get any remaining stderr
                     _, stderr_output = process.communicate(timeout=1) 
+                    if stderr_output:
+                        print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
                 except subprocess.TimeoutExpired:
-                    process.kill() # Force kill if terminate doesn't work
-                    stderr_output = b"" # Assume no stderr if killed
-                    print("[v0] Process killed after terminate timeout.")
+                    process.kill()
+                    print("[v0] Process killed after terminate timeout.", flush=True)
                 except Exception as e:
-                    print(f"[v0] Error during process termination/communication: {e}")
-                    stderr_output = b"" # Assume no stderr on error
+                    print(f"[v0] Error during process termination: {e}", flush=True)
 
                 print(f"[v0] Collected {len(json_objects)} JSON objects total", flush=True)
                 
-                if not any('clients' in obj for obj in json_objects):
-                    try:
-                        # Use communicate() with timeout instead of read() to avoid blocking
-                        _, stderr_output = process.communicate(timeout=0.5)
-                        if stderr_output:
-                            print(f"[v0] intel_gpu_top stderr (no clients found): {stderr_output}", flush=True)
-                    except subprocess.TimeoutExpired:
-                        process.kill()
-                        print(f"[v0] Process killed after timeout", flush=True)
-                    except Exception as e:
-                        print(f"[v0] Error reading stderr: {e}", flush=True)
-                
                 best_json = None
-                best_score = -1
                 
                 # First priority: Find JSON with populated clients
                 for json_obj in reversed(json_objects):
@@ -1740,28 +1837,11 @@ def get_detailed_gpu_info(gpu):
                             best_json = json_obj
                             break
                 
-                # Second priority: Find JSON with highest engine utilization
-                if not best_json and json_objects:
-                    print(f"[v0] No JSON with clients found, selecting JSON with highest activity...", flush=True)
-                    for json_obj in json_objects:
-                        score = 0
-                        if 'engines' in json_obj:
-                            engines = json_obj['engines']
-                            for engine_name, engine_data in engines.items():
-                                busy_value = float(engine_data.get('busy', 0))
-                                score += busy_value
-                        
-                        if score > best_score:
-                            best_score = score
-                            best_json = json_obj
-                    
-                    print(f"[v0] Selected JSON with activity score: {best_score:.2f}", flush=True)
-                
-                # Fallback: Use most recent JSON
+                # Second priority: Use most recent JSON
                 if not best_json and json_objects:
                     best_json = json_objects[-1]
-                    print(f"[v0] Using most recent JSON object as fallback", flush=True)
-                
+                    print(f"[v0] No clients found, using most recent JSON for current GPU state", flush=True)
+
                 if best_json:
                     print(f"[v0] Parsing selected JSON object...", flush=True)
                     data_retrieved = False
@@ -1865,6 +1945,13 @@ def get_detailed_gpu_info(gpu):
                         print(f"[v0] - Utilization: {detailed_info['utilization_gpu']}", flush=True)
                         print(f"[v0] - Engines: R={detailed_info['engine_render']}, B={detailed_info['engine_blitter']}, V={detailed_info['engine_video']}, VE={detailed_info['engine_video_enhance']}", flush=True)
                         print(f"[v0] - Processes: {len(detailed_info['processes'])}", flush=True)
+                        
+                        if len(detailed_info['processes']) == 0:
+                            print(f"[v0] No processes found in JSON, trying text output...", flush=True)
+                            text_processes = get_intel_gpu_processes_from_text()
+                            if text_processes:
+                                detailed_info['processes'] = text_processes
+                                print(f"[v0] Found {len(text_processes)} processes from text output", flush=True)
                     else:
                         print(f"[v0] WARNING: No data retrieved from intel_gpu_top", flush=True)
                 else:
@@ -1887,7 +1974,15 @@ def get_detailed_gpu_info(gpu):
                 traceback.print_exc()
         else:
             print(f"[v0] intel_gpu_top not found in PATH", flush=True)
-    
+            # Fallback to text parsing if JSON parsing fails or -J is not available
+            print("[v0] Trying intel_gpu_top text output for process parsing...", flush=True)
+            detailed_info['processes'] = get_intel_gpu_processes_from_text()
+            if detailed_info['processes']:
+                detailed_info['has_monitoring_tool'] = True
+                print(f"[v0] Intel GPU process monitoring (text mode) successful.", flush=True)
+            else:
+                print(f"[v0] Intel GPU process monitoring (text mode) failed.", flush=True)
+
     # NVIDIA GPU monitoring with nvidia-smi
     elif 'nvidia' in vendor:
         print(f"[v0] NVIDIA GPU detected, checking for nvidia-smi...", flush=True)
@@ -2614,7 +2709,9 @@ def get_hardware_info():
                                 if rpm_match:
                                     fan_speed = int(float(rpm_match.group(1)))
                                     
-                                    identified_name = identify_fan(sensor_name, current_adapter)
+                                    # Placeholder for identify_fan - needs implementation
+                                    # identified_name = identify_fan(sensor_name, current_adapter) 
+                                    identified_name = sensor_name # Use original name for now
                                     
                                     fans.append({
                                         'name': identified_name,
