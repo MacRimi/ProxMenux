@@ -1625,7 +1625,7 @@ def get_detailed_gpu_info(gpu):
 
             output_lines = []
             start_time = time.time()
-            timeout_seconds = 3.0
+            timeout_seconds = 5.0
             json_objects_found = 0
             valid_data_found = False
             best_json_data = None  # Store the best JSON object found (one with clients if available)
@@ -1643,8 +1643,8 @@ def get_detailed_gpu_info(gpu):
                             output_lines.append(line)
                             output = ''.join(output_lines)
                             
-                            if len(output_lines) <= 10:
-                                print(f"[v0] Received line {len(output_lines)}: {line.strip()[:100]}")
+                            if len(output_lines) <= 20:
+                                print(f"[v0] Received line {len(output_lines)}: {line.strip()[:150]}")
                             
                             # Find all complete JSON objects
                             search_start = 0
@@ -1693,16 +1693,19 @@ def get_detailed_gpu_info(gpu):
                                         
                                         has_clients = 'clients' in json_data and json_data['clients']
                                         if has_clients:
-                                            print(f"[v0] JSON object #{json_objects_found} has clients data with {len(json_data['clients'])} client(s)")
+                                            client_names = [client.get('name', 'Unknown') for client in json_data['clients'].values()]
+                                            print(f"[v0] ✓ JSON object #{json_objects_found} has clients data with {len(json_data['clients'])} client(s): {client_names}")
                                             best_json_data = json_data
                                             valid_data_found = True
                                             break
                                         elif best_json_data is None:
                                             best_json_data = json_data
-                                            print(f"[v0] JSON object #{json_objects_found} has no clients data, storing as fallback")
+                                            print(f"[v0] ✗ JSON object #{json_objects_found} has no clients data, storing as fallback")
+                                        else:
+                                            print(f"[v0] ✗ JSON object #{json_objects_found} has no clients data")
                                         
-                                        if json_objects_found >= 3:
-                                            print(f"[v0] Read 3 JSON objects without clients, using fallback")
+                                        if json_objects_found >= 5:
+                                            print(f"[v0] Read 5 JSON objects without clients, using fallback")
                                             valid_data_found = True
                                             break
                                         
@@ -1724,8 +1727,13 @@ def get_detailed_gpu_info(gpu):
             
             if best_json_data:
                 json_data = best_json_data
+                has_clients = 'clients' in json_data and json_data['clients']
                 print(f"[v0] Using JSON data with keys: {list(json_data.keys())}")
-                print(f"[v0] Has clients: {'clients' in json_data and json_data['clients']}")
+                print(f"[v0] Has clients: {has_clients}")
+                if has_clients:
+                    print(f"[v0] Number of clients: {len(json_data['clients'])}")
+                else:
+                    print(f"[v0] WARNING: No clients found in any of the {json_objects_found} JSON objects read")
 
                 # Parse frequency data
                 if 'frequency' in json_data:
@@ -2851,7 +2859,7 @@ def api_hardware():
             'motherboard': hardware_info.get('motherboard', {}),
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
-            'storage_devices': hardware_info.get('storage_devices', []),
+            'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_data
             'pci_devices': hardware_info.get('pci_devices', []),
             'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
             'fans': all_fans, # Return combined fans (sensors + IPMI)
