@@ -566,7 +566,7 @@ export default function Hardware() {
                                     ? realtimeGPUData.engine_render
                                     : Number.parseFloat(realtimeGPUData.engine_render) || 0
                                 }
-                                className="h-2"
+                                className="h-2 [&>div]:bg-blue-500"
                               />
                             </div>
                           )}
@@ -586,7 +586,7 @@ export default function Hardware() {
                                     ? realtimeGPUData.engine_video
                                     : Number.parseFloat(realtimeGPUData.engine_video) || 0
                                 }
-                                className="h-2"
+                                className="h-2 [&>div]:bg-blue-500"
                               />
                             </div>
                           )}
@@ -606,7 +606,7 @@ export default function Hardware() {
                                     ? realtimeGPUData.engine_blitter
                                     : Number.parseFloat(realtimeGPUData.engine_blitter) || 0
                                 }
-                                className="h-2"
+                                className="h-2 [&>div]:bg-blue-500"
                               />
                             </div>
                           )}
@@ -626,7 +626,7 @@ export default function Hardware() {
                                     ? realtimeGPUData.engine_video_enhance
                                     : Number.parseFloat(realtimeGPUData.engine_video_enhance) || 0
                                 }
-                                className="h-2"
+                                className="h-2 [&>div]:bg-blue-500"
                               />
                             </div>
                           )}
@@ -673,7 +673,7 @@ export default function Hardware() {
                                           <span className="text-xs text-muted-foreground">{engineName}</span>
                                           <span className="text-xs font-medium">{utilizationNum.toFixed(1)}%</span>
                                         </div>
-                                        <Progress value={utilizationNum} className="h-1.5" />
+                                        <Progress value={utilizationNum} className="h-1.5 [&>div]:bg-blue-500" />
                                       </div>
                                     )
                                   })}
@@ -716,7 +716,10 @@ export default function Hardware() {
                                 <span className="text-sm text-muted-foreground">Memory Utilization</span>
                                 <span className="text-sm font-medium">{realtimeGPUData.utilization_memory}%</span>
                               </div>
-                              <Progress value={realtimeGPUData.utilization_memory} className="h-2" />
+                              <Progress
+                                value={realtimeGPUData.utilization_memory}
+                                className="h-2 [&>div]:bg-blue-500"
+                              />
                             </div>
                           )}
                         </div>
