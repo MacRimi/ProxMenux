@@ -1635,7 +1635,7 @@ def get_detailed_gpu_info(gpu):
                 time.sleep(4)
                 
                 start_time = time.time()
-                timeout = 6
+                timeout = 10
                 json_objects = []
                 buffer = ""
                 brace_count = 0
@@ -1688,8 +1688,8 @@ def get_detailed_gpu_info(gpu):
                                         else:
                                             print(f"[v0] No 'clients' key in this JSON object", flush=True)
                                         
-                                        if len(json_objects) >= 10:
-                                            print(f"[v0] Collected 10 JSON objects, stopping...", flush=True)
+                                        if len(json_objects) >= 30:
+                                            print(f"[v0] Collected 30 JSON objects, stopping...", flush=True)
                                             break
                                     except json.JSONDecodeError:
                                         pass
@@ -1716,7 +1716,6 @@ def get_detailed_gpu_info(gpu):
 
                 print(f"[v0] Collected {len(json_objects)} JSON objects total", flush=True)
                 
-                # CHANGE: Evitar bloqueo al leer stderr - usar communicate() con timeout
                 if not any('clients' in obj for obj in json_objects):
                     try:
                         # Use communicate() with timeout instead of read() to avoid blocking
@@ -1730,21 +1729,38 @@ def get_detailed_gpu_info(gpu):
                         print(f"[v0] Error reading stderr: {e}", flush=True)
                 
                 best_json = None
+                best_score = -1
+                
+                # First priority: Find JSON with populated clients
                 for json_obj in reversed(json_objects):
-                    json_keys = list(json_obj.keys())
-                    print(f"[v0] Checking JSON object with keys: {json_keys}", flush=True)
                     if 'clients' in json_obj:
                         clients_data = json_obj['clients']
                         if clients_data and len(clients_data) > 0:
                             print(f"[v0] Found JSON with {len(clients_data)} client(s)!", flush=True)
                             best_json = json_obj
                             break
-                        else:
-                            print(f"[v0] Found 'clients' key but it's empty", flush=True)
                 
+                # Second priority: Find JSON with highest engine utilization
+                if not best_json and json_objects:
+                    print(f"[v0] No JSON with clients found, selecting JSON with highest activity...", flush=True)
+                    for json_obj in json_objects:
+                        score = 0
+                        if 'engines' in json_obj:
+                            engines = json_obj['engines']
+                            for engine_name, engine_data in engines.items():
+                                busy_value = float(engine_data.get('busy', 0))
+                                score += busy_value
+                        
+                        if score > best_score:
+                            best_score = score
+                            best_json = json_obj
+                    
+                    print(f"[v0] Selected JSON with activity score: {best_score:.2f}", flush=True)
+                
+                # Fallback: Use most recent JSON
                 if not best_json and json_objects:
                     best_json = json_objects[-1]
-                    print(f"[v0] No JSON with populated clients found, using most recent JSON object as fallback", flush=True)
+                    print(f"[v0] Using most recent JSON object as fallback", flush=True)
                 
                 if best_json:
                     print(f"[v0] Parsing selected JSON object...", flush=True)
