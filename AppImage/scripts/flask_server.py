@@ -1626,27 +1626,21 @@ def get_detailed_gpu_info(gpu):
                 print(f"[v0] Current user: {os.getenv('USER', 'unknown')}", flush=True)
                 print(f"[v0] Current working directory: {os.getcwd()}", flush=True)
                 
-                cmd = 'intel_gpu_top -J'
-                print(f"[v0] Executing command: {cmd}", flush=True)
+                cmd = ['intel_gpu_top', '-J']
+                print(f"[v0] Executing command: {' '.join(cmd)}", flush=True)
                 
                 process = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                    bufsize=1,
-                    shell=True,  # Execute in shell context for proper DRM access
-                    env=os.environ.copy()  # Copy all environment variables
+                    bufsize=1
                 )
                 
                 print(f"[v0] Process started with PID: {process.pid}", flush=True)
                 
-                print(f"[v0] Waiting 2 seconds for intel_gpu_top to initialize...", flush=True)
-                time.sleep(2)
-                print(f"[v0] Starting to read JSON objects...", flush=True)
-                
                 start_time = time.time()
-                timeout = 8  # Increased timeout from 5 to 8 seconds
+                timeout = 5  # 5 seconds timeout
                 json_objects = []
                 buffer = ""
                 brace_count = 0
@@ -1693,8 +1687,9 @@ def get_detailed_gpu_info(gpu):
                                         else:
                                             print(f"[v0] No 'clients' key in this JSON object", flush=True)
                                         
-                                        if len(json_objects) >= 10:
-                                            print(f"[v0] Collected 10 JSON objects, stopping...", flush=True)
+                                        # Stop after finding 5 JSON objects
+                                        if len(json_objects) >= 5:
+                                            print(f"[v0] Collected 5 JSON objects, stopping...", flush=True)
                                             break
                                     except json.JSONDecodeError:
                                         pass
@@ -1745,7 +1740,7 @@ def get_detailed_gpu_info(gpu):
                         print(f"[v0] Parsing clients section...", flush=True)
                         clients = best_json['clients']
                         processes = []
-
+                        
                         for client_id, client_data in clients.items():
                             process_info = {
                                 'name': client_data.get('name', 'Unknown'),
@@ -2145,6 +2140,74 @@ def get_gpu_info():
         print(f"[v0] Error enriching GPU data from sensors: {e}")
     
     return gpus
+
+def get_disk_hardware_info(disk_name):
+    """Get detailed hardware information for a disk"""
+    disk_info = {}
+    
+    try:
+        # Get disk type (HDD, SSD, NVMe)
+        result = subprocess.run(['lsblk', '-d', '-n', '-o', 'NAME,ROTA,TYPE', f'/dev/{disk_name}'], 
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            parts = result.stdout.strip().split()
+            if len(parts) >= 2:
+                rota = parts[1]
+                disk_info['type'] = 'HDD' if rota == '1' else 'SSD'
+                if disk_name.startswith('nvme'):
+                    disk_info['type'] = 'NVMe SSD'
+        
+        # Get driver/kernel module
+        try:
+            # For NVMe
+            if disk_name.startswith('nvme'):
+                disk_info['driver'] = 'nvme'
+                disk_info['interface'] = 'PCIe/NVMe'
+            # For SATA/SAS
+            else:
+                result = subprocess.run(['udevadm', 'info', '--query=property', f'/dev/{disk_name}'], 
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    for line in result.stdout.split('\n'):
+                        if 'ID_BUS=' in line:
+                            bus = line.split('=')[1].strip()
+                            disk_info['interface'] = bus.upper()
+                        if 'ID_MODEL=' in line:
+                            model = line.split('=')[1].strip()
+                            disk_info['model'] = model
+                        if 'ID_SERIAL_SHORT=' in line:
+                            serial = line.split('=')[1].strip()
+                            disk_info['serial'] = serial
+        except Exception as e:
+            print(f"[v0] Error getting disk driver info: {e}")
+            
+        # Get SMART data
+        try:
+            result = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    if 'Model Family:' in line:
+                        disk_info['family'] = line.split(':', 1)[1].strip()
+                    elif 'Device Model:' in line or 'Model Number:' in line:
+                        disk_info['model'] = line.split(':', 1)[1].strip()
+                    elif 'Serial Number:' in line:
+                        disk_info['serial'] = line.split(':', 1)[1].strip()
+                    elif 'Firmware Version:' in line:
+                        disk_info['firmware'] = line.split(':', 1)[1].strip()
+                    elif 'Rotation Rate:' in line:
+                        disk_info['rotation_rate'] = line.split(':', 1)[1].strip()
+                    elif 'Form Factor:' in line:
+                        disk_info['form_factor'] = line.split(':', 1)[1].strip()
+                    elif 'SATA Version is:' in line:
+                        disk_info['sata_version'] = line.split(':', 1)[1].strip()
+        except Exception as e:
+            print(f"[v0] Error getting SMART info: {e}")
+            
+    except Exception as e:
+        print(f"[v0] Error getting disk hardware info: {e}")
+    
+    return disk_info
 
 def get_hardware_info():
     """Get comprehensive hardware information"""
@@ -2731,7 +2794,7 @@ def api_hardware():
             'motherboard': hardware_info.get('motherboard', {}),
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
-            'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_info
+            'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_data
             'pci_devices': hardware_info.get('pci_devices', []),
             'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
             'fans': all_fans, # Return combined fans (sensors + IPMI)
