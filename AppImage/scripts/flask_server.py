@@ -1744,6 +1744,7 @@ def get_detailed_gpu_info(gpu):
                                         if 'engines' in json_data:
                                             engines_data = json_data['engines']
                                             print(f"[v0] Parsing engines data: {list(engines_data.keys())}")
+                                            
                                             engine_map = {
                                                 'Render/3D': 'engine_render',
                                                 'Blitter': 'engine_blitter',
@@ -1751,55 +1752,145 @@ def get_detailed_gpu_info(gpu):
                                                 'VideoEnhance': 'engine_video_enhance'
                                             }
                                             
-                                            engine_values = []
-                                            for engine_name, key in engine_map.items():
-                                                if engine_name in engines_data:
-                                                    busy_value = engines_data[engine_name].get('busy', 0)
-                                                    detailed_info[key] = float(busy_value)
-                                                    engine_values.append(busy_value)
-                                                    print(f"[v0] Engine {engine_name}: {busy_value}%")
+                                            engine_totals = {
+                                                'engine_render': 0.0,
+                                                'engine_blitter': 0.0,
+                                                'engine_video': 0.0,
+                                                'engine_video_enhance': 0.0
+                                            }
                                             
-                                            # Calculate overall GPU utilization
-                                            if engine_values:
-                                                avg_utilization = sum(engine_values) / len(engine_values)
-                                            else:
-                                                avg_utilization = 0.0
-                                            
-                                            detailed_info['utilization_gpu'] = f"{avg_utilization:.1f}%"
-                                            print(f"[v0] Calculated utilization_gpu: {detailed_info['utilization_gpu']}")
-                                            data_retrieved = True
-                                        
-                                        if 'utilization_gpu' not in detailed_info:
-                                            print(f"[v0] No engines data found in JSON, setting utilization to 0")
-                                            detailed_info['utilization_gpu'] = "0.0%"
-                                            data_retrieved = True
+                                            for engine_key in engines_data.keys():
+                                                engine_base = engine_key.rsplit('/', 1)[0] if '/' in engine_key and engine_key[-1].isdigit() else engine_key
+                                                
+                                                if engine_base in engine_map:
+                                                    busy_value = engines_data[engine_key].get('busy', 0)
+                                                    key = engine_map[engine_base]
+                                                    engine_totals[key] = busy_value
+                                                    print(f"[v0] Global engine {engine_key}: {busy_value}%")
 
-                                        # Parse client processes
                                         if 'clients' in json_data:
                                             clients_data = json_data['clients']
                                             processes = []
+                                            print(f"[v0] Found {len(clients_data)} clients in intel_gpu_top output")
+                                            
+                                            # Initialize per-engine totals from clients
+                                            client_engine_totals = {
+                                                'engine_render': 0.0,
+                                                'engine_blitter': 0.0,
+                                                'engine_video': 0.0,
+                                                'engine_video_enhance': 0.0
+                                            }
+                                            
                                             for client_id, client_info in clients_data.items():
                                                 process_info = {
                                                     'name': client_info.get('name', 'Unknown'),
-                                                    'pid': client_info.get('pid', 'N/A')
+                                                    'pid': str(client_info.get('pid', 'N/A'))
                                                 }
                                                 
-                                                if 'memory' in client_info and 'system' in client_info['memory']:
-                                                    mem_info = client_info['memory']['system']
-                                                    if 'resident' in mem_info:
-                                                        mem_mb = int(mem_info['resident']) / (1024 * 1024)
+                                                # Extract memory usage
+                                                if 'memory' in client_info:
+                                                    if 'system' in client_info['memory'] and 'resident' in client_info['memory']['system']:
+                                                        mem_bytes = int(client_info['memory']['system']['resident'])
+                                                        mem_mb = mem_bytes / (1024 * 1024)
+                                                        process_info['memory_used'] = f"{mem_mb:.0f} MB"
+                                                    elif 'resident' in client_info['memory']:
+                                                        mem_bytes = int(client_info['memory']['resident'])
+                                                        mem_mb = mem_bytes / (1024 * 1024)
                                                         process_info['memory_used'] = f"{mem_mb:.0f} MB"
                                                 
+                                                # Extract GPU utilization from engine classes
+                                                process_engines = {}
                                                 if 'engine-classes' in client_info:
                                                     engine_classes = client_info['engine-classes']
-                                                    if 'Render/3D' in engine_classes:
-                                                        render_busy = engine_classes['Render/3D'].get('busy', '0')
-                                                        process_info['gpu_utilization'] = f"{float(render_busy):.1f}%"
+                                                    
+                                                    engine_map_client = {
+                                                        'Render/3D': 'engine_render',
+                                                        'Blitter': 'engine_blitter',
+                                                        'Video': 'engine_video',
+                                                        'VideoEnhance': 'engine_video_enhance'
+                                                    }
+                                                    
+                                                    max_utilization = 0.0
+                                                    for engine_name, engine_key in engine_map_client.items():
+                                                        if engine_name in engine_classes:
+                                                            busy = float(engine_classes[engine_name].get('busy', 0))
+                                                            process_engines[engine_name] = busy
+                                                            client_engine_totals[engine_key] = max(client_engine_totals[engine_key], busy)
+                                                            max_utilization = max(max_utilization, busy)
+                                                    
+                                                    if max_utilization > 0:
+                                                        process_info['gpu_utilization'] = f"{max_utilization:.1f}%"
+                                                        print(f"[v0] Process {process_info['name']} (PID: {process_info['pid']}): {max_utilization:.1f}% GPU, Engines: {process_engines}")
                                                 
                                                 processes.append(process_info)
                                             
+                                            for key in engine_totals:
+                                                if client_engine_totals[key] > engine_totals[key]:
+                                                    engine_totals[key] = client_engine_totals[key]
+                                            
+                                            detailed_info['processes'] = processes
+                                            data_retrieved = True
+                                        
+                                        if 'engines' in json_data or 'clients' in json_data:
+                                            detailed_info['engine_render'] = f"{engine_totals['engine_render']:.1f}%"
+                                            detailed_info['engine_blitter'] = f"{engine_totals['engine_blitter']:.1f}%"
+                                            detailed_info['engine_video'] = f"{engine_totals['engine_video']:.1f}%"
+                                            detailed_info['engine_video_enhance'] = f"{engine_totals['engine_video_enhance']:.1f}%"
+                                            
+                                            # Calculate overall GPU utilization as max of all engines
+                                            max_engine = max(engine_totals.values())
+                                            detailed_info['utilization_gpu'] = f"{max_engine:.1f}%"
+                                            print(f"[v0] Final GPU utilization: {detailed_info['utilization_gpu']}, Engines: {detailed_info['engine_render']}, {detailed_info['engine_blitter']}, {detailed_info['engine_video']}, {detailed_info['engine_video_enhance']}")
+                                            data_retrieved = True
+                                        
+                                        if 'utilization_gpu' not in detailed_info:
+                                            print(f"[v0] No engines or clients data found, setting utilization to 0")
+                                            detailed_info['utilization_gpu'] = "0.0%"
+                                            detailed_info['engine_render'] = "0.0%"
+                                            detailed_info['engine_blitter'] = "0.0%"
+                                            detailed_info['engine_video'] = "0.0%"
+                                            detailed_info['engine_video_enhance'] = "0.0%"
+                                            data_retrieved = True
+
+                                        if 'clients' in json_data:
+                                            clients_data = json_data['clients']
+                                            processes = []
+                                            print(f"[v0] Found {len(clients_data)} clients in intel_gpu_top output")
+                                            
+                                            for client_id, client_info in clients_data.items():
+                                                process_info = {
+                                                    'name': client_info.get('name', 'Unknown'),
+                                                    'pid': str(client_info.get('pid', 'N/A'))
+                                                }
+                                                
+                                                # Extract memory usage
+                                                if 'memory' in client_info:
+                                                    if 'resident' in client_info['memory']:
+                                                        mem_bytes = client_info['memory']['resident']
+                                                        mem_mb = int(mem_bytes) / (1024 * 1024)
+                                                        process_info['memory_used'] = f"{mem_mb:.0f} MB"
+                                                    elif 'system' in client_info['memory'] and 'resident' in client_info['memory']['system']:
+                                                        mem_bytes = client_info['memory']['system']['resident']
+                                                        mem_mb = int(mem_bytes) / (1024 * 1024)
+                                                        process_info['memory_used'] = f"{mem_mb:.0f} MB"
+                                                
+                                                # Extract GPU utilization from engine classes
+                                                if 'engine-classes' in client_info:
+                                                    engine_classes = client_info['engine-classes']
+                                                    # Try to get Render/3D utilization as primary indicator
+                                                    for engine_name in ['Render/3D', 'Video', 'VideoEnhance', 'Blitter']:
+                                                        if engine_name in engine_classes:
+                                                            busy = engine_classes[engine_name].get('busy', 0)
+                                                            if busy > 0:
+                                                                process_info['gpu_utilization'] = f"{float(busy):.1f}%"
+                                                                break
+                                                
+                                                processes.append(process_info)
+                                                print(f"[v0] Process: {process_info['name']} (PID: {process_info['pid']})")
+                                            
                                             if processes:
                                                 detailed_info['processes'] = processes
+                                                print(f"[v0] Added {len(processes)} processes to GPU data")
                                                 data_retrieved = True
                                         
                                         print(f"[v0] Intel GPU data retrieved successfully")
@@ -2804,7 +2895,7 @@ def api_hardware():
             'motherboard': hardware_info.get('motherboard', {}),
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
-            'storage_devices': hardware_info.get('storage_devices', []),
+            'storage_devices': hardware_info.get('storage_devices', []), # Corrected to use hardware_data
             'pci_devices': hardware_info.get('pci_devices', []),
             'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
             'fans': all_fans, # Return combined fans (sensors + IPMI)
