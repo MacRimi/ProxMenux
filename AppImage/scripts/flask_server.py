@@ -1589,21 +1589,6 @@ def get_detailed_gpu_info(gpu):
             else:
                 print(f"[v0] intel_gpu_top found for Intel GPU")
             
-            slot = gpu.get('slot', '')
-            if slot:
-                sys_link = f"/sys/bus/pci/devices/0000:{slot}"
-                if os.path.exists(sys_link):
-                    sys_real = os.path.realpath(sys_link)
-                    print(f"[v0] Resolved GPU sysfs path: {sys_link} -> {sys_real}")
-                else:
-                    print(f"[v0] GPU sysfs path not found: {sys_link}")
-                    detailed_info['has_monitoring_tool'] = False
-                    return detailed_info
-            else:
-                print(f"[v0] GPU slot not provided")
-                detailed_info['has_monitoring_tool'] = False
-                return detailed_info
-            
             gpu_device = '/dev/dri/card0'
             if not os.path.exists(gpu_device):
                 print(f"[v0] GPU device {gpu_device} not found - marking tool as unavailable")
@@ -1625,7 +1610,7 @@ def get_detailed_gpu_info(gpu):
         data_retrieved = False
         process = None
         try:
-            cmd = ['intel_gpu_top', '-J', '-s', '1000', '-o', '-', '-d', f'sys:{sys_real}']
+            cmd = ['intel_gpu_top', '-J']
             print(f"[v0] Starting intel_gpu_top with command: {' '.join(cmd)}")
             
             process = subprocess.Popen(
@@ -1640,7 +1625,7 @@ def get_detailed_gpu_info(gpu):
 
             output_lines = []
             start_time = time.time()
-            timeout_seconds = 10.0
+            timeout_seconds = 3.0
             json_objects_found = 0
             valid_data_found = False
             best_json_data = None  # Store the best JSON object found (one with clients if available)
@@ -1716,6 +1701,11 @@ def get_detailed_gpu_info(gpu):
                                             best_json_data = json_data
                                             print(f"[v0] JSON object #{json_objects_found} has no clients data, storing as fallback")
                                         
+                                        if json_objects_found >= 3:
+                                            print(f"[v0] Read 3 JSON objects without clients, using fallback")
+                                            valid_data_found = True
+                                            break
+                                        
                                     except json.JSONDecodeError as e:
                                         print(f"[v0] Failed to parse JSON object #{json_objects_found}: {e}")
                                     
@@ -1769,8 +1759,14 @@ def get_detailed_gpu_info(gpu):
                     detailed_info['irq_rate'] = int(irq_count)
                     data_retrieved = True
                 
-                # Parse engines and calculate utilization
                 engine_totals = {
+                    'engine_render': 0.0,
+                    'engine_blitter': 0.0,
+                    'engine_video': 0.0,
+                    'engine_video_enhance': 0.0
+                }
+                
+                client_engine_totals = {
                     'engine_render': 0.0,
                     'engine_blitter': 0.0,
                     'engine_video': 0.0,
@@ -1801,14 +1797,6 @@ def get_detailed_gpu_info(gpu):
                     clients_data = json_data['clients']
                     processes = []
                     print(f"[v0] Found {len(clients_data)} clients in intel_gpu_top output")
-                    
-                    # Initialize per-engine totals from clients
-                    client_engine_totals = {
-                        'engine_render': 0.0,
-                        'engine_blitter': 0.0,
-                        'engine_video': 0.0,
-                        'engine_video_enhance': 0.0
-                    }
                     
                     for client_id, client_info in clients_data.items():
                         process_info = {
@@ -2111,7 +2099,7 @@ def get_network_hardware_info(pci_slot):
     return net_info
 
 def get_gpu_info():
-    """Get GPU information from lspci and enrich with temperature/fan data from sensors"""
+    """Detect and return information about GPUs in the system"""
     gpus = []
     
     try:
@@ -2154,8 +2142,8 @@ def get_gpu_info():
                             gpu['pci_driver'] = pci_info.get('driver', '')
                             gpu['pci_kernel_module'] = pci_info.get('kernel_module', '')
                         
-                        detailed_info = get_detailed_gpu_info(gpu)
-                        gpu.update(detailed_info)
+                        # detailed_info = get_detailed_gpu_info(gpu)
+                        # gpu.update(detailed_info)
                         
                         gpus.append(gpu)
                         print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
