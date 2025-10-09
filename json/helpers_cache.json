@@ -4382,6 +4382,18 @@
     "type": "ct"
   },
   {
+    "name": "rwMarkable",
+    "slug": "rwmarkable",
+    "desc": "A simple, self-hosted app for your checklists and notes. Tired of bloated, cloud-based to-do apps? rwMarkable is a lightweight alternative for managing your personal checklists and notes. It's built with Next.js 14, is easy to deploy, and keeps all your data on your own server.",
+    "script": "ct/rwmarkable.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/rwmarkable.sh",
+    "categories": [
+      12
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "SABnzbd",
     "slug": "sabnzbd",
     "desc": "SABnzbd is a free, open-source software program for downloading binary files from Usenet newsgroups. It is designed to be easy to use, and provides a number of features to simplify the downloading process, such as automatic error detection and repair, download scheduling, and integration with other applications. SABnzbd is a binary newsreader, which means it is specifically designed for downloading binary files, such as images, music, and video, from Usenet newsgroups. With its user-friendly interface and powerful features, SABnzbd makes it easy to manage your Usenet downloads and keep your download queue organized.",
