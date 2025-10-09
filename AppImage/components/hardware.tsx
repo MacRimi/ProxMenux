@@ -22,10 +22,13 @@ import useSWR from "swr"
 import { useState, useEffect } from "react"
 import { type HardwareData, type GPU, type PCIDevice, type StorageDevice, fetcher } from "../types/hardware"
 
-const formatMemory = (memoryMB: number | string): string => {
-  const mb = typeof memoryMB === "string" ? Number.parseFloat(memoryMB) : memoryMB
+const formatMemory = (memoryKB: number | string): string => {
+  const kb = typeof memoryKB === "string" ? Number.parseFloat(memoryKB) : memoryKB
 
-  if (isNaN(mb)) return "N/A"
+  if (isNaN(kb)) return "N/A"
+
+  // Convert KB to MB
+  const mb = kb / 1024
 
   // Convert to GB if >= 1024 MB
   if (mb >= 1024) {
