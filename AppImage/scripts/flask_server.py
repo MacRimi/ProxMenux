@@ -2308,9 +2308,6 @@ def get_hardware_info():
             print(f"[v0] Error getting memory info: {e}")
         
         storage_info = get_storage_info()
-        for device in storage_info.get('disks', []):
-            hw_info = get_disk_hardware_info(device['name'])
-            device.update(hw_info)
         hardware_data['storage_devices'] = storage_info.get('disks', [])
         
         # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
