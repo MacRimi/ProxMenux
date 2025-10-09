@@ -93,6 +93,9 @@ export default function Hardware() {
 
         const data = await response.json()
         console.log("[v0] GPU realtime data received:", data)
+        console.log("[v0] has_monitoring_tool value:", data.has_monitoring_tool)
+        console.log("[v0] has_monitoring_tool type:", typeof data.has_monitoring_tool)
+        console.log("[v0] has_monitoring_tool === true:", data.has_monitoring_tool === true)
         setRealtimeGPUData(data)
         setDetailsLoading(false)
       } catch (error) {
@@ -140,6 +143,9 @@ export default function Hardware() {
 
   const hasRealtimeData = (): boolean => {
     if (!realtimeGPUData) return false
+
+    console.log("[v0] hasRealtimeData check - realtimeGPUData:", realtimeGPUData)
+    console.log("[v0] hasRealtimeData check - has_monitoring_tool:", realtimeGPUData.has_monitoring_tool)
 
     // Esto permite mostrar datos incluso cuando la GPU está inactiva (valores en 0 o null)
     return realtimeGPUData.has_monitoring_tool === true
@@ -968,7 +974,7 @@ export default function Hardware() {
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="text-sm font-medium line-clamp-2 break-words flex-1">{device.device}</span>
-                      <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs shrink-0">
+                      <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 px-2.5 py-0.5 shrink-0">
                         Ethernet
                       </Badge>
                     </div>
