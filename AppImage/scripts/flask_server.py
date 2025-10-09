@@ -1648,11 +1648,11 @@ def get_detailed_gpu_info(gpu):
                 
                 print(f"[v0] Process started with PID: {process.pid}", flush=True)
                 
-                print(f"[v0] Waiting 2 seconds for intel_gpu_top to initialize...", flush=True)
-                time.sleep(2)
+                print(f"[v0] Waiting 4 seconds for intel_gpu_top to initialize and detect processes...", flush=True)
+                time.sleep(4)
                 
                 start_time = time.time()
-                timeout = 3  # Reduced timeout to 3 seconds
+                timeout = 5
                 json_objects = []
                 buffer = ""
                 brace_count = 0
@@ -1699,8 +1699,8 @@ def get_detailed_gpu_info(gpu):
                                         else:
                                             print(f"[v0] No 'clients' key in this JSON object", flush=True)
                                         
-                                        if len(json_objects) >= 10:
-                                            print(f"[v0] Collected 10 JSON objects, stopping...", flush=True)
+                                        if len(json_objects) >= 15:
+                                            print(f"[v0] Collected 15 JSON objects, stopping...", flush=True)
                                             break
                                     except json.JSONDecodeError:
                                         pass
@@ -1712,8 +1712,14 @@ def get_detailed_gpu_info(gpu):
                         print(f"[v0] Error reading line: {e}", flush=True)
                         break
                 
-                process.terminate()
-                process.wait(timeout=1)
+                try:
+                    process.terminate()
+                    process.wait(timeout=1)
+                except:
+                    try:
+                        process.kill()
+                    except:
+                        pass
                 
                 print(f"[v0] Collected {len(json_objects)} JSON objects total", flush=True)
                 
@@ -1725,19 +1731,20 @@ def get_detailed_gpu_info(gpu):
                             stderr_output = process.stderr.read()
                             if stderr_output:
                                 print(f"[v0] intel_gpu_top stderr (no clients found): {stderr_output}", flush=True)
-                        except:
-                            pass
-                    
+                        except Exception as e:
+                            print(f"[v0] Could not read stderr: {e}", flush=True)
+
                     best_json = None
-                    for json_obj in json_objects:
+                    # Search from the end of the list backwards (most recent first)
+                    for json_obj in reversed(json_objects):
                         if 'clients' in json_obj and len(json_obj['clients']) > 0:
                             best_json = json_obj
-                            print(f"[v0] Using JSON object with {len(json_obj['clients'])} client(s)", flush=True)
+                            print(f"[v0] Using most recent JSON object with {len(json_obj['clients'])} client(s)", flush=True)
                             break
                     
                     if not best_json and json_objects:
-                        best_json = json_objects[0]
-                        print(f"[v0] No JSON with clients found, using first JSON object as fallback", flush=True)
+                        best_json = json_objects[-1]
+                        print(f"[v0] No JSON with clients found, using most recent JSON object as fallback", flush=True)
                     
                     if best_json:
                         print(f"[v0] Parsing selected JSON object...", flush=True)
@@ -2071,112 +2078,6 @@ def get_network_hardware_info(pci_slot):
         print(f"[v0] Error getting network hardware info: {e}")
     
     return net_info
-
-def get_gpu_info():
-    """Detect and return information about GPUs in the system"""
-    gpus = []
-    
-    try:
-        result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            for line in result.stdout.split('\n'):
-                # Match VGA, 3D, Display controllers
-                if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
-
-                    parts = line.split(' ', 1)
-                    if len(parts) >= 2:
-                        slot = parts[0].strip()  
-                        remaining = parts[1]
-                        
-                        if ':' in remaining:
-                            class_and_name = remaining.split(':', 1)
-                            gpu_name = class_and_name[1].strip() if len(class_and_name) > 1 else remaining.strip()
-                        else:
-                            gpu_name = remaining.strip()
-                        
-                        # Determine vendor
-                        vendor = 'Unknown'
-                        if 'NVIDIA' in gpu_name or 'nVidia' in gpu_name:
-                            vendor = 'NVIDIA'
-                        elif 'AMD' in gpu_name or 'ATI' in gpu_name or 'Radeon' in gpu_name:
-                            vendor = 'AMD'
-                        elif 'Intel' in gpu_name:
-                            vendor = 'Intel'
-                        
-                        gpu = {
-                            'slot': slot,
-                            'name': gpu_name,
-                            'vendor': vendor,
-                            'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated'
-                        }
-                        
-                        pci_info = get_pci_device_info(slot)
-                        if pci_info:
-                            gpu['pci_class'] = pci_info.get('class', '')
-                            gpu['pci_driver'] = pci_info.get('driver', '')
-                            gpu['pci_kernel_module'] = pci_info.get('kernel_module', '')
-                        
-                        # detailed_info = get_detailed_gpu_info(gpu) # Removed this call here
-                        # gpu.update(detailed_info)             # It will be called later in api_gpu_realtime
-                        
-                        gpus.append(gpu)
-                        print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
-
-    except Exception as e:
-        print(f"[v0] Error detecting GPUs from lspci: {e}")
-    
-    try:
-        result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            current_adapter = None
-            
-            for line in result.stdout.split('\n'):
-                line = line.strip()
-                if not line:
-                    continue
-                
-                # Detect adapter line
-                if line.startswith('Adapter:'):
-                    current_adapter = line.replace('Adapter:', '').strip()
-                    continue
-                
-                # Look for GPU-related sensors (nouveau, amdgpu, radeon, i915)
-                if ':' in line and not line.startswith(' '):
-                    parts = line.split(':', 1)
-                    sensor_name = parts[0].strip()
-                    value_part = parts[1].strip()
-                    
-                    # Check if this is a GPU sensor
-                    gpu_sensor_keywords = ['nouveau', 'amdgpu', 'radeon', 'i915']
-                    is_gpu_sensor = any(keyword in current_adapter.lower() if current_adapter else False for keyword in gpu_sensor_keywords)
-                    
-                    if is_gpu_sensor:
-                        # Try to match this sensor to a GPU
-                        for gpu in gpus:
-                            # Match nouveau to NVIDIA, amdgpu/radeon to AMD, i915 to Intel
-                            if (('nouveau' in current_adapter.lower() and gpu['vendor'] == 'NVIDIA') or
-                                (('amdgpu' in current_adapter.lower() or 'radeon' in current_adapter.lower()) and gpu['vendor'] == 'AMD') or
-                                ('i915' in current_adapter.lower() and gpu['vendor'] == 'Intel')):
-                                
-                                # Parse temperature (only if not already set by nvidia-smi)
-                                if 'temperature' not in gpu or gpu['temperature'] is None:
-                                    if '°C' in value_part or 'C' in value_part:
-                                        temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
-                                        if temp_match:
-                                            gpu['temperature'] = float(temp_match.group(1))
-                                            print(f"[v0] GPU {gpu['name']}: Temperature = {gpu['temperature']}°C")
-                                
-                                # Parse fan speed
-                                elif 'RPM' in value_part:
-                                    rpm_match = re.search(r'([\d.]+)\s*RPM', value_part)
-                                    if rpm_match:
-                                        gpu['fan_speed'] = int(float(rpm_match.group(1)))
-                                        gpu['fan_unit'] = 'RPM'
-                                        print(f"[v0] GPU {gpu['name']}: Fan = {gpu['fan_speed']} RPM")
-    except Exception as e:
-        print(f"[v0] Error enriching GPU data from sensors: {e}")
-    
-    return gpus
 
 def get_disk_hardware_info(disk_name):
     """Get detailed hardware information for a disk"""
@@ -3052,7 +2953,7 @@ def api_vm_control(vmid):
                     'error': control_result.stderr
                 }), 500
         else:
-            return jsonify({'error': 'Failed to control VM'}), 500
+            return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
         print(f"Error controlling VM: {e}")
         return jsonify({'error': str(e)}), 500
