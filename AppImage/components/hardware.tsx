@@ -74,8 +74,13 @@ export default function Hardware() {
 
     if (!fullSlot) return
 
+    let abortController = new AbortController()
+
     const fetchRealtimeData = async () => {
       try {
+        // Create a new AbortController for each fetch
+        abortController = new AbortController()
+
         const apiUrl = `http://${window.location.hostname}:8008/api/gpu/${fullSlot}/realtime`
         console.log("[v0] Fetching GPU realtime data from:", apiUrl)
 
@@ -84,7 +89,7 @@ export default function Hardware() {
           headers: {
             "Content-Type": "application/json",
           },
-          signal: AbortSignal.timeout(10000),
+          signal: abortController.signal,
         })
 
         if (!response.ok) {
@@ -99,7 +104,10 @@ export default function Hardware() {
         setRealtimeGPUData(data)
         setDetailsLoading(false)
       } catch (error) {
-        console.error("[v0] Error fetching GPU realtime data:", error)
+        // Only log non-abort errors
+        if (error instanceof Error && error.name !== "AbortError") {
+          console.error("[v0] Error fetching GPU realtime data:", error)
+        }
         setRealtimeGPUData({ has_monitoring_tool: false })
         setDetailsLoading(false)
       }
@@ -111,7 +119,10 @@ export default function Hardware() {
     // Poll every 3 seconds
     const interval = setInterval(fetchRealtimeData, 3000)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      abortController.abort()
+    }
   }, [selectedGPU])
 
   const handleGPUClick = async (gpu: GPU) => {
