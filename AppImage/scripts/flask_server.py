@@ -1728,7 +1728,7 @@ def get_detailed_gpu_info(gpu):
                 process.terminate()
                 process.wait(timeout=1)
                 
-                print(f"[v0] Collected {len(json_objects)} JSON objects total", flush=True)
+                print(f"[v0] Checking if any JSON has clients...", flush=True)
                 
                 if not any('clients' in obj for obj in json_objects):
                     try:
@@ -1737,6 +1737,8 @@ def get_detailed_gpu_info(gpu):
                             print(f"[v0] intel_gpu_top stderr: {stderr_output[:500]}", flush=True)
                     except:
                         pass
+                
+                print(f"[v0] Selecting best JSON object...", flush=True)
                 
                 best_json = None
                 for json_obj in json_objects:
@@ -1749,109 +1751,131 @@ def get_detailed_gpu_info(gpu):
                     best_json = json_objects[0]
                     print(f"[v0] No JSON with clients found, using first JSON object as fallback", flush=True)
                 
+                print(f"[v0] About to parse JSON object (best_json is None: {best_json is None})", flush=True)
+                
                 if best_json:
                     print(f"[v0] Parsing selected JSON object...", flush=True)
-                    data_retrieved = False
                     
-                    # Initialize engine totals
-                    engine_totals = {
-                        'Render/3D': 0.0,
-                        'Blitter': 0.0,
-                        'Video': 0.0,
-                        'VideoEnhance': 0.0
-                    }
-                    client_engine_totals = {
-                        'Render/3D': 0.0,
-                        'Blitter': 0.0,
-                        'Video': 0.0,
-                        'VideoEnhance': 0.0
-                    }
-                    
-                    # Parse clients section (processes using GPU)
-                    if 'clients' in best_json:
-                        print(f"[v0] Parsing clients section...", flush=True)
-                        clients = best_json['clients']
-                        processes = []
+                    try:
+                        data_retrieved = False
+                        
+                        # Initialize engine totals
+                        engine_totals = {
+                            'Render/3D': 0.0,
+                            'Blitter': 0.0,
+                            'Video': 0.0,
+                            'VideoEnhance': 0.0
+                        }
+                        client_engine_totals = {
+                            'Render/3D': 0.0,
+                            'Blitter': 0.0,
+                            'Video': 0.0,
+                            'VideoEnhance': 0.0
+                        }
+                        
+                        print(f"[v0] Initialized engine totals", flush=True)
+                        
+                        # Parse clients section (processes using GPU)
+                        if 'clients' in best_json:
+                            print(f"[v0] Parsing clients section...", flush=True)
+                            clients = best_json['clients']
+                            processes = []
 
-                        for client_id, client_data in clients.items():
-                            process_info = {
-                                'name': client_data.get('name', 'Unknown'),
-                                'pid': client_data.get('pid', 'Unknown'),
-                                'memory': {
-                                    'total': client_data.get('memory', {}).get('system', {}).get('total', 0),
-                                    'shared': client_data.get('memory', {}).get('system', {}).get('shared', 0),
-                                    'resident': client_data.get('memory', {}).get('system', {}).get('resident', 0)
-                                },
-                                'engines': {}
-                            }
-                            
-                            # Parse engine utilization for this process
-                            engine_classes = client_data.get('engine-classes', {})
-                            for engine_name, engine_data in engine_classes.items():
-                                busy_value = float(engine_data.get('busy', 0))
-                                process_info['engines'][engine_name] = f"{busy_value:.1f}%"
+                            for client_id, client_data in clients.items():
+                                process_info = {
+                                    'name': client_data.get('name', 'Unknown'),
+                                    'pid': client_data.get('pid', 'Unknown'),
+                                    'memory': {
+                                        'total': client_data.get('memory', {}).get('system', {}).get('total', 0),
+                                        'shared': client_data.get('memory', {}).get('system', {}).get('shared', 0),
+                                        'resident': client_data.get('memory', {}).get('system', {}).get('resident', 0)
+                                    },
+                                    'engines': {}
+                                }
                                 
-                                # Sum up engine utilization across all processes
-                                if engine_name in client_engine_totals:
-                                    client_engine_totals[engine_name] += busy_value
+                                # Parse engine utilization for this process
+                                engine_classes = client_data.get('engine-classes', {})
+                                for engine_name, engine_data in engine_classes.items():
+                                    busy_value = float(engine_data.get('busy', 0))
+                                    process_info['engines'][engine_name] = f"{busy_value:.1f}%"
+                                    
+                                    # Sum up engine utilization across all processes
+                                    if engine_name in client_engine_totals:
+                                        client_engine_totals[engine_name] += busy_value
+                                
+                                processes.append(process_info)
+                                print(f"[v0] Added process: {process_info['name']} (PID: {process_info['pid']})", flush=True)
                             
-                            processes.append(process_info)
-                            print(f"[v0] Added process: {process_info['name']} (PID: {process_info['pid']})", flush=True)
+                            detailed_info['processes'] = processes
+                            print(f"[v0] Total processes found: {len(processes)}", flush=True)
+                        else:
+                            print(f"[v0] WARNING: No 'clients' section in selected JSON", flush=True)
                         
-                        detailed_info['processes'] = processes
-                        print(f"[v0] Total processes found: {len(processes)}", flush=True)
-                    else:
-                        print(f"[v0] WARNING: No 'clients' section in selected JSON", flush=True)
-                    
-                    # Parse global engines section
-                    if 'engines' in best_json:
-                        print(f"[v0] Parsing engines section...", flush=True)
-                        engines = best_json['engines']
+                        print(f"[v0] About to parse engines section...", flush=True)
                         
-                        for engine_name, engine_data in engines.items():
-                            # Remove the /0 suffix if present
-                            clean_name = engine_name.replace('/0', '')
-                            busy_value = float(engine_data.get('busy', 0))
+                        # Parse global engines section
+                        if 'engines' in best_json:
+                            print(f"[v0] Parsing engines section...", flush=True)
+                            engines = best_json['engines']
                             
-                            if clean_name in engine_totals:
-                                engine_totals[clean_name] = busy_value
+                            for engine_name, engine_data in engines.items():
+                                # Remove the /0 suffix if present
+                                clean_name = engine_name.replace('/0', '')
+                                busy_value = float(engine_data.get('busy', 0))
+                                
+                                if clean_name in engine_totals:
+                                    engine_totals[clean_name] = busy_value
+                        
+                        print(f"[v0] Calculating final engines...", flush=True)
+                        
+                        # Use client engine totals if available, otherwise use global engines
+                        final_engines = client_engine_totals if any(v > 0 for v in client_engine_totals.values()) else engine_totals
+                        
+                        detailed_info['engine_render'] = f"{final_engines['Render/3D']:.1f}%"
+                        detailed_info['engine_blitter'] = f"{final_engines['Blitter']:.1f}%"
+                        detailed_info['engine_video'] = f"{final_engines['Video']:.1f}%"
+                        detailed_info['engine_video_enhance'] = f"{final_engines['VideoEnhance']:.1f}%"
+                        
+                        # Calculate overall GPU utilization (max of all engines)
+                        max_utilization = max(final_engines.values())
+                        detailed_info['utilization_gpu'] = f"{max_utilization:.1f}%"
+                        
+                        print(f"[v0] Parsing frequency...", flush=True)
+                        
+                        # Parse frequency
+                        if 'frequency' in best_json:
+                            freq_data = best_json['frequency']
+                            actual_freq = freq_data.get('actual', 0)
+                            detailed_info['clock_graphics'] = f"{actual_freq} MHz"
+                            data_retrieved = True
+                        
+                        print(f"[v0] Parsing power...", flush=True)
+                        
+                        # Parse power
+                        if 'power' in best_json:
+                            power_data = best_json['power']
+                            gpu_power = power_data.get('GPU', 0)
+                            package_power = power_data.get('Package', 0)
+                            detailed_info['power_draw'] = f"{gpu_power:.2f} W"
+                            detailed_info['power_limit'] = f"{package_power:.2f} W"
+                            data_retrieved = True
+                        
+                        print(f"[v0] Finalizing data (data_retrieved={data_retrieved})...", flush=True)
+                        
+                        if data_retrieved:
+                            detailed_info['has_monitoring_tool'] = True
+                            print(f"[v0] Intel GPU monitoring successful", flush=True)
+                            print(f"[v0] - Utilization: {detailed_info['utilization_gpu']}", flush=True)
+                            print(f"[v0] - Engines: R={detailed_info['engine_render']}, B={detailed_info['engine_blitter']}, V={detailed_info['engine_video']}, VE={detailed_info['engine_video_enhance']}", flush=True)
+                            print(f"[v0] - Processes: {len(detailed_info['processes'])}", flush=True)
+                        else:
+                            print(f"[v0] WARNING: No data retrieved from intel_gpu_top", flush=True)
                     
-                    # Use client engine totals if available, otherwise use global engines
-                    final_engines = client_engine_totals if any(v > 0 for v in client_engine_totals.values()) else engine_totals
-                    
-                    detailed_info['engine_render'] = f"{final_engines['Render/3D']:.1f}%"
-                    detailed_info['engine_blitter'] = f"{final_engines['Blitter']:.1f}%"
-                    detailed_info['engine_video'] = f"{final_engines['Video']:.1f}%"
-                    detailed_info['engine_video_enhance'] = f"{final_engines['VideoEnhance']:.1f}%"
-                    
-                    # Calculate overall GPU utilization (max of all engines)
-                    max_utilization = max(final_engines.values())
-                    detailed_info['utilization_gpu'] = f"{max_utilization:.1f}%"
-                    
-                    # Parse frequency
-                    if 'frequency' in best_json:
-                        freq_data = best_json['frequency']
-                        actual_freq = freq_data.get('actual', 0)
-                        detailed_info['clock_graphics'] = f"{actual_freq} MHz"
-                        data_retrieved = True
-                    
-                    # Parse power
-                    if 'power' in best_json:
-                        power_data = best_json['power']
-                        gpu_power = power_data.get('GPU', 0)
-                        package_power = power_data.get('Package', 0)
-                        detailed_info['power_draw'] = f"{gpu_power:.2f} W"
-                        detailed_info['power_limit'] = f"{package_power:.2f} W"
-                        data_retrieved = True
-                    
-                    if data_retrieved:
-                        detailed_info['has_monitoring_tool'] = True
-                        print(f"[v0] Intel GPU monitoring successful", flush=True)
-                        print(f"[v0] - Utilization: {detailed_info['utilization_gpu']}", flush=True)
-                        print(f"[v0] - Engines: R={detailed_info['engine_render']}, B={detailed_info['engine_blitter']}, V={detailed_info['engine_video']}, VE={detailed_info['engine_video_enhance']}", flush=True)
-                        print(f"[v0] - Processes: {len(detailed_info['processes'])}", flush=True)
-                    else:
-                        print(f"[v0] WARNING: No data retrieved from intel_gpu_top", flush=True)
+                    except Exception as parse_error:
+                        print(f"[v0] ERROR parsing JSON data: {parse_error}", flush=True)
+                        import traceback
+                        traceback.print_exc()
+                        
                 else:
                     print(f"[v0] WARNING: No valid JSON objects found", flush=True)
             
@@ -2983,3 +3007,4 @@ if __name__ == '__main__':
     print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
+', port=8008, debug=False)
