@@ -589,6 +589,7 @@ def get_smart_data(disk_name):
             print(f"[v0] Attempt {cmd_index + 1}/{len(commands_to_try)}: Running command: {' '.join(cmd)}")
             try:
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                # Use communicate with a timeout to avoid hanging if the process doesn't exit
                 stdout, stderr = process.communicate(timeout=15)
                 result_code = process.returncode
                 
@@ -817,12 +818,17 @@ def get_smart_data(disk_name):
             
             except subprocess.TimeoutExpired:
                 print(f"[v0] Command timeout for attempt {cmd_index + 1}, trying next...")
+                if process and process.returncode is None:
+                    process.kill()
                 continue
             except Exception as e:
                 print(f"[v0] Error in attempt {cmd_index + 1}: {type(e).__name__}: {e}")
+                if process and process.returncode is None:
+                    process.kill()
                 continue
             finally:
-                if process and process.returncode is None: # If process is still running after error
+                # Ensure the process is terminated if it's still running
+                if process and process.poll() is None: 
                     try:
                         process.kill()
                         print(f"[v0] Process killed for command: {' '.join(cmd)}")
@@ -1666,11 +1672,17 @@ def get_detailed_gpu_info(gpu):
                         break
                     
                     try:
-                        line = process.stdout.readline()
-                        if not line:
-                            time.sleep(0.1)
-                            continue
-                        
+                        # Use non-blocking read with select to avoid hanging
+                        ready, _, _ = select.select([process.stdout], [], [], 0.1)
+                        if process.stdout in ready:
+                            line = process.stdout.readline()
+                            if not line:
+                                time.sleep(0.01) # Small sleep if line is empty but stdout is still open
+                                continue
+                        else:
+                            time.sleep(0.01)
+                            continue # No data available yet
+
                         for char in line:
                             if char == '{':
                                 if brace_count == 0:
@@ -1712,18 +1724,33 @@ def get_detailed_gpu_info(gpu):
                         print(f"[v0] Error reading line: {e}", flush=True)
                         break
                 
-                process.terminate()
-                process.wait(timeout=1)
-                
+                # Terminate process and get remaining output/errors
+                try:
+                    process.terminate()
+                    # Use communicate with a short timeout to ensure termination and get any remaining stderr
+                    _, stderr_output = process.communicate(timeout=1) 
+                except subprocess.TimeoutExpired:
+                    process.kill() # Force kill if terminate doesn't work
+                    stderr_output = b"" # Assume no stderr if killed
+                    print("[v0] Process killed after terminate timeout.")
+                except Exception as e:
+                    print(f"[v0] Error during process termination/communication: {e}")
+                    stderr_output = b"" # Assume no stderr on error
+
                 print(f"[v0] Collected {len(json_objects)} JSON objects total", flush=True)
                 
+                # CHANGE: Evitar bloqueo al leer stderr - usar communicate() con timeout
                 if not any('clients' in obj for obj in json_objects):
                     try:
-                        stderr_output = process.stderr.read()
+                        # Use communicate() with timeout instead of read() to avoid blocking
+                        _, stderr_output = process.communicate(timeout=0.5)
                         if stderr_output:
                             print(f"[v0] intel_gpu_top stderr (no clients found): {stderr_output}", flush=True)
-                    except:
-                        pass
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        print(f"[v0] Process killed after timeout", flush=True)
+                    except Exception as e:
+                        print(f"[v0] Error reading stderr: {e}", flush=True)
                 
                 best_json = None
                 for json_obj in json_objects:
@@ -1841,13 +1868,17 @@ def get_detailed_gpu_info(gpu):
                         print(f"[v0] WARNING: No data retrieved from intel_gpu_top", flush=True)
                 else:
                     print(f"[v0] WARNING: No valid JSON objects found", flush=True)
-                    # Check stderr for errors
+                    # CHANGE: Evitar bloqueo al leer stderr - usar communicate() con timeout
                     try:
-                        stderr_output = process.stderr.read()
+                        # Use communicate() with timeout instead of read() to avoid blocking
+                        _, stderr_output = process.communicate(timeout=0.5)
                         if stderr_output:
                             print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
-                    except:
-                        pass
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        print(f"[v0] Process killed after timeout", flush=True)
+                    except Exception as e:
+                        print(f"[v0] Error reading stderr: {e}", flush=True)
             
             except Exception as e:
                 print(f"[v0] Error running intel_gpu_top: {e}", flush=True)
