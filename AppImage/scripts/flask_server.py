@@ -1701,16 +1701,6 @@ def get_detailed_gpu_info(gpu):
         'engine_video_enhance': None
     }
     
-    if 'amd' in vendor or 'ati' in vendor:
-        print(f"[v0] AMD GPU detected, checking for amdgpu_top...", flush=True)
-        amd_data = get_amd_gpu_realtime_data(slot)
-        if amd_data:
-            detailed_info.update(amd_data)
-            return detailed_info
-        else:
-            print(f"[v0] AMD GPU monitoring failed or amdgpu_top not available", flush=True)
-            return detailed_info
-    
     # Intel GPU monitoring with intel_gpu_top
     if 'intel' in vendor:
         print(f"[v0] Intel GPU detected, checking for intel_gpu_top...", flush=True)
@@ -2092,23 +2082,19 @@ def get_detailed_gpu_info(gpu):
     # AMD GPU monitoring (placeholder, requires radeontop or similar)
     elif 'amd' in vendor:
         print(f"[v0] AMD GPU detected. Monitoring tools like radeontop are needed for detailed info.", flush=True)
-        if shutil.which('amdgpu_top'):
-            print(f"[v0] amdgpu_top found, attempting to get real-time data...", flush=True)
-            # Attempt to get data using the dedicated function
-            amd_data = get_amd_gpu_realtime_data(slot)
-            if amd_data:
-                detailed_info.update(amd_data) # Update detailed_info with AMD data
-                detailed_info['has_monitoring_tool'] = True # Mark as tool found and used
+        if shutil.which('radeontop'):
+            print(f"[v0] radeontop found, but integration is not yet implemented.", flush=True)
         else:
-            print(f"[v0] amdgpu_top not found in PATH.", flush=True)
+            print(f"[v0] radeontop not found in PATH.", flush=True)
         # Placeholder: return basic info if available from lspci or sensors
-        # No detailed monitoring implemented yet for AMD (beyond amdgpu_top)
+        # No detailed monitoring implemented yet for AMD
         
     else:
         print(f"[v0] Unsupported GPU vendor: {vendor}", flush=True)
 
     print(f"[v0] ===== Exiting get_detailed_gpu_info for GPU {slot} =====", flush=True)
     return detailed_info
+
 
 def get_pci_device_info(pci_slot):
     """Get detailed PCI device information for a given slot"""
@@ -2208,6 +2194,112 @@ def get_network_hardware_info(pci_slot):
         print(f"[v0] Error getting network hardware info: {e}")
     
     return net_info
+
+def get_gpu_info():
+    """Detect and return information about GPUs in the system"""
+    gpus = []
+    
+    try:
+        result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                # Match VGA, 3D, Display controllers
+                if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
+
+                    parts = line.split(' ', 1)
+                    if len(parts) >= 2:
+                        slot = parts[0].strip()  
+                        remaining = parts[1]
+                        
+                        if ':' in remaining:
+                            class_and_name = remaining.split(':', 1)
+                            gpu_name = class_and_name[1].strip() if len(class_and_name) > 1 else remaining.strip()
+                        else:
+                            gpu_name = remaining.strip()
+                        
+                        # Determine vendor
+                        vendor = 'Unknown'
+                        if 'NVIDIA' in gpu_name or 'nVidia' in gpu_name:
+                            vendor = 'NVIDIA'
+                        elif 'AMD' in gpu_name or 'ATI' in gpu_name or 'Radeon' in gpu_name:
+                            vendor = 'AMD'
+                        elif 'Intel' in gpu_name:
+                            vendor = 'Intel'
+                        
+                        gpu = {
+                            'slot': slot,
+                            'name': gpu_name,
+                            'vendor': vendor,
+                            'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated'
+                        }
+                        
+                        pci_info = get_pci_device_info(slot)
+                        if pci_info:
+                            gpu['pci_class'] = pci_info.get('class', '')
+                            gpu['pci_driver'] = pci_info.get('driver', '')
+                            gpu['pci_kernel_module'] = pci_info.get('kernel_module', '')
+                        
+                        # detailed_info = get_detailed_gpu_info(gpu) # Removed this call here
+                        # gpu.update(detailed_info)             # It will be called later in api_gpu_realtime
+                        
+                        gpus.append(gpu)
+                        print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+
+    except Exception as e:
+        print(f"[v0] Error detecting GPUs from lspci: {e}")
+    
+    try:
+        result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            current_adapter = None
+            
+            for line in result.stdout.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Detect adapter line
+                if line.startswith('Adapter:'):
+                    current_adapter = line.replace('Adapter:', '').strip()
+                    continue
+                
+                # Look for GPU-related sensors (nouveau, amdgpu, radeon, i915)
+                if ':' in line and not line.startswith(' '):
+                    parts = line.split(':', 1)
+                    sensor_name = parts[0].strip()
+                    value_part = parts[1].strip()
+                    
+                    # Check if this is a GPU sensor
+                    gpu_sensor_keywords = ['nouveau', 'amdgpu', 'radeon', 'i915']
+                    is_gpu_sensor = any(keyword in current_adapter.lower() if current_adapter else False for keyword in gpu_sensor_keywords)
+                    
+                    if is_gpu_sensor:
+                        # Try to match this sensor to a GPU
+                        for gpu in gpus:
+                            # Match nouveau to NVIDIA, amdgpu/radeon to AMD, i915 to Intel
+                            if (('nouveau' in current_adapter.lower() and gpu['vendor'] == 'NVIDIA') or
+                                (('amdgpu' in current_adapter.lower() or 'radeon' in current_adapter.lower()) and gpu['vendor'] == 'AMD') or
+                                ('i915' in current_adapter.lower() and gpu['vendor'] == 'Intel')):
+                                
+                                # Parse temperature (only if not already set by nvidia-smi)
+                                if 'temperature' not in gpu or gpu['temperature'] is None:
+                                    if '°C' in value_part or 'C' in value_part:
+                                        temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
+                                        if temp_match:
+                                            gpu['temperature'] = float(temp_match.group(1))
+                                            print(f"[v0] GPU {gpu['name']}: Temperature = {gpu['temperature']}°C")
+                                
+                                # Parse fan speed
+                                elif 'RPM' in value_part:
+                                    rpm_match = re.search(r'([\d.]+)\s*RPM', value_part)
+                                    if rpm_match:
+                                        gpu['fan_speed'] = int(float(rpm_match.group(1)))
+                                        gpu['fan_unit'] = 'RPM'
+                                        print(f"[v0] GPU {gpu['name']}: Fan = {gpu['fan_speed']} RPM")
+    except Exception as e:
+        print(f"[v0] Error enriching GPU data from sensors: {e}")
+    
+    return gpus
 
 def get_disk_hardware_info(disk_name):
     """Get detailed hardware information for a disk"""
@@ -2490,37 +2582,60 @@ def get_hardware_info():
                     
                     if not line:
                         # Empty line = end of device
-                        if current_device and current_device.get('Class') in ['VGA compatible controller', '3D controller', 'Display controller']:
-                            # This is a GPU
-                            device_type = 'Integrated' if 'Integrated' in current_device.get('Device', '') else 'Discrete'
-                            gpu_slot = current_device.get('Slot', 'Unknown')
-                            gpu_name = current_device.get('Device', 'Unknown GPU')
-                            gpu_vendor = current_device.get('Vendor', 'Unknown')
+                        if current_device and 'Class' in current_device:
+                            device_class = current_device.get('Class', '')
+                            device_name = current_device.get('Device', '')
+                            vendor = current_device.get('Vendor', '')
+                            slot = current_device.get('Slot', 'Unknown')
                             
-                            # Add to graphics_cards if not already present (e.g., from nvidia-smi)
-                            found = False
-                            for existing_gpu in hardware_data['graphics_cards']:
-                                if gpu_slot == existing_gpu.get('slot'): # Match by slot
-                                    found = True
-                                    # Ensure vendor is set if it was unknown
-                                    if existing_gpu.get('vendor') == 'Unknown':
-                                        existing_gpu['vendor'] = gpu_vendor
-                                    break
-                            if not found:
-                                hardware_data['graphics_cards'].append({
-                                    'slot': gpu_slot,
-                                    'name': gpu_name,
-                                    'vendor': gpu_vendor,
-                                    'type': device_type
-                                })
-                                print(f"[v0] Found GPU (lspci -vmm): {gpu_name} ({gpu_vendor}, Type: {device_type})")
-
+                            # Categorize and add important devices
+                            device_type = 'Other'
+                            include_device = False
+                            
+                            # Graphics/Display devices
+                            if any(keyword in device_class for keyword in ['VGA', 'Display', '3D']):
+                                device_type = 'Graphics Card'
+                                include_device = True
+                            # Storage controllers
+                            elif any(keyword in device_class for keyword in ['SATA', 'RAID', 'Mass storage', 'Non-Volatile memory']):
+                                device_type = 'Storage Controller'
+                                include_device = True
+                            # Network controllers
+                            elif 'Ethernet' in device_class or 'Network' in device_class:
+                                device_type = 'Network Controller'
+                                include_device = True
+                            # USB controllers
+                            elif 'USB' in device_class:
+                                device_type = 'USB Controller'
+                                include_device = True
+                            # Audio devices
+                            elif 'Audio' in device_class or 'Multimedia' in device_class:
+                                device_type = 'Audio Controller'
+                                include_device = True
+                            # Special devices (Coral TPU, etc.)
+                            elif any(keyword in device_name.lower() for keyword in ['coral', 'tpu', 'edge']):
+                                device_type = 'AI Accelerator'
+                                include_device = True
+                            # PCI bridges (usually not interesting for users)
+                            elif 'Bridge' in device_class:
+                                include_device = False
+                            
+                            if include_device:
+                                pci_device = {
+                                    'slot': slot,
+                                    'type': device_type,
+                                    'vendor': vendor,
+                                    'device': device_name,
+                                    'class': device_class
+                                }
+                                hardware_data['pci_devices'].append(pci_device)
+                        
                         current_device = {}
                     elif ':' in line:
                         key, value = line.split(':', 1)
                         current_device[key.strip()] = value.strip()
             
-            # Now get driver information with lspci -k and populate pci_devices
+            # Now get driver information with lspci -k
             result_k = subprocess.run(['lspci', '-k'], capture_output=True, text=True, timeout=10)
             if result_k.returncode == 0:
                 current_slot = None
@@ -2545,76 +2660,14 @@ def get_hardware_info():
                         
                         # Update the corresponding PCI device
                         if current_slot and (current_driver or current_module):
-                            # Find if this slot corresponds to a GPU
-                            is_gpu = False
-                            for gpu in hardware_data['graphics_cards']:
-                                if gpu.get('slot') == current_slot:
-                                    is_gpu = True
+                            for device in hardware_data['pci_devices']:
+                                if device['slot'] == current_slot:
+                                    if current_driver:
+                                        device['driver'] = current_driver
+                                    if current_module:
+                                        device['kernel_module'] = current_module
                                     break
-                            
-                            # Categorize and add important devices, including GPUs
-                            device_class_str = ""
-                            for d_line in result_k.stdout.split('\n'): # Re-scan for class info
-                                if d_line.startswith(current_slot + ' ') and not d_line.startswith('\t'):
-                                    device_class_str = d_line.split(':', 1)[1].strip()
-                                    break
-                            
-                            device_type = 'Other'
-                            include_device = False
-                            
-                            if is_gpu:
-                                device_type = 'Graphics Card'
-                                include_device = True
-                            elif 'VGA' in device_class_str or '3D' in device_class_str or 'Display' in device_class_str:
-                                device_type = 'Graphics Card'
-                                include_device = True
-                            elif 'SATA' in device_class_str or 'RAID' in device_class_str or 'Mass storage' in device_class_str or 'Non-Volatile memory' in device_class_str:
-                                device_type = 'Storage Controller'
-                                include_device = True
-                            elif 'Ethernet' in device_class_str or 'Network' in device_class_str:
-                                device_type = 'Network Controller'
-                                include_device = True
-                            elif 'USB' in device_class_str:
-                                device_type = 'USB Controller'
-                                include_device = True
-                            elif 'Audio' in device_class_str or 'Multimedia' in device_class_str:
-                                device_type = 'Audio Controller'
-                                include_device = True
-                            elif any(keyword in device_class_str.lower() for keyword in ['coral', 'tpu', 'edge']):
-                                device_type = 'AI Accelerator'
-                                include_device = True
-                            
-                            if include_device:
-                                pci_device = {
-                                    'slot': current_slot,
-                                    'type': device_type,
-                                    'driver': current_driver,
-                                    'kernel_module': current_module
-                                }
-                                
-                                # Avoid adding duplicates if already processed by lspci -vmm
-                                already_added = False
-                                for existing_device in hardware_data['pci_devices']:
-                                    if existing_device.get('slot') == current_slot:
-                                        existing_device['driver'] = current_driver
-                                        existing_device['kernel_module'] = current_module
-                                        already_added = True
-                                        break
-                                if not already_added:
-                                    hardware_data['pci_devices'].append(pci_device)
             
-            # Ensure all graphics cards have driver/module info if available
-            for gpu in hardware_data['graphics_cards']:
-                gpu_slot = gpu.get('slot')
-                if gpu_slot:
-                    for pci_device in hardware_data['pci_devices']:
-                        if pci_device.get('slot') == gpu_slot:
-                            if 'driver' in pci_device:
-                                gpu['driver'] = pci_device['driver']
-                            if 'kernel_module' in pci_device:
-                                gpu['kernel_module'] = pci_device['kernel_module']
-                            break
-                                
             print(f"[v0] Total PCI devices found: {len(hardware_data['pci_devices'])}")
         except Exception as e:
             print(f"[v0] Error getting PCI devices: {e}")
@@ -2745,348 +2798,6 @@ def get_hardware_info():
         traceback.print_exc()
         return {}
 
-# Define the AMD specific function before it's called in get_detailed_gpu_info
-def get_amd_gpu_realtime_data(slot):
-    """Get real-time monitoring data for AMD GPU using amdgpu_top"""
-    try:
-        print(f"[v0] Getting AMD GPU data for slot {slot}...", flush=True)
-        
-        # Check if amdgpu_top is available
-        amdgpu_top_path = shutil.which('amdgpu_top')
-        if not amdgpu_top_path:
-            print(f"[v0] amdgpu_top not found in PATH", flush=True)
-            return None
-        
-        print(f"[v0] Found amdgpu_top at: {amdgpu_top_path}", flush=True)
-        
-        # Execute amdgpu_top --json -n 1 for a single snapshot
-        cmd = [amdgpu_top_path, '--json', '-n', '1']
-        print(f"[v0] Executing: {' '.join(cmd)}", flush=True)
-        
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        
-        if result.returncode != 0:
-            print(f"[v0] amdgpu_top failed with code {result.returncode}", flush=True)
-            print(f"[v0] stderr: {result.stderr}", flush=True)
-            return None
-        
-        # Parse JSON output
-        try:
-            data = json.loads(result.stdout)
-            print(f"[v0] Successfully parsed amdgpu_top JSON output", flush=True)
-            
-            detailed_info = {
-                'has_monitoring_tool': True,
-                'temperature': None,
-                'fan_speed': None,
-                'fan_unit': None,
-                'utilization_gpu': None,
-                'utilization_memory': None,
-                'memory_used': None,
-                'memory_total': None,
-                'memory_free': None,
-                'power_draw': None,
-                'power_limit': None,
-                'clock_graphics': None,
-                'clock_memory': None,
-                'processes': [],
-                'engine_render': None,
-                'engine_blitter': None,
-                'engine_video': None,
-                'engine_video_enhance': None
-            }
-            
-            # Parse sensors data
-            if 'sensors' in data:
-                sensors = data['sensors']
-                
-                # Temperature (Edge Temperature or GFX)
-                if 'Edge Temperature' in sensors:
-                    temp_str = sensors['Edge Temperature']
-                    # Format: "49 C" or similar
-                    temp_value = temp_str.split()[0]
-                    detailed_info['temperature'] = f"{temp_value}°C"
-                elif 'GFX' in sensors:
-                    temp_str = sensors['GFX']
-                    temp_value = temp_str.split()[0]
-                    detailed_info['temperature'] = f"{temp_value}°C"
-                
-                # Power (GPU Power or GFX Power)
-                if 'GPU Power' in sensors:
-                    power_str = sensors['GPU Power']
-                    # Format: "18 W (Input)" or similar
-                    power_value = power_str.split()[0]
-                    detailed_info['power_draw'] = f"{power_value} W"
-                elif 'GFX Power' in sensors:
-                    power_str = sensors['GFX Power']
-                    power_value = power_str.split()[0]
-                    detailed_info['power_draw'] = f"{power_value} W"
-                
-                # Clock frequencies
-                if 'GFX_SCLK' in sensors:
-                    clock_str = sensors['GFX_SCLK']
-                    # Format: "200 MHz" or similar
-                    clock_value = clock_str.split()[0]
-                    detailed_info['clock_graphics'] = f"{clock_value} MHz"
-                
-                if 'GFX_MCLK' in sensors:
-                    clock_str = sensors['GFX_MCLK']
-                    clock_value = clock_str.split()[0]
-                    detailed_info['clock_memory'] = f"{clock_value} MHz"
-            
-            # Parse VRAM usage
-            if 'VRAM' in data:
-                vram = data['VRAM']
-                if 'Total VRAM Usage' in vram:
-                    usage_str = vram['Total VRAM Usage']
-                    # Format: "375 / 512 MiB" or similar
-                    parts = usage_str.split('/')
-                    if len(parts) == 2:
-                        used = parts[0].strip().split()[0]
-                        total = parts[1].strip().split()[0]
-                        detailed_info['memory_used'] = f"{used} MiB"
-                        detailed_info['memory_total'] = f"{total} MiB"
-                        
-                        # Calculate memory utilization percentage
-                        try:
-                            used_val = float(used)
-                            total_val = float(total)
-                            mem_util = (used_val / total_val) * 100
-                            detailed_info['utilization_memory'] = f"{mem_util:.1f}%"
-                        except:
-                            pass
-            
-            # Parse activity (GPU utilization)
-            if 'Activity' in data:
-                activity = data['Activity']
-                
-                # GFX activity (main GPU utilization)
-                if 'GFX' in activity:
-                    gfx_str = activity['GFX']
-                    # Format: "15 %" or similar
-                    gfx_value = gfx_str.split()[0]
-                    detailed_info['utilization_gpu'] = f"{gfx_value}%"
-                    detailed_info['engine_render'] = f"{gfx_value}%"
-                
-                # Media activity (video encoding/decoding)
-                if 'Media' in activity:
-                    media_str = activity['Media']
-                    media_value = media_str.split()[0]
-                    detailed_info['engine_video'] = f"{media_value}%"
-            
-            # Parse GRBM (Graphics Register Bus Manager) for more detailed engine utilization
-            if 'GRBM' in data:
-                grbm = data['GRBM']
-                
-                # Graphics Pipe -> Render/3D
-                if 'Graphics Pipe' in grbm:
-                    pipe_str = grbm['Graphics Pipe']
-                    pipe_value = pipe_str.split()[0]
-                    # Use the higher value between Activity.GFX and GRBM.Graphics Pipe
-                    if detailed_info['engine_render']:
-                        current_val = float(detailed_info['engine_render'].rstrip('%'))
-                        new_val = float(pipe_value)
-                        if new_val > current_val:
-                            detailed_info['engine_render'] = f"{pipe_value}%"
-                    else:
-                        detailed_info['engine_render'] = f"{pipe_value}%"
-                
-                # Texture Pipe could be mapped to Blitter (texture operations)
-                if 'Texture Pipe' in grbm:
-                    texture_str = grbm['Texture Pipe']
-                    texture_value = texture_str.split()[0]
-                    detailed_info['engine_blitter'] = f"{texture_value}%"
-            
-            # Parse GRBM2 for additional engine data
-            if 'GRBM2' in data:
-                grbm2 = data['GRBM2']
-                
-                # Command Processor - Graphics could enhance Render/3D data
-                if 'Command Processor - Graphics' in grbm2:
-                    cp_str = grbm2['Command Processor - Graphics']
-                    cp_value = cp_str.split()[0]
-                    # Use as additional indicator for render activity
-                    if not detailed_info['engine_render'] or detailed_info['engine_render'] == '0.0%':
-                        detailed_info['engine_render'] = f"{cp_value}%"
-            
-            # Parse fdinfo (process information)
-            if 'fdinfo' in data:
-                fdinfo = data['fdinfo']
-                processes = []
-                
-                for proc_data in fdinfo:
-                    process_info = {
-                        'name': proc_data.get('name', 'Unknown'),
-                        'pid': str(proc_data.get('pid', 'Unknown')),
-                        'memory': {
-                            'total': 0,
-                            'shared': 0,
-                            'resident': 0
-                        },
-                        'engines': {}
-                    }
-                    
-                    # Parse memory usage (VRAM and GTT)
-                    if 'VRAM' in proc_data:
-                        vram_str = proc_data['VRAM']
-                        # Format: "354M" or "354 MiB"
-                        vram_value = vram_str.replace('M', '').replace('MiB', '').strip()
-                        try:
-                            # Convert to KB for consistency with Intel
-                            vram_kb = int(float(vram_value) * 1024)
-                            process_info['memory']['total'] = vram_kb
-                        except:
-                            pass
-                    
-                    if 'GTT' in proc_data:
-                        gtt_str = proc_data['GTT']
-                        gtt_value = gtt_str.replace('M', '').replace('MiB', '').strip()
-                        try:
-                            gtt_kb = int(float(gtt_value) * 1024)
-                            process_info['memory']['resident'] = gtt_kb
-                        except:
-                            pass
-                    
-                    # Parse engine utilization for this process
-                    # Map AMD engine names to Intel-like names for consistency
-                    engine_mapping = {
-                        'GFX': 'Render/3D',
-                        'Compute': 'Render/3D',  # Compute also maps to Render/3D
-                        'DMA': 'Blitter',
-                        'DEC': 'Video',  # Decode
-                        'ENC': 'Video',  # Encode
-                        'VCN': 'Video',  # Video Core Next
-                        'UVD': 'Video',  # Unified Video Decoder
-                        'VCE': 'Video'   # Video Compression Engine
-                    }
-                    
-                    for amd_engine, intel_engine in engine_mapping.items():
-                        if amd_engine in proc_data:
-                            value_str = proc_data[amd_engine]
-                            # Format: "15%" or "15 %"
-                            value = value_str.replace('%', '').strip()
-                            try:
-                                value_float = float(value)
-                                if value_float > 0:
-                                    # If engine already exists, add to it (for DEC+ENC -> Video)
-                                    if intel_engine in process_info['engines']:
-                                        existing = float(process_info['engines'][intel_engine].rstrip('%'))
-                                        process_info['engines'][intel_engine] = f"{existing + value_float:.1f}%"
-                                    else:
-                                        process_info['engines'][intel_engine] = f"{value_float:.1f}%"
-                            except:
-                                pass
-                    
-                    # Only add process if it has some GPU activity
-                    if process_info['engines']:
-                        processes.append(process_info)
-                        print(f"[v0] Found AMD process: {process_info['name']} (PID: {process_info['pid']}) with {len(process_info['engines'])} active engines", flush=True)
-                
-                detailed_info['processes'] = processes
-                print(f"[v0] Total AMD processes found: {len(processes)}", flush=True)
-            
-            print(f"[v0] AMD GPU monitoring successful", flush=True)
-            print(f"[v0] - Temperature: {detailed_info['temperature']}", flush=True)
-            print(f"[v0] - Power: {detailed_info['power_draw']}", flush=True)
-            print(f"[v0] - Utilization: {detailed_info['utilization_gpu']}", flush=True)
-            print(f"[v0] - Memory: {detailed_info['memory_used']} / {detailed_info['memory_total']}", flush=True)
-            print(f"[v0] - Processes: {len(detailed_info['processes'])}", flush=True)
-            
-            return detailed_info
-            
-        except json.JSONDecodeError as e:
-            print(f"[v0] Failed to parse amdgpu_top JSON: {e}", flush=True)
-            return None
-            
-    except subprocess.TimeoutExpired:
-        print(f"[v0] amdgpu_top command timed out", flush=True)
-        return None
-    except Exception as e:
-        print(f"[v0] Error getting AMD GPU data: {e}", flush=True)
-        import traceback
-        traceback.print_exc()
-        return None
-
-def get_gpu_info():
-    """Get detailed GPU information from lspci"""
-    gpus = []
-    try:
-        # Get GPU info from lspci with verbose output
-        result = subprocess.run(['lspci', '-vmm'], capture_output=True, text=True, timeout=10)
-        if result.returncode == 0:
-            current_device = {}
-            for line in result.stdout.split('\n'):
-                line = line.strip()
-                if not line:
-                    # Empty line indicates end of device block
-                    if current_device and current_device.get('Class') in ['VGA compatible controller', '3D controller', 'Display controller']:
-                        # This is a GPU
-                        gpu = {
-                            'slot': current_device.get('Slot', 'Unknown'),
-                            'name': current_device.get('Device', 'Unknown GPU'),
-                            'vendor': current_device.get('Vendor', 'Unknown'),
-                            'driver': current_device.get('Driver', 'Unknown'), # May be empty from -vmm
-                            'kernel_module': current_device.get('Module', 'Unknown'), # May be empty from -vmm
-                            'type': 'Integrated' if 'Integrated' in current_device.get('Device', '') else 'Discrete'
-                        }
-                        gpus.append(gpu)
-                        print(f"[v0] Found GPU (lspci -vmm): {gpu['name']} ({gpu['vendor']})")
-                    current_device = {}
-                elif ':' in line:
-                    key, value = line.split(':', 1)
-                    current_device[key.strip()] = value.strip()
-            
-            # Handle last device if file doesn't end with empty line
-            if current_device and current_device.get('Class') in ['VGA compatible controller', '3D controller', 'Display controller']:
-                gpu = {
-                    'slot': current_device.get('Slot', 'Unknown'),
-                    'name': current_device.get('Device', 'Unknown GPU'),
-                    'vendor': current_device.get('Vendor', 'Unknown'),
-                    'driver': current_device.get('Driver', 'Unknown'),
-                    'kernel_module': current_device.get('Module', 'Unknown'),
-                    'type': 'Integrated' if 'Integrated' in current_device.get('Device', '') else 'Discrete'
-                }
-                gpus.append(gpu)
-                print(f"[v0] Found GPU (lspci -vmm): {gpu['name']} ({gpu['vendor']})")
-        
-        # Get driver information from lspci -k
-        result_k = subprocess.run(['lspci', '-k'], capture_output=True, text=True, timeout=10)
-        if result_k.returncode == 0:
-            current_slot = None
-            for line in result_k.stdout.split('\n'):
-                # Check if this is a device line (starts with slot number)
-                if line and not line.startswith('\t'):
-                    parts = line.split(' ', 1)
-                    if len(parts) >= 1:
-                        current_slot = parts[0]
-                # Check for driver information
-                elif line.startswith('\t'):
-                    line = line.strip()
-                    if line.startswith('Kernel driver in use:'):
-                        driver = line.split(':', 1)[1].strip()
-                        # Update GPU with driver info
-                        for gpu in gpus:
-                            if gpu['slot'] == current_slot:
-                                gpu['driver'] = driver
-                    elif line.startswith('Kernel modules:'):
-                        modules = line.split(':', 1)[1].strip()
-                        # Update GPU with kernel module info
-                        for gpu in gpus:
-                            if gpu['slot'] == current_slot:
-                                gpu['kernel_module'] = modules
-        
-        print(f"[v0] Total GPUs found: {len(gpus)}")
-    except Exception as e:
-        print(f"[v0] Error getting GPU info: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    return gpus
 
 @app.route('/api/system', methods=['GET'])
 def api_system():
@@ -3466,7 +3177,7 @@ def api_vm_control(vmid):
                     'error': control_result.stderr
                 }), 500
         else:
-            return jsonify({'error': 'Failed to get VM details'}), 500
+            return jsonify({'error': 'Failed to control VM'}), 500
     except Exception as e:
         print(f"Error controlling VM: {e}")
         return jsonify({'error': str(e)}), 500
