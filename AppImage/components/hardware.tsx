@@ -30,6 +30,12 @@ const formatMemory = (memoryKB: number | string): string => {
   // Convert KB to MB
   const mb = kb / 1024
 
+  // Convert to TB if >= 1024 GB
+  if (mb >= 1024 * 1024) {
+    const tb = mb / (1024 * 1024)
+    return `${tb.toFixed(1)} TB`
+  }
+
   // Convert to GB if >= 1024 MB
   if (mb >= 1024) {
     const gb = mb / 1024
