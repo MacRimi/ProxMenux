@@ -40,13 +40,19 @@ const formatMemory = (memoryKB: number | string): string => {
   return `${mb.toFixed(0)} MB`
 }
 
-const formatClock = (clockString: string): string => {
-  // Extract numeric value from string like "1138.179107 MHz"
-  const match = clockString.match(/([\d.]+)\s*MHz/i)
-  if (!match) return clockString
+const formatClock = (clockString: string | number): string => {
+  let mhz: number
 
-  const mhz = Number.parseFloat(match[1])
-  if (isNaN(mhz)) return clockString
+  if (typeof clockString === "number") {
+    mhz = clockString
+  } else {
+    // Extract numeric value from string like "1138.179107 MHz"
+    const match = clockString.match(/([\d.]+)\s*MHz/i)
+    if (!match) return clockString
+    mhz = Number.parseFloat(match[1])
+  }
+
+  if (isNaN(mhz)) return String(clockString)
 
   // Convert to GHz if >= 1000 MHz
   if (mhz >= 1000) {
@@ -110,13 +116,10 @@ export default function Hardware() {
 
     if (!fullSlot) return
 
-    let abortController = new AbortController()
+    const abortController = new AbortController()
 
     const fetchRealtimeData = async () => {
       try {
-        // Create a new AbortController for each fetch
-        abortController = new AbortController()
-
         const apiUrl = `http://${window.location.hostname}:8008/api/gpu/${fullSlot}/realtime`
 
         const response = await fetch(apiUrl, {
