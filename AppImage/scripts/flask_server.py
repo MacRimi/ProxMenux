@@ -2200,8 +2200,8 @@ def get_detailed_gpu_info(gpu):
                                     mem_total = int(detailed_info['memory_total'].replace(' MB', ''))
                                     if mem_total > 0:
                                         mem_util = (mem_used / mem_total) * 100
-                                        detailed_info['utilization_memory'] = f"{mem_util:.1f}%"
-                                        print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}", flush=True)
+                                        detailed_info['utilization_memory'] = round(mem_util, 1)
+                                        print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
                             
                             # Parse GRBM (Graphics Register Bus Manager) for engine utilization
                             if 'GRBM' in device:
@@ -2615,15 +2615,17 @@ def get_disk_hardware_info(disk_name):
     
     try:
         # Get disk type (HDD, SSD, NVMe)
-        result = subprocess.run(['lsblk', '-d', '-n', '-o', 'NAME,ROTA,TYPE', f'/dev/{disk_name}'], 
+        result = subprocess.run(['lsblk', '-d', '-n', '-o', 'NAME,ROTA,TYPE'], 
                               capture_output=True, text=True, timeout=5)
         if result.returncode == 0:
-            parts = result.stdout.strip().split()
-            if len(parts) >= 2:
-                rota = parts[1]
-                disk_info['type'] = 'HDD' if rota == '1' else 'SSD'
-                if disk_name.startswith('nvme'):
-                    disk_info['type'] = 'NVMe SSD'
+            for line in result.stdout.strip().split('\n'):
+                parts = line.split()
+                if len(parts) >= 2 and parts[0] == disk_name:
+                    rota = parts[1]
+                    disk_info['type'] = 'HDD' if rota == '1' else 'SSD'
+                    if disk_name.startswith('nvme'):
+                        disk_info['type'] = 'NVMe SSD'
+                    break # Found the correct disk
         
         # Get driver/kernel module
         try:
