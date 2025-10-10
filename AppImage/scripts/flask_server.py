@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 import re # Added for regex matching
 import select # Added for non-blocking read
 import shutil # Added for shutil.which
+import xml.etree.ElementTree as ET  # Added for XML parsing
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
@@ -1698,7 +1699,10 @@ def get_detailed_gpu_info(gpu):
         'engine_render': None,
         'engine_blitter': None,
         'engine_video': None,
-        'engine_video_enhance': None
+        'engine_video_enhance': None,
+        # Added for NVIDIA/AMD specific engine info if available
+        'engine_encoder': None,
+        'engine_decoder': None
     }
     
     # Intel GPU monitoring with intel_gpu_top
@@ -1998,77 +2002,227 @@ def get_detailed_gpu_info(gpu):
     elif 'nvidia' in vendor:
         print(f"[v0] NVIDIA GPU detected, checking for nvidia-smi...", flush=True)
         if shutil.which('nvidia-smi'):
-            print(f"[v0] nvidia-smi found, executing...", flush=True)
+            print(f"[v0] nvidia-smi found, executing with XML output...", flush=True)
             try:
-                # Basic GPU stats
-                query_gpu = 'index,name,memory.total,memory.used,memory.free,temperature.gpu,power.draw,power.limit,utilization.gpu,utilization.memory,clocks.gr,clocks.mem,pcie.link.gen.current,pcie.link.width.current'
-                cmd_gpu = ['nvidia-smi', f'--query-gpu={query_gpu}', '--format=csv,noheader,nounits']
-                print(f"[v0] Executing command: {' '.join(cmd_gpu)}", flush=True)
-                result_gpu = subprocess.run(cmd_gpu, capture_output=True, text=True, timeout=5)
+                cmd = ['nvidia-smi', '-q', '-x']
+                print(f"[v0] Executing command: {' '.join(cmd)}", flush=True)
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
                 
-                if result_gpu.returncode == 0 and result_gpu.stdout.strip():
-                    output_lines = result_gpu.stdout.strip().split('\n')
-                    # Assuming only one GPU, or taking the first one if multiple are returned
-                    gpu_data_line = output_lines[0] 
-                    parts = [p.strip() for p in gpu_data_line.split(',')]
+                if result.returncode == 0 and result.stdout.strip():
+                    print(f"[v0] nvidia-smi XML output received, parsing...", flush=True)
                     
-                    if len(parts) >= 14: # Check if we have enough parts
-                        try:
-                            detailed_info['temperature'] = int(parts[5]) if parts[5].isdigit() else None
-                            detailed_info['power_draw'] = float(parts[6]) if parts[6].replace('.', '', 1).isdigit() else None
-                            detailed_info['power_limit'] = float(parts[7]) if parts[7].replace('.', '', 1).isdigit() else None
-                            detailed_info['utilization_gpu'] = int(parts[8]) if parts[8].isdigit() else None
-                            detailed_info['utilization_memory'] = int(parts[9]) if parts[9].isdigit() else None
-                            detailed_info['clock_graphics'] = int(parts[10]) if parts[10].isdigit() else None
-                            detailed_info['clock_memory'] = int(parts[11]) if parts[11].isdigit() else None
-                            detailed_info['memory_total'] = int(parts[2]) if parts[2].isdigit() else None
-                            detailed_info['memory_used'] = int(parts[3]) if parts[3].isdigit() else None
-                            detailed_info['memory_free'] = int(parts[4]) if parts[4].isdigit() else None
+                    try:
+                        # Parse XML
+                        root = ET.fromstring(result.stdout)
+                        
+                        # Get first GPU (assuming single GPU or taking first one)
+                        gpu_elem = root.find('gpu')
+                        
+                        if gpu_elem is not None:
+                            print(f"[v0] Processing NVIDIA GPU XML data...", flush=True)
+                            data_retrieved = False
                             
-                            print(f"[v0] NVIDIA GPU Basic Stats: Temp={detailed_info['temperature']}C, Power={detailed_info['power_draw']}W, Util={detailed_info['utilization_gpu']}%", flush=True)
-                            detailed_info['has_monitoring_tool'] = True
-                        except (ValueError, IndexError) as e:
-                            print(f"[v0] Error parsing NVIDIA GPU stats: {e}", flush=True)
-                            detailed_info['has_monitoring_tool'] = False
-
-                # Compute processes using GPU
-                query_apps = 'pid,process_name,used_memory'
-                cmd_apps = ['nvidia-smi', f'--query-compute-apps={query_apps}', '--format=csv,noheader']
-                print(f"[v0] Executing command: {' '.join(cmd_apps)}", flush=True)
-                result_apps = subprocess.run(cmd_apps, capture_output=True, text=True, timeout=5)
-
-                if result_apps.returncode == 0 and result_apps.stdout.strip():
-                    processes = []
-                    for line in result_apps.stdout.strip().split('\n'):
-                        if line:
-                            parts = [p.strip() for p in line.split(',')]
-                            if len(parts) >= 3:
-                                # Convert memory to MB
-                                mem_str = parts[2]
-                                mem_mb = 0
-                                if 'MiB' in mem_str:
+                            # Parse temperature
+                            temp_elem = gpu_elem.find('.//temperature/gpu_temp')
+                            if temp_elem is not None and temp_elem.text:
+                                try:
+                                    # Remove ' C' suffix and convert to int
+                                    temp_str = temp_elem.text.replace(' C', '').strip()
+                                    detailed_info['temperature'] = int(temp_str)
+                                    print(f"[v0] Temperature: {detailed_info['temperature']}°C", flush=True)
+                                    data_retrieved = True
+                                except ValueError:
+                                    pass
+                            
+                            # Parse fan speed
+                            fan_elem = gpu_elem.find('.//fan_speed')
+                            if fan_elem is not None and fan_elem.text and fan_elem.text != 'N/A':
+                                try:
+                                    # Remove ' %' suffix and convert to int
+                                    fan_str = fan_elem.text.replace(' %', '').strip()
+                                    detailed_info['fan_speed'] = int(fan_str)
+                                    detailed_info['fan_unit'] = '%'
+                                    print(f"[v0] Fan Speed: {detailed_info['fan_speed']}%", flush=True)
+                                    data_retrieved = True
+                                except ValueError:
+                                    pass
+                            
+                            # Parse power draw
+                            power_elem = gpu_elem.find('.//gpu_power_readings/power_state')
+                            instant_power_elem = gpu_elem.find('.//gpu_power_readings/instant_power_draw')
+                            if instant_power_elem is not None and instant_power_elem.text and instant_power_elem.text != 'N/A':
+                                try:
+                                    # Remove ' W' suffix and convert to float
+                                    power_str = instant_power_elem.text.replace(' W', '').strip()
+                                    detailed_info['power_draw'] = float(power_str)
+                                    print(f"[v0] Power Draw: {detailed_info['power_draw']} W", flush=True)
+                                    data_retrieved = True
+                                except ValueError:
+                                    pass
+                            
+                            # Parse power limit
+                            power_limit_elem = gpu_elem.find('.//gpu_power_readings/current_power_limit')
+                            if power_limit_elem is not None and power_limit_elem.text and power_limit_elem.text != 'N/A':
+                                try:
+                                    power_limit_str = power_limit_elem.text.replace(' W', '').strip()
+                                    detailed_info['power_limit'] = float(power_limit_str)
+                                    print(f"[v0] Power Limit: {detailed_info['power_limit']} W", flush=True)
+                                except ValueError:
+                                    pass
+                            
+                            # Parse GPU utilization
+                            gpu_util_elem = gpu_elem.find('.//utilization/gpu_util')
+                            if gpu_util_elem is not None and gpu_util_elem.text:
+                                try:
+                                    util_str = gpu_util_elem.text.replace(' %', '').strip()
+                                    detailed_info['utilization_gpu'] = int(util_str)
+                                    print(f"[v0] GPU Utilization: {detailed_info['utilization_gpu']}%", flush=True)
+                                    data_retrieved = True
+                                except ValueError:
+                                    pass
+                            
+                            # Parse memory utilization
+                            mem_util_elem = gpu_elem.find('.//utilization/memory_util')
+                            if mem_util_elem is not None and mem_util_elem.text:
+                                try:
+                                    mem_util_str = mem_util_elem.text.replace(' %', '').strip()
+                                    detailed_info['utilization_memory'] = int(mem_util_str)
+                                    print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
+                                    data_retrieved = True
+                                except ValueError:
+                                    pass
+                            
+                            # Parse encoder utilization
+                            encoder_util_elem = gpu_elem.find('.//utilization/encoder_util')
+                            if encoder_util_elem is not None and encoder_util_elem.text and encoder_util_elem.text != 'N/A':
+                                try:
+                                    encoder_str = encoder_util_elem.text.replace(' %', '').strip()
+                                    detailed_info['engine_encoder'] = int(encoder_str)
+                                    print(f"[v0] Encoder Utilization: {detailed_info['engine_encoder']}%", flush=True)
+                                except ValueError:
+                                    pass
+                            
+                            # Parse decoder utilization
+                            decoder_util_elem = gpu_elem.find('.//utilization/decoder_util')
+                            if decoder_util_elem is not None and decoder_util_elem.text and decoder_util_elem.text != 'N/A':
+                                try:
+                                    decoder_str = decoder_util_elem.text.replace(' %', '').strip()
+                                    detailed_info['engine_decoder'] = int(decoder_str)
+                                    print(f"[v0] Decoder Utilization: {detailed_info['engine_decoder']}%", flush=True)
+                                except ValueError:
+                                    pass
+                            
+                            # Parse clocks
+                            graphics_clock_elem = gpu_elem.find('.//clocks/graphics_clock')
+                            if graphics_clock_elem is not None and graphics_clock_elem.text:
+                                try:
+                                    clock_str = graphics_clock_elem.text.replace(' MHz', '').strip()
+                                    detailed_info['clock_graphics'] = int(clock_str)
+                                    print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']} MHz", flush=True)
+                                    data_retrieved = True
+                                except ValueError:
+                                    pass
+                            
+                            mem_clock_elem = gpu_elem.find('.//clocks/mem_clock')
+                            if mem_clock_elem is not None and mem_clock_elem.text:
+                                try:
+                                    mem_clock_str = mem_clock_elem.text.replace(' MHz', '').strip()
+                                    detailed_info['clock_memory'] = int(mem_clock_str)
+                                    print(f"[v0] Memory Clock: {detailed_info['clock_memory']} MHz", flush=True)
+                                    data_retrieved = True
+                                except ValueError:
+                                    pass
+                            
+                            # Parse memory usage
+                            mem_total_elem = gpu_elem.find('.//fb_memory_usage/total')
+                            if mem_total_elem is not None and mem_total_elem.text:
+                                try:
+                                    mem_total_str = mem_total_elem.text.replace(' MiB', '').strip()
+                                    detailed_info['memory_total'] = int(mem_total_str)
+                                    print(f"[v0] Memory Total: {detailed_info['memory_total']} MB", flush=True)
+                                    data_retrieved = True
+                                except ValueError:
+                                    pass
+                            
+                            mem_used_elem = gpu_elem.find('.//fb_memory_usage/used')
+                            if mem_used_elem is not None and mem_used_elem.text:
+                                try:
+                                    mem_used_str = mem_used_elem.text.replace(' MiB', '').strip()
+                                    detailed_info['memory_used'] = int(mem_used_str)
+                                    print(f"[v0] Memory Used: {detailed_info['memory_used']} MB", flush=True)
+                                    data_retrieved = True
+                                except ValueError:
+                                    pass
+                            
+                            mem_free_elem = gpu_elem.find('.//fb_memory_usage/free')
+                            if mem_free_elem is not None and mem_free_elem.text:
+                                try:
+                                    mem_free_str = mem_free_elem.text.replace(' MiB', '').strip()
+                                    detailed_info['memory_free'] = int(mem_free_str)
+                                    print(f"[v0] Memory Free: {detailed_info['memory_free']} MB", flush=True)
+                                except ValueError:
+                                    pass
+                            
+                            # Parse processes
+                            processes_elem = gpu_elem.find('.//processes')
+                            if processes_elem is not None:
+                                processes = []
+                                for process_elem in processes_elem.findall('process_info'):
                                     try:
-                                        mem_mb = int(float(mem_str.replace('MiB', '').strip()))
-                                    except ValueError:
-                                        pass
-                                elif 'GiB' in mem_str:
-                                    try:
-                                        mem_mb = int(float(mem_str.replace('GiB', '').strip()) * 1024)
-                                    except ValueError:
-                                        pass
+                                        pid_elem = process_elem.find('pid')
+                                        name_elem = process_elem.find('process_name')
+                                        mem_elem = process_elem.find('used_memory')
+                                        type_elem = process_elem.find('type')
+                                        
+                                        if pid_elem is not None and name_elem is not None and mem_elem is not None:
+                                            pid = pid_elem.text.strip()
+                                            name = name_elem.text.strip()
+                                            
+                                            # Parse memory (format: "362 MiB")
+                                            mem_str = mem_elem.text.replace(' MiB', '').strip()
+                                            memory_mb = int(mem_str)
+                                            
+                                            # Get process type (C=Compute, G=Graphics)
+                                            proc_type = type_elem.text.strip() if type_elem is not None else 'C'
+                                            
+                                            process_info = {
+                                                'pid': pid,
+                                                'name': name,
+                                                'memory_used_mb': memory_mb,
+                                                'type': proc_type,
+                                                'engines': {}
+                                            }
+                                            
+                                            # For NVIDIA, we don't have per-process engine utilization
+                                            # But we can indicate the type of workload
+                                            if proc_type == 'G':
+                                                process_info['engines']['Graphics'] = 'Active'
+                                            elif proc_type == 'C':
+                                                process_info['engines']['Compute'] = 'Active'
+                                            
+                                            processes.append(process_info)
+                                            print(f"[v0] Process: {name} (PID: {pid}) - {memory_mb} MB - Type: {proc_type}", flush=True)
+                                    except (ValueError, AttributeError) as e:
+                                        print(f"[v0] Error parsing process: {e}", flush=True)
+                                        continue
                                 
-                                processes.append({
-                                    'pid': parts[0],
-                                    'name': parts[1],
-                                    'memory_used_mb': mem_mb
-                                })
-                    detailed_info['processes'] = processes
-                    print(f"[v0] Found {len(processes)} NVIDIA GPU processes", flush=True)
-
-                if detailed_info['has_monitoring_tool']:
-                    print(f"[v0] NVIDIA GPU monitoring successful", flush=True)
+                                detailed_info['processes'] = processes
+                                print(f"[v0] Found {len(processes)} NVIDIA GPU processes", flush=True)
+                            
+                            if data_retrieved:
+                                detailed_info['has_monitoring_tool'] = True
+                                print(f"[v0] NVIDIA GPU monitoring successful", flush=True)
+                            else:
+                                print(f"[v0] NVIDIA GPU monitoring failed - no data retrieved", flush=True)
+                        else:
+                            print(f"[v0] No GPU element found in XML", flush=True)
+                    
+                    except ET.ParseError as e:
+                        print(f"[v0] Error parsing nvidia-smi XML: {e}", flush=True)
+                        import traceback
+                        traceback.print_exc()
                 else:
-                    print(f"[v0] NVIDIA GPU monitoring failed - essential data not retrieved", flush=True)
+                    print(f"[v0] nvidia-smi returned error or empty output", flush=True)
 
             except subprocess.TimeoutExpired:
                 print(f"[v0] nvidia-smi timed out - marking tool as unavailable", flush=True)
@@ -2151,7 +2305,7 @@ def get_detailed_gpu_info(gpu):
                                     mem_clock = clocks['GFX_MCLK']
                                     if 'value' in mem_clock:
                                         detailed_info['clock_memory'] = f"{mem_clock['value']} MHz"
-                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']}", flush=True)
+                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']} MHz", flush=True)
                                         data_retrieved = True
                             
                             # Parse GPU activity (gpu_activity.GFX)
@@ -3335,7 +3489,10 @@ def api_gpu_realtime(slot):
             'engine_render': gpu.get('engine_render'),
             'engine_blitter': gpu.get('engine_blitter'),
             'engine_video': gpu.get('engine_video'),
-            'engine_video_enhance': gpu.get('engine_video_enhance')
+            'engine_video_enhance': gpu.get('engine_video_enhance'),
+            # Added for NVIDIA/AMD specific engine info if available
+            'engine_encoder': gpu.get('engine_encoder'),
+            'engine_decoder': gpu.get('engine_decoder')
         }
         
         print(f"[v0] /api/gpu/{slot}/realtime returning data")
