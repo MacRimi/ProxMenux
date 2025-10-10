@@ -128,13 +128,14 @@ const fetchStorageData = async (): Promise<StorageData | null> => {
     })
 
     if (!response.ok) {
-      throw new Error(`Flask server responded with status: ${response.status}`)
+      console.log("[v0] Storage API not available (this is normal if not configured)")
+      return null
     }
 
     const data = await response.json()
     return data
   } catch (error) {
-    console.error("[v0] Failed to fetch storage data:", error)
+    console.log("[v0] Storage data unavailable:", error instanceof Error ? error.message : "Unknown error")
     return null
   }
 }
@@ -153,13 +154,14 @@ const fetchNetworkData = async (): Promise<NetworkData | null> => {
     })
 
     if (!response.ok) {
-      throw new Error(`Flask server responded with status: ${response.status}`)
+      console.log("[v0] Network API not available (this is normal if not configured)")
+      return null
     }
 
     const data = await response.json()
     return data
   } catch (error) {
-    console.error("[v0] Failed to fetch network data:", error)
+    console.log("[v0] Network data unavailable:", error instanceof Error ? error.message : "Unknown error")
     return null
   }
 }

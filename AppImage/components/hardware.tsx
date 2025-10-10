@@ -488,7 +488,7 @@ export default function Hardware() {
                           </span>
                           {realtimeGPUData?.has_monitoring_tool === true && (
                             <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-xs px-1.5 py-0">
-                              ✓
+                              {realtimeGPUData?.driver_version ? `✓ v${realtimeGPUData.driver_version}` : "✓"}
                             </Badge>
                           )}
                         </div>
@@ -656,7 +656,7 @@ export default function Hardware() {
                             <div key={idx} className="rounded-lg border border-border/30 bg-background/50 p-4">
                               <div className="flex justify-between items-start mb-3">
                                 <div>
-                                  <Badge className="bg-purple-500/10 text-purple-500 border-purple-500/20 mb-1">
+                                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 mb-1">
                                     {proc.name}
                                   </Badge>
                                   <p className="font-mono text-xs text-muted-foreground">PID: {proc.pid}</p>

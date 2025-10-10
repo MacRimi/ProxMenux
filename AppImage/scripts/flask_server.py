@@ -3422,7 +3422,7 @@ def api_hardware():
         # Format data for frontend
         formatted_data = {
             'cpu': hardware_info.get('cpu', {}),
-            'motherboard': hardware_info.get('motherboard', {}), # Fixed: use hardware_info
+            'motherboard': hardware_info.get('motherboard', {}), # Corrected: use hardware_info
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
             'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_info
