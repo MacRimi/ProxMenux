@@ -1698,7 +1698,8 @@ def get_detailed_gpu_info(gpu):
         'engine_video_enhance': None,
         # Added for NVIDIA/AMD specific engine info if available
         'engine_encoder': None,
-        'engine_decoder': None
+        'engine_decoder': None,
+        'driver_version': None # Added driver_version
     }
     
     # Intel GPU monitoring with intel_gpu_top
@@ -2017,6 +2018,11 @@ def get_detailed_gpu_info(gpu):
                         if gpu_elem is not None:
                             print(f"[v0] Processing NVIDIA GPU XML data...", flush=True)
                             data_retrieved = False
+                            
+                            driver_version_elem = gpu_elem.find('.//driver_version')
+                            if driver_version_elem is not None and driver_version_elem.text:
+                                detailed_info['driver_version'] = driver_version_elem.text.strip()
+                                print(f"[v0] Driver Version: {detailed_info['driver_version']}", flush=True)
                             
                             # Parse temperature
                             temp_elem = gpu_elem.find('.//temperature/gpu_temp')
@@ -3416,7 +3422,7 @@ def api_hardware():
         # Format data for frontend
         formatted_data = {
             'cpu': hardware_info.get('cpu', {}),
-            'motherboard': hardware_info.get('motherboard', {}),
+            'motherboard': hardware_info.get('motherboard', {}), # Fixed: use hardware_info
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
             'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_info
@@ -3491,7 +3497,8 @@ def api_gpu_realtime(slot):
             'engine_video_enhance': gpu.get('engine_video_enhance'),
             # Added for NVIDIA/AMD specific engine info if available
             'engine_encoder': gpu.get('engine_encoder'),
-            'engine_decoder': gpu.get('engine_decoder')
+            'engine_decoder': gpu.get('engine_decoder'),
+            'driver_version': gpu.get('driver_version') # Added driver_version
         }
         
         print(f"[v0] /api/gpu/{slot}/realtime returning data")
