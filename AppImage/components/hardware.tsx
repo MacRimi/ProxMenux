@@ -645,7 +645,7 @@ export default function Hardware() {
                       </div>
                     )}
 
-                    {/* CHANGE: Changed process name to Badge with blue color */}
+                    {/* CHANGE: Changed process name badge from blue to purple to match Intel/AMD */}
                     {realtimeGPUData.processes && realtimeGPUData.processes.length > 0 && (
                       <div>
                         <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
@@ -656,7 +656,7 @@ export default function Hardware() {
                             <div key={idx} className="rounded-lg border border-border/30 bg-background/50 p-4">
                               <div className="flex justify-between items-start mb-3">
                                 <div>
-                                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 mb-1">
+                                  <Badge className="bg-purple-500/10 text-purple-500 border-purple-500/20 mb-1">
                                     {proc.name}
                                   </Badge>
                                   <p className="font-mono text-xs text-muted-foreground">PID: {proc.pid}</p>
