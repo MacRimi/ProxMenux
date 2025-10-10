@@ -960,7 +960,7 @@ def get_smart_data(disk_name):
                 print(f"[v0] Health: WARNING (temperature {smart_data['temperature']}°C)")
             
     except FileNotFoundError:
-        print(f"[v0] ERROR: smartctl not found - install smartmontools")
+        print(f"[v0] ERROR: smartctl not found - install smartmontools for disk monitoring.")
     except Exception as e:
         print(f"[v0] ERROR: Unexpected exception for {disk_name}: {type(e).__name__}: {e}")
         import traceback
@@ -2178,13 +2178,15 @@ def get_detailed_gpu_info(gpu):
                                             mem_str = mem_elem.text.replace(' MiB', '').strip()
                                             memory_mb = int(mem_str)
                                             
+                                            memory_kb = memory_mb * 1024
+                                            
                                             # Get process type (C=Compute, G=Graphics)
                                             proc_type = type_elem.text.strip() if type_elem is not None else 'C'
                                             
                                             process_info = {
                                                 'pid': pid,
                                                 'name': name,
-                                                'memory': memory_mb,  # Changed key from memory_used_mb to memory for consistency
+                                                'memory': memory_kb,  # Now in KB instead of MB
                                                 'engines': {}  # Leave engines empty for NVIDIA since we don't have per-process utilization
                                             }
                                             
@@ -3634,7 +3636,7 @@ def api_vm_control(vmid):
                     'error': control_result.stderr
                 }), 500
         else:
-            return jsonify({'error': 'Failed to control VM'}), 500
+            return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
         print(f"Error controlling VM: {e}")
         return jsonify({'error': str(e)}), 500
