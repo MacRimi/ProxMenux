@@ -536,7 +536,8 @@ def get_storage_info():
                         
                         physical_disks[disk_name] = {
                             'name': disk_name,
-                            'size': disk_size_kb,  # Now in KB instead of string with units
+                            'size': disk_size_kb,  # In KB for formatMemory() in Storage Summary
+                            'size_formatted': size_str,  # Added formatted size string for Storage section
                             'size_bytes': disk_size_bytes,
                             'temperature': smart_data.get('temperature', 0),
                             'health': smart_data.get('health', 'unknown'),
