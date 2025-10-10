@@ -2490,60 +2490,37 @@ def get_hardware_info():
                     
                     if not line:
                         # Empty line = end of device
-                        if current_device and 'Class' in current_device:
-                            device_class = current_device.get('Class', '')
-                            device_name = current_device.get('Device', '')
-                            vendor = current_device.get('Vendor', '')
-                            slot = current_device.get('Slot', 'Unknown')
+                        if current_device and current_device.get('Class') in ['VGA compatible controller', '3D controller', 'Display controller']:
+                            # This is a GPU
+                            device_type = 'Integrated' if 'Integrated' in current_device.get('Device', '') else 'Discrete'
+                            gpu_slot = current_device.get('Slot', 'Unknown')
+                            gpu_name = current_device.get('Device', 'Unknown GPU')
+                            gpu_vendor = current_device.get('Vendor', 'Unknown')
                             
-                            # Categorize and add important devices
-                            device_type = 'Other'
-                            include_device = False
-                            
-                            # Graphics/Display devices
-                            if any(keyword in device_class for keyword in ['VGA', 'Display', '3D']):
-                                device_type = 'Graphics Card'
-                                include_device = True
-                            # Storage controllers
-                            elif any(keyword in device_class for keyword in ['SATA', 'RAID', 'Mass storage', 'Non-Volatile memory']):
-                                device_type = 'Storage Controller'
-                                include_device = True
-                            # Network controllers
-                            elif 'Ethernet' in device_class or 'Network' in device_class:
-                                device_type = 'Network Controller'
-                                include_device = True
-                            # USB controllers
-                            elif 'USB' in device_class:
-                                device_type = 'USB Controller'
-                                include_device = True
-                            # Audio devices
-                            elif 'Audio' in device_class or 'Multimedia' in device_class:
-                                device_type = 'Audio Controller'
-                                include_device = True
-                            # Special devices (Coral TPU, etc.)
-                            elif any(keyword in device_name.lower() for keyword in ['coral', 'tpu', 'edge']):
-                                device_type = 'AI Accelerator'
-                                include_device = True
-                            # PCI bridges (usually not interesting for users)
-                            elif 'Bridge' in device_class:
-                                include_device = False
-                            
-                            if include_device:
-                                pci_device = {
-                                    'slot': slot,
-                                    'type': device_type,
-                                    'vendor': vendor,
-                                    'device': device_name,
-                                    'class': device_class
-                                }
-                                hardware_data['pci_devices'].append(pci_device)
-                        
+                            # Add to graphics_cards if not already present (e.g., from nvidia-smi)
+                            found = False
+                            for existing_gpu in hardware_data['graphics_cards']:
+                                if gpu_slot == existing_gpu.get('slot'): # Match by slot
+                                    found = True
+                                    # Ensure vendor is set if it was unknown
+                                    if existing_gpu.get('vendor') == 'Unknown':
+                                        existing_gpu['vendor'] = gpu_vendor
+                                    break
+                            if not found:
+                                hardware_data['graphics_cards'].append({
+                                    'slot': gpu_slot,
+                                    'name': gpu_name,
+                                    'vendor': gpu_vendor,
+                                    'type': device_type
+                                })
+                                print(f"[v0] Found GPU (lspci -vmm): {gpu_name} ({gpu_vendor}, Type: {device_type})")
+
                         current_device = {}
                     elif ':' in line:
                         key, value = line.split(':', 1)
                         current_device[key.strip()] = value.strip()
             
-            # Now get driver information with lspci -k
+            # Now get driver information with lspci -k and populate pci_devices
             result_k = subprocess.run(['lspci', '-k'], capture_output=True, text=True, timeout=10)
             if result_k.returncode == 0:
                 current_slot = None
@@ -2568,14 +2545,76 @@ def get_hardware_info():
                         
                         # Update the corresponding PCI device
                         if current_slot and (current_driver or current_module):
-                            for device in hardware_data['pci_devices']:
-                                if device['slot'] == current_slot:
-                                    if current_driver:
-                                        device['driver'] = current_driver
-                                    if current_module:
-                                        device['kernel_module'] = current_module
+                            # Find if this slot corresponds to a GPU
+                            is_gpu = False
+                            for gpu in hardware_data['graphics_cards']:
+                                if gpu.get('slot') == current_slot:
+                                    is_gpu = True
                                     break
+                            
+                            # Categorize and add important devices, including GPUs
+                            device_class_str = ""
+                            for d_line in result_k.stdout.split('\n'): # Re-scan for class info
+                                if d_line.startswith(current_slot + ' ') and not d_line.startswith('\t'):
+                                    device_class_str = d_line.split(':', 1)[1].strip()
+                                    break
+                            
+                            device_type = 'Other'
+                            include_device = False
+                            
+                            if is_gpu:
+                                device_type = 'Graphics Card'
+                                include_device = True
+                            elif 'VGA' in device_class_str or '3D' in device_class_str or 'Display' in device_class_str:
+                                device_type = 'Graphics Card'
+                                include_device = True
+                            elif 'SATA' in device_class_str or 'RAID' in device_class_str or 'Mass storage' in device_class_str or 'Non-Volatile memory' in device_class_str:
+                                device_type = 'Storage Controller'
+                                include_device = True
+                            elif 'Ethernet' in device_class_str or 'Network' in device_class_str:
+                                device_type = 'Network Controller'
+                                include_device = True
+                            elif 'USB' in device_class_str:
+                                device_type = 'USB Controller'
+                                include_device = True
+                            elif 'Audio' in device_class_str or 'Multimedia' in device_class_str:
+                                device_type = 'Audio Controller'
+                                include_device = True
+                            elif any(keyword in device_class_str.lower() for keyword in ['coral', 'tpu', 'edge']):
+                                device_type = 'AI Accelerator'
+                                include_device = True
+                            
+                            if include_device:
+                                pci_device = {
+                                    'slot': current_slot,
+                                    'type': device_type,
+                                    'driver': current_driver,
+                                    'kernel_module': current_module
+                                }
+                                
+                                # Avoid adding duplicates if already processed by lspci -vmm
+                                already_added = False
+                                for existing_device in hardware_data['pci_devices']:
+                                    if existing_device.get('slot') == current_slot:
+                                        existing_device['driver'] = current_driver
+                                        existing_device['kernel_module'] = current_module
+                                        already_added = True
+                                        break
+                                if not already_added:
+                                    hardware_data['pci_devices'].append(pci_device)
             
+            # Ensure all graphics cards have driver/module info if available
+            for gpu in hardware_data['graphics_cards']:
+                gpu_slot = gpu.get('slot')
+                if gpu_slot:
+                    for pci_device in hardware_data['pci_devices']:
+                        if pci_device.get('slot') == gpu_slot:
+                            if 'driver' in pci_device:
+                                gpu['driver'] = pci_device['driver']
+                            if 'kernel_module' in pci_device:
+                                gpu['kernel_module'] = pci_device['kernel_module']
+                            break
+                                
             print(f"[v0] Total PCI devices found: {len(hardware_data['pci_devices'])}")
         except Exception as e:
             print(f"[v0] Error getting PCI devices: {e}")
@@ -2973,6 +3012,81 @@ def get_amd_gpu_realtime_data(slot):
         traceback.print_exc()
         return None
 
+def get_gpu_info():
+    """Get detailed GPU information from lspci"""
+    gpus = []
+    try:
+        # Get GPU info from lspci with verbose output
+        result = subprocess.run(['lspci', '-vmm'], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            current_device = {}
+            for line in result.stdout.split('\n'):
+                line = line.strip()
+                if not line:
+                    # Empty line indicates end of device block
+                    if current_device and current_device.get('Class') in ['VGA compatible controller', '3D controller', 'Display controller']:
+                        # This is a GPU
+                        gpu = {
+                            'slot': current_device.get('Slot', 'Unknown'),
+                            'name': current_device.get('Device', 'Unknown GPU'),
+                            'vendor': current_device.get('Vendor', 'Unknown'),
+                            'driver': current_device.get('Driver', 'Unknown'), # May be empty from -vmm
+                            'kernel_module': current_device.get('Module', 'Unknown'), # May be empty from -vmm
+                            'type': 'Integrated' if 'Integrated' in current_device.get('Device', '') else 'Discrete'
+                        }
+                        gpus.append(gpu)
+                        print(f"[v0] Found GPU (lspci -vmm): {gpu['name']} ({gpu['vendor']})")
+                    current_device = {}
+                elif ':' in line:
+                    key, value = line.split(':', 1)
+                    current_device[key.strip()] = value.strip()
+            
+            # Handle last device if file doesn't end with empty line
+            if current_device and current_device.get('Class') in ['VGA compatible controller', '3D controller', 'Display controller']:
+                gpu = {
+                    'slot': current_device.get('Slot', 'Unknown'),
+                    'name': current_device.get('Device', 'Unknown GPU'),
+                    'vendor': current_device.get('Vendor', 'Unknown'),
+                    'driver': current_device.get('Driver', 'Unknown'),
+                    'kernel_module': current_device.get('Module', 'Unknown'),
+                    'type': 'Integrated' if 'Integrated' in current_device.get('Device', '') else 'Discrete'
+                }
+                gpus.append(gpu)
+                print(f"[v0] Found GPU (lspci -vmm): {gpu['name']} ({gpu['vendor']})")
+        
+        # Get driver information from lspci -k
+        result_k = subprocess.run(['lspci', '-k'], capture_output=True, text=True, timeout=10)
+        if result_k.returncode == 0:
+            current_slot = None
+            for line in result_k.stdout.split('\n'):
+                # Check if this is a device line (starts with slot number)
+                if line and not line.startswith('\t'):
+                    parts = line.split(' ', 1)
+                    if len(parts) >= 1:
+                        current_slot = parts[0]
+                # Check for driver information
+                elif line.startswith('\t'):
+                    line = line.strip()
+                    if line.startswith('Kernel driver in use:'):
+                        driver = line.split(':', 1)[1].strip()
+                        # Update GPU with driver info
+                        for gpu in gpus:
+                            if gpu['slot'] == current_slot:
+                                gpu['driver'] = driver
+                    elif line.startswith('Kernel modules:'):
+                        modules = line.split(':', 1)[1].strip()
+                        # Update GPU with kernel module info
+                        for gpu in gpus:
+                            if gpu['slot'] == current_slot:
+                                gpu['kernel_module'] = modules
+        
+        print(f"[v0] Total GPUs found: {len(gpus)}")
+    except Exception as e:
+        print(f"[v0] Error getting GPU info: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    return gpus
 
 @app.route('/api/system', methods=['GET'])
 def api_system():
