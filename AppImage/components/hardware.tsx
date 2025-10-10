@@ -674,7 +674,7 @@ export default function Hardware() {
                                     const utilizationNum =
                                       typeof utilization === "string" ? Number.parseFloat(utilization) : utilization
 
-                                    if (utilizationNum === 0) return null
+                                    if (utilizationNum === 0 || isNaN(utilizationNum)) return null
 
                                     return (
                                       <div key={engineName} className="space-y-1">
