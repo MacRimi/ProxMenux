@@ -2234,63 +2234,119 @@ def get_detailed_gpu_info(gpu):
                                 fdinfo = device['fdinfo']
                                 processes = []
                                 
-                                for proc_data in fdinfo:
-                                    if 'name' in proc_data and 'pid' in proc_data:
+                                print(f"[v0] Parsing fdinfo with {len(fdinfo)} entries", flush=True)
+                                
+                                # fdinfo es un diccionario donde las claves son los PIDs (como strings)
+                                for pid_str, proc_data in fdinfo.items():
+                                    try:
                                         process_info = {
-                                            'name': proc_data['name'],
-                                            'pid': str(proc_data['pid']),
+                                            'name': proc_data.get('name', 'Unknown'),
+                                            'pid': pid_str,  # El PID ya es la clave
                                             'memory': {},
                                             'engines': {}
                                         }
                                         
+                                        print(f"[v0] Processing fdinfo entry: PID={pid_str}, Name={process_info['name']}", flush=True)
+                                        
                                         # Parse VRAM usage for this process
                                         if 'VRAM' in proc_data:
-                                            vram_usage = proc_data['VRAM']
-                                            if 'value' in vram_usage:
-                                                # Convert to bytes for consistency with Intel format
-                                                vram_mb = vram_usage['value']
+                                            vram_data = proc_data['VRAM']
+                                            if isinstance(vram_data, dict) and 'value' in vram_data:
+                                                vram_mb = vram_data['value']
                                                 process_info['memory'] = {
                                                     'total': int(vram_mb * 1024 * 1024),  # MB to bytes
                                                     'shared': 0,
                                                     'resident': int(vram_mb * 1024 * 1024)
                                                 }
+                                                print(f"[v0]   VRAM: {vram_mb} MB", flush=True)
+                                        
+                                        # Parse GTT (Graphics Translation Table) usage
+                                        if 'GTT' in proc_data:
+                                            gtt_data = proc_data['GTT']
+                                            if isinstance(gtt_data, dict) and 'value' in gtt_data:
+                                                gtt_mb = gtt_data['value']
+                                                # Add GTT to total memory if not already counted
+                                                if 'total' not in process_info['memory']:
+                                                    process_info['memory']['total'] = int(gtt_mb * 1024 * 1024)
+                                                print(f"[v0]   GTT: {gtt_mb} MB", flush=True)
                                         
                                         # Parse engine utilization for this process
                                         if 'usage' in proc_data:
                                             usage = proc_data['usage']
+                                            print(f"[v0]   Usage data: {usage}", flush=True)
                                             
+                                            # GFX (Graphics/Render)
                                             if 'GFX' in usage:
                                                 gfx_usage = usage['GFX']
-                                                if 'value' in gfx_usage:
-                                                    process_info['engines']['Render/3D'] = f"{gfx_usage['value']:.1f}%"
+                                                if isinstance(gfx_usage, dict) and 'value' in gfx_usage:
+                                                    val = gfx_usage['value']
+                                                    if val > 0:
+                                                        process_info['engines']['Render/3D'] = f"{val:.1f}%"
+                                                        print(f"[v0]     GFX: {val}%", flush=True)
                                             
-                                            if 'Compute' in usage:
-                                                compute_usage = usage['Compute']
-                                                if 'value' in compute_usage:
-                                                    process_info['engines']['Compute'] = f"{compute_usage['value']:.1f}%"
+                                            # COMP (Compute)
+                                            if 'COMP' in usage:
+                                                comp_usage = usage['COMP']
+                                                if isinstance(comp_usage, dict) and 'value' in comp_usage:
+                                                    val = comp_usage['value']
+                                                    if val > 0:
+                                                        process_info['engines']['Compute'] = f"{val:.1f}%"
+                                                        print(f"[v0]     COMP: {val}%", flush=True)
                                             
+                                            # DMA (Direct Memory Access)
                                             if 'DMA' in usage:
                                                 dma_usage = usage['DMA']
-                                                if 'value' in dma_usage:
-                                                    process_info['engines']['DMA'] = f"{dma_usage['value']:.1f}%"
+                                                if isinstance(dma_usage, dict) and 'value' in dma_usage:
+                                                    val = dma_usage['value']
+                                                    if val > 0:
+                                                        process_info['engines']['DMA'] = f"{val:.1f}%"
+                                                        print(f"[v0]     DMA: {val}%", flush=True)
                                             
-                                            if 'Decode' in usage:
-                                                decode_usage = usage['Decode']
-                                                if 'value' in decode_usage:
-                                                    process_info['engines']['Video'] = f"{decode_usage['value']:.1f}%"
+                                            # DEC (Decode/Video)
+                                            if 'DEC' in usage:
+                                                dec_usage = usage['DEC']
+                                                if isinstance(dec_usage, dict) and 'value' in dec_usage:
+                                                    val = dec_usage['value']
+                                                    if val > 0:
+                                                        process_info['engines']['Video'] = f"{val:.1f}%"
+                                                        print(f"[v0]     DEC: {val}%", flush=True)
                                             
-                                            if 'Encode' in usage:
-                                                encode_usage = usage['Encode']
-                                                if 'value' in encode_usage:
-                                                    process_info['engines']['VideoEncode'] = f"{encode_usage['value']:.1f}%"
+                                            # ENC (Encode)
+                                            if 'ENC' in usage:
+                                                enc_usage = usage['ENC']
+                                                if isinstance(enc_usage, dict) and 'value' in enc_usage:
+                                                    val = enc_usage['value']
+                                                    if val > 0:
+                                                        process_info['engines']['VideoEncode'] = f"{val:.1f}%"
+                                                        print(f"[v0]     ENC: {val}%", flush=True)
+                                            
+                                            # CPU (CPU usage by GPU driver)
+                                            if 'CPU' in usage:
+                                                cpu_usage = usage['CPU']
+                                                if isinstance(cpu_usage, dict) and 'value' in cpu_usage:
+                                                    val = cpu_usage['value']
+                                                    if val > 0:
+                                                        process_info['engines']['CPU'] = f"{val:.1f}%"
+                                                        print(f"[v0]     CPU: {val}%", flush=True)
                                         
-                                        # Only add process if it has some GPU activity
-                                        if process_info['engines']:
+                                        # Add the process even if it has no active engines at this moment
+                                        # (may have allocated memory but is not actively using the GPU)
+                                        if process_info['memory'] or process_info['engines']:
                                             processes.append(process_info)
-                                            print(f"[v0] Found AMD GPU process: {process_info['name']} (PID: {process_info['pid']})", flush=True)
+                                            print(f"[v0] Added AMD GPU process: {process_info['name']} (PID: {process_info['pid']})", flush=True)
+                                        else:
+                                            print(f"[v0] Skipped process {process_info['name']} - no memory or engine usage", flush=True)
+                                    
+                                    except Exception as e:
+                                        print(f"[v0] Error parsing fdinfo entry for PID {pid_str}: {e}", flush=True)
+                                        import traceback
+                                        traceback.print_exc()
                                 
                                 detailed_info['processes'] = processes
                                 print(f"[v0] Total AMD GPU processes: {len(processes)}", flush=True)
+                            else:
+                                print(f"[v0] No fdinfo section found in device data", flush=True)
+                                detailed_info['processes'] = []
                             
                             if data_retrieved:
                                 detailed_info['has_monitoring_tool'] = True
@@ -2303,10 +2359,6 @@ def get_detailed_gpu_info(gpu):
                     except json.JSONDecodeError as e:
                         print(f"[v0] Error parsing amdgpu_top JSON: {e}", flush=True)
                         print(f"[v0] Raw output: {result.stdout[:500]}", flush=True)
-                else:
-                    print(f"[v0] amdgpu_top returned error or empty output", flush=True)
-                    if result.stderr:
-                        print(f"[v0] amdgpu_top stderr: {result.stderr}", flush=True)
             
             except subprocess.TimeoutExpired:
                 print(f"[v0] amdgpu_top timed out", flush=True)
