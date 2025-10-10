@@ -1336,7 +1336,7 @@ def get_network_info():
             network_data['traffic']['packet_loss_in'] = 0
             
         if total_packets_out > 0:
-            network_data['traffic']['packet_loss_out'] = round((net_io.dropout / total_packets_out) * 100, 2)
+            network_data['traffic']['packet_loss_out'] = round((io_stats.dropout / total_packets_out) * 100, 2)
         else:
             network_data['traffic']['packet_loss_out'] = 0
         
@@ -2158,6 +2158,13 @@ def get_detailed_gpu_info(gpu):
                                     print(f"[v0] Memory Free: {detailed_info['memory_free']} MB", flush=True)
                                 except ValueError:
                                     pass
+                            
+                            if (detailed_info['utilization_memory'] is None or detailed_info['utilization_memory'] == 0) and \
+                               detailed_info['memory_used'] is not None and detailed_info['memory_total'] is not None and \
+                               detailed_info['memory_total'] > 0:
+                                mem_util = (detailed_info['memory_used'] / detailed_info['memory_total']) * 100
+                                detailed_info['utilization_memory'] = round(mem_util, 1)
+                                print(f"[v0] Memory Utilization (calculated): {detailed_info['utilization_memory']}%", flush=True)
                             
                             # Parse processes
                             processes_elem = gpu_elem.find('.//processes')
