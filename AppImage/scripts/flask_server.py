@@ -527,6 +527,8 @@ def get_storage_info():
                         smart_data = get_smart_data(disk_name)
                         print(f"[v0] SMART data for {disk_name}: {smart_data}")
                         
+                        disk_size_kb = disk_size_bytes / 1024
+                        
                         if disk_size_tb >= 1:
                             size_str = f"{disk_size_tb:.1f}T"
                         else:
@@ -534,7 +536,7 @@ def get_storage_info():
                         
                         physical_disks[disk_name] = {
                             'name': disk_name,
-                            'size': size_str,
+                            'size': disk_size_kb,  # Now in KB instead of string with units
                             'size_bytes': disk_size_bytes,
                             'temperature': smart_data.get('temperature', 0),
                             'health': smart_data.get('health', 'unknown'),
