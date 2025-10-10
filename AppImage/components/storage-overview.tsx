@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 interface DiskInfo {
   name: string
-  size?: string
+  size?: number // Changed from string to number (KB) for formatMemory()
+  size_formatted?: string // Added formatted size string for display
   temperature: number
   health: string
   power_on_hours?: number
@@ -25,8 +26,8 @@ interface DiskInfo {
   reallocated_sectors?: number
   pending_sectors?: number
   crc_errors?: number
-  rotation_rate?: number // Added rotation rate (RPM)
-  power_cycles?: number // Added power cycle count
+  rotation_rate?: number
+  power_cycles?: number
 }
 
 interface ZFSPool {
@@ -458,10 +459,10 @@ export function StorageOverview() {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  {disk.size && (
+                  {disk.size_formatted && (
                     <div>
                       <p className="text-sm text-muted-foreground">Size</p>
-                      <p className="font-medium">{disk.size}</p>
+                      <p className="font-medium">{disk.size_formatted}</p>
                     </div>
                   )}
                   {disk.smart_status && disk.smart_status !== "unknown" && (
@@ -512,7 +513,7 @@ export function StorageOverview() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Capacity</p>
-                  <p className="font-medium">{selectedDisk.size}</p>
+                  <p className="font-medium">{selectedDisk.size_formatted}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Health Status</p>
