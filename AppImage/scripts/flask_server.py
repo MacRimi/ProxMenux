@@ -124,6 +124,204 @@ def get_intel_gpu_processes_from_text():
         traceback.print_exc()
         return []
 
+def get_amd_gpu_realtime_data(slot):
+    """Get real-time monitoring data for AMD GPU using amdgpu_top"""
+    try:
+        print(f"[v0] Checking for amdgpu_top...", flush=True)
+        
+        amdgpu_top_path = shutil.which('amdgpu_top')
+        if not amdgpu_top_path:
+            print(f"[v0] amdgpu_top not found in PATH", flush=True)
+            return None
+        
+        print(f"[v0] Found amdgpu_top at: {amdgpu_top_path}", flush=True)
+        print(f"[v0] Executing: amdgpu_top --json -n 1", flush=True)
+        
+        # Execute amdgpu_top --json -n 1 for a single snapshot
+        result = subprocess.run(
+            [amdgpu_top_path, '--json', '-n', '1'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if result.returncode != 0:
+            print(f"[v0] amdgpu_top failed with return code {result.returncode}", flush=True)
+            print(f"[v0] stderr: {result.stderr}", flush=True)
+            return None
+        
+        # Parse JSON output
+        data = json.loads(result.stdout)
+        print(f"[v0] Successfully parsed amdgpu_top JSON output", flush=True)
+        
+        # Find the device matching the slot
+        devices = data.get('devices', [])
+        if not devices:
+            print(f"[v0] No devices found in amdgpu_top output", flush=True)
+            return None
+        
+        # For now, use the first device (can be enhanced to match by PCI slot)
+        device = devices[0]
+        print(f"[v0] Using device: {device.get('Info', {}).get('DeviceName', 'Unknown')}", flush=True)
+        
+        # Extract monitoring data
+        amd_data = {
+            'has_monitoring_tool': True,
+            'processes': []
+        }
+        
+        # Parse sensors (temperatures, frequencies, power)
+        sensors = device.get('Sensors', {})
+        if sensors:
+            # Temperature
+            edge_temp = sensors.get('Edge Temperature')
+            if edge_temp:
+                temp_value = edge_temp.get('value', 0)
+                amd_data['temperature'] = f"{temp_value}°C"
+            
+            # GPU Power
+            gpu_power = sensors.get('GFX Power') or sensors.get('GPU Power')
+            if gpu_power:
+                power_value = gpu_power.get('value', 0)
+                power_unit = gpu_power.get('unit', 'W')
+                amd_data['power_draw'] = f"{power_value} {power_unit}"
+            
+            # Graphics Clock
+            gfx_sclk = sensors.get('GFX_SCLK')
+            if gfx_sclk:
+                freq_value = gfx_sclk.get('value', 0)
+                freq_unit = gfx_sclk.get('unit', 'MHz')
+                amd_data['clock_graphics'] = f"{freq_value} {freq_unit}"
+            
+            # Memory Clock
+            gfx_mclk = sensors.get('GFX_MCLK')
+            if gfx_mclk:
+                mem_freq_value = gfx_mclk.get('value', 0)
+                mem_freq_unit = gfx_mclk.get('unit', 'MHz')
+                amd_data['clock_memory'] = f"{mem_freq_value} {mem_freq_unit}"
+        
+        # Parse VRAM usage
+        vram = device.get('VRAM', {})
+        if vram:
+            total_vram = vram.get('Total VRAM', {})
+            vram_usage = vram.get('Total VRAM Usage', {})
+            
+            if total_vram:
+                total_value = total_vram.get('value', 0)
+                total_unit = total_vram.get('unit', 'MiB')
+                amd_data['memory_total'] = f"{total_value} {total_unit}"
+            
+            if vram_usage:
+                used_value = vram_usage.get('value', 0)
+                used_unit = vram_usage.get('unit', 'MiB')
+                amd_data['memory_used'] = f"{used_value} {used_unit}"
+                
+                # Calculate memory utilization percentage
+                if total_vram and vram_usage:
+                    total_val = total_vram.get('value', 1)
+                    used_val = vram_usage.get('value', 0)
+                    if total_val > 0:
+                        mem_util_pct = (used_val / total_val) * 100
+                        amd_data['utilization_memory'] = f"{mem_util_pct:.1f}%"
+        
+        # Parse GPU activity
+        activity = device.get('Activity', {})
+        if activity:
+            gfx_activity = activity.get('GFX', {})
+            if gfx_activity:
+                gfx_value = gfx_activity.get('value', 0)
+                amd_data['utilization_gpu'] = f"{gfx_value}%"
+        
+        # Parse GRBM (Graphics Register Bus Manager) for engine utilization
+        grbm = device.get('GRBM', {})
+        grbm2 = device.get('GRBM2', {})
+        
+        # Map AMD GRBM components to Intel-like engine names for consistency
+        if grbm:
+            graphics_pipe = grbm.get('Graphics Pipe', {}).get('value', 0)
+            amd_data['engine_render'] = f"{graphics_pipe}%"
+            
+            texture_pipe = grbm.get('Texture Pipe', {}).get('value', 0)
+            # Use texture pipe as a proxy for blitter
+            amd_data['engine_blitter'] = f"{texture_pipe}%"
+        
+        if grbm2:
+            # Video-related components
+            cmd_proc_graphics = grbm2.get('Command Processor - Graphics', {}).get('value', 0)
+            # Use command processor graphics as video engine proxy
+            amd_data['engine_video'] = f"{cmd_proc_graphics}%"
+        
+        # Parse fdinfo (process information)
+        fdinfo = device.get('fdinfo', {})
+        if fdinfo:
+            for proc_name, proc_data in fdinfo.items():
+                if isinstance(proc_data, dict):
+                    process_info = {
+                        'name': proc_name,
+                        'pid': str(proc_data.get('PID', 'Unknown')),
+                        'memory': {},
+                        'engines': {}
+                    }
+                    
+                    # Parse memory usage
+                    vram_val = proc_data.get('VRAM', {})
+                    gtt_val = proc_data.get('GTT', {})
+                    
+                    if isinstance(vram_val, dict):
+                        vram_mb = vram_val.get('value', 0)
+                        vram_unit = vram_val.get('unit', 'MiB')
+                        # Convert to bytes for consistency with Intel
+                        if vram_unit == 'MiB':
+                            vram_bytes = int(vram_mb * 1024 * 1024)
+                        else:
+                            vram_bytes = int(vram_mb)
+                        
+                        process_info['memory']['resident'] = vram_bytes
+                    
+                    # Parse engine utilization for this process
+                    gfx_pct = proc_data.get('GFX', {})
+                    if isinstance(gfx_pct, dict):
+                        gfx_value = gfx_pct.get('value', 0)
+                        process_info['engines']['Render/3D'] = f"{gfx_value}%"
+                    
+                    # Video decode/encode
+                    dec_pct = proc_data.get('DEC', {})
+                    enc_pct = proc_data.get('ENC', {})
+                    
+                    if isinstance(dec_pct, dict) or isinstance(enc_pct, dict):
+                        dec_value = dec_pct.get('value', 0) if isinstance(dec_pct, dict) else 0
+                        enc_value = enc_pct.get('value', 0) if isinstance(enc_pct, dict) else 0
+                        # Combine decode and encode as "Video"
+                        video_total = dec_value + enc_value
+                        if video_total > 0:
+                            process_info['engines']['Video'] = f"{video_total}%"
+                    
+                    # Only add process if it has some GPU activity
+                    if process_info['engines']:
+                        amd_data['processes'].append(process_info)
+                        print(f"[v0] Found AMD GPU process: {proc_name} (PID: {process_info['pid']})", flush=True)
+        
+        print(f"[v0] AMD GPU monitoring successful", flush=True)
+        print(f"[v0] - Temperature: {amd_data.get('temperature')}", flush=True)
+        print(f"[v0] - Power: {amd_data.get('power_draw')}", flush=True)
+        print(f"[v0] - GPU Utilization: {amd_data.get('utilization_gpu')}", flush=True)
+        print(f"[v0] - Processes: {len(amd_data['processes'])}", flush=True)
+        
+        return amd_data
+        
+    except subprocess.TimeoutExpired:
+        print(f"[v0] amdgpu_top command timed out", flush=True)
+        return None
+    except json.JSONDecodeError as e:
+        print(f"[v0] Failed to parse amdgpu_top JSON output: {e}", flush=True)
+        return None
+    except Exception as e:
+        print(f"[v0] Error getting AMD GPU data: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return None
+
+
 def extract_vmid_from_interface(interface_name):
     """Extract VMID from virtual interface name (veth100i0 -> 100, tap105i0 -> 105)"""
     try:
@@ -1701,8 +1899,18 @@ def get_detailed_gpu_info(gpu):
         'engine_video_enhance': None
     }
     
+    if 'amd' in vendor or 'ati' in vendor:
+        print(f"[v0] AMD GPU detected, checking for amdgpu_top...", flush=True)
+        amd_data = get_amd_gpu_realtime_data(slot)
+        if amd_data:
+            detailed_info.update(amd_data)
+            print(f"[v0] AMD GPU details updated: {detailed_info}", flush=True)
+            return detailed_info
+        else:
+            print(f"[v0] AMD GPU monitoring failed or amdgpu_top not available", flush=True)
+    
     # Intel GPU monitoring with intel_gpu_top
-    if 'intel' in vendor:
+    elif 'intel' in vendor:
         print(f"[v0] Intel GPU detected, checking for intel_gpu_top...", flush=True)
         
         intel_gpu_top_path = None
@@ -2079,16 +2287,6 @@ def get_detailed_gpu_info(gpu):
         else:
             print(f"[v0] nvidia-smi not found in PATH", flush=True)
 
-    # AMD GPU monitoring (placeholder, requires radeontop or similar)
-    elif 'amd' in vendor:
-        print(f"[v0] AMD GPU detected. Monitoring tools like radeontop are needed for detailed info.", flush=True)
-        if shutil.which('radeontop'):
-            print(f"[v0] radeontop found, but integration is not yet implemented.", flush=True)
-        else:
-            print(f"[v0] radeontop not found in PATH.", flush=True)
-        # Placeholder: return basic info if available from lspci or sensors
-        # No detailed monitoring implemented yet for AMD
-        
     else:
         print(f"[v0] Unsupported GPU vendor: {vendor}", flush=True)
 
@@ -2194,112 +2392,6 @@ def get_network_hardware_info(pci_slot):
         print(f"[v0] Error getting network hardware info: {e}")
     
     return net_info
-
-def get_gpu_info():
-    """Detect and return information about GPUs in the system"""
-    gpus = []
-    
-    try:
-        result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            for line in result.stdout.split('\n'):
-                # Match VGA, 3D, Display controllers
-                if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
-
-                    parts = line.split(' ', 1)
-                    if len(parts) >= 2:
-                        slot = parts[0].strip()  
-                        remaining = parts[1]
-                        
-                        if ':' in remaining:
-                            class_and_name = remaining.split(':', 1)
-                            gpu_name = class_and_name[1].strip() if len(class_and_name) > 1 else remaining.strip()
-                        else:
-                            gpu_name = remaining.strip()
-                        
-                        # Determine vendor
-                        vendor = 'Unknown'
-                        if 'NVIDIA' in gpu_name or 'nVidia' in gpu_name:
-                            vendor = 'NVIDIA'
-                        elif 'AMD' in gpu_name or 'ATI' in gpu_name or 'Radeon' in gpu_name:
-                            vendor = 'AMD'
-                        elif 'Intel' in gpu_name:
-                            vendor = 'Intel'
-                        
-                        gpu = {
-                            'slot': slot,
-                            'name': gpu_name,
-                            'vendor': vendor,
-                            'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated'
-                        }
-                        
-                        pci_info = get_pci_device_info(slot)
-                        if pci_info:
-                            gpu['pci_class'] = pci_info.get('class', '')
-                            gpu['pci_driver'] = pci_info.get('driver', '')
-                            gpu['pci_kernel_module'] = pci_info.get('kernel_module', '')
-                        
-                        # detailed_info = get_detailed_gpu_info(gpu) # Removed this call here
-                        # gpu.update(detailed_info)             # It will be called later in api_gpu_realtime
-                        
-                        gpus.append(gpu)
-                        print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
-
-    except Exception as e:
-        print(f"[v0] Error detecting GPUs from lspci: {e}")
-    
-    try:
-        result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            current_adapter = None
-            
-            for line in result.stdout.split('\n'):
-                line = line.strip()
-                if not line:
-                    continue
-                
-                # Detect adapter line
-                if line.startswith('Adapter:'):
-                    current_adapter = line.replace('Adapter:', '').strip()
-                    continue
-                
-                # Look for GPU-related sensors (nouveau, amdgpu, radeon, i915)
-                if ':' in line and not line.startswith(' '):
-                    parts = line.split(':', 1)
-                    sensor_name = parts[0].strip()
-                    value_part = parts[1].strip()
-                    
-                    # Check if this is a GPU sensor
-                    gpu_sensor_keywords = ['nouveau', 'amdgpu', 'radeon', 'i915']
-                    is_gpu_sensor = any(keyword in current_adapter.lower() if current_adapter else False for keyword in gpu_sensor_keywords)
-                    
-                    if is_gpu_sensor:
-                        # Try to match this sensor to a GPU
-                        for gpu in gpus:
-                            # Match nouveau to NVIDIA, amdgpu/radeon to AMD, i915 to Intel
-                            if (('nouveau' in current_adapter.lower() and gpu['vendor'] == 'NVIDIA') or
-                                (('amdgpu' in current_adapter.lower() or 'radeon' in current_adapter.lower()) and gpu['vendor'] == 'AMD') or
-                                ('i915' in current_adapter.lower() and gpu['vendor'] == 'Intel')):
-                                
-                                # Parse temperature (only if not already set by nvidia-smi)
-                                if 'temperature' not in gpu or gpu['temperature'] is None:
-                                    if '°C' in value_part or 'C' in value_part:
-                                        temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
-                                        if temp_match:
-                                            gpu['temperature'] = float(temp_match.group(1))
-                                            print(f"[v0] GPU {gpu['name']}: Temperature = {gpu['temperature']}°C")
-                                
-                                # Parse fan speed
-                                elif 'RPM' in value_part:
-                                    rpm_match = re.search(r'([\d.]+)\s*RPM', value_part)
-                                    if rpm_match:
-                                        gpu['fan_speed'] = int(float(rpm_match.group(1)))
-                                        gpu['fan_unit'] = 'RPM'
-                                        print(f"[v0] GPU {gpu['name']}: Fan = {gpu['fan_speed']} RPM")
-    except Exception as e:
-        print(f"[v0] Error enriching GPU data from sensors: {e}")
-    
-    return gpus
 
 def get_disk_hardware_info(disk_name):
     """Get detailed hardware information for a disk"""
