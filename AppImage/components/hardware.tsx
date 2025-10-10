@@ -481,9 +481,17 @@ export default function Hardware() {
                     {(findPCIDeviceForGPU(selectedGPU)?.driver || selectedGPU.pci_driver) && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
                         <span className="text-sm text-muted-foreground">Driver</span>
-                        <span className="font-mono text-sm text-green-500">
-                          {findPCIDeviceForGPU(selectedGPU)?.driver || selectedGPU.pci_driver}
-                        </span>
+                        {/* CHANGE: Added monitoring availability indicator */}
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm text-green-500">
+                            {findPCIDeviceForGPU(selectedGPU)?.driver || selectedGPU.pci_driver}
+                          </span>
+                          {realtimeGPUData?.has_monitoring_tool === true && (
+                            <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-xs px-1.5 py-0">
+                              ✓
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     )}
                     {(findPCIDeviceForGPU(selectedGPU)?.kernel_module || selectedGPU.pci_kernel_module) && (
