@@ -6,88 +6,165 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { ScrollArea } from "./ui/scroll-area"
-import { FileText, Search, Download, AlertTriangle, Info, CheckCircle, XCircle } from "lucide-react"
-import { useState } from "react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
+import {
+  FileText,
+  Search,
+  Download,
+  AlertTriangle,
+  Info,
+  CheckCircle,
+  XCircle,
+  Database,
+  Activity,
+  HardDrive,
+  Calendar,
+  RefreshCw,
+} from "lucide-react"
+import { useState, useEffect } from "react"
 
-const systemLogs = [
-  {
-    timestamp: "2024-01-15 14:32:15",
-    level: "info",
-    service: "pveproxy",
-    message: "User root@pam authenticated successfully",
-    source: "auth.log",
-  },
-  {
-    timestamp: "2024-01-15 14:31:45",
-    level: "warning",
-    service: "pvedaemon",
-    message: "VM 101 high memory usage detected (85%)",
-    source: "syslog",
-  },
-  {
-    timestamp: "2024-01-15 14:30:22",
-    level: "error",
-    service: "pve-cluster",
-    message: "Failed to connect to cluster node pve-02",
-    source: "cluster.log",
-  },
-  {
-    timestamp: "2024-01-15 14:29:18",
-    level: "info",
-    service: "pvestatd",
-    message: "Storage local: 1.25TB used, 750GB available",
-    source: "syslog",
-  },
-  {
-    timestamp: "2024-01-15 14:28:33",
-    level: "info",
-    service: "pve-firewall",
-    message: "Blocked connection attempt from 192.168.1.50",
-    source: "firewall.log",
-  },
-  {
-    timestamp: "2024-01-15 14:27:45",
-    level: "warning",
-    service: "smartd",
-    message: "SMART warning: /dev/nvme0n1 temperature high (55°C)",
-    source: "smart.log",
-  },
-  {
-    timestamp: "2024-01-15 14:26:12",
-    level: "info",
-    service: "pveproxy",
-    message: "Started backup job for VM 100",
-    source: "backup.log",
-  },
-  {
-    timestamp: "2024-01-15 14:25:38",
-    level: "error",
-    service: "qemu-server",
-    message: "VM 102 failed to start: insufficient memory",
-    source: "qemu.log",
-  },
-  {
-    timestamp: "2024-01-15 14:24:55",
-    level: "info",
-    service: "pvedaemon",
-    message: "VM 103 migrated successfully to node pve-01",
-    source: "migration.log",
-  },
-  {
-    timestamp: "2024-01-15 14:23:17",
-    level: "warning",
-    service: "pve-ha-lrm",
-    message: "Resource VM:104 state changed to error",
-    source: "ha.log",
-  },
-]
+interface Log {
+  timestamp: string
+  level: string
+  service: string
+  message: string
+  source: string
+  pid?: string
+  hostname?: string
+}
+
+interface Backup {
+  volid: string
+  storage: string
+  vmid: string | null
+  type: string | null
+  size: number
+  size_human: string
+  created: string
+  timestamp: number
+}
+
+interface Event {
+  upid: string
+  type: string
+  status: string
+  level: string
+  node: string
+  user: string
+  vmid: string
+  starttime: string
+  endtime: string
+  duration: string
+}
+
+interface SystemLog {
+  timestamp: string
+  level: string
+  service: string
+  message: string
+  source: string
+  pid?: string
+  hostname?: string
+}
 
 export function SystemLogs() {
+  const [logs, setLogs] = useState<SystemLog[]>([])
+  const [backups, setBackups] = useState<Backup[]>([])
+  const [events, setEvents] = useState<Event[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   const [searchTerm, setSearchTerm] = useState("")
   const [levelFilter, setLevelFilter] = useState("all")
   const [serviceFilter, setServiceFilter] = useState("all")
+  const [activeTab, setActiveTab] = useState("logs")
 
-  const filteredLogs = systemLogs.filter((log) => {
+  // Fetch data
+  useEffect(() => {
+    fetchAllData()
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchAllData, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchAllData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Fetch logs, backups, and events in parallel
+      const [logsRes, backupsRes, eventsRes] = await Promise.all([
+        fetchSystemLogs(),
+        fetch("http://localhost:8008/api/backups"),
+        fetch("http://localhost:8008/api/events?limit=50"),
+      ])
+
+      setLogs(logsRes)
+
+      if (backupsRes.ok) {
+        const backupsData = await backupsRes.json()
+        setBackups(backupsData.backups || [])
+      }
+
+      if (eventsRes.ok) {
+        const eventsData = await eventsRes.json()
+        setEvents(eventsData.events || [])
+      }
+    } catch (err) {
+      console.error("[v0] Error fetching system logs data:", err)
+      setError("Failed to connect to server")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchSystemLogs = async (): Promise<SystemLog[]> => {
+    try {
+      const baseUrl =
+        typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+      const apiUrl = `${baseUrl}/api/logs`
+
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      })
+
+      if (!response.ok) {
+        throw new Error(`Flask server responded with status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      return Array.isArray(data) ? data : data.logs || []
+    } catch (error) {
+      console.error("[v0] Failed to fetch system logs:", error)
+      return []
+    }
+  }
+
+  const handleDownloadLogs = async (type = "system") => {
+    try {
+      const response = await fetch(`http://localhost:8008/api/logs/download?type=${type}&lines=1000`)
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `proxmox_${type}.log`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      }
+    } catch (err) {
+      console.error("[v0] Error downloading logs:", err)
+    }
+  }
+
+  // Filter logs
+  const filteredLogs = logs.filter((log) => {
     const matchesSearch =
       log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.service.toLowerCase().includes(searchTerm.toLowerCase())
@@ -100,10 +177,14 @@ export function SystemLogs() {
   const getLevelColor = (level: string) => {
     switch (level) {
       case "error":
+      case "critical":
+      case "emergency":
+      case "alert":
         return "bg-red-500/10 text-red-500 border-red-500/20"
       case "warning":
         return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
       case "info":
+      case "notice":
         return "bg-blue-500/10 text-blue-500 border-blue-500/20"
       default:
         return "bg-gray-500/10 text-gray-500 border-gray-500/20"
@@ -113,10 +194,14 @@ export function SystemLogs() {
   const getLevelIcon = (level: string) => {
     switch (level) {
       case "error":
+      case "critical":
+      case "emergency":
+      case "alert":
         return <XCircle className="h-3 w-3 mr-1" />
       case "warning":
         return <AlertTriangle className="h-3 w-3 mr-1" />
       case "info":
+      case "notice":
         return <Info className="h-3 w-3 mr-1" />
       default:
         return <CheckCircle className="h-3 w-3 mr-1" />
@@ -124,17 +209,41 @@ export function SystemLogs() {
   }
 
   const logCounts = {
-    total: systemLogs.length,
-    error: systemLogs.filter((log) => log.level === "error").length,
-    warning: systemLogs.filter((log) => log.level === "warning").length,
-    info: systemLogs.filter((log) => log.level === "info").length,
+    total: logs.length,
+    error: logs.filter((log) => ["error", "critical", "emergency", "alert"].includes(log.level)).length,
+    warning: logs.filter((log) => log.level === "warning").length,
+    info: logs.filter((log) => ["info", "notice", "debug"].includes(log.level)).length,
   }
 
-  const uniqueServices = [...new Set(systemLogs.map((log) => log.service))]
+  const uniqueServices = [...new Set(logs.map((log) => log.service))]
+
+  // Calculate backup statistics
+  const backupStats = {
+    total: backups.length,
+    totalSize: backups.reduce((sum, b) => sum + b.size, 0),
+    qemu: backups.filter((b) => b.type === "qemu").length,
+    lxc: backups.filter((b) => b.type === "lxc").length,
+  }
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return "0 B"
+    const k = 1024
+    const sizes = ["B", "KB", "MB", "GB", "TB"]
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+  }
+
+  if (loading && logs.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      {/* Log Statistics */}
+      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -143,7 +252,7 @@ export function SystemLogs() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{logCounts.total}</div>
-            <p className="text-xs text-muted-foreground mt-2">Last 24 hours</p>
+            <p className="text-xs text-muted-foreground mt-2">Last 200 entries</p>
           </CardContent>
         </Card>
 
@@ -171,103 +280,235 @@ export function SystemLogs() {
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Info</CardTitle>
-            <Info className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Backups</CardTitle>
+            <Database className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-500">{logCounts.info}</div>
-            <p className="text-xs text-muted-foreground mt-2">Normal operations</p>
+            <div className="text-2xl font-bold text-blue-500">{backupStats.total}</div>
+            <p className="text-xs text-muted-foreground mt-2">{formatBytes(backupStats.totalSize)}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Log Filters and Search */}
+      {/* Main Content with Tabs */}
       <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-foreground flex items-center">
-            <FileText className="h-5 w-5 mr-2" />
-            System Logs
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search logs..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-background border-border"
-                />
-              </div>
-            </div>
-
-            <Select value={levelFilter} onValueChange={setLevelFilter}>
-              <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
-                <SelectValue placeholder="Filter by level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Levels</SelectItem>
-                <SelectItem value="error">Error</SelectItem>
-                <SelectItem value="warning">Warning</SelectItem>
-                <SelectItem value="info">Info</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={serviceFilter} onValueChange={setServiceFilter}>
-              <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
-                <SelectValue placeholder="Filter by service" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Services</SelectItem>
-                {uniqueServices.map((service) => (
-                  <SelectItem key={service} value={service}>
-                    {service}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline" className="border-border bg-transparent">
-              <Download className="h-4 w-4 mr-2" />
-              Export
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-foreground flex items-center">
+              <Activity className="h-5 w-5 mr-2" />
+              System Logs & Events
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={fetchAllData} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Refresh
             </Button>
           </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="logs">System Logs</TabsTrigger>
+              <TabsTrigger value="events">Recent Events</TabsTrigger>
+              <TabsTrigger value="backups">Backups</TabsTrigger>
+            </TabsList>
 
-          <ScrollArea className="h-[600px] w-full rounded-md border border-border">
-            <div className="space-y-2 p-4">
-              {filteredLogs.map((log, index) => (
-                <div
-                  key={index}
-                  className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50"
+            {/* System Logs Tab */}
+            <TabsContent value="logs" className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search logs..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 bg-background border-border"
+                    />
+                  </div>
+                </div>
+
+                <Select value={levelFilter} onValueChange={setLevelFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
+                    <SelectValue placeholder="Filter by level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Levels</SelectItem>
+                    <SelectItem value="error">Error</SelectItem>
+                    <SelectItem value="warning">Warning</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={serviceFilter} onValueChange={setServiceFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
+                    <SelectValue placeholder="Filter by service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Services</SelectItem>
+                    {uniqueServices.slice(0, 20).map((service) => (
+                      <SelectItem key={service} value={service}>
+                        {service}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  className="border-border bg-transparent"
+                  onClick={() => handleDownloadLogs("system")}
                 >
-                  <div className="flex-shrink-0">
-                    <Badge variant="outline" className={getLevelColor(log.level)}>
-                      {getLevelIcon(log.level)}
-                      {log.level.toUpperCase()}
-                    </Badge>
-                  </div>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="text-sm font-medium text-foreground">{log.service}</div>
-                      <div className="text-xs text-muted-foreground font-mono">{log.timestamp}</div>
+              <ScrollArea className="h-[600px] w-full rounded-md border border-border">
+                <div className="space-y-2 p-4">
+                  {filteredLogs.map((log, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors"
+                    >
+                      <div className="flex-shrink-0">
+                        <Badge variant="outline" className={getLevelColor(log.level)}>
+                          {getLevelIcon(log.level)}
+                          {log.level.toUpperCase()}
+                        </Badge>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm font-medium text-foreground">{log.service}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{log.timestamp}</div>
+                        </div>
+                        <div className="text-sm text-foreground mb-1">{log.message}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Source: {log.source}
+                          {log.pid && ` • PID: ${log.pid}`}
+                          {log.hostname && ` • Host: ${log.hostname}`}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-sm text-foreground mb-1">{log.message}</div>
-                    <div className="text-xs text-muted-foreground">Source: {log.source}</div>
-                  </div>
-                </div>
-              ))}
+                  ))}
 
-              {filteredLogs.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No logs found matching your criteria</p>
+                  {filteredLogs.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No logs found matching your criteria</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </ScrollArea>
+              </ScrollArea>
+            </TabsContent>
+
+            {/* Recent Events Tab */}
+            <TabsContent value="events" className="space-y-4">
+              <ScrollArea className="h-[600px] w-full rounded-md border border-border">
+                <div className="space-y-2 p-4">
+                  {events.map((event, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors"
+                    >
+                      <div className="flex-shrink-0">
+                        <Badge variant="outline" className={getLevelColor(event.level)}>
+                          {getLevelIcon(event.level)}
+                          {event.status}
+                        </Badge>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm font-medium text-foreground">
+                            {event.type}
+                            {event.vmid && ` (VM/CT ${event.vmid})`}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{event.duration}</div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Node: {event.node} • User: {event.user}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Started: {event.starttime} • Ended: {event.endtime}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {events.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No recent events found</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            {/* Backups Tab */}
+            <TabsContent value="backups" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <Card className="bg-card/50 border-border">
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold text-foreground">{backupStats.qemu}</div>
+                    <p className="text-xs text-muted-foreground mt-1">QEMU Backups</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-card/50 border-border">
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold text-foreground">{backupStats.lxc}</div>
+                    <p className="text-xs text-muted-foreground mt-1">LXC Backups</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-card/50 border-border">
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold text-foreground">{formatBytes(backupStats.totalSize)}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Total Size</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <ScrollArea className="h-[500px] w-full rounded-md border border-border">
+                <div className="space-y-2 p-4">
+                  {backups.map((backup, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors"
+                    >
+                      <div className="flex-shrink-0">
+                        <HardDrive className="h-5 w-5 text-blue-500" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm font-medium text-foreground">
+                            {backup.type?.toUpperCase()} {backup.vmid && `VM ${backup.vmid}`}
+                          </div>
+                          <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                            {backup.size_human}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground mb-1">Storage: {backup.storage}</div>
+                        <div className="text-xs text-muted-foreground flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {backup.created}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 font-mono truncate">{backup.volid}</div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {backups.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No backups found</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>

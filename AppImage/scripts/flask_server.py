@@ -19,9 +19,23 @@ import re # Added for regex matching
 import select # Added for non-blocking read
 import shutil # Added for shutil.which
 import xml.etree.ElementTree as ET  # Added for XML parsing
+import math # Imported math for format_bytes function
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
+
+# Helper function to format bytes into human-readable string
+def format_bytes(size_in_bytes):
+    """Converts bytes to a human-readable string (KB, MB, GB, TB)."""
+    if size_in_bytes is None:
+        return "N/A"
+    if size_in_bytes == 0:
+        return "0 B"
+    size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    i = int(math.floor(math.log(size_in_bytes, 1024)))
+    p = math.pow(1024, i)
+    s = round(size_in_bytes / p, 2)
+    return f"{s} {size_name[i]}"
 
 # AGREGANDO FUNCIÓN PARA PARSEAR PROCESOS DE INTEL_GPU_TOP (SIN -J)
 def get_intel_gpu_processes_from_text():
@@ -988,11 +1002,6 @@ def get_proxmox_storage():
         
         storage_list = []
         lines = result.stdout.strip().split('\n')
-        
-        # Skip header line
-        if len(lines) < 2:
-            print("[v0] No storage found in pvesm output")
-            return {'storage': []}
         
         # Parse each storage line
         for line in lines[1:]:  # Skip header
@@ -3300,9 +3309,21 @@ def api_vms():
 def api_logs():
     """Get system logs"""
     try:
-        # Get recent system logs
-        result = subprocess.run(['journalctl', '-n', '100', '--output', 'json'], 
-                              capture_output=True, text=True, timeout=10)
+        limit = request.args.get('limit', '200')
+        priority = request.args.get('priority', None)  # 0-7 (0=emerg, 3=err, 4=warning, 6=info)
+        service = request.args.get('service', None)
+        
+        cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
+        
+        # Add priority filter if specified
+        if priority:
+            cmd.extend(['-p', priority])
+        
+        # Add service filter if specified
+        if service:
+            cmd.extend(['-u', service])
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
         
         if result.returncode == 0:
             logs = []
@@ -3310,26 +3331,193 @@ def api_logs():
                 if line:
                     try:
                         log_entry = json.loads(line)
+                        # Convert timestamp from microseconds to readable format
+                        timestamp_us = int(log_entry.get('__REALTIME_TIMESTAMP', '0'))
+                        timestamp = datetime.fromtimestamp(timestamp_us / 1000000).strftime('%Y-%m-%d %H:%M:%S')
+                        
+                        # Map priority to level name
+                        priority_map = {
+                            '0': 'emergency', '1': 'alert', '2': 'critical', '3': 'error',
+                            '4': 'warning', '5': 'notice', '6': 'info', '7': 'debug'
+                        }
+                        priority_num = str(log_entry.get('PRIORITY', '6'))
+                        level = priority_map.get(priority_num, 'info')
+                        
                         logs.append({
-                            'timestamp': log_entry.get('__REALTIME_TIMESTAMP', ''),
-                            'level': log_entry.get('PRIORITY', '6'),
-                            'service': log_entry.get('_SYSTEMD_UNIT', 'system'),
+                            'timestamp': timestamp,
+                            'level': level,
+                            'service': log_entry.get('_SYSTEMD_UNIT', log_entry.get('SYSLOG_IDENTIFIER', 'system')),
                             'message': log_entry.get('MESSAGE', ''),
-                            'source': 'journalctl'
+                            'source': 'journalctl',
+                            'pid': log_entry.get('_PID', ''),
+                            'hostname': log_entry.get('_HOSTNAME', '')
                         })
-                    except json.JSONDecodeError:
+                    except (json.JSONDecodeError, ValueError) as e:
                         continue
-            return jsonify(logs)
+            return jsonify({'logs': logs, 'total': len(logs)})
         else:
             return jsonify({
                 'error': 'journalctl not available or failed',
-                'logs': []
+                'logs': [],
+                'total': 0
             })
     except Exception as e:
         print(f"Error getting logs: {e}")
         return jsonify({
             'error': f'Unable to access system logs: {str(e)}',
-            'logs': []
+            'logs': [],
+            'total': 0
+        })
+
+@app.route('/api/logs/download', methods=['GET'])
+def api_logs_download():
+    """Download system logs as a text file"""
+    try:
+        log_type = request.args.get('type', 'system')  # system, kernel, auth
+        lines = request.args.get('lines', '1000')
+        
+        if log_type == 'kernel':
+            cmd = ['journalctl', '-k', '-n', lines, '--no-pager']
+            filename = 'kernel.log'
+        elif log_type == 'auth':
+            cmd = ['journalctl', '-u', 'ssh', '-u', 'sshd', '-n', lines, '--no-pager']
+            filename = 'auth.log'
+        else:
+            cmd = ['journalctl', '-n', lines, '--no-pager']
+            filename = 'system.log'
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        
+        if result.returncode == 0:
+            # Create a temporary file
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
+                f.write(result.stdout)
+                temp_path = f.name
+            
+            return send_file(
+                temp_path,
+                mimetype='text/plain',
+                as_attachment=True,
+                download_name=f'proxmox_{filename}'
+            )
+        else:
+            return jsonify({'error': 'Failed to generate log file'}), 500
+            
+    except Exception as e:
+        print(f"Error downloading logs: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/notifications', methods=['GET'])
+def api_notifications():
+    """Get Proxmox notification history"""
+    try:
+        notifications = []
+        
+        # 1. Get notifications from journalctl (Proxmox notification service)
+        try:
+            cmd = [
+                'journalctl',
+                '-u', 'pve-ha-lrm',
+                '-u', 'pve-ha-crm',
+                '-u', 'pvedaemon',
+                '-u', 'pveproxy',
+                '-u', 'pvestatd',
+                '--grep', 'notification|email|webhook|alert|notify',
+                '-n', '100',
+                '--output', 'json',
+                '--no-pager'
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if line:
+                        try:
+                            log_entry = json.loads(line)
+                            timestamp_us = int(log_entry.get('__REALTIME_TIMESTAMP', '0'))
+                            timestamp = datetime.fromtimestamp(timestamp_us / 1000000).strftime('%Y-%m-%d %H:%M:%S')
+                            
+                            message = log_entry.get('MESSAGE', '')
+                            
+                            # Determine notification type from message
+                            notif_type = 'info'
+                            if 'email' in message.lower():
+                                notif_type = 'email'
+                            elif 'webhook' in message.lower():
+                                notif_type = 'webhook'
+                            elif 'alert' in message.lower() or 'warning' in message.lower():
+                                notif_type = 'alert'
+                            elif 'error' in message.lower() or 'fail' in message.lower():
+                                notif_type = 'error'
+                            
+                            notifications.append({
+                                'timestamp': timestamp,
+                                'type': notif_type,
+                                'service': log_entry.get('_SYSTEMD_UNIT', 'proxmox'),
+                                'message': message,
+                                'source': 'journal'
+                            })
+                        except (json.JSONDecodeError, ValueError):
+                            continue
+        except Exception as e:
+            print(f"Error reading notification logs: {e}")
+        
+        # 2. Try to read Proxmox notification configuration
+        try:
+            notif_config_path = '/etc/pve/notifications.cfg'
+            if os.path.exists(notif_config_path):
+                with open(notif_config_path, 'r') as f:
+                    config_content = f.read()
+                    # Parse notification targets (emails, webhooks, etc.)
+                    for line in config_content.split('\n'):
+                        if line.strip() and not line.startswith('#'):
+                            notifications.append({
+                                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                                'type': 'config',
+                                'service': 'notification-config',
+                                'message': f'Notification target configured: {line.strip()}',
+                                'source': 'config'
+                            })
+        except Exception as e:
+            print(f"Error reading notification config: {e}")
+        
+        # 3. Get backup notifications from task log
+        try:
+            cmd = ['pvesh', 'get', '/cluster/tasks', '--output-format', 'json']
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                tasks = json.loads(result.stdout)
+                for task in tasks:
+                    if task.get('type') in ['vzdump', 'backup']:
+                        status = task.get('status', 'unknown')
+                        notif_type = 'success' if status == 'OK' else 'error' if status == 'stopped' else 'info'
+                        
+                        notifications.append({
+                            'timestamp': datetime.fromtimestamp(task.get('starttime', 0)).strftime('%Y-%m-%d %H:%M:%S'),
+                            'type': notif_type,
+                            'service': 'backup',
+                            'message': f"Backup task {task.get('upid', 'unknown')}: {status}",
+                            'source': 'task-log'
+                        })
+        except Exception as e:
+            print(f"Error reading task notifications: {e}")
+        
+        # Sort by timestamp (newest first)
+        notifications.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return jsonify({
+            'notifications': notifications[:100],  # Limit to 100 most recent
+            'total': len(notifications)
+        })
+        
+    except Exception as e:
+        print(f"Error getting notifications: {e}")
+        return jsonify({
+            'error': str(e),
+            'notifications': [],
+            'total': 0
         })
 
 @app.route('/api/health', methods=['GET'])
@@ -3408,7 +3596,10 @@ def api_info():
             '/api/logs',
             '/api/health',
             '/api/hardware',
-            '/api/gpu/<slot>/realtime' # Added endpoint for GPU monitoring
+            '/api/gpu/<slot>/realtime', # Added endpoint for GPU monitoring
+            '/api/backups', # Added backup endpoint
+            '/api/events', # Added events endpoint
+            '/api/notifications' # Added notifications endpoint
         ]
     })
 
