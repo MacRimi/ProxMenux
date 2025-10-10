@@ -634,7 +634,7 @@ export default function Hardware() {
                       </div>
                     )}
 
-                    {/* CHANGE: Changed badge colors: purple for process name, green for memory */}
+                    {/* CHANGE: Changed process name to Badge with blue color */}
                     {realtimeGPUData.processes && realtimeGPUData.processes.length > 0 && (
                       <div>
                         <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
@@ -651,7 +651,10 @@ export default function Hardware() {
                                   <p className="font-mono text-xs text-muted-foreground">PID: {proc.pid}</p>
                                 </div>
                                 {proc.memory && (
-                                  <Badge className="bg-green-500/10 text-green-500 border-green-500/20 font-mono text-xs">
+                                  <Badge
+                                    variant="outline"
+                                    className="font-mono text-xs bg-green-500/10 text-green-500 border-green-500/20"
+                                  >
                                     {typeof proc.memory === "object"
                                       ? formatMemory(proc.memory.resident / 1024)
                                       : formatMemory(proc.memory)}
