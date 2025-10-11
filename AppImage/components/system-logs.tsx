@@ -176,15 +176,37 @@ export function SystemLogs() {
     if (dateRange?.from && dateRange?.to) {
       console.log("[v0] Applying date range:", dateRange)
       setIsCalendarOpen(false)
+      setLoading(true)
       const logsRes = await fetchSystemLogs()
       console.log("[v0] Fetched logs for date range:", logsRes.length)
       setLogs(logsRes)
+      setLoading(false)
     }
   }
 
   const fetchSystemLogs = async (): Promise<SystemLog[]> => {
     try {
-      const apiUrl = getApiUrl("/api/logs")
+      let apiUrl = getApiUrl("/api/logs")
+
+      const params = new URLSearchParams()
+
+      if (dateFilter === "custom" && dateRange?.from && dateRange?.to) {
+        const fromDate = format(dateRange.from, "yyyy-MM-dd")
+        const toDate = format(dateRange.to, "yyyy-MM-dd")
+        params.append("from_date", fromDate)
+        params.append("to_date", toDate)
+        console.log("[v0] Fetching logs with custom date range:", fromDate, "to", toDate)
+      } else if (dateFilter !== "now") {
+        const daysAgo = Number.parseInt(dateFilter)
+        params.append("since_days", daysAgo.toString())
+        console.log("[v0] Fetching logs from", daysAgo, "days ago")
+      }
+
+      if (params.toString()) {
+        apiUrl += `?${params.toString()}`
+      }
+
+      console.log("[v0] Fetching logs from:", apiUrl)
 
       const response = await fetch(apiUrl, {
         method: "GET",
@@ -647,7 +669,7 @@ export function SystemLogs() {
                 </Select>
 
                 {dateFilter === "custom" && (
-                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <Popover open={isCalendarOpen && activeTab === "logs"} onOpenChange={setIsCalendarOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
