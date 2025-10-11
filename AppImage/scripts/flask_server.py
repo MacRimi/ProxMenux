@@ -437,14 +437,6 @@ def get_system_info():
         except Exception as e:
             print(f"Note: pveversion not available: {e}")
         
-        kernel_version = None
-        try:
-            result = subprocess.run(['uname', '-r'], capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                kernel_version = result.stdout.strip()
-        except Exception as e:
-            print(f"Note: uname not available: {e}")
-        
         cpu_cores = psutil.cpu_count(logical=False)  # Physical cores only
         
         available_updates = 0
@@ -2964,12 +2956,41 @@ def get_hardware_info():
                     line = line.strip()
                     
                     if line.startswith('Memory Device'):
-                        if current_module and current_module.get('size') != 'No Module Installed':
+                        # Ensure only modules with size and not 'No Module Installed' are appended
+                        if current_module and current_module.get('size') and current_module.get('size') != 'No Module Installed' and current_module.get('size') != 0:
                             hardware_data['memory_modules'].append(current_module)
                         current_module = {}
                     elif line.startswith('Size:'):
-                        size = line.split(':', 1)[1].strip()
-                        current_module['size'] = size
+                        size_str = line.split(':', 1)[1].strip()
+                        if size_str and size_str != 'No Module Installed' and size_str != 'Not Specified':
+                            try:
+                                # Parse size like "32768 MB" or "32 GB"
+                                parts = size_str.split()
+                                if len(parts) >= 2:
+                                    value = float(parts[0])
+                                    unit = parts[1].upper()
+                                    
+                                    # Convert to KB
+                                    if unit == 'GB':
+                                        size_kb = value * 1024 * 1024
+                                    elif unit == 'MB':
+                                        size_kb = value * 1024
+                                    elif unit == 'KB':
+                                        size_kb = value
+                                    else:
+                                        size_kb = value  # Assume KB if no unit
+                                    
+                                    current_module['size'] = size_kb
+                                    print(f"[v0] Parsed memory size: {size_str} -> {size_kb} KB")
+                                else:
+                                    # Handle cases where unit might be missing but value is present
+                                    current_module['size'] = float(size_str) if size_str else 0
+                                    print(f"[v0] Parsed memory size (no unit): {size_str} -> {current_module['size']} KB")
+                            except (ValueError, IndexError) as e:
+                                print(f"[v0] Error parsing memory size '{size_str}': {e}")
+                                current_module['size'] = 0
+                        else:
+                            current_module['size'] = 0 # Default to 0 if no size or explicitly 'No Module Installed'
                     elif line.startswith('Type:'):
                         current_module['type'] = line.split(':', 1)[1].strip()
                     elif line.startswith('Speed:'):
@@ -2981,7 +3002,8 @@ def get_hardware_info():
                     elif line.startswith('Locator:'):
                         current_module['slot'] = line.split(':', 1)[1].strip()
                 
-                if current_module and current_module.get('size') != 'No Module Installed':
+                # Append the last module if it's valid
+                if current_module and current_module.get('size') and current_module.get('size') != 'No Module Installed' and current_module.get('size') != 0:
                     hardware_data['memory_modules'].append(current_module)
                 
                 print(f"[v0] Memory modules: {len(hardware_data['memory_modules'])} installed")
@@ -3520,6 +3542,166 @@ def api_notifications():
             'total': 0
         })
 
+@app.route('/api/backups', methods=['GET'])
+def api_backups():
+    """Get list of all backup files from Proxmox storage"""
+    try:
+        backups = []
+        
+        # Get list of storage locations
+        try:
+            result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'], 
+                                  capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                storages = json.loads(result.stdout)
+                
+                # For each storage, get backup files
+                for storage in storages:
+                    storage_id = storage.get('storage')
+                    storage_type = storage.get('type')
+                    
+                    # Only check storages that can contain backups
+                    if storage_type in ['dir', 'nfs', 'cifs', 'pbs']:
+                        try:
+                            # Get content of storage
+                            content_result = subprocess.run(
+                                ['pvesh', 'get', f'/nodes/localhost/storage/{storage_id}/content', '--output-format', 'json'],
+                                capture_output=True, text=True, timeout=10
+                            )
+                            
+                            if content_result.returncode == 0:
+                                contents = json.loads(content_result.stdout)
+                                
+                                for item in contents:
+                                    if item.get('content') == 'backup':
+                                        # Parse backup information
+                                        volid = item.get('volid', '')
+                                        size = item.get('size', 0)
+                                        ctime = item.get('ctime', 0)
+                                        
+                                        # Extract VMID from volid (format: storage:backup/vzdump-qemu-100-...)
+                                        vmid = None
+                                        backup_type = None
+                                        if 'vzdump-qemu-' in volid:
+                                            backup_type = 'qemu'
+                                            try:
+                                                vmid = volid.split('vzdump-qemu-')[1].split('-')[0]
+                                            except:
+                                                pass
+                                        elif 'vzdump-lxc-' in volid:
+                                            backup_type = 'lxc'
+                                            try:
+                                                vmid = volid.split('vzdump-lxc-')[1].split('-')[0]
+                                            except:
+                                                pass
+                                        
+                                        backups.append({
+                                            'volid': volid,
+                                            'storage': storage_id,
+                                            'vmid': vmid,
+                                            'type': backup_type,
+                                            'size': size,
+                                            'size_human': format_bytes(size),
+                                            'created': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M:%S'),
+                                            'timestamp': ctime
+                                        })
+                        except Exception as e:
+                            print(f"Error getting content for storage {storage_id}: {e}")
+                            continue
+        except Exception as e:
+            print(f"Error getting storage list: {e}")
+        
+        # Sort by creation time (newest first)
+        backups.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return jsonify({
+            'backups': backups,
+            'total': len(backups)
+        })
+        
+    except Exception as e:
+        print(f"Error getting backups: {e}")
+        return jsonify({
+            'error': str(e),
+            'backups': [],
+            'total': 0
+        })
+
+@app.route('/api/events', methods=['GET'])
+def api_events():
+    """Get recent Proxmox events and tasks"""
+    try:
+        limit = request.args.get('limit', '50')
+        events = []
+        
+        try:
+            result = subprocess.run(['pvesh', 'get', '/cluster/tasks', '--output-format', 'json'], 
+                                  capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                tasks = json.loads(result.stdout)
+                
+                for task in tasks[:int(limit)]:
+                    upid = task.get('upid', '')
+                    task_type = task.get('type', 'unknown')
+                    status = task.get('status', 'unknown')
+                    node = task.get('node', 'unknown')
+                    user = task.get('user', 'unknown')
+                    vmid = task.get('id', '')
+                    starttime = task.get('starttime', 0)
+                    endtime = task.get('endtime', 0)
+                    
+                    # Calculate duration
+                    duration = ''
+                    if endtime and starttime:
+                        duration_sec = endtime - starttime
+                        if duration_sec < 60:
+                            duration = f"{duration_sec}s"
+                        elif duration_sec < 3600:
+                            duration = f"{duration_sec // 60}m {duration_sec % 60}s"
+                        else:
+                            hours = duration_sec // 3600
+                            minutes = (duration_sec % 3600) // 60
+                            duration = f"{hours}h {minutes}m"
+                    
+                    # Determine level based on status
+                    level = 'info'
+                    if status == 'OK':
+                        level = 'info'
+                    elif status in ['stopped', 'error']:
+                        level = 'error'
+                    elif status == 'running':
+                        level = 'warning'
+                    
+                    events.append({
+                        'upid': upid,
+                        'type': task_type,
+                        'status': status,
+                        'level': level,
+                        'node': node,
+                        'user': user,
+                        'vmid': str(vmid) if vmid else '',
+                        'starttime': datetime.fromtimestamp(starttime).strftime('%Y-%m-%d %H:%M:%S') if starttime else '',
+                        'endtime': datetime.fromtimestamp(endtime).strftime('%Y-%m-%d %H:%M:%S') if endtime else 'Running',
+                        'duration': duration
+                    })
+        except Exception as e:
+            print(f"Error getting events: {e}")
+        
+        return jsonify({
+            'events': events,
+            'total': len(events)
+        })
+        
+    except Exception as e:
+        print(f"Error getting events: {e}")
+        return jsonify({
+            'error': str(e),
+            'events': [],
+            'total': 0
+        })
+
 @app.route('/api/health', methods=['GET'])
 def api_health():
     """Health check endpoint"""
@@ -3619,7 +3801,7 @@ def api_hardware():
             'motherboard': hardware_info.get('motherboard', {}), # Corrected: use hardware_info
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
-            'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_info
+            'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_data
             'pci_devices': hardware_info.get('pci_devices', []),
             'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
             'fans': all_fans, # Return combined fans (sensors + IPMI)

@@ -20,6 +20,8 @@ import {
   HardDrive,
   Calendar,
   RefreshCw,
+  Bell,
+  Mail,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -57,6 +59,14 @@ interface Event {
   duration: string
 }
 
+interface Notification {
+  timestamp: string
+  type: string
+  service: string
+  message: string
+  source: string
+}
+
 interface SystemLog {
   timestamp: string
   level: string
@@ -71,6 +81,7 @@ export function SystemLogs() {
   const [logs, setLogs] = useState<SystemLog[]>([])
   const [backups, setBackups] = useState<Backup[]>([])
   const [events, setEvents] = useState<Event[]>([])
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -78,6 +89,13 @@ export function SystemLogs() {
   const [levelFilter, setLevelFilter] = useState("all")
   const [serviceFilter, setServiceFilter] = useState("all")
   const [activeTab, setActiveTab] = useState("logs")
+
+  const getApiUrl = (endpoint: string) => {
+    if (typeof window !== "undefined") {
+      return `${window.location.protocol}//${window.location.hostname}:8008${endpoint}`
+    }
+    return `http://localhost:8008${endpoint}`
+  }
 
   // Fetch data
   useEffect(() => {
@@ -92,11 +110,11 @@ export function SystemLogs() {
       setLoading(true)
       setError(null)
 
-      // Fetch logs, backups, and events in parallel
-      const [logsRes, backupsRes, eventsRes] = await Promise.all([
+      const [logsRes, backupsRes, eventsRes, notificationsRes] = await Promise.all([
         fetchSystemLogs(),
-        fetch("http://localhost:8008/api/backups"),
-        fetch("http://localhost:8008/api/events?limit=50"),
+        fetch(getApiUrl("/api/backups")),
+        fetch(getApiUrl("/api/events?limit=50")),
+        fetch(getApiUrl("/api/notifications")),
       ])
 
       setLogs(logsRes)
@@ -110,6 +128,11 @@ export function SystemLogs() {
         const eventsData = await eventsRes.json()
         setEvents(eventsData.events || [])
       }
+
+      if (notificationsRes.ok) {
+        const notificationsData = await notificationsRes.json()
+        setNotifications(notificationsData.notifications || [])
+      }
     } catch (err) {
       console.error("[v0] Error fetching system logs data:", err)
       setError("Failed to connect to server")
@@ -120,9 +143,7 @@ export function SystemLogs() {
 
   const fetchSystemLogs = async (): Promise<SystemLog[]> => {
     try {
-      const baseUrl =
-        typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-      const apiUrl = `${baseUrl}/api/logs`
+      const apiUrl = getApiUrl("/api/logs")
 
       const response = await fetch(apiUrl, {
         method: "GET",
@@ -146,7 +167,7 @@ export function SystemLogs() {
 
   const handleDownloadLogs = async (type = "system") => {
     try {
-      const response = await fetch(`http://localhost:8008/api/logs/download?type=${type}&lines=1000`)
+      const response = await fetch(getApiUrl(`/api/logs/download?type=${type}&lines=1000`))
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
@@ -186,6 +207,8 @@ export function SystemLogs() {
       case "info":
       case "notice":
         return "bg-blue-500/10 text-blue-500 border-blue-500/20"
+      case "success":
+        return "bg-green-500/10 text-green-500 border-green-500/20"
       default:
         return "bg-gray-500/10 text-gray-500 border-gray-500/20"
     }
@@ -203,8 +226,27 @@ export function SystemLogs() {
       case "info":
       case "notice":
         return <Info className="h-3 w-3 mr-1" />
+      case "success":
+        return <CheckCircle className="h-3 w-3 mr-1" />
       default:
         return <CheckCircle className="h-3 w-3 mr-1" />
+    }
+  }
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case "email":
+        return <Mail className="h-4 w-4 text-blue-500" />
+      case "webhook":
+        return <Activity className="h-4 w-4 text-purple-500" />
+      case "alert":
+        return <AlertTriangle className="h-4 w-4 text-yellow-500" />
+      case "error":
+        return <XCircle className="h-4 w-4 text-red-500" />
+      case "success":
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      default:
+        return <Bell className="h-4 w-4 text-gray-500" />
     }
   }
 
@@ -306,10 +348,11 @@ export function SystemLogs() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="logs">System Logs</TabsTrigger>
               <TabsTrigger value="events">Recent Events</TabsTrigger>
               <TabsTrigger value="backups">Backups</TabsTrigger>
+              <TabsTrigger value="notifications">Notifications</TabsTrigger>
             </TabsList>
 
             {/* System Logs Tab */}
@@ -503,6 +546,39 @@ export function SystemLogs() {
                     <div className="text-center py-8 text-muted-foreground">
                       <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>No backups found</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="notifications" className="space-y-4">
+              <ScrollArea className="h-[600px] w-full rounded-md border border-border">
+                <div className="space-y-2 p-4">
+                  {notifications.map((notification, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors"
+                    >
+                      <div className="flex-shrink-0">{getNotificationIcon(notification.type)}</div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm font-medium text-foreground capitalize">{notification.type}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{notification.timestamp}</div>
+                        </div>
+                        <div className="text-sm text-foreground mb-1">{notification.message}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Service: {notification.service} • Source: {notification.source}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {notifications.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No notifications found</p>
                     </div>
                   )}
                 </div>
