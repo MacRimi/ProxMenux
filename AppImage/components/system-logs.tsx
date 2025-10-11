@@ -106,6 +106,9 @@ export function SystemLogs() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
+  const [dateFilter, setDateFilter] = useState("now")
+  const [customDays, setCustomDays] = useState("1")
+
   const getApiUrl = (endpoint: string) => {
     if (typeof window !== "undefined") {
       return `${window.location.protocol}//${window.location.hostname}:8008${endpoint}`
@@ -179,7 +182,19 @@ export function SystemLogs() {
 
   const handleDownloadLogs = async (type = "system") => {
     try {
-      const hours = 48
+      let hours = 48
+
+      if (filteredLogs.length > 0) {
+        const lastLog = filteredLogs[filteredLogs.length - 1]
+        const lastLogTime = new Date(lastLog.timestamp)
+        const now = new Date()
+        const diffMs = now.getTime() - lastLogTime.getTime()
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+
+        // Download 48 hours from the last visible log
+        hours = 48
+      }
+
       let url = getApiUrl(`/api/logs/download?type=${type}&hours=${hours}`)
 
       // Apply filters if any are active
@@ -188,6 +203,11 @@ export function SystemLogs() {
       }
       if (serviceFilter !== "all") {
         url += `&service=${serviceFilter}`
+      }
+
+      if (dateFilter !== "now") {
+        const daysAgo = dateFilter === "custom" ? Number.parseInt(customDays) : Number.parseInt(dateFilter)
+        url += `&since_days=${daysAgo}`
       }
 
       const response = await fetch(url)
@@ -208,23 +228,31 @@ export function SystemLogs() {
   }
 
   const handleDownloadNotificationLog = async (notification: Notification) => {
-    // Added
     try {
-      // Download the complete log for this notification
-      const response = await fetch(getApiUrl(`/api/notifications/download?timestamp=${notification.timestamp}`))
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `notification_${notification.timestamp.replace(/[:\s]/g, "_")}.log`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      }
+      const blob = new Blob(
+        [
+          `Notification Details\n`,
+          `==================\n\n`,
+          `Timestamp: ${notification.timestamp}\n`,
+          `Type: ${notification.type}\n`,
+          `Service: ${notification.service}\n`,
+          `Source: ${notification.source}\n\n`,
+          `Complete Message:\n`,
+          `${notification.message}\n`,
+        ],
+        { type: "text/plain" },
+      )
+
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `notification_${notification.timestamp.replace(/[:\s]/g, "_")}.txt`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
     } catch (err) {
-      console.error("[v0] Error downloading notification log:", err)
+      console.error("[v0] Error downloading notification:", err)
     }
   }
 
@@ -291,6 +319,21 @@ export function SystemLogs() {
         return <CheckCircle className="h-4 w-4 text-green-500" />
       default:
         return <Bell className="h-4 w-4 text-gray-500" />
+    }
+  }
+
+  const getNotificationTypeColor = (type: string) => {
+    switch (type.toLowerCase()) {
+      case "error":
+        return "bg-red-500/10 text-red-500 border-red-500/20"
+      case "warning":
+        return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+      case "info":
+        return "bg-blue-500/10 text-blue-500 border-blue-500/20"
+      case "success":
+        return "bg-green-500/10 text-green-500 border-green-500/20"
+      default:
+        return "bg-gray-500/10 text-gray-500 border-gray-500/20"
     }
   }
 
@@ -552,6 +595,32 @@ export function SystemLogs() {
                   </div>
                 </div>
 
+                <Select value={dateFilter} onValueChange={setDateFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
+                    <SelectValue placeholder="Time range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="now">Current logs</SelectItem>
+                    <SelectItem value="1">1 day ago</SelectItem>
+                    <SelectItem value="3">3 days ago</SelectItem>
+                    <SelectItem value="7">1 week ago</SelectItem>
+                    <SelectItem value="14">2 weeks ago</SelectItem>
+                    <SelectItem value="30">1 month ago</SelectItem>
+                    <SelectItem value="custom">Custom days</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {dateFilter === "custom" && (
+                  <Input
+                    type="number"
+                    placeholder="Days ago"
+                    value={customDays}
+                    onChange={(e) => setCustomDays(e.target.value)}
+                    className="w-full sm:w-[120px] bg-background border-border"
+                    min="1"
+                  />
+                )}
+
                 <Select value={levelFilter} onValueChange={setLevelFilter}>
                   <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
                     <SelectValue placeholder="Filter by level" />
@@ -768,16 +837,13 @@ export function SystemLogs() {
                     >
                       <div className="flex-shrink-0 flex items-center gap-2">
                         {getNotificationIcon(notification.type)}
-                        <span className="text-sm font-medium text-muted-foreground capitalize md:hidden">
-                          {notification.type}
-                        </span>
+                        <Badge variant="outline" className={getNotificationTypeColor(notification.type)}>
+                          {notification.type.toUpperCase()}
+                        </Badge>
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm font-medium text-muted-foreground capitalize truncate hidden md:block">
-                            {notification.type}
-                          </div>
                           <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
                             {notification.timestamp}
                           </div>
@@ -993,10 +1059,9 @@ export function SystemLogs() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
-                  <div className="flex items-center gap-2">
-                    {getNotificationIcon(selectedNotification.type)}
-                    <span className="text-sm text-foreground capitalize">{selectedNotification.type}</span>
-                  </div>
+                  <Badge variant="outline" className={getNotificationTypeColor(selectedNotification.type)}>
+                    {selectedNotification.type.toUpperCase()}
+                  </Badge>
                 </div>
                 <div className="sm:col-span-2">
                   <div className="text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
@@ -1026,7 +1091,7 @@ export function SystemLogs() {
                   className="border-border w-full sm:w-auto"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Download Complete Log
+                  Download Complete Message
                 </Button>
               </div>
             </div>

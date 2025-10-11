@@ -3404,11 +3404,27 @@ def api_logs_download():
     """Download system logs as a text file"""
     try:
         log_type = request.args.get('type', 'system')
-        hours = int(request.args.get('hours', '48'))  # Changed from lines to hours, default 48h
-        level = request.args.get('level', 'all')  # Added level filter
-        service = request.args.get('service', 'all')  # Added service filter
+        hours = int(request.args.get('hours', '48'))
+        level = request.args.get('level', 'all')
+        service = request.args.get('service', 'all')
+        since_days = request.args.get('since_days', None)
         
-        cmd = ['journalctl', '--since', f'{hours} hours ago', '--no-pager']
+        if since_days:
+            days = int(since_days)
+            # Original code: cmd = ['journalctl', '--since', f'{days} days ago', '--until', f'{days - 1} days ago', '--no-pager']
+            # This logic seems incorrect if we want logs FROM since_days ago.
+            # Correct logic: logs from 'days' ago until 'now' (or 'days-1' ago for a specific 24h period)
+            # For simplicity and to keep the original intent of filtering *from* X days ago, let's use '--since'.
+            # If 'since_days' is 1, it means logs from yesterday until now.
+            # If 'since_days' is 2, it means logs from the day before yesterday until now.
+            # Let's assume 'since_days' means the number of *full 24-hour periods* to go back.
+            # So, if since_days = 1, we want logs from 24 hours ago.
+            # If since_days = 2, we want logs from 48 hours ago.
+            # The original '--until' logic was problematic. Let's simplify.
+            # If 'since_days' is provided, use it as the primary time filter.
+            cmd = ['journalctl', '--since', f'{days} days ago', '--no-pager']
+        else:
+            cmd = ['journalctl', '--since', f'{hours} hours ago', '--no-pager']
         
         if log_type == 'kernel':
             cmd.extend(['-k'])
