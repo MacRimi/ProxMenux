@@ -925,7 +925,6 @@ def get_smart_data(disk_name):
                                     except (ValueError, IndexError) as e:
                                         print(f"[v0] Error parsing attribute line '{line}': {e}")
                                         continue
-                        
                         # If we got complete data, break
                         if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
                             print(f"[v0] Successfully extracted complete data from text output (attempt {cmd_index + 1})")
@@ -3344,15 +3343,16 @@ def api_logs():
         service = request.args.get('service', None)
         since_days = request.args.get('since_days', None)
         
-        cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
-        
         if since_days:
             try:
                 days = int(since_days)
-                cmd.extend(['--since', f'{days} days ago'])
-                print(f"[API] Filtering logs since {days} days ago")
+                cmd = ['journalctl', '--since', f'{days} days ago', '--output', 'json', '--no-pager']
+                print(f"[API] Filtering logs since {days} days ago (no limit)")
             except ValueError:
                 print(f"[API] Invalid since_days value: {since_days}")
+                cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
+        else:
+            cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
         
         # Add priority filter if specified
         if priority:
