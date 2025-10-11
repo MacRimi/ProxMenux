@@ -3342,8 +3342,17 @@ def api_logs():
         limit = request.args.get('limit', '200')
         priority = request.args.get('priority', None)  # 0-7 (0=emerg, 3=err, 4=warning, 6=info)
         service = request.args.get('service', None)
+        since_days = request.args.get('since_days', None)
         
         cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
+        
+        if since_days:
+            try:
+                days = int(since_days)
+                cmd.extend(['--since', f'{days} days ago'])
+                print(f"[API] Filtering logs since {days} days ago")
+            except ValueError:
+                print(f"[API] Invalid since_days value: {since_days}")
         
         # Add priority filter if specified
         if priority:
@@ -3354,7 +3363,7 @@ def api_logs():
             cmd.extend(['-u', service])
         
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        
+
         if result.returncode == 0:
             logs = []
             for line in result.stdout.strip().split('\n'):

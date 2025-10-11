@@ -121,12 +121,22 @@ export function SystemLogs() {
   }, [])
 
   useEffect(() => {
+    console.log("[v0] Date filter changed:", dateFilter, "Custom days:", customDays)
     if (dateFilter !== "now") {
-      console.log("[v0] Date filter changed to:", dateFilter)
-      fetchSystemLogs().then((newLogs) => {
-        console.log("[v0] Loaded logs for date filter:", dateFilter, "Count:", newLogs.length)
-        setLogs(newLogs)
-      })
+      setLoading(true)
+      fetchSystemLogs()
+        .then((newLogs) => {
+          console.log("[v0] Loaded logs for date filter:", dateFilter, "Count:", newLogs.length)
+          console.log("[v0] First log:", newLogs[0])
+          setLogs(newLogs)
+          setLoading(false)
+        })
+        .catch((err) => {
+          console.error("[v0] Error loading logs:", err)
+          setLoading(false)
+        })
+    } else {
+      fetchAllData()
     }
   }, [dateFilter, customDays])
 
@@ -170,13 +180,13 @@ export function SystemLogs() {
     try {
       let apiUrl = getApiUrl("/api/logs")
 
-      // Add date filter parameters if not "now"
       if (dateFilter !== "now") {
         const daysAgo = dateFilter === "custom" ? Number.parseInt(customDays) : Number.parseInt(dateFilter)
         apiUrl += `?since_days=${daysAgo}`
-        console.log("[v0] Fetching logs with since_days:", daysAgo)
+        console.log("[v0] Fetching logs with API URL:", apiUrl, "since_days:", daysAgo)
       }
 
+      console.log("[v0] Making fetch request to:", apiUrl)
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -185,12 +195,19 @@ export function SystemLogs() {
         cache: "no-store",
       })
 
+      console.log("[v0] Response status:", response.status, "OK:", response.ok)
+
       if (!response.ok) {
         throw new Error(`Flask server responded with status: ${response.status}`)
       }
 
       const data = await response.json()
-      return Array.isArray(data) ? data : data.logs || []
+      console.log("[v0] Received logs data, type:", typeof data, "is array:", Array.isArray(data))
+      console.log("[v0] Data length:", Array.isArray(data) ? data.length : data.logs ? data.logs.length : 0)
+
+      const logsArray = Array.isArray(data) ? data : data.logs || []
+      console.log("[v0] Returning logs array with length:", logsArray.length)
+      return logsArray
     } catch (error) {
       console.error("[v0] Failed to fetch system logs:", error)
       return []
