@@ -3339,11 +3339,11 @@ def api_vms():
 def api_logs():
     """Get system logs"""
     try:
-        limit = request.args.get('limit', '200')
+        minutes = request.args.get('minutes', '1')  # Default 1 minute for fast loading
         priority = request.args.get('priority', None)  # 0-7 (0=emerg, 3=err, 4=warning, 6=info)
         service = request.args.get('service', None)
         
-        cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
+        cmd = ['journalctl', '--since', f'{minutes} minutes ago', '--output', 'json', '--no-pager']
         
         # Add priority filter if specified
         if priority:
@@ -3569,24 +3569,25 @@ def api_notifications_download():
         if not timestamp:
             return jsonify({'error': 'Timestamp parameter required'}), 400
         
-        # Parse the timestamp and calculate time range
         from datetime import datetime, timedelta
         
         try:
             # Parse timestamp format: "2025-10-11 14:27:35"
             dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-            since_time = (dt - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
-            until_time = (dt + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+            # Use a very small time window (2 minutes) to get just this notification
+            since_time = (dt - timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
+            until_time = (dt + timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
         except ValueError:
             # If parsing fails, use a default range
-            since_time = "1 hour ago"
+            since_time = "2 minutes ago"
             until_time = "now"
         
+        # Get logs around the specific timestamp
         cmd = [
             'journalctl',
             '--since', since_time,
             '--until', until_time,
-            '-n', '1000',
+            '-n', '50',  # Limit to 50 lines around the notification
             '--no-pager'
         ]
         
@@ -3596,7 +3597,7 @@ def api_notifications_download():
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
                 f.write(f"Notification Log - {timestamp}\n")
-                f.write(f"Time Range: {since_time} to {until_time}\n")
+                f.write(f"Time Window: {since_time} to {until_time}\n")
                 f.write("=" * 80 + "\n\n")
                 f.write(result.stdout)
                 temp_path = f.name
