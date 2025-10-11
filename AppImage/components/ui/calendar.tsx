@@ -22,7 +22,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+          "h-8 w-8 bg-background p-0 hover:bg-accent hover:text-accent-foreground border-border",
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
@@ -31,11 +31,10 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] flex items-center justify-center",
         row: "grid grid-cols-7 gap-1 mt-2",
         cell: cn(
-          "h-9 w-9 text-center text-sm p-0 relative",
+          "h-9 w-9 text-center text-sm p-0 relative flex items-center justify-center",
           "[&:has([aria-selected].day-range-end)]:rounded-r-md",
           "[&:has([aria-selected].day-range-start)]:rounded-l-md",
-          "[&:has([aria-selected].day-range-middle)]:bg-accent/50",
-          "[&:has([aria-selected])]:bg-accent",
+          "[&:has([aria-selected].day-range-middle)]:bg-primary/20",
           "focus-within:relative focus-within:z-20",
         ),
         day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100"),
@@ -47,7 +46,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         day_outside:
           "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
         day_disabled: "text-muted-foreground opacity-50",
-        day_range_middle: "aria-selected:bg-accent/50 aria-selected:text-accent-foreground rounded-none",
+        day_range_middle: "aria-selected:bg-primary/20 aria-selected:text-foreground rounded-none",
         day_hidden: "invisible",
         ...classNames,
       }}
