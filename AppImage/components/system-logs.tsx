@@ -7,6 +7,7 @@ import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { ScrollArea } from "./ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import {
   FileText,
   Search,
@@ -22,6 +23,7 @@ import {
   RefreshCw,
   Bell,
   Mail,
+  Eye,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -90,6 +92,13 @@ export function SystemLogs() {
   const [serviceFilter, setServiceFilter] = useState("all")
   const [activeTab, setActiveTab] = useState("logs")
 
+  const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null)
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false)
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false)
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false)
+
   const getApiUrl = (endpoint: string) => {
     if (typeof window !== "undefined") {
       return `${window.location.protocol}//${window.location.hostname}:8008${endpoint}`
@@ -97,12 +106,8 @@ export function SystemLogs() {
     return `http://localhost:8008${endpoint}`
   }
 
-  // Fetch data
   useEffect(() => {
     fetchAllData()
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchAllData, 30000)
-    return () => clearInterval(interval)
   }, [])
 
   const fetchAllData = async () => {
@@ -259,12 +264,38 @@ export function SystemLogs() {
 
   const uniqueServices = [...new Set(logs.map((log) => log.service))]
 
-  // Calculate backup statistics
+  const getBackupStorageType = (volid: string): "pbs" | "pve" => {
+    // PBS backups have format: storage:backup/type/vmid/timestamp
+    // PVE backups have format: storage:backup/vzdump-type-vmid-timestamp.vma.zst
+    if (volid.includes(":backup/vm/") || volid.includes(":backup/ct/")) {
+      return "pbs"
+    }
+    return "pve"
+  }
+
+  const getBackupStorageColor = (volid: string) => {
+    const type = getBackupStorageType(volid)
+    return type === "pbs"
+      ? "bg-purple-500/10 text-purple-500 border-purple-500/20"
+      : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+  }
+
+  const getBackupStorageLabel = (volid: string) => {
+    const type = getBackupStorageType(volid)
+    return type === "pbs" ? "PBS" : "PVE"
+  }
+
   const backupStats = {
     total: backups.length,
     totalSize: backups.reduce((sum, b) => sum + b.size, 0),
-    qemu: backups.filter((b) => b.type === "qemu").length,
-    lxc: backups.filter((b) => b.type === "lxc").length,
+    qemu: backups.filter((b) => {
+      // Check if volid contains /vm/ for QEMU or vzdump-qemu for PVE
+      return b.volid.includes("/vm/") || b.volid.includes("vzdump-qemu")
+    }).length,
+    lxc: backups.filter((b) => {
+      // Check if volid contains /ct/ for LXC or vzdump-lxc for PVE
+      return b.volid.includes("/ct/") || b.volid.includes("vzdump-lxc")
+    }).length,
   }
 
   const formatBytes = (bytes: number) => {
@@ -411,7 +442,11 @@ export function SystemLogs() {
                   {filteredLogs.map((log, index) => (
                     <div
                       key={index}
-                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors"
+                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedLog(log)
+                        setIsLogModalOpen(true)
+                      }}
                     >
                       <div className="flex-shrink-0">
                         <Badge variant="outline" className={getLevelColor(log.level)}>
@@ -423,9 +458,12 @@ export function SystemLogs() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <div className="text-sm font-medium text-foreground">{log.service}</div>
-                          <div className="text-xs text-muted-foreground font-mono">{log.timestamp}</div>
+                          <div className="flex items-center gap-2">
+                            <Eye className="h-3 w-3 text-muted-foreground" />
+                            <div className="text-xs text-muted-foreground font-mono">{log.timestamp}</div>
+                          </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1">{log.message}</div>
+                        <div className="text-sm text-foreground mb-1 line-clamp-2">{log.message}</div>
                         <div className="text-xs text-muted-foreground">
                           Source: {log.source}
                           {log.pid && ` • PID: ${log.pid}`}
@@ -452,7 +490,11 @@ export function SystemLogs() {
                   {events.map((event, index) => (
                     <div
                       key={index}
-                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors"
+                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedEvent(event)
+                        setIsEventModalOpen(true)
+                      }}
                     >
                       <div className="flex-shrink-0">
                         <Badge variant="outline" className={getLevelColor(event.level)}>
@@ -467,14 +509,15 @@ export function SystemLogs() {
                             {event.type}
                             {event.vmid && ` (VM/CT ${event.vmid})`}
                           </div>
-                          <div className="text-xs text-muted-foreground">{event.duration}</div>
+                          <div className="flex items-center gap-2">
+                            <Eye className="h-3 w-3 text-muted-foreground" />
+                            <div className="text-xs text-muted-foreground">{event.duration}</div>
+                          </div>
                         </div>
                         <div className="text-xs text-muted-foreground">
                           Node: {event.node} • User: {event.user}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Started: {event.starttime} • Ended: {event.endtime}
-                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">Started: {event.starttime}</div>
                       </div>
                     </div>
                   ))}
@@ -517,7 +560,11 @@ export function SystemLogs() {
                   {backups.map((backup, index) => (
                     <div
                       key={index}
-                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors"
+                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedBackup(backup)
+                        setIsBackupModalOpen(true)
+                      }}
                     >
                       <div className="flex-shrink-0">
                         <HardDrive className="h-5 w-5 text-blue-500" />
@@ -525,19 +572,27 @@ export function SystemLogs() {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm font-medium text-foreground">
-                            {backup.type?.toUpperCase()} {backup.vmid && `VM ${backup.vmid}`}
+                          <div className="flex items-center gap-2">
+                            <div className="text-sm font-medium text-foreground">
+                              {backup.volid.includes("/vm/") || backup.volid.includes("vzdump-qemu") ? "QEMU" : "LXC"}
+                              {backup.vmid && ` VM ${backup.vmid}`}
+                            </div>
+                            <Badge variant="outline" className={getBackupStorageColor(backup.volid)}>
+                              {getBackupStorageLabel(backup.volid)}
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                            {backup.size_human}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Eye className="h-3 w-3 text-muted-foreground" />
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                              {backup.size_human}
+                            </Badge>
+                          </div>
                         </div>
                         <div className="text-xs text-muted-foreground mb-1">Storage: {backup.storage}</div>
                         <div className="text-xs text-muted-foreground flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />
                           {backup.created}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1 font-mono truncate">{backup.volid}</div>
                       </div>
                     </div>
                   ))}
@@ -552,6 +607,7 @@ export function SystemLogs() {
               </ScrollArea>
             </TabsContent>
 
+            {/* Notifications Tab */}
             <TabsContent value="notifications" className="space-y-4">
               <ScrollArea className="h-[600px] w-full rounded-md border border-border">
                 <div className="space-y-2 p-4">
@@ -564,7 +620,9 @@ export function SystemLogs() {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm font-medium text-foreground capitalize">{notification.type}</div>
+                          <div className="text-sm font-medium text-muted-foreground capitalize">
+                            {notification.type}
+                          </div>
                           <div className="text-xs text-muted-foreground font-mono">{notification.timestamp}</div>
                         </div>
                         <div className="text-sm text-foreground mb-1">{notification.message}</div>
@@ -587,6 +645,182 @@ export function SystemLogs() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <Dialog open={isLogModalOpen} onOpenChange={setIsLogModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Log Details
+            </DialogTitle>
+            <DialogDescription>Complete information about this log entry</DialogDescription>
+          </DialogHeader>
+          {selectedLog && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Level</div>
+                  <Badge variant="outline" className={getLevelColor(selectedLog.level)}>
+                    {getLevelIcon(selectedLog.level)}
+                    {selectedLog.level.toUpperCase()}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Service</div>
+                  <div className="text-sm text-foreground">{selectedLog.service}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
+                  <div className="text-sm text-foreground font-mono">{selectedLog.timestamp}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Source</div>
+                  <div className="text-sm text-foreground">{selectedLog.source}</div>
+                </div>
+                {selectedLog.pid && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">Process ID</div>
+                    <div className="text-sm text-foreground font-mono">{selectedLog.pid}</div>
+                  </div>
+                )}
+                {selectedLog.hostname && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">Hostname</div>
+                    <div className="text-sm text-foreground">{selectedLog.hostname}</div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">Message</div>
+                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                  <pre className="text-sm text-foreground whitespace-pre-wrap break-words">{selectedLog.message}</pre>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEventModalOpen} onOpenChange={setIsEventModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Event Details
+            </DialogTitle>
+            <DialogDescription>Complete information about this event</DialogDescription>
+          </DialogHeader>
+          {selectedEvent && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Status</div>
+                  <Badge variant="outline" className={getLevelColor(selectedEvent.level)}>
+                    {getLevelIcon(selectedEvent.level)}
+                    {selectedEvent.status}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
+                  <div className="text-sm text-foreground">{selectedEvent.type}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Node</div>
+                  <div className="text-sm text-foreground">{selectedEvent.node}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">User</div>
+                  <div className="text-sm text-foreground">{selectedEvent.user}</div>
+                </div>
+                {selectedEvent.vmid && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">VM/CT ID</div>
+                    <div className="text-sm text-foreground font-mono">{selectedEvent.vmid}</div>
+                  </div>
+                )}
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Duration</div>
+                  <div className="text-sm text-foreground">{selectedEvent.duration}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Start Time</div>
+                  <div className="text-sm text-foreground">{selectedEvent.starttime}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">End Time</div>
+                  <div className="text-sm text-foreground">{selectedEvent.endtime}</div>
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">UPID</div>
+                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                  <pre className="text-sm text-foreground font-mono whitespace-pre-wrap break-all">
+                    {selectedEvent.upid}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isBackupModalOpen} onOpenChange={setIsBackupModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Backup Details
+            </DialogTitle>
+            <DialogDescription>Complete information about this backup</DialogDescription>
+          </DialogHeader>
+          {selectedBackup && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                    {selectedBackup.volid.includes("/vm/") || selectedBackup.volid.includes("vzdump-qemu")
+                      ? "QEMU"
+                      : "LXC"}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Storage Type</div>
+                  <Badge variant="outline" className={getBackupStorageColor(selectedBackup.volid)}>
+                    {getBackupStorageLabel(selectedBackup.volid)}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Storage</div>
+                  <div className="text-sm text-foreground">{selectedBackup.storage}</div>
+                </div>
+                {selectedBackup.vmid && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">VM/CT ID</div>
+                    <div className="text-sm text-foreground font-mono">{selectedBackup.vmid}</div>
+                  </div>
+                )}
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Size</div>
+                  <div className="text-sm text-foreground font-mono">{selectedBackup.size_human}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Created</div>
+                  <div className="text-sm text-foreground">{selectedBackup.created}</div>
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">Volume ID</div>
+                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                  <pre className="text-sm text-foreground font-mono whitespace-pre-wrap break-all">
+                    {selectedBackup.volid}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
