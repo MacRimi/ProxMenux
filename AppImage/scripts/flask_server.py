@@ -3403,23 +3403,33 @@ def api_logs():
 def api_logs_download():
     """Download system logs as a text file"""
     try:
-        log_type = request.args.get('type', 'system')  # system, kernel, auth
-        lines = request.args.get('lines', '1000')
+        log_type = request.args.get('type', 'system')
+        hours = int(request.args.get('hours', '48'))  # Changed from lines to hours, default 48h
+        level = request.args.get('level', 'all')  # Added level filter
+        service = request.args.get('service', 'all')  # Added service filter
+        
+        cmd = ['journalctl', '--since', f'{hours} hours ago', '--no-pager']
         
         if log_type == 'kernel':
-            cmd = ['journalctl', '-k', '-n', lines, '--no-pager']
+            cmd.extend(['-k'])
             filename = 'kernel.log'
         elif log_type == 'auth':
-            cmd = ['journalctl', '-u', 'ssh', '-u', 'sshd', '-n', lines, '--no-pager']
+            cmd.extend(['-u', 'ssh', '-u', 'sshd'])
             filename = 'auth.log'
         else:
-            cmd = ['journalctl', '-n', lines, '--no-pager']
             filename = 'system.log'
+        
+        # Apply level filter
+        if level != 'all':
+            cmd.extend(['-p', level])
+        
+        # Apply service filter
+        if service != 'all':
+            cmd.extend(['-u', service])
         
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         
         if result.returncode == 0:
-            # Create a temporary file
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
                 f.write(result.stdout)
@@ -3549,6 +3559,47 @@ def api_notifications():
             'notifications': [],
             'total': 0
         })
+
+@app.route('/api/notifications/download', methods=['GET'])
+def api_notifications_download():
+    """Download complete log for a specific notification"""
+    try:
+        timestamp = request.args.get('timestamp', '')
+        
+        if not timestamp:
+            return jsonify({'error': 'Timestamp parameter required'}), 400
+        
+        # Get logs around the notification timestamp (1 hour before and after)
+        cmd = [
+            'journalctl',
+            '--since', f'{timestamp}',
+            '--until', f'{timestamp}',
+            '-n', '1000',
+            '--no-pager'
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        
+        if result.returncode == 0:
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
+                f.write(f"Notification Log - {timestamp}\n")
+                f.write("=" * 80 + "\n\n")
+                f.write(result.stdout)
+                temp_path = f.name
+            
+            return send_file(
+                temp_path,
+                mimetype='text/plain',
+                as_attachment=True,
+                download_name=f'notification_{timestamp.replace(":", "_").replace(" ", "_")}.log'
+            )
+        else:
+            return jsonify({'error': 'Failed to generate notification log'}), 500
+            
+    except Exception as e:
+        print(f"Error downloading notification log: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/backups', methods=['GET'])
 def api_backups():

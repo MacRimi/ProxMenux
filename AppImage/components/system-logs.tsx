@@ -23,7 +23,6 @@ import {
   RefreshCw,
   Bell,
   Mail,
-  Eye,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -510,14 +509,13 @@ export function SystemLogs() {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm font-medium text-foreground">{log.service}</div>
-                          <div className="flex items-center gap-2">
-                            <Eye className="h-3 w-3 text-muted-foreground" />
-                            <div className="text-xs text-muted-foreground font-mono">{log.timestamp}</div>
+                          <div className="text-sm font-medium text-foreground truncate">{log.service}</div>
+                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
+                            {log.timestamp}
                           </div>
                         </div>
                         <div className="text-sm text-foreground mb-1 line-clamp-2">{log.message}</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground truncate">
                           Source: {log.source}
                           {log.pid && ` • PID: ${log.pid}`}
                           {log.hostname && ` • Host: ${log.hostname}`}
@@ -550,27 +548,24 @@ export function SystemLogs() {
                       }}
                     >
                       <div className="flex-shrink-0">
-                        <Badge variant="outline" className={getLevelColor(event.level)}>
+                        <Badge variant="outline" className={`${getLevelColor(event.level)} max-w-[120px] truncate`}>
                           {getLevelIcon(event.level)}
-                          {event.status}
+                          <span className="truncate">{event.status}</span>
                         </Badge>
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm font-medium text-foreground">
+                        <div className="flex items-center justify-between mb-1 gap-2">
+                          <div className="text-sm font-medium text-foreground truncate">
                             {event.type}
                             {event.vmid && ` (VM/CT ${event.vmid})`}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Eye className="h-3 w-3 text-muted-foreground" />
-                            <div className="text-xs text-muted-foreground">{event.duration}</div>
-                          </div>
+                          <div className="text-xs text-muted-foreground whitespace-nowrap">{event.duration}</div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground truncate">
                           Node: {event.node} • User: {event.user}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">Started: {event.starttime}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{event.starttime}</div>
                       </div>
                     </div>
                   ))}
@@ -624,8 +619,8 @@ export function SystemLogs() {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className={getBackupTypeColor(backup.volid)}>
                               {getBackupTypeLabel(backup.volid)}
                             </Badge>
@@ -633,14 +628,17 @@ export function SystemLogs() {
                               {getBackupStorageLabel(backup.volid)}
                             </Badge>
                           </div>
-                          <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                          <Badge
+                            variant="outline"
+                            className="bg-green-500/10 text-green-500 border-green-500/20 whitespace-nowrap"
+                          >
                             {backup.size_human}
                           </Badge>
                         </div>
-                        <div className="text-xs text-muted-foreground mb-1">Storage: {backup.storage}</div>
+                        <div className="text-xs text-muted-foreground mb-1 truncate">Storage: {backup.storage}</div>
                         <div className="text-xs text-muted-foreground flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {backup.created}
+                          <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+                          <span className="truncate">{backup.created}</span>
                         </div>
                       </div>
                     </div>
@@ -673,13 +671,15 @@ export function SystemLogs() {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm font-medium text-muted-foreground capitalize">
+                          <div className="text-sm font-medium text-muted-foreground capitalize truncate">
                             {notification.type}
                           </div>
-                          <div className="text-xs text-muted-foreground font-mono">{notification.timestamp}</div>
+                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
+                            {notification.timestamp}
+                          </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1">{notification.message}</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-sm text-foreground mb-1 line-clamp-2">{notification.message}</div>
+                        <div className="text-xs text-muted-foreground truncate">
                           Service: {notification.service} • Source: {notification.source}
                         </div>
                       </div>
@@ -845,16 +845,18 @@ export function SystemLogs() {
                   <div className="text-sm font-medium text-muted-foreground mb-1">Storage</div>
                   <div className="text-sm text-foreground">{selectedBackup.storage}</div>
                 </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Size</div>
+                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                    {selectedBackup.size_human}
+                  </Badge>
+                </div>
                 {selectedBackup.vmid && (
                   <div>
                     <div className="text-sm font-medium text-muted-foreground mb-1">VM/CT ID</div>
                     <div className="text-sm text-foreground font-mono">{selectedBackup.vmid}</div>
                   </div>
                 )}
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Size</div>
-                  <div className="text-sm text-foreground font-mono">{selectedBackup.size_human}</div>
-                </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Created</div>
                   <div className="text-sm text-foreground">{selectedBackup.created}</div>
