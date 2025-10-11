@@ -9,6 +9,8 @@ import { ScrollArea } from "./ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet"
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
+import { Calendar } from "./ui/calendar"
 import {
   FileText,
   Search,
@@ -20,7 +22,7 @@ import {
   Database,
   Activity,
   HardDrive,
-  Calendar,
+  CalendarIcon,
   RefreshCw,
   Bell,
   Mail,
@@ -29,6 +31,8 @@ import {
   CalendarDays,
 } from "lucide-react"
 import { useState, useEffect } from "react"
+import type { DateRange } from "react-day-picker"
+import { format } from "date-fns"
 
 interface Log {
   timestamp: string
@@ -108,6 +112,7 @@ export function SystemLogs() {
 
   const [dateFilter, setDateFilter] = useState("now")
   const [customDays, setCustomDays] = useState("1")
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
 
   const getApiUrl = (endpoint: string) => {
     if (typeof window !== "undefined") {
@@ -205,7 +210,11 @@ export function SystemLogs() {
         url += `&service=${serviceFilter}`
       }
 
-      if (dateFilter !== "now") {
+      if (dateFilter === "custom" && dateRange?.from && dateRange?.to) {
+        const fromDate = format(dateRange.from, "yyyy-MM-dd")
+        const toDate = format(dateRange.to, "yyyy-MM-dd")
+        url += `&from_date=${fromDate}&to_date=${toDate}`
+      } else if (dateFilter !== "now") {
         const daysAgo = dateFilter === "custom" ? Number.parseInt(customDays) : Number.parseInt(dateFilter)
         url += `&since_days=${daysAgo}`
       }
@@ -437,6 +446,12 @@ export function SystemLogs() {
     }
   }
 
+  const getMinDate = () => {
+    const twoYearsAgo = new Date()
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2)
+    return twoYearsAgo
+  }
+
   if (loading && logs.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -606,19 +621,43 @@ export function SystemLogs() {
                     <SelectItem value="7">1 week ago</SelectItem>
                     <SelectItem value="14">2 weeks ago</SelectItem>
                     <SelectItem value="30">1 month ago</SelectItem>
-                    <SelectItem value="custom">Custom days</SelectItem>
+                    <SelectItem value="custom">Custom range</SelectItem>
                   </SelectContent>
                 </Select>
 
                 {dateFilter === "custom" && (
-                  <Input
-                    type="number"
-                    placeholder="Days ago"
-                    value={customDays}
-                    onChange={(e) => setCustomDays(e.target.value)}
-                    className="w-full sm:w-[120px] bg-background border-border"
-                    min="1"
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full sm:w-[280px] justify-start text-left font-normal bg-background border-border"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRange?.from ? (
+                          dateRange.to ? (
+                            <>
+                              {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
+                            </>
+                          ) : (
+                            format(dateRange.from, "LLL dd, y")
+                          )
+                        ) : (
+                          <span>Pick a date range</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={dateRange?.from}
+                        selected={dateRange}
+                        onSelect={setDateRange}
+                        numberOfMonths={2}
+                        disabled={(date) => date > new Date() || date < getMinDate()}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 )}
 
                 <Select value={levelFilter} onValueChange={setLevelFilter}>
