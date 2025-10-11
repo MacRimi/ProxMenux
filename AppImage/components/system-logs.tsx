@@ -95,9 +95,11 @@ export function SystemLogs() {
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null)
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null) // Added
   const [isLogModalOpen, setIsLogModalOpen] = useState(false)
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false)
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false) // Added
 
   const getApiUrl = (endpoint: string) => {
     if (typeof window !== "undefined") {
@@ -172,20 +174,52 @@ export function SystemLogs() {
 
   const handleDownloadLogs = async (type = "system") => {
     try {
-      const response = await fetch(getApiUrl(`/api/logs/download?type=${type}&lines=1000`))
+      const hours = 48
+      let url = getApiUrl(`/api/logs/download?type=${type}&hours=${hours}`)
+
+      // Apply filters if any are active
+      if (levelFilter !== "all") {
+        url += `&level=${levelFilter}`
+      }
+      if (serviceFilter !== "all") {
+        url += `&service=${serviceFilter}`
+      }
+
+      const response = await fetch(url)
+      if (response.ok) {
+        const blob = await response.blob()
+        const downloadUrl = window.URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = downloadUrl
+        a.download = `proxmox_${type}_${hours}h.log`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(downloadUrl)
+        document.body.removeChild(a)
+      }
+    } catch (err) {
+      console.error("[v0] Error downloading logs:", err)
+    }
+  }
+
+  const handleDownloadNotificationLog = async (notification: Notification) => {
+    // Added
+    try {
+      // Download the complete log for this notification
+      const response = await fetch(getApiUrl(`/api/notifications/download?timestamp=${notification.timestamp}`))
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement("a")
         a.href = url
-        a.download = `proxmox_${type}.log`
+        a.download = `notification_${notification.timestamp.replace(/[:\s]/g, "_")}.log`
         document.body.appendChild(a)
         a.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
       }
     } catch (err) {
-      console.error("[v0] Error downloading logs:", err)
+      console.error("[v0] Error downloading notification log:", err)
     }
   }
 
@@ -263,6 +297,25 @@ export function SystemLogs() {
   }
 
   const uniqueServices = [...new Set(logs.map((log) => log.service))]
+
+  const getBackupType = (volid: string): "vm" | "lxc" => {
+    if (volid.includes("/vm/") || volid.includes("vzdump-qemu")) {
+      return "vm"
+    }
+    return "lxc"
+  }
+
+  const getBackupTypeColor = (volid: string) => {
+    const type = getBackupType(volid)
+    return type === "vm"
+      ? "bg-cyan-500/10 text-cyan-500 border-cyan-500/20"
+      : "bg-orange-500/10 text-orange-500 border-orange-500/20"
+  }
+
+  const getBackupTypeLabel = (volid: string) => {
+    const type = getBackupType(volid)
+    return type === "vm" ? "VM" : "LXC"
+  }
 
   const getBackupStorageType = (volid: string): "pbs" | "pve" => {
     // PBS backups have format: storage:backup/type/vmid/timestamp
@@ -537,13 +590,13 @@ export function SystemLogs() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <Card className="bg-card/50 border-border">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-foreground">{backupStats.qemu}</div>
+                    <div className="text-2xl font-bold text-cyan-500">{backupStats.qemu}</div>
                     <p className="text-xs text-muted-foreground mt-1">QEMU Backups</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-card/50 border-border">
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-foreground">{backupStats.lxc}</div>
+                    <div className="text-2xl font-bold text-orange-500">{backupStats.lxc}</div>
                     <p className="text-xs text-muted-foreground mt-1">LXC Backups</p>
                   </CardContent>
                 </Card>
@@ -573,20 +626,16 @@ export function SystemLogs() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <div className="text-sm font-medium text-foreground">
-                              {backup.volid.includes("/vm/") || backup.volid.includes("vzdump-qemu") ? "QEMU" : "LXC"}
-                              {backup.vmid && ` VM ${backup.vmid}`}
-                            </div>
+                            <Badge variant="outline" className={getBackupTypeColor(backup.volid)}>
+                              {getBackupTypeLabel(backup.volid)}
+                            </Badge>
                             <Badge variant="outline" className={getBackupStorageColor(backup.volid)}>
                               {getBackupStorageLabel(backup.volid)}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Eye className="h-3 w-3 text-muted-foreground" />
-                            <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                              {backup.size_human}
-                            </Badge>
-                          </div>
+                          <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                            {backup.size_human}
+                          </Badge>
                         </div>
                         <div className="text-xs text-muted-foreground mb-1">Storage: {backup.storage}</div>
                         <div className="text-xs text-muted-foreground flex items-center">
@@ -614,7 +663,11 @@ export function SystemLogs() {
                   {notifications.map((notification, index) => (
                     <div
                       key={index}
-                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors"
+                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedNotification(notification)
+                        setIsNotificationModalOpen(true)
+                      }}
                     >
                       <div className="flex-shrink-0">{getNotificationIcon(notification.type)}</div>
 
@@ -778,10 +831,8 @@ export function SystemLogs() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
-                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                    {selectedBackup.volid.includes("/vm/") || selectedBackup.volid.includes("vzdump-qemu")
-                      ? "QEMU"
-                      : "LXC"}
+                  <Badge variant="outline" className={getBackupTypeColor(selectedBackup.volid)}>
+                    {getBackupTypeLabel(selectedBackup.volid)}
                   </Badge>
                 </div>
                 <div>
@@ -816,6 +867,61 @@ export function SystemLogs() {
                     {selectedBackup.volid}
                   </pre>
                 </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isNotificationModalOpen} onOpenChange={setIsNotificationModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notification Details
+            </DialogTitle>
+            <DialogDescription>Complete information about this notification</DialogDescription>
+          </DialogHeader>
+          {selectedNotification && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
+                  <div className="flex items-center gap-2">
+                    {getNotificationIcon(selectedNotification.type)}
+                    <span className="text-sm text-foreground capitalize">{selectedNotification.type}</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
+                  <div className="text-sm text-foreground font-mono">{selectedNotification.timestamp}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Service</div>
+                  <div className="text-sm text-foreground">{selectedNotification.service}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Source</div>
+                  <div className="text-sm text-foreground">{selectedNotification.source}</div>
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">Message</div>
+                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                  <pre className="text-sm text-foreground whitespace-pre-wrap break-words">
+                    {selectedNotification.message}
+                  </pre>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => handleDownloadNotificationLog(selectedNotification)}
+                  className="border-border"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Complete Log
+                </Button>
               </div>
             </div>
           )}
