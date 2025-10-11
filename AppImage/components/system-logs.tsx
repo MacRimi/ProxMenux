@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { ScrollArea } from "./ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet"
 import {
   FileText,
   Search,
@@ -23,6 +24,9 @@ import {
   RefreshCw,
   Bell,
   Mail,
+  Menu,
+  Terminal,
+  CalendarDays,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -99,6 +103,8 @@ export function SystemLogs() {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false)
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false) // Added
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const getApiUrl = (endpoint: string) => {
     if (typeof window !== "undefined") {
@@ -358,6 +364,36 @@ export function SystemLogs() {
     return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
   }
 
+  const getSectionIcon = (section: string) => {
+    switch (section) {
+      case "logs":
+        return <Terminal className="h-4 w-4" />
+      case "events":
+        return <CalendarDays className="h-4 w-4" />
+      case "backups":
+        return <Database className="h-4 w-4" />
+      case "notifications":
+        return <Bell className="h-4 w-4" />
+      default:
+        return <FileText className="h-4 w-4" />
+    }
+  }
+
+  const getSectionLabel = (section: string) => {
+    switch (section) {
+      case "logs":
+        return "System Logs"
+      case "events":
+        return "Recent Events"
+      case "backups":
+        return "Backups"
+      case "notifications":
+        return "Notifications"
+      default:
+        return section
+    }
+  }
+
   if (loading && logs.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -431,12 +467,75 @@ export function SystemLogs() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="hidden md:grid w-full grid-cols-4">
               <TabsTrigger value="logs">System Logs</TabsTrigger>
               <TabsTrigger value="events">Recent Events</TabsTrigger>
               <TabsTrigger value="backups">Backups</TabsTrigger>
               <TabsTrigger value="notifications">Notifications</TabsTrigger>
             </TabsList>
+
+            <div className="md:hidden mb-4">
+              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start gap-2 bg-transparent">
+                    <Menu className="h-4 w-4" />
+                    {getSectionIcon(activeTab)}
+                    <span>{getSectionLabel(activeTab)}</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[280px]">
+                  <SheetHeader>
+                    <SheetTitle>Sections</SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-6 space-y-2">
+                    <Button
+                      variant={activeTab === "logs" ? "default" : "ghost"}
+                      className="w-full justify-start gap-3"
+                      onClick={() => {
+                        setActiveTab("logs")
+                        setIsMobileMenuOpen(false)
+                      }}
+                    >
+                      <Terminal className="h-4 w-4" />
+                      System Logs
+                    </Button>
+                    <Button
+                      variant={activeTab === "events" ? "default" : "ghost"}
+                      className="w-full justify-start gap-3"
+                      onClick={() => {
+                        setActiveTab("events")
+                        setIsMobileMenuOpen(false)
+                      }}
+                    >
+                      <CalendarDays className="h-4 w-4" />
+                      Recent Events
+                    </Button>
+                    <Button
+                      variant={activeTab === "backups" ? "default" : "ghost"}
+                      className="w-full justify-start gap-3"
+                      onClick={() => {
+                        setActiveTab("backups")
+                        setIsMobileMenuOpen(false)
+                      }}
+                    >
+                      <Database className="h-4 w-4" />
+                      Backups
+                    </Button>
+                    <Button
+                      variant={activeTab === "notifications" ? "default" : "ghost"}
+                      className="w-full justify-start gap-3"
+                      onClick={() => {
+                        setActiveTab("notifications")
+                        setIsMobileMenuOpen(false)
+                      }}
+                    >
+                      <Bell className="h-4 w-4" />
+                      Notifications
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
 
             {/* System Logs Tab */}
             <TabsContent value="logs" className="space-y-4">
@@ -710,7 +809,7 @@ export function SystemLogs() {
           </DialogHeader>
           {selectedLog && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Level</div>
                   <Badge variant="outline" className={getLevelColor(selectedLog.level)}>
@@ -720,15 +819,15 @@ export function SystemLogs() {
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Service</div>
-                  <div className="text-sm text-foreground">{selectedLog.service}</div>
+                  <div className="text-sm text-foreground break-words">{selectedLog.service}</div>
                 </div>
-                <div>
+                <div className="sm:col-span-2">
                   <div className="text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
-                  <div className="text-sm text-foreground font-mono">{selectedLog.timestamp}</div>
+                  <div className="text-sm text-foreground font-mono break-words">{selectedLog.timestamp}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Source</div>
-                  <div className="text-sm text-foreground">{selectedLog.source}</div>
+                  <div className="text-sm text-foreground break-words">{selectedLog.source}</div>
                 </div>
                 {selectedLog.pid && (
                   <div>
@@ -737,9 +836,9 @@ export function SystemLogs() {
                   </div>
                 )}
                 {selectedLog.hostname && (
-                  <div>
+                  <div className="sm:col-span-2">
                     <div className="text-sm font-medium text-muted-foreground mb-1">Hostname</div>
-                    <div className="text-sm text-foreground">{selectedLog.hostname}</div>
+                    <div className="text-sm text-foreground break-words">{selectedLog.hostname}</div>
                   </div>
                 )}
               </div>
@@ -765,7 +864,7 @@ export function SystemLogs() {
           </DialogHeader>
           {selectedEvent && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Status</div>
                   <Badge variant="outline" className={getLevelColor(selectedEvent.level)}>
@@ -775,7 +874,7 @@ export function SystemLogs() {
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
-                  <div className="text-sm text-foreground">{selectedEvent.type}</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.type}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Node</div>
@@ -783,7 +882,7 @@ export function SystemLogs() {
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">User</div>
-                  <div className="text-sm text-foreground">{selectedEvent.user}</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.user}</div>
                 </div>
                 {selectedEvent.vmid && (
                   <div>
@@ -795,13 +894,13 @@ export function SystemLogs() {
                   <div className="text-sm font-medium text-muted-foreground mb-1">Duration</div>
                   <div className="text-sm text-foreground">{selectedEvent.duration}</div>
                 </div>
-                <div>
+                <div className="sm:col-span-2">
                   <div className="text-sm font-medium text-muted-foreground mb-1">Start Time</div>
-                  <div className="text-sm text-foreground">{selectedEvent.starttime}</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.starttime}</div>
                 </div>
-                <div>
+                <div className="sm:col-span-2">
                   <div className="text-sm font-medium text-muted-foreground mb-1">End Time</div>
-                  <div className="text-sm text-foreground">{selectedEvent.endtime}</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.endtime}</div>
                 </div>
               </div>
               <div>
@@ -828,7 +927,7 @@ export function SystemLogs() {
           </DialogHeader>
           {selectedBackup && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
                   <Badge variant="outline" className={getBackupTypeColor(selectedBackup.volid)}>
@@ -843,7 +942,7 @@ export function SystemLogs() {
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Storage</div>
-                  <div className="text-sm text-foreground">{selectedBackup.storage}</div>
+                  <div className="text-sm text-foreground break-words">{selectedBackup.storage}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Size</div>
@@ -857,9 +956,9 @@ export function SystemLogs() {
                     <div className="text-sm text-foreground font-mono">{selectedBackup.vmid}</div>
                   </div>
                 )}
-                <div>
+                <div className="sm:col-span-2">
                   <div className="text-sm font-medium text-muted-foreground mb-1">Created</div>
-                  <div className="text-sm text-foreground">{selectedBackup.created}</div>
+                  <div className="text-sm text-foreground break-words">{selectedBackup.created}</div>
                 </div>
               </div>
               <div>
@@ -886,7 +985,7 @@ export function SystemLogs() {
           </DialogHeader>
           {selectedNotification && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
                   <div className="flex items-center gap-2">
@@ -894,17 +993,17 @@ export function SystemLogs() {
                     <span className="text-sm text-foreground capitalize">{selectedNotification.type}</span>
                   </div>
                 </div>
-                <div>
+                <div className="sm:col-span-2">
                   <div className="text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
-                  <div className="text-sm text-foreground font-mono">{selectedNotification.timestamp}</div>
+                  <div className="text-sm text-foreground font-mono break-words">{selectedNotification.timestamp}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Service</div>
-                  <div className="text-sm text-foreground">{selectedNotification.service}</div>
+                  <div className="text-sm text-foreground break-words">{selectedNotification.service}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Source</div>
-                  <div className="text-sm text-foreground">{selectedNotification.source}</div>
+                  <div className="text-sm text-foreground break-words">{selectedNotification.source}</div>
                 </div>
               </div>
               <div>
@@ -919,7 +1018,7 @@ export function SystemLogs() {
                 <Button
                   variant="outline"
                   onClick={() => handleDownloadNotificationLog(selectedNotification)}
-                  className="border-border"
+                  className="border-border w-full sm:w-auto"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download Complete Log

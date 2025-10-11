@@ -3569,11 +3569,23 @@ def api_notifications_download():
         if not timestamp:
             return jsonify({'error': 'Timestamp parameter required'}), 400
         
-        # Get logs around the notification timestamp (1 hour before and after)
+        # Parse the timestamp and calculate time range
+        from datetime import datetime, timedelta
+        
+        try:
+            # Parse timestamp format: "2025-10-11 14:27:35"
+            dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            since_time = (dt - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+            until_time = (dt + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            # If parsing fails, use a default range
+            since_time = "1 hour ago"
+            until_time = "now"
+        
         cmd = [
             'journalctl',
-            '--since', f'{timestamp}',
-            '--until', f'{timestamp}',
+            '--since', since_time,
+            '--until', until_time,
             '-n', '1000',
             '--no-pager'
         ]
@@ -3584,6 +3596,7 @@ def api_notifications_download():
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
                 f.write(f"Notification Log - {timestamp}\n")
+                f.write(f"Time Range: {since_time} to {until_time}\n")
                 f.write("=" * 80 + "\n\n")
                 f.write(result.stdout)
                 temp_path = f.name
