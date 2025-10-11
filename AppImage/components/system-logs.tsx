@@ -481,6 +481,16 @@ export function SystemLogs() {
 
   return (
     <div className="space-y-6">
+      {loading && logs.length > 0 && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-card border border-border shadow-lg">
+            <RefreshCw className="h-12 w-12 animate-spin text-primary" />
+            <div className="text-lg font-medium text-foreground">Loading logs selected...</div>
+            <div className="text-sm text-muted-foreground">Please wait while we fetch the logs</div>
+          </div>
+        </div>
+      )}
+
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-card border-border">
