@@ -128,8 +128,11 @@ export function SystemLogs() {
 
   useEffect(() => {
     if (dateFilter !== "now" && dateFilter !== "custom") {
-      // Reload logs when a predefined time range is selected
-      fetchSystemLogs().then(setLogs)
+      console.log("[v0] Date filter changed to:", dateFilter)
+      fetchSystemLogs().then((logsData) => {
+        console.log("[v0] Fetched logs:", logsData.length)
+        setLogs(logsData)
+      })
     }
   }, [dateFilter])
 
@@ -171,8 +174,10 @@ export function SystemLogs() {
 
   const handleApplyDateRange = async () => {
     if (dateRange?.from && dateRange?.to) {
+      console.log("[v0] Applying date range:", dateRange)
       setIsCalendarOpen(false)
       const logsRes = await fetchSystemLogs()
+      console.log("[v0] Fetched logs for date range:", logsRes.length)
       setLogs(logsRes)
     }
   }
