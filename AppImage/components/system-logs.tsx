@@ -120,6 +120,16 @@ export function SystemLogs() {
     fetchAllData()
   }, [])
 
+  useEffect(() => {
+    if (dateFilter !== "now") {
+      console.log("[v0] Date filter changed to:", dateFilter)
+      fetchSystemLogs().then((newLogs) => {
+        console.log("[v0] Loaded logs for date filter:", dateFilter, "Count:", newLogs.length)
+        setLogs(newLogs)
+      })
+    }
+  }, [dateFilter, customDays])
+
   const fetchAllData = async () => {
     try {
       setLoading(true)
@@ -158,7 +168,14 @@ export function SystemLogs() {
 
   const fetchSystemLogs = async (): Promise<SystemLog[]> => {
     try {
-      const apiUrl = getApiUrl("/api/logs")
+      let apiUrl = getApiUrl("/api/logs")
+
+      // Add date filter parameters if not "now"
+      if (dateFilter !== "now") {
+        const daysAgo = dateFilter === "custom" ? Number.parseInt(customDays) : Number.parseInt(dateFilter)
+        apiUrl += `?since_days=${daysAgo}`
+        console.log("[v0] Fetching logs with since_days:", daysAgo)
+      }
 
       const response = await fetch(apiUrl, {
         method: "GET",
