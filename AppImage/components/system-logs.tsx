@@ -113,6 +113,7 @@ export function SystemLogs() {
   const [dateFilter, setDateFilter] = useState("now")
   const [customDays, setCustomDays] = useState("1")
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 
   const getApiUrl = (endpoint: string) => {
     if (typeof window !== "undefined") {
@@ -452,6 +453,14 @@ export function SystemLogs() {
     return twoYearsAgo
   }
 
+  const handleApplyDateRange = async () => {
+    if (dateRange?.from && dateRange?.to) {
+      setIsDatePickerOpen(false)
+      // Fetch logs with the selected date range
+      await fetchSystemLogs()
+    }
+  }
+
   if (loading && logs.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -626,7 +635,7 @@ export function SystemLogs() {
                 </Select>
 
                 {dateFilter === "custom" && (
-                  <Popover>
+                  <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -647,15 +656,26 @@ export function SystemLogs() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={dateRange?.from}
-                        selected={dateRange}
-                        onSelect={setDateRange}
-                        numberOfMonths={2}
-                        disabled={(date) => date > new Date() || date < getMinDate()}
-                      />
+                      <div className="space-y-3">
+                        <Calendar
+                          initialFocus
+                          mode="range"
+                          defaultMonth={dateRange?.from}
+                          selected={dateRange}
+                          onSelect={setDateRange}
+                          numberOfMonths={2}
+                          disabled={(date) => date > new Date() || date < getMinDate()}
+                        />
+                        <div className="px-3 pb-3 border-t border-border pt-3">
+                          <Button
+                            onClick={handleApplyDateRange}
+                            disabled={!dateRange?.from || !dateRange?.to}
+                            className="w-full"
+                          >
+                            Apply Filter
+                          </Button>
+                        </div>
+                      </div>
                     </PopoverContent>
                   </Popover>
                 )}
