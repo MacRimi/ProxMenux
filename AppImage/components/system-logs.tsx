@@ -125,15 +125,6 @@ export function SystemLogs() {
     fetchAllData()
   }, [])
 
-  useEffect(() => {
-    if (dateFilter !== "now" && dateFilter !== "custom") {
-      console.log("[v0] Date filter changed to:", dateFilter)
-      fetchSystemLogs({ since_days: Number(dateFilter) }).then((newLogs) => {
-        setLogs(newLogs)
-      })
-    }
-  }, [dateFilter])
-
   const fetchAllData = async () => {
     try {
       setLoading(true)
@@ -170,29 +161,9 @@ export function SystemLogs() {
     }
   }
 
-  const fetchSystemLogs = async (params?: {
-    since_days?: number
-    from_date?: string
-    to_date?: string
-  }): Promise<SystemLog[]> => {
+  const fetchSystemLogs = async (): Promise<SystemLog[]> => {
     try {
-      let apiUrl = getApiUrl("/api/logs")
-
-      // Add date parameters if provided
-      const queryParams = new URLSearchParams()
-      if (params?.since_days) {
-        queryParams.append("since_days", params.since_days.toString())
-        console.log("[v0] Fetching logs with since_days:", params.since_days)
-      }
-      if (params?.from_date && params?.to_date) {
-        queryParams.append("from_date", params.from_date)
-        queryParams.append("to_date", params.to_date)
-        console.log("[v0] Fetching logs with date range:", params.from_date, "to", params.to_date)
-      }
-
-      if (queryParams.toString()) {
-        apiUrl += `?${queryParams.toString()}`
-      }
+      const apiUrl = getApiUrl("/api/logs")
 
       const response = await fetch(apiUrl, {
         method: "GET",
@@ -211,18 +182,6 @@ export function SystemLogs() {
     } catch (error) {
       console.error("[v0] Failed to fetch system logs:", error)
       return []
-    }
-  }
-
-  const handleApplyDateRange = async () => {
-    if (dateRange?.from && dateRange?.to) {
-      console.log("[v0] Applying date range filter:", dateRange.from, "to", dateRange.to)
-      setLoading(true)
-      const fromDate = format(dateRange.from, "yyyy-MM-dd")
-      const toDate = format(dateRange.to, "yyyy-MM-dd")
-      const newLogs = await fetchSystemLogs({ from_date: fromDate, to_date: toDate })
-      setLogs(newLogs)
-      setLoading(false)
     }
   }
 
@@ -697,22 +656,6 @@ export function SystemLogs() {
                         numberOfMonths={2}
                         disabled={(date) => date > new Date() || date < getMinDate()}
                       />
-                      <div className="p-3 border-t border-border">
-                        <Button
-                          onClick={handleApplyDateRange}
-                          disabled={!dateRange?.from || !dateRange?.to || loading}
-                          className="w-full"
-                        >
-                          {loading ? (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                              Loading...
-                            </>
-                          ) : (
-                            "Apply Filter"
-                          )}
-                        </Button>
-                      </div>
                     </PopoverContent>
                   </Popover>
                 )}
