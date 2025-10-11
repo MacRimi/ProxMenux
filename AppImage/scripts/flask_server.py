@@ -3408,20 +3408,14 @@ def api_logs_download():
         level = request.args.get('level', 'all')
         service = request.args.get('service', 'all')
         since_days = request.args.get('since_days', None)
+        from_date = request.args.get('from_date', None)
+        to_date = request.args.get('to_date', None)
         
-        if since_days:
+        if from_date and to_date:
+            # Date format expected: YYYY-MM-DD
+            cmd = ['journalctl', '--since', from_date, '--until', f'{to_date} 23:59:59', '--no-pager']
+        elif since_days:
             days = int(since_days)
-            # Original code: cmd = ['journalctl', '--since', f'{days} days ago', '--until', f'{days - 1} days ago', '--no-pager']
-            # This logic seems incorrect if we want logs FROM since_days ago.
-            # Correct logic: logs from 'days' ago until 'now' (or 'days-1' ago for a specific 24h period)
-            # For simplicity and to keep the original intent of filtering *from* X days ago, let's use '--since'.
-            # If 'since_days' is 1, it means logs from yesterday until now.
-            # If 'since_days' is 2, it means logs from the day before yesterday until now.
-            # Let's assume 'since_days' means the number of *full 24-hour periods* to go back.
-            # So, if since_days = 1, we want logs from 24 hours ago.
-            # If since_days = 2, we want logs from 48 hours ago.
-            # The original '--until' logic was problematic. Let's simplify.
-            # If 'since_days' is provided, use it as the primary time filter.
             cmd = ['journalctl', '--since', f'{days} days ago', '--no-pager']
         else:
             cmd = ['journalctl', '--since', f'{hours} hours ago', '--no-pager']

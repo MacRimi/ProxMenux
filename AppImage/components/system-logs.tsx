@@ -102,18 +102,17 @@ export function SystemLogs() {
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null)
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null) // Added
   const [isLogModalOpen, setIsLogModalOpen] = useState(false)
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false)
-  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false) // Added
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const [dateFilter, setDateFilter] = useState("now")
   const [customDays, setCustomDays] = useState("1")
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
   const getApiUrl = (endpoint: string) => {
     if (typeof window !== "undefined") {
@@ -129,9 +128,8 @@ export function SystemLogs() {
   useEffect(() => {
     if (dateFilter !== "now" && dateFilter !== "custom") {
       console.log("[v0] Date filter changed to:", dateFilter)
-      fetchSystemLogs().then((logsData) => {
-        console.log("[v0] Fetched logs:", logsData.length)
-        setLogs(logsData)
+      fetchSystemLogs({ since_days: Number(dateFilter) }).then((newLogs) => {
+        setLogs(newLogs)
       })
     }
   }, [dateFilter])
@@ -172,41 +170,29 @@ export function SystemLogs() {
     }
   }
 
-  const handleApplyDateRange = async () => {
-    if (dateRange?.from && dateRange?.to) {
-      console.log("[v0] Applying date range:", dateRange)
-      setIsCalendarOpen(false)
-      setLoading(true)
-      const logsRes = await fetchSystemLogs()
-      console.log("[v0] Fetched logs for date range:", logsRes.length)
-      setLogs(logsRes)
-      setLoading(false)
-    }
-  }
-
-  const fetchSystemLogs = async (): Promise<SystemLog[]> => {
+  const fetchSystemLogs = async (params?: {
+    since_days?: number
+    from_date?: string
+    to_date?: string
+  }): Promise<SystemLog[]> => {
     try {
       let apiUrl = getApiUrl("/api/logs")
 
-      const params = new URLSearchParams()
-
-      if (dateFilter === "custom" && dateRange?.from && dateRange?.to) {
-        const fromDate = format(dateRange.from, "yyyy-MM-dd")
-        const toDate = format(dateRange.to, "yyyy-MM-dd")
-        params.append("from_date", fromDate)
-        params.append("to_date", toDate)
-        console.log("[v0] Fetching logs with custom date range:", fromDate, "to", toDate)
-      } else if (dateFilter !== "now") {
-        const daysAgo = Number.parseInt(dateFilter)
-        params.append("since_days", daysAgo.toString())
-        console.log("[v0] Fetching logs from", daysAgo, "days ago")
+      // Add date parameters if provided
+      const queryParams = new URLSearchParams()
+      if (params?.since_days) {
+        queryParams.append("since_days", params.since_days.toString())
+        console.log("[v0] Fetching logs with since_days:", params.since_days)
+      }
+      if (params?.from_date && params?.to_date) {
+        queryParams.append("from_date", params.from_date)
+        queryParams.append("to_date", params.to_date)
+        console.log("[v0] Fetching logs with date range:", params.from_date, "to", params.to_date)
       }
 
-      if (params.toString()) {
-        apiUrl += `?${params.toString()}`
+      if (queryParams.toString()) {
+        apiUrl += `?${queryParams.toString()}`
       }
-
-      console.log("[v0] Fetching logs from:", apiUrl)
 
       const response = await fetch(apiUrl, {
         method: "GET",
@@ -225,6 +211,18 @@ export function SystemLogs() {
     } catch (error) {
       console.error("[v0] Failed to fetch system logs:", error)
       return []
+    }
+  }
+
+  const handleApplyDateRange = async () => {
+    if (dateRange?.from && dateRange?.to) {
+      console.log("[v0] Applying date range filter:", dateRange.from, "to", dateRange.to)
+      setLoading(true)
+      const fromDate = format(dateRange.from, "yyyy-MM-dd")
+      const toDate = format(dateRange.to, "yyyy-MM-dd")
+      const newLogs = await fetchSystemLogs({ from_date: fromDate, to_date: toDate })
+      setLogs(newLogs)
+      setLoading(false)
     }
   }
 
@@ -669,7 +667,7 @@ export function SystemLogs() {
                 </Select>
 
                 {dateFilter === "custom" && (
-                  <Popover open={isCalendarOpen && activeTab === "logs"} onOpenChange={setIsCalendarOpen}>
+                  <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -702,10 +700,17 @@ export function SystemLogs() {
                       <div className="p-3 border-t border-border">
                         <Button
                           onClick={handleApplyDateRange}
-                          disabled={!dateRange?.from || !dateRange?.to}
+                          disabled={!dateRange?.from || !dateRange?.to || loading}
                           className="w-full"
                         >
-                          Apply Filter
+                          {loading ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            "Apply Filter"
+                          )}
                         </Button>
                       </div>
                     </PopoverContent>
