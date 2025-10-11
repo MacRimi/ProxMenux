@@ -3390,14 +3390,14 @@ def api_logs():
                 'error': 'journalctl not available or failed',
                 'logs': [],
                 'total': 0
-            })
+            }), 500
     except Exception as e:
         print(f"Error getting logs: {e}")
         return jsonify({
-            'error': f'Unable to access system logs: {str(e)}',
+            'error': str(e),
             'logs': [],
             'total': 0
-        })
+        }), 500
 
 @app.route('/api/logs/download', methods=['GET'])
 def api_logs_download():
@@ -3609,7 +3609,7 @@ def api_notifications_download():
                 download_name=f'notification_{timestamp.replace(":", "_").replace(" ", "_")}.log'
             )
         else:
-            return jsonify({'error': 'Failed to generate notification log'}), 500
+            return jsonify({'error': 'Failed to generate log file'}), 500
             
     except Exception as e:
         print(f"Error downloading notification log: {e}")
@@ -3969,7 +3969,7 @@ def api_gpu_realtime(slot):
 def api_vm_details(vmid):
     """Get detailed information for a specific VM/LXC"""
     try:
-        result = subprocess.run(['pvesh', 'get', f'/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
                               capture_output=True, text=True, timeout=10)
         
         if result.returncode == 0:
