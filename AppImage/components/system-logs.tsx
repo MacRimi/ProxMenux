@@ -7,6 +7,7 @@ import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { ScrollArea } from "./ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
@@ -20,6 +21,7 @@ import {
   XCircle,
   Database,
   Activity,
+  HardDrive,
   CalendarIcon,
   RefreshCw,
   Bell,
@@ -100,18 +102,18 @@ export function SystemLogs() {
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null)
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null) // Added
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
   const [isLogModalOpen, setIsLogModalOpen] = useState(false)
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false)
-  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false) // Added
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const [dateFilter, setDateFilter] = useState("now")
   const [customDays, setCustomDays] = useState("1")
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
   const getApiUrl = (endpoint: string) => {
     if (typeof window !== "undefined") {
@@ -125,11 +127,11 @@ export function SystemLogs() {
   }, [])
 
   useEffect(() => {
-    if (dateFilter !== "custom") {
-      // Reload logs when non-custom filter changes
+    if (dateFilter !== "now" && dateFilter !== "custom") {
+      // Reload logs when a predefined time range is selected
       fetchSystemLogs().then(setLogs)
     }
-  }, [dateFilter, customDays])
+  }, [dateFilter])
 
   const fetchAllData = async () => {
     try {
@@ -167,25 +169,17 @@ export function SystemLogs() {
     }
   }
 
+  const handleApplyDateRange = async () => {
+    if (dateRange?.from && dateRange?.to) {
+      setIsCalendarOpen(false)
+      const logsRes = await fetchSystemLogs()
+      setLogs(logsRes)
+    }
+  }
+
   const fetchSystemLogs = async (): Promise<SystemLog[]> => {
     try {
-      let apiUrl = getApiUrl("/api/logs")
-
-      const params = new URLSearchParams()
-
-      if (dateFilter === "custom" && dateRange?.from && dateRange?.to) {
-        params.append("from_date", format(dateRange.from, "yyyy-MM-dd"))
-        params.append("to_date", format(dateRange.to, "yyyy-MM-dd"))
-      } else if (dateFilter !== "now") {
-        const daysAgo = dateFilter === "custom" ? Number.parseInt(customDays) : Number.parseInt(dateFilter)
-        params.append("since_days", daysAgo.toString())
-      }
-
-      if (params.toString()) {
-        apiUrl += `?${params.toString()}`
-      }
-
-      console.log("[v0] Fetching logs from:", apiUrl)
+      const apiUrl = getApiUrl("/api/logs")
 
       const response = await fetch(apiUrl, {
         method: "GET",
@@ -474,23 +468,6 @@ export function SystemLogs() {
     return twoYearsAgo
   }
 
-  const handleApplyDateRange = async () => {
-    if (dateRange?.from && dateRange?.to) {
-      console.log("[v0] Applying date range filter:", dateRange)
-      setIsDatePickerOpen(false)
-      setLoading(true)
-      try {
-        const newLogs = await fetchSystemLogs()
-        setLogs(newLogs)
-        console.log("[v0] Loaded", newLogs.length, "logs for date range")
-      } catch (error) {
-        console.error("[v0] Error loading logs for date range:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-  }
-
   if (loading && logs.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -665,7 +642,7 @@ export function SystemLogs() {
                 </Select>
 
                 {dateFilter === "custom" && (
-                  <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -686,25 +663,23 @@ export function SystemLogs() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <div className="space-y-3">
-                        <Calendar
-                          initialFocus
-                          mode="range"
-                          defaultMonth={dateRange?.from}
-                          selected={dateRange}
-                          onSelect={setDateRange}
-                          numberOfMonths={2}
-                          disabled={(date) => date > new Date() || date < getMinDate()}
-                        />
-                        <div className="px-3 pb-3 border-t border-border pt-3">
-                          <Button
-                            onClick={handleApplyDateRange}
-                            disabled={!dateRange?.from || !dateRange?.to}
-                            className="w-full"
-                          >
-                            Apply Filter
-                          </Button>
-                        </div>
+                      <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={dateRange?.from}
+                        selected={dateRange}
+                        onSelect={setDateRange}
+                        numberOfMonths={2}
+                        disabled={(date) => date > new Date() || date < getMinDate()}
+                      />
+                      <div className="p-3 border-t border-border">
+                        <Button
+                          onClick={handleApplyDateRange}
+                          disabled={!dateRange?.from || !dateRange?.to}
+                          className="w-full"
+                        >
+                          Apply Filter
+                        </Button>
                       </div>
                     </PopoverContent>
                   </Popover>
@@ -817,14 +792,12 @@ export function SystemLogs() {
                             {event.type}
                             {event.vmid && ` (VM/CT ${event.vmid})`}
                           </div>
-                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap">
-                            {event.starttime}
-                          </div>
+                          <div className="text-xs text-muted-foreground whitespace-nowrap">{event.duration}</div>
                         </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2">{event.message}</div>
                         <div className="text-xs text-muted-foreground truncate">
                           Node: {event.node} • User: {event.user}
                         </div>
+                        <div className="text-xs text-muted-foreground mt-1">{event.starttime}</div>
                       </div>
                     </div>
                   ))}
@@ -832,7 +805,7 @@ export function SystemLogs() {
                   {events.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No events found</p>
+                      <p>No recent events found</p>
                     </div>
                   )}
                 </div>
@@ -841,32 +814,64 @@ export function SystemLogs() {
 
             {/* Backups Tab */}
             <TabsContent value="backups" className="space-y-4">
-              <ScrollArea className="h-[600px] w-full rounded-md border border-border">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <Card className="bg-card/50 border-border">
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold text-cyan-500">{backupStats.qemu}</div>
+                    <p className="text-xs text-muted-foreground mt-1">QEMU Backups</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-card/50 border-border">
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold text-orange-500">{backupStats.lxc}</div>
+                    <p className="text-xs text-muted-foreground mt-1">LXC Backups</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-card/50 border-border">
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold text-foreground">{formatBytes(backupStats.totalSize)}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Total Size</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <ScrollArea className="h-[500px] w-full rounded-md border border-border">
                 <div className="space-y-2 p-4">
                   {backups.map((backup, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
+                      className="flex items-start space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
                       onClick={() => {
                         setSelectedBackup(backup)
                         setIsBackupModalOpen(true)
                       }}
                     >
                       <div className="flex-shrink-0">
-                        <Badge variant="outline" className={getBackupTypeColor(backup.volid)}>
-                          {getBackupTypeLabel(backup.volid)}
-                        </Badge>
+                        <HardDrive className="h-5 w-5 text-blue-500" />
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm font-medium text-foreground truncate">{backup.storage}</div>
-                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap">
-                            {backup.created}
+                        <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className={getBackupTypeColor(backup.volid)}>
+                              {getBackupTypeLabel(backup.volid)}
+                            </Badge>
+                            <Badge variant="outline" className={getBackupStorageColor(backup.volid)}>
+                              {getBackupStorageLabel(backup.volid)}
+                            </Badge>
                           </div>
+                          <Badge
+                            variant="outline"
+                            className="bg-green-500/10 text-green-500 border-green-500/20 whitespace-nowrap"
+                          >
+                            {backup.size_human}
+                          </Badge>
                         </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2">{backup.volid}</div>
-                        <div className="text-xs text-muted-foreground truncate">Size: {backup.size_human}</div>
+                        <div className="text-xs text-muted-foreground mb-1 truncate">Storage: {backup.storage}</div>
+                        <div className="text-xs text-muted-foreground flex items-center">
+                          <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+                          <span className="truncate">{backup.created}</span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -894,22 +899,23 @@ export function SystemLogs() {
                         setIsNotificationModalOpen(true)
                       }}
                     >
-                      <div className="flex-shrink-0">
+                      <div className="flex-shrink-0 flex items-center gap-2">
+                        {getNotificationIcon(notification.type)}
                         <Badge variant="outline" className={getNotificationTypeColor(notification.type)}>
-                          {getNotificationIcon(notification.type)}
                           {notification.type.toUpperCase()}
                         </Badge>
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm font-medium text-foreground truncate">{notification.service}</div>
-                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap">
+                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
                             {notification.timestamp}
                           </div>
                         </div>
                         <div className="text-sm text-foreground mb-1 line-clamp-2">{notification.message}</div>
-                        <div className="text-xs text-muted-foreground truncate">Source: {notification.source}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          Service: {notification.service} • Source: {notification.source}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -926,6 +932,236 @@ export function SystemLogs() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <Dialog open={isLogModalOpen} onOpenChange={setIsLogModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Log Details
+            </DialogTitle>
+            <DialogDescription>Complete information about this log entry</DialogDescription>
+          </DialogHeader>
+          {selectedLog && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Level</div>
+                  <Badge variant="outline" className={getLevelColor(selectedLog.level)}>
+                    {getLevelIcon(selectedLog.level)}
+                    {selectedLog.level.toUpperCase()}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Service</div>
+                  <div className="text-sm text-foreground break-words">{selectedLog.service}</div>
+                </div>
+                <div className="sm:col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
+                  <div className="text-sm text-foreground font-mono break-words">{selectedLog.timestamp}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Source</div>
+                  <div className="text-sm text-foreground break-words">{selectedLog.source}</div>
+                </div>
+                {selectedLog.pid && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">Process ID</div>
+                    <div className="text-sm text-foreground font-mono">{selectedLog.pid}</div>
+                  </div>
+                )}
+                {selectedLog.hostname && (
+                  <div className="sm:col-span-2">
+                    <div className="text-sm font-medium text-muted-foreground mb-1">Hostname</div>
+                    <div className="text-sm text-foreground break-words">{selectedLog.hostname}</div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">Message</div>
+                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                  <pre className="text-sm text-foreground whitespace-pre-wrap break-words">{selectedLog.message}</pre>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEventModalOpen} onOpenChange={setIsEventModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Event Details
+            </DialogTitle>
+            <DialogDescription>Complete information about this event</DialogDescription>
+          </DialogHeader>
+          {selectedEvent && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Status</div>
+                  <Badge variant="outline" className={getLevelColor(selectedEvent.level)}>
+                    {getLevelIcon(selectedEvent.level)}
+                    {selectedEvent.status}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.type}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Node</div>
+                  <div className="text-sm text-foreground">{selectedEvent.node}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">User</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.user}</div>
+                </div>
+                {selectedEvent.vmid && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">VM/CT ID</div>
+                    <div className="text-sm text-foreground font-mono">{selectedEvent.vmid}</div>
+                  </div>
+                )}
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Duration</div>
+                  <div className="text-sm text-foreground">{selectedEvent.duration}</div>
+                </div>
+                <div className="sm:col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Start Time</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.starttime}</div>
+                </div>
+                <div className="sm:col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">End Time</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.endtime}</div>
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">UPID</div>
+                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                  <pre className="text-sm text-foreground font-mono whitespace-pre-wrap break-all">
+                    {selectedEvent.upid}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isBackupModalOpen} onOpenChange={setIsBackupModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Backup Details
+            </DialogTitle>
+            <DialogDescription>Complete information about this backup</DialogDescription>
+          </DialogHeader>
+          {selectedBackup && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
+                  <Badge variant="outline" className={getBackupTypeColor(selectedBackup.volid)}>
+                    {getBackupTypeLabel(selectedBackup.volid)}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Storage Type</div>
+                  <Badge variant="outline" className={getBackupStorageColor(selectedBackup.volid)}>
+                    {getBackupStorageLabel(selectedBackup.volid)}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Storage</div>
+                  <div className="text-sm text-foreground break-words">{selectedBackup.storage}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Size</div>
+                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                    {selectedBackup.size_human}
+                  </Badge>
+                </div>
+                {selectedBackup.vmid && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">VM/CT ID</div>
+                    <div className="text-sm text-foreground font-mono">{selectedBackup.vmid}</div>
+                  </div>
+                )}
+                <div className="sm:col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Created</div>
+                  <div className="text-sm text-foreground break-words">{selectedBackup.created}</div>
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">Volume ID</div>
+                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                  <pre className="text-sm text-foreground font-mono whitespace-pre-wrap break-all">
+                    {selectedBackup.volid}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isNotificationModalOpen} onOpenChange={setIsNotificationModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notification Details
+            </DialogTitle>
+            <DialogDescription>Complete information about this notification</DialogDescription>
+          </DialogHeader>
+          {selectedNotification && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
+                  <Badge variant="outline" className={getNotificationTypeColor(selectedNotification.type)}>
+                    {selectedNotification.type.toUpperCase()}
+                  </Badge>
+                </div>
+                <div className="sm:col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
+                  <div className="text-sm text-foreground font-mono break-words">{selectedNotification.timestamp}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Service</div>
+                  <div className="text-sm text-foreground break-words">{selectedNotification.service}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Source</div>
+                  <div className="text-sm text-foreground break-words">{selectedNotification.source}</div>
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">Message</div>
+                <div className="p-4 rounded-lg bg-muted/50 border border-border max-h-[300px] overflow-y-auto">
+                  <pre className="text-sm text-foreground whitespace-pre-wrap break-words">
+                    {selectedNotification.message}
+                  </pre>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => handleDownloadNotificationLog(selectedNotification)}
+                  className="border-border w-full sm:w-auto"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Complete Message
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
