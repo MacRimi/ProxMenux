@@ -3984,6 +3984,21 @@
     "type": "ct"
   },
   {
+    "name": "Prometheus Blackbox Exporter",
+    "slug": "prometheus-blackbox-exporter",
+    "desc": "An exporter allows blackbox probing of endpoints over HTTP, HTTPS, DNS, TCP, ICMP and gRPC for use by the Prometheus monitoring system.",
+    "script": "ct/prometheus-blackbox-exporter.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/prometheus-blackbox-exporter.sh",
+    "categories": [
+      1,
+      9
+    ],
+    "notes": [
+      "Please adjust the Proxmox credentials in the configuration file!"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Prometheus Paperless NGX Exporter",
     "slug": "prometheus-paperless-ngx-exporter",
     "desc": "Prometheus metrics exporter for Paperless-NGX, a document management system transforming physical documents into a searchable online archive. The exporter relies on Paperless' REST API.",
@@ -4588,6 +4603,23 @@
       "Post Install: `https://github.com/community-scripts/ProxmoxVE/discussions/671`"
     ],
     "type": "ct"
+  },
+  {
+    "name": "sonarqube",
+    "slug": "sonarqube",
+    "desc": "SonarQube Server automates code quality and security reviews and provides actionable code intelligence so developers can focus on building better, faster.",
+    "script": "ct/sonarqube.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/sonarqube.sh",
+    "categories": [
+      20,
+      19
+    ],
+    "notes": [],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin"
+    }
   },
   {
     "name": "Sonarr",
