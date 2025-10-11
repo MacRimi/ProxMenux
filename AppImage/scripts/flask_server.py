@@ -437,6 +437,14 @@ def get_system_info():
         except Exception as e:
             print(f"Note: pveversion not available: {e}")
         
+        kernel_version = None
+        try:
+            result = subprocess.run(['uname', '-r'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                kernel_version = result.stdout.strip()
+        except Exception as e:
+            print(f"Note: uname not available: {e}")
+        
         cpu_cores = psutil.cpu_count(logical=False)  # Physical cores only
         
         available_updates = 0
