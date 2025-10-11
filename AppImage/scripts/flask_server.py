@@ -3339,11 +3339,11 @@ def api_vms():
 def api_logs():
     """Get system logs"""
     try:
-        minutes = request.args.get('minutes', '1')  # Default 1 minute for fast loading
+        limit = request.args.get('limit', '200')
         priority = request.args.get('priority', None)  # 0-7 (0=emerg, 3=err, 4=warning, 6=info)
         service = request.args.get('service', None)
         
-        cmd = ['journalctl', '--since', f'{minutes} minutes ago', '--output', 'json', '--no-pager']
+        cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
         
         # Add priority filter if specified
         if priority:
@@ -3390,14 +3390,14 @@ def api_logs():
                 'error': 'journalctl not available or failed',
                 'logs': [],
                 'total': 0
-            }), 500
+            })
     except Exception as e:
         print(f"Error getting logs: {e}")
         return jsonify({
-            'error': str(e),
+            'error': f'Unable to access system logs: {str(e)}',
             'logs': [],
             'total': 0
-        }), 500
+        })
 
 @app.route('/api/logs/download', methods=['GET'])
 def api_logs_download():
@@ -3609,7 +3609,7 @@ def api_notifications_download():
                 download_name=f'notification_{timestamp.replace(":", "_").replace(" ", "_")}.log'
             )
         else:
-            return jsonify({'error': 'Failed to generate log file'}), 500
+            return jsonify({'error': 'Failed to generate notification log'}), 500
             
     except Exception as e:
         print(f"Error downloading notification log: {e}")
@@ -3969,7 +3969,7 @@ def api_gpu_realtime(slot):
 def api_vm_details(vmid):
     """Get detailed information for a specific VM/LXC"""
     try:
-        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+        result = subprocess.run(['pvesh', 'get', f'/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
                               capture_output=True, text=True, timeout=10)
         
         if result.returncode == 0:

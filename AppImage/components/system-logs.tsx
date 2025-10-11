@@ -27,7 +27,6 @@ import {
   Menu,
   Terminal,
   CalendarDays,
-  Clock,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -94,7 +93,6 @@ export function SystemLogs() {
   const [searchTerm, setSearchTerm] = useState("")
   const [levelFilter, setLevelFilter] = useState("all")
   const [serviceFilter, setServiceFilter] = useState("all")
-  const [timeRange, setTimeRange] = useState("1") // Default 1 minute for fast loading
   const [activeTab, setActiveTab] = useState("logs")
 
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null)
@@ -117,7 +115,7 @@ export function SystemLogs() {
 
   useEffect(() => {
     fetchAllData()
-  }, [timeRange]) // Re-fetch when time range changes
+  }, [])
 
   const fetchAllData = async () => {
     try {
@@ -157,7 +155,7 @@ export function SystemLogs() {
 
   const fetchSystemLogs = async (): Promise<SystemLog[]> => {
     try {
-      const apiUrl = getApiUrl(`/api/logs?minutes=${timeRange}`)
+      const apiUrl = getApiUrl("/api/logs")
 
       const response = await fetch(apiUrl, {
         method: "GET",
@@ -294,20 +292,6 @@ export function SystemLogs() {
       default:
         return <Bell className="h-4 w-4 text-gray-500" />
     }
-  }
-
-  const getNotificationTypeColor = (type: string) => {
-    const lowerType = type.toLowerCase()
-    if (lowerType.includes("error") || lowerType.includes("critical") || lowerType.includes("alert")) {
-      return "bg-red-500/10 text-red-500 border-red-500/20"
-    } else if (lowerType.includes("warning") || lowerType.includes("warn")) {
-      return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-    } else if (lowerType.includes("success") || lowerType.includes("ok")) {
-      return "bg-green-500/10 text-green-500 border-green-500/20"
-    } else if (lowerType.includes("info")) {
-      return "bg-blue-500/10 text-blue-500 border-blue-500/20"
-    }
-    return "bg-gray-500/10 text-gray-500 border-gray-500/20"
   }
 
   const logCounts = {
@@ -568,22 +552,6 @@ export function SystemLogs() {
                   </div>
                 </div>
 
-                <Select value={timeRange} onValueChange={setTimeRange}>
-                  <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
-                    <Clock className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Time range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Last 1 minute</SelectItem>
-                    <SelectItem value="5">Last 5 minutes</SelectItem>
-                    <SelectItem value="15">Last 15 minutes</SelectItem>
-                    <SelectItem value="30">Last 30 minutes</SelectItem>
-                    <SelectItem value="60">Last 1 hour</SelectItem>
-                    <SelectItem value="360">Last 6 hours</SelectItem>
-                    <SelectItem value="1440">Last 24 hours</SelectItem>
-                  </SelectContent>
-                </Select>
-
                 <Select value={levelFilter} onValueChange={setLevelFilter}>
                   <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
                     <SelectValue placeholder="Filter by level" />
@@ -798,22 +766,26 @@ export function SystemLogs() {
                         setIsNotificationModalOpen(true)
                       }}
                     >
-                      <div className="flex-shrink-0">
-                        <Badge variant="outline" className={getNotificationTypeColor(notification.type)}>
-                          {getNotificationIcon(notification.type)}
-                          {notification.type.toUpperCase()}
-                        </Badge>
+                      <div className="flex-shrink-0 flex items-center gap-2">
+                        {getNotificationIcon(notification.type)}
+                        <span className="text-sm font-medium text-muted-foreground capitalize md:hidden">
+                          {notification.type}
+                        </span>
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm font-medium text-foreground truncate">{notification.service}</div>
+                          <div className="text-sm font-medium text-muted-foreground capitalize truncate hidden md:block">
+                            {notification.type}
+                          </div>
                           <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
                             {notification.timestamp}
                           </div>
                         </div>
                         <div className="text-sm text-foreground mb-1 line-clamp-2">{notification.message}</div>
-                        <div className="text-xs text-muted-foreground truncate">Source: {notification.source}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          Service: {notification.service} • Source: {notification.source}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1021,10 +993,10 @@ export function SystemLogs() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
-                  <Badge variant="outline" className={getNotificationTypeColor(selectedNotification.type)}>
+                  <div className="flex items-center gap-2">
                     {getNotificationIcon(selectedNotification.type)}
-                    {selectedNotification.type.toUpperCase()}
-                  </Badge>
+                    <span className="text-sm text-foreground capitalize">{selectedNotification.type}</span>
+                  </div>
                 </div>
                 <div className="sm:col-span-2">
                   <div className="text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
@@ -1040,11 +1012,10 @@ export function SystemLogs() {
                 </div>
               </div>
               <div>
-                <div className="text-sm font-medium text-muted-foreground mb-2">Message (First 20 lines)</div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">Message</div>
                 <div className="p-4 rounded-lg bg-muted/50 border border-border max-h-[300px] overflow-y-auto">
                   <pre className="text-sm text-foreground whitespace-pre-wrap break-words">
-                    {selectedNotification.message.split("\n").slice(0, 20).join("\n")}
-                    {selectedNotification.message.split("\n").length > 20 && "\n\n... (download full log to see more)"}
+                    {selectedNotification.message}
                   </pre>
                 </div>
               </div>
