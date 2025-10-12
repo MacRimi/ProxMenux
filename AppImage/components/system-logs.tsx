@@ -603,7 +603,9 @@ export function SystemLogs() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{filteredCombinedLogs.length.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-foreground">
+              {filteredCombinedLogs.length.toLocaleString("fr-FR")}
+            </div>
             <p className="text-xs text-muted-foreground mt-2">Filtered</p>
           </CardContent>
         </Card>
@@ -614,7 +616,7 @@ export function SystemLogs() {
             <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">{logCounts.error.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-red-500">{logCounts.error.toLocaleString("fr-FR")}</div>
             <p className="text-xs text-muted-foreground mt-2">Requires attention</p>
           </CardContent>
         </Card>
@@ -625,7 +627,7 @@ export function SystemLogs() {
             <AlertTriangle className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">{logCounts.warning.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-yellow-500">{logCounts.warning.toLocaleString("fr-FR")}</div>
             <p className="text-xs text-muted-foreground mt-2">Monitor closely</p>
           </CardContent>
         </Card>
@@ -636,7 +638,7 @@ export function SystemLogs() {
             <Database className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-500">{backupStats.total.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-blue-500">{backupStats.total.toLocaleString("fr-FR")}</div>
             <p className="text-xs text-muted-foreground mt-2">{formatBytes(backupStats.totalSize)}</p>
           </CardContent>
         </Card>
@@ -1050,16 +1052,25 @@ export function SystemLogs() {
               Event Details
             </DialogTitle>
             <DialogDescription>Complete information about this event</DialogDescription>
+            {selectedEvent && (
+              <div className="flex gap-2 mt-2">
+                <Badge variant="outline" className={getLevelColor(selectedEvent.level)}>
+                  {getLevelIcon(selectedEvent.level)}
+                  {selectedEvent.level.toUpperCase()}
+                </Badge>
+                <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
+                  <Activity className="h-3 w-3 mr-1" />
+                  EVENT
+                </Badge>
+              </div>
+            )}
           </DialogHeader>
           {selectedEvent && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Status</div>
-                  <Badge variant="outline" className={getLevelColor(selectedEvent.level)}>
-                    {getLevelIcon(selectedEvent.level)}
-                    {selectedEvent.status}
-                  </Badge>
+                <div className="sm:col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Message</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.status}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
