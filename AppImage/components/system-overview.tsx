@@ -63,6 +63,20 @@ interface NetworkData {
     packets_sent: number
     packets_recv: number
   }
+  physical_active_count?: number
+  physical_total_count?: number
+  bridge_active_count?: number
+  bridge_total_count?: number
+  physical_interfaces?: Array<{
+    name: string
+    status: string
+    addresses: Array<{ ip: string; netmask: string }>
+  }>
+  bridge_interfaces?: Array<{
+    name: string
+    status: string
+    addresses: Array<{ ip: string; netmask: string }>
+  }>
 }
 
 interface ProxmoxStorageData {
@@ -288,7 +302,7 @@ export function SystemOverview() {
     }
 
     fetchNetwork()
-    const networkInterval = setInterval(fetchNetwork, 15000)
+    const networkInterval = setInterval(fetchNetwork, 60000)
 
     return () => {
       clearInterval(networkInterval)
@@ -530,9 +544,24 @@ export function SystemOverview() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Active Interfaces:</span>
                   <span className="text-lg font-semibold text-foreground">
-                    {networkData.interfaces.filter((i) => i.status === "up").length}
+                    {(networkData.physical_active_count || 0) + (networkData.bridge_active_count || 0)}
                   </span>
                 </div>
+
+                {(() => {
+                  const primaryInterface =
+                    networkData.physical_interfaces?.find((i) => i.status === "up") ||
+                    networkData.bridge_interfaces?.find((i) => i.status === "up") ||
+                    networkData.interfaces.find((i) => i.status === "up")
+
+                  return primaryInterface ? (
+                    <div className="flex justify-between items-center pb-3 border-b border-border">
+                      <span className="text-sm text-muted-foreground">Primary Interface:</span>
+                      <span className="text-sm font-semibold text-foreground font-mono">{primaryInterface.name}</span>
+                    </div>
+                  ) : null
+                })()}
+
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Data Sent:</span>
                   <span className="text-lg font-semibold text-foreground">
@@ -545,22 +574,49 @@ export function SystemOverview() {
                     {(networkData.traffic.bytes_recv / 1024 ** 3).toFixed(2)} GB
                   </span>
                 </div>
+
                 <div className="pt-2 border-t border-border space-y-1">
-                  {networkData.interfaces.slice(0, 3).map((iface) => (
-                    <div key={iface.name} className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">{iface.name}:</span>
-                      <Badge
-                        variant="outline"
-                        className={
-                          iface.status === "up"
-                            ? "bg-green-500/10 text-green-500 border-green-500/20"
-                            : "bg-gray-500/10 text-gray-500 border-gray-500/20"
-                        }
-                      >
-                        {iface.status}
-                      </Badge>
-                    </div>
-                  ))}
+                  {networkData.physical_interfaces && networkData.physical_interfaces.length > 0 && (
+                    <>
+                      <div className="text-xs text-muted-foreground font-medium mb-1">Physical Interfaces</div>
+                      {networkData.physical_interfaces.slice(0, 2).map((iface) => (
+                        <div key={iface.name} className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground font-mono">{iface.name}:</span>
+                          <Badge
+                            variant="outline"
+                            className={
+                              iface.status === "up"
+                                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                            }
+                          >
+                            {iface.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {networkData.bridge_interfaces && networkData.bridge_interfaces.length > 0 && (
+                    <>
+                      <div className="text-xs text-muted-foreground font-medium mb-1 mt-2">Bridge Interfaces</div>
+                      {networkData.bridge_interfaces.slice(0, 2).map((iface) => (
+                        <div key={iface.name} className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground font-mono">{iface.name}:</span>
+                          <Badge
+                            variant="outline"
+                            className={
+                              iface.status === "up"
+                                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                            }
+                          >
+                            {iface.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
