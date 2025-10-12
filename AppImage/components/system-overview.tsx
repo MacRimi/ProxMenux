@@ -541,82 +541,60 @@ export function SystemOverview() {
           <CardContent>
             {networkData ? (
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center pb-3 border-b border-border">
                   <span className="text-sm text-muted-foreground">Active Interfaces:</span>
                   <span className="text-lg font-semibold text-foreground">
                     {(networkData.physical_active_count || 0) + (networkData.bridge_active_count || 0)}
                   </span>
                 </div>
 
-                {(() => {
-                  const primaryInterface =
-                    networkData.physical_interfaces?.find((i) => i.status === "up") ||
-                    networkData.bridge_interfaces?.find((i) => i.status === "up") ||
-                    networkData.interfaces.find((i) => i.status === "up")
-
-                  return primaryInterface ? (
-                    <div className="flex justify-between items-center pb-3 border-b border-border">
-                      <span className="text-sm text-muted-foreground">Primary Interface:</span>
-                      <span className="text-sm font-semibold text-foreground font-mono">{primaryInterface.name}</span>
-                    </div>
-                  ) : null
-                })()}
-
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Data Sent:</span>
-                  <span className="text-lg font-semibold text-foreground">
-                    {(networkData.traffic.bytes_sent / 1024 ** 3).toFixed(2)} GB
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Data Received:</span>
-                  <span className="text-lg font-semibold text-foreground">
-                    {(networkData.traffic.bytes_recv / 1024 ** 3).toFixed(2)} GB
-                  </span>
-                </div>
-
-                <div className="pt-2 border-t border-border space-y-1">
+                <div className="space-y-2">
                   {networkData.physical_interfaces && networkData.physical_interfaces.length > 0 && (
-                    <>
-                      <div className="text-xs text-muted-foreground font-medium mb-1">Physical Interfaces</div>
-                      {networkData.physical_interfaces.slice(0, 2).map((iface) => (
-                        <div key={iface.name} className="flex justify-between items-center">
-                          <span className="text-xs text-muted-foreground font-mono">{iface.name}:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {networkData.physical_interfaces
+                        .filter((iface) => iface.status === "up")
+                        .map((iface) => (
                           <Badge
+                            key={iface.name}
                             variant="outline"
-                            className={
-                              iface.status === "up"
-                                ? "bg-green-500/10 text-green-500 border-green-500/20"
-                                : "bg-gray-500/10 text-gray-500 border-gray-500/20"
-                            }
+                            className="bg-blue-500/10 text-blue-500 border-blue-500/20"
                           >
-                            {iface.status}
+                            {iface.name}
                           </Badge>
-                        </div>
-                      ))}
-                    </>
+                        ))}
+                    </div>
                   )}
 
                   {networkData.bridge_interfaces && networkData.bridge_interfaces.length > 0 && (
-                    <>
-                      <div className="text-xs text-muted-foreground font-medium mb-1 mt-2">Bridge Interfaces</div>
-                      {networkData.bridge_interfaces.slice(0, 2).map((iface) => (
-                        <div key={iface.name} className="flex justify-between items-center">
-                          <span className="text-xs text-muted-foreground font-mono">{iface.name}:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {networkData.bridge_interfaces
+                        .filter((iface) => iface.status === "up")
+                        .map((iface) => (
                           <Badge
+                            key={iface.name}
                             variant="outline"
-                            className={
-                              iface.status === "up"
-                                ? "bg-green-500/10 text-green-500 border-green-500/20"
-                                : "bg-gray-500/10 text-gray-500 border-gray-500/20"
-                            }
+                            className="bg-green-500/10 text-green-500 border-green-500/20"
                           >
-                            {iface.status}
+                            {iface.name}
                           </Badge>
-                        </div>
-                      ))}
-                    </>
+                        ))}
+                    </div>
                   )}
+                </div>
+
+                <div className="pt-2 border-t border-border space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Data Sent:</span>
+                    <span className="text-lg font-semibold text-foreground">
+                      {(networkData.traffic.bytes_sent / 1024 ** 3).toFixed(2)} GB
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Data Received:</span>
+                    <span className="text-lg font-semibold text-foreground">
+                      {(networkData.traffic.bytes_recv / 1024 ** 3).toFixed(2)} GB
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -693,85 +671,6 @@ export function SystemOverview() {
           </CardContent>
         </Card>
       </div>
-
-      {vmData.length > 0 && (
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center justify-between">
-              <div className="flex items-center">
-                <Server className="h-5 w-5 mr-2" />
-                Virtual Machines & Containers
-              </div>
-              <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                {vmData.length} Total
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {vmData.map((vm) => (
-                <Card key={vm.vmid} className="bg-muted/30 border-border">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <div className="font-semibold text-foreground">{vm.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {vm.type === "lxc" ? "LXC" : "VM"} #{vm.vmid}
-                        </div>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          vm.status === "running"
-                            ? "bg-green-500/10 text-green-500 border-green-500/20"
-                            : "bg-red-500/10 text-red-500 border-red-500/20"
-                        }
-                      >
-                        {vm.status}
-                      </Badge>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-muted-foreground">CPU</span>
-                          <span className="text-foreground font-medium">{(vm.cpu * 100).toFixed(1)}%</span>
-                        </div>
-                        <Progress value={vm.cpu * 100} className="h-1.5 [&>div]:bg-blue-500" />
-                      </div>
-
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-muted-foreground">Memory</span>
-                          <span className="text-foreground font-medium">
-                            {formatBytes(vm.mem)} / {formatBytes(vm.maxmem)} GB
-                          </span>
-                        </div>
-                        <Progress value={(vm.mem / vm.maxmem) * 100} className="h-1.5 [&>div]:bg-purple-500" />
-                      </div>
-
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-muted-foreground">Disk</span>
-                          <span className="text-foreground font-medium">
-                            {formatBytes(vm.disk)} / {formatBytes(vm.maxdisk)} GB
-                          </span>
-                        </div>
-                        <Progress value={(vm.disk / vm.maxdisk) * 100} className="h-1.5 [&>div]:bg-orange-500" />
-                      </div>
-
-                      <div className="flex justify-between text-xs pt-1 border-t border-border">
-                        <span className="text-muted-foreground">Uptime</span>
-                        <span className="text-foreground font-medium">{formatUptime(vm.uptime)}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
