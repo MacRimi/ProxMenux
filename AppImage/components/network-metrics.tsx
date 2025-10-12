@@ -21,6 +21,8 @@ interface NetworkData {
     packet_loss_out?: number
     dropin?: number
     dropout?: number
+    errin?: number
+    errout?: number
   }
   active_count?: number
   total_count?: number
@@ -172,6 +174,23 @@ export function NetworkMetrics() {
   const trafficOutGB = (networkData.traffic.bytes_sent / 1024 ** 3).toFixed(2)
   const packetsRecvK = networkData.traffic.packets_recv ? (networkData.traffic.packets_recv / 1000).toFixed(0) : "0"
 
+  const totalErrors = (networkData.traffic.errin || 0) + (networkData.traffic.errout || 0)
+  const packetLossIn = networkData.traffic.packet_loss_in || 0
+  const packetLossOut = networkData.traffic.packet_loss_out || 0
+  const avgPacketLoss = ((packetLossIn + packetLossOut) / 2).toFixed(2)
+
+  // Determine health status
+  let healthStatus = "Healthy"
+  let healthColor = "bg-green-500/10 text-green-500 border-green-500/20"
+
+  if (Number.parseFloat(avgPacketLoss) > 5 || totalErrors > 1000) {
+    healthStatus = "Critical"
+    healthColor = "bg-red-500/10 text-red-500 border-red-500/20"
+  } else if (Number.parseFloat(avgPacketLoss) >= 1 || totalErrors >= 100) {
+    healthStatus = "Warning"
+    healthColor = "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+  }
+
   return (
     <div className="space-y-6">
       {/* Network Overview Cards */}
@@ -182,10 +201,15 @@ export function NetworkMetrics() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{trafficInGB} GB</div>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              <span className="text-xs text-green-500">↓ {trafficInGB} GB</span>
-              <span className="text-xs text-blue-500">↑ {trafficOutGB} GB</span>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Received:</span>
+                <span className="text-xl font-bold text-green-500">↓ {trafficInGB} GB</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Sent:</span>
+                <span className="text-xl font-bold text-blue-500">↑ {trafficOutGB} GB</span>
+              </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">Total data transferred</p>
           </CardContent>
@@ -232,17 +256,31 @@ export function NetworkMetrics() {
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Packets</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Network Health</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{packetsRecvK}K</div>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
-                Received
+            <div className="text-2xl font-bold text-foreground mb-2">
+              <Badge variant="outline" className={healthColor}>
+                {healthStatus}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">No packet loss</p>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Packet Loss:</span>
+                <span
+                  className={`font-medium ${Number.parseFloat(avgPacketLoss) > 1 ? "text-red-500" : "text-green-500"}`}
+                >
+                  {avgPacketLoss}%
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Errors:</span>
+                <span className={`font-medium ${totalErrors > 100 ? "text-red-500" : "text-green-500"}`}>
+                  {totalErrors}
+                </span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
