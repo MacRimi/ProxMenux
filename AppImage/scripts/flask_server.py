@@ -20,6 +20,7 @@ import select # Added for non-blocking read
 import shutil # Added for shutil.which
 import xml.etree.ElementTree as ET  # Added for XML parsing
 import math # Imported math for format_bytes function
+import urllib.parse # Added for URL encoding
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
@@ -2777,8 +2778,8 @@ def get_gpu_info():
     except Exception as e:
         print(f"[v0] Error enriching GPU data from sensors: {e}")
     
-    return gpus
-    
+    return gpus    
+
 def get_disk_hardware_info(disk_name):
     """Get detailed hardware information for a disk"""
     disk_info = {}
@@ -3420,11 +3421,7 @@ def api_logs_download():
         
         if since_days:
             days = int(since_days)
-            # Original code: cmd = ['journalctl', '--since', f'{days} days ago', '--until', f'{days - 1} days ago', '--no-pager']
-            # This logic seems incorrect if we want logs FROM since_days ago.
-            # Correct logic: logs from 'days' ago until 'now' (or 'days-1' ago for a specific 24h period)
-            # For simplicity and to keep the original intent of filtering *from* X days ago, let's use '--since'.
-            # If 'since_days' is provided, use it as the primary time filter.
+
             cmd = ['journalctl', '--since', f'{days} days ago', '--no-pager']
         else:
             cmd = ['journalctl', '--since', f'{hours} hours ago', '--no-pager']
@@ -3810,9 +3807,12 @@ def get_task_log(upid):
         node = parts[1]
         print(f"[v0] Extracted node: {node}")
         
+        encoded_upid = urllib.parse.quote(upid, safe='')
+        print(f"[v0] Encoded UPID: {encoded_upid}")
+        
         # Get task log from Proxmox using pvesh
         result = subprocess.run(
-            ['pvesh', 'get', f'/nodes/{node}/tasks/{upid}/log', '--output-format', 'json'],
+            ['pvesh', 'get', f'/nodes/{node}/tasks/{encoded_upid}/log', '--output-format', 'json'],
             capture_output=True, text=True, timeout=30
         )
         
