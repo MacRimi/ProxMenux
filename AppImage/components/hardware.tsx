@@ -318,7 +318,7 @@ export default function Hardware() {
                   {module.size && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Size</span>
-                      <span className="font-medium">{formatMemory(module.size)}</span>
+                      <span className="font-medium text-green-500">{formatMemory(module.size)}</span>
                     </div>
                   )}
                   {module.type && (
