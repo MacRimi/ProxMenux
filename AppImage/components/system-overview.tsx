@@ -231,7 +231,7 @@ export function SystemOverview() {
     }
 
     fetchStorage()
-    const storageInterval = setInterval(fetchStorage, 15000)
+    const storageInterval = setInterval(fetchStorage, 30000)
 
     return () => {
       clearInterval(storageInterval)
@@ -323,8 +323,8 @@ export function SystemOverview() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{systemData.cpu_usage}%</div>
-            <Progress value={systemData.cpu_usage} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-2">Real-time data from Flask server</p>
+            <Progress value={systemData.cpu_usage} className="mt-2 [&>div]:bg-blue-500" />
+            <p className="text-xs text-muted-foreground mt-2">Real-time usage</p>
           </CardContent>
         </Card>
 
@@ -335,9 +335,10 @@ export function SystemOverview() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{systemData.memory_used.toFixed(1)} GB</div>
-            <Progress value={systemData.memory_usage} className="mt-2" />
+            <Progress value={systemData.memory_usage} className="mt-2 [&>div]:bg-blue-500" />
             <p className="text-xs text-muted-foreground mt-2">
-              {systemData.memory_usage.toFixed(1)}% of {systemData.memory_total} GB
+              <span className="text-blue-500 font-medium">{systemData.memory_usage.toFixed(1)}%</span> of{" "}
+              {systemData.memory_total} GB
             </p>
           </CardContent>
         </Card>
@@ -374,7 +375,7 @@ export function SystemOverview() {
                 {vmStats.running} Running
               </Badge>
               {vmStats.stopped > 0 && (
-                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">
                   {vmStats.stopped} Stopped
                 </Badge>
               )}
@@ -410,7 +411,7 @@ export function SystemOverview() {
                   <span className="text-sm text-muted-foreground">Available:</span>
                   <span className="text-lg font-semibold text-green-500">{storageData.available} GB</span>
                 </div>
-                <Progress value={(storageData.used / storageData.total) * 100} className="mt-2" />
+                <Progress value={(storageData.used / storageData.total) * 100} className="mt-2 [&>div]:bg-blue-500" />
                 <div className="pt-2 border-t border-border">
                   <p className="text-xs text-muted-foreground">
                     {storageData.disks.length} disk{storageData.disks.length !== 1 ? "s" : ""} configured
