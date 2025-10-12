@@ -2778,7 +2778,7 @@ def get_gpu_info():
         print(f"[v0] Error enriching GPU data from sensors: {e}")
     
     return gpus
-
+    
 def get_disk_hardware_info(disk_name):
     """Get detailed hardware information for a disk"""
     disk_info = {}
@@ -3424,12 +3424,6 @@ def api_logs_download():
             # This logic seems incorrect if we want logs FROM since_days ago.
             # Correct logic: logs from 'days' ago until 'now' (or 'days-1' ago for a specific 24h period)
             # For simplicity and to keep the original intent of filtering *from* X days ago, let's use '--since'.
-            # If 'since_days' is 1, it means logs from yesterday until now.
-            # If 'since_days' is 2, it means logs from the day before yesterday until now.
-            # Let's assume 'since_days' means the number of *full 24-hour periods* to go back.
-            # So, if since_days = 1, we want logs from 24 hours ago.
-            # If since_days = 2, we want logs from 48 hours ago.
-            # The original '--until' logic was problematic. Let's simplify.
             # If 'since_days' is provided, use it as the primary time filter.
             cmd = ['journalctl', '--since', f'{days} days ago', '--no-pager']
         else:
@@ -3634,10 +3628,10 @@ def api_notifications_download():
                 download_name=f'notification_{timestamp.replace(":", "_").replace(" ", "_")}.log'
             )
         else:
-            return jsonify({'error': 'Failed to generate notification log'}), 500
+            return jsonify({'error': 'Failed to generate log file'}), 500
             
     except Exception as e:
-        print(f"Error downloading notification log: {e}")
+        print(f"Error downloading logs: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/backups', methods=['GET'])
@@ -3800,6 +3794,58 @@ def api_events():
             'total': 0
         })
 
+@app.route('/api/task-log/<path:upid>')
+def get_task_log(upid):
+    """Get complete task log from Proxmox using UPID"""
+    try:
+        print(f"[v0] Getting task log for UPID: {upid}")
+        
+        # Parse UPID to extract node name
+        # UPID format: UPID:node:pid:pstart:starttime:type:id:user:
+        parts = upid.split(':')
+        if len(parts) < 2:
+            print(f"[v0] Invalid UPID format: {upid}")
+            return jsonify({'error': 'Invalid UPID format'}), 400
+        
+        node = parts[1]
+        print(f"[v0] Extracted node: {node}")
+        
+        # Get task log from Proxmox using pvesh
+        result = subprocess.run(
+            ['pvesh', 'get', f'/nodes/{node}/tasks/{upid}/log', '--output-format', 'json'],
+            capture_output=True, text=True, timeout=30
+        )
+        
+        if result.returncode == 0:
+            try:
+                # Parse JSON response
+                log_entries = json.loads(result.stdout)
+                
+                # Convert log entries to text
+                # Each entry has format: {"n": line_number, "t": "log text"}
+                log_lines = [entry.get('t', '') for entry in log_entries if 't' in entry]
+                log_text = '\n'.join(log_lines)
+                
+                print(f"[v0] Successfully retrieved {len(log_lines)} log lines")
+                return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+            except json.JSONDecodeError as e:
+                print(f"[v0] Failed to parse JSON response: {e}")
+                # If JSON parsing fails, return raw output
+                return result.stdout, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        else:
+            error_msg = result.stderr or 'Failed to get task log'
+            print(f"[v0] pvesh command failed: {error_msg}")
+            return jsonify({'error': error_msg}), 500
+            
+    except subprocess.TimeoutExpired:
+        print(f"[v0] Timeout getting task log for UPID: {upid}")
+        return jsonify({'error': 'Request timeout'}), 504
+    except Exception as e:
+        print(f"[v0] Error fetching task log for UPID {upid}: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/health', methods=['GET'])
 def api_health():
     """Health check endpoint"""
@@ -3879,7 +3925,8 @@ def api_info():
             '/api/gpu/<slot>/realtime', # Added endpoint for GPU monitoring
             '/api/backups', # Added backup endpoint
             '/api/events', # Added events endpoint
-            '/api/notifications' # Added notifications endpoint
+            '/api/notifications', # Added notifications endpoint
+            '/api/task-log/<upid>' # Added task log endpoint
         ]
     })
 
