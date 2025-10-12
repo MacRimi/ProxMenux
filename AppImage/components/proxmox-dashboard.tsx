@@ -10,7 +10,20 @@ import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
-import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Server, Menu } from "lucide-react"
+import {
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Server,
+  Menu,
+  LayoutDashboard,
+  HardDrive,
+  NetworkIcon,
+  Box,
+  Cpu,
+  FileText,
+} from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet"
@@ -264,37 +277,37 @@ export function ProxmoxDashboard() {
           <TabsList className="hidden md:grid w-full grid-cols-6 bg-card border border-border">
             <TabsTrigger
               value="overview"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-500 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none"
             >
               Overview
             </TabsTrigger>
             <TabsTrigger
               value="storage"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-500 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none"
             >
               Storage
             </TabsTrigger>
             <TabsTrigger
               value="network"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-500 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none"
             >
               Network
             </TabsTrigger>
             <TabsTrigger
               value="vms"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-500 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none"
             >
               Virtual Machines
             </TabsTrigger>
             <TabsTrigger
               value="hardware"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-500 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none"
             >
               Hardware
             </TabsTrigger>
             <TabsTrigger
               value="logs"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-500 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none"
             >
               System Logs
             </TabsTrigger>
@@ -317,9 +330,14 @@ export function ProxmoxDashboard() {
                     setActiveTab("overview")
                     setMobileMenuOpen(false)
                   }}
-                  className="w-full justify-start"
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "overview"
+                      ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                      : ""
+                  }`}
                 >
-                  Overview
+                  <LayoutDashboard className="h-5 w-5" />
+                  <span>Overview</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -327,9 +345,14 @@ export function ProxmoxDashboard() {
                     setActiveTab("storage")
                     setMobileMenuOpen(false)
                   }}
-                  className="w-full justify-start"
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "storage"
+                      ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                      : ""
+                  }`}
                 >
-                  Storage
+                  <HardDrive className="h-5 w-5" />
+                  <span>Storage</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -337,9 +360,14 @@ export function ProxmoxDashboard() {
                     setActiveTab("network")
                     setMobileMenuOpen(false)
                   }}
-                  className="w-full justify-start"
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "network"
+                      ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                      : ""
+                  }`}
                 >
-                  Network
+                  <NetworkIcon className="h-5 w-5" />
+                  <span>Network</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -347,9 +375,12 @@ export function ProxmoxDashboard() {
                     setActiveTab("vms")
                     setMobileMenuOpen(false)
                   }}
-                  className="w-full justify-start"
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "vms" ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none" : ""
+                  }`}
                 >
-                  Virtual Machines
+                  <Box className="h-5 w-5" />
+                  <span>Virtual Machines</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -357,9 +388,14 @@ export function ProxmoxDashboard() {
                     setActiveTab("hardware")
                     setMobileMenuOpen(false)
                   }}
-                  className="w-full justify-start"
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "hardware"
+                      ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                      : ""
+                  }`}
                 >
-                  Hardware
+                  <Cpu className="h-5 w-5" />
+                  <span>Hardware</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -367,9 +403,12 @@ export function ProxmoxDashboard() {
                     setActiveTab("logs")
                     setMobileMenuOpen(false)
                   }}
-                  className="w-full justify-start"
+                  className={`w-full justify-start gap-3 ${
+                    activeTab === "logs" ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none" : ""
+                  }`}
                 >
-                  System Logs
+                  <FileText className="h-5 w-5" />
+                  <span>System Logs</span>
                 </Button>
               </div>
             </SheetContent>
