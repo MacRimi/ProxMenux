@@ -157,6 +157,25 @@ export function ProxmoxDashboard() {
     }
   }, [systemStatus.status])
 
+  const getActiveTabLabel = () => {
+    switch (activeTab) {
+      case "overview":
+        return "Overview"
+      case "storage":
+        return "Storage"
+      case "network":
+        return "Network"
+      case "vms":
+        return "Virtual Machines"
+      case "hardware":
+        return "Hardware"
+      case "logs":
+        return "System Logs"
+      default:
+        return "Navigation Menu"
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {!isServerConnected && (
@@ -277,37 +296,37 @@ export function ProxmoxDashboard() {
           <TabsList className="hidden md:grid w-full grid-cols-6 bg-card border border-border">
             <TabsTrigger
               value="overview"
-              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-500 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none"
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
             >
               Overview
             </TabsTrigger>
             <TabsTrigger
               value="storage"
-              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-500 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none"
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
             >
               Storage
             </TabsTrigger>
             <TabsTrigger
               value="network"
-              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-500 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none"
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
             >
               Network
             </TabsTrigger>
             <TabsTrigger
               value="vms"
-              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-500 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none"
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
             >
               Virtual Machines
             </TabsTrigger>
             <TabsTrigger
               value="hardware"
-              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-500 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none"
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
             >
               Hardware
             </TabsTrigger>
             <TabsTrigger
               value="logs"
-              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-500 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none"
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
             >
               System Logs
             </TabsTrigger>
@@ -317,7 +336,7 @@ export function ProxmoxDashboard() {
             <div className="md:hidden">
               <SheetTrigger asChild>
                 <Button variant="outline" className="w-full justify-between bg-card border-border">
-                  <span>Navigation Menu</span>
+                  <span>{getActiveTabLabel()}</span>
                   <Menu className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
