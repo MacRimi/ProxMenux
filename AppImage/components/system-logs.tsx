@@ -523,6 +523,20 @@ export function SystemLogs() {
     }
   }
 
+  // ADDED: New function for notification source colors
+  const getNotificationSourceColor = (source: string) => {
+    switch (source.toLowerCase()) {
+      case "task-log":
+        return "bg-purple-500/10 text-purple-500 border-purple-500/20"
+      case "journal":
+        return "bg-cyan-500/10 text-cyan-500 border-cyan-500/20"
+      case "system":
+        return "bg-orange-500/10 text-orange-500 border-orange-500/20"
+      default:
+        return "bg-gray-500/10 text-gray-500 border-gray-500/20"
+    }
+  }
+
   const logCounts = {
     total: logs.length,
     error: logs.filter((log) => ["error", "critical", "emergency", "alert"].includes(log.level)).length,
@@ -1012,6 +1026,15 @@ export function SystemLogs() {
                             className={`${getNotificationTypeColor(notification.type)} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 flex-shrink-0`}
                           >
                             {notification.type.toUpperCase()}
+                          </Badge>
+                          {/* CHANGED: Modified to use getNotificationSourceColor and appropriate icons */}
+                          <Badge
+                            variant="outline"
+                            className={`${getNotificationSourceColor(notification.source)} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 flex-shrink-0`}
+                          >
+                            {notification.source === "task-log" && <Activity className="h-3 w-3 mr-1" />}
+                            {notification.source === "journal" && <FileText className="h-3 w-3 mr-1" />}
+                            {notification.source.toUpperCase()}
                           </Badge>
                         </div>
                         <div className="text-[10px] sm:text-xs text-muted-foreground font-mono whitespace-nowrap flex-shrink-0">
