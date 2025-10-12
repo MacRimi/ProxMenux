@@ -247,6 +247,8 @@ export function SystemLogs() {
         console.log("[v0] Fetching logs for service:", serviceFilter)
       }
 
+      params.append("limit", "5000")
+
       if (params.toString()) {
         apiUrl += `?${params.toString()}`
       }
@@ -258,6 +260,7 @@ export function SystemLogs() {
           "Content-Type": "application/json",
         },
         cache: "no-store",
+        signal: AbortSignal.timeout(30000), // 30 second timeout
       })
 
       console.log("[v0] Response status:", response.status, "OK:", response.ok)
@@ -274,6 +277,11 @@ export function SystemLogs() {
       return logsArray
     } catch (error) {
       console.error("[v0] Failed to fetch system logs:", error)
+      if (error instanceof Error && error.name === "TimeoutError") {
+        setError("Request timed out. Try selecting a more specific filter.")
+      } else {
+        setError("Failed to load logs. Please try again.")
+      }
       return []
     }
   }
