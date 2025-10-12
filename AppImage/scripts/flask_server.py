@@ -179,7 +179,16 @@ def get_intel_gpu_processes_from_text():
                                     utilization = min(100.0, (filled_chars / 50.0) * 100.0)
                                     if utilization > 0:
                                         engines[engine_name] = f"{utilization:.1f}%"
-                            
+                                        
+                                    if engine_name == 'Render/3D' and utilization > 0:
+                                        engine_names[0] = f"Render/3D ({utilization:.1f}%)"
+                                    elif engine_name == 'Blitter' and utilization > 0:
+                                        engine_names[1] = f"Blitter ({utilization:.1f}%)"
+                                    elif engine_name == 'Video' and utilization > 0:
+                                        engine_names[2] = f"Video ({utilization:.1f}%)"
+                                    elif engine_name == 'VideoEnhance' and utilization > 0:
+                                        engine_names[3] = f"VideoEnhance ({utilization:.1f}%)"
+
                             if engines:  # Only add if there's some GPU activity
                                 process_info = {
                                     'name': name,
@@ -3804,11 +3813,15 @@ def get_task_log(upid):
     try:
         print(f"[v0] Getting task log for UPID: {upid}")
         
+        # Proxmox stores files without trailing :: but API may include them
+        upid_clean = upid.rstrip(':')
+        print(f"[v0] Cleaned UPID: {upid_clean}")
+        
         # Parse UPID to extract node name and calculate index
         # UPID format: UPID:node:pid:pstart:starttime:type:id:user:
-        parts = upid.split(':')
+        parts = upid_clean.split(':')
         if len(parts) < 5:
-            print(f"[v0] Invalid UPID format: {upid}")
+            print(f"[v0] Invalid UPID format: {upid_clean}")
             return jsonify({'error': 'Invalid UPID format'}), 400
         
         node = parts[1]
@@ -3819,39 +3832,56 @@ def get_task_log(upid):
         
         print(f"[v0] Extracted node: {node}, starttime: {starttime}, index: {index}")
         
-        # Construct file path
-        log_file_path = f"/var/log/pve/tasks/{index}/{upid}"
-        print(f"[v0] Reading log file: {log_file_path}")
+        # Try with cleaned UPID (no trailing colons)
+        log_file_path = f"/var/log/pve/tasks/{index}/{upid_clean}"
+        print(f"[v0] Trying log file: {log_file_path}")
         
-        # Read the log file
         if os.path.exists(log_file_path):
             with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 log_text = f.read()
-            
             print(f"[v0] Successfully read {len(log_text)} bytes from log file")
             return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
-        else:
-            # Try with uppercase index
-            log_file_path_upper = f"/var/log/pve/tasks/{index.upper()}/{upid}"
-            print(f"[v0] Trying alternative path: {log_file_path_upper}")
+        
+        # Try with single trailing colon
+        log_file_path_single = f"/var/log/pve/tasks/{index}/{upid_clean}:"
+        print(f"[v0] Trying alternative path with single colon: {log_file_path_single}")
+        
+        if os.path.exists(log_file_path_single):
+            with open(log_file_path_single, 'r', encoding='utf-8', errors='ignore') as f:
+                log_text = f.read()
+            print(f"[v0] Successfully read {len(log_text)} bytes from alternative log file")
+            return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        
+        # Try with uppercase index
+        log_file_path_upper = f"/var/log/pve/tasks/{index.upper()}/{upid_clean}"
+        print(f"[v0] Trying uppercase index path: {log_file_path_upper}")
+        
+        if os.path.exists(log_file_path_upper):
+            with open(log_file_path_upper, 'r', encoding='utf-8', errors='ignore') as f:
+                log_text = f.read()
+            print(f"[v0] Successfully read {len(log_text)} bytes from uppercase index log file")
+            return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        
+        # List available files in the directory for debugging
+        tasks_dir = f"/var/log/pve/tasks/{index}"
+        if os.path.exists(tasks_dir):
+            available_files = os.listdir(tasks_dir)
+            print(f"[v0] Available files in {tasks_dir}: {available_files[:10]}")  # Show first 10
             
-            if os.path.exists(log_file_path_upper):
-                with open(log_file_path_upper, 'r', encoding='utf-8', errors='ignore') as f:
-                    log_text = f.read()
-                
-                print(f"[v0] Successfully read {len(log_text)} bytes from alternative log file")
-                return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
-            else:
-                # List available files in the directory for debugging
-                tasks_dir = f"/var/log/pve/tasks/{index}"
-                if os.path.exists(tasks_dir):
-                    available_files = os.listdir(tasks_dir)
-                    print(f"[v0] Available files in {tasks_dir}: {available_files[:10]}")  # Show first 10
-                else:
-                    print(f"[v0] Tasks directory does not exist: {tasks_dir}")
-                
-                print(f"[v0] Log file not found: {log_file_path}")
-                return jsonify({'error': 'Log file not found', 'path': log_file_path}), 404
+            upid_prefix = ':'.join(parts[:5])  # Get first 5 parts of UPID
+            for filename in available_files:
+                if filename.startswith(upid_prefix):
+                    matched_file = f"{tasks_dir}/{filename}"
+                    print(f"[v0] Found matching file by prefix: {matched_file}")
+                    with open(matched_file, 'r', encoding='utf-8', errors='ignore') as f:
+                        log_text = f.read()
+                    print(f"[v0] Successfully read {len(log_text)} bytes from matched file")
+                    return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        else:
+            print(f"[v0] Tasks directory does not exist: {tasks_dir}")
+        
+        print(f"[v0] Log file not found after trying all variations")
+        return jsonify({'error': 'Log file not found', 'tried_paths': [log_file_path, log_file_path_single, log_file_path_upper]}), 404
             
     except Exception as e:
         print(f"[v0] Error fetching task log for UPID {upid}: {type(e).__name__}: {e}")
