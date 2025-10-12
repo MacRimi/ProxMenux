@@ -2962,7 +2962,7 @@ def get_hardware_info():
                                     print(f"[v0] Parsed memory size (no unit): {size_str} -> {current_module['size']} KB")
                             except (ValueError, IndexError) as e:
                                 print(f"[v0] Error parsing memory size '{size_str}': {e}")
-                                current_module['size'] = 0
+                                current_module['size'] = 0 # Default to 0 if parsing fails
                         else:
                             current_module['size'] = 0 # Default to 0 if no size or explicitly 'No Module Installed'
                     elif line.startswith('Type:'):
@@ -4220,8 +4220,10 @@ def api_vm_control(vmid):
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    print("Starting ProxMenux Flask Server on port 8008...")
-    print("Server will be accessible on all network interfaces (0.0.0.0:8008)")
-    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
+    # API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware
+    
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
     
     app.run(host='0.0.0.0', port=8008, debug=False)

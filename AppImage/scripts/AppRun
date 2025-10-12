@@ -19,8 +19,6 @@ if [[ "$1" == "--translate" ]]; then
     exec python3 "${APPDIR}/usr/bin/translate_cli.py" "${@:2}"
 else
     echo "🚀 Starting ProxMenux Monitor Dashboard..."
-    echo "📊 Dashboard will be available at: http://localhost:8008"
-    echo "🔌 API endpoints at: http://localhost:8008/api/"
     echo ""
     
     echo "🔧 Hardware monitoring tools:"
@@ -36,8 +34,6 @@ else
         fi
     fi
     
-    echo ""
-    echo "Press Ctrl+C to stop the server"
     echo ""
     
     # Start the Flask server
