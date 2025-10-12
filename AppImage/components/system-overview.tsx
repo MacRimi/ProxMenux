@@ -40,6 +40,7 @@ interface StorageData {
   total: number
   used: number
   available: number
+  disk_count: number
   disks: Array<{
     name: string
     mountpoint: string
@@ -62,6 +63,18 @@ interface NetworkData {
     packets_sent: number
     packets_recv: number
   }
+}
+
+interface ProxmoxStorageData {
+  storage: Array<{
+    name: string
+    type: string
+    status: string
+    total: number
+    used: number
+    available: number
+    percent: number
+  }>
 }
 
 const fetchSystemData = async (): Promise<SystemData | null> => {
@@ -166,10 +179,37 @@ const fetchNetworkData = async (): Promise<NetworkData | null> => {
   }
 }
 
+const fetchProxmoxStorageData = async (): Promise<ProxmoxStorageData | null> => {
+  try {
+    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+    const apiUrl = `${baseUrl}/api/proxmox-storage`
+
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      console.log("[v0] Proxmox storage API not available")
+      return null
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.log("[v0] Proxmox storage data unavailable:", error instanceof Error ? error.message : "Unknown error")
+    return null
+  }
+}
+
 export function SystemOverview() {
   const [systemData, setSystemData] = useState<SystemData | null>(null)
   const [vmData, setVmData] = useState<VMData[]>([])
   const [storageData, setStorageData] = useState<StorageData | null>(null)
+  const [proxmoxStorageData, setProxmoxStorageData] = useState<ProxmoxStorageData | null>(null)
   const [networkData, setNetworkData] = useState<NetworkData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -228,6 +268,9 @@ export function SystemOverview() {
     const fetchStorage = async () => {
       const storageResult = await fetchStorageData()
       setStorageData(storageResult)
+
+      const proxmoxStorageResult = await fetchProxmoxStorageData()
+      setProxmoxStorageData(proxmoxStorageResult)
     }
 
     fetchStorage()
@@ -310,7 +353,26 @@ export function SystemOverview() {
     return { status: "Hot", color: "bg-red-500/10 text-red-500 border-red-500/20" }
   }
 
+  const formatUptime = (seconds: number) => {
+    if (!seconds || seconds === 0) return "Stopped"
+    const days = Math.floor(seconds / 86400)
+    const hours = Math.floor((seconds % 86400) / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+
+    if (days > 0) return `${days}d ${hours}h`
+    if (hours > 0) return `${hours}h ${minutes}m`
+    return `${minutes}m`
+  }
+
+  const formatBytes = (bytes: number) => {
+    return (bytes / 1024 ** 3).toFixed(2)
+  }
+
   const tempStatus = getTemperatureStatus(systemData.temperature)
+
+  const localStorage = proxmoxStorageData?.storage.find(
+    (s) => s.name === "local-lvm" || s.name === "local-zfs" || s.name === "local",
+  )
 
   return (
     <div className="space-y-6">
@@ -399,22 +461,52 @@ export function SystemOverview() {
           <CardContent>
             {storageData ? (
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Total Storage:</span>
-                  <span className="text-lg font-semibold text-foreground">{storageData.total} GB</span>
+                <div className="flex justify-between items-center pb-3 border-b border-border">
+                  <span className="text-sm text-muted-foreground">Total Capacity:</span>
+                  <span className="text-lg font-semibold text-foreground">{storageData.total} TB</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Used:</span>
-                  <span className="text-lg font-semibold text-foreground">{storageData.used} GB</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Available:</span>
-                  <span className="text-lg font-semibold text-green-500">{storageData.available} GB</span>
-                </div>
-                <Progress value={(storageData.used / storageData.total) * 100} className="mt-2 [&>div]:bg-blue-500" />
+
+                {localStorage ? (
+                  <>
+                    <div className="pt-2">
+                      <div className="text-xs text-muted-foreground mb-2">System Storage ({localStorage.name})</div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-muted-foreground">Used:</span>
+                        <span className="text-sm font-semibold text-foreground">{localStorage.used} GB</span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-muted-foreground">Available:</span>
+                        <span className="text-sm font-semibold text-green-500">{localStorage.available} GB</span>
+                      </div>
+                      <Progress value={localStorage.percent} className="mt-2 [&>div]:bg-blue-500" />
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-xs text-muted-foreground">
+                          {localStorage.used} / {localStorage.total} GB
+                        </span>
+                        <span className="text-xs text-muted-foreground">{localStorage.percent.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Used:</span>
+                      <span className="text-lg font-semibold text-foreground">{storageData.used} GB</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Available:</span>
+                      <span className="text-lg font-semibold text-green-500">{storageData.available} GB</span>
+                    </div>
+                    <Progress
+                      value={(storageData.used / (storageData.used + storageData.available)) * 100}
+                      className="mt-2 [&>div]:bg-blue-500"
+                    />
+                  </>
+                )}
+
                 <div className="pt-2 border-t border-border">
                   <p className="text-xs text-muted-foreground">
-                    {storageData.disks.length} disk{storageData.disks.length !== 1 ? "s" : ""} configured
+                    {storageData.disk_count} physical disk{storageData.disk_count !== 1 ? "s" : ""} configured
                   </p>
                 </div>
               </div>
@@ -545,6 +637,85 @@ export function SystemOverview() {
           </CardContent>
         </Card>
       </div>
+
+      {vmData.length > 0 && (
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center justify-between">
+              <div className="flex items-center">
+                <Server className="h-5 w-5 mr-2" />
+                Virtual Machines & Containers
+              </div>
+              <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                {vmData.length} Total
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {vmData.map((vm) => (
+                <Card key={vm.vmid} className="bg-muted/30 border-border">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <div className="font-semibold text-foreground">{vm.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {vm.type === "lxc" ? "LXC" : "VM"} #{vm.vmid}
+                        </div>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          vm.status === "running"
+                            ? "bg-green-500/10 text-green-500 border-green-500/20"
+                            : "bg-red-500/10 text-red-500 border-red-500/20"
+                        }
+                      >
+                        {vm.status}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-muted-foreground">CPU</span>
+                          <span className="text-foreground font-medium">{(vm.cpu * 100).toFixed(1)}%</span>
+                        </div>
+                        <Progress value={vm.cpu * 100} className="h-1.5 [&>div]:bg-blue-500" />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-muted-foreground">Memory</span>
+                          <span className="text-foreground font-medium">
+                            {formatBytes(vm.mem)} / {formatBytes(vm.maxmem)} GB
+                          </span>
+                        </div>
+                        <Progress value={(vm.mem / vm.maxmem) * 100} className="h-1.5 [&>div]:bg-purple-500" />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-muted-foreground">Disk</span>
+                          <span className="text-foreground font-medium">
+                            {formatBytes(vm.disk)} / {formatBytes(vm.maxdisk)} GB
+                          </span>
+                        </div>
+                        <Progress value={(vm.disk / vm.maxdisk) * 100} className="h-1.5 [&>div]:bg-orange-500" />
+                      </div>
+
+                      <div className="flex justify-between text-xs pt-1 border-t border-border">
+                        <span className="text-muted-foreground">Uptime</span>
+                        <span className="text-foreground font-medium">{formatUptime(vm.uptime)}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
