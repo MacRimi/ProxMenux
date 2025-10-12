@@ -452,7 +452,7 @@ export function SystemOverview() {
             <div className="text-2xl font-bold text-foreground">{systemData.memory_used.toFixed(1)} GB</div>
             <Progress value={systemData.memory_usage} className="mt-2 [&>div]:bg-blue-500" />
             <p className="text-xs text-muted-foreground mt-2">
-              <span className="text-blue-500 font-medium">{systemData.memory_usage.toFixed(1)}%</span> of{" "}
+              <span className="text-green-500 font-medium">{systemData.memory_usage.toFixed(1)}%</span> of{" "}
               {systemData.memory_total} GB
             </p>
           </CardContent>
