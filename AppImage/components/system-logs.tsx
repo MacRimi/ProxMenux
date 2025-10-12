@@ -993,30 +993,28 @@ export function SystemLogs() {
             {/* Notifications Tab */}
             <TabsContent value="notifications" className="space-y-4">
               <ScrollArea className="h-[600px] w-full rounded-md border border-border">
-                <div className="space-y-2 p-4">
+                <div className="space-y-2 p-2 sm:p-4">
                   {notifications.map((notification, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
+                      className="flex flex-col space-y-2 p-2 sm:p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
                       onClick={() => {
                         setSelectedNotification(notification)
                         setIsNotificationModalOpen(true)
                       }}
                     >
-                      <div className="flex-shrink-0 flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {getNotificationIcon(notification.type)}
-                        <Badge variant="outline" className={getNotificationTypeColor(notification.type)}>
+                        <Badge variant="outline" className={`${getNotificationTypeColor(notification.type)} text-xs`}>
                           {notification.type.toUpperCase()}
                         </Badge>
+                        <div className="text-xs text-muted-foreground font-mono ml-auto whitespace-nowrap">
+                          {notification.timestamp}
+                        </div>
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
-                            {notification.timestamp}
-                          </div>
-                        </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2">{notification.message}</div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-foreground line-clamp-2 break-words">{notification.message}</div>
                         <div className="text-xs text-muted-foreground truncate">
                           Service: {notification.service} • Source: {notification.source}
                         </div>
@@ -1223,51 +1221,55 @@ export function SystemLogs() {
       </Dialog>
 
       <Dialog open={isNotificationModalOpen} onOpenChange={setIsNotificationModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
               Notification Details
             </DialogTitle>
-            <DialogDescription>Complete information about this notification</DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
+              Complete information about this notification
+            </DialogDescription>
           </DialogHeader>
           {selectedNotification && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
-                  <Badge variant="outline" className={getNotificationTypeColor(selectedNotification.type)}>
+                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Type</div>
+                  <Badge variant="outline" className={`${getNotificationTypeColor(selectedNotification.type)} text-xs`}>
                     {selectedNotification.type.toUpperCase()}
                   </Badge>
                 </div>
-                <div className="sm:col-span-2">
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
-                  <div className="text-sm text-foreground font-mono break-words">{selectedNotification.timestamp}</div>
+                <div>
+                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
+                  <div className="text-xs sm:text-sm text-foreground font-mono break-words">
+                    {selectedNotification.timestamp}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Service</div>
-                  <div className="text-sm text-foreground break-words">{selectedNotification.service}</div>
+                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Service</div>
+                  <div className="text-xs sm:text-sm text-foreground break-words">{selectedNotification.service}</div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">Source</div>
-                  <div className="text-sm text-foreground break-words">{selectedNotification.source}</div>
+                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">Source</div>
+                  <div className="text-xs sm:text-sm text-foreground break-words">{selectedNotification.source}</div>
                 </div>
               </div>
               <div>
-                <div className="text-sm font-medium text-muted-foreground mb-2">Message</div>
-                <div className="p-4 rounded-lg bg-muted/50 border border-border max-h-[300px] overflow-y-auto">
-                  <pre className="text-sm text-foreground whitespace-pre-wrap break-words">
+                <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Message</div>
+                <div className="p-3 sm:p-4 rounded-lg bg-muted/50 border border-border max-h-[200px] sm:max-h-[300px] overflow-y-auto">
+                  <pre className="text-xs sm:text-sm text-foreground whitespace-pre-wrap break-words">
                     {selectedNotification.message}
                   </pre>
                 </div>
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-end pt-2">
                 <Button
                   variant="outline"
                   onClick={() => handleDownloadNotificationLog(selectedNotification)}
-                  className="border-border w-full sm:w-auto"
+                  className="border-border w-full sm:w-auto text-xs sm:text-sm"
                 >
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Download Complete Message
                 </Button>
               </div>

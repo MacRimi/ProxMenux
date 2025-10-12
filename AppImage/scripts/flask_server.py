@@ -3814,8 +3814,8 @@ def get_task_log(upid):
         node = parts[1]
         starttime = parts[4]
         
-        # Calculate index (last character of starttime in hex)
-        index = starttime[-1].upper()
+        # Calculate index (last character of starttime in hex, lowercase)
+        index = starttime[-1].lower()
         
         print(f"[v0] Extracted node: {node}, starttime: {starttime}, index: {index}")
         
@@ -3831,8 +3831,27 @@ def get_task_log(upid):
             print(f"[v0] Successfully read {len(log_text)} bytes from log file")
             return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
         else:
-            print(f"[v0] Log file not found: {log_file_path}")
-            return jsonify({'error': 'Log file not found'}), 404
+            # Try with uppercase index
+            log_file_path_upper = f"/var/log/pve/tasks/{index.upper()}/{upid}"
+            print(f"[v0] Trying alternative path: {log_file_path_upper}")
+            
+            if os.path.exists(log_file_path_upper):
+                with open(log_file_path_upper, 'r', encoding='utf-8', errors='ignore') as f:
+                    log_text = f.read()
+                
+                print(f"[v0] Successfully read {len(log_text)} bytes from alternative log file")
+                return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+            else:
+                # List available files in the directory for debugging
+                tasks_dir = f"/var/log/pve/tasks/{index}"
+                if os.path.exists(tasks_dir):
+                    available_files = os.listdir(tasks_dir)
+                    print(f"[v0] Available files in {tasks_dir}: {available_files[:10]}")  # Show first 10
+                else:
+                    print(f"[v0] Tasks directory does not exist: {tasks_dir}")
+                
+                print(f"[v0] Log file not found: {log_file_path}")
+                return jsonify({'error': 'Log file not found', 'path': log_file_path}), 404
             
     except Exception as e:
         print(f"[v0] Error fetching task log for UPID {upid}: {type(e).__name__}: {e}")
