@@ -1011,13 +1011,13 @@ export function SystemLogs() {
                   {notifications.map((notification, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
+                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer overflow-hidden w-full"
                       onClick={() => {
                         setSelectedNotification(notification)
                         setIsNotificationModalOpen(true)
                       }}
                     >
-                      <div className="flex-shrink-0 flex gap-2">
+                      <div className="flex-shrink-0 flex gap-2 flex-wrap">
                         <Badge variant="outline" className={getNotificationTypeColor(notification.type)}>
                           {notification.type.toUpperCase()}
                         </Badge>
@@ -1028,15 +1028,17 @@ export function SystemLogs() {
                         </Badge>
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                           <div className="text-sm font-medium text-foreground truncate">{notification.service}</div>
-                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
+                          <div className="text-xs text-muted-foreground font-mono truncate">
                             {notification.timestamp}
                           </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2">{notification.message}</div>
-                        <div className="text-xs text-muted-foreground truncate">
+                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-all overflow-hidden">
+                          {notification.message}
+                        </div>
+                        <div className="text-xs text-muted-foreground break-words overflow-hidden">
                           Service: {notification.service} • Source: {notification.source}
                         </div>
                       </div>
