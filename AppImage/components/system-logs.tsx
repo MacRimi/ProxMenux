@@ -1007,50 +1007,37 @@ export function SystemLogs() {
             {/* Notifications Tab */}
             <TabsContent value="notifications" className="space-y-4">
               <ScrollArea className="h-[600px] w-full rounded-md border border-border">
-                <div className="space-y-2 sm:space-y-3 p-2 sm:p-4">
+                <div className="space-y-2 p-4">
                   {notifications.map((notification, index) => (
                     <div
                       key={index}
-                      className="flex flex-col space-y-2 p-2.5 sm:p-4 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
+                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
                       onClick={() => {
                         setSelectedNotification(notification)
                         setIsNotificationModalOpen(true)
                       }}
                     >
-                      {/* Header with icon, badge, and timestamp */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <div className="flex-shrink-0">{getNotificationIcon(notification.type)}</div>
-                          <Badge
-                            variant="outline"
-                            className={`${getNotificationTypeColor(notification.type)} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 flex-shrink-0`}
-                          >
-                            {notification.type.toUpperCase()}
-                          </Badge>
-                          {/* CHANGED: Modified to use getNotificationSourceColor and appropriate icons */}
-                          <Badge
-                            variant="outline"
-                            className={`${getNotificationSourceColor(notification.source)} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 flex-shrink-0`}
-                          >
-                            {notification.source === "task-log" && <Activity className="h-3 w-3 mr-1" />}
-                            {notification.source === "journal" && <FileText className="h-3 w-3 mr-1" />}
-                            {notification.source.toUpperCase()}
-                          </Badge>
-                        </div>
-                        <div className="text-[10px] sm:text-xs text-muted-foreground font-mono whitespace-nowrap flex-shrink-0">
-                          {notification.timestamp}
-                        </div>
+                      <div className="flex-shrink-0 flex gap-2">
+                        <Badge variant="outline" className={getNotificationTypeColor(notification.type)}>
+                          {notification.type.toUpperCase()}
+                        </Badge>
+                        <Badge variant="outline" className={getNotificationSourceColor(notification.source)}>
+                          {notification.source === "task-log" && <Activity className="h-3 w-3 mr-1" />}
+                          {notification.source === "journal" && <FileText className="h-3 w-3 mr-1" />}
+                          {notification.source.toUpperCase()}
+                        </Badge>
                       </div>
 
-                      {/* Message content */}
-                      <div className="space-y-1.5 min-w-0">
-                        <div className="text-xs sm:text-sm text-foreground break-words overflow-hidden line-clamp-3">
-                          {notification.message}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm font-medium text-foreground truncate">{notification.service}</div>
+                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
+                            {notification.timestamp}
+                          </div>
                         </div>
-                        <div className="text-[10px] sm:text-xs text-muted-foreground break-words overflow-hidden">
-                          <span className="inline-block">Service: {notification.service}</span>
-                          <span className="mx-1">•</span>
-                          <span className="inline-block">Source: {notification.source}</span>
+                        <div className="text-sm text-foreground mb-1 line-clamp-2">{notification.message}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          Service: {notification.service} • Source: {notification.source}
                         </div>
                       </div>
                     </div>
