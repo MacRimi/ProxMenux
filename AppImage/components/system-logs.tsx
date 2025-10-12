@@ -993,32 +993,41 @@ export function SystemLogs() {
             {/* Notifications Tab */}
             <TabsContent value="notifications" className="space-y-4">
               <ScrollArea className="h-[600px] w-full rounded-md border border-border">
-                <div className="space-y-3 p-3 sm:p-4">
+                <div className="space-y-2 sm:space-y-3 p-2 sm:p-4">
                   {notifications.map((notification, index) => (
                     <div
                       key={index}
-                      className="flex flex-col space-y-2 p-3 sm:p-4 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
+                      className="flex flex-col space-y-2 p-2.5 sm:p-4 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
                       onClick={() => {
                         setSelectedNotification(notification)
                         setIsNotificationModalOpen(true)
                       }}
                     >
-                      <div className="flex items-start sm:items-center gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          {getNotificationIcon(notification.type)}
-                          <Badge variant="outline" className={`${getNotificationTypeColor(notification.type)} text-xs`}>
+                      {/* Header with icon, badge, and timestamp */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div className="flex-shrink-0">{getNotificationIcon(notification.type)}</div>
+                          <Badge
+                            variant="outline"
+                            className={`${getNotificationTypeColor(notification.type)} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 flex-shrink-0`}
+                          >
                             {notification.type.toUpperCase()}
                           </Badge>
                         </div>
-                        <div className="text-xs text-muted-foreground font-mono ml-auto">{notification.timestamp}</div>
+                        <div className="text-[10px] sm:text-xs text-muted-foreground font-mono whitespace-nowrap flex-shrink-0">
+                          {notification.timestamp}
+                        </div>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <div className="text-sm text-foreground break-words overflow-hidden">
+                      {/* Message content */}
+                      <div className="space-y-1.5 min-w-0">
+                        <div className="text-xs sm:text-sm text-foreground break-words overflow-hidden line-clamp-3">
                           {notification.message}
                         </div>
-                        <div className="text-xs text-muted-foreground break-words">
-                          Service: {notification.service} • Source: {notification.source}
+                        <div className="text-[10px] sm:text-xs text-muted-foreground break-words overflow-hidden">
+                          <span className="inline-block">Service: {notification.service}</span>
+                          <span className="mx-1">•</span>
+                          <span className="inline-block">Source: {notification.source}</span>
                         </div>
                       </div>
                     </div>
