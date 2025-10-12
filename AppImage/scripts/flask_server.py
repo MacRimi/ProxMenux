@@ -388,8 +388,7 @@ def serve_images(filename):
 def get_system_info():
     """Get basic system information"""
     try:
-        # CPU usage
-        cpu_percent = psutil.cpu_percent(interval=1)
+        cpu_percent = psutil.cpu_percent(interval=0.5)
         
         # Memory usage
         memory = psutil.virtual_memory()
