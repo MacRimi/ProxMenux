@@ -96,11 +96,6 @@ interface CombinedLogEntry {
 }
 
 export function SystemLogs() {
-  console.log("[v0] ========================================")
-  console.log("[v0] SystemLogs v47 - TABS SHOULD BE MERGED")
-  console.log("[v0] Expected tabs: Logs & Events, Backups, Notifications")
-  console.log("[v0] ========================================")
-
   const [logs, setLogs] = useState<SystemLog[]>([])
   const [backups, setBackups] = useState<Backup[]>([])
   const [events, setEvents] = useState<Event[]>([])
@@ -291,43 +286,65 @@ export function SystemLogs() {
     }
   }
 
-  const handleDownloadLogs = async (type = "system") => {
+  const handleDownloadLogs = async () => {
     try {
-      const hours = 48
-
-      // This part seems to be intended for system logs specifically, and might not apply directly to combined logs/events.
-      // For now, we'll keep it as is, assuming it's for a specific download scenario.
-      // If the intent is to download combined logs/events, this function would need modification.
-
-      let url = getApiUrl(`/api/logs/download?type=${type}&hours=${hours}`)
-
-      // Apply filters if any are active
+      // Generate filename based on active filters
+      const filters = []
+      if (dateFilter !== "now") {
+        const days = dateFilter === "custom" ? customDays : dateFilter
+        filters.push(`${days}days`)
+      }
       if (levelFilter !== "all") {
-        url += `&level=${levelFilter}`
+        filters.push(levelFilter)
       }
       if (serviceFilter !== "all") {
-        url += `&service=${serviceFilter}`
+        filters.push(serviceFilter)
+      }
+      if (searchTerm) {
+        filters.push("searched")
       }
 
-      if (dateFilter !== "now") {
-        const daysAgo = dateFilter === "custom" ? Number.parseInt(customDays) : Number.parseInt(dateFilter)
-        url += `&since_days=${daysAgo}`
-      }
+      const filename = `proxmox_logs_${filters.length > 0 ? filters.join("_") + "_" : ""}${new Date().toISOString().split("T")[0]}.txt`
 
-      const response = await fetch(url)
-      if (response.ok) {
-        const blob = await response.blob()
-        const downloadUrl = window.URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = downloadUrl
-        a.download = `proxmox_${type}_${hours}h.log`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(downloadUrl)
-        document.body.removeChild(a)
-      }
+      // Generate log content
+      const logContent = [
+        `Proxmox System Logs & Events Export`,
+        `Generated: ${new Date().toISOString()}`,
+        `Total Entries: ${filteredCombinedLogs.length.toLocaleString()}`,
+        ``,
+        `Filters Applied:`,
+        `- Date Range: ${dateFilter === "now" ? "Current logs" : dateFilter === "custom" ? `${customDays} days ago` : `${dateFilter} days ago`}`,
+        `- Level: ${levelFilter === "all" ? "All Levels" : levelFilter}`,
+        `- Service: ${serviceFilter === "all" ? "All Services" : serviceFilter}`,
+        `- Search: ${searchTerm || "None"}`,
+        ``,
+        `${"=".repeat(80)}`,
+        ``,
+        ...filteredCombinedLogs.map((log) => {
+          const lines = [
+            `[${log.timestamp}] ${log.level.toUpperCase()} - ${log.service}${log.isEvent ? " [EVENT]" : ""}`,
+            `Message: ${log.message}`,
+            `Source: ${log.source}`,
+          ]
+          if (log.pid) lines.push(`PID: ${log.pid}`)
+          if (log.hostname) lines.push(`Hostname: ${log.hostname}`)
+          lines.push(`${"-".repeat(80)}`)
+          return lines.join("\n")
+        }),
+      ].join("\n")
+
+      // Create and download blob
+      const blob = new Blob([logContent], { type: "text/plain" })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
     } catch (err) {
-      console.error("[v0] Error downloading logs:", err)
+      console.error("Error exporting logs:", err)
     }
   }
 
@@ -568,8 +585,6 @@ export function SystemLogs() {
 
   return (
     <div className="space-y-6">
-      {console.log("[v0] SystemLogs component rendered - Tabs should be: Logs & Events, Backups, Notifications")}
-
       {loading && (logs.length > 0 || events.length > 0) && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-card border border-border shadow-lg">
@@ -588,7 +603,7 @@ export function SystemLogs() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{filteredCombinedLogs.length}</div>
+            <div className="text-2xl font-bold text-foreground">{filteredCombinedLogs.length.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground mt-2">Filtered</p>
           </CardContent>
         </Card>
@@ -599,7 +614,7 @@ export function SystemLogs() {
             <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">{logCounts.error}</div>
+            <div className="text-2xl font-bold text-red-500">{logCounts.error.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground mt-2">Requires attention</p>
           </CardContent>
         </Card>
@@ -610,7 +625,7 @@ export function SystemLogs() {
             <AlertTriangle className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">{logCounts.warning}</div>
+            <div className="text-2xl font-bold text-yellow-500">{logCounts.warning.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground mt-2">Monitor closely</p>
           </CardContent>
         </Card>
@@ -621,7 +636,7 @@ export function SystemLogs() {
             <Database className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-500">{backupStats.total}</div>
+            <div className="text-2xl font-bold text-blue-500">{backupStats.total.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground mt-2">{formatBytes(backupStats.totalSize)}</p>
           </CardContent>
         </Card>
@@ -776,11 +791,7 @@ export function SystemLogs() {
                   </SelectContent>
                 </Select>
 
-                <Button
-                  variant="outline"
-                  className="border-border bg-transparent"
-                  onClick={() => handleDownloadLogs("system")}
-                >
+                <Button variant="outline" className="border-border bg-transparent" onClick={handleDownloadLogs}>
                   <Download className="h-4 w-4 mr-2" />
                   Export Logs
                 </Button>
