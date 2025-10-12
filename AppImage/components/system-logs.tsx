@@ -82,6 +82,19 @@ interface SystemLog {
   hostname?: string
 }
 
+interface CombinedLogEntry {
+  timestamp: string
+  level: string
+  service: string
+  message: string
+  source: string
+  pid?: string
+  hostname?: string
+  isEvent: boolean
+  eventData?: Event
+  sortTimestamp: number
+}
+
 export function SystemLogs() {
   const [logs, setLogs] = useState<SystemLog[]>([])
   const [backups, setBackups] = useState<Backup[]>([])
@@ -94,6 +107,8 @@ export function SystemLogs() {
   const [levelFilter, setLevelFilter] = useState("all")
   const [serviceFilter, setServiceFilter] = useState("all")
   const [activeTab, setActiveTab] = useState("logs")
+
+  const [displayedLogsCount, setDisplayedLogsCount] = useState(500)
 
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
@@ -265,18 +280,11 @@ export function SystemLogs() {
 
   const handleDownloadLogs = async (type = "system") => {
     try {
-      let hours = 48
+      const hours = 48
 
-      if (filteredLogs.length > 0) {
-        const lastLog = filteredLogs[filteredLogs.length - 1]
-        const lastLogTime = new Date(lastLog.timestamp)
-        const now = new Date()
-        const diffMs = now.getTime() - lastLogTime.getTime()
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-
-        // Download 48 hours from the last visible log
-        hours = 48
-      }
+      // This part seems to be intended for system logs specifically, and might not apply directly to combined logs/events.
+      // For now, we'll keep it as is, assuming it's for a specific download scenario.
+      // If the intent is to download combined logs/events, this function would need modification.
 
       let url = getApiUrl(`/api/logs/download?type=${type}&hours=${hours}`)
 
@@ -339,8 +347,22 @@ export function SystemLogs() {
     }
   }
 
-  // Filter logs
-  const filteredLogs = logs.filter((log) => {
+  const combinedLogs: CombinedLogEntry[] = [
+    ...logs.map((log) => ({ ...log, isEvent: false, sortTimestamp: new Date(log.timestamp).getTime() })),
+    ...events.map((event) => ({
+      timestamp: event.starttime,
+      level: event.level,
+      service: event.type,
+      message: `${event.type}${event.vmid ? ` (VM/CT ${event.vmid})` : ""} - ${event.status}`,
+      source: `Node: ${event.node} • User: ${event.user}`,
+      isEvent: true,
+      eventData: event,
+      sortTimestamp: new Date(event.starttime).getTime(),
+    })),
+  ].sort((a, b) => b.sortTimestamp - a.sortTimestamp) // Sort by timestamp descending
+
+  // Filter combined logs
+  const filteredCombinedLogs = combinedLogs.filter((log) => {
     const matchesSearch =
       log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.service.toLowerCase().includes(searchTerm.toLowerCase())
@@ -349,6 +371,9 @@ export function SystemLogs() {
 
     return matchesSearch && matchesLevel && matchesService
   })
+
+  const displayedLogs = filteredCombinedLogs.slice(0, displayedLogsCount)
+  const hasMoreLogs = displayedLogsCount < filteredCombinedLogs.length
 
   const getLevelColor = (level: string) => {
     switch (level) {
@@ -508,7 +533,7 @@ export function SystemLogs() {
   const getSectionLabel = (section: string) => {
     switch (section) {
       case "logs":
-        return "System Logs"
+        return "Logs & Events"
       case "events":
         return "Recent Events"
       case "backups":
@@ -520,7 +545,7 @@ export function SystemLogs() {
     }
   }
 
-  if (loading && logs.length === 0) {
+  if (loading && logs.length === 0 && events.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -530,7 +555,7 @@ export function SystemLogs() {
 
   return (
     <div className="space-y-6">
-      {loading && logs.length > 0 && (
+      {loading && (logs.length > 0 || events.length > 0) && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-card border border-border shadow-lg">
             <RefreshCw className="h-12 w-12 animate-spin text-primary" />
@@ -544,12 +569,12 @@ export function SystemLogs() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Logs</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Entries</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{logCounts.total}</div>
-            <p className="text-xs text-muted-foreground mt-2">Last 200 entries</p>
+            <div className="text-2xl font-bold text-foreground">{filteredCombinedLogs.length}</div>
+            <p className="text-xs text-muted-foreground mt-2">Filtered</p>
           </CardContent>
         </Card>
 
@@ -603,9 +628,8 @@ export function SystemLogs() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="hidden md:grid w-full grid-cols-4">
-              <TabsTrigger value="logs">System Logs</TabsTrigger>
-              <TabsTrigger value="events">Recent Events</TabsTrigger>
+            <TabsList className="hidden md:grid w-full grid-cols-3">
+              <TabsTrigger value="logs">Logs & Events</TabsTrigger>
               <TabsTrigger value="backups">Backups</TabsTrigger>
               <TabsTrigger value="notifications">Notifications</TabsTrigger>
             </TabsList>
@@ -633,18 +657,7 @@ export function SystemLogs() {
                       }}
                     >
                       <Terminal className="h-4 w-4" />
-                      System Logs
-                    </Button>
-                    <Button
-                      variant={activeTab === "events" ? "default" : "ghost"}
-                      className="w-full justify-start gap-3"
-                      onClick={() => {
-                        setActiveTab("events")
-                        setIsMobileMenuOpen(false)
-                      }}
-                    >
-                      <CalendarDays className="h-4 w-4" />
-                      Recent Events
+                      Logs & Events
                     </Button>
                     <Button
                       variant={activeTab === "backups" ? "default" : "ghost"}
@@ -673,14 +686,13 @@ export function SystemLogs() {
               </Sheet>
             </div>
 
-            {/* System Logs Tab */}
             <TabsContent value="logs" className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search logs..."
+                      placeholder="Search logs & events..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 bg-background border-border"
@@ -746,26 +758,37 @@ export function SystemLogs() {
                   onClick={() => handleDownloadLogs("system")}
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Export
+                  Export Logs
                 </Button>
               </div>
 
               <ScrollArea className="h-[600px] w-full rounded-md border border-border">
                 <div className="space-y-2 p-4">
-                  {filteredLogs.map((log, index) => (
+                  {displayedLogs.map((log, index) => (
                     <div
                       key={index}
                       className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
                       onClick={() => {
-                        setSelectedLog(log)
-                        setIsLogModalOpen(true)
+                        if (log.isEvent) {
+                          setSelectedEvent(log.eventData)
+                          setIsEventModalOpen(true)
+                        } else {
+                          setSelectedLog(log as SystemLog) // Cast to SystemLog for dialog
+                          setIsLogModalOpen(true)
+                        }
                       }}
                     >
-                      <div className="flex-shrink-0">
+                      <div className="flex-shrink-0 flex gap-2">
                         <Badge variant="outline" className={getLevelColor(log.level)}>
                           {getLevelIcon(log.level)}
                           {log.level.toUpperCase()}
                         </Badge>
+                        {log.isEvent && (
+                          <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
+                            <Activity className="h-3 w-3 mr-1" />
+                            EVENT
+                          </Badge>
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -777,7 +800,7 @@ export function SystemLogs() {
                         </div>
                         <div className="text-sm text-foreground mb-1 line-clamp-2">{log.message}</div>
                         <div className="text-xs text-muted-foreground truncate">
-                          Source: {log.source}
+                          {log.source}
                           {log.pid && ` • PID: ${log.pid}`}
                           {log.hostname && ` • Host: ${log.hostname}`}
                         </div>
@@ -785,56 +808,23 @@ export function SystemLogs() {
                     </div>
                   ))}
 
-                  {filteredLogs.length === 0 && (
+                  {displayedLogs.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No logs found matching your criteria</p>
+                      <p>No logs or events found matching your criteria</p>
                     </div>
                   )}
-                </div>
-              </ScrollArea>
-            </TabsContent>
 
-            {/* Recent Events Tab */}
-            <TabsContent value="events" className="space-y-4">
-              <ScrollArea className="h-[600px] w-full rounded-md border border-border">
-                <div className="space-y-2 p-4">
-                  {events.map((event, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-card/50 border border-border/50 hover:bg-card/80 transition-colors cursor-pointer"
-                      onClick={() => {
-                        setSelectedEvent(event)
-                        setIsEventModalOpen(true)
-                      }}
-                    >
-                      <div className="flex-shrink-0">
-                        <Badge variant="outline" className={`${getLevelColor(event.level)} max-w-[120px] truncate`}>
-                          {getLevelIcon(event.level)}
-                          <span className="truncate">{event.status}</span>
-                        </Badge>
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1 gap-2">
-                          <div className="text-sm font-medium text-foreground truncate">
-                            {event.type}
-                            {event.vmid && ` (VM/CT ${event.vmid})`}
-                          </div>
-                          <div className="text-xs text-muted-foreground whitespace-nowrap">{event.duration}</div>
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          Node: {event.node} • User: {event.user}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">{event.starttime}</div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {events.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No recent events found</p>
+                  {hasMoreLogs && (
+                    <div className="flex justify-center pt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => setDisplayedLogsCount((prev) => prev + 500)}
+                        className="border-border"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Load More ({filteredCombinedLogs.length - displayedLogsCount} remaining)
+                      </Button>
                     </div>
                   )}
                 </div>
