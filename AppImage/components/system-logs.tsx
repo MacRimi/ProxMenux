@@ -348,8 +348,56 @@ export function SystemLogs() {
     }
   }
 
+  const extractUPID = (message: string): string | null => {
+    const upidMatch = message.match(/UPID:[^\s:]+:[^\s:]+:[^\s:]+:[^\s:]+:[^\s:]+:[^\s:]*:[^\s:]*:?[^\s]*/)
+    return upidMatch ? upidMatch[0] : null
+  }
+
   const handleDownloadNotificationLog = async (notification: Notification) => {
     try {
+      const upid = extractUPID(notification.message)
+
+      if (upid) {
+        // Try to fetch the complete task log from Proxmox
+        try {
+          const response = await fetch(getApiUrl(`/api/task-log/${encodeURIComponent(upid)}`))
+
+          if (response.ok) {
+            const taskLog = await response.text()
+
+            // Download the complete task log
+            const blob = new Blob(
+              [
+                `Proxmox Task Log\n`,
+                `================\n\n`,
+                `UPID: ${upid}\n`,
+                `Timestamp: ${notification.timestamp}\n`,
+                `Service: ${notification.service}\n`,
+                `Source: ${notification.source}\n\n`,
+                `Complete Task Log:\n`,
+                `${"-".repeat(80)}\n`,
+                `${taskLog}\n`,
+              ],
+              { type: "text/plain" },
+            )
+
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = `task_log_${upid.replace(/:/g, "_")}_${notification.timestamp.replace(/[:\s]/g, "_")}.txt`
+            document.body.appendChild(a)
+            a.click()
+            window.URL.revokeObjectURL(url)
+            document.body.removeChild(a)
+            return
+          }
+        } catch (error) {
+          console.error("[v0] Failed to fetch task log from Proxmox:", error)
+          // Fall through to download notification message
+        }
+      }
+
+      // If no UPID or failed to fetch task log, download the notification message
       const blob = new Blob(
         [
           `Notification Details\n`,
