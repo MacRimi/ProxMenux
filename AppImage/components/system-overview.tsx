@@ -681,7 +681,7 @@ export function SystemOverview() {
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Zap className="h-5 w-5 mr-2" />
-              System Health & Alerts
+              System Overview
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -704,28 +704,17 @@ export function SystemOverview() {
               <span className="text-lg font-semibold text-foreground">{systemData.cpu_threads || "N/A"}</span>
             </div>
 
-            {systemAlerts.length > 0 && (
-              <div className="pt-2">
-                <div className="text-sm text-muted-foreground mb-2">Recent Alerts:</div>
-                <div className="space-y-2">
-                  {systemAlerts.map((alert, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm text-foreground">{alert.message}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="flex justify-between items-center pb-3 border-b border-border">
+              <span className="text-sm text-muted-foreground">Physical Disks:</span>
+              <span className="text-lg font-semibold text-foreground">{storageData?.disk_count || "N/A"}</span>
+            </div>
 
-            {systemAlerts.length === 0 && (
-              <div className="pt-2 text-center">
-                <div className="text-sm text-green-500 flex items-center justify-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                  All systems operational
-                </div>
-              </div>
-            )}
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Network Interfaces:</span>
+              <span className="text-lg font-semibold text-foreground">
+                {networkData?.physical_total_count || networkData?.physical_interfaces?.length || "N/A"}
+              </span>
+            </div>
           </CardContent>
         </Card>
       </div>
