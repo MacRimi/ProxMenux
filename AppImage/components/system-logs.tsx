@@ -96,6 +96,11 @@ interface CombinedLogEntry {
 }
 
 export function SystemLogs() {
+  console.log("[v0] ========================================")
+  console.log("[v0] SystemLogs v47 - TABS SHOULD BE MERGED")
+  console.log("[v0] Expected tabs: Logs & Events, Backups, Notifications")
+  console.log("[v0] ========================================")
+
   const [logs, setLogs] = useState<SystemLog[]>([])
   const [backups, setBackups] = useState<Backup[]>([])
   const [events, setEvents] = useState<Event[]>([])
@@ -563,6 +568,8 @@ export function SystemLogs() {
 
   return (
     <div className="space-y-6">
+      {console.log("[v0] SystemLogs component rendered - Tabs should be: Logs & Events, Backups, Notifications")}
+
       {loading && (logs.length > 0 || events.length > 0) && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-card border border-border shadow-lg">
@@ -637,9 +644,18 @@ export function SystemLogs() {
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="hidden md:grid w-full grid-cols-3">
-              <TabsTrigger value="logs">Logs & Events</TabsTrigger>
-              <TabsTrigger value="backups">Backups</TabsTrigger>
-              <TabsTrigger value="notifications">Notifications</TabsTrigger>
+              <TabsTrigger value="logs">
+                <Terminal className="h-4 w-4 mr-2" />
+                Logs & Events
+              </TabsTrigger>
+              <TabsTrigger value="backups">
+                <Database className="h-4 w-4 mr-2" />
+                Backups
+              </TabsTrigger>
+              <TabsTrigger value="notifications">
+                <Bell className="h-4 w-4 mr-2" />
+                Notifications
+              </TabsTrigger>
             </TabsList>
 
             <div className="md:hidden mb-4">
