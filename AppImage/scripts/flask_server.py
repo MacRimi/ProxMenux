@@ -2778,7 +2778,7 @@ def get_gpu_info():
     except Exception as e:
         print(f"[v0] Error enriching GPU data from sensors: {e}")
     
-    return gpus    
+    return gpus
 
 def get_disk_hardware_info(disk_name):
     """Get detailed hardware information for a disk"""
@@ -3797,49 +3797,36 @@ def get_task_log(upid):
     try:
         print(f"[v0] Getting task log for UPID: {upid}")
         
-        # Parse UPID to extract node name
+        # Parse UPID to extract node name and calculate index
         # UPID format: UPID:node:pid:pstart:starttime:type:id:user:
         parts = upid.split(':')
-        if len(parts) < 2:
+        if len(parts) < 5:
             print(f"[v0] Invalid UPID format: {upid}")
             return jsonify({'error': 'Invalid UPID format'}), 400
         
         node = parts[1]
-        print(f"[v0] Extracted node: {node}")
+        starttime = parts[4]
         
-        encoded_upid = urllib.parse.quote(upid, safe='')
-        print(f"[v0] Encoded UPID: {encoded_upid}")
+        # Calculate index (last character of starttime in hex)
+        index = starttime[-1].upper()
         
-        # Get task log from Proxmox using pvesh
-        result = subprocess.run(
-            ['pvesh', 'get', f'/nodes/{node}/tasks/{encoded_upid}/log', '--output-format', 'json'],
-            capture_output=True, text=True, timeout=30
-        )
+        print(f"[v0] Extracted node: {node}, starttime: {starttime}, index: {index}")
         
-        if result.returncode == 0:
-            try:
-                # Parse JSON response
-                log_entries = json.loads(result.stdout)
-                
-                # Convert log entries to text
-                # Each entry has format: {"n": line_number, "t": "log text"}
-                log_lines = [entry.get('t', '') for entry in log_entries if 't' in entry]
-                log_text = '\n'.join(log_lines)
-                
-                print(f"[v0] Successfully retrieved {len(log_lines)} log lines")
-                return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
-            except json.JSONDecodeError as e:
-                print(f"[v0] Failed to parse JSON response: {e}")
-                # If JSON parsing fails, return raw output
-                return result.stdout, 200, {'Content-Type': 'text/plain; charset=utf-8'}
-        else:
-            error_msg = result.stderr or 'Failed to get task log'
-            print(f"[v0] pvesh command failed: {error_msg}")
-            return jsonify({'error': error_msg}), 500
+        # Construct file path
+        log_file_path = f"/var/log/pve/tasks/{index}/{upid}"
+        print(f"[v0] Reading log file: {log_file_path}")
+        
+        # Read the log file
+        if os.path.exists(log_file_path):
+            with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                log_text = f.read()
             
-    except subprocess.TimeoutExpired:
-        print(f"[v0] Timeout getting task log for UPID: {upid}")
-        return jsonify({'error': 'Request timeout'}), 504
+            print(f"[v0] Successfully read {len(log_text)} bytes from log file")
+            return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        else:
+            print(f"[v0] Log file not found: {log_file_path}")
+            return jsonify({'error': 'Log file not found'}), 404
+            
     except Exception as e:
         print(f"[v0] Error fetching task log for UPID {upid}: {type(e).__name__}: {e}")
         import traceback
@@ -3946,7 +3933,7 @@ def api_hardware():
             'motherboard': hardware_info.get('motherboard', {}), # Corrected: use hardware_info
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
-            'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_data
+            'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_info
             'pci_devices': hardware_info.get('pci_devices', []),
             'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
             'fans': all_fans, # Return combined fans (sensors + IPMI)
