@@ -18,6 +18,7 @@ interface SystemData {
   node_id: string
   timestamp: string
   cpu_cores?: number
+  cpu_threads?: number
   proxmox_version?: string
   kernel_version?: string
   available_updates?: number
@@ -271,7 +272,7 @@ export function SystemOverview() {
     }
 
     fetchVMs()
-    const vmInterval = setInterval(fetchVMs, 15000)
+    const vmInterval = setInterval(fetchVMs, 60000)
 
     return () => {
       clearInterval(vmInterval)
@@ -288,7 +289,7 @@ export function SystemOverview() {
     }
 
     fetchStorage()
-    const storageInterval = setInterval(fetchStorage, 30000)
+    const storageInterval = setInterval(fetchStorage, 60000)
 
     return () => {
       clearInterval(storageInterval)
@@ -387,6 +388,44 @@ export function SystemOverview() {
   const localStorage = proxmoxStorageData?.storage.find(
     (s) => s.name === "local-lvm" || s.name === "local-zfs" || s.name === "local",
   )
+
+  const getLoadStatus = (load: number, cores: number) => {
+    if (load < cores) {
+      return { status: "Normal", color: "bg-green-500/10 text-green-500 border-green-500/20" }
+    } else if (load < cores * 1.5) {
+      return { status: "Moderate", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" }
+    } else {
+      return { status: "High", color: "bg-red-500/10 text-red-500 border-red-500/20" }
+    }
+  }
+
+  const systemAlerts = []
+  if (systemData.available_updates && systemData.available_updates > 0) {
+    systemAlerts.push({
+      type: "warning",
+      message: `${systemData.available_updates} updates available`,
+    })
+  }
+  if (vmStats.stopped > 0) {
+    systemAlerts.push({
+      type: "info",
+      message: `${vmStats.stopped} VM${vmStats.stopped > 1 ? "s" : ""} stopped`,
+    })
+  }
+  if (systemData.temperature > 75) {
+    systemAlerts.push({
+      type: "warning",
+      message: "High temperature detected",
+    })
+  }
+  if (localStorage && localStorage.percent > 90) {
+    systemAlerts.push({
+      type: "warning",
+      message: "System storage almost full",
+    })
+  }
+
+  const loadStatus = getLoadStatus(systemData.load_average[0], systemData.cpu_cores || 8)
 
   return (
     <div className="space-y-6">
@@ -637,37 +676,56 @@ export function SystemOverview() {
           </CardContent>
         </Card>
 
+        {/* System Health & Alerts */}
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Zap className="h-5 w-5 mr-2" />
-              Performance Metrics
+              System Health & Alerts
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between items-start">
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-border">
               <div className="flex flex-col">
-                <span className="text-muted-foreground">Load Average:</span>
-                <span className="text-xs text-muted-foreground">(1m, 5m, 15m)</span>
+                <span className="text-sm text-muted-foreground">Load Average (1m):</span>
               </div>
-              <span className="text-foreground font-mono">
-                {systemData.load_average.map((avg) => avg.toFixed(2)).join(", ")}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold text-foreground font-mono">
+                  {systemData.load_average[0].toFixed(2)}
+                </span>
+                <Badge variant="outline" className={loadStatus.color}>
+                  {loadStatus.status}
+                </Badge>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total Memory:</span>
-              <span className="text-foreground">{systemData.memory_total} GB</span>
+
+            <div className="flex justify-between items-center pb-3 border-b border-border">
+              <span className="text-sm text-muted-foreground">CPU Threads:</span>
+              <span className="text-lg font-semibold text-foreground">{systemData.cpu_threads || "N/A"}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Available Memory:</span>
-              <span className="text-foreground">
-                {(systemData.memory_total - systemData.memory_used).toFixed(1)} GB
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">CPU Cores:</span>
-              <span className="text-foreground">{systemData.cpu_cores || "N/A"}</span>
-            </div>
+
+            {systemAlerts.length > 0 && (
+              <div className="pt-2">
+                <div className="text-sm text-muted-foreground mb-2">Recent Alerts:</div>
+                <div className="space-y-2">
+                  {systemAlerts.map((alert, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-yellow-500" />
+                      <span className="text-sm text-foreground">{alert.message}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {systemAlerts.length === 0 && (
+              <div className="pt-2 text-center">
+                <div className="text-sm text-green-500 flex items-center justify-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                  All systems operational
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

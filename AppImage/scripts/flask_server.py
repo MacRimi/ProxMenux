@@ -21,6 +21,7 @@ import shutil # Added for shutil.which
 import xml.etree.ElementTree as ET  # Added for XML parsing
 import math # Imported math for format_bytes function
 import urllib.parse # Added for URL encoding
+import platform # Added for platform.release()
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
@@ -37,6 +38,73 @@ def format_bytes(size_in_bytes):
     p = math.pow(1024, i)
     s = round(size_in_bytes / p, 2)
     return f"{s} {size_name[i]}"
+
+# Helper functions for system info
+def get_cpu_temperature():
+    """Get CPU temperature using psutil if available, otherwise return 0."""
+    temp = 0
+    try:
+        if hasattr(psutil, "sensors_temperatures"):
+            temps = psutil.sensors_temperatures()
+            if temps:
+                # Priority order for temperature sensors
+                sensor_priority = ['coretemp', 'cpu_thermal', 'acpi', 'thermal_zone']
+                for sensor_name in sensor_priority:
+                    if sensor_name in temps and temps[sensor_name]:
+                        temp = temps[sensor_name][0].current
+                        break
+                
+                # If no priority sensor found, use first available
+                if temp == 0:
+                    for name, entries in temps.items():
+                        if entries:
+                            temp = entries[0].current
+                            break
+    except Exception as e:
+        print(f"Warning: Error reading temperature sensors: {e}")
+    return temp
+
+def get_uptime():
+    """Get system uptime in a human-readable format."""
+    try:
+        boot_time = psutil.boot_time()
+        uptime_seconds = time.time() - boot_time
+        return str(timedelta(seconds=int(uptime_seconds)))
+    except Exception as e:
+        print(f"Warning: Error getting uptime: {e}")
+        return "N/A"
+
+def get_proxmox_version():
+    """Get Proxmox version if available."""
+    proxmox_version = None
+    try:
+        result = subprocess.run(['pveversion'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            # Parse output like "pve-manager/9.0.6/..."
+            version_line = result.stdout.strip().split('\n')[0]
+            if '/' in version_line:
+                proxmox_version = version_line.split('/')[1]
+    except FileNotFoundError:
+        print("Warning: pveversion command not found - Proxmox may not be installed.")
+    except Exception as e:
+        print(f"Warning: Error getting Proxmox version: {e}")
+    return proxmox_version
+
+def get_available_updates():
+    """Get the number of available package updates."""
+    available_updates = 0
+    try:
+        # Use apt list --upgradable to count available updates
+        result = subprocess.run(['apt', 'list', '--upgradable'], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            # Count lines minus the header line
+            lines = result.stdout.strip().split('\n')
+            available_updates = max(0, len(lines) - 1)
+    except FileNotFoundError:
+        print("Warning: apt command not found - cannot check for updates.")
+    except Exception as e:
+        print(f"Warning: Error checking for updates: {e}")
+    return available_updates
 
 # AGREGANDO FUNCIÓN PARA PARSEAR PROCESOS DE INTEL_GPU_TOP (SIN -J)
 def get_intel_gpu_processes_from_text():
@@ -385,118 +453,8 @@ def serve_images(filename):
         print(f"Error serving image {filename}: {e}")
         return '', 404
 
-def get_system_info():
-    """Get basic system information"""
-    try:
-        cpu_percent = psutil.cpu_percent(interval=0.5)
-        
-        # Memory usage
-        memory = psutil.virtual_memory()
-        
-        temp = 0
-        try:
-            if hasattr(psutil, "sensors_temperatures"):
-                temps = psutil.sensors_temperatures()
-                if temps:
-                    # Priority order for temperature sensors
-                    sensor_priority = ['coretemp', 'cpu_thermal', 'acpi', 'thermal_zone']
-                    for sensor_name in sensor_priority:
-                        if sensor_name in temps and temps[sensor_name]:
-                            temp = temps[sensor_name][0].current
-                            break
-                    
-                    # If no priority sensor found, use first available
-                    if temp == 0:
-                        for name, entries in temps.items():
-                            if entries:
-                                temp = entries[0].current
-                                break
-        except Exception as e:
-            print(f"Error reading temperature sensors: {e}")
-            temp = 0  # Use 0 to indicate no temperature available
-        
-        # Uptime
-        boot_time = psutil.boot_time()
-        uptime_seconds = time.time() - boot_time
-        uptime_str = str(timedelta(seconds=int(uptime_seconds)))
-        
-        # Load average
-        load_avg = os.getloadavg() if hasattr(os, 'getloadavg') else [0, 0, 0]
-        
-        hostname = socket.gethostname()
-        node_id = f"pve-{hostname}"
-        
-        proxmox_version = None
-        try:
-            result = subprocess.run(['pveversion'], capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                # Parse output like "pve-manager/9.0.6/..."
-                version_line = result.stdout.strip().split('\n')[0]
-                if '/' in version_line:
-                    proxmox_version = version_line.split('/')[1]
-        except Exception as e:
-            print(f"Note: pveversion not available: {e}")
-        
-        kernel_version = None
-        try:
-            result = subprocess.run(['uname', '-r'], capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                kernel_version = result.stdout.strip()
-        except Exception as e:
-            print(f"Note: uname not available: {e}")
-        
-        cpu_cores = psutil.cpu_count(logical=False)  # Physical cores only
-        
-        available_updates = 0
-        try:
-            result = subprocess.run(['apt', 'list', '--upgradable'], capture_output=True, text=True, timeout=10)
-            if result.returncode == 0:
-                # Count lines minus header
-                lines = result.stdout.strip().split('\n')
-                available_updates = max(0, len(lines) - 1)
-        except Exception as e:
-            print(f"Note: apt list not available: {e}")
-        
-        # Try to get Proxmox node info if available
-        try:
-            result = subprocess.run(['pvesh', 'get', '/nodes', '--output-format', 'json'], 
-                                  capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                nodes = json.loads(result.stdout)
-                if nodes and len(nodes) > 0:
-                    node_id = nodes[0].get('node', node_id)
-        except Exception as e:
-            print(f"Note: pvesh not available or failed: {e}")
-            pass  # Use default if pvesh not available
-        
-        response = {
-            'cpu_usage': round(cpu_percent, 1),
-            'memory_usage': round(memory.percent, 1),
-            'memory_total': round(memory.total / (1024**3), 1),  # GB
-            'memory_used': round(memory.used / (1024**3), 1),    # GB
-            'temperature': temp,
-            'uptime': uptime_str,
-            'load_average': list(load_avg),
-            'hostname': hostname,
-            'node_id': node_id,
-            'timestamp': datetime.now().isoformat(),
-            'cpu_cores': cpu_cores
-        }
-        
-        if proxmox_version:
-            response['proxmox_version'] = proxmox_version
-        if kernel_version:
-            response['kernel_version'] = kernel_version
-        if available_updates > 0:
-            response['available_updates'] = available_updates
-        
-        return response
-    except Exception as e:
-        print(f"Critical error getting system info: {e}")
-        return {
-            'error': f'Unable to access system information: {str(e)}',
-            'timestamp': datetime.now().isoformat()
-        }
+# Moved helper functions for system info up
+# def get_system_info(): ... (moved up)
 
 def get_storage_info():
     """Get storage and disk information"""
@@ -3311,8 +3269,58 @@ def get_hardware_info():
 
 @app.route('/api/system', methods=['GET'])
 def api_system():
-    """Get system information"""
-    return jsonify(get_system_info())
+    """Get system information including CPU, memory, and temperature"""
+    try:
+        cpu_usage = psutil.cpu_percent(interval=0.5)
+        
+        memory = psutil.virtual_memory()
+        memory_used_gb = memory.used / (1024 ** 3)
+        memory_total_gb = memory.total / (1024 ** 3)
+        memory_usage_percent = memory.percent
+        
+        # Get temperature
+        temp = get_cpu_temperature()
+        
+        # Get uptime
+        uptime = get_uptime()
+        
+        # Get load average
+        load_avg = os.getloadavg()
+        
+        # Get CPU cores
+        cpu_cores = psutil.cpu_count(logical=False)
+        
+        cpu_threads = psutil.cpu_count(logical=True)
+        
+        # Get Proxmox version
+        proxmox_version = get_proxmox_version()
+        
+        # Get kernel version
+        kernel_version = platform.release()
+        
+        # Get available updates
+        available_updates = get_available_updates()
+        
+        return jsonify({
+            'cpu_usage': round(cpu_usage, 1),
+            'memory_usage': round(memory_usage_percent, 1),
+            'memory_total': round(memory_total_gb, 1),
+            'memory_used': round(memory_used_gb, 1),
+            'temperature': temp,
+            'uptime': uptime,
+            'load_average': list(load_avg),
+            'hostname': socket.gethostname(),
+            'node_id': socket.gethostname(),
+            'timestamp': datetime.now().isoformat(),
+            'cpu_cores': cpu_cores,
+            'cpu_threads': cpu_threads,
+            'proxmox_version': proxmox_version,
+            'kernel_version': kernel_version,
+            'available_updates': available_updates
+        })
+    except Exception as e:
+        print(f"Error getting system info: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/storage', methods=['GET'])
 def api_storage():
