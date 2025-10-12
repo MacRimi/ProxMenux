@@ -140,6 +140,33 @@ export function SystemLogs() {
     }
   }, [dateFilter, customDays])
 
+  useEffect(() => {
+    console.log("[v0] Level or service filter changed:", levelFilter, serviceFilter)
+    if (levelFilter !== "all" || serviceFilter !== "all") {
+      setLoading(true)
+      fetchSystemLogs()
+        .then((newLogs) => {
+          console.log(
+            "[v0] Loaded logs for filters - Level:",
+            levelFilter,
+            "Service:",
+            serviceFilter,
+            "Count:",
+            newLogs.length,
+          )
+          setLogs(newLogs)
+          setLoading(false)
+        })
+        .catch((err) => {
+          console.error("[v0] Error loading logs:", err)
+          setLoading(false)
+        })
+    } else if (dateFilter === "now") {
+      // Only reload all data if we're on "now" and all filters are cleared
+      fetchAllData()
+    }
+  }, [levelFilter, serviceFilter])
+
   const fetchAllData = async () => {
     try {
       setLoading(true)
@@ -179,11 +206,34 @@ export function SystemLogs() {
   const fetchSystemLogs = async (): Promise<SystemLog[]> => {
     try {
       let apiUrl = getApiUrl("/api/logs")
+      const params = new URLSearchParams()
 
       if (dateFilter !== "now") {
         const daysAgo = dateFilter === "custom" ? Number.parseInt(customDays) : Number.parseInt(dateFilter)
-        apiUrl += `?since_days=${daysAgo}`
-        console.log("[v0] Fetching logs with API URL:", apiUrl, "since_days:", daysAgo)
+        params.append("since_days", daysAgo.toString())
+        console.log("[v0] Fetching logs since_days:", daysAgo)
+      }
+
+      if (levelFilter !== "all") {
+        const priorityMap: Record<string, string> = {
+          error: "3", // 0-3: emerg, alert, crit, err
+          warning: "4", // 4: warning
+          info: "6", // 5-7: notice, info, debug
+        }
+        const priority = priorityMap[levelFilter]
+        if (priority) {
+          params.append("priority", priority)
+          console.log("[v0] Fetching logs with priority:", priority, "for level:", levelFilter)
+        }
+      }
+
+      if (serviceFilter !== "all") {
+        params.append("service", serviceFilter)
+        console.log("[v0] Fetching logs for service:", serviceFilter)
+      }
+
+      if (params.toString()) {
+        apiUrl += `?${params.toString()}`
       }
 
       console.log("[v0] Making fetch request to:", apiUrl)
@@ -202,8 +252,7 @@ export function SystemLogs() {
       }
 
       const data = await response.json()
-      console.log("[v0] Received logs data, type:", typeof data, "is array:", Array.isArray(data))
-      console.log("[v0] Data length:", Array.isArray(data) ? data.length : data.logs ? data.logs.length : 0)
+      console.log("[v0] Received logs data, count:", data.logs?.length || 0)
 
       const logsArray = Array.isArray(data) ? data : data.logs || []
       console.log("[v0] Returning logs array with length:", logsArray.length)
