@@ -3912,6 +3912,199 @@ def api_health():
         'version': '1.0.0'
     })
 
+@app.route('/api/prometheus', methods=['GET'])
+def api_prometheus():
+    """Export metrics in Prometheus format"""
+    try:
+        metrics = []
+        timestamp = int(datetime.now().timestamp() * 1000)
+        node = socket.gethostname()
+        
+        # Get system data
+        cpu_usage = psutil.cpu_percent(interval=0.5)
+        memory = psutil.virtual_memory()
+        load_avg = os.getloadavg()
+        uptime_seconds = time.time() - psutil.boot_time()
+        
+        # System metrics
+        metrics.append(f'# HELP proxmox_cpu_usage CPU usage percentage')
+        metrics.append(f'# TYPE proxmox_cpu_usage gauge')
+        metrics.append(f'proxmox_cpu_usage{{node="{node}"}} {cpu_usage} {timestamp}')
+        
+        metrics.append(f'# HELP proxmox_memory_total_bytes Total memory in bytes')
+        metrics.append(f'# TYPE proxmox_memory_total_bytes gauge')
+        metrics.append(f'proxmox_memory_total_bytes{{node="{node}"}} {memory.total} {timestamp}')
+        
+        metrics.append(f'# HELP proxmox_memory_used_bytes Used memory in bytes')
+        metrics.append(f'# TYPE proxmox_memory_used_bytes gauge')
+        metrics.append(f'proxmox_memory_used_bytes{{node="{node}"}} {memory.used} {timestamp}')
+        
+        metrics.append(f'# HELP proxmox_memory_usage_percent Memory usage percentage')
+        metrics.append(f'# TYPE proxmox_memory_usage_percent gauge')
+        metrics.append(f'proxmox_memory_usage_percent{{node="{node}"}} {memory.percent} {timestamp}')
+        
+        metrics.append(f'# HELP proxmox_load_average System load average')
+        metrics.append(f'# TYPE proxmox_load_average gauge')
+        metrics.append(f'proxmox_load_average{{node="{node}",period="1m"}} {load_avg[0]} {timestamp}')
+        metrics.append(f'proxmox_load_average{{node="{node}",period="5m"}} {load_avg[1]} {timestamp}')
+        metrics.append(f'proxmox_load_average{{node="{node}",period="15m"}} {load_avg[2]} {timestamp}')
+        
+        metrics.append(f'# HELP proxmox_uptime_seconds System uptime in seconds')
+        metrics.append(f'# TYPE proxmox_uptime_seconds counter')
+        metrics.append(f'proxmox_uptime_seconds{{node="{node}"}} {uptime_seconds} {timestamp}')
+        
+        # Temperature
+        temp = get_cpu_temperature()
+        if temp:
+            metrics.append(f'# HELP proxmox_cpu_temperature_celsius CPU temperature in Celsius')
+            metrics.append(f'# TYPE proxmox_cpu_temperature_celsius gauge')
+            metrics.append(f'proxmox_cpu_temperature_celsius{{node="{node}"}} {temp} {timestamp}')
+        
+        # Storage metrics
+        storage_info = get_storage_info()
+        for disk in storage_info.get('disks', []):
+            disk_name = disk.get('name', 'unknown')
+            metrics.append(f'# HELP proxmox_disk_total_bytes Total disk space in bytes')
+            metrics.append(f'# TYPE proxmox_disk_total_bytes gauge')
+            metrics.append(f'proxmox_disk_total_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("total", 0)} {timestamp}')
+            
+            metrics.append(f'# HELP proxmox_disk_used_bytes Used disk space in bytes')
+            metrics.append(f'# TYPE proxmox_disk_used_bytes gauge')
+            metrics.append(f'proxmox_disk_used_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("used", 0)} {timestamp}')
+            
+            metrics.append(f'# HELP proxmox_disk_usage_percent Disk usage percentage')
+            metrics.append(f'# TYPE proxmox_disk_usage_percent gauge')
+            metrics.append(f'proxmox_disk_usage_percent{{node="{node}",disk="{disk_name}"}} {disk.get("percent", 0)} {timestamp}')
+        
+        # Network metrics
+        network_info = get_network_info()
+        if 'traffic' in network_info:
+            metrics.append(f'# HELP proxmox_network_bytes_sent_total Total bytes sent')
+            metrics.append(f'# TYPE proxmox_network_bytes_sent_total counter')
+            metrics.append(f'proxmox_network_bytes_sent_total{{node="{node}"}} {network_info["traffic"].get("bytes_sent", 0)} {timestamp}')
+            
+            metrics.append(f'# HELP proxmox_network_bytes_received_total Total bytes received')
+            metrics.append(f'# TYPE proxmox_network_bytes_received_total counter')
+            metrics.append(f'proxmox_network_bytes_received_total{{node="{node}"}} {network_info["traffic"].get("bytes_recv", 0)} {timestamp}')
+        
+        # Per-interface network metrics
+        for interface in network_info.get('interfaces', []):
+            iface_name = interface.get('name', 'unknown')
+            if interface.get('status') == 'up':
+                metrics.append(f'# HELP proxmox_interface_bytes_sent_total Bytes sent per interface')
+                metrics.append(f'# TYPE proxmox_interface_bytes_sent_total counter')
+                metrics.append(f'proxmox_interface_bytes_sent_total{{node="{node}",interface="{iface_name}"}} {interface.get("bytes_sent", 0)} {timestamp}')
+                
+                metrics.append(f'# HELP proxmox_interface_bytes_received_total Bytes received per interface')
+                metrics.append(f'# TYPE proxmox_interface_bytes_received_total counter')
+                metrics.append(f'proxmox_interface_bytes_received_total{{node="{node}",interface="{iface_name}"}} {interface.get("bytes_recv", 0)} {timestamp}')
+        
+        # VM metrics
+        vms_data = get_proxmox_vms()
+        if isinstance(vms_data, list):
+            vms = vms_data
+            total_vms = len(vms)
+            running_vms = sum(1 for vm in vms if vm.get('status') == 'running')
+            stopped_vms = sum(1 for vm in vms if vm.get('status') == 'stopped')
+            
+            metrics.append(f'# HELP proxmox_vms_total Total number of VMs and LXCs')
+            metrics.append(f'# TYPE proxmox_vms_total gauge')
+            metrics.append(f'proxmox_vms_total{{node="{node}"}} {total_vms} {timestamp}')
+            
+            metrics.append(f'# HELP proxmox_vms_running Number of running VMs and LXCs')
+            metrics.append(f'# TYPE proxmox_vms_running gauge')
+            metrics.append(f'proxmox_vms_running{{node="{node}"}} {running_vms} {timestamp}')
+            
+            metrics.append(f'# HELP proxmox_vms_stopped Number of stopped VMs and LXCs')
+            metrics.append(f'# TYPE proxmox_vms_stopped gauge')
+            metrics.append(f'proxmox_vms_stopped{{node="{node}"}} {stopped_vms} {timestamp}')
+            
+            # Per-VM metrics
+            for vm in vms:
+                vmid = vm.get('vmid', 'unknown')
+                vm_name = vm.get('name', f'vm-{vmid}')
+                vm_status = 1 if vm.get('status') == 'running' else 0
+                
+                metrics.append(f'# HELP proxmox_vm_status VM status (1=running, 0=stopped)')
+                metrics.append(f'# TYPE proxmox_vm_status gauge')
+                metrics.append(f'proxmox_vm_status{{node="{node}",vmid="{vmid}",name="{vm_name}"}} {vm_status} {timestamp}')
+                
+                if vm.get('status') == 'running':
+                    metrics.append(f'# HELP proxmox_vm_cpu_usage VM CPU usage')
+                    metrics.append(f'# TYPE proxmox_vm_cpu_usage gauge')
+                    metrics.append(f'proxmox_vm_cpu_usage{{node="{node}",vmid="{vmid}",name="{vm_name}"}} {vm.get("cpu", 0)} {timestamp}')
+                    
+                    metrics.append(f'# HELP proxmox_vm_memory_used_bytes VM memory used in bytes')
+                    metrics.append(f'# TYPE proxmox_vm_memory_used_bytes gauge')
+                    metrics.append(f'proxmox_vm_memory_used_bytes{{node="{node}",vmid="{vmid}",name="{vm_name}"}} {vm.get("mem", 0)} {timestamp}')
+                    
+                    metrics.append(f'# HELP proxmox_vm_memory_max_bytes VM memory max in bytes')
+                    metrics.append(f'# TYPE proxmox_vm_memory_max_bytes gauge')
+                    metrics.append(f'proxmox_vm_memory_max_bytes{{node="{node}",vmid="{vmid}",name="{vm_name}"}} {vm.get("maxmem", 0)} {timestamp}')
+        
+        # Hardware metrics (temperature, fans, UPS)
+        try:
+            hardware_info = get_hardware_info()
+            
+            # Disk temperatures
+            for device in hardware_info.get('storage_devices', []):
+                if device.get('temperature'):
+                    disk_name = device.get('name', 'unknown')
+                    metrics.append(f'# HELP proxmox_disk_temperature_celsius Disk temperature in Celsius')
+                    metrics.append(f'# TYPE proxmox_disk_temperature_celsius gauge')
+                    metrics.append(f'proxmox_disk_temperature_celsius{{node="{node}",disk="{disk_name}"}} {device["temperature"]} {timestamp}')
+            
+            # Fan speeds
+            all_fans = hardware_info.get('sensors', {}).get('fans', [])
+            all_fans.extend(hardware_info.get('ipmi_fans', []))
+            for fan in all_fans:
+                fan_name = fan.get('name', 'unknown').replace(' ', '_')
+                if fan.get('speed') is not None:
+                    metrics.append(f'# HELP proxmox_fan_speed_rpm Fan speed in RPM')
+                    metrics.append(f'# TYPE proxmox_fan_speed_rpm gauge')
+                    metrics.append(f'proxmox_fan_speed_rpm{{node="{node}",fan="{fan_name}"}} {fan["speed"]} {timestamp}')
+            
+            # UPS metrics
+            ups = hardware_info.get('ups')
+            if ups:
+                ups_name = ups.get('name', 'ups').replace(' ', '_')
+                
+                if ups.get('battery_charge') is not None:
+                    metrics.append(f'# HELP proxmox_ups_battery_charge_percent UPS battery charge percentage')
+                    metrics.append(f'# TYPE proxmox_ups_battery_charge_percent gauge')
+                    metrics.append(f'proxmox_ups_battery_charge_percent{{node="{node}",ups="{ups_name}"}} {ups["battery_charge"]} {timestamp}')
+                
+                if ups.get('load') is not None:
+                    metrics.append(f'# HELP proxmox_ups_load_percent UPS load percentage')
+                    metrics.append(f'# TYPE proxmox_ups_load_percent gauge')
+                    metrics.append(f'proxmox_ups_load_percent{{node="{node}",ups="{ups_name}"}} {ups["load"]} {timestamp}')
+                
+                if ups.get('runtime'):
+                    # Convert runtime to seconds
+                    runtime_str = ups['runtime']
+                    runtime_seconds = 0
+                    if 'minutes' in runtime_str:
+                        runtime_seconds = int(runtime_str.split()[0]) * 60
+                    metrics.append(f'# HELP proxmox_ups_runtime_seconds UPS runtime in seconds')
+                    metrics.append(f'# TYPE proxmox_ups_runtime_seconds gauge')
+                    metrics.append(f'proxmox_ups_runtime_seconds{{node="{node}",ups="{ups_name}"}} {runtime_seconds} {timestamp}')
+                
+                if ups.get('input_voltage') is not None:
+                    metrics.append(f'# HELP proxmox_ups_input_voltage_volts UPS input voltage in volts')
+                    metrics.append(f'# TYPE proxmox_ups_input_voltage_volts gauge')
+                    metrics.append(f'proxmox_ups_input_voltage_volts{{node="{node}",ups="{ups_name}"}} {ups["input_voltage"]} {timestamp}')
+        except Exception as e:
+            print(f"[v0] Error getting hardware metrics for Prometheus: {e}")
+        
+        # Return metrics in Prometheus format
+        return '\n'.join(metrics) + '\n', 200, {'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'}
+        
+    except Exception as e:
+        print(f"Error generating Prometheus metrics: {e}")
+        import traceback
+        traceback.print_exc()
+        return f'# Error generating metrics: {str(e)}\n', 500, {'Content-Type': 'text/plain; charset=utf-8'}
+
 @app.route('/api/system-info', methods=['GET'])
 def api_system_info():
     """Get system and node information for dashboard header"""
@@ -3983,7 +4176,8 @@ def api_info():
             '/api/backups', # Added backup endpoint
             '/api/events', # Added events endpoint
             '/api/notifications', # Added notifications endpoint
-            '/api/task-log/<upid>' # Added task log endpoint
+            '/api/task-log/<upid>', # Added task log endpoint
+            '/api/prometheus' # Added prometheus endpoint
         ]
     })
 
@@ -4231,7 +4425,7 @@ def api_vm_control(vmid):
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware
+    # API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus
     
     import sys
     import logging
@@ -4245,6 +4439,6 @@ if __name__ == '__main__':
     cli.show_server_banner = lambda *x: None
     
     # Print only essential information
-    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
+    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus")
     
     app.run(host='0.0.0.0', port=8008, debug=False)

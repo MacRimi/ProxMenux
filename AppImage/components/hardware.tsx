@@ -965,7 +965,12 @@ export default function Hardware() {
             <div className="rounded-lg border border-border/30 bg-background/50 p-4">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm font-medium">{hardwareData.ups.model}</span>
-                <Badge variant={hardwareData.ups.status === "OL" ? "default" : "destructive"}>
+                <Badge
+                  variant={hardwareData.ups.status === "OL" ? "default" : "destructive"}
+                  className={
+                    hardwareData.ups.status === "OL" ? "bg-green-500/10 text-green-500 border-green-500/20" : ""
+                  }
+                >
                   {hardwareData.ups.status}
                 </Badge>
               </div>
@@ -975,11 +980,11 @@ export default function Hardware() {
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Battery Charge</span>
-                      <span className="text-sm font-semibold">{hardwareData.ups.battery_charge}</span>
+                      <span className="text-sm font-semibold text-green-500">{hardwareData.ups.battery_charge}</span>
                     </div>
                     <Progress
                       value={Number.parseInt(hardwareData.ups.battery_charge.replace("%", ""))}
-                      className="h-2"
+                      className="h-2 [&>div]:bg-blue-500"
                     />
                   </div>
                 )}
@@ -988,23 +993,34 @@ export default function Hardware() {
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Load</span>
-                      <span className="text-sm font-semibold">{hardwareData.ups.load_percent}</span>
+                      <span className="text-sm font-semibold text-green-500">{hardwareData.ups.load_percent}</span>
                     </div>
-                    <Progress value={Number.parseInt(hardwareData.ups.load_percent.replace("%", ""))} className="h-2" />
+                    <Progress
+                      value={Number.parseInt(hardwareData.ups.load_percent.replace("%", ""))}
+                      className="h-2 [&>div]:bg-blue-500"
+                    />
                   </div>
                 )}
 
                 {hardwareData.ups.time_left && (
                   <div>
                     <span className="text-xs text-muted-foreground">Runtime</span>
-                    <p className="text-sm font-semibold">{hardwareData.ups.time_left}</p>
+                    <div className="mt-1">
+                      <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+                        {hardwareData.ups.time_left}
+                      </Badge>
+                    </div>
                   </div>
                 )}
 
                 {hardwareData.ups.line_voltage && (
                   <div>
                     <span className="text-xs text-muted-foreground">Input Voltage</span>
-                    <p className="text-sm font-semibold">{hardwareData.ups.line_voltage}</p>
+                    <div className="mt-1">
+                      <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+                        {hardwareData.ups.line_voltage}
+                      </Badge>
+                    </div>
                   </div>
                 )}
               </div>
