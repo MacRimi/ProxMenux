@@ -166,7 +166,7 @@ export function ProxmoxDashboard() {
       case "network":
         return "Network"
       case "vms":
-        return "Virtual Machines"
+        return "VMs & LXCs"
       case "hardware":
         return "Hardware"
       case "logs":
@@ -316,7 +316,7 @@ export function ProxmoxDashboard() {
               value="vms"
               className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
             >
-              Virtual Machines
+              VMs & LXCs
             </TabsTrigger>
             <TabsTrigger
               value="hardware"
@@ -399,7 +399,7 @@ export function ProxmoxDashboard() {
                   }`}
                 >
                   <Box className="h-5 w-5" />
-                  <span>Virtual Machines</span>
+                  <span>VMs & LXCs</span>
                 </Button>
                 <Button
                   variant="ghost"

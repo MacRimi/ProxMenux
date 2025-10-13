@@ -104,6 +104,18 @@ const formatBytes = (bytes: number | undefined): string => {
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
 }
 
+const formatStorage = (bytes: number): string => {
+  if (bytes === 0) return "0 B"
+  const k = 1024
+  const sizes = ["B", "KB", "MB", "GB", "TB", "PB"]
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const value = bytes / Math.pow(k, i)
+
+  // Use 1 decimal place for values >= 10, 2 decimal places for values < 10
+  const decimals = value >= 10 ? 1 : 2
+  return `${value.toFixed(decimals)} ${sizes[i]}`
+}
+
 const formatSpeed = (speed: number): string => {
   if (speed === 0) return "N/A"
   if (speed >= 1000) return `${(speed / 1000).toFixed(1)} Gbps`
@@ -170,8 +182,8 @@ export function NetworkMetrics() {
     )
   }
 
-  const trafficInGB = (networkData.traffic.bytes_recv / 1024 ** 3).toFixed(2)
-  const trafficOutGB = (networkData.traffic.bytes_sent / 1024 ** 3).toFixed(2)
+  const trafficInFormatted = formatStorage(networkData.traffic.bytes_recv)
+  const trafficOutFormatted = formatStorage(networkData.traffic.bytes_sent)
   const packetsRecvK = networkData.traffic.packets_recv ? (networkData.traffic.packets_recv / 1000).toFixed(0) : "0"
 
   const totalErrors = (networkData.traffic.errin || 0) + (networkData.traffic.errout || 0)
@@ -204,11 +216,11 @@ export function NetworkMetrics() {
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Received:</span>
-                <span className="text-xl font-bold text-green-500">↓ {trafficInGB} GB</span>
+                <span className="text-xl font-bold text-green-500">↓ {trafficInFormatted}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Sent:</span>
-                <span className="text-xl font-bold text-blue-500">↑ {trafficOutGB} GB</span>
+                <span className="text-xl font-bold text-blue-500">↑ {trafficOutFormatted}</span>
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">Total data transferred</p>
