@@ -231,16 +231,22 @@ def extract_vmid_from_interface(interface_name):
         return None, None
 
 def get_vm_lxc_names():
-    """Get VM and LXC names from Proxmox API"""
+    """Get VM and LXC names from Proxmox API (only from local node)"""
     vm_lxc_map = {}
     
     try:
+        local_node = socket.gethostname()
+        
         result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
                               capture_output=True, text=True, timeout=10)
         
         if result.returncode == 0:
             resources = json.loads(result.stdout)
             for resource in resources:
+                node = resource.get('node', '')
+                if node != local_node:
+                    continue
+                
                 vmid = resource.get('vmid')
                 name = resource.get('name', f'VM-{vmid}')
                 vm_type = resource.get('type', 'unknown')  # 'qemu' or 'lxc'
@@ -1341,17 +1347,25 @@ def get_network_info():
         }
 
 def get_proxmox_vms():
-    """Get Proxmox VM and LXC information (requires pvesh command)"""
+    """Get Proxmox VM and LXC information (requires pvesh command) - only from local node"""
     try:
         all_vms = []
         
         try:
+            local_node = socket.gethostname()
+            print(f"[v0] Local node detected: {local_node}")
+            
             result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
                                   capture_output=True, text=True, timeout=10)
             
             if result.returncode == 0:
                 resources = json.loads(result.stdout)
                 for resource in resources:
+                    node = resource.get('node', '')
+                    if node != local_node:
+                        print(f"[v0] Skipping VM {resource.get('vmid')} from remote node: {node}")
+                        continue
+                    
                     vm_data = {
                         'vmid': resource.get('vmid'),
                         'name': resource.get('name', f"VM-{resource.get('vmid')}"),
@@ -1371,6 +1385,7 @@ def get_proxmox_vms():
                     all_vms.append(vm_data)
                     print(f"[v0] Found {vm_data['type']}: {vm_data['name']} (VMID: {vm_data['vmid']}, Status: {vm_data['status']})")
                 
+                print(f"[v0] Total VMs/LXCs on local node {local_node}: {len(all_vms)}")
                 return all_vms
             else:
                 print(f"[v0] pvesh command failed: {result.stderr}")
