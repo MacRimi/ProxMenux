@@ -1820,7 +1820,7 @@ def get_detailed_gpu_info(gpu):
                 # Terminate process
                 try:
                     process.terminate()
-                    _, stderr_output = process.communicate(timeout=1) 
+                    _, stderr_output = process.communicate(timeout=0.5) # Use communicate with a smaller timeout
                     if stderr_output:
                         print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
                 except subprocess.TimeoutExpired:
@@ -4042,7 +4042,7 @@ def api_prometheus():
                     metrics.append(f'# TYPE proxmox_vm_memory_max_bytes gauge')
                     metrics.append(f'proxmox_vm_memory_max_bytes{{node="{node}",vmid="{vmid}",name="{vm_name}"}} {vm.get("maxmem", 0)} {timestamp}')
         
-        # Hardware metrics (temperature, fans, UPS)
+        # Hardware metrics (temperature, fans, UPS, GPU)
         try:
             hardware_info = get_hardware_info()
             
@@ -4063,6 +4063,76 @@ def api_prometheus():
                     metrics.append(f'# HELP proxmox_fan_speed_rpm Fan speed in RPM')
                     metrics.append(f'# TYPE proxmox_fan_speed_rpm gauge')
                     metrics.append(f'proxmox_fan_speed_rpm{{node="{node}",fan="{fan_name}"}} {fan["speed"]} {timestamp}')
+            
+            # GPU metrics
+            pci_devices = hardware_info.get('pci_devices', [])
+            for device in pci_devices:
+                if device.get('type') == 'GPU':
+                    gpu_name = device.get('device', 'unknown').replace(' ', '_')
+                    gpu_vendor = device.get('vendor', 'unknown')
+                    
+                    # GPU Temperature
+                    if device.get('gpu_temperature') is not None:
+                        metrics.append(f'# HELP proxmox_gpu_temperature_celsius GPU temperature in Celsius')
+                        metrics.append(f'# TYPE proxmox_gpu_temperature_celsius gauge')
+                        metrics.append(f'proxmox_gpu_temperature_celsius{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {device["gpu_temperature"]} {timestamp}')
+                    
+                    # GPU Utilization
+                    if device.get('gpu_utilization') is not None:
+                        metrics.append(f'# HELP proxmox_gpu_utilization_percent GPU utilization percentage')
+                        metrics.append(f'# TYPE proxmox_gpu_utilization_percent gauge')
+                        metrics.append(f'proxmox_gpu_utilization_percent{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {device["gpu_utilization"]} {timestamp}')
+                    
+                    # GPU Memory
+                    if device.get('gpu_memory_used') and device.get('gpu_memory_total'):
+                        try:
+                            # Extract numeric values from strings like "1024 MiB"
+                            mem_used = float(device['gpu_memory_used'].split()[0])
+                            mem_total = float(device['gpu_memory_total'].split()[0])
+                            mem_used_bytes = mem_used * 1024 * 1024  # Convert MiB to bytes
+                            mem_total_bytes = mem_total * 1024 * 1024
+                            
+                            metrics.append(f'# HELP proxmox_gpu_memory_used_bytes GPU memory used in bytes')
+                            metrics.append(f'# TYPE proxmox_gpu_memory_used_bytes gauge')
+                            metrics.append(f'proxmox_gpu_memory_used_bytes{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {mem_used_bytes} {timestamp}')
+                            
+                            metrics.append(f'# HELP proxmox_gpu_memory_total_bytes GPU memory total in bytes')
+                            metrics.append(f'# TYPE proxmox_gpu_memory_total_bytes gauge')
+                            metrics.append(f'proxmox_gpu_memory_total_bytes{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {mem_total_bytes} {timestamp}')
+                        except (ValueError, IndexError):
+                            pass
+                    
+                    # GPU Power Draw (NVIDIA only)
+                    if device.get('gpu_power_draw'):
+                        try:
+                            # Extract numeric value from string like "75.5 W"
+                            power_draw = float(device['gpu_power_draw'].split()[0])
+                            metrics.append(f'# HELP proxmox_gpu_power_draw_watts GPU power draw in watts')
+                            metrics.append(f'# TYPE proxmox_gpu_power_draw_watts gauge')
+                            metrics.append(f'proxmox_gpu_power_draw_watts{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {power_draw} {timestamp}')
+                        except (ValueError, IndexError):
+                            pass
+                    
+                    # GPU Clock Speeds (NVIDIA only)
+                    if device.get('gpu_clock_speed'):
+                        try:
+                            # Extract numeric value from string like "1500 MHz"
+                            clock_speed = float(device['gpu_clock_speed'].split()[0])
+                            metrics.append(f'# HELP proxmox_gpu_clock_speed_mhz GPU clock speed in MHz')
+                            metrics.append(f'# TYPE proxmox_gpu_clock_speed_mhz gauge')
+                            metrics.append(f'proxmox_gpu_clock_speed_mhz{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {clock_speed} {timestamp}')
+                        except (ValueError, IndexError):
+                            pass
+                    
+                    if device.get('gpu_memory_clock'):
+                        try:
+                            # Extract numeric value from string like "5001 MHz"
+                            mem_clock = float(device['gpu_memory_clock'].split()[0])
+                            metrics.append(f'# HELP proxmox_gpu_memory_clock_mhz GPU memory clock speed in MHz')
+                            metrics.append(f'# TYPE proxmox_gpu_memory_clock_mhz gauge')
+                            metrics.append(f'proxmox_gpu_memory_clock_mhz{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {mem_clock} {timestamp}')
+                        except (ValueError, IndexError):
+                            pass
             
             # UPS metrics
             ups = hardware_info.get('ups')
@@ -4292,7 +4362,7 @@ def api_gpu_realtime(slot):
 def api_vm_details(vmid):
     """Get detailed information for a specific VM/LXC"""
     try:
-        result = subprocess.run(['pvesh', 'get', f'/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
                               capture_output=True, text=True, timeout=10)
         
         if result.returncode == 0:
