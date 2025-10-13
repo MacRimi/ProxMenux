@@ -66,18 +66,9 @@ const fetchStorageData = async (): Promise<StorageData | null> => {
     }
 
     const data = await response.json()
-    console.log("[v0] Storage data received:", data)
-    console.log("[v0] Disks:", data.disks)
-    if (data.disks && data.disks.length > 0) {
-      console.log("[v0] First disk details:", data.disks[0])
-      console.log(
-        "[v0] Disk types:",
-        data.disks.map((d: DiskInfo) => ({ name: d.name, type: d.disk_type })),
-      )
-    }
     return data
   } catch (error) {
-    console.error("[v0] Failed to fetch storage data from Flask server:", error)
+    console.error("Failed to fetch storage data from Flask server:", error)
     return null
   }
 }
@@ -103,13 +94,10 @@ const getTempStatus = (temp: number, diskType: string): "safe" | "warning" | "cr
 }
 
 const groupDisksByType = (disks: DiskInfo[]): DiskGroup[] => {
-  console.log("[v0] Grouping disks by type, total disks:", disks.length)
-
   const groups: { [key: string]: DiskInfo[] } = {}
 
   disks.forEach((disk) => {
     const type = disk.disk_type || "Unknown"
-    console.log("[v0] Disk:", disk.name, "Type:", type, "Temp:", disk.temperature)
     if (!groups[type]) {
       groups[type] = []
     }
@@ -128,12 +116,9 @@ const groupDisksByType = (disks: DiskInfo[]): DiskGroup[] => {
       else if (diskStatus === "warning" && status !== "critical") status = "warning"
     })
 
-    console.log("[v0] Group:", type, "Disks:", disks.length, "Avg Temp:", avgTemp, "Status:", status)
-
     return { type, disks, avgTemp, status }
   })
 
-  console.log("[v0] Total groups created:", result.length)
   return result
 }
 
