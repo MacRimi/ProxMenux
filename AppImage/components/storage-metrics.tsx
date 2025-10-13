@@ -40,13 +40,15 @@ interface DiskInfo {
   ssd_life_left?: number
   wear_leveling_count?: number
   media_wearout_indicator?: number
-}
-
-interface DiskGroup {
-  type: string
-  disks: DiskInfo[]
-  avgTemp: number
-  status: "safe" | "warning" | "critical"
+  model?: string
+  serial?: string
+  power_on_hours?: number
+  power_cycles?: number
+  smart_status?: string
+  reallocated_sectors?: number
+  pending_sectors?: number
+  crc_errors?: number
+  rotation_rate?: number
 }
 
 const fetchStorageData = async (): Promise<StorageData | null> => {
@@ -116,6 +118,187 @@ const groupDisksByType = (disks: DiskInfo[]): DiskGroup[] => {
 
     return { type, disks, avgTemp, status }
   })
+}
+
+interface DiskGroup {
+  type: string
+  disks: DiskInfo[]
+  avgTemp: number
+  status: "safe" | "warning" | "critical"
+}
+
+function DiskDetailsModal({ disk }: { disk: DiskInfo }) {
+  const getHealthColor = (health: string) => {
+    if (health === "healthy") return "bg-green-500/10 text-green-500 border-green-500/20"
+    if (health === "warning") return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+    return "bg-red-500/10 text-red-500 border-red-500/20"
+  }
+
+  const getLifeColor = (life: number) => {
+    if (life >= 80) return "text-green-500"
+    if (life >= 50) return "text-yellow-500"
+    return "text-red-500"
+  }
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm">
+          Ver detalles
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <HardDrive className="h-5 w-5" />
+            Disk Details: {disk.name}
+          </DialogTitle>
+          <DialogDescription>Complete SMART information and health status</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Basic Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">Model</div>
+              <div className="font-medium">{disk.model || "Unknown"}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">Serial Number</div>
+              <div className="font-medium">{disk.serial || "Unknown"}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">Capacity</div>
+              <div className="font-medium">{disk.total?.toFixed(1) || "N/A"}G</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">Health Status</div>
+              <Badge variant="outline" className={getHealthColor(disk.health)}>
+                {disk.health === "healthy" ? "Healthy" : disk.health}
+              </Badge>
+            </div>
+          </div>
+
+          {/* SSD/NVMe Wear Indicators */}
+          {(disk.disk_type === "SSD" || disk.disk_type === "NVMe") && (
+            <div className="border border-border rounded-lg p-4 bg-card/50">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Indicadores de desgaste y salud
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                {disk.ssd_life_left !== undefined && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Vida útil restante</div>
+                    <div className="flex items-center gap-2">
+                      <Progress value={disk.ssd_life_left} className="flex-1" />
+                      <span className={`font-bold ${getLifeColor(disk.ssd_life_left)}`}>{disk.ssd_life_left}%</span>
+                    </div>
+                  </div>
+                )}
+                {disk.disk_type === "NVMe" && disk.percentage_used !== undefined && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Percentage Used</div>
+                    <div className="flex items-center gap-2">
+                      <Progress value={disk.percentage_used} className="flex-1" />
+                      <span className={`font-bold ${getLifeColor(100 - disk.percentage_used)}`}>
+                        {disk.percentage_used}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {disk.wear_leveling_count !== undefined && disk.wear_leveling_count > 0 && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Wear Leveling Count</div>
+                    <div className={`font-bold ${getLifeColor(disk.wear_leveling_count)}`}>
+                      {disk.wear_leveling_count}%
+                    </div>
+                  </div>
+                )}
+                {disk.media_wearout_indicator !== undefined && disk.media_wearout_indicator > 0 && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Media Wearout Indicator</div>
+                    <div className={`font-bold ${getLifeColor(disk.media_wearout_indicator)}`}>
+                      {disk.media_wearout_indicator}%
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SMART Attributes */}
+          <div>
+            <h3 className="font-semibold mb-3">SMART Attributes</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Temperature</div>
+                <div
+                  className={`font-bold ${
+                    getTempStatus(disk.temperature, disk.disk_type || "Unknown") === "safe"
+                      ? "text-green-500"
+                      : getTempStatus(disk.temperature, disk.disk_type || "Unknown") === "warning"
+                        ? "text-yellow-500"
+                        : "text-red-500"
+                  }`}
+                >
+                  {disk.temperature}°C
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Power On Hours</div>
+                <div className="font-medium">
+                  {disk.power_on_hours ? `${disk.power_on_hours}h (${Math.floor(disk.power_on_hours / 24)}d)` : "N/A"}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Rotation Rate</div>
+                <div className="font-medium">
+                  {disk.rotation_rate === 0 || disk.disk_type === "SSD" || disk.disk_type === "NVMe"
+                    ? "SSD"
+                    : disk.rotation_rate
+                      ? `${disk.rotation_rate} RPM`
+                      : "N/A"}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Power Cycles</div>
+                <div className="font-medium">{disk.power_cycles || "N/A"}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">SMART Status</div>
+                <div className="font-medium">
+                  {disk.smart_status === "passed" ? "Passed" : disk.smart_status || "Unknown"}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Reallocated Sectors</div>
+                <div
+                  className={`font-medium ${disk.reallocated_sectors && disk.reallocated_sectors > 0 ? "text-red-500" : ""}`}
+                >
+                  {disk.reallocated_sectors || 0}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Pending Sectors</div>
+                <div
+                  className={`font-medium ${disk.pending_sectors && disk.pending_sectors > 0 ? "text-yellow-500" : ""}`}
+                >
+                  {disk.pending_sectors || 0}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">CRC Errors</div>
+                <div className={`font-medium ${disk.crc_errors && disk.crc_errors > 0 ? "text-yellow-500" : ""}`}>
+                  {disk.crc_errors || 0}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 function TemperatureThresholdsModal() {
@@ -492,6 +675,8 @@ export function StorageMetrics() {
                     )}
                     {disk.health}
                   </Badge>
+
+                  <DiskDetailsModal disk={disk} />
                 </div>
               </div>
             ))}
