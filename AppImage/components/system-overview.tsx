@@ -383,6 +383,19 @@ export function SystemOverview() {
     return (bytes / 1024 ** 3).toFixed(2)
   }
 
+  const formatStorage = (sizeInGB: number): string => {
+    if (sizeInGB < 1) {
+      // Less than 1 GB, show in MB
+      return `${(sizeInGB * 1024).toFixed(1)} MB`
+    } else if (sizeInGB < 1024) {
+      // Less than 1024 GB, show in GB
+      return `${sizeInGB.toFixed(1)} GB`
+    } else {
+      // 1024 GB or more, show in TB
+      return `${(sizeInGB / 1024).toFixed(1)} TB`
+    }
+  }
+
   const tempStatus = getTemperatureStatus(systemData.temperature)
 
   const localStorage = proxmoxStorageData?.storage.find(
@@ -623,15 +636,15 @@ export function SystemOverview() {
 
                 <div className="pt-2 border-t border-border space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Data Sent:</span>
-                    <span className="text-lg font-semibold text-foreground">
-                      {(networkData.traffic.bytes_sent / 1024 ** 3).toFixed(2)} GB
+                    <span className="text-sm text-muted-foreground">Received:</span>
+                    <span className="text-lg font-semibold text-green-500 flex items-center gap-1">
+                      ↓ {formatStorage(networkData.traffic.bytes_recv / 1024 ** 3)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Data Received:</span>
-                    <span className="text-lg font-semibold text-foreground">
-                      {(networkData.traffic.bytes_recv / 1024 ** 3).toFixed(2)} GB
+                    <span className="text-sm text-muted-foreground">Sent:</span>
+                    <span className="text-lg font-semibold text-blue-500 flex items-center gap-1">
+                      ↑ {formatStorage(networkData.traffic.bytes_sent / 1024 ** 3)}
                     </span>
                   </div>
                 </div>

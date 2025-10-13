@@ -66,6 +66,19 @@ interface ProxmoxStorageData {
   error?: string
 }
 
+const formatStorage = (sizeInGB: number): string => {
+  if (sizeInGB < 1) {
+    // Less than 1 GB, show in MB
+    return `${(sizeInGB * 1024).toFixed(1)} MB`
+  } else if (sizeInGB < 1024) {
+    // Less than 1024 GB, show in GB
+    return `${sizeInGB.toFixed(1)} GB`
+  } else {
+    // 1024 GB or more, show in TB
+    return `${(sizeInGB / 1024).toFixed(1)} TB`
+  }
+}
+
 export function StorageOverview() {
   const [storageData, setStorageData] = useState<StorageData | null>(null)
   const [proxmoxStorage, setProxmoxStorage] = useState<ProxmoxStorageData | null>(null)
@@ -257,7 +270,7 @@ export function StorageOverview() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalProxmoxUsed.toFixed(1)} GB</div>
+            <div className="text-2xl font-bold">{formatStorage(totalProxmoxUsed)}</div>
             <p className="text-xs text-muted-foreground mt-1">{usagePercent}% used</p>
           </CardContent>
         </Card>

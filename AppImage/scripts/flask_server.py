@@ -3672,8 +3672,7 @@ def api_backups():
                             # Get content of storage
                             content_result = subprocess.run(
                                 ['pvesh', 'get', f'/nodes/localhost/storage/{storage_id}/content', '--output-format', 'json'],
-                                capture_output=True, text=True, timeout=10
-                            )
+                                capture_output=True, text=True, timeout=10)
                             
                             if content_result.returncode == 0:
                                 contents = json.loads(content_result.stdout)
@@ -4097,8 +4096,7 @@ def api_vm_details(vmid):
                     # Get detailed config
                     config_result = subprocess.run(
                         ['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/config', '--output-format', 'json'],
-                        capture_output=True, text=True, timeout=10
-                    )
+                        capture_output=True, text=True, timeout=10)
                     
                     config = {}
                     if config_result.returncode == 0:
@@ -4143,8 +4141,7 @@ def api_vm_logs(vmid):
             # Get real logs from the container/VM (last 1000 lines)
             log_result = subprocess.run(
                 ['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/log', '--start', '0', '--limit', '1000'],
-                capture_output=True, text=True, timeout=10
-            )
+                capture_output=True, text=True, timeout=10)
             
             logs = []
             if log_result.returncode == 0:
@@ -4198,8 +4195,7 @@ def api_vm_control(vmid):
             # Execute action
             control_result = subprocess.run(
                 ['pvesh', 'create', f'/nodes/{node}/{vm_type}/{vmid}/status/{action}'],
-                capture_output=True, text=True, timeout=30
-            )
+                capture_output=True, text=True, timeout=30)
             
             if control_result.returncode == 0:
                 return jsonify({
@@ -4222,8 +4218,18 @@ def api_vm_control(vmid):
 if __name__ == '__main__':
     # API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware
     
+    import sys
     import logging
+    
+    # Silence werkzeug logger
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
+    
+    # Silence Flask CLI banner (removes "Serving Flask app", "Debug mode", "WARNING" messages)
+    cli = sys.modules['flask.cli']
+    cli.show_server_banner = lambda *x: None
+    
+    # Print only essential information
+    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware")
     
     app.run(host='0.0.0.0', port=8008, debug=False)

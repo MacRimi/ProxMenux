@@ -114,6 +114,19 @@ const extractIPFromConfig = (config?: VMConfig): string => {
   return "DHCP"
 }
 
+const formatStorage = (sizeInGB: number): string => {
+  if (sizeInGB < 1) {
+    // Less than 1 GB, show in MB
+    return `${(sizeInGB * 1024).toFixed(1)} MB`
+  } else if (sizeInGB < 1024) {
+    // Less than 1024 GB, show in GB
+    return `${sizeInGB.toFixed(1)} GB`
+  } else {
+    // 1024 GB or more, show in TB
+    return `${(sizeInGB / 1024).toFixed(1)} TB`
+  }
+}
+
 export function VirtualMachines() {
   const {
     data: vmData,
@@ -419,7 +432,7 @@ export function VirtualMachines() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {(safeVMData.reduce((sum, vm) => sum + (vm.maxdisk || 0), 0) / 1024 ** 3).toFixed(1)} GB
+              {formatStorage(safeVMData.reduce((sum, vm) => sum + (vm.maxdisk || 0), 0) / 1024 ** 3)}
             </div>
             <p className="text-xs text-muted-foreground mt-2">Allocated disk space</p>
           </CardContent>
