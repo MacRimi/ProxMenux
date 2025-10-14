@@ -344,10 +344,10 @@ export function StorageOverview() {
   }
 
   const disksWithTemp = storageData.disks.filter((disk) => disk.temperature > 0)
-  const avgTemp =
+  const hottestDisk =
     disksWithTemp.length > 0
-      ? Math.round(disksWithTemp.reduce((sum, disk) => sum + disk.temperature, 0) / disksWithTemp.length)
-      : 0
+      ? disksWithTemp.reduce((hottest, disk) => (disk.temperature > hottest.temperature ? disk : hottest))
+      : null
 
   const totalProxmoxUsed =
     proxmoxStorage && proxmoxStorage.storage
@@ -402,14 +402,21 @@ export function StorageOverview() {
           </CardContent>
         </Card>
 
+        {/* Hottest Disk */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Temperature</CardTitle>
+            <CardTitle className="text-sm font-medium">Hottest Disk</CardTitle>
             <Thermometer className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${getTempColor(avgTemp)}`}>{avgTemp > 0 ? `${avgTemp}°C` : "N/A"}</div>
-            <p className="text-xs text-muted-foreground mt-1">Across all disks</p>
+            <div
+              className={`text-2xl font-bold ${hottestDisk ? getTempColor(hottestDisk.temperature, hottestDisk.name, hottestDisk.rotation_rate) : "text-gray-500"}`}
+            >
+              {hottestDisk ? `${hottestDisk.temperature}°C` : "N/A"}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {hottestDisk ? `/dev/${hottestDisk.name}` : "No temperature data"}
+            </p>
           </CardContent>
         </Card>
       </div>
