@@ -132,7 +132,11 @@ const groupAndSortTemperatures = (temperatures: any[]) => {
 }
 
 export default function Hardware() {
-  const { data: hardwareData, error } = useSWR<HardwareData>("/api/hardware", fetcher, {
+  const {
+    data: hardwareData,
+    error,
+    isLoading,
+  } = useSWR<HardwareData>("/api/hardware", fetcher, {
     refreshInterval: 5000,
   })
 
@@ -226,6 +230,16 @@ export default function Hardware() {
 
     // Esto permite mostrar datos incluso cuando la GPU está inactiva (valores en 0 o null)
     return realtimeGPUData.has_monitoring_tool === true
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="text-center py-8">
+          <div className="text-lg font-medium text-foreground mb-2">Loading hardware data...</div>
+        </div>
+      </div>
+    )
   }
 
   return (
