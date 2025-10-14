@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Thermometer } from "lucide-react"
+import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Thermometer, Square } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -248,6 +248,22 @@ export function StorageOverview() {
     return typeColors[type.toLowerCase()] || "bg-gray-500/10 text-gray-500 border-gray-500/20"
   }
 
+  const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "active":
+      case "online":
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />
+      case "inactive":
+      case "offline":
+        return <Square className="h-5 w-5 text-gray-500" />
+      case "error":
+      case "failed":
+        return <AlertTriangle className="h-5 w-5 text-red-500" />
+      default:
+        return <CheckCircle2 className="h-5 w-5 text-gray-500" />
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -359,15 +375,7 @@ export function StorageOverview() {
                       <Database className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                       <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
                       <h3 className="font-semibold text-base flex-1 min-w-0 truncate">{storage.name}</h3>
-                      <Badge
-                        className={
-                          storage.status === "active"
-                            ? "bg-green-500/10 text-green-500 border-green-500/20 px-2"
-                            : "bg-gray-500/10 text-gray-500 border-gray-500/20 px-2"
-                        }
-                      >
-                        {storage.status === "active" ? "▶" : "■"}
-                      </Badge>
+                      {getStatusIcon(storage.status)}
                     </div>
 
                     {/* Desktop: Badge active + Porcentaje */}
