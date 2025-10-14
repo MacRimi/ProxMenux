@@ -355,20 +355,18 @@ export function StorageOverview() {
                       <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
                     </div>
 
-                    {/* Mobile: Badge icono + Nombre + Badge active (sin porcentaje) */}
                     <div className="flex md:hidden items-center gap-2 flex-1">
-                      <Badge className={`${getStorageTypeBadge(storage.type)} px-2`}>
-                        <Database className="h-3 w-3" />
-                      </Badge>
-                      <h3 className="font-semibold text-base">{storage.name}</h3>
+                      <Database className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
+                      <h3 className="font-semibold text-base flex-1 min-w-0 truncate">{storage.name}</h3>
                       <Badge
                         className={
                           storage.status === "active"
-                            ? "bg-green-500/10 text-green-500 border-green-500/20"
-                            : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                            ? "bg-green-500/10 text-green-500 border-green-500/20 px-2"
+                            : "bg-gray-500/10 text-gray-500 border-gray-500/20 px-2"
                         }
                       >
-                        {storage.status}
+                        {storage.status === "active" ? "▶" : "■"}
                       </Badge>
                     </div>
 
