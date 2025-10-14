@@ -6,7 +6,19 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle } from "lucide-react"
+import {
+  Server,
+  Play,
+  Square,
+  Cpu,
+  MemoryStick,
+  HardDrive,
+  Network,
+  Power,
+  RotateCcw,
+  StopCircle,
+  Container,
+} from "lucide-react"
 import useSWR from "swr"
 
 interface VMData {
@@ -125,6 +137,18 @@ const formatStorage = (sizeInGB: number): string => {
     // 1024 GB or more, show in TB
     return `${(sizeInGB / 1024).toFixed(1)} TB`
   }
+}
+
+const getUsageColor = (percent: number): string => {
+  if (percent >= 80) return "text-red-500"
+  if (percent >= 50) return "text-yellow-500"
+  return "text-white"
+}
+
+const getProgressColor = (percent: number): string => {
+  if (percent >= 80) return "[&>div]:bg-red-500"
+  if (percent >= 50) return "[&>div]:bg-yellow-500"
+  return "[&>div]:bg-blue-500"
 }
 
 export function VirtualMachines() {
@@ -276,9 +300,17 @@ export function VirtualMachines() {
 
   const getTypeBadge = (type: string) => {
     if (type === "lxc") {
-      return { color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", label: "LXC" }
+      return {
+        color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+        label: "LXC",
+        icon: <Container className="h-3 w-3 mr-1" />,
+      }
     }
-    return { color: "bg-purple-500/10 text-purple-500 border-purple-500/20", label: "VM" }
+    return {
+      color: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+      label: "VM",
+      icon: <Server className="h-3 w-3 mr-1" />,
+    }
   }
 
   const safeVMData = vmData || []
@@ -391,7 +423,7 @@ export function VirtualMachines() {
                   </span>{" "}
                   of {physicalMemoryGB.toFixed(1)} GB
                 </div>
-                <Progress value={memoryUsagePercent} className="h-2 mt-2 [&>div]:bg-blue-500" />
+                <Progress value={memoryUsagePercent} className="h-2 [&>div]:bg-blue-500" />
               </div>
             ) : (
               <div>
@@ -450,106 +482,93 @@ export function VirtualMachines() {
           {safeVMData.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No virtual machines found</div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {safeVMData.map((vm) => {
                 const cpuPercent = (vm.cpu * 100).toFixed(1)
                 const memPercent = vm.maxmem > 0 ? ((vm.mem / vm.maxmem) * 100).toFixed(1) : "0"
                 const memGB = (vm.mem / 1024 ** 3).toFixed(1)
                 const maxMemGB = (vm.maxmem / 1024 ** 3).toFixed(1)
+                const diskPercent = vm.maxdisk > 0 ? ((vm.disk / vm.maxdisk) * 100).toFixed(1) : "0"
+                const diskGB = (vm.disk / 1024 ** 3).toFixed(1)
+                const maxDiskGB = (vm.maxdisk / 1024 ** 3).toFixed(1)
                 const typeBadge = getTypeBadge(vm.type)
                 const lxcIP = vm.type === "lxc" ? vmConfigs[vm.vmid] : null
 
                 return (
                   <div
                     key={vm.vmid}
-                    className="p-6 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
                     onClick={() => handleVMClick(vm)}
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                      <div className="flex items-center space-x-4">
-                        <Server className="h-6 w-6 text-muted-foreground flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-foreground text-lg flex items-center flex-wrap gap-2">
-                            <span className="truncate">{vm.name}</span>
-                            <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
-                              {typeBadge.label}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <div className="text-sm text-muted-foreground">ID: {vm.vmid}</div>
-                            {lxcIP && (
-                              <>
-                                <span className="text-muted-foreground">•</span>
-                                <div className="flex items-center gap-1 text-sm">
-                                  <Network
-                                    className={`h-3 w-3 ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
-                                  />
-                                  <span className={lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}>
-                                    IP: {lxcIP}
-                                  </span>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className={`text-xs flex-shrink-0 ${getStatusColor(vm.status)}`}>
+                          {getStatusIcon(vm.status)}
+                          {vm.status.toUpperCase()}
+                        </Badge>
+                        <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
+                          {typeBadge.icon}
+                          {typeBadge.label}
+                        </Badge>
+                        <span className="font-semibold text-foreground">{vm.name}</span>
+                        <span className="text-sm text-muted-foreground">ID: {vm.vmid}</span>
+                        {lxcIP && (
+                          <span
+                            className={`text-sm flex items-center gap-1 ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
+                          >
+                            <Network className="h-3 w-3" />
+                            {lxcIP}
+                          </span>
+                        )}
+                        <span className="text-sm text-muted-foreground ml-auto">Uptime: {formatUptime(vm.uptime)}</span>
                       </div>
-
-                      <Badge
-                        variant="outline"
-                        className={`${getStatusColor(vm.status)} flex-shrink-0 self-start sm:self-center`}
-                      >
-                        {getStatusIcon(vm.status)}
-                        {vm.status.toUpperCase()}
-                      </Badge>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <div>
-                        <div className="text-sm text-muted-foreground mb-2">CPU Usage</div>
-                        <div className="text-lg font-semibold text-foreground mb-1">{cpuPercent}%</div>
-                        <Progress value={Number.parseFloat(cpuPercent)} className="h-2 [&>div]:bg-blue-500" />
+                        <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
+                        <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(cpuPercent))}`}>
+                          {cpuPercent}%
+                        </div>
+                        <Progress
+                          value={Number.parseFloat(cpuPercent)}
+                          className={`h-1.5 ${getProgressColor(Number.parseFloat(cpuPercent))}`}
+                        />
                       </div>
 
                       <div>
-                        <div className="text-sm text-muted-foreground mb-2">Memory Usage</div>
-                        <div className="text-lg font-semibold text-foreground mb-1">
+                        <div className="text-xs text-muted-foreground mb-1">Memory</div>
+                        <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(memPercent))}`}>
                           {memGB} / {maxMemGB} GB
                         </div>
-                        <Progress value={Number.parseFloat(memPercent)} className="h-2 [&>div]:bg-blue-500" />
+                        <Progress
+                          value={Number.parseFloat(memPercent)}
+                          className={`h-1.5 ${getProgressColor(Number.parseFloat(memPercent))}`}
+                        />
                       </div>
 
-                      <div className="hidden md:block">
-                        <div className="text-sm text-muted-foreground mb-2">Disk I/O</div>
-                        <div className="text-sm font-semibold text-foreground">
-                          <div className="flex items-center gap-1">
-                            <HardDrive className="h-3 w-3 text-green-500" />
-                            <span className="text-green-500">↓ {formatBytes(vm.diskread)}</span>
-                          </div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <HardDrive className="h-3 w-3 text-blue-500" />
-                            <span className="text-blue-500">↑ {formatBytes(vm.diskwrite)}</span>
-                          </div>
+                      <div className="col-span-2 md:col-span-1">
+                        <div className="text-xs text-muted-foreground mb-1">Disk Usage</div>
+                        <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(diskPercent))}`}>
+                          {diskGB} / {maxDiskGB} GB
                         </div>
+                        <Progress
+                          value={Number.parseFloat(diskPercent)}
+                          className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
+                        />
                       </div>
 
-                      <div className="hidden md:block">
-                        <div className="text-sm text-muted-foreground mb-2">Network I/O</div>
-                        <div className="text-sm font-semibold text-foreground">
+                      <div className="col-span-2 md:col-span-1">
+                        <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
+                        <div className="text-xs font-semibold">
                           <div className="flex items-center gap-1">
-                            <Network className="h-3 w-3 text-green-500" />
                             <span className="text-green-500">↓ {formatBytes(vm.netin)}</span>
                           </div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Network className="h-3 w-3 text-blue-500" />
+                          <div className="flex items-center gap-1">
                             <span className="text-blue-500">↑ {formatBytes(vm.netout)}</span>
                           </div>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t border-border">
-                      <div className="text-sm text-muted-foreground">Uptime</div>
-                      <div className="text-lg font-semibold text-foreground">{formatUptime(vm.uptime)}</div>
                     </div>
                   </div>
                 )
@@ -576,6 +595,7 @@ export function VirtualMachines() {
               {selectedVM && (
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="outline" className={`${getTypeBadge(selectedVM.type).color} flex-shrink-0`}>
+                    {getTypeBadge(selectedVM.type).icon}
                     {getTypeBadge(selectedVM.type).label}
                   </Badge>
                   <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
@@ -604,37 +624,37 @@ export function VirtualMachines() {
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
-                      <div
-                        className={`font-semibold ${
-                          (selectedVM.cpu * 100) > 80
-                            ? "text-red-500"
-                            : selectedVM.cpu * 100 > 60
-                              ? "text-yellow-500"
-                              : "text-green-500"
-                        }`}
-                      >
+                      <div className={`font-semibold mb-1 ${getUsageColor(selectedVM.cpu * 100)}`}>
                         {(selectedVM.cpu * 100).toFixed(1)}%
                       </div>
+                      <Progress
+                        value={selectedVM.cpu * 100}
+                        className={`h-1.5 ${getProgressColor(selectedVM.cpu * 100)}`}
+                      />
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Memory</div>
                       <div
-                        className={`font-semibold ${
-                          ((selectedVM.mem / selectedVM.maxmem) * 100) > 80
-                            ? "text-red-500"
-                            : (selectedVM.mem / selectedVM.maxmem) * 100 > 60
-                              ? "text-yellow-500"
-                              : "text-blue-500"
-                        }`}
+                        className={`font-semibold mb-1 ${getUsageColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
                       >
                         {(selectedVM.mem / 1024 ** 3).toFixed(1)} / {(selectedVM.maxmem / 1024 ** 3).toFixed(1)} GB
                       </div>
+                      <Progress
+                        value={(selectedVM.mem / selectedVM.maxmem) * 100}
+                        className={`h-1.5 ${getProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                      />
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Disk</div>
-                      <div className="font-semibold text-foreground">
+                      <div
+                        className={`font-semibold mb-1 ${getUsageColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                      >
                         {(selectedVM.disk / 1024 ** 3).toFixed(1)} / {(selectedVM.maxdisk / 1024 ** 3).toFixed(1)} GB
                       </div>
+                      <Progress
+                        value={(selectedVM.disk / selectedVM.maxdisk) * 100}
+                        className={`h-1.5 ${getProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                      />
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">Uptime</div>
