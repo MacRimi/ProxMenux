@@ -136,10 +136,12 @@ export function StorageMetrics() {
       if (!result) {
         setError("Flask server not available. Please ensure the server is running.")
       } else {
-        console.log("[v0] Storage data received:", result)
+        console.log("[v0] ===== STORAGE DATA RECEIVED =====")
+        console.log("[v0] Storage data:", result)
         console.log("[v0] Number of disks:", result.disks?.length || 0)
         if (result.disks && result.disks.length > 0) {
           console.log("[v0] First disk sample:", result.disks[0])
+          console.log("[v0] Disk types found:", result.disks.map((d) => d.disk_type).filter(Boolean))
         }
         setStorageData(result)
       }
@@ -196,7 +198,9 @@ export function StorageMetrics() {
     {} as Record<string, DiskInfo[]>,
   )
 
+  console.log("[v0] ===== DISK GROUPING =====")
   console.log("[v0] Disks grouped by type:", disksByType)
+  console.log("[v0] Disk types present:", Object.keys(disksByType))
 
   const tempByType = Object.entries(disksByType)
     .map(([type, disks]) => {
@@ -206,7 +210,9 @@ export function StorageMetrics() {
     })
     .filter((item) => item.type !== "Unknown")
 
+  console.log("[v0] ===== TEMPERATURE BY TYPE =====")
   console.log("[v0] Temperature by type:", tempByType)
+  console.log("[v0] Number of temperature cards to show:", tempByType.length)
 
   return (
     <div className="space-y-6">
@@ -276,48 +282,57 @@ export function StorageMetrics() {
       </div>
 
       {/* Temperature cards by disk type */}
-      {tempByType.length > 0 && (
+      {tempByType.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tempByType.map(({ type, avgTemp, status, count }) => (
-            <Card key={type} className="bg-card border-border">
-              <CardHeader>
-                <CardTitle className="text-foreground flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Thermometer className="h-5 w-5 mr-2" />
-                    Avg Temperature
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={getDiskTypeBadgeColor(type)}>
-                      {type}
+          {tempByType.map(({ type, avgTemp, status, count }) => {
+            console.log(`[v0] Rendering temp card for ${type}: ${avgTemp}°C, ${count} disks`)
+            return (
+              <Card key={type} className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Thermometer className="h-5 w-5 mr-2" />
+                      Avg Temperature
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={getDiskTypeBadgeColor(type)}>
+                        {type}
+                      </Badge>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowTempInfo(true)}>
+                        <Info className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-3xl font-bold ${getTempColor(status)}`}>{avgTemp}°C</div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {count} {type} disk{count > 1 ? "s" : ""}
+                  </p>
+                  <div className="mt-3">
+                    <Badge
+                      variant="outline"
+                      className={
+                        status === "safe"
+                          ? "bg-green-500/10 text-green-500 border-green-500/20"
+                          : status === "warning"
+                            ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                            : "bg-red-500/10 text-red-500 border-red-500/20"
+                      }
+                    >
+                      {status === "safe" ? "Optimal" : status === "warning" ? "Warning" : "Critical"}
                     </Badge>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowTempInfo(true)}>
-                      <Info className="h-4 w-4" />
-                    </Button>
                   </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-3xl font-bold ${getTempColor(status)}`}>{avgTemp}°C</div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {count} {type} disk{count > 1 ? "s" : ""}
-                </p>
-                <div className="mt-3">
-                  <Badge
-                    variant="outline"
-                    className={
-                      status === "safe"
-                        ? "bg-green-500/10 text-green-500 border-green-500/20"
-                        : status === "warning"
-                          ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                          : "bg-red-500/10 text-red-500 border-red-500/20"
-                    }
-                  >
-                    {status === "safe" ? "Optimal" : status === "warning" ? "Warning" : "Critical"}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      ) : (
+        <div>
+          {console.log("[v0] WARNING: No temperature cards to display!")}
+          {console.log("[v0] disksByType:", disksByType)}
+          {console.log("[v0] tempByType:", tempByType)}
         </div>
       )}
 
