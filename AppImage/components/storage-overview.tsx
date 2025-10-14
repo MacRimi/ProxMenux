@@ -348,14 +348,32 @@ export function StorageOverview() {
               {proxmoxStorage.storage.map((storage) => (
                 <div key={storage.name} className="border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
+                    {/* Desktop: Icon + Name + Badge tipo alineados horizontalmente */}
+                    <div className="hidden md:flex items-center gap-3">
                       <Database className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <h3 className="font-semibold text-lg">{storage.name}</h3>
-                        <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
-                      </div>
+                      <h3 className="font-semibold text-lg">{storage.name}</h3>
+                      <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    {/* Mobile: Badge icono + Nombre + Badge active (sin porcentaje) */}
+                    <div className="flex md:hidden items-center gap-2 flex-1">
+                      <Badge className={`${getStorageTypeBadge(storage.type)} px-2`}>
+                        <Database className="h-3 w-3" />
+                      </Badge>
+                      <h3 className="font-semibold text-base">{storage.name}</h3>
+                      <Badge
+                        className={
+                          storage.status === "active"
+                            ? "bg-green-500/10 text-green-500 border-green-500/20"
+                            : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                        }
+                      >
+                        {storage.status}
+                      </Badge>
+                    </div>
+
+                    {/* Desktop: Badge active + Porcentaje */}
+                    <div className="hidden md:flex items-center gap-2">
                       <Badge
                         className={
                           storage.status === "active"
