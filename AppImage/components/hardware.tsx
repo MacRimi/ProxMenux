@@ -102,6 +102,35 @@ const getMonitoringToolRecommendation = (vendor: string): string => {
   return "To get extended GPU monitoring information, please install the appropriate GPU monitoring tools for your hardware."
 }
 
+const groupAndSortTemperatures = (temperatures: any[]) => {
+  const groups = {
+    CPU: [] as any[],
+    GPU: [] as any[],
+    NVME: [] as any[],
+    PCI: [] as any[],
+    OTHER: [] as any[],
+  }
+
+  temperatures.forEach((temp) => {
+    const nameLower = temp.name.toLowerCase()
+    const adapterLower = temp.adapter?.toLowerCase() || ""
+
+    if (nameLower.includes("cpu") || nameLower.includes("core") || nameLower.includes("package")) {
+      groups.CPU.push(temp)
+    } else if (nameLower.includes("gpu") || adapterLower.includes("gpu")) {
+      groups.GPU.push(temp)
+    } else if (nameLower.includes("nvme") || adapterLower.includes("nvme")) {
+      groups.NVME.push(temp)
+    } else if (adapterLower.includes("pci")) {
+      groups.PCI.push(temp)
+    } else {
+      groups.OTHER.push(temp)
+    }
+  })
+
+  return groups
+}
+
 export default function Hardware() {
   const { data: hardwareData, error } = useSWR<HardwareData>("/api/hardware", fetcher, {
     refreshInterval: 5000,
@@ -357,33 +386,218 @@ export default function Hardware() {
             </Badge>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {hardwareData.temperatures.map((temp, index) => {
-              const percentage = temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
-              const isHot = temp.current > (temp.high || 80)
-              const isCritical = temp.current > (temp.critical || 90)
+          {(() => {
+            const groupedTemps = groupAndSortTemperatures(hardwareData.temperatures)
 
-              return (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{temp.name}</span>
-                    <span
-                      className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
-                    >
-                      {temp.current.toFixed(1)}°C
-                    </span>
+            return (
+              <div className="space-y-6">
+                {/* CPU Sensors */}
+                {groupedTemps.CPU.length > 0 && (
+                  <div>
+                    <div className="mb-3 flex items-center gap-2">
+                      <CpuIcon className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="text-sm font-semibold">CPU</h3>
+                      <Badge variant="outline" className="text-xs">
+                        {groupedTemps.CPU.length}
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {groupedTemps.CPU.map((temp, index) => {
+                        const percentage =
+                          temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
+                        const isHot = temp.current > (temp.high || 80)
+                        const isCritical = temp.current > (temp.critical || 90)
+
+                        return (
+                          <div key={index} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{temp.name}</span>
+                              <span
+                                className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
+                              >
+                                {temp.current.toFixed(1)}°C
+                              </span>
+                            </div>
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                              <div
+                                className="h-full bg-blue-500 transition-all"
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                              />
+                            </div>
+                            {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className="h-full bg-blue-500 transition-all"
-                      style={{ width: `${Math.min(percentage, 100)}%` }}
-                    />
+                )}
+
+                {/* GPU Sensors */}
+                {groupedTemps.GPU.length > 0 && (
+                  <div>
+                    <div className="mb-3 flex items-center gap-2">
+                      <Gpu className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="text-sm font-semibold">GPU</h3>
+                      <Badge variant="outline" className="text-xs">
+                        {groupedTemps.GPU.length}
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {groupedTemps.GPU.map((temp, index) => {
+                        const percentage =
+                          temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
+                        const isHot = temp.current > (temp.high || 80)
+                        const isCritical = temp.current > (temp.critical || 90)
+
+                        return (
+                          <div key={index} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{temp.name}</span>
+                              <span
+                                className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
+                              >
+                                {temp.current.toFixed(1)}°C
+                              </span>
+                            </div>
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                              <div
+                                className="h-full bg-blue-500 transition-all"
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                              />
+                            </div>
+                            {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                  {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
-                </div>
-              )
-            })}
-          </div>
+                )}
+
+                {/* NVME Sensors */}
+                {groupedTemps.NVME.length > 0 && (
+                  <div>
+                    <div className="mb-3 flex items-center gap-2">
+                      <HardDrive className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="text-sm font-semibold">NVME</h3>
+                      <Badge variant="outline" className="text-xs">
+                        {groupedTemps.NVME.length}
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {groupedTemps.NVME.map((temp, index) => {
+                        const percentage =
+                          temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
+                        const isHot = temp.current > (temp.high || 80)
+                        const isCritical = temp.current > (temp.critical || 90)
+
+                        return (
+                          <div key={index} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{temp.name}</span>
+                              <span
+                                className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
+                              >
+                                {temp.current.toFixed(1)}°C
+                              </span>
+                            </div>
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                              <div
+                                className="h-full bg-blue-500 transition-all"
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                              />
+                            </div>
+                            {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* PCI Sensors */}
+                {groupedTemps.PCI.length > 0 && (
+                  <div>
+                    <div className="mb-3 flex items-center gap-2">
+                      <CpuIcon className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="text-sm font-semibold">PCI</h3>
+                      <Badge variant="outline" className="text-xs">
+                        {groupedTemps.PCI.length}
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {groupedTemps.PCI.map((temp, index) => {
+                        const percentage =
+                          temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
+                        const isHot = temp.current > (temp.high || 80)
+                        const isCritical = temp.current > (temp.critical || 90)
+
+                        return (
+                          <div key={index} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{temp.name}</span>
+                              <span
+                                className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
+                              >
+                                {temp.current.toFixed(1)}°C
+                              </span>
+                            </div>
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                              <div
+                                className="h-full bg-blue-500 transition-all"
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                              />
+                            </div>
+                            {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* OTHER Sensors */}
+                {groupedTemps.OTHER.length > 0 && (
+                  <div>
+                    <div className="mb-3 flex items-center gap-2">
+                      <Thermometer className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="text-sm font-semibold">OTHER</h3>
+                      <Badge variant="outline" className="text-xs">
+                        {groupedTemps.OTHER.length}
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {groupedTemps.OTHER.map((temp, index) => {
+                        const percentage =
+                          temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
+                        const isHot = temp.current > (temp.high || 80)
+                        const isCritical = temp.current > (temp.critical || 90)
+
+                        return (
+                          <div key={index} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{temp.name}</span>
+                              <span
+                                className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
+                              >
+                                {temp.current.toFixed(1)}°C
+                              </span>
+                            </div>
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                              <div
+                                className="h-full bg-blue-500 transition-all"
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                              />
+                            </div>
+                            {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </Card>
       )}
 
