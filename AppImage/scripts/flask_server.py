@@ -1735,40 +1735,74 @@ def get_ups_info():
     # Return first UPS for backward compatibility, or None if no UPS found
     return ups_list[0] if ups_list else None
 # </CHANGE>
-
 def identify_temperature_sensor(sensor_name, adapter):
-    """Identify what a temperature sensor corresponds to"""
+    """Identify what a temperature sensor corresponds to and assign a category"""
     sensor_lower = sensor_name.lower()
     adapter_lower = adapter.lower() if adapter else ""
     
+    category = "Other"
+    display_name = sensor_name
+    
     # CPU/Package temperatures
     if "package" in sensor_lower or "tctl" in sensor_lower or "tccd" in sensor_lower:
-        return "CPU Package"
-    if "core" in sensor_lower:
+        category = "CPU"
+        display_name = "CPU Package"
+    elif "core" in sensor_lower:
+        category = "CPU"
         core_num = re.search(r'(\d+)', sensor_name)
-        return f"CPU Core {core_num.group(1)}" if core_num else "CPU Core"
-    
-    # Motherboard/Chipset
-    if "temp1" in sensor_lower and ("isa" in adapter_lower or "acpi" in adapter_lower):
-        return "Motherboard/Chipset"
-    if "pch" in sensor_lower or "chipset" in sensor_lower:
-        return "Chipset"
-    
-    # Storage (NVMe, SATA)
-    if "nvme" in sensor_lower or "composite" in sensor_lower:
-        return "NVMe SSD"
-    if "sata" in sensor_lower or "ata" in sensor_lower:
-        return "SATA Drive"
+        display_name = f"CPU Core {core_num.group(1)}" if core_num else "CPU Core"
+    elif "coretemp" in adapter_lower or "k10temp" in adapter_lower or "cpu_thermal" in adapter_lower:
+        category = "CPU"
+        display_name = sensor_name
     
     # GPU
-    if any(gpu in adapter_lower for gpu in ["nouveau", "amdgpu", "radeon", "i915"]):
-        return "GPU"
+    elif any(gpu in adapter_lower for gpu in ["nouveau", "amdgpu", "radeon", "i915", "nvidia"]):
+        category = "GPU"
+        display_name = f"GPU - {sensor_name}"
+    elif any(gpu in sensor_lower for gpu in ["gpu", "vga", "graphics"]):
+        category = "GPU"
+        display_name = sensor_name
     
-    # Network adapters
-    if "pci" in adapter_lower and "temp" in sensor_lower:
-        return "PCI Device"
+    # Storage (NVMe, SATA)
+    elif "nvme" in sensor_lower or "composite" in sensor_lower:
+        category = "NVMe"
+        # Extract NVMe device number if present
+        nvme_match = re.search(r'nvme(\d+)', sensor_lower)
+        if nvme_match:
+            display_name = f"NVMe {nvme_match.group(1)}"
+        else:
+            display_name = "NVMe SSD"
+    elif "sensor" in sensor_lower and "nvme" in adapter_lower:
+        category = "NVMe"
+        sensor_num = re.search(r'(\d+)', sensor_name)
+        display_name = f"NVMe Sensor {sensor_num.group(1)}" if sensor_num else sensor_name
+    elif "sata" in sensor_lower or "ata" in sensor_lower or "drivetemp" in adapter_lower:
+        category = "Storage"
+        display_name = f"SATA - {sensor_name}"
     
-    return sensor_name
+    # Motherboard/Chipset
+    elif "pch" in sensor_lower or "chipset" in sensor_lower:
+        category = "Chipset"
+        display_name = "Chipset"
+    elif "temp1" in sensor_lower and ("isa" in adapter_lower or "acpi" in adapter_lower):
+        category = "Motherboard"
+        display_name = "Motherboard"
+    elif any(mb in adapter_lower for mb in ["it87", "nct", "w83", "asus", "gigabyte", "msi"]):
+        category = "Motherboard"
+        display_name = sensor_name
+    elif "acpitz" in adapter_lower:
+        category = "Motherboard"
+        display_name = "ACPI Thermal Zone"
+    
+    # PCI Devices
+    elif "pci" in adapter_lower and "temp" in sensor_lower:
+        category = "PCI"
+        display_name = f"PCI Device - {sensor_name}"
+    
+    return {
+        'category': category,
+        'display_name': display_name
+    }
 
 def get_temperature_info():
     """Get detailed temperature information from sensors command"""
@@ -1827,11 +1861,12 @@ def get_temperature_info():
                                 high_value = float(high_match.group(1)) if high_match else 0
                                 crit_value = float(crit_match.group(1)) if crit_match else 0
                                 
-                                identified_name = identify_temperature_sensor(sensor_name, current_adapter)
+                                sensor_info = identify_temperature_sensor(sensor_name, current_adapter)
                                 
                                 temperatures.append({
-                                    'name': identified_name,
+                                    'name': sensor_info['display_name'],
                                     'original_name': sensor_name,
+                                    'category': sensor_info['category'],
                                     'current': temp_value,
                                     'high': high_value,
                                     'critical': crit_value,
@@ -3367,15 +3402,16 @@ def get_hardware_info():
                             # Use identify_temperature_sensor to make names more user-friendly
                             identified_name = identify_temperature_sensor(entry.label if entry.label else sensor_name, sensor_name)
                             
-                            hardware_data['sensors']['temperatures'].append({
-                                'name': identified_name,
+                            temperatures.append({
+                                'name': identified_name['display_name'],
                                 'original_name': entry.label if entry.label else sensor_name,
+                                'category': identified_name['category'],
                                 'current': entry.current,
                                 'high': entry.high if entry.high else 0,
                                 'critical': entry.critical if entry.critical else 0
                             })
                     
-                    print(f"[v0] Temperature sensors: {len(hardware_data['sensors']['temperatures'])} found")
+                    print(f"[v0] Temperature sensors: {len(temperatures)} found")
             
             try:
                 result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)

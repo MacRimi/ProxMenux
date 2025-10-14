@@ -318,7 +318,7 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* Thermal Monitoring */}
+      {/* Thermal Monitoring - Organized by Category */}
       {hardwareData?.temperatures && hardwareData.temperatures.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -329,33 +329,84 @@ export default function Hardware() {
             </Badge>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {hardwareData.temperatures.map((temp, index) => {
-              const percentage = temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
-              const isHot = temp.current > (temp.high || 80)
-              const isCritical = temp.current > (temp.critical || 90)
+          {(() => {
+            // Group temperatures by category
+            const tempsByCategory: Record<string, typeof hardwareData.temperatures> = {}
+            hardwareData.temperatures.forEach((temp) => {
+              const category = (temp as any).category || "Other"
+              if (!tempsByCategory[category]) {
+                tempsByCategory[category] = []
+              }
+              tempsByCategory[category].push(temp)
+            })
 
-              return (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{temp.name}</span>
-                    <span
-                      className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
-                    >
-                      {temp.current.toFixed(1)}°C
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className="h-full bg-blue-500 transition-all"
-                      style={{ width: `${Math.min(percentage, 100)}%` }}
-                    />
-                  </div>
-                  {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
-                </div>
-              )
-            })}
-          </div>
+            // Define category order and icons
+            const categoryOrder = ["CPU", "GPU", "NVMe", "Storage", "Motherboard", "Chipset", "PCI", "Other"]
+            const categoryIcons: Record<string, any> = {
+              CPU: CpuIcon,
+              GPU: Gpu,
+              NVMe: HardDrive,
+              Storage: HardDrive,
+              Motherboard: Cpu,
+              Chipset: Cpu,
+              PCI: Network,
+              Other: Thermometer,
+            }
+
+            return (
+              <div className="space-y-6">
+                {categoryOrder.map((category) => {
+                  const temps = tempsByCategory[category]
+                  if (!temps || temps.length === 0) return null
+
+                  const CategoryIcon = categoryIcons[category] || Thermometer
+
+                  return (
+                    <div key={category}>
+                      <div className="mb-3 flex items-center gap-2">
+                        <CategoryIcon className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                          {category}
+                        </h3>
+                        <Badge variant="outline" className="text-xs">
+                          {temps.length}
+                        </Badge>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {temps.map((temp, index) => {
+                          const percentage =
+                            temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
+                          const isHot = temp.current > (temp.high || 80)
+                          const isCritical = temp.current > (temp.critical || 90)
+
+                          return (
+                            <div key={index} className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">{temp.name}</span>
+                                <span
+                                  className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
+                                >
+                                  {temp.current.toFixed(1)}°C
+                                </span>
+                              </div>
+                              <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                                <div
+                                  className={`h-full transition-all ${isCritical ? "bg-red-500" : isHot ? "bg-orange-500" : "bg-blue-500"}`}
+                                  style={{ width: `${Math.min(percentage, 100)}%` }}
+                                />
+                              </div>
+                              {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
         </Card>
       )}
 
