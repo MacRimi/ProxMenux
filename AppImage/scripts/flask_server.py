@@ -1549,20 +1549,49 @@ def get_ipmi_power():
     }
 
 def get_ups_info():
-    """Get UPS information from NUT (upsc)"""
-    ups_data = {}
+    """Get UPS information from NUT (upsc) - supports both local and remote UPS"""
+    ups_list = []
     
     try:
-        # First, list available UPS devices
+        upsmon_conf = '/etc/nut/upsmon.conf'
+        configured_ups = []
+        
+        if os.path.exists(upsmon_conf):
+            try:
+                with open(upsmon_conf, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        # Look for MONITOR lines: MONITOR ups@hostname powervalue username password ("master"|"slave")
+                        if line.startswith('MONITOR') and not line.startswith('#'):
+                            parts = line.split()
+                            if len(parts) >= 2:
+                                ups_identifier = parts[1]  # Format: upsname@hostname or just upsname
+                                configured_ups.append(ups_identifier)
+                                print(f"[v0] Found configured UPS in upsmon.conf: {ups_identifier}")
+            except Exception as e:
+                print(f"[v0] Error reading upsmon.conf: {e}")
+        
         result = subprocess.run(['upsc', '-l'], capture_output=True, text=True, timeout=5)
+        local_ups = []
         if result.returncode == 0:
-            ups_list = result.stdout.strip().split('\n')
-            if ups_list and ups_list[0]:
-                ups_name = ups_list[0]
-                print(f"[v0] Found UPS: {ups_name}")
+            local_ups = [ups.strip() for ups in result.stdout.strip().split('\n') if ups.strip()]
+            print(f"[v0] Found local UPS devices: {local_ups}")
+        
+        all_ups = list(set(configured_ups + local_ups))
+        
+        if not all_ups:
+            print("[v0] No UPS devices found")
+            return {}
+        
+        for ups_identifier in all_ups:
+            try:
+                ups_data = {
+                    'name': ups_identifier,
+                    'raw_data': {}  # Store all raw data for the modal
+                }
                 
                 # Get detailed UPS info
-                result = subprocess.run(['upsc', ups_name], capture_output=True, text=True, timeout=5)
+                result = subprocess.run(['upsc', ups_identifier], capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
                     for line in result.stdout.split('\n'):
                         if ':' in line:
@@ -1570,69 +1599,108 @@ def get_ups_info():
                             key = key.strip()
                             value = value.strip()
                             
-                            # Map common UPS variables
+                            # Store all raw data
+                            ups_data['raw_data'][key] = value
+                            
+                            # Map common UPS variables for quick access
                             if key == 'device.model':
                                 ups_data['model'] = value
+                            elif key == 'device.mfr':
+                                ups_data['manufacturer'] = value
+                            elif key == 'device.serial':
+                                ups_data['serial'] = value
+                            elif key == 'device.type':
+                                ups_data['device_type'] = value
                             elif key == 'ups.status':
                                 ups_data['status'] = value
                             elif key == 'battery.charge':
                                 ups_data['battery_charge'] = f"{value}%"
+                                ups_data['battery_charge_value'] = float(value)
+                            elif key == 'battery.charge.low':
+                                ups_data['battery_charge_low'] = f"{value}%"
                             elif key == 'battery.runtime':
                                 # Convert seconds to minutes
                                 try:
                                     runtime_sec = int(value)
                                     runtime_min = runtime_sec // 60
                                     ups_data['time_left'] = f"{runtime_min} minutes"
+                                    ups_data['time_left_seconds'] = runtime_sec
                                 except ValueError:
                                     ups_data['time_left'] = value
+                            elif key == 'battery.runtime.low':
+                                try:
+                                    runtime_sec = int(value)
+                                    runtime_min = runtime_sec // 60
+                                    ups_data['battery_runtime_low'] = f"{runtime_min} minutes"
+                                except ValueError:
+                                    ups_data['battery_runtime_low'] = value
+                            elif key == 'battery.voltage':
+                                ups_data['battery_voltage'] = f"{value}V"
+                            elif key == 'battery.voltage.nominal':
+                                ups_data['battery_voltage_nominal'] = f"{value}V"
+                            elif key == 'battery.type':
+                                ups_data['battery_type'] = value
                             elif key == 'ups.load':
                                 ups_data['load_percent'] = f"{value}%"
-                            elif key == 'input.voltage':
-                                ups_data['line_voltage'] = f"{value}V"
+                                ups_data['load_value'] = float(value)
                             elif key == 'ups.realpower':
                                 ups_data['real_power'] = f"{value}W"
+                            elif key == 'ups.realpower.nominal':
+                                ups_data['real_power_nominal'] = f"{value}W"
+                            elif key == 'ups.power':
+                                ups_data['apparent_power'] = f"{value}VA"
+                            elif key == 'ups.power.nominal':
+                                ups_data['apparent_power_nominal'] = f"{value}VA"
+                            elif key == 'input.voltage':
+                                ups_data['input_voltage'] = f"{value}V"
+                            elif key == 'input.voltage.nominal':
+                                ups_data['input_voltage_nominal'] = f"{value}V"
+                            elif key == 'input.frequency':
+                                ups_data['input_frequency'] = f"{value}Hz"
+                            elif key == 'output.voltage':
+                                ups_data['output_voltage'] = f"{value}V"
+                            elif key == 'output.voltage.nominal':
+                                ups_data['output_voltage_nominal'] = f"{value}V"
+                            elif key == 'output.frequency':
+                                ups_data['output_frequency'] = f"{value}Hz"
+                            elif key == 'ups.beeper.status':
+                                ups_data['beeper_status'] = value
+                            elif key == 'ups.delay.shutdown':
+                                ups_data['delay_shutdown'] = f"{value}s"
+                            elif key == 'ups.delay.start':
+                                ups_data['delay_start'] = f"{value}s"
+                            elif key == 'ups.test.result':
+                                ups_data['test_result'] = value
+                            elif key == 'ups.firmware':
+                                ups_data['firmware'] = value
+                            elif key == 'driver.name':
+                                ups_data['driver_name'] = value
+                            elif key == 'driver.version':
+                                ups_data['driver_version'] = value
                     
-                    print(f"[v0] UPS data: {ups_data}")
+                    ups_list.append(ups_data)
+                    print(f"[v0] Successfully retrieved data for UPS: {ups_identifier}")
+                else:
+                    print(f"[v0] Failed to get data for UPS: {ups_identifier}")
+                    
+            except Exception as e:
+                print(f"[v0] Error getting info for UPS {ups_identifier}: {e}")
+        
+        if len(ups_list) == 0:
+            return {}
+        elif len(ups_list) == 1:
+            return ups_list[0]
+        else:
+            return {'ups_list': ups_list, 'count': len(ups_list)}
+            
     except FileNotFoundError:
-        print("[v0] upsc not found")
+        print("[v0] upsc not found - NUT client not installed")
     except Exception as e:
         print(f"[v0] Error getting UPS info: {e}")
+        import traceback
+        traceback.print_exc()
     
-    return ups_data
-
-def identify_temperature_sensor(sensor_name, adapter):
-    """Identify what a temperature sensor corresponds to"""
-    sensor_lower = sensor_name.lower()
-    adapter_lower = adapter.lower() if adapter else ""
-    
-    # CPU/Package temperatures
-    if "package" in sensor_lower or "tctl" in sensor_lower or "tccd" in sensor_lower:
-        return "CPU Package"
-    if "core" in sensor_lower:
-        core_num = re.search(r'(\d+)', sensor_name)
-        return f"CPU Core {core_num.group(1)}" if core_num else "CPU Core"
-    
-    # Motherboard/Chipset
-    if "temp1" in sensor_lower and ("isa" in adapter_lower or "acpi" in adapter_lower):
-        return "Motherboard/Chipset"
-    if "pch" in sensor_lower or "chipset" in sensor_lower:
-        return "Chipset"
-    
-    # Storage (NVMe, SATA)
-    if "nvme" in sensor_lower or "composite" in sensor_lower:
-        return "NVMe SSD"
-    if "sata" in sensor_lower or "ata" in sensor_lower:
-        return "SATA Drive"
-    
-    # GPU
-    if any(gpu in adapter_lower for gpu in ["nouveau", "amdgpu", "radeon", "i915"]):
-        return "GPU"
-    
-    # Network adapters
-    if "pci" in adapter_lower and "temp" in sensor_lower:
-        return "PCI Device"
-    
-    return sensor_name
+    return {}
 
 def get_temperature_info():
     """Get detailed temperature information from sensors command"""
@@ -4197,27 +4265,22 @@ def api_prometheus():
                 if ups.get('battery_charge') is not None:
                     metrics.append(f'# HELP proxmox_ups_battery_charge_percent UPS battery charge percentage')
                     metrics.append(f'# TYPE proxmox_ups_battery_charge_percent gauge')
-                    metrics.append(f'proxmox_ups_battery_charge_percent{{node="{node}",ups="{ups_name}"}} {ups["battery_charge"]} {timestamp}')
+                    metrics.append(f'proxmox_ups_battery_charge_percent{{node="{node}",ups="{ups_name}"}} {ups["battery_charge_value"]} {timestamp}') # Use numeric value
                 
                 if ups.get('load_percent') is not None: # Changed from 'load' to 'load_percent'
                     metrics.append(f'# HELP proxmox_ups_load_percent UPS load percentage')
                     metrics.append(f'# TYPE proxmox_ups_load_percent gauge')
-                    metrics.append(f'proxmox_ups_load_percent{{node="{node}",ups="{ups_name}"}} {ups["load_percent"]} {timestamp}')
+                    metrics.append(f'proxmox_ups_load_percent{{node="{node}",ups="{ups_name}"}} {ups["load_value"]} {timestamp}') # Use numeric value
                 
-                if ups.get('time_left'):
-                    # Convert runtime to seconds
-                    runtime_str = ups['time_left']
-                    runtime_seconds = 0
-                    if 'minutes' in runtime_str:
-                        runtime_seconds = int(runtime_str.split()[0]) * 60
+                if ups.get('time_left_seconds') is not None:
                     metrics.append(f'# HELP proxmox_ups_runtime_seconds UPS runtime in seconds')
                     metrics.append(f'# TYPE proxmox_ups_runtime_seconds gauge')
-                    metrics.append(f'proxmox_ups_runtime_seconds{{node="{node}",ups="{ups_name}"}} {runtime_seconds} {timestamp}')
+                    metrics.append(f'proxmox_ups_runtime_seconds{{node="{node}",ups="{ups_name}"}} {ups["time_left_seconds"]} {timestamp}')
                 
-                if ups.get('line_voltage') is not None:
+                if ups.get('input_voltage') is not None:
                     metrics.append(f'# HELP proxmox_ups_input_voltage_volts UPS input voltage in volts')
                     metrics.append(f'# TYPE proxmox_ups_input_voltage_volts gauge')
-                    metrics.append(f'proxmox_ups_input_voltage_volts{{node="{node}",ups="{ups_name}"}} {ups["line_voltage"]} {timestamp}')
+                    metrics.append(f'proxmox_ups_input_voltage_volts{{node="{node}",ups="{ups_name}"}} {ups["input_voltage"]} {timestamp}') # This is a string, might need conversion
         except Exception as e:
             print(f"[v0] Error getting hardware metrics for Prometheus: {e}")
         
