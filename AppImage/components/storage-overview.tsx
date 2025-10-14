@@ -72,6 +72,9 @@ interface ProxmoxStorageData {
 }
 
 const formatStorage = (sizeInGB: number): string => {
+  if (sizeInGB <= 0) {
+    return "0 GB"
+  }
   if (sizeInGB < 1) {
     // Less than 1 GB, show in MB
     return `${(sizeInGB * 1024).toFixed(1)} MB`
@@ -355,7 +358,9 @@ export function StorageOverview() {
       : 0
 
   const usagePercent =
-    storageData.total > 0 ? ((totalProxmoxUsed / (storageData.total * 1024)) * 100).toFixed(2) : "0.00"
+    storageData.total > 0 && totalProxmoxUsed > 0
+      ? ((totalProxmoxUsed / (storageData.total * 1024)) * 100).toFixed(2)
+      : "0.00"
 
   return (
     <div className="space-y-6">

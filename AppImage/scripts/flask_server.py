@@ -529,8 +529,9 @@ def serve_images(filename):
 # Moved helper functions for system info up
 # def get_system_info(): ... (moved up)
 
+# get_storage_info() function is OPTIMIZED to remove SMART data
 def get_storage_info():
-    """Get storage and disk information"""
+    """Get storage and disk information - OPTIMIZED: Basic info only, no SMART data"""
     try:
         storage_data = {
             'total': 0,
@@ -567,10 +568,9 @@ def get_storage_info():
                         
                         total_disk_size_bytes += disk_size_bytes
                         
-                        # Get SMART data for this disk
-                        print(f"[v0] Getting SMART data for {disk_name}...")
-                        smart_data = get_smart_data(disk_name)
-                        print(f"[v0] SMART data for {disk_name}: {smart_data}")
+                        print(f"[v0] Getting basic info for {disk_name}...")
+                        basic_info = get_basic_disk_info(disk_name)
+                        print(f"[v0] Basic info for {disk_name}: {basic_info}")
                         
                         disk_size_kb = disk_size_bytes / 1024
                         
@@ -581,29 +581,17 @@ def get_storage_info():
                         
                         physical_disks[disk_name] = {
                             'name': disk_name,
-                            'size': disk_size_kb,  # In KB for formatMemory() in Storage Summary
-                            'size_formatted': size_str,  # Added formatted size string for Storage section
+                            'size': disk_size_kb,
+                            'size_formatted': size_str,
                             'size_bytes': disk_size_bytes,
-                            'temperature': smart_data.get('temperature', 0),
-                            'health': smart_data.get('health', 'unknown'),
-                            'power_on_hours': smart_data.get('power_on_hours', 0),
-                            'smart_status': smart_data.get('smart_status', 'unknown'),
-                            'model': smart_data.get('model', 'Unknown'),
-                            'serial': smart_data.get('serial', 'Unknown'),
-                            'reallocated_sectors': smart_data.get('reallocated_sectors', 0),
-                            'pending_sectors': smart_data.get('pending_sectors', 0),
-                            'crc_errors': smart_data.get('crc_errors', 0),
-                            'rotation_rate': smart_data.get('rotation_rate', 0),  # Added
-                            'power_cycles': smart_data.get('power_cycles', 0),   # Added
-                            'percentage_used': smart_data.get('percentage_used'), # Added
-                            'media_wearout_indicator': smart_data.get('media_wearout_indicator'), # Added
-                            'wear_leveling_count': smart_data.get('wear_leveling_count'), # Added
-                            'total_lbas_written': smart_data.get('total_lbas_written'), # Added
-                            'ssd_life_left': smart_data.get('ssd_life_left') # Added
+                            'temperature': basic_info.get('temperature', 0),
+                            'health': basic_info.get('health', 'unknown'),
+                            'model': basic_info.get('model', 'Unknown'),
+                            'rotation_rate': basic_info.get('rotation_rate', 0),
                         }
                         
                         storage_data['disk_count'] += 1
-                        health = smart_data.get('health', 'unknown').lower()
+                        health = basic_info.get('health', 'unknown').lower()
                         if health == 'healthy':
                             storage_data['healthy_disks'] += 1
                         elif health == 'warning':
@@ -703,6 +691,57 @@ def get_storage_info():
             'warning_disks': 0,
             'critical_disks': 0
         }
+
+# New function to get basic disk info quickly
+def get_basic_disk_info(disk_name):
+    """Get basic disk info quickly without full SMART scan - OPTIMIZED"""
+    basic_info = {
+        'temperature': 0,
+        'health': 'unknown',
+        'model': 'Unknown',
+        'rotation_rate': 0,
+    }
+    
+    try:
+        # Only get basic info (-i) and health (-H), skip full attributes scan
+        cmd = ['smartctl', '-i', '-H', '-j', f'/dev/{disk_name}']
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        
+        if result.returncode in [0, 4]:  # 0 = success, 4 = some SMART values exceeded threshold
+            try:
+                data = json.loads(result.stdout)
+                
+                # Extract model
+                if 'model_name' in data:
+                    basic_info['model'] = data['model_name']
+                elif 'model_family' in data:
+                    basic_info['model'] = data['model_family']
+                
+                # Extract rotation rate
+                if 'rotation_rate' in data:
+                    basic_info['rotation_rate'] = data['rotation_rate']
+                
+                # Extract SMART status
+                if 'smart_status' in data and 'passed' in data['smart_status']:
+                    basic_info['health'] = 'healthy' if data['smart_status']['passed'] else 'critical'
+                
+                # Extract temperature (quick check)
+                if 'temperature' in data and 'current' in data['temperature']:
+                    basic_info['temperature'] = data['temperature']['current']
+                elif 'nvme_smart_health_information_log' in data:
+                    nvme_data = data['nvme_smart_health_information_log']
+                    if 'temperature' in nvme_data:
+                        basic_info['temperature'] = nvme_data['temperature']
+                        
+            except json.JSONDecodeError:
+                pass
+                
+    except Exception as e:
+        print(f"[v0] Error getting basic disk info for {disk_name}: {e}")
+    
+    return basic_info
+
 
 def get_smart_data(disk_name):
     """Get SMART data for a specific disk - Enhanced with multiple device type attempts"""
@@ -2018,7 +2057,7 @@ def get_detailed_gpu_info(gpu):
                                         if 'clients' in json_data:
                                             client_count = len(json_data['clients'])
                                             print(f"[v0] *** FOUND CLIENTS SECTION with {client_count} client(s) ***", flush=True)
-                                            for client_id, client_data in json_data['clients'].items():
+                                            for client_id, client_data in json_data['clients']:
                                                 client_name = client_data.get('name', 'Unknown')
                                                 client_pid = client_data.get('pid', 'Unknown')
                                                 print(f"[v0]   - Client: {client_name} (PID: {client_pid})", flush=True)
@@ -2524,7 +2563,7 @@ def get_detailed_gpu_info(gpu):
                                     mem_clock = clocks['GFX_MCLK']
                                     if 'value' in mem_clock:
                                         detailed_info['clock_memory'] = f"{mem_clock['value']} MHz"
-                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']} MHz", flush=True)
+                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']}", flush=True)
                                         data_retrieved = True
                             
                             # Parse GPU activity (gpu_activity.GFX)
@@ -3573,8 +3612,19 @@ def api_system():
 
 @app.route('/api/storage', methods=['GET'])
 def api_storage():
-    """Get storage information"""
+    """Get storage information - OPTIMIZED: Basic info only"""
     return jsonify(get_storage_info())
+
+@app.route('/api/storage/disk/<disk_name>/details', methods=['GET'])
+def api_disk_details(disk_name):
+    """Get detailed SMART data for a specific disk - loaded on demand"""
+    try:
+        print(f"[v0] Getting detailed SMART data for {disk_name}...")
+        smart_data = get_smart_data(disk_name)
+        return jsonify(smart_data)
+    except Exception as e:
+        print(f"[v0] Error getting disk details: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/proxmox-storage', methods=['GET'])
 def api_proxmox_storage():
@@ -4460,7 +4510,8 @@ def api_info():
         'endpoints': [
             '/api/system',
             '/api/system-info',
-            '/api/storage', 
+            '/api/storage',
+            '/api/storage/disk/<disk_name>/details', # Added endpoint for detailed disk SMART data
             '/api/proxmox-storage',
             '/api/network',
             '/api/vms',
@@ -4734,6 +4785,6 @@ if __name__ == '__main__':
     cli.show_server_banner = lambda *x: None
     
     # Print only essential information
-    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus")
+    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/storage/disk/<disk_name>/details, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/gpu/<slot>/realtime, /api/prometheus")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
