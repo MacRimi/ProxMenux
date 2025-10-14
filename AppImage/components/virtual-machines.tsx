@@ -521,6 +521,11 @@ export function VirtualMachines() {
                         </Badge>
                         <span className="font-semibold text-foreground">{vm.name}</span>
                         <span className="text-sm text-muted-foreground">ID: {vm.vmid}</span>
+                        <span className="text-sm text-muted-foreground ml-auto hidden sm:inline">
+                          Uptime: {formatUptime(vm.uptime)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap sm:hidden">
                         {lxcIP && (
                           <span
                             className={`text-sm flex items-center gap-1 ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
@@ -529,24 +534,22 @@ export function VirtualMachines() {
                             {lxcIP}
                           </span>
                         )}
-                        <span className="text-sm text-muted-foreground ml-auto">Uptime: {formatUptime(vm.uptime)}</span>
+                        <span className="text-sm text-muted-foreground">Uptime: {formatUptime(vm.uptime)}</span>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      {/* CPU Usage - Desktop: column 1, no progress bar */}
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
-                        <div className={`text-sm font-semibold ${getUsageColor(Number.parseFloat(cpuPercent))}`}>
+                        <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(cpuPercent))}`}>
                           {cpuPercent}%
                         </div>
                         <Progress
                           value={Number.parseFloat(cpuPercent)}
-                          className={`h-1.5 md:hidden ${getProgressColor(Number.parseFloat(cpuPercent))}`}
+                          className={`h-1.5 ${getProgressColor(Number.parseFloat(cpuPercent))}`}
                         />
                       </div>
 
-                      {/* Memory - Desktop: column 2 with small bar */}
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">Memory</div>
                         <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(memPercent))}`}>
@@ -558,7 +561,6 @@ export function VirtualMachines() {
                         />
                       </div>
 
-                      {/* Disk Usage - Desktop: column 3 with small bar + Disk I/O below */}
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">Disk Usage</div>
                         <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(diskPercent))}`}>
@@ -568,19 +570,8 @@ export function VirtualMachines() {
                           value={Number.parseFloat(diskPercent)}
                           className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
                         />
-                        <div className="hidden md:block text-xs font-semibold mt-1.5 space-y-0.5">
-                          <div className="flex items-center gap-1">
-                            <HardDrive className="h-3 w-3 text-green-500" />
-                            <span className="text-green-500">↓ {formatBytes(vm.diskread)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <HardDrive className="h-3 w-3 text-blue-500" />
-                            <span className="text-blue-500">↑ {formatBytes(vm.diskwrite)}</span>
-                          </div>
-                        </div>
                       </div>
 
-                      {/* Disk I/O - Desktop: column 4 (separate column) */}
                       <div className="hidden md:block">
                         <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
                         <div className="text-sm font-semibold space-y-0.5">
@@ -595,7 +586,6 @@ export function VirtualMachines() {
                         </div>
                       </div>
 
-                      {/* Network I/O - Mobile: right column (same row as Disk Usage), Desktop: column 5 */}
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
                         <div className="text-sm font-semibold space-y-0.5">
