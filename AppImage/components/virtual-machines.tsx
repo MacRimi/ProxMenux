@@ -290,9 +290,9 @@ export function VirtualMachines() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "running":
-        return <Play className="h-3 w-3 mr-1" />
+        return <Play className="h-3 w-3" />
       case "stopped":
-        return <Square className="h-3 w-3 mr-1" />
+        return <Square className="h-3 w-3" />
       default:
         return null
     }
@@ -502,9 +502,18 @@ export function VirtualMachines() {
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className={`text-xs flex-shrink-0 ${getStatusColor(vm.status)}`}>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs flex-shrink-0 ${getStatusColor(vm.status)} hidden sm:flex`}
+                        >
                           {getStatusIcon(vm.status)}
                           {vm.status.toUpperCase()}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs flex-shrink-0 p-1.5 ${getStatusColor(vm.status)} flex sm:hidden`}
+                        >
+                          {getStatusIcon(vm.status)}
                         </Badge>
                         <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
                           {typeBadge.icon}
@@ -556,6 +565,10 @@ export function VirtualMachines() {
                           value={Number.parseFloat(diskPercent)}
                           className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
                         />
+                        <div className="text-xs font-semibold mt-1 flex gap-2">
+                          <span className="text-green-500">↓ {formatBytes(vm.diskread)}</span>
+                          <span className="text-blue-500">↑ {formatBytes(vm.diskwrite)}</span>
+                        </div>
                       </div>
 
                       <div className="col-span-2 md:col-span-1">
