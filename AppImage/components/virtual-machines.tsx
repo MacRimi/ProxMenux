@@ -533,7 +533,8 @@ export function VirtualMachines() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* CPU Usage - Mobile: left column, Desktop: column 1 */}
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
                         <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(cpuPercent))}`}>
@@ -545,6 +546,7 @@ export function VirtualMachines() {
                         />
                       </div>
 
+                      {/* Memory - Mobile: right column, Desktop: column 2 */}
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">Memory</div>
                         <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(memPercent))}`}>
@@ -556,7 +558,8 @@ export function VirtualMachines() {
                         />
                       </div>
 
-                      <div className="col-span-2 md:col-span-1">
+                      {/* Disk Usage - Mobile: left column (new row), Desktop: column 3 */}
+                      <div>
                         <div className="text-xs text-muted-foreground mb-1">Disk Usage</div>
                         <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(diskPercent))}`}>
                           {diskGB} / {maxDiskGB} GB
@@ -565,12 +568,22 @@ export function VirtualMachines() {
                           value={Number.parseFloat(diskPercent)}
                           className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
                         />
-                        <div className="text-xs font-semibold mt-1 flex gap-2">
-                          <span className="text-green-500">↓ {formatBytes(vm.diskread)}</span>
-                          <span className="text-blue-500">↑ {formatBytes(vm.diskwrite)}</span>
+                      </div>
+
+                      {/* Disk I/O - Mobile: right column (same row as Disk Usage), Desktop: column 3 (below Disk Usage bar) */}
+                      <div className="md:hidden">
+                        <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
+                        <div className="text-xs font-semibold">
+                          <div className="flex items-center gap-1">
+                            <span className="text-green-500">↓ {formatBytes(vm.diskread)}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-blue-500">↑ {formatBytes(vm.diskwrite)}</span>
+                          </div>
                         </div>
                       </div>
 
+                      {/* Network I/O - Mobile: full width (new row), Desktop: column 4 */}
                       <div className="col-span-2 md:col-span-1">
                         <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
                         <div className="text-xs font-semibold">
@@ -580,6 +593,14 @@ export function VirtualMachines() {
                           <div className="flex items-center gap-1">
                             <span className="text-blue-500">↑ {formatBytes(vm.netout)}</span>
                           </div>
+                        </div>
+                      </div>
+
+                      {/* Disk I/O for Desktop - shown below Disk Usage */}
+                      <div className="hidden md:block md:col-start-3">
+                        <div className="text-xs font-semibold mt-1 flex gap-2">
+                          <span className="text-green-500">↓ {formatBytes(vm.diskread)}</span>
+                          <span className="text-blue-500">↑ {formatBytes(vm.diskwrite)}</span>
                         </div>
                       </div>
                     </div>
