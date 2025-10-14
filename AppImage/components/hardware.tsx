@@ -20,7 +20,7 @@ import {
   Info,
 } from "lucide-react"
 import useSWR from "swr"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { type HardwareData, type GPU, type PCIDevice, type StorageDevice, fetcher } from "../types/hardware"
 
 const formatMemory = (memoryKB: number | string): string => {
@@ -116,56 +116,26 @@ export default function Hardware() {
   const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
   const [selectedUPS, setSelectedUPS] = useState<any>(null) // Added state for UPS modal
 
-  useEffect(() => {
-    if (!selectedGPU) return
+  if (!hardwareData && !error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+          <p className="text-sm text-muted-foreground">Loading hardware information...</p>
+        </div>
+      </div>
+    )
+  }
 
-    const pciDevice = findPCIDeviceForGPU(selectedGPU)
-    const fullSlot = pciDevice?.slot || selectedGPU.slot
-
-    if (!fullSlot) return
-
-    const abortController = new AbortController()
-
-    const fetchRealtimeData = async () => {
-      try {
-        const apiUrl = `http://${window.location.hostname}:8008/api/gpu/${fullSlot}/realtime`
-
-        const response = await fetch(apiUrl, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          signal: abortController.signal,
-        })
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        const data = await response.json()
-        setRealtimeGPUData(data)
-        setDetailsLoading(false)
-      } catch (error) {
-        // Only log non-abort errors
-        if (error instanceof Error && error.name !== "AbortError") {
-          console.error("[v0] Error fetching GPU realtime data:", error)
-        }
-        setRealtimeGPUData({ has_monitoring_tool: false })
-        setDetailsLoading(false)
-      }
-    }
-
-    // Initial fetch
-    fetchRealtimeData()
-
-    // Poll every 3 seconds
-    const interval = setInterval(fetchRealtimeData, 3000)
-
-    return () => {
-      clearInterval(interval)
-      abortController.abort()
-    }
-  }, [selectedGPU])
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-sm text-destructive">Error loading hardware information</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleGPUClick = async (gpu: GPU) => {
     setSelectedGPU(gpu)
@@ -952,8 +922,10 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* UPS */}
-      {/* Modified UPS card to include info button and trigger modal */}
+      {/* Power Supplies */}
+      {/* This section was moved to be grouped with Power Consumption */}
+
+      {/* UPS - Enhanced with detailed modal */}
       {hardwareData?.ups && Object.keys(hardwareData.ups).length > 0 && hardwareData.ups.model && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -968,7 +940,7 @@ export default function Hardware() {
                   <span className="text-sm font-medium">{hardwareData.ups.model}</span>
                   <button
                     onClick={() => setSelectedUPS(hardwareData.ups)}
-                    className="p-1 rounded-md hover:bg-background/80 transition-colors"
+                    className="p-1 rounded-md hover:bg-accent transition-colors"
                     title="View detailed UPS information"
                   >
                     <Info className="h-4 w-4 text-muted-foreground hover:text-primary" />
@@ -1022,13 +994,12 @@ export default function Hardware() {
                   </div>
                 )}
 
-                {/* CHANGE: Corrected input_voltage field name */}
-                {hardwareData.ups.input_voltage && (
+                {hardwareData.ups.line_voltage && (
                   <div>
                     <span className="text-xs text-muted-foreground">Input Voltage</span>
                     <div className="mt-1">
                       <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
-                        {hardwareData.ups.input_voltage}
+                        {hardwareData.ups.line_voltage}
                       </Badge>
                     </div>
                   </div>
@@ -1044,229 +1015,265 @@ export default function Hardware() {
           {selectedUPS && (
             <>
               <DialogHeader className="pb-4 border-b border-border">
-                <DialogTitle>{selectedUPS.model || "UPS Details"}</DialogTitle>
-                <DialogDescription>Complete UPS Information from NUT</DialogDescription>
+                <DialogTitle>{selectedUPS.model || selectedUPS.name}</DialogTitle>
+                <DialogDescription>Comprehensive UPS Information</DialogDescription>
               </DialogHeader>
 
               <div className="space-y-6 py-4">
                 {/* Device Information */}
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                    Device Information
-                  </h3>
-                  <div className="grid gap-2">
-                    {selectedUPS.manufacturer && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Manufacturer</span>
-                        <span className="text-sm font-medium">{selectedUPS.manufacturer}</span>
-                      </div>
-                    )}
-                    {selectedUPS.model && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Model</span>
-                        <span className="text-sm font-medium">{selectedUPS.model}</span>
-                      </div>
-                    )}
-                    {selectedUPS.serial && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Serial Number</span>
-                        <span className="font-mono text-sm">{selectedUPS.serial}</span>
-                      </div>
-                    )}
-                    {selectedUPS.device_type && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Device Type</span>
-                        <span className="text-sm font-medium">{selectedUPS.device_type}</span>
-                      </div>
-                    )}
-                    {selectedUPS.firmware && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Firmware</span>
-                        <span className="font-mono text-sm">{selectedUPS.firmware}</span>
-                      </div>
-                    )}
+                {(selectedUPS.model || selectedUPS.manufacturer || selectedUPS.serial || selectedUPS.device_type) && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                      Device Information
+                    </h3>
+                    <div className="grid gap-2">
+                      {selectedUPS.model && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Model</span>
+                          <span className="text-sm font-medium text-right">{selectedUPS.model}</span>
+                        </div>
+                      )}
+                      {selectedUPS.manufacturer && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Manufacturer</span>
+                          <span className="text-sm font-medium">{selectedUPS.manufacturer}</span>
+                        </div>
+                      )}
+                      {selectedUPS.serial && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Serial Number</span>
+                          <span className="font-mono text-sm">{selectedUPS.serial}</span>
+                        </div>
+                      )}
+                      {selectedUPS.device_type && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Device Type</span>
+                          <span className="text-sm font-medium">{selectedUPS.device_type}</span>
+                        </div>
+                      )}
+                      {selectedUPS.firmware && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Firmware</span>
+                          <span className="font-mono text-sm">{selectedUPS.firmware}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Status */}
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Status</h3>
-                  <div className="grid gap-2">
-                    {selectedUPS.status && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">UPS Status</span>
-                        <Badge
-                          variant={selectedUPS.status === "OL" ? "default" : "destructive"}
-                          className={
-                            selectedUPS.status === "OL" ? "bg-green-500/10 text-green-500 border-green-500/20" : ""
-                          }
-                        >
-                          {selectedUPS.status}
-                        </Badge>
-                      </div>
-                    )}
-                    {selectedUPS.test_result && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Test Result</span>
-                        <span className="text-sm font-medium">{selectedUPS.test_result}</span>
-                      </div>
-                    )}
-                    {selectedUPS.beeper_status && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Beeper Status</span>
-                        <span className="text-sm font-medium">{selectedUPS.beeper_status}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Battery Information */}
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Battery</h3>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {selectedUPS.battery_charge && (
-                      <div className="space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Charge</span>
-                          <span className="text-sm font-semibold text-green-500">{selectedUPS.battery_charge}</span>
+                {(selectedUPS.status || selectedUPS.beeper_status || selectedUPS.test_result) && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Status</h3>
+                    <div className="grid gap-2">
+                      {selectedUPS.status && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">UPS Status</span>
+                          <Badge
+                            variant={selectedUPS.status === "OL" ? "default" : "destructive"}
+                            className={
+                              selectedUPS.status === "OL" ? "bg-green-500/10 text-green-500 border-green-500/20" : ""
+                            }
+                          >
+                            {selectedUPS.status}
+                          </Badge>
                         </div>
-                        <Progress
-                          value={
-                            selectedUPS.battery_charge_value ||
-                            Number.parseInt(selectedUPS.battery_charge.replace("%", ""))
-                          }
-                          className="h-2 [&>div]:bg-blue-500"
-                        />
-                      </div>
-                    )}
-                    {selectedUPS.battery_charge_low && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Low Charge Threshold</span>
-                        <span className="text-sm font-medium">{selectedUPS.battery_charge_low}</span>
-                      </div>
-                    )}
-                    {selectedUPS.time_left && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Runtime</span>
-                        <span className="text-sm font-medium text-green-500">{selectedUPS.time_left}</span>
-                      </div>
-                    )}
-                    {selectedUPS.battery_runtime_low && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Low Runtime Threshold</span>
-                        <span className="text-sm font-medium">{selectedUPS.battery_runtime_low}</span>
-                      </div>
-                    )}
-                    {selectedUPS.battery_voltage && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Voltage</span>
-                        <span className="text-sm font-medium">{selectedUPS.battery_voltage}</span>
-                      </div>
-                    )}
-                    {selectedUPS.battery_voltage_nominal && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Nominal Voltage</span>
-                        <span className="text-sm font-medium">{selectedUPS.battery_voltage_nominal}</span>
-                      </div>
-                    )}
-                    {selectedUPS.battery_type && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Type</span>
-                        <span className="text-sm font-medium">{selectedUPS.battery_type}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Power Information */}
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Power</h3>
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {selectedUPS.load_percent && (
-                      <div className="space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Load</span>
-                          <span className="text-sm font-semibold text-green-500">{selectedUPS.load_percent}</span>
+                      )}
+                      {selectedUPS.beeper_status && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Beeper Status</span>
+                          <span className="text-sm font-medium">{selectedUPS.beeper_status}</span>
                         </div>
-                        <Progress
-                          value={selectedUPS.load_value || Number.parseInt(selectedUPS.load_percent.replace("%", ""))}
-                          className="h-2 [&>div]:bg-blue-500"
-                        />
-                      </div>
-                    )}
-                    {selectedUPS.real_power && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Real Power</span>
-                        <span className="text-sm font-medium text-blue-500">{selectedUPS.real_power}</span>
-                      </div>
-                    )}
-                    {selectedUPS.real_power_nominal && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Nominal Real Power</span>
-                        <span className="text-sm font-medium">{selectedUPS.real_power_nominal}</span>
-                      </div>
-                    )}
-                    {selectedUPS.apparent_power && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Apparent Power</span>
-                        <span className="text-sm font-medium text-blue-500">{selectedUPS.apparent_power}</span>
-                      </div>
-                    )}
-                    {selectedUPS.apparent_power_nominal && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Nominal Apparent Power</span>
-                        <span className="text-sm font-medium">{selectedUPS.apparent_power_nominal}</span>
-                      </div>
-                    )}
+                      )}
+                      {selectedUPS.test_result && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Test Result</span>
+                          <span className="text-sm font-medium">{selectedUPS.test_result}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Battery */}
+                {(selectedUPS.battery_charge ||
+                  selectedUPS.time_left ||
+                  selectedUPS.battery_voltage ||
+                  selectedUPS.battery_type) && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                      Battery
+                    </h3>
+                    <div className="grid gap-2">
+                      {selectedUPS.battery_charge && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Charge Level</span>
+                            <span className="text-sm font-medium">{selectedUPS.battery_charge}</span>
+                          </div>
+                          <Progress
+                            value={Number.parseInt(selectedUPS.battery_charge.replace("%", ""))}
+                            className="h-2 [&>div]:bg-blue-500"
+                          />
+                        </div>
+                      )}
+                      {selectedUPS.battery_charge_low && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Low Battery Threshold</span>
+                          <span className="text-sm font-medium">{selectedUPS.battery_charge_low}</span>
+                        </div>
+                      )}
+                      {selectedUPS.time_left && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Runtime Remaining</span>
+                          <span className="text-sm font-medium text-green-500">{selectedUPS.time_left}</span>
+                        </div>
+                      )}
+                      {selectedUPS.battery_runtime_low && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Low Runtime Threshold</span>
+                          <span className="text-sm font-medium">{selectedUPS.battery_runtime_low}</span>
+                        </div>
+                      )}
+                      {selectedUPS.battery_voltage && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Battery Voltage</span>
+                          <span className="text-sm font-medium">{selectedUPS.battery_voltage}</span>
+                        </div>
+                      )}
+                      {selectedUPS.battery_voltage_nominal && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Nominal Voltage</span>
+                          <span className="text-sm font-medium">{selectedUPS.battery_voltage_nominal}</span>
+                        </div>
+                      )}
+                      {selectedUPS.battery_type && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Battery Type</span>
+                          <span className="text-sm font-medium">{selectedUPS.battery_type}</span>
+                        </div>
+                      )}
+                      {selectedUPS.battery_mfr_date && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Battery Manufacture Date</span>
+                          <span className="text-sm font-medium">{selectedUPS.battery_mfr_date}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Power */}
+                {(selectedUPS.load_percent || selectedUPS.real_power || selectedUPS.apparent_power) && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Power</h3>
+                    <div className="grid gap-2">
+                      {selectedUPS.load_percent && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Load</span>
+                            <span className="text-sm font-medium">{selectedUPS.load_percent}</span>
+                          </div>
+                          <Progress
+                            value={Number.parseInt(selectedUPS.load_percent.replace("%", ""))}
+                            className="h-2 [&>div]:bg-blue-500"
+                          />
+                        </div>
+                      )}
+                      {selectedUPS.real_power && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Real Power</span>
+                          <span className="text-sm font-medium text-blue-500">{selectedUPS.real_power}</span>
+                        </div>
+                      )}
+                      {selectedUPS.realpower_nominal && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Nominal Real Power</span>
+                          <span className="text-sm font-medium">{selectedUPS.realpower_nominal}</span>
+                        </div>
+                      )}
+                      {selectedUPS.apparent_power && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Apparent Power</span>
+                          <span className="text-sm font-medium">{selectedUPS.apparent_power}</span>
+                        </div>
+                      )}
+                      {selectedUPS.power_nominal && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Nominal Apparent Power</span>
+                          <span className="text-sm font-medium">{selectedUPS.power_nominal}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Input/Output */}
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                    Input / Output
-                  </h3>
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {selectedUPS.input_voltage && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Input Voltage</span>
-                        <span className="text-sm font-medium text-green-500">{selectedUPS.input_voltage}</span>
-                      </div>
-                    )}
-                    {selectedUPS.input_voltage_nominal && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Nominal Input Voltage</span>
-                        <span className="text-sm font-medium">{selectedUPS.input_voltage_nominal}</span>
-                      </div>
-                    )}
-                    {selectedUPS.input_frequency && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Input Frequency</span>
-                        <span className="text-sm font-medium">{selectedUPS.input_frequency}</span>
-                      </div>
-                    )}
-                    {selectedUPS.output_voltage && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Output Voltage</span>
-                        <span className="text-sm font-medium text-green-500">{selectedUPS.output_voltage}</span>
-                      </div>
-                    )}
-                    {selectedUPS.output_voltage_nominal && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Nominal Output Voltage</span>
-                        <span className="text-sm font-medium">{selectedUPS.output_voltage_nominal}</span>
-                      </div>
-                    )}
-                    {selectedUPS.output_frequency && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Output Frequency</span>
-                        <span className="text-sm font-medium">{selectedUPS.output_frequency}</span>
-                      </div>
-                    )}
+                {(selectedUPS.input_voltage || selectedUPS.output_voltage || selectedUPS.input_frequency) && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                      Input / Output
+                    </h3>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {selectedUPS.input_voltage && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Input Voltage</span>
+                          <span className="text-sm font-medium text-green-500">{selectedUPS.input_voltage}</span>
+                        </div>
+                      )}
+                      {selectedUPS.input_voltage_nominal && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Nominal Input Voltage</span>
+                          <span className="text-sm font-medium">{selectedUPS.input_voltage_nominal}</span>
+                        </div>
+                      )}
+                      {selectedUPS.input_frequency && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Input Frequency</span>
+                          <span className="text-sm font-medium">{selectedUPS.input_frequency}</span>
+                        </div>
+                      )}
+                      {selectedUPS.input_transfer_high && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Transfer High</span>
+                          <span className="text-sm font-medium">{selectedUPS.input_transfer_high}</span>
+                        </div>
+                      )}
+                      {selectedUPS.input_transfer_low && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Transfer Low</span>
+                          <span className="text-sm font-medium">{selectedUPS.input_transfer_low}</span>
+                        </div>
+                      )}
+                      {selectedUPS.transfer_reason && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Last Transfer Reason</span>
+                          <span className="text-sm font-medium">{selectedUPS.transfer_reason}</span>
+                        </div>
+                      )}
+                      {selectedUPS.output_voltage && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Output Voltage</span>
+                          <span className="text-sm font-medium">{selectedUPS.output_voltage}</span>
+                        </div>
+                      )}
+                      {selectedUPS.output_voltage_nominal && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Nominal Output Voltage</span>
+                          <span className="text-sm font-medium">{selectedUPS.output_voltage_nominal}</span>
+                        </div>
+                      )}
+                      {selectedUPS.output_frequency && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Output Frequency</span>
+                          <span className="text-sm font-medium">{selectedUPS.output_frequency}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Driver Information */}
+                {/* Driver */}
                 {(selectedUPS.driver_name || selectedUPS.driver_version) && (
                   <div>
                     <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Driver</h3>
@@ -1283,12 +1290,30 @@ export default function Hardware() {
                           <span className="font-mono text-sm">{selectedUPS.driver_version}</span>
                         </div>
                       )}
+                      {selectedUPS.driver_version_internal && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Internal Version</span>
+                          <span className="font-mono text-sm">{selectedUPS.driver_version_internal}</span>
+                        </div>
+                      )}
+                      {selectedUPS.driver_poll_freq && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Poll Frequency</span>
+                          <span className="text-sm font-medium">{selectedUPS.driver_poll_freq}</span>
+                        </div>
+                      )}
+                      {selectedUPS.driver_poll_interval && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Poll Interval</span>
+                          <span className="text-sm font-medium">{selectedUPS.driver_poll_interval}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
                 {/* Configuration */}
-                {(selectedUPS.delay_shutdown || selectedUPS.delay_start) && (
+                {(selectedUPS.delay_shutdown || selectedUPS.delay_start || selectedUPS.timer_shutdown) && (
                   <div>
                     <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                       Configuration
@@ -1306,22 +1331,34 @@ export default function Hardware() {
                           <span className="text-sm font-medium">{selectedUPS.delay_start}</span>
                         </div>
                       )}
+                      {selectedUPS.timer_shutdown && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Shutdown Timer</span>
+                          <span className="text-sm font-medium">{selectedUPS.timer_shutdown}</span>
+                        </div>
+                      )}
+                      {selectedUPS.timer_reboot && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm text-muted-foreground">Reboot Timer</span>
+                          <span className="text-sm font-medium">{selectedUPS.timer_reboot}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Raw Data Section - Collapsible */}
-                {selectedUPS.raw_data && Object.keys(selectedUPS.raw_data).length > 0 && (
+                {/* Raw Variables - Collapsible section with all UPS variables */}
+                {selectedUPS.raw_variables && Object.keys(selectedUPS.raw_variables).length > 0 && (
                   <details className="rounded-lg border border-border/30 bg-background/50">
-                    <summary className="cursor-pointer p-4 font-medium text-sm hover:bg-background/80 transition-colors">
-                      All UPS Variables ({Object.keys(selectedUPS.raw_data).length})
+                    <summary className="cursor-pointer p-4 font-medium text-sm hover:bg-accent/50 transition-colors">
+                      All UPS Variables ({Object.keys(selectedUPS.raw_variables).length})
                     </summary>
-                    <div className="p-4 pt-0 max-h-96 overflow-y-auto">
-                      <div className="space-y-1 font-mono text-xs">
-                        {Object.entries(selectedUPS.raw_data).map(([key, value]) => (
-                          <div key={key} className="flex justify-between border-b border-border/30 pb-1">
-                            <span className="text-muted-foreground">{key}</span>
-                            <span className="text-foreground">{value as string}</span>
+                    <div className="p-4 pt-0 max-h-[300px] overflow-y-auto">
+                      <div className="grid gap-1">
+                        {Object.entries(selectedUPS.raw_variables).map(([key, value]) => (
+                          <div key={key} className="flex justify-between border-b border-border/50 pb-1 text-xs">
+                            <span className="font-mono text-muted-foreground">{key}</span>
+                            <span className="font-mono">{value as string}</span>
                           </div>
                         ))}
                       </div>
