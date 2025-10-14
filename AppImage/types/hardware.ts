@@ -76,12 +76,31 @@ export interface PowerSupply {
 
 export interface UPS {
   name: string
+  host?: string
+  is_remote?: boolean
+  connection_type?: string
   status: string
-  battery_charge?: number
-  battery_runtime?: number
-  load?: number
-  input_voltage?: number
-  output_voltage?: number
+  model?: string
+  manufacturer?: string
+  serial?: string
+  device_type?: string
+  firmware?: string
+  driver?: string
+  battery_charge?: string
+  battery_charge_raw?: number
+  battery_voltage?: string
+  battery_date?: string
+  time_left?: string
+  time_left_seconds?: number
+  load_percent?: string
+  load_percent_raw?: number
+  input_voltage?: string
+  input_frequency?: string
+  output_voltage?: string
+  output_frequency?: string
+  real_power?: string
+  apparent_power?: string
+  [key: string]: any
 }
 
 export interface GPU {
@@ -179,7 +198,7 @@ export interface HardwareData {
   gpus?: GPU[]
   fans?: Fan[]
   power_supplies?: PowerSupply[]
-  ups?: UPS
+  ups?: UPS | UPS[]
 }
 
 export const fetcher = (url: string) => fetch(url).then((res) => res.json())

@@ -1549,20 +1549,72 @@ def get_ipmi_power():
     }
 
 def get_ups_info():
-    """Get UPS information from NUT (upsc)"""
-    ups_data = {}
+    """Get UPS information from NUT (upsc) - supports both local and remote UPS"""
+    ups_list = []
     
     try:
-        # First, list available UPS devices
-        result = subprocess.run(['upsc', '-l'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            ups_list = result.stdout.strip().split('\n')
-            if ups_list and ups_list[0]:
-                ups_name = ups_list[0]
-                print(f"[v0] Found UPS: {ups_name}")
+        configured_ups = {}
+        try:
+            with open('/etc/nut/upsmon.conf', 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    # Look for MONITOR lines: MONITOR ups@host powervalue username password type
+                    if line.startswith('MONITOR') and not line.startswith('#'):
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            ups_spec = parts[1]  # Format: upsname@hostname or just upsname
+                            if '@' in ups_spec:
+                                ups_name, ups_host = ups_spec.split('@', 1)
+                                configured_ups[ups_spec] = {
+                                    'name': ups_name,
+                                    'host': ups_host,
+                                    'is_remote': ups_host not in ['localhost', '127.0.0.1', '::1']
+                                }
+                            else:
+                                configured_ups[ups_spec] = {
+                                    'name': ups_spec,
+                                    'host': 'localhost',
+                                    'is_remote': False
+                                }
+        except FileNotFoundError:
+            print("[v0] /etc/nut/upsmon.conf not found")
+        except Exception as e:
+            print(f"[v0] Error reading upsmon.conf: {e}")
+        
+        # Get list of locally available UPS
+        local_ups = []
+        try:
+            result = subprocess.run(['upsc', '-l'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                local_ups = [ups.strip() for ups in result.stdout.strip().split('\n') if ups.strip()]
+        except Exception as e:
+            print(f"[v0] Error listing local UPS: {e}")
+        
+        # Combine configured and local UPS
+        all_ups = set()
+        
+        # Add configured UPS
+        for ups_spec, ups_info in configured_ups.items():
+            all_ups.add((ups_spec, ups_info['host'], ups_info['is_remote']))
+        
+        # Add local UPS that might not be in config
+        for ups_name in local_ups:
+            all_ups.add((ups_name, 'localhost', False))
+        
+        # Get detailed info for each UPS
+        for ups_spec, ups_host, is_remote in all_ups:
+            try:
+                ups_data = {
+                    'name': ups_spec.split('@')[0] if '@' in ups_spec else ups_spec,
+                    'host': ups_host,
+                    'is_remote': is_remote,
+                    'connection_type': 'Remote (NUT)' if is_remote else 'Local'
+                }
                 
-                # Get detailed UPS info
-                result = subprocess.run(['upsc', ups_name], capture_output=True, text=True, timeout=5)
+                # Get detailed UPS info using upsc
+                cmd = ['upsc', ups_spec] if '@' in ups_spec else ['upsc', ups_spec, ups_host] if is_remote else ['upsc', ups_spec]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+                
                 if result.returncode == 0:
                     for line in result.stdout.split('\n'):
                         if ':' in line:
@@ -1570,35 +1622,70 @@ def get_ups_info():
                             key = key.strip()
                             value = value.strip()
                             
-                            # Map common UPS variables
+                            # Store all UPS variables for detailed modal
+                            ups_data[key] = value
+                            
+                            # Map common variables for quick access
                             if key == 'device.model':
                                 ups_data['model'] = value
+                            elif key == 'device.mfr':
+                                ups_data['manufacturer'] = value
+                            elif key == 'device.serial':
+                                ups_data['serial'] = value
+                            elif key == 'device.type':
+                                ups_data['device_type'] = value
                             elif key == 'ups.status':
                                 ups_data['status'] = value
                             elif key == 'battery.charge':
                                 ups_data['battery_charge'] = f"{value}%"
+                                ups_data['battery_charge_raw'] = float(value)
                             elif key == 'battery.runtime':
-                                # Convert seconds to minutes
                                 try:
                                     runtime_sec = int(value)
                                     runtime_min = runtime_sec // 60
                                     ups_data['time_left'] = f"{runtime_min} minutes"
+                                    ups_data['time_left_seconds'] = runtime_sec
                                 except ValueError:
                                     ups_data['time_left'] = value
+                            elif key == 'battery.voltage':
+                                ups_data['battery_voltage'] = f"{value}V"
+                            elif key == 'battery.date':
+                                ups_data['battery_date'] = value
                             elif key == 'ups.load':
                                 ups_data['load_percent'] = f"{value}%"
+                                ups_data['load_percent_raw'] = float(value)
                             elif key == 'input.voltage':
-                                ups_data['line_voltage'] = f"{value}V"
+                                ups_data['input_voltage'] = f"{value}V"
+                            elif key == 'input.frequency':
+                                ups_data['input_frequency'] = f"{value}Hz"
+                            elif key == 'output.voltage':
+                                ups_data['output_voltage'] = f"{value}V"
+                            elif key == 'output.frequency':
+                                ups_data['output_frequency'] = f"{value}Hz"
                             elif key == 'ups.realpower':
                                 ups_data['real_power'] = f"{value}W"
+                            elif key == 'ups.power':
+                                ups_data['apparent_power'] = f"{value}VA"
+                            elif key == 'ups.firmware':
+                                ups_data['firmware'] = value
+                            elif key == 'driver.name':
+                                ups_data['driver'] = value
                     
-                    print(f"[v0] UPS data: {ups_data}")
+                    ups_list.append(ups_data)
+                    print(f"[v0] UPS found: {ups_data.get('model', 'Unknown')} ({ups_data['connection_type']})")
+                else:
+                    print(f"[v0] Failed to get info for UPS: {ups_spec}")
+                    
+            except Exception as e:
+                print(f"[v0] Error getting UPS info for {ups_spec}: {e}")
+                
     except FileNotFoundError:
         print("[v0] upsc not found")
     except Exception as e:
-        print(f"[v0] Error getting UPS info: {e}")
+        print(f"[v0] Error in get_ups_info: {e}")
     
-    return ups_data
+    return ups_list
+
 
 def identify_temperature_sensor(sensor_name, adapter):
     """Identify what a temperature sensor corresponds to"""
