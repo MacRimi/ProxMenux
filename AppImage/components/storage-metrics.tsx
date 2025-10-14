@@ -136,6 +136,11 @@ export function StorageMetrics() {
       if (!result) {
         setError("Flask server not available. Please ensure the server is running.")
       } else {
+        console.log("[v0] Storage data received:", result)
+        console.log("[v0] Number of disks:", result.disks?.length || 0)
+        if (result.disks && result.disks.length > 0) {
+          console.log("[v0] First disk sample:", result.disks[0])
+        }
         setStorageData(result)
       }
 
@@ -191,6 +196,8 @@ export function StorageMetrics() {
     {} as Record<string, DiskInfo[]>,
   )
 
+  console.log("[v0] Disks grouped by type:", disksByType)
+
   const tempByType = Object.entries(disksByType)
     .map(([type, disks]) => {
       const avgTemp = disks.reduce((sum, disk) => sum + disk.temperature, 0) / disks.length
@@ -198,6 +205,8 @@ export function StorageMetrics() {
       return { type, avgTemp: Math.round(avgTemp), status, count: disks.length }
     })
     .filter((item) => item.type !== "Unknown")
+
+  console.log("[v0] Temperature by type:", tempByType)
 
   return (
     <div className="space-y-6">
@@ -574,7 +583,7 @@ export function StorageMetrics() {
                                 <div
                                   className={`text-lg font-bold ${getWearStatus(selectedDisk.media_wearout_indicator).color}`}
                                 >
-                                  {selectedDisk.media_wearout_indicator}
+                                  {selectedDisk.media_wearout_indicator}%
                                 </div>
                                 <Progress value={selectedDisk.media_wearout_indicator} className="mt-2" />
                               </div>
