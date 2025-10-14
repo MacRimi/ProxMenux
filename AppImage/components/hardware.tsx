@@ -390,10 +390,10 @@ export default function Hardware() {
             const groupedTemps = groupAndSortTemperatures(hardwareData.temperatures)
 
             return (
-              <div className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
                 {/* CPU Sensors */}
                 {groupedTemps.CPU.length > 0 && (
-                  <div>
+                  <div className="md:col-span-2">
                     <div className="mb-3 flex items-center gap-2">
                       <CpuIcon className="h-4 w-4 text-muted-foreground" />
                       <h3 className="text-sm font-semibold">CPU</h3>
@@ -434,7 +434,7 @@ export default function Hardware() {
 
                 {/* GPU Sensors */}
                 {groupedTemps.GPU.length > 0 && (
-                  <div>
+                  <div className={groupedTemps.GPU.length > 1 ? "md:col-span-2" : ""}>
                     <div className="mb-3 flex items-center gap-2">
                       <Gpu className="h-4 w-4 text-muted-foreground" />
                       <h3 className="text-sm font-semibold">GPU</h3>
@@ -442,7 +442,7 @@ export default function Hardware() {
                         {groupedTemps.GPU.length}
                       </Badge>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className={`grid gap-4 ${groupedTemps.GPU.length > 1 ? "md:grid-cols-2" : ""}`}>
                       {groupedTemps.GPU.map((temp, index) => {
                         const percentage =
                           temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
@@ -475,7 +475,7 @@ export default function Hardware() {
 
                 {/* NVME Sensors */}
                 {groupedTemps.NVME.length > 0 && (
-                  <div>
+                  <div className={groupedTemps.NVME.length > 1 ? "md:col-span-2" : ""}>
                     <div className="mb-3 flex items-center gap-2">
                       <HardDrive className="h-4 w-4 text-muted-foreground" />
                       <h3 className="text-sm font-semibold">NVME</h3>
@@ -483,7 +483,7 @@ export default function Hardware() {
                         {groupedTemps.NVME.length}
                       </Badge>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className={`grid gap-4 ${groupedTemps.NVME.length > 1 ? "md:grid-cols-2" : ""}`}>
                       {groupedTemps.NVME.map((temp, index) => {
                         const percentage =
                           temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
@@ -516,7 +516,7 @@ export default function Hardware() {
 
                 {/* PCI Sensors */}
                 {groupedTemps.PCI.length > 0 && (
-                  <div>
+                  <div className={groupedTemps.PCI.length > 1 ? "md:col-span-2" : ""}>
                     <div className="mb-3 flex items-center gap-2">
                       <CpuIcon className="h-4 w-4 text-muted-foreground" />
                       <h3 className="text-sm font-semibold">PCI</h3>
@@ -524,7 +524,7 @@ export default function Hardware() {
                         {groupedTemps.PCI.length}
                       </Badge>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className={`grid gap-4 ${groupedTemps.PCI.length > 1 ? "md:grid-cols-2" : ""}`}>
                       {groupedTemps.PCI.map((temp, index) => {
                         const percentage =
                           temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
@@ -557,7 +557,7 @@ export default function Hardware() {
 
                 {/* OTHER Sensors */}
                 {groupedTemps.OTHER.length > 0 && (
-                  <div>
+                  <div className={groupedTemps.OTHER.length > 1 ? "md:col-span-2" : ""}>
                     <div className="mb-3 flex items-center gap-2">
                       <Thermometer className="h-4 w-4 text-muted-foreground" />
                       <h3 className="text-sm font-semibold">OTHER</h3>
@@ -565,7 +565,7 @@ export default function Hardware() {
                         {groupedTemps.OTHER.length}
                       </Badge>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className={`grid gap-4 ${groupedTemps.OTHER.length > 1 ? "md:grid-cols-2" : ""}`}>
                       {groupedTemps.OTHER.map((temp, index) => {
                         const percentage =
                           temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
