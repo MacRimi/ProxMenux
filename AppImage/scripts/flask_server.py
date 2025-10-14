@@ -537,7 +537,13 @@ def get_storage_info():
                             'crc_errors': smart_data.get('crc_errors', 0),
                             'rotation_rate': smart_data.get('rotation_rate', 0), # Added
                             'power_cycles': smart_data.get('power_cycles', 0), # Added
-                            'disk_type': smart_data.get('disk_type', 'Unknown') # Added from get_smart_data
+                            'disk_type': smart_data.get('disk_type', 'Unknown'), # Added from get_smart_data
+                            # Added wear indicators
+                            'percentage_used': smart_data.get('percentage_used'),
+                            'ssd_life_left': smart_data.get('ssd_life_left'),
+                            'wear_leveling_count': smart_data.get('wear_leveling_count'),
+                            'media_wearout_indicator': smart_data.get('media_wearout_indicator'),
+                            'total_lbas_written': smart_data.get('total_lbas_written'),
                         }
                         
                         storage_data['disk_count'] += 1
@@ -657,6 +663,11 @@ def get_smart_data(disk_name):
         'rotation_rate': 0,  # Added rotation rate (RPM)
         'power_cycles': 0,   # Added power cycle count
         'disk_type': 'Unknown',  # Will be 'HDD', 'SSD', or 'NVMe'
+        'percentage_used': None,  # NVMe specific
+        'ssd_life_left': None,  # SSD specific (percentage remaining)
+        'wear_leveling_count': None,  # SSD specific
+        'media_wearout_indicator': None,  # SSD specific
+        'total_lbas_written': None,  # Both SSD and NVMe
     }
     
     print(f"[v0] ===== Starting SMART data collection for /dev/{disk_name} =====")
@@ -753,6 +764,7 @@ def get_smart_data(disk_name):
                                 for attr in data['ata_smart_attributes']['table']:
                                     attr_id = attr.get('id')
                                     raw_value = attr.get('raw', {}).get('value', 0)
+                                    normalized_value = attr.get('value', 0)
                                     
                                     if attr_id == 9:  # Power_On_Hours
                                         smart_data['power_on_hours'] = raw_value
@@ -777,6 +789,22 @@ def get_smart_data(disk_name):
                                     elif attr_id == 199:  # UDMA_CRC_Error_Count
                                         smart_data['crc_errors'] = raw_value
                                         print(f"[v0] CRC Errors (ID 199): {raw_value}")
+                                    elif attr_id == 177:  # Wear_Leveling_Count
+                                        smart_data['wear_leveling_count'] = normalized_value
+                                        print(f"[v0] Wear Leveling Count (ID 177): {normalized_value}")
+                                    elif attr_id == 231:  # SSD_Life_Left or Temperature
+                                        if normalized_value <= 100:  # Likely life left percentage
+                                            smart_data['ssd_life_left'] = normalized_value
+                                            print(f"[v0] SSD Life Left (ID 231): {normalized_value}%")
+                                    elif attr_id == 233:  # Media_Wearout_Indicator
+                                        smart_data['media_wearout_indicator'] = normalized_value
+                                        print(f"[v0] Media Wearout Indicator (ID 233): {normalized_value}")
+                                    elif attr_id == 202:  # Percent_Lifetime_Remain
+                                        smart_data['ssd_life_left'] = normalized_value
+                                        print(f"[v0] Percent Lifetime Remain (ID 202): {normalized_value}%")
+                                    elif attr_id == 241:  # Total_LBAs_Written
+                                        smart_data['total_lbas_written'] = raw_value
+                                        print(f"[v0] Total LBAs Written (ID 241): {raw_value}")
                             
                             # Parse NVMe SMART data
                             if 'nvme_smart_health_information_log' in data:
@@ -791,7 +819,13 @@ def get_smart_data(disk_name):
                                 if 'power_cycles' in nvme_data:
                                     smart_data['power_cycles'] = nvme_data['power_cycles']
                                     print(f"[v0] NVMe Power Cycles: {smart_data['power_cycles']}")
-                            
+                                if 'percentage_used' in nvme_data:
+                                    smart_data['percentage_used'] = nvme_data['percentage_used']
+                                    print(f"[v0] NVMe Percentage Used: {smart_data['percentage_used']}%")
+                                if 'data_units_written' in nvme_data:
+                                    smart_data['total_lbas_written'] = nvme_data['data_units_written']
+                                    print(f"[v0] NVMe Data Units Written: {smart_data['total_lbas_written']}")
+
                             # If we got good data, break out of the loop
                             if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
                                 print(f"[v0] Successfully extracted complete data from JSON (attempt {cmd_index + 1})")
@@ -1370,7 +1404,7 @@ def get_network_info():
         }
 
 def get_proxmox_vms():
-    """Get Proxmox VM and LXC information (requires pvesh command) - only from local node"""
+    """Get Proxmox VM and LXC information using pvesh command - only from local node"""
     try:
         all_vms = []
         
