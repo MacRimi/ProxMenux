@@ -873,9 +873,14 @@ def get_smart_data(disk_name):
                                         print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
                                     elif attr_id == '241':  # Total_LBAs_Written
                                         # Convertir a GB (raw_value es en sectores de 512 bytes)
-                                        total_gb = (raw_value * 512) / (1024 * 1024 * 1024)
-                                        smart_data['total_lbas_written'] = round(total_gb, 2)
-                                        print(f"[v0] Total LBAs Written (ID 241): {smart_data['total_lbas_written']} GB")
+                                        # Corrected the conversion for Total_LBAs_Written (ID 241)
+                                        try:
+                                            raw_int = int(raw_value.replace(',', ''))
+                                            total_gb = (raw_int * 512) / (1024 * 1024 * 1024)
+                                            smart_data['total_lbas_written'] = round(total_gb, 2)
+                                            print(f"[v0] Total LBAs Written (ID 241): {smart_data['total_lbas_written']} GB")
+                                        except ValueError:
+                                            pass
                             
                             # If we got good data, break out of the loop
                             if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
@@ -2584,15 +2589,15 @@ def get_detailed_gpu_info(gpu):
                                         
                                         print(f"[v0] VRAM Total: {detailed_info['memory_total']}", flush=True)
                                         data_retrieved = True
-                                
-                                # Calculate memory utilization percentage
-                                if detailed_info['memory_used'] and detailed_info['memory_total']:
-                                    mem_used = int(detailed_info['memory_used'].replace(' MB', ''))
-                                    mem_total = int(detailed_info['memory_total'].replace(' MB', ''))
-                                    if mem_total > 0:
-                                        mem_util = (mem_used / mem_total) * 100
-                                        detailed_info['utilization_memory'] = round(mem_util, 1)
-                                        print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
+                            
+                            # Calculate memory utilization percentage
+                            if detailed_info['memory_used'] and detailed_info['memory_total']:
+                                mem_used = int(detailed_info['memory_used'].replace(' MB', ''))
+                                mem_total = int(detailed_info['memory_total'].replace(' MB', ''))
+                                if mem_total > 0:
+                                    mem_util = (mem_used / mem_total) * 100
+                                    detailed_info['utilization_memory'] = round(mem_util, 1)
+                                    print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
                             
                             # Parse GRBM (Graphics Register Bus Manager) for engine utilization
                             if 'GRBM' in device:
