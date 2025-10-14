@@ -1761,7 +1761,7 @@ def identify_temperature_sensor(sensor_name, adapter):
     elif "nouveau" in adapter_lower or "amdgpu" in adapter_lower or "radeon" in adapter_lower or "i915" in adapter_lower or "nvidia" in adapter_lower: # Check adapter for GPU drivers
         category = "GPU"
         display_name = f"GPU - {sensor_name}"
-    elif any(gpu in sensor_lower for gpu in ["gpu", "vga", "graphics"]):
+    elif "gpu" in sensor_lower or "vga" in sensor_lower or "graphics" in sensor_lower:
         category = "GPU"
         display_name = sensor_name
     
@@ -2884,6 +2884,7 @@ def get_network_hardware_info(pci_slot):
     
     return net_info
 
+# Improved GPU type identification logic
 def identify_gpu_type(gpu_name, vendor):
     """
     Identify if a GPU is integrated or discrete based on its name and vendor.
@@ -2892,6 +2893,8 @@ def identify_gpu_type(gpu_name, vendor):
     - Intel: HD Graphics, UHD Graphics, Iris, Iris Xe (but NOT Arc)
     - AMD: Radeon Vega (integrated), Radeon Graphics (APU), with keywords like "Integrated"
     - NVIDIA: Tegra (rare in servers)
+    - Matrox: G200 series (BMC/IPMI graphics for server management)
+    - ASPEED: AST series (BMC graphics)
     
     Discrete GPUs:
     - Intel: Arc series (A380, A750, A770, etc.)
@@ -2900,12 +2903,16 @@ def identify_gpu_type(gpu_name, vendor):
     """
     gpu_name_lower = gpu_name.lower()
     
-    # Keywords that indicate an integrated GPU
+    # Keywords that indicate an integrated GPU (including BMC/IPMI)
     integrated_keywords = [
         'integrated', 'on-board', 'built-in', 'onboard',
         'hd graphics', 'uhd graphics', 'iris graphics', 'iris xe graphics',
         'radeon vega', 'radeon graphics',  # AMD APU integrated graphics
-        'tegra'  # NVIDIA Tegra (rare)
+        'tegra',  # NVIDIA Tegra (rare)
+        'g200',  # Matrox G200 series (BMC)
+        'mga g200',  # Matrox MGA G200 (BMC)
+        'ast1', 'ast2',  # ASPEED AST series (BMC)
+        'aspeed'  # ASPEED BMC graphics
     ]
     
     # Keywords that indicate a discrete GPU
@@ -2946,6 +2953,12 @@ def identify_gpu_type(gpu_name, vendor):
             return 'Integrated'
         # Most other AMD GPUs are discrete
         return 'Discrete'
+    elif vendor == 'Matrox':
+        # Matrox G200 series are BMC/IPMI integrated graphics
+        return 'Integrated'
+    elif vendor == 'ASPEED':
+        # ASPEED AST series are BMC integrated graphics
+        return 'Integrated'
     
     # Default to Discrete if we can't determine
     return 'Discrete'
@@ -2980,6 +2993,10 @@ def get_gpu_info():
                             vendor = 'AMD'
                         elif 'Intel' in gpu_name:
                             vendor = 'Intel'
+                        elif 'Matrox' in gpu_name:
+                            vendor = 'Matrox'
+                        elif 'ASPEED' in gpu_name:
+                            vendor = 'ASPEED'
                         
                         gpu_type = identify_gpu_type(gpu_name, vendor)
                         
