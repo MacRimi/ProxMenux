@@ -28,6 +28,11 @@ interface DiskInfo {
   crc_errors?: number
   rotation_rate?: number
   power_cycles?: number
+  percentage_used?: number // NVMe: Percentage Used (0-100)
+  media_wearout_indicator?: number // SSD: Media Wearout Indicator
+  wear_leveling_count?: number // SSD: Wear Leveling Count
+  total_lbas_written?: number // SSD/NVMe: Total LBAs Written (GB)
+  ssd_life_left?: number // SSD: SSD Life Left percentage
 }
 
 interface ZFSPool {
@@ -262,6 +267,64 @@ export function StorageOverview() {
       default:
         return <CheckCircle2 className="h-5 w-5 text-gray-500" />
     }
+  }
+
+  const getWearIndicator = (disk: DiskInfo): { value: number; label: string } | null => {
+    const diskType = getDiskType(disk.name, disk.rotation_rate)
+
+    if (diskType === "NVMe" && disk.percentage_used !== undefined && disk.percentage_used !== null) {
+      return { value: disk.percentage_used, label: "Percentage Used" }
+    }
+
+    if (diskType === "SSD") {
+      // Prioridad: Media Wearout Indicator > Wear Leveling Count > SSD Life Left
+      if (disk.media_wearout_indicator !== undefined && disk.media_wearout_indicator !== null) {
+        return { value: disk.media_wearout_indicator, label: "Media Wearout" }
+      }
+      if (disk.wear_leveling_count !== undefined && disk.wear_leveling_count !== null) {
+        return { value: disk.wear_leveling_count, label: "Wear Level" }
+      }
+      if (disk.ssd_life_left !== undefined && disk.ssd_life_left !== null) {
+        return { value: 100 - disk.ssd_life_left, label: "Life Used" }
+      }
+    }
+
+    return null
+  }
+
+  const getWearColor = (wearPercent: number): string => {
+    if (wearPercent <= 50) return "text-green-500"
+    if (wearPercent <= 80) return "text-yellow-500"
+    return "text-red-500"
+  }
+
+  const getEstimatedLifeRemaining = (disk: DiskInfo): string | null => {
+    const wearIndicator = getWearIndicator(disk)
+    if (!wearIndicator || !disk.power_on_hours || disk.power_on_hours === 0) {
+      return null
+    }
+
+    const wearPercent = wearIndicator.value
+    const hoursUsed = disk.power_on_hours
+
+    // Si el desgaste es 0, no podemos calcular
+    if (wearPercent === 0) {
+      return "N/A"
+    }
+
+    // Calcular horas totales estimadas: hoursUsed / (wearPercent / 100)
+    const totalEstimatedHours = hoursUsed / (wearPercent / 100)
+    const remainingHours = totalEstimatedHours - hoursUsed
+
+    // Convertir a años
+    const remainingYears = remainingHours / 8760 // 8760 horas en un año
+
+    if (remainingYears < 1) {
+      const remainingMonths = Math.round(remainingYears * 12)
+      return `~${remainingMonths} months`
+    }
+
+    return `~${remainingYears.toFixed(1)} years`
   }
 
   if (loading) {
@@ -588,6 +651,51 @@ export function StorageOverview() {
                   <div className="mt-1">{getHealthBadge(selectedDisk.health)}</div>
                 </div>
               </div>
+
+              {/* Wear & Lifetime Section */}
+              {getWearIndicator(selectedDisk) && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Wear & Lifetime</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-muted-foreground">{getWearIndicator(selectedDisk)!.label}</p>
+                        <p className={`font-medium ${getWearColor(getWearIndicator(selectedDisk)!.value)}`}>
+                          {getWearIndicator(selectedDisk)!.value}%
+                        </p>
+                      </div>
+                      <Progress
+                        value={getWearIndicator(selectedDisk)!.value}
+                        className={`h-2 ${
+                          getWearIndicator(selectedDisk)!.value > 80
+                            ? "[&>div]:bg-red-500"
+                            : getWearIndicator(selectedDisk)!.value > 50
+                              ? "[&>div]:bg-yellow-500"
+                              : "[&>div]:bg-green-500"
+                        }`}
+                      />
+                    </div>
+                    {getEstimatedLifeRemaining(selectedDisk) && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Estimated Life Remaining</p>
+                          <p className="font-medium">{getEstimatedLifeRemaining(selectedDisk)}</p>
+                        </div>
+                        {selectedDisk.total_lbas_written && selectedDisk.total_lbas_written > 0 && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Total Data Written</p>
+                            <p className="font-medium">
+                              {selectedDisk.total_lbas_written >= 1024
+                                ? `${(selectedDisk.total_lbas_written / 1024).toFixed(2)} TB`
+                                : `${selectedDisk.total_lbas_written.toFixed(2)} GB`}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="border-t pt-4">
                 <h4 className="font-semibold mb-3">SMART Attributes</h4>

@@ -593,8 +593,13 @@ def get_storage_info():
                             'reallocated_sectors': smart_data.get('reallocated_sectors', 0),
                             'pending_sectors': smart_data.get('pending_sectors', 0),
                             'crc_errors': smart_data.get('crc_errors', 0),
-                            'rotation_rate': smart_data.get('rotation_rate', 0), # Added
-                            'power_cycles': smart_data.get('power_cycles', 0) # Added
+                            'rotation_rate': smart_data.get('rotation_rate', 0),  # Added
+                            'power_cycles': smart_data.get('power_cycles', 0),   # Added
+                            'percentage_used': smart_data.get('percentage_used'), # Added
+                            'media_wearout_indicator': smart_data.get('media_wearout_indicator'), # Added
+                            'wear_leveling_count': smart_data.get('wear_leveling_count'), # Added
+                            'total_lbas_written': smart_data.get('total_lbas_written'), # Added
+                            'ssd_life_left': smart_data.get('ssd_life_left') # Added
                         }
                         
                         storage_data['disk_count'] += 1
@@ -713,6 +718,11 @@ def get_smart_data(disk_name):
         'crc_errors': 0,
         'rotation_rate': 0,  # Added rotation rate (RPM)
         'power_cycles': 0,   # Added power cycle count
+        'percentage_used': None,  # NVMe: Percentage Used (0-100)
+        'media_wearout_indicator': None,  # SSD: Media Wearout Indicator (Intel/Samsung)
+        'wear_leveling_count': None,  # SSD: Wear Leveling Count
+        'total_lbas_written': None,  # SSD/NVMe: Total LBAs Written
+        'ssd_life_left': None,  # SSD: SSD Life Left percentage
     }
     
     print(f"[v0] ===== Starting SMART data collection for /dev/{disk_name} =====")
@@ -790,12 +800,37 @@ def get_smart_data(disk_name):
                                 smart_data['temperature'] = data['temperature']['current']
                                 print(f"[v0] Temperature: {smart_data['temperature']}°C")
                             
+                            # Parse NVMe SMART data
+                            if 'nvme_smart_health_information_log' in data:
+                                print(f"[v0] Parsing NVMe SMART data...")
+                                nvme_data = data['nvme_smart_health_information_log']
+                                if 'temperature' in nvme_data:
+                                    smart_data['temperature'] = nvme_data['temperature']
+                                    print(f"[v0] NVMe Temperature: {smart_data['temperature']}°C")
+                                if 'power_on_hours' in nvme_data:
+                                    smart_data['power_on_hours'] = nvme_data['power_on_hours']
+                                    print(f"[v0] NVMe Power On Hours: {smart_data['power_on_hours']}")
+                                if 'power_cycles' in nvme_data:
+                                    smart_data['power_cycles'] = nvme_data['power_cycles']
+                                    print(f"[v0] NVMe Power Cycles: {smart_data['power_cycles']}")
+                                if 'percentage_used' in nvme_data:
+                                    smart_data['percentage_used'] = nvme_data['percentage_used']
+                                    print(f"[v0] NVMe Percentage Used: {smart_data['percentage_used']}%")
+                                if 'data_units_written' in nvme_data:
+                                    # data_units_written está en unidades de 512KB
+                                    data_units = nvme_data['data_units_written']
+                                    # Convertir a GB (data_units * 512KB / 1024 / 1024)
+                                    total_gb = (data_units * 512) / (1024 * 1024)
+                                    smart_data['total_lbas_written'] = round(total_gb, 2)
+                                    print(f"[v0] NVMe Total Data Written: {smart_data['total_lbas_written']} GB")
+                            
                             # Parse ATA SMART attributes
                             if 'ata_smart_attributes' in data and 'table' in data['ata_smart_attributes']:
                                 print(f"[v0] Parsing ATA SMART attributes...")
                                 for attr in data['ata_smart_attributes']['table']:
                                     attr_id = attr.get('id')
                                     raw_value = attr.get('raw', {}).get('value', 0)
+                                    normalized_value = attr.get('value', 0)  # Normalized value (0-100)
                                     
                                     if attr_id == 9:  # Power_On_Hours
                                         smart_data['power_on_hours'] = raw_value
@@ -820,20 +855,27 @@ def get_smart_data(disk_name):
                                     elif attr_id == 199:  # UDMA_CRC_Error_Count
                                         smart_data['crc_errors'] = raw_value
                                         print(f"[v0] CRC Errors (ID 199): {raw_value}")
-                            
-                            # Parse NVMe SMART data
-                            if 'nvme_smart_health_information_log' in data:
-                                print(f"[v0] Parsing NVMe SMART data...")
-                                nvme_data = data['nvme_smart_health_information_log']
-                                if 'temperature' in nvme_data:
-                                    smart_data['temperature'] = nvme_data['temperature']
-                                    print(f"[v0] NVMe Temperature: {smart_data['temperature']}°C")
-                                if 'power_on_hours' in nvme_data:
-                                    smart_data['power_on_hours'] = nvme_data['power_on_hours']
-                                    print(f"[v0] NVMe Power On Hours: {smart_data['power_on_hours']}")
-                                if 'power_cycles' in nvme_data:
-                                    smart_data['power_cycles'] = nvme_data['power_cycles']
-                                    print(f"[v0] NVMe Power Cycles: {smart_data['power_cycles']}")
+                                    elif attr_id == 233:  # Media_Wearout_Indicator (Intel/Samsung SSD)
+                                        # Valor normalizado: 100 = nuevo, 0 = gastado
+                                        # Invertimos para mostrar desgaste: 0% = nuevo, 100% = gastado
+                                        smart_data['media_wearout_indicator'] = 100 - normalized_value
+                                        print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
+                                    elif attr_id == 177:  # Wear_Leveling_Count
+                                        # Valor normalizado: 100 = nuevo, 0 = gastado
+                                        smart_data['wear_leveling_count'] = 100 - normalized_value
+                                        print(f"[v0] Wear Leveling Count (ID 177): {smart_data['wear_leveling_count']}% used")
+                                    elif attr_id == 202:  # Percentage_Lifetime_Remain (algunos fabricantes)
+                                        # Valor normalizado: 100 = nuevo, 0 = gastado
+                                        smart_data['ssd_life_left'] = normalized_value
+                                        print(f"[v0] SSD Life Left (ID 202): {smart_data['ssd_life_left']}%")
+                                    elif attr_id == 231:  # SSD_Life_Left (algunos fabricantes)
+                                        smart_data['ssd_life_left'] = normalized_value
+                                        print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
+                                    elif attr_id == 241:  # Total_LBAs_Written
+                                        # Convertir a GB (raw_value es en sectores de 512 bytes)
+                                        total_gb = (raw_value * 512) / (1024 * 1024 * 1024)
+                                        smart_data['total_lbas_written'] = round(total_gb, 2)
+                                        print(f"[v0] Total LBAs Written (ID 241): {smart_data['total_lbas_written']} GB")
                             
                             # If we got good data, break out of the loop
                             if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
@@ -956,6 +998,28 @@ def get_smart_data(disk_name):
                                     except (ValueError, IndexError) as e:
                                         print(f"[v0] Error parsing attribute line '{line}': {e}")
                                         continue
+                        elif attr_id == 233:  # Media_Wearout_Indicator (Intel/Samsung SSD)
+                            # Valor normalizado: 100 = nuevo, 0 = gastado
+                            # Invertimos para mostrar desgaste: 0% = nuevo, 100% = gastado
+                            smart_data['media_wearout_indicator'] = 100 - normalized_value
+                            print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
+                        elif attr_id == 177:  # Wear_Leveling_Count
+                            # Valor normalizado: 100 = nuevo, 0 = gastado
+                            smart_data['wear_leveling_count'] = 100 - normalized_value
+                            print(f"[v0] Wear Leveling Count (ID 177): {smart_data['wear_leveling_count']}% used")
+                        elif attr_id == 202:  # Percentage_Lifetime_Remain (algunos fabricantes)
+                            # Valor normalizado: 100 = nuevo, 0 = gastado
+                            smart_data['ssd_life_left'] = normalized_value
+                            print(f"[v0] SSD Life Left (ID 202): {smart_data['ssd_life_left']}%")
+                        elif attr_id == 231:  # SSD_Life_Left (algunos fabricantes)
+                            smart_data['ssd_life_left'] = normalized_value
+                            print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
+                        elif attr_id == 241:  # Total_LBAs_Written
+                            # Convertir a GB (raw_value es en sectores de 512 bytes)
+                            total_gb = (raw_value * 512) / (1024 * 1024 * 1024)
+                            smart_data['total_lbas_written'] = round(total_gb, 2)
+                            print(f"[v0] Total LBAs Written (ID 241): {smart_data['total_lbas_written']} GB")
+
                         # If we got complete data, break
                         if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
                             print(f"[v0] Successfully extracted complete data from text output (attempt {cmd_index + 1})")
@@ -1547,6 +1611,7 @@ def get_ipmi_power():
         'power_supplies': power_supplies,
         'power_meter': power_meter
     }
+
 
 def get_ups_info():
     """Get UPS information from NUT (upsc) - supports both local and remote UPS"""
