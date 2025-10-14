@@ -136,13 +136,6 @@ export function StorageMetrics() {
       if (!result) {
         setError("Flask server not available. Please ensure the server is running.")
       } else {
-        console.log("[v0] ===== STORAGE DATA RECEIVED =====")
-        console.log("[v0] Storage data:", result)
-        console.log("[v0] Number of disks:", result.disks?.length || 0)
-        if (result.disks && result.disks.length > 0) {
-          console.log("[v0] First disk sample:", result.disks[0])
-          console.log("[v0] Disk types found:", result.disks.map((d) => d.disk_type).filter(Boolean))
-        }
         setStorageData(result)
       }
 
@@ -198,10 +191,6 @@ export function StorageMetrics() {
     {} as Record<string, DiskInfo[]>,
   )
 
-  console.log("[v0] ===== DISK GROUPING =====")
-  console.log("[v0] Disks grouped by type:", disksByType)
-  console.log("[v0] Disk types present:", Object.keys(disksByType))
-
   const tempByType = Object.entries(disksByType)
     .map(([type, disks]) => {
       const avgTemp = disks.reduce((sum, disk) => sum + disk.temperature, 0) / disks.length
@@ -209,10 +198,6 @@ export function StorageMetrics() {
       return { type, avgTemp: Math.round(avgTemp), status, count: disks.length }
     })
     .filter((item) => item.type !== "Unknown")
-
-  console.log("[v0] ===== TEMPERATURE BY TYPE =====")
-  console.log("[v0] Temperature by type:", tempByType)
-  console.log("[v0] Number of temperature cards to show:", tempByType.length)
 
   return (
     <div className="space-y-6">
@@ -285,7 +270,6 @@ export function StorageMetrics() {
       {tempByType.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tempByType.map(({ type, avgTemp, status, count }) => {
-            console.log(`[v0] Rendering temp card for ${type}: ${avgTemp}°C, ${count} disks`)
             return (
               <Card key={type} className="bg-card border-border">
                 <CardHeader>
@@ -328,13 +312,7 @@ export function StorageMetrics() {
             )
           })}
         </div>
-      ) : (
-        <div>
-          {console.log("[v0] WARNING: No temperature cards to display!")}
-          {console.log("[v0] disksByType:", disksByType)}
-          {console.log("[v0] tempByType:", tempByType)}
-        </div>
-      )}
+      ) : null}
 
       {/* Disk Details */}
       <Card className="bg-card border-border">
