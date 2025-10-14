@@ -706,6 +706,21 @@ def get_storage_info():
 
 def get_smart_data(disk_name):
     """Get SMART data for a specific disk - Enhanced with multiple device type attempts"""
+        # --- Helpers internos ---
+    def _normalize_disk_path(disk_name: str) -> str:
+        """Si es NVMe, usa /dev/nvmeX en lugar de /dev/nvmeXn1"""
+        if disk_name.startswith('nvme') and 'n' in disk_name:
+            base = disk_name.split('n', 1)[0]   # nvme0n1 -> nvme0
+            return f'/dev/{base}'
+        return f'/dev/{disk_name}'
+
+    def _to_int(s, default=None):
+        """Convierte a entero tolerando comas, espacios o hex"""
+        try:
+            return int(str(s).replace(',', '').replace('+', '').strip(), 0)
+        except Exception:
+            return default
+
     smart_data = {
         'temperature': 0,
         'health': 'unknown',
@@ -726,24 +741,18 @@ def get_smart_data(disk_name):
     }
     
     print(f"[v0] ===== Starting SMART data collection for /dev/{disk_name} =====")
+
+    devpath = _normalize_disk_path(disk_name)
+
     
     try:
         commands_to_try = [
-            ['smartctl', '-a', '-j', f'/dev/{disk_name}'],  # JSON output (preferred)
-            ['smartctl', '-a', '-j', '-d', 'ata', f'/dev/{disk_name}'],  # JSON with ATA device type
-            ['smartctl', '-a', '-j', '-d', 'sat', f'/dev/{disk_name}'],  # JSON with SAT device type
-            ['smartctl', '-a', f'/dev/{disk_name}'],  # Text output (fallback)
-            ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # Text with ATA device type
-            ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],  # Text with SAT device type
-            ['smartctl', '-i', '-H', '-A', f'/dev/{disk_name}'],  # Info + Health + Attributes
-            ['smartctl', '-i', '-H', '-A', '-d', 'ata', f'/dev/{disk_name}'],  # With ATA
-            ['smartctl', '-i', '-H', '-A', '-d', 'sat', f'/dev/{disk_name}'],  # With SAT
-            ['smartctl', '-a', '-j', '-d', 'scsi', f'/dev/{disk_name}'],  # JSON with SCSI device type
-            ['smartctl', '-a', '-j', '-d', 'sat,12', f'/dev/{disk_name}'],  # SAT with 12-byte commands
-            ['smartctl', '-a', '-j', '-d', 'sat,16', f'/dev/{disk_name}'],  # SAT with 16-byte commands
-            ['smartctl', '-a', '-d', 'sat,12', f'/dev/{disk_name}'],  # Text SAT with 12-byte commands
-            ['smartctl', '-a', '-d', 'sat,16', f'/dev/{disk_name}'],  # Text SAT with 16-byte commands
+            ['smartctl', '-a', '-j', devpath],
+            ['smartctl', '-a', '-j', '-d', 'ata', devpath],
+            ['smartctl', '-a', f'{devpath}'],
+            ...
         ]
+
         
         process = None # Initialize process to None
         for cmd_index, cmd in enumerate(commands_to_try):
@@ -804,6 +813,31 @@ def get_smart_data(disk_name):
                             if 'nvme_smart_health_information_log' in data:
                                 print(f"[v0] Parsing NVMe SMART data...")
                                 nvme_data = data['nvme_smart_health_information_log']
+
+                                if 'available_spare' in nvme_data:
+                                    smart_data['available_spare'] = nvme_data['available_spare']
+                                    print(f"[v0] NVMe Available Spare: {smart_data['available_spare']}%")
+
+                                if 'available_spare_threshold' in nvme_data:
+                                    smart_data['available_spare_threshold'] = nvme_data['available_spare_threshold']
+                                    print(f"[v0] NVMe Spare Threshold: {smart_data['available_spare_threshold']}%")
+
+                                if 'critical_warning' in nvme_data:
+                                    cw = nvme_data['critical_warning']
+                                    if cw != 0:
+                                        print(f"[v0] NVMe Critical Warning: {cw}")
+                                        smart_data['health'] = 'critical'
+
+                                if 'percentage_used' in nvme_data:
+                                    smart_data['percentage_used'] = nvme_data['percentage_used']
+                                    print(f"[v0] NVMe Percentage Used: {smart_data['percentage_used']}%")
+
+                                if 'data_units_written' in nvme_data:
+                                    du = _to_int(nvme_data['data_units_written'], 0)
+                                    total_gb = (du * 512000) / (1024 ** 3)  # 1 data unit = 512000 bytes
+                                    smart_data['total_lbas_written'] = round(total_gb, 2)
+                                    print(f"[v0] NVMe Total Data Written: {smart_data['total_lbas_written']} GB")
+
                                 if 'temperature' in nvme_data:
                                     smart_data['temperature'] = nvme_data['temperature']
                                     print(f"[v0] NVMe Temperature: {smart_data['temperature']}°C")
@@ -828,10 +862,10 @@ def get_smart_data(disk_name):
                             if 'ata_smart_attributes' in data and 'table' in data['ata_smart_attributes']:
                                 print(f"[v0] Parsing ATA SMART attributes...")
                                 for attr in data['ata_smart_attributes']['table']:
-                                    attr_id = attr.get('id')
+                                    attr_id = _to_int(attr.get('id'))
                                     raw_value = attr.get('raw', {}).get('value', 0)
-                                    normalized_value = attr.get('value', 0)  # Normalized value (0-100)
-                                    
+                                    normalized_value = _to_int(attr.get('value', 100))
+
                                     if attr_id == 9:  # Power_On_Hours
                                         smart_data['power_on_hours'] = raw_value
                                         print(f"[v0] Power On Hours (ID 9): {raw_value}")
@@ -855,25 +889,26 @@ def get_smart_data(disk_name):
                                     elif attr_id == 199:  # UDMA_CRC_Error_Count
                                         smart_data['crc_errors'] = raw_value
                                         print(f"[v0] CRC Errors (ID 199): {smart_data['crc_errors']}")
-                                    elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
-                                        # Valor normalizado: 100 = nuevo, 0 = gastado
-                                        # Invertimos para mostrar desgaste: 0% = nuevo, 100% = gastado
+
+                                    elif attr_id == 233:  # Media_Wearout_Indicator
                                         smart_data['media_wearout_indicator'] = 100 - normalized_value
                                         print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
-                                    elif attr_id == '177':  # Wear_Leveling_Count
-                                        # Valor normalizado: 100 = nuevo, 0 = gastado
+
+                                    elif attr_id == 177:  # Wear_Leveling_Count
                                         smart_data['wear_leveling_count'] = 100 - normalized_value
                                         print(f"[v0] Wear Leveling Count (ID 177): {smart_data['wear_leveling_count']}% used")
-                                    elif attr_id == '202':  # Percentage_Lifetime_Remain (algunos fabricantes)
-                                        # Valor normalizado: 100 = nuevo, 0 = gastado
+
+                                    elif attr_id in (202, 231):  # SSD_Life_Left
                                         smart_data['ssd_life_left'] = normalized_value
-                                        print(f"[v0] SSD Life Left (ID 202): {smart_data['ssd_life_left']}%")
-                                    elif attr_id == '231':  # SSD_Life_Left (algunos fabricantes)
-                                        smart_data['ssd_life_left'] = normalized_value
-                                        print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
-                                    elif attr_id == '241':  # Total_LBAs_Written
-                                        # Convertir a GB (raw_value es en sectores de 512 bytes)
-                                        # Corrected the conversion for Total_LBAs_Written (ID 241)
+                                        print(f"[v0] SSD Life Left (ID {attr_id}): {smart_data['ssd_life_left']}%")
+
+                                    elif attr_id == 241:  # Total_LBAs_Written
+                                        raw_int = _to_int(raw_value)
+                                        if raw_int is not None:
+                                            total_gb = (raw_int * 512) / (1024 ** 3)
+                                            smart_data['total_lbas_written'] = round(total_gb, 2)
+                                            print(f"[v0] Total LBAs Written (ID 241): {smart_data['total_lbas_written']} GB")
+
                                         try:
                                             raw_int = int(raw_value.replace(',', ''))
                                             total_gb = (raw_int * 512) / (1024 * 1024 * 1024)
@@ -999,24 +1034,21 @@ def get_smart_data(disk_name):
                                         elif attr_id == '199':  # CRC Errors
                                             smart_data['crc_errors'] = int(raw_value)
                                             print(f"[v0] CRC Errors: {smart_data['crc_errors']}")
-                                        elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
-                                            normalized_value = int(parts[3]) if len(parts) > 3 else 100
+                                        elif attr_id == 233:  # Media_Wearout_Indicator (Intel/Samsung SSD)
+                                            normalized_value = _to_int(parts[3], 100)
                                             smart_data['media_wearout_indicator'] = 100 - normalized_value
                                             print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
-                                        elif attr_id == '177':  # Wear_Leveling_Count
-                                            # Valor normalizado: 100 = nuevo, 0 = gastado
-                                            normalized_value = int(parts[3]) if len(parts) > 3 else 100
+
+                                        elif attr_id == 177:  # Wear_Leveling_Count
+                                            normalized_value = _to_int(parts[3], 100)
                                             smart_data['wear_leveling_count'] = 100 - normalized_value
                                             print(f"[v0] Wear Leveling Count (ID 177): {smart_data['wear_leveling_count']}% used")
-                                        elif attr_id == '202':  # Percentage_Lifetime_Remain (algunos fabricantes)
-                                            # Valor normalizado: 100 = nuevo, 0 = gastado
-                                            normalized_value = int(parts[3]) if len(parts) > 3 else 100
+
+                                        elif attr_id in (202, 231):  # SSD_Life_Left (algunos fabricantes)
+                                            normalized_value = _to_int(parts[3], 100)
                                             smart_data['ssd_life_left'] = normalized_value
-                                            print(f"[v0] SSD Life Left (ID 202): {smart_data['ssd_life_left']}%")
-                                        elif attr_id == '231':  # SSD_Life_Left (algunos fabricantes)
-                                            normalized_value = int(parts[3]) if len(parts) > 3 else 100
-                                            smart_data['ssd_life_left'] = normalized_value
-                                            print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
+                                            print(f"[v0] SSD Life Left (ID {attr_id}): {smart_data['ssd_life_left']}%")
+
                                         elif attr_id == '241':  # Total_LBAs_Written
                                             # Convertir a GB (raw_value es en sectores de 512 bytes)
                                             try:
