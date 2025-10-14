@@ -1737,74 +1737,86 @@ def get_ups_info():
 
 # </CHANGE>
 
-def identify_temperature_sensor(sensor_name, adapter):
-    """Identify what a temperature sensor corresponds to and assign a category"""
-    sensor_lower = sensor_name.lower()
-    adapter_lower = adapter.lower() if adapter else ""
+# Moved helper functions for system info up
+# def get_system_info(): ... (moved up)
+
+# New function for identifying GPU types
+def identify_gpu_type(gpu_name, vendor):
+    """
+    Identify GPU type with more granular classification:
+    - Integrated: GPUs integrated in CPU/chipset (Intel HD/UHD, AMD APU)
+    - PCI - BMC: Management GPUs (Matrox G200, ASPEED)
+    - PCI - Professional: Professional GPUs (Quadro, FirePro, Radeon Pro)
+    - PCI - Gaming: Gaming GPUs (GeForce, Radeon RX)
+    - PCI - Compute: Compute GPUs (Tesla, Instinct)
+    - PCI - Discrete: Generic discrete GPU (fallback)
+    """
+    gpu_name_lower = gpu_name.lower()
     
-    category = "Other"
-    display_name = sensor_name
+    # Check for BMC/Management GPUs first (these are PCI but for management)
+    bmc_keywords = ['g200', 'mga g200', 'ast1', 'ast2', 'aspeed']
+    for keyword in bmc_keywords:
+        if keyword in gpu_name_lower:
+            return 'PCI - BMC'
     
-    # CPU/Package temperatures
-    if "package" in sensor_lower or "tctl" in sensor_lower or "tccd" in sensor_lower:
-        category = "CPU"
-        display_name = "CPU Package"
-    elif "core" in sensor_lower:
-        category = "CPU"
-        core_num = re.search(r'(\d+)', sensor_name)
-        display_name = f"CPU Core {core_num.group(1)}" if core_num else "CPU Core"
-    elif "coretemp" in adapter_lower or "k10temp" in adapter_lower or "cpu_thermal" in adapter_lower:
-        category = "CPU"
-        display_name = sensor_name
+    # Check for truly integrated GPUs (in CPU/chipset)
+    integrated_keywords = [
+        'hd graphics', 'uhd graphics', 'iris graphics', 'iris xe graphics',
+        'radeon vega', 'radeon graphics',  # AMD APU integrated
+        'tegra',  # NVIDIA Tegra (rare)
+    ]
+    for keyword in integrated_keywords:
+        if keyword in gpu_name_lower:
+            # Make sure it's not Arc (which is discrete)
+            if 'arc' not in gpu_name_lower:
+                return 'Integrated'
     
-    # GPU
-    elif "nouveau" in adapter_lower or "amdgpu" in adapter_lower or "radeon" in adapter_lower or "i915" in adapter_lower or "nvidia" in adapter_lower: # Check adapter for GPU drivers
-        category = "GPU"
-        display_name = f"GPU - {sensor_name}"
-    elif "gpu" in sensor_lower or "vga" in sensor_lower or "graphics" in sensor_lower:
-        category = "GPU"
-        display_name = sensor_name
+    # Check for Professional GPUs
+    professional_keywords = ['quadro', 'firepro', 'radeon pro', 'firegl']
+    for keyword in professional_keywords:
+        if keyword in gpu_name_lower:
+            return 'PCI - Professional'
     
-    # Storage (NVMe, SATA)
-    elif "nvme" in sensor_lower or "composite" in sensor_lower:
-        category = "NVMe"
-        # Extract NVMe device number if present
-        nvme_match = re.search(r'nvme(\d+)', sensor_lower)
-        if nvme_match:
-            display_name = f"NVMe {nvme_match.group(1)}"
+    # Check for Compute GPUs
+    compute_keywords = ['tesla', 'instinct', 'mi100', 'mi200', 'mi300']
+    for keyword in compute_keywords:
+        if keyword in gpu_name_lower:
+            return 'PCI - Compute'
+    
+    # Check for Gaming GPUs
+    gaming_keywords = [
+        'geforce', 'rtx', 'gtx', 'titan',  # NVIDIA gaming
+        'radeon rx', 'radeon r9', 'radeon r7', 'radeon r5', 'radeon vii',  # AMD gaming
+        'arc a'  # Intel Arc gaming
+    ]
+    for keyword in gaming_keywords:
+        if keyword in gpu_name_lower:
+            return 'PCI - Gaming'
+    
+    # Fallback logic based on vendor
+    if vendor == 'Intel':
+        # Intel Arc is discrete gaming, everything else is typically integrated
+        if 'arc' in gpu_name_lower:
+            return 'PCI - Gaming'
         else:
-            display_name = "NVMe SSD"
-    elif "sensor" in sensor_lower and "nvme" in adapter_lower:
-        category = "NVMe"
-        sensor_num = re.search(r'(\d+)', sensor_name)
-        display_name = f"NVMe Sensor {sensor_num.group(1)}" if sensor_num else sensor_name
-    elif "sata" in sensor_lower or "ata" in sensor_lower or "drivetemp" in adapter_lower:
-        category = "Storage"
-        display_name = f"SATA - {sensor_name}"
+            return 'Integrated'
+    elif vendor == 'NVIDIA':
+        # Most NVIDIA GPUs are discrete
+        return 'PCI - Discrete'
+    elif vendor == 'AMD':
+        # AMD APUs are integrated, others are discrete
+        if 'ryzen' in gpu_name_lower or 'athlon' in gpu_name_lower:
+            return 'Integrated'
+        return 'PCI - Discrete'
+    elif vendor == 'Matrox':
+        # Matrox G200 series are BMC
+        return 'PCI - BMC'
+    elif vendor == 'ASPEED':
+        # ASPEED AST series are BMC
+        return 'PCI - BMC'
     
-    # Motherboard/Chipset
-    elif "pch" in sensor_lower or "chipset" in sensor_lower:
-        category = "Chipset"
-        display_name = "Chipset"
-    elif "temp1" in sensor_lower and ("isa" in adapter_lower or "acpi" in adapter_lower):
-        category = "Motherboard"
-        display_name = "Motherboard"
-    elif any(mb in adapter_lower for mb in ["it87", "nct", "w83", "asus", "gigabyte", "msi"]):
-        category = "Motherboard"
-        display_name = sensor_name
-    elif "acpitz" in adapter_lower:
-        category = "Motherboard"
-        display_name = "ACPI Thermal Zone"
-    
-    # PCI Devices
-    elif "pci" in adapter_lower and "temp" in sensor_lower:
-        category = "PCI"
-        display_name = f"PCI Device - {sensor_name}"
-    
-    return {
-        'category': category,
-        'display_name': display_name
-    }
+    # Default to PCI - Discrete if we can't determine
+    return 'PCI - Discrete'
 
 def get_temperature_info():
     """Get detailed temperature information from sensors command"""
@@ -2887,81 +2899,80 @@ def get_network_hardware_info(pci_slot):
 # Improved GPU type identification logic
 def identify_gpu_type(gpu_name, vendor):
     """
-    Identify if a GPU is integrated or discrete based on its name and vendor.
-    
-    Integrated GPUs:
-    - Intel: HD Graphics, UHD Graphics, Iris, Iris Xe (but NOT Arc)
-    - AMD: Radeon Vega (integrated), Radeon Graphics (APU), with keywords like "Integrated"
-    - NVIDIA: Tegra (rare in servers)
-    - Matrox: G200 series (BMC/IPMI graphics for server management)
-    - ASPEED: AST series (BMC graphics)
-    
-    Discrete GPUs:
-    - Intel: Arc series (A380, A750, A770, etc.)
-    - NVIDIA: GeForce, Quadro, Tesla, RTX, GTX
-    - AMD: Radeon RX, Radeon Pro, FirePro, Radeon VII
+    Identify GPU type with more granular classification:
+    - Integrated: GPUs integrated in CPU/chipset (Intel HD/UHD, AMD APU)
+    - PCI - BMC: Management GPUs (Matrox G200, ASPEED)
+    - PCI - Professional: Professional GPUs (Quadro, FirePro, Radeon Pro)
+    - PCI - Gaming: Gaming GPUs (GeForce, Radeon RX)
+    - PCI - Compute: Compute GPUs (Tesla, Instinct)
+    - PCI - Discrete: Generic discrete GPU (fallback)
     """
     gpu_name_lower = gpu_name.lower()
     
-    # Keywords that indicate an integrated GPU (including BMC/IPMI)
-    integrated_keywords = [
-        'integrated', 'on-board', 'built-in', 'onboard',
-        'hd graphics', 'uhd graphics', 'iris graphics', 'iris xe graphics',
-        'radeon vega', 'radeon graphics',  # AMD APU integrated graphics
-        'tegra',  # NVIDIA Tegra (rare)
-        'g200',  # Matrox G200 series (BMC)
-        'mga g200',  # Matrox MGA G200 (BMC)
-        'ast1', 'ast2',  # ASPEED AST series (BMC)
-        'aspeed'  # ASPEED BMC graphics
-    ]
-    
-    # Keywords that indicate a discrete GPU
-    discrete_keywords = [
-        # Intel discrete
-        'arc a', 'arc graphics',
-        # NVIDIA discrete
-        'geforce', 'quadro', 'tesla', 'rtx', 'gtx', 'titan',
-        # AMD discrete
-        'radeon rx', 'radeon pro', 'radeon vii', 'radeon r9', 'radeon r7', 'radeon r5',
-        'firepro', 'firegl'
-    ]
-    
-    # Check for discrete keywords first (more specific)
-    for keyword in discrete_keywords:
+    # Check for BMC/Management GPUs first (these are PCI but for management)
+    bmc_keywords = ['g200', 'mga g200', 'ast1', 'ast2', 'aspeed']
+    for keyword in bmc_keywords:
         if keyword in gpu_name_lower:
-            return 'Discrete'
+            return 'PCI - BMC'
     
-    # Check for integrated keywords
+    # Check for truly integrated GPUs (in CPU/chipset)
+    integrated_keywords = [
+        'hd graphics', 'uhd graphics', 'iris graphics', 'iris xe graphics',
+        'radeon vega', 'radeon graphics',  # AMD APU integrated
+        'tegra',  # NVIDIA Tegra (rare)
+    ]
     for keyword in integrated_keywords:
         if keyword in gpu_name_lower:
-            return 'Integrated'
+            # Make sure it's not Arc (which is discrete)
+            if 'arc' not in gpu_name_lower:
+                return 'Integrated'
     
-    # Fallback logic based on vendor and common patterns
+    # Check for Professional GPUs
+    professional_keywords = ['quadro', 'firepro', 'radeon pro', 'firegl']
+    for keyword in professional_keywords:
+        if keyword in gpu_name_lower:
+            return 'PCI - Professional'
+    
+    # Check for Compute GPUs
+    compute_keywords = ['tesla', 'instinct', 'mi100', 'mi200', 'mi300']
+    for keyword in compute_keywords:
+        if keyword in gpu_name_lower:
+            return 'PCI - Compute'
+    
+    # Check for Gaming GPUs
+    gaming_keywords = [
+        'geforce', 'rtx', 'gtx', 'titan',  # NVIDIA gaming
+        'radeon rx', 'radeon r9', 'radeon r7', 'radeon r5', 'radeon vii',  # AMD gaming
+        'arc a'  # Intel Arc gaming
+    ]
+    for keyword in gaming_keywords:
+        if keyword in gpu_name_lower:
+            return 'PCI - Gaming'
+    
+    # Fallback logic based on vendor
     if vendor == 'Intel':
-        # Intel Arc is discrete, everything else is typically integrated
+        # Intel Arc is discrete gaming, everything else is typically integrated
         if 'arc' in gpu_name_lower:
-            return 'Discrete'
+            return 'PCI - Gaming'
         else:
             return 'Integrated'
     elif vendor == 'NVIDIA':
-        # Most NVIDIA GPUs are discrete (except Tegra which is already handled)
-        return 'Discrete'
+        # Most NVIDIA GPUs are discrete
+        return 'PCI - Discrete'
     elif vendor == 'AMD':
-        # AMD is tricky - check for APU indicators
-        # APUs typically have model numbers like "Ryzen X XXXX" with graphics
+        # AMD APUs are integrated, others are discrete
         if 'ryzen' in gpu_name_lower or 'athlon' in gpu_name_lower:
             return 'Integrated'
-        # Most other AMD GPUs are discrete
-        return 'Discrete'
+        return 'PCI - Discrete'
     elif vendor == 'Matrox':
-        # Matrox G200 series are BMC/IPMI integrated graphics
-        return 'Integrated'
+        # Matrox G200 series are BMC
+        return 'PCI - BMC'
     elif vendor == 'ASPEED':
-        # ASPEED AST series are BMC integrated graphics
-        return 'Integrated'
+        # ASPEED AST series are BMC
+        return 'PCI - BMC'
     
-    # Default to Discrete if we can't determine
-    return 'Discrete'
+    # Default to PCI - Discrete if we can't determine
+    return 'PCI - Discrete'
 
 def get_gpu_info():
     """Detect and return information about GPUs in the system"""
@@ -3996,7 +4007,7 @@ def api_backups():
                         try:
                             # Get content of storage
                             content_result = subprocess.run(
-                                ['pvesh', 'get', f'/nodes/localhost/storage/{storage_id}/content', '--output-format', 'json'],
+                                ['pvesh', 'get', f'/nodes/{storage.get("node", "localhost")}/storage/{storage_id}/content', '--output-format', 'json'],
                                 capture_output=True, text=True, timeout=10)
                             
                             if content_result.returncode == 0:
@@ -4036,7 +4047,7 @@ def api_backups():
                                             'timestamp': ctime
                                         })
                         except Exception as e:
-                            print(f"Error getting content for storage {storage_id}: {e}")
+                            print(f"Error getting content for storage {storage_id} on node {storage.get('node', 'localhost')}: {e}")
                             continue
         except Exception as e:
             print(f"Error getting storage list: {e}")
