@@ -20,7 +20,7 @@ import {
   Info,
 } from "lucide-react"
 import useSWR from "swr"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { type HardwareData, type GPU, type PCIDevice, type StorageDevice, fetcher } from "../types/hardware"
 
 const formatMemory = (memoryKB: number | string): string => {
@@ -115,6 +115,70 @@ export default function Hardware() {
   const [selectedDisk, setSelectedDisk] = useState<StorageDevice | null>(null)
   const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
   const [selectedUPS, setSelectedUPS] = useState<any>(null) // Added state for UPS modal
+
+  useEffect(() => {
+    if (!selectedGPU) return
+
+    const pciDevice = findPCIDeviceForGPU(selectedGPU)
+    const fullSlot = pciDevice?.slot || selectedGPU.slot
+
+    if (!fullSlot) {
+      setDetailsLoading(false)
+      setRealtimeGPUData({ has_monitoring_tool: false })
+      return
+    }
+
+    const abortController = new AbortController()
+    let timeoutId: NodeJS.Timeout
+
+    const fetchRealtimeData = async () => {
+      try {
+        const apiUrl = `http://${window.location.hostname}:8008/api/gpu/${fullSlot}/realtime`
+
+        // Set a timeout of 5 seconds
+        timeoutId = setTimeout(() => {
+          abortController.abort()
+        }, 5000)
+
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          signal: abortController.signal,
+        })
+
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        setRealtimeGPUData(data)
+        setDetailsLoading(false)
+      } catch (error) {
+        // Only log non-abort errors
+        if (error instanceof Error && error.name !== "AbortError") {
+          console.error("[v0] Error fetching GPU realtime data:", error)
+        }
+        setRealtimeGPUData({ has_monitoring_tool: false })
+        setDetailsLoading(false)
+      }
+    }
+
+    // Initial fetch
+    fetchRealtimeData()
+
+    // Poll every 3 seconds
+    const interval = setInterval(fetchRealtimeData, 3000)
+
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeoutId)
+      abortController.abort()
+    }
+  }, [selectedGPU, hardwareData?.pci_devices])
 
   if (!hardwareData && !error) {
     return (
