@@ -151,11 +151,40 @@ export function StorageOverview() {
     }
   }
 
-  const getTempColor = (temp: number) => {
+  const getTempColor = (temp: number, diskName?: string, rotationRate?: number) => {
     if (temp === 0) return "text-gray-500"
-    if (temp < 45) return "text-green-500"
-    if (temp < 60) return "text-yellow-500"
-    return "text-red-500"
+
+    // Determinar el tipo de disco
+    let diskType = "HDD" // Por defecto
+    if (diskName) {
+      if (diskName.startsWith("nvme")) {
+        diskType = "NVMe"
+      } else if (!rotationRate || rotationRate === 0) {
+        diskType = "SSD"
+      }
+    }
+
+    // Aplicar rangos de temperatura según el tipo
+    switch (diskType) {
+      case "NVMe":
+        // NVMe: ≤60°C verde, 61-70°C amarillo, >70°C rojo
+        if (temp <= 60) return "text-green-500"
+        if (temp <= 70) return "text-yellow-500"
+        return "text-red-500"
+
+      case "SSD":
+        // SSD: ≤55°C verde, 56-65°C amarillo, >65°C rojo
+        if (temp <= 55) return "text-green-500"
+        if (temp <= 65) return "text-yellow-500"
+        return "text-red-500"
+
+      case "HDD":
+      default:
+        // HDD: ≤45°C verde, 46-55°C amarillo, >55°C rojo
+        if (temp <= 45) return "text-green-500"
+        if (temp <= 55) return "text-yellow-500"
+        return "text-red-500"
+    }
   }
 
   const formatHours = (hours: number) => {
@@ -295,11 +324,9 @@ export function StorageOverview() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Thermometer className="h-5 w-5" />
-              Avg Temperature
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Temperature</CardTitle>
+            <Thermometer className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${getTempColor(avgTemp)}`}>{avgTemp > 0 ? `${avgTemp}°C` : "N/A"}</div>
@@ -460,8 +487,12 @@ export function StorageOverview() {
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {disk.temperature > 0 && (
                         <div className="flex items-center gap-1">
-                          <Thermometer className={`h-4 w-4 ${getTempColor(disk.temperature)}`} />
-                          <span className={`text-sm font-medium ${getTempColor(disk.temperature)}`}>
+                          <Thermometer
+                            className={`h-4 w-4 ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}
+                          />
+                          <span
+                            className={`text-sm font-medium ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}
+                          >
                             {disk.temperature}°C
                           </span>
                         </div>
@@ -539,7 +570,9 @@ export function StorageOverview() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Temperature</p>
-                    <p className={`font-medium ${getTempColor(selectedDisk.temperature)}`}>
+                    <p
+                      className={`font-medium ${getTempColor(selectedDisk.temperature, selectedDisk.name, selectedDisk.rotation_rate)}`}
+                    >
                       {selectedDisk.temperature > 0 ? `${selectedDisk.temperature}°C` : "N/A"}
                     </p>
                   </div>
