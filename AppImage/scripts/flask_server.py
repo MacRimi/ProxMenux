@@ -26,6 +26,64 @@ import platform # Added for platform.release()
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
 
+def identify_gpu_type(name, vendor=None, bus=None, driver=None):
+    """
+    Returns: 'Integrated' or 'PCI' (discrete)
+    - name: full device name (e.g. 'AMD/ATI Phoenix3 (rev b3)')
+    - vendor: 'Intel', 'AMD', 'NVIDIA', 'ASPEED', 'Matrox'... (optional)
+    - bus: address such as '0000:65:00.0' or '65:00.0' (optional)
+    - driver: e.g. 'i915', 'amdgpu', 'nvidia' (optional)
+    """
+
+    n = (name or "").lower()
+    v = (vendor or "").lower()
+    d = (driver or "").lower()
+    b = (bus or "")
+
+    bmc_keywords = ['aspeed', 'ast', 'matrox g200', 'g200e', 'g200eh', 'mgag200']
+    if any(k in n for k in bmc_keywords) or v in ['aspeed', 'matrox']:
+        return 'Integrated'
+
+    intel_igpu_words = ['uhd graphics', 'iris', 'integrated graphics controller']
+    if v == 'intel' or 'intel corporation' in n:
+        if d == 'i915' or any(w in n for w in intel_igpu_words):
+            return 'Integrated'
+        if b.startswith('0000:00:02.0') or b.startswith('00:02.0'):
+            return 'Integrated'
+        return 'Integrated'
+
+    amd_apu_keywords = [
+        'phoenix', 'rembrandt', 'cezanne', 'lucienne', 'renoir', 'picasso', 'raven',
+        'dali', 'barcelo', 'van gogh', 'mendocino', 'hawk point', 'strix point',
+        'radeon 780m', 'radeon 760m', 'radeon 680m', 'radeon 660m',
+        'vega 3', 'vega 6', 'vega 7', 'vega 8', 'vega 10', 'vega 11'
+    ]
+    if v.startswith('advanced micro devices') or v == 'amd' or 'amd/ati' in n:
+        if any(k in n for k in amd_apu_keywords):
+            return 'Integrated'
+        if 'radeon graphics' in n:
+            return 'Integrated'
+        discrete_markers = ['rx ', 'rx-', 'radeon pro', 'w5', 'w6', 'polaris', 'navi', 'xt ', 'xt-']
+        if d == 'amdgpu' and not any(m in n for m in discrete_markers):
+            return 'Integrated'
+        return 'PCI'
+
+    if v == 'nvidia' or 'nvidia corporation' in n:
+        if 'tegra' in n:
+            return 'Integrated'
+        return 'PCI'
+
+    soc_keywords = ['tegra', 'mali', 'adreno', 'powervr', 'videocore']
+    if any(k in n for k in soc_keywords):
+        return 'Integrated'
+
+    if b.startswith('0000:00:') or b.startswith('00:'):
+        return 'Integrated'
+
+    # Fallback
+    return 'PCI'
+
+
 # Helper function to format bytes into human-readable string
 def format_bytes(size_in_bytes):
     """Converts bytes to a human-readable string (KB, MB, GB, TB)."""
@@ -904,7 +962,6 @@ def get_smart_data(disk_name):
                             break
                         elif smart_data['model'] != 'Unknown' or smart_data['serial'] != 'Unknown':
                             print(f"[v0] Extracted partial data from text output, continuing to next attempt...")
-                
                 else:
                     print(f"[v0] No usable output (return code {result_code}), trying next command...")
             
@@ -2655,6 +2712,8 @@ def get_network_hardware_info(pci_slot):
     
     return net_info
 
+# The get_gpu_info function is updated to include Matrox vendor detection
+# and uses the new identify_gpu_type function.
 def get_gpu_info():
     """Detect and return information about GPUs in the system"""
     gpus = []
@@ -2685,12 +2744,14 @@ def get_gpu_info():
                             vendor = 'AMD'
                         elif 'Intel' in gpu_name:
                             vendor = 'Intel'
+                        elif 'Matrox' in gpu_name:
+                            vendor = 'Matrox'
                         
                         gpu = {
                             'slot': slot,
                             'name': gpu_name,
                             'vendor': vendor,
-                            'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated'
+                            'type': identify_gpu_type(gpu_name)
                         }
                         
                         pci_info = get_pci_device_info(slot)
@@ -3419,7 +3480,7 @@ def api_logs():
                             'level': level,
                             'service': log_entry.get('_SYSTEMD_UNIT', log_entry.get('SYSLOG_IDENTIFIER', 'system')),
                             'message': log_entry.get('MESSAGE', ''),
-                            'source': 'journalctl',
+                            'source': 'journal',
                             'pid': log_entry.get('_PID', ''),
                             'hostname': log_entry.get('_HOSTNAME', '')
                         })
@@ -4067,7 +4128,7 @@ def api_prometheus():
             # GPU metrics
             pci_devices = hardware_info.get('pci_devices', [])
             for device in pci_devices:
-                if device.get('type') == 'GPU':
+                if device.get('type') == 'Graphics Card': # Changed from 'GPU' to 'Graphics Card' to match pci_devices type
                     gpu_name = device.get('device', 'unknown').replace(' ', '_')
                     gpu_vendor = device.get('vendor', 'unknown')
                     
