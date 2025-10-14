@@ -537,12 +537,7 @@ def get_storage_info():
                             'crc_errors': smart_data.get('crc_errors', 0),
                             'rotation_rate': smart_data.get('rotation_rate', 0), # Added
                             'power_cycles': smart_data.get('power_cycles', 0), # Added
-                            # Campos adicionales para SMART
-                            'disk_type': smart_data.get('disk_type', 'unknown'),
-                            'percentage_used': smart_data.get('percentage_used', 0),
-                            'wear_leveling_count': smart_data.get('wear_leveling_count', 0),
-                            'media_wearout_indicator': smart_data.get('media_wearout_indicator', 0),
-                            'ssd_life_left': smart_data.get('ssd_life_left', 100)
+                            'disk_type': smart_data.get('disk_type', 'Unknown') # Added from get_smart_data
                         }
                         
                         storage_data['disk_count'] += 1
@@ -659,44 +654,41 @@ def get_smart_data(disk_name):
         'reallocated_sectors': 0,
         'pending_sectors': 0,
         'crc_errors': 0,
-        'rotation_rate': 0,
-        'power_cycles': 0,
-        'disk_type': 'unknown',  # HDD, SSD, or NVMe
-        'percentage_used': 0,  # For NVMe
-        'wear_leveling_count': 0,  # For SSD
-        'media_wearout_indicator': 0,  # For SSD (Intel)
-        'ssd_life_left': 100,  # For SSD (percentage)
+        'rotation_rate': 0,  # Added rotation rate (RPM)
+        'power_cycles': 0,   # Added power cycle count
+        'disk_type': 'Unknown',  # Will be 'HDD', 'SSD', or 'NVMe'
     }
     
     print(f"[v0] ===== Starting SMART data collection for /dev/{disk_name} =====")
     
-    if 'nvme' in disk_name:
+    if 'nvme' in disk_name.lower():
         smart_data['disk_type'] = 'NVMe'
-        print(f"[v0] Detected NVMe disk")
+        print(f"[v0] Detected NVMe disk based on device name")
     
     try:
         commands_to_try = [
-            ['smartctl', '-a', '-j', f'/dev/{disk_name}'],
-            ['smartctl', '-a', '-j', '-d', 'ata', f'/dev/{disk_name}'],
-            ['smartctl', '-a', '-j', '-d', 'sat', f'/dev/{disk_name}'],
-            ['smartctl', '-a', f'/dev/{disk_name}'],
-            ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],
-            ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],
-            ['smartctl', '-i', '-H', '-A', f'/dev/{disk_name}'],
-            ['smartctl', '-i', '-H', '-A', '-d', 'ata', f'/dev/{disk_name}'],
-            ['smartctl', '-i', '-H', '-A', '-d', 'sat', f'/dev/{disk_name}'],
-            ['smartctl', '-a', '-j', '-d', 'scsi', f'/dev/{disk_name}'],
-            ['smartctl', '-a', '-j', '-d', 'sat,12', f'/dev/{disk_name}'],
-            ['smartctl', '-a', '-j', '-d', 'sat,16', f'/dev/{disk_name}'],
-            ['smartctl', '-a', '-d', 'sat,12', f'/dev/{disk_name}'],
-            ['smartctl', '-a', '-d', 'sat,16', f'/dev/{disk_name}'],
+            ['smartctl', '-a', '-j', f'/dev/{disk_name}'],  # JSON output (preferred)
+            ['smartctl', '-a', '-j', '-d', 'ata', f'/dev/{disk_name}'],  # JSON with ATA device type
+            ['smartctl', '-a', '-j', '-d', 'sat', f'/dev/{disk_name}'],  # JSON with SAT device type
+            ['smartctl', '-a', f'/dev/{disk_name}'],  # Text output (fallback)
+            ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # Text with ATA device type
+            ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],  # Text with SAT device type
+            ['smartctl', '-i', '-H', '-A', f'/dev/{disk_name}'],  # Info + Health + Attributes
+            ['smartctl', '-i', '-H', '-A', '-d', 'ata', f'/dev/{disk_name}'],  # With ATA
+            ['smartctl', '-i', '-H', '-A', '-d', 'sat', f'/dev/{disk_name}'],  # With SAT
+            ['smartctl', '-a', '-j', '-d', 'scsi', f'/dev/{disk_name}'],  # JSON with SCSI device type
+            ['smartctl', '-a', '-j', '-d', 'sat,12', f'/dev/{disk_name}'],  # SAT with 12-byte commands
+            ['smartctl', '-a', '-j', '-d', 'sat,16', f'/dev/{disk_name}'],  # SAT with 16-byte commands
+            ['smartctl', '-a', '-d', 'sat,12', f'/dev/{disk_name}'],  # Text SAT with 12-byte commands
+            ['smartctl', '-a', '-d', 'sat,16', f'/dev/{disk_name}'],  # Text SAT with 16-byte commands
         ]
         
-        process = None
+        process = None # Initialize process to None
         for cmd_index, cmd in enumerate(commands_to_try):
             print(f"[v0] Attempt {cmd_index + 1}/{len(commands_to_try)}: Running command: {' '.join(cmd)}")
             try:
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                # Use communicate with a timeout to avoid hanging if the process doesn't exit
                 stdout, stderr = process.communicate(timeout=15)
                 result_code = process.returncode
                 
@@ -711,12 +703,14 @@ def get_smart_data(disk_name):
                 if has_output:
                     print(f"[v0] Got output ({len(stdout)} bytes), attempting to parse...")
                     
+                    # Try JSON parsing first (if -j flag was used)
                     if '-j' in cmd:
                         try:
                             print(f"[v0] Attempting JSON parse...")
                             data = json.loads(stdout)
                             print(f"[v0] JSON parse successful!")
                             
+                            # Extract model
                             if 'model_name' in data:
                                 smart_data['model'] = data['model_name']
                                 print(f"[v0] Model: {smart_data['model']}")
@@ -724,81 +718,70 @@ def get_smart_data(disk_name):
                                 smart_data['model'] = data['model_family']
                                 print(f"[v0] Model family: {smart_data['model']}")
                             
+                            # Extract serial
                             if 'serial_number' in data:
                                 smart_data['serial'] = data['serial_number']
                                 print(f"[v0] Serial: {smart_data['serial']}")
                             
                             if 'rotation_rate' in data:
-                                rotation = data['rotation_rate']
-                                smart_data['rotation_rate'] = rotation
-                                if rotation == 0 or 'Solid State Device' in str(rotation):
-                                    smart_data['disk_type'] = 'SSD'
-                                    print(f"[v0] Detected SSD (rotation_rate: {rotation})")
-                                elif isinstance(rotation, int) and rotation > 0:
-                                    smart_data['disk_type'] = 'HDD'
-                                    print(f"[v0] Detected HDD (rotation_rate: {rotation} RPM)")
+                                smart_data['rotation_rate'] = data['rotation_rate']
+                                print(f"[v0] Rotation Rate: {smart_data['rotation_rate']} RPM")
+                                
+                                # Classify disk type based on rotation rate
+                                if smart_data['disk_type'] == 'Unknown':
+                                    if data['rotation_rate'] == 0 or 'Solid State Device' in str(data.get('rotation_rate', '')):
+                                        smart_data['disk_type'] = 'SSD'
+                                        print(f"[v0] Detected SSD based on rotation rate")
+                                    elif isinstance(data['rotation_rate'], int) and data['rotation_rate'] > 0:
+                                        smart_data['disk_type'] = 'HDD'
+                                        print(f"[v0] Detected HDD based on rotation rate")
                             
+                            # Extract SMART status
                             if 'smart_status' in data and 'passed' in data['smart_status']:
                                 smart_data['smart_status'] = 'passed' if data['smart_status']['passed'] else 'failed'
                                 smart_data['health'] = 'healthy' if data['smart_status']['passed'] else 'critical'
                                 print(f"[v0] SMART status: {smart_data['smart_status']}, health: {smart_data['health']}")
                             
+                            # Extract temperature
                             if 'temperature' in data and 'current' in data['temperature']:
                                 smart_data['temperature'] = data['temperature']['current']
                                 print(f"[v0] Temperature: {smart_data['temperature']}°C")
                             
+                            # Parse ATA SMART attributes
                             if 'ata_smart_attributes' in data and 'table' in data['ata_smart_attributes']:
                                 print(f"[v0] Parsing ATA SMART attributes...")
                                 for attr in data['ata_smart_attributes']['table']:
                                     attr_id = attr.get('id')
-                                    attr_name = attr.get('name', '')
                                     raw_value = attr.get('raw', {}).get('value', 0)
-                                    normalized_value = attr.get('value', 0)
                                     
-                                    if attr_id == 9:
+                                    if attr_id == 9:  # Power_On_Hours
                                         smart_data['power_on_hours'] = raw_value
                                         print(f"[v0] Power On Hours (ID 9): {raw_value}")
-                                    elif attr_id == 12:
+                                    elif attr_id == 12:  # Power_Cycle_Count
                                         smart_data['power_cycles'] = raw_value
                                         print(f"[v0] Power Cycles (ID 12): {raw_value}")
-                                    elif attr_id == 194:
+                                    elif attr_id == 194:  # Temperature_Celsius
                                         if smart_data['temperature'] == 0:
                                             smart_data['temperature'] = raw_value
                                             print(f"[v0] Temperature (ID 194): {raw_value}°C")
-                                    elif attr_id == 190:
+                                    elif attr_id == 190:  # Airflow_Temperature_Cel
                                         if smart_data['temperature'] == 0:
                                             smart_data['temperature'] = raw_value
                                             print(f"[v0] Airflow Temperature (ID 190): {raw_value}°C")
-                                    elif attr_id == 5:
+                                    elif attr_id == 5:  # Reallocated_Sector_Ct
                                         smart_data['reallocated_sectors'] = raw_value
                                         print(f"[v0] Reallocated Sectors (ID 5): {raw_value}")
-                                    elif attr_id == 197:
+                                    elif attr_id == 197:  # Current_Pending_Sector
                                         smart_data['pending_sectors'] = raw_value
                                         print(f"[v0] Pending Sectors (ID 197): {raw_value}")
-                                    elif attr_id == 199:
+                                    elif attr_id == 199:  # UDMA_CRC_Error_Count
                                         smart_data['crc_errors'] = raw_value
                                         print(f"[v0] CRC Errors (ID 199): {raw_value}")
-                                    elif attr_id == 177:  # Wear_Leveling_Count
-                                        smart_data['wear_leveling_count'] = normalized_value
-                                        smart_data['ssd_life_left'] = normalized_value
-                                        print(f"[v0] Wear Leveling Count (ID 177): {normalized_value}%")
-                                    elif attr_id == 231:  # SSD_Life_Left or Temperature
-                                        if 'Life' in attr_name or 'life' in attr_name:
-                                            smart_data['ssd_life_left'] = normalized_value
-                                            print(f"[v0] SSD Life Left (ID 231): {normalized_value}%")
-                                    elif attr_id == 233:  # Media_Wearout_Indicator (Intel)
-                                        smart_data['media_wearout_indicator'] = normalized_value
-                                        smart_data['ssd_life_left'] = normalized_value
-                                        print(f"[v0] Media Wearout Indicator (ID 233): {normalized_value}%")
-                                    elif attr_id == 202:  # Percent_Lifetime_Remain
-                                        smart_data['ssd_life_left'] = normalized_value
-                                        print(f"[v0] Percent Lifetime Remain (ID 202): {normalized_value}%")
                             
+                            # Parse NVMe SMART data
                             if 'nvme_smart_health_information_log' in data:
                                 print(f"[v0] Parsing NVMe SMART data...")
                                 nvme_data = data['nvme_smart_health_information_log']
-                                smart_data['disk_type'] = 'NVMe'
-                                
                                 if 'temperature' in nvme_data:
                                     smart_data['temperature'] = nvme_data['temperature']
                                     print(f"[v0] NVMe Temperature: {smart_data['temperature']}°C")
@@ -808,12 +791,8 @@ def get_smart_data(disk_name):
                                 if 'power_cycles' in nvme_data:
                                     smart_data['power_cycles'] = nvme_data['power_cycles']
                                     print(f"[v0] NVMe Power Cycles: {smart_data['power_cycles']}")
-                                if 'percentage_used' in nvme_data:
-                                    smart_data['percentage_used'] = nvme_data['percentage_used']
-                                    smart_data['ssd_life_left'] = 100 - nvme_data['percentage_used']
-                                    print(f"[v0] NVMe Percentage Used: {smart_data['percentage_used']}%")
-                                    print(f"[v0] NVMe Life Left: {smart_data['ssd_life_left']}%")
                             
+                            # If we got good data, break out of the loop
                             if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
                                 print(f"[v0] Successfully extracted complete data from JSON (attempt {cmd_index + 1})")
                                 break
@@ -822,12 +801,14 @@ def get_smart_data(disk_name):
                             print(f"[v0] JSON parse failed: {e}, trying text parsing...")
                     
                     if smart_data['model'] == 'Unknown' or smart_data['serial'] == 'Unknown' or smart_data['temperature'] == 0:
-                        print(f"[v0] Parsing text output...")
+                        print(f"[v0] Parsing text output (model={smart_data['model']}, serial={smart_data['serial']}, temp={smart_data['temperature']})...")
                         output = stdout
                         
+                        # Get basic info
                         for line in output.split('\n'):
                             line = line.strip()
                             
+                            # Model detection
                             if (line.startswith('Device Model:') or line.startswith('Model Number:')) and smart_data['model'] == 'Unknown':
                                 smart_data['model'] = line.split(':', 1)[1].strip()
                                 print(f"[v0] Found model: {smart_data['model']}")
@@ -835,6 +816,7 @@ def get_smart_data(disk_name):
                                 smart_data['model'] = line.split(':', 1)[1].strip()
                                 print(f"[v0] Found model family: {smart_data['model']}")
                             
+                            # Serial detection
                             elif line.startswith('Serial Number:') and smart_data['serial'] == 'Unknown':
                                 smart_data['serial'] = line.split(':', 1)[1].strip()
                                 print(f"[v0] Found serial: {smart_data['serial']}")
@@ -844,15 +826,22 @@ def get_smart_data(disk_name):
                                 if 'rpm' in rate_str.lower():
                                     try:
                                         smart_data['rotation_rate'] = int(rate_str.split()[0])
-                                        smart_data['disk_type'] = 'HDD'
-                                        print(f"[v0] Found HDD rotation rate: {smart_data['rotation_rate']} RPM")
+                                        print(f"[v0] Found rotation rate: {smart_data['rotation_rate']} RPM")
+                                        # Classify as HDD
+                                        if smart_data['disk_type'] == 'Unknown':
+                                            smart_data['disk_type'] = 'HDD'
+                                            print(f"[v0] Detected HDD based on rotation rate")
                                     except (ValueError, IndexError):
                                         pass
                                 elif 'Solid State Device' in rate_str:
-                                    smart_data['rotation_rate'] = 0
-                                    smart_data['disk_type'] = 'SSD'
+                                    smart_data['rotation_rate'] = 0  # SSD
                                     print(f"[v0] Found SSD (no rotation)")
+                                    # Classify as SSD
+                                    if smart_data['disk_type'] == 'Unknown':
+                                        smart_data['disk_type'] = 'SSD'
+                                        print(f"[v0] Detected SSD based on rotation rate")
                             
+                            # SMART status detection
                             elif 'SMART overall-health self-assessment test result:' in line:
                                 if 'PASSED' in line:
                                     smart_data['smart_status'] = 'passed'
@@ -863,12 +852,14 @@ def get_smart_data(disk_name):
                                     smart_data['health'] = 'critical'
                                     print(f"[v0] SMART status: FAILED")
                             
+                            # NVMe health
                             elif 'SMART Health Status:' in line:
                                 if 'OK' in line:
                                     smart_data['smart_status'] = 'passed'
                                     smart_data['health'] = 'healthy'
                                     print(f"[v0] NVMe Health: OK")
                             
+                            # Temperature detection (various formats)
                             elif 'Current Temperature:' in line and smart_data['temperature'] == 0:
                                 try:
                                     temp_str = line.split(':')[1].strip().split()[0]
@@ -876,16 +867,8 @@ def get_smart_data(disk_name):
                                     print(f"[v0] Found temperature: {smart_data['temperature']}°C")
                                 except (ValueError, IndexError):
                                     pass
-                            
-                            elif 'Percentage Used:' in line:
-                                try:
-                                    percentage_str = line.split(':')[1].strip().rstrip('%')
-                                    smart_data['percentage_used'] = int(percentage_str)
-                                    smart_data['ssd_life_left'] = 100 - smart_data['percentage_used']
-                                    print(f"[v0] NVMe Percentage Used: {smart_data['percentage_used']}%")
-                                except (ValueError, IndexError):
-                                    pass
                         
+                        # Parse SMART attributes table
                         in_attributes = False
                         for line in output.split('\n'):
                             line = line.strip()
@@ -896,6 +879,7 @@ def get_smart_data(disk_name):
                                 continue
                             
                             if in_attributes:
+                                # Stop at empty line or next section
                                 if not line or line.startswith('SMART') or line.startswith('==='):
                                     in_attributes = False
                                     continue
@@ -904,56 +888,40 @@ def get_smart_data(disk_name):
                                 if len(parts) >= 10:
                                     try:
                                         attr_id = parts[0]
-                                        attr_name = parts[1]
-                                        normalized_value = int(parts[3])
+                                        # Raw value is typically the last column
                                         raw_value = parts[-1]
                                         
-                                        if attr_id == '9':
+                                        # Parse based on attribute ID
+                                        if attr_id == '9':  # Power On Hours
                                             raw_clean = raw_value.split()[0].replace('h', '').replace(',', '')
                                             smart_data['power_on_hours'] = int(raw_clean)
                                             print(f"[v0] Power On Hours: {smart_data['power_on_hours']}")
-                                        elif attr_id == '12':
+                                        elif attr_id == '12':  # Power Cycle Count
                                             raw_clean = raw_value.split()[0].replace(',', '')
                                             smart_data['power_cycles'] = int(raw_clean)
                                             print(f"[v0] Power Cycles: {smart_data['power_cycles']}")
-                                        elif attr_id == '194' and smart_data['temperature'] == 0:
+                                        elif attr_id == '194' and smart_data['temperature'] == 0:  # Temperature
                                             temp_str = raw_value.split()[0]
                                             smart_data['temperature'] = int(temp_str)
                                             print(f"[v0] Temperature (attr 194): {smart_data['temperature']}°C")
-                                        elif attr_id == '190' and smart_data['temperature'] == 0:
+                                        elif attr_id == '190' and smart_data['temperature'] == 0:  # Airflow Temperature
                                             temp_str = raw_value.split()[0]
                                             smart_data['temperature'] = int(temp_str)
                                             print(f"[v0] Airflow Temperature (attr 190): {smart_data['temperature']}°C")
-                                        elif attr_id == '5':
+                                        elif attr_id == '5':  # Reallocated Sectors
                                             smart_data['reallocated_sectors'] = int(raw_value)
                                             print(f"[v0] Reallocated Sectors: {smart_data['reallocated_sectors']}")
-                                        elif attr_id == '197':
+                                        elif attr_id == '197':  # Pending Sectors
                                             smart_data['pending_sectors'] = int(raw_value)
                                             print(f"[v0] Pending Sectors: {smart_data['pending_sectors']}")
-                                        elif attr_id == '199':
+                                        elif attr_id == '199':  # CRC Errors
                                             smart_data['crc_errors'] = int(raw_value)
                                             print(f"[v0] CRC Errors: {smart_data['crc_errors']}")
-                                        # Parsear atributos de desgaste SSD
-                                        elif attr_id == '177':  # Wear_Leveling_Count
-                                            smart_data['wear_leveling_count'] = normalized_value
-                                            smart_data['ssd_life_left'] = normalized_value
-                                            print(f"[v0] Wear Leveling Count: {normalized_value}%")
-                                        elif attr_id == '231':
-                                            if 'Life' in attr_name or 'life' in attr_name:
-                                                smart_data['ssd_life_left'] = normalized_value
-                                                print(f"[v0] SSD Life Left: {normalized_value}%")
-                                        elif attr_id == '233':  # Media_Wearout_Indicator
-                                            smart_data['media_wearout_indicator'] = normalized_value
-                                            smart_data['ssd_life_left'] = normalized_value
-                                            print(f"[v0] Media Wearout Indicator: {normalized_value}%")
-                                        elif attr_id == '202':  # Percent_Lifetime_Remain
-                                            smart_data['ssd_life_left'] = normalized_value
-                                            print(f"[v0] Percent Lifetime Remain: {normalized_value}%")
                                             
                                     except (ValueError, IndexError) as e:
                                         print(f"[v0] Error parsing attribute line '{line}': {e}")
                                         continue
-                        
+                        # If we got complete data, break
                         if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
                             print(f"[v0] Successfully extracted complete data from text output (attempt {cmd_index + 1})")
                             break
@@ -974,12 +942,14 @@ def get_smart_data(disk_name):
                     process.kill()
                 continue
             finally:
+                # Ensure the process is terminated if it's still running
                 if process and process.poll() is None: 
                     try:
                         process.kill()
                         print(f"[v0] Process killed for command: {' '.join(cmd)}")
                     except Exception as kill_err:
                         print(f"[v0] Error killing process: {kill_err}")
+
 
         if smart_data['reallocated_sectors'] > 0 or smart_data['pending_sectors'] > 0:
             if smart_data['health'] == 'healthy':
@@ -992,39 +962,14 @@ def get_smart_data(disk_name):
             smart_data['health'] = 'critical'
             print(f"[v0] Health: CRITICAL (SMART failed)")
         
+        # Temperature-based health (only if we have a valid temperature)
         if smart_data['health'] == 'healthy' and smart_data['temperature'] > 0:
-            disk_type = smart_data['disk_type']
-            temp = smart_data['temperature']
-            
-            if disk_type == 'HDD':
-                if temp > 55:
-                    smart_data['health'] = 'critical'
-                    print(f"[v0] Health: CRITICAL (HDD temperature {temp}°C > 55°C)")
-                elif temp > 45:
-                    smart_data['health'] = 'warning'
-                    print(f"[v0] Health: WARNING (HDD temperature {temp}°C > 45°C)")
-            elif disk_type == 'SSD':
-                if temp > 65:
-                    smart_data['health'] = 'critical'
-                    print(f"[v0] Health: CRITICAL (SSD temperature {temp}°C > 65°C)")
-                elif temp > 55:
-                    smart_data['health'] = 'warning'
-                    print(f"[v0] Health: WARNING (SSD temperature {temp}°C > 55°C)")
-            elif disk_type == 'NVMe':
-                if temp > 70:
-                    smart_data['health'] = 'critical'
-                    print(f"[v0] Health: CRITICAL (NVMe temperature {temp}°C > 70°C)")
-                elif temp > 60:
-                    smart_data['health'] = 'warning'
-                    print(f"[v0] Health: WARNING (NVMe temperature {temp}°C > 60°C)")
-            else:
-                # Umbral genérico si no se detectó el tipo
-                if temp >= 70:
-                    smart_data['health'] = 'critical'
-                    print(f"[v0] Health: CRITICAL (temperature {temp}°C)")
-                elif temp >= 60:
-                    smart_data['health'] = 'warning'
-                    print(f"[v0] Health: WARNING (temperature {temp}°C)")
+            if smart_data['temperature'] >= 70:
+                smart_data['health'] = 'critical'
+                print(f"[v0] Health: CRITICAL (temperature {smart_data['temperature']}°C)")
+            elif smart_data['temperature'] >= 60:
+                smart_data['health'] = 'warning'
+                print(f"[v0] Health: WARNING (temperature {smart_data['temperature']}°C)")
             
     except FileNotFoundError:
         print(f"[v0] ERROR: smartctl not found - install smartmontools for disk monitoring.")
@@ -3497,9 +3442,7 @@ def api_logs():
                             'level': level,
                             'service': log_entry.get('_SYSTEMD_UNIT', log_entry.get('SYSLOG_IDENTIFIER', 'system')),
                             'message': log_entry.get('MESSAGE', ''),
-                            'source': 'journal',
-                            'pid': log_entry.get('_PID', ''),
-                            'hostname': log_entry.get('_HOSTNAME', '')
+                            'source': 'journal'
                         })
                     except (json.JSONDecodeError, ValueError) as e:
                         continue
@@ -4053,23 +3996,6 @@ def api_prometheus():
             metrics.append(f'# HELP proxmox_disk_usage_percent Disk usage percentage')
             metrics.append(f'# TYPE proxmox_disk_usage_percent gauge')
             metrics.append(f'proxmox_disk_usage_percent{{node="{node}",disk="{disk_name}"}} {disk.get("percent", 0)} {timestamp}')
-
-            # Métricas de SMART para discos SSD/NVMe
-            if disk.get('disk_type') in ['SSD', 'NVMe']:
-                if disk.get('ssd_life_left') is not None and disk.get('ssd_life_left') != 100: # Solo agregar si es diferente del default (100)
-                    metrics.append(f'# HELP proxmox_disk_ssd_life_left SSD remaining life percentage')
-                    metrics.append(f'# TYPE proxmox_disk_ssd_life_left gauge')
-                    metrics.append(f'proxmox_disk_ssd_life_left{{node="{node}",disk="{disk_name}"}} {disk["ssd_life_left"]} {timestamp}')
-                
-                if disk.get('percentage_used') is not None and disk.get('percentage_used') > 0:
-                    metrics.append(f'# HELP proxmox_disk_nvme_percentage_used NVMe disk percentage used')
-                    metrics.append(f'# TYPE proxmox_disk_nvme_percentage_used gauge')
-                    metrics.append(f'proxmox_disk_nvme_percentage_used{{node="{node}",disk="{disk_name}"}} {disk["percentage_used"]} {timestamp}')
-
-                if disk.get('wear_leveling_count') is not None and disk.get('wear_leveling_count') > 0:
-                    metrics.append(f'# HELP proxmox_disk_ssd_wear_leveling_count SSD wear leveling count percentage')
-                    metrics.append(f'# TYPE proxmox_disk_ssd_wear_leveling_count gauge')
-                    metrics.append(f'proxmox_disk_ssd_wear_leveling_count{{node="{node}",disk="{disk_name}"}} {disk["wear_leveling_count"]} {timestamp}')
         
         # Network metrics
         network_info = get_network_info()
@@ -4162,28 +4088,28 @@ def api_prometheus():
             # GPU metrics
             pci_devices = hardware_info.get('pci_devices', [])
             for device in pci_devices:
-                if device.get('type') == 'Graphics Card': # Check for Graphics Card type specifically
+                if device.get('type') == 'Graphics Card': # Changed from 'GPU' to 'Graphics Card' to match pci_devices categorization
                     gpu_name = device.get('device', 'unknown').replace(' ', '_')
                     gpu_vendor = device.get('vendor', 'unknown')
                     
                     # GPU Temperature
-                    if device.get('temperature') is not None:
+                    if device.get('gpu_temperature') is not None:
                         metrics.append(f'# HELP proxmox_gpu_temperature_celsius GPU temperature in Celsius')
                         metrics.append(f'# TYPE proxmox_gpu_temperature_celsius gauge')
-                        metrics.append(f'proxmox_gpu_temperature_celsius{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {device["temperature"]} {timestamp}')
+                        metrics.append(f'proxmox_gpu_temperature_celsius{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {device["gpu_temperature"]} {timestamp}')
                     
                     # GPU Utilization
-                    if device.get('utilization_gpu') is not None:
+                    if device.get('gpu_utilization') is not None:
                         metrics.append(f'# HELP proxmox_gpu_utilization_percent GPU utilization percentage')
                         metrics.append(f'# TYPE proxmox_gpu_utilization_percent gauge')
-                        metrics.append(f'proxmox_gpu_utilization_percent{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {device["utilization_gpu"]} {timestamp}')
+                        metrics.append(f'proxmox_gpu_utilization_percent{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {device["gpu_utilization"]} {timestamp}')
                     
                     # GPU Memory
-                    if device.get('memory_used') and device.get('memory_total'):
+                    if device.get('gpu_memory_used') and device.get('gpu_memory_total'):
                         try:
                             # Extract numeric values from strings like "1024 MiB"
-                            mem_used = float(device['memory_used'].split()[0])
-                            mem_total = float(device['memory_total'].split()[0])
+                            mem_used = float(device['gpu_memory_used'].split()[0])
+                            mem_total = float(device['gpu_memory_total'].split()[0])
                             mem_used_bytes = mem_used * 1024 * 1024  # Convert MiB to bytes
                             mem_total_bytes = mem_total * 1024 * 1024
                             
@@ -4198,10 +4124,10 @@ def api_prometheus():
                             pass
                     
                     # GPU Power Draw (NVIDIA only)
-                    if device.get('power_draw'):
+                    if device.get('gpu_power_draw'):
                         try:
                             # Extract numeric value from string like "75.5 W"
-                            power_draw = float(device['power_draw'].split()[0])
+                            power_draw = float(device['gpu_power_draw'].split()[0])
                             metrics.append(f'# HELP proxmox_gpu_power_draw_watts GPU power draw in watts')
                             metrics.append(f'# TYPE proxmox_gpu_power_draw_watts gauge')
                             metrics.append(f'proxmox_gpu_power_draw_watts{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {power_draw} {timestamp}')
@@ -4209,20 +4135,20 @@ def api_prometheus():
                             pass
                     
                     # GPU Clock Speeds (NVIDIA only)
-                    if device.get('clock_graphics'):
+                    if device.get('gpu_clock_speed'):
                         try:
                             # Extract numeric value from string like "1500 MHz"
-                            clock_speed = float(device['clock_graphics'].split()[0])
+                            clock_speed = float(device['gpu_clock_speed'].split()[0])
                             metrics.append(f'# HELP proxmox_gpu_clock_speed_mhz GPU clock speed in MHz')
                             metrics.append(f'# TYPE proxmox_gpu_clock_speed_mhz gauge')
                             metrics.append(f'proxmox_gpu_clock_speed_mhz{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {clock_speed} {timestamp}')
                         except (ValueError, IndexError):
                             pass
                     
-                    if device.get('clock_memory'):
+                    if device.get('gpu_memory_clock'):
                         try:
                             # Extract numeric value from string like "5001 MHz"
-                            mem_clock = float(device['clock_memory'].split()[0])
+                            mem_clock = float(device['gpu_memory_clock'].split()[0])
                             metrics.append(f'# HELP proxmox_gpu_memory_clock_mhz GPU memory clock speed in MHz')
                             metrics.append(f'# TYPE proxmox_gpu_memory_clock_mhz gauge')
                             metrics.append(f'proxmox_gpu_memory_clock_mhz{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {mem_clock} {timestamp}')
@@ -4239,14 +4165,14 @@ def api_prometheus():
                     metrics.append(f'# TYPE proxmox_ups_battery_charge_percent gauge')
                     metrics.append(f'proxmox_ups_battery_charge_percent{{node="{node}",ups="{ups_name}"}} {ups["battery_charge"]} {timestamp}')
                 
-                if ups.get('load') is not None:
+                if ups.get('load_percent') is not None: # Changed from 'load' to 'load_percent'
                     metrics.append(f'# HELP proxmox_ups_load_percent UPS load percentage')
                     metrics.append(f'# TYPE proxmox_ups_load_percent gauge')
-                    metrics.append(f'proxmox_ups_load_percent{{node="{node}",ups="{ups_name}"}} {ups["load"]} {timestamp}')
+                    metrics.append(f'proxmox_ups_load_percent{{node="{node}",ups="{ups_name}"}} {ups["load_percent"]} {timestamp}')
                 
-                if ups.get('runtime'):
+                if ups.get('time_left'):
                     # Convert runtime to seconds
-                    runtime_str = ups['runtime']
+                    runtime_str = ups['time_left']
                     runtime_seconds = 0
                     if 'minutes' in runtime_str:
                         runtime_seconds = int(runtime_str.split()[0]) * 60
@@ -4254,10 +4180,10 @@ def api_prometheus():
                     metrics.append(f'# TYPE proxmox_ups_runtime_seconds gauge')
                     metrics.append(f'proxmox_ups_runtime_seconds{{node="{node}",ups="{ups_name}"}} {runtime_seconds} {timestamp}')
                 
-                if ups.get('input_voltage') is not None:
+                if ups.get('line_voltage') is not None:
                     metrics.append(f'# HELP proxmox_ups_input_voltage_volts UPS input voltage in volts')
                     metrics.append(f'# TYPE proxmox_ups_input_voltage_volts gauge')
-                    metrics.append(f'proxmox_ups_input_voltage_volts{{node="{node}",ups="{ups_name}"}} {ups["input_voltage"]} {timestamp}')
+                    metrics.append(f'proxmox_ups_input_voltage_volts{{node="{node}",ups="{ups_name}"}} {ups["line_voltage"]} {timestamp}')
         except Exception as e:
             print(f"[v0] Error getting hardware metrics for Prometheus: {e}")
         
@@ -4375,7 +4301,7 @@ def api_hardware():
         print(f"[v0] /api/hardware returning data")
         print(f"[v0] - CPU: {formatted_data['cpu'].get('model', 'Unknown')}")
         print(f"[v0] - Temperatures: {len(formatted_data['temperatures'])} sensors")
-        print(f"[v0] - Fans: {len(formatted_data['fans'])} fans") # Now includes IPMI fans
+        print(f"[v0] - Fans: {len(formatted_data['fans'])} fans") # Includes IPMI fans
         print(f"[v0] - Power supplies: {len(formatted_data['power_supplies'])} PSUs")
         print(f"[v0] - Power meter: {'Yes' if formatted_data['power_meter'] else 'No'}")
         print(f"[v0] - UPS: {'Yes' if formatted_data['ups'] else 'No'}")
