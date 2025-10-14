@@ -1734,7 +1734,9 @@ def get_ups_info():
     
     # Return first UPS for backward compatibility, or None if no UPS found
     return ups_list[0] if ups_list else None
+
 # </CHANGE>
+
 def identify_temperature_sensor(sensor_name, adapter):
     """Identify what a temperature sensor corresponds to and assign a category"""
     sensor_lower = sensor_name.lower()
@@ -1756,7 +1758,7 @@ def identify_temperature_sensor(sensor_name, adapter):
         display_name = sensor_name
     
     # GPU
-    elif any(gpu in adapter_lower for gpu in ["nouveau", "amdgpu", "radeon", "i915", "nvidia"]):
+    elif "nouveau" in adapter_lower or "amdgpu" in adapter_lower or "radeon" in adapter_lower or "i915" in adapter_lower or "nvidia" in adapter_lower: # Check adapter for GPU drivers
         category = "GPU"
         display_name = f"GPU - {sensor_name}"
     elif any(gpu in sensor_lower for gpu in ["gpu", "vga", "graphics"]):
@@ -2783,7 +2785,6 @@ def get_detailed_gpu_info(gpu):
     print(f"[v0] ===== Exiting get_detailed_gpu_info for GPU {slot} =====", flush=True)
     return detailed_info
 
-
 def get_pci_device_info(pci_slot):
     """Get detailed PCI device information for a given slot"""
     pci_info = {}
@@ -2883,6 +2884,72 @@ def get_network_hardware_info(pci_slot):
     
     return net_info
 
+def identify_gpu_type(gpu_name, vendor):
+    """
+    Identify if a GPU is integrated or discrete based on its name and vendor.
+    
+    Integrated GPUs:
+    - Intel: HD Graphics, UHD Graphics, Iris, Iris Xe (but NOT Arc)
+    - AMD: Radeon Vega (integrated), Radeon Graphics (APU), with keywords like "Integrated"
+    - NVIDIA: Tegra (rare in servers)
+    
+    Discrete GPUs:
+    - Intel: Arc series (A380, A750, A770, etc.)
+    - NVIDIA: GeForce, Quadro, Tesla, RTX, GTX
+    - AMD: Radeon RX, Radeon Pro, FirePro, Radeon VII
+    """
+    gpu_name_lower = gpu_name.lower()
+    
+    # Keywords that indicate an integrated GPU
+    integrated_keywords = [
+        'integrated', 'on-board', 'built-in', 'onboard',
+        'hd graphics', 'uhd graphics', 'iris graphics', 'iris xe graphics',
+        'radeon vega', 'radeon graphics',  # AMD APU integrated graphics
+        'tegra'  # NVIDIA Tegra (rare)
+    ]
+    
+    # Keywords that indicate a discrete GPU
+    discrete_keywords = [
+        # Intel discrete
+        'arc a', 'arc graphics',
+        # NVIDIA discrete
+        'geforce', 'quadro', 'tesla', 'rtx', 'gtx', 'titan',
+        # AMD discrete
+        'radeon rx', 'radeon pro', 'radeon vii', 'radeon r9', 'radeon r7', 'radeon r5',
+        'firepro', 'firegl'
+    ]
+    
+    # Check for discrete keywords first (more specific)
+    for keyword in discrete_keywords:
+        if keyword in gpu_name_lower:
+            return 'Discrete'
+    
+    # Check for integrated keywords
+    for keyword in integrated_keywords:
+        if keyword in gpu_name_lower:
+            return 'Integrated'
+    
+    # Fallback logic based on vendor and common patterns
+    if vendor == 'Intel':
+        # Intel Arc is discrete, everything else is typically integrated
+        if 'arc' in gpu_name_lower:
+            return 'Discrete'
+        else:
+            return 'Integrated'
+    elif vendor == 'NVIDIA':
+        # Most NVIDIA GPUs are discrete (except Tegra which is already handled)
+        return 'Discrete'
+    elif vendor == 'AMD':
+        # AMD is tricky - check for APU indicators
+        # APUs typically have model numbers like "Ryzen X XXXX" with graphics
+        if 'ryzen' in gpu_name_lower or 'athlon' in gpu_name_lower:
+            return 'Integrated'
+        # Most other AMD GPUs are discrete
+        return 'Discrete'
+    
+    # Default to Discrete if we can't determine
+    return 'Discrete'
+
 def get_gpu_info():
     """Detect and return information about GPUs in the system"""
     gpus = []
@@ -2914,11 +2981,13 @@ def get_gpu_info():
                         elif 'Intel' in gpu_name:
                             vendor = 'Intel'
                         
+                        gpu_type = identify_gpu_type(gpu_name, vendor)
+                        
                         gpu = {
                             'slot': slot,
                             'name': gpu_name,
                             'vendor': vendor,
-                            'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated'
+                            'type': gpu_type
                         }
                         
                         pci_info = get_pci_device_info(slot)
@@ -2927,11 +2996,8 @@ def get_gpu_info():
                             gpu['pci_driver'] = pci_info.get('driver', '')
                             gpu['pci_kernel_module'] = pci_info.get('kernel_module', '')
                         
-                        # detailed_info = get_detailed_gpu_info(gpu) # Removed this call here
-                        # gpu.update(detailed_info)             # It will be called later in api_gpu_realtime
-                        
                         gpus.append(gpu)
-                        print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+                        print(f"[v0] Found GPU: {gpu_name} ({vendor}, {gpu_type}) at slot {slot}")
 
     except Exception as e:
         print(f"[v0] Error detecting GPUs from lspci: {e}")

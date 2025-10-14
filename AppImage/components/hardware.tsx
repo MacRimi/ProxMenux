@@ -98,7 +98,7 @@ const getMonitoringToolRecommendation = (vendor: string): string => {
   }
 
   if (lowerVendor.includes("amd") || lowerVendor.includes("ati")) {
-    return "To get extended GPU monitoring information, please install radeontop package."
+    return "To get extended GPU monitoring information, please install amdgpu_top package. Download from: https://github.com/Umio-Yasuno/amdgpu_top/releases"
   }
   return "To get extended GPU monitoring information, please install the appropriate GPU monitoring tools for your hardware."
 }
