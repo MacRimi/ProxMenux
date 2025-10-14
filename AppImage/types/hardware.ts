@@ -77,53 +77,11 @@ export interface PowerSupply {
 export interface UPS {
   name: string
   status: string
-  model?: string
-  manufacturer?: string
-  serial?: string
-  device_type?: string
-  firmware?: string
-  battery_charge?: string
-  battery_charge_raw?: number
-  battery_charge_low?: string
-  battery_runtime_seconds?: number
-  battery_runtime_low?: string
-  battery_voltage?: string
-  battery_voltage_nominal?: string
-  battery_type?: string
-  battery_mfr_date?: string
-  time_left?: string
-  load_percent?: string
-  load_raw?: number
-  real_power?: string
-  realpower_nominal?: string
-  apparent_power?: string
-  power_nominal?: string
-  input_voltage?: string
-  input_voltage_nominal?: string
-  input_frequency?: string
-  input_transfer_high?: string
-  input_transfer_low?: string
-  transfer_reason?: string
-  line_voltage?: string
-  output_voltage?: string
-  output_voltage_nominal?: string
-  output_frequency?: string
-  driver_name?: string
-  driver_version?: string
-  driver_version_internal?: string
-  driver_poll_freq?: string
-  driver_poll_interval?: string
-  ups_manufacturer?: string
-  ups_mfr_date?: string
-  product_id?: string
-  vendor_id?: string
-  beeper_status?: string
-  test_result?: string
-  delay_shutdown?: string
-  delay_start?: string
-  timer_shutdown?: string
-  timer_reboot?: string
-  raw_variables?: Record<string, string>
+  battery_charge?: number
+  battery_runtime?: number
+  load?: number
+  input_voltage?: number
+  output_voltage?: number
 }
 
 export interface GPU {

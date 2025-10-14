@@ -17,7 +17,6 @@ import {
   MemoryStick,
   Cpu as Gpu,
   Loader2,
-  Info,
 } from "lucide-react"
 import useSWR from "swr"
 import { useState, useEffect } from "react"
@@ -98,7 +97,7 @@ const getMonitoringToolRecommendation = (vendor: string): string => {
   }
 
   if (lowerVendor.includes("amd") || lowerVendor.includes("ati")) {
-    return "To get extended GPU monitoring information, please install amdgpu_top package. Download from: https://github.com/Umio-Yasuno/amdgpu_top/releases"
+    return "To get extended GPU monitoring information, please install radeontop package."
   }
   return "To get extended GPU monitoring information, please install the appropriate GPU monitoring tools for your hardware."
 }
@@ -114,7 +113,6 @@ export default function Hardware() {
   const [selectedPCIDevice, setSelectedPCIDevice] = useState<PCIDevice | null>(null)
   const [selectedDisk, setSelectedDisk] = useState<StorageDevice | null>(null)
   const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
-  const [selectedUPS, setSelectedUPS] = useState<any>(null) // Added state for UPS modal
 
   useEffect(() => {
     if (!selectedGPU) return
@@ -122,23 +120,13 @@ export default function Hardware() {
     const pciDevice = findPCIDeviceForGPU(selectedGPU)
     const fullSlot = pciDevice?.slot || selectedGPU.slot
 
-    if (!fullSlot) {
-      setDetailsLoading(false)
-      setRealtimeGPUData({ has_monitoring_tool: false })
-      return
-    }
+    if (!fullSlot) return
 
     const abortController = new AbortController()
-    let timeoutId: NodeJS.Timeout
 
     const fetchRealtimeData = async () => {
       try {
         const apiUrl = `http://${window.location.hostname}:8008/api/gpu/${fullSlot}/realtime`
-
-        // Set a timeout of 5 seconds
-        timeoutId = setTimeout(() => {
-          abortController.abort()
-        }, 5000)
 
         const response = await fetch(apiUrl, {
           method: "GET",
@@ -147,8 +135,6 @@ export default function Hardware() {
           },
           signal: abortController.signal,
         })
-
-        clearTimeout(timeoutId)
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
@@ -175,31 +161,9 @@ export default function Hardware() {
 
     return () => {
       clearInterval(interval)
-      clearTimeout(timeoutId)
       abortController.abort()
     }
-  }, [selectedGPU, hardwareData?.pci_devices])
-
-  if (!hardwareData && !error) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
-          <p className="text-sm text-muted-foreground">Loading hardware information...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <p className="text-sm text-destructive">Error loading hardware information</p>
-        </div>
-      </div>
-    )
-  }
+  }, [selectedGPU])
 
   const handleGPUClick = async (gpu: GPU) => {
     setSelectedGPU(gpu)
@@ -382,7 +346,7 @@ export default function Hardware() {
         </Card>
       )}
 
-      {/* Thermal Monitoring - Organized by Category */}
+      {/* Thermal Monitoring */}
       {hardwareData?.temperatures && hardwareData.temperatures.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -393,84 +357,33 @@ export default function Hardware() {
             </Badge>
           </div>
 
-          {(() => {
-            // Group temperatures by category
-            const tempsByCategory: Record<string, typeof hardwareData.temperatures> = {}
-            hardwareData.temperatures.forEach((temp) => {
-              const category = (temp as any).category || "Other"
-              if (!tempsByCategory[category]) {
-                tempsByCategory[category] = []
-              }
-              tempsByCategory[category].push(temp)
-            })
+          <div className="grid gap-4 md:grid-cols-2">
+            {hardwareData.temperatures.map((temp, index) => {
+              const percentage = temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
+              const isHot = temp.current > (temp.high || 80)
+              const isCritical = temp.current > (temp.critical || 90)
 
-            // Define category order and icons
-            const categoryOrder = ["CPU", "GPU", "NVMe", "Storage", "Motherboard", "Chipset", "PCI", "Other"]
-            const categoryIcons: Record<string, any> = {
-              CPU: CpuIcon,
-              GPU: Gpu,
-              NVMe: HardDrive,
-              Storage: HardDrive,
-              Motherboard: Cpu,
-              Chipset: Cpu,
-              PCI: Network,
-              Other: Thermometer,
-            }
-
-            return (
-              <div className="space-y-6">
-                {categoryOrder.map((category) => {
-                  const temps = tempsByCategory[category]
-                  if (!temps || temps.length === 0) return null
-
-                  const CategoryIcon = categoryIcons[category] || Thermometer
-
-                  return (
-                    <div key={category}>
-                      <div className="mb-3 flex items-center gap-2">
-                        <CategoryIcon className="h-4 w-4 text-muted-foreground" />
-                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                          {category}
-                        </h3>
-                        <Badge variant="outline" className="text-xs">
-                          {temps.length}
-                        </Badge>
-                      </div>
-
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {temps.map((temp, index) => {
-                          const percentage =
-                            temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
-                          const isHot = temp.current > (temp.high || 80)
-                          const isCritical = temp.current > (temp.critical || 90)
-
-                          return (
-                            <div key={index} className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium">{temp.name}</span>
-                                <span
-                                  className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
-                                >
-                                  {temp.current.toFixed(1)}°C
-                                </span>
-                              </div>
-                              <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                                <div
-                                  className={`h-full transition-all ${isCritical ? "bg-red-500" : isHot ? "bg-orange-500" : "bg-blue-500"}`}
-                                  style={{ width: `${Math.min(percentage, 100)}%` }}
-                                />
-                              </div>
-                              {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })()}
+              return (
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{temp.name}</span>
+                    <span
+                      className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
+                    >
+                      {temp.current.toFixed(1)}°C
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full bg-blue-500 transition-all"
+                      style={{ width: `${Math.min(percentage, 100)}%` }}
+                    />
+                  </div>
+                  {temp.adapter && <span className="text-xs text-muted-foreground">{temp.adapter}</span>}
+                </div>
+              )
+            })}
+          </div>
         </Card>
       )}
 
@@ -1040,7 +953,7 @@ export default function Hardware() {
       {/* Power Supplies */}
       {/* This section was moved to be grouped with Power Consumption */}
 
-      {/* UPS - Enhanced with detailed modal */}
+      {/* UPS */}
       {hardwareData?.ups && Object.keys(hardwareData.ups).length > 0 && hardwareData.ups.model && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -1051,16 +964,7 @@ export default function Hardware() {
           <div className="space-y-4">
             <div className="rounded-lg border border-border/30 bg-background/50 p-4">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{hardwareData.ups.model}</span>
-                  <button
-                    onClick={() => setSelectedUPS(hardwareData.ups)}
-                    className="p-1 rounded-md hover:bg-accent transition-colors"
-                    title="View detailed UPS information"
-                  >
-                    <Info className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                  </button>
-                </div>
+                <span className="text-sm font-medium">{hardwareData.ups.model}</span>
                 <Badge
                   variant={hardwareData.ups.status === "OL" ? "default" : "destructive"}
                   className={
@@ -1124,367 +1028,6 @@ export default function Hardware() {
           </div>
         </Card>
       )}
-
-      <Dialog open={selectedUPS !== null} onOpenChange={() => setSelectedUPS(null)}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          {selectedUPS && (
-            <>
-              <DialogHeader className="pb-4 border-b border-border">
-                <DialogTitle>{selectedUPS.model || selectedUPS.name}</DialogTitle>
-                <DialogDescription>Comprehensive UPS Information</DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-6 py-4">
-                {/* Device Information */}
-                {(selectedUPS.model || selectedUPS.manufacturer || selectedUPS.serial || selectedUPS.device_type) && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                      Device Information
-                    </h3>
-                    <div className="grid gap-2">
-                      {selectedUPS.model && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Model</span>
-                          <span className="text-sm font-medium text-right">{selectedUPS.model}</span>
-                        </div>
-                      )}
-                      {selectedUPS.manufacturer && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Manufacturer</span>
-                          <span className="text-sm font-medium">{selectedUPS.manufacturer}</span>
-                        </div>
-                      )}
-                      {selectedUPS.serial && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Serial Number</span>
-                          <span className="font-mono text-sm">{selectedUPS.serial}</span>
-                        </div>
-                      )}
-                      {selectedUPS.device_type && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Device Type</span>
-                          <span className="text-sm font-medium">{selectedUPS.device_type}</span>
-                        </div>
-                      )}
-                      {selectedUPS.firmware && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Firmware</span>
-                          <span className="font-mono text-sm">{selectedUPS.firmware}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Status */}
-                {(selectedUPS.status || selectedUPS.beeper_status || selectedUPS.test_result) && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Status</h3>
-                    <div className="grid gap-2">
-                      {selectedUPS.status && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">UPS Status</span>
-                          <Badge
-                            variant={selectedUPS.status === "OL" ? "default" : "destructive"}
-                            className={
-                              selectedUPS.status === "OL" ? "bg-green-500/10 text-green-500 border-green-500/20" : ""
-                            }
-                          >
-                            {selectedUPS.status}
-                          </Badge>
-                        </div>
-                      )}
-                      {selectedUPS.beeper_status && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Beeper Status</span>
-                          <span className="text-sm font-medium">{selectedUPS.beeper_status}</span>
-                        </div>
-                      )}
-                      {selectedUPS.test_result && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Test Result</span>
-                          <span className="text-sm font-medium">{selectedUPS.test_result}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Battery */}
-                {(selectedUPS.battery_charge ||
-                  selectedUPS.time_left ||
-                  selectedUPS.battery_voltage ||
-                  selectedUPS.battery_type) && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                      Battery
-                    </h3>
-                    <div className="grid gap-2">
-                      {selectedUPS.battery_charge && (
-                        <div className="space-y-1">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Charge Level</span>
-                            <span className="text-sm font-medium">{selectedUPS.battery_charge}</span>
-                          </div>
-                          <Progress
-                            value={Number.parseInt(selectedUPS.battery_charge.replace("%", ""))}
-                            className="h-2 [&>div]:bg-blue-500"
-                          />
-                        </div>
-                      )}
-                      {selectedUPS.battery_charge_low && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Low Battery Threshold</span>
-                          <span className="text-sm font-medium">{selectedUPS.battery_charge_low}</span>
-                        </div>
-                      )}
-                      {selectedUPS.time_left && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Runtime Remaining</span>
-                          <span className="text-sm font-medium text-green-500">{selectedUPS.time_left}</span>
-                        </div>
-                      )}
-                      {selectedUPS.battery_runtime_low && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Low Runtime Threshold</span>
-                          <span className="text-sm font-medium">{selectedUPS.battery_runtime_low}</span>
-                        </div>
-                      )}
-                      {selectedUPS.battery_voltage && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Battery Voltage</span>
-                          <span className="text-sm font-medium">{selectedUPS.battery_voltage}</span>
-                        </div>
-                      )}
-                      {selectedUPS.battery_voltage_nominal && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Nominal Voltage</span>
-                          <span className="text-sm font-medium">{selectedUPS.battery_voltage_nominal}</span>
-                        </div>
-                      )}
-                      {selectedUPS.battery_type && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Battery Type</span>
-                          <span className="text-sm font-medium">{selectedUPS.battery_type}</span>
-                        </div>
-                      )}
-                      {selectedUPS.battery_mfr_date && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Battery Manufacture Date</span>
-                          <span className="text-sm font-medium">{selectedUPS.battery_mfr_date}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Power */}
-                {(selectedUPS.load_percent || selectedUPS.real_power || selectedUPS.apparent_power) && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Power</h3>
-                    <div className="grid gap-2">
-                      {selectedUPS.load_percent && (
-                        <div className="space-y-1">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Load</span>
-                            <span className="text-sm font-medium">{selectedUPS.load_percent}</span>
-                          </div>
-                          <Progress
-                            value={Number.parseInt(selectedUPS.load_percent.replace("%", ""))}
-                            className="h-2 [&>div]:bg-blue-500"
-                          />
-                        </div>
-                      )}
-                      {selectedUPS.real_power && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Real Power</span>
-                          <span className="text-sm font-medium text-blue-500">{selectedUPS.real_power}</span>
-                        </div>
-                      )}
-                      {selectedUPS.realpower_nominal && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Nominal Real Power</span>
-                          <span className="text-sm font-medium">{selectedUPS.realpower_nominal}</span>
-                        </div>
-                      )}
-                      {selectedUPS.apparent_power && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Apparent Power</span>
-                          <span className="text-sm font-medium">{selectedUPS.apparent_power}</span>
-                        </div>
-                      )}
-                      {selectedUPS.power_nominal && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Nominal Apparent Power</span>
-                          <span className="text-sm font-medium">{selectedUPS.power_nominal}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Input/Output */}
-                {(selectedUPS.input_voltage || selectedUPS.output_voltage || selectedUPS.input_frequency) && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                      Input / Output
-                    </h3>
-                    <div className="grid gap-2 md:grid-cols-2">
-                      {selectedUPS.input_voltage && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Input Voltage</span>
-                          <span className="text-sm font-medium text-green-500">{selectedUPS.input_voltage}</span>
-                        </div>
-                      )}
-                      {selectedUPS.input_voltage_nominal && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Nominal Input Voltage</span>
-                          <span className="text-sm font-medium">{selectedUPS.input_voltage_nominal}</span>
-                        </div>
-                      )}
-                      {selectedUPS.input_frequency && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Input Frequency</span>
-                          <span className="text-sm font-medium">{selectedUPS.input_frequency}</span>
-                        </div>
-                      )}
-                      {selectedUPS.input_transfer_high && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Transfer High</span>
-                          <span className="text-sm font-medium">{selectedUPS.input_transfer_high}</span>
-                        </div>
-                      )}
-                      {selectedUPS.input_transfer_low && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Transfer Low</span>
-                          <span className="text-sm font-medium">{selectedUPS.input_transfer_low}</span>
-                        </div>
-                      )}
-                      {selectedUPS.transfer_reason && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Last Transfer Reason</span>
-                          <span className="text-sm font-medium">{selectedUPS.transfer_reason}</span>
-                        </div>
-                      )}
-                      {selectedUPS.output_voltage && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Output Voltage</span>
-                          <span className="text-sm font-medium">{selectedUPS.output_voltage}</span>
-                        </div>
-                      )}
-                      {selectedUPS.output_voltage_nominal && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Nominal Output Voltage</span>
-                          <span className="text-sm font-medium">{selectedUPS.output_voltage_nominal}</span>
-                        </div>
-                      )}
-                      {selectedUPS.output_frequency && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Output Frequency</span>
-                          <span className="text-sm font-medium">{selectedUPS.output_frequency}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Driver */}
-                {(selectedUPS.driver_name || selectedUPS.driver_version) && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Driver</h3>
-                    <div className="grid gap-2">
-                      {selectedUPS.driver_name && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Driver Name</span>
-                          <span className="font-mono text-sm text-green-500">{selectedUPS.driver_name}</span>
-                        </div>
-                      )}
-                      {selectedUPS.driver_version && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Driver Version</span>
-                          <span className="font-mono text-sm">{selectedUPS.driver_version}</span>
-                        </div>
-                      )}
-                      {selectedUPS.driver_version_internal && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Internal Version</span>
-                          <span className="font-mono text-sm">{selectedUPS.driver_version_internal}</span>
-                        </div>
-                      )}
-                      {selectedUPS.driver_poll_freq && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Poll Frequency</span>
-                          <span className="text-sm font-medium">{selectedUPS.driver_poll_freq}</span>
-                        </div>
-                      )}
-                      {selectedUPS.driver_poll_interval && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Poll Interval</span>
-                          <span className="text-sm font-medium">{selectedUPS.driver_poll_interval}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Configuration */}
-                {(selectedUPS.delay_shutdown || selectedUPS.delay_start || selectedUPS.timer_shutdown) && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                      Configuration
-                    </h3>
-                    <div className="grid gap-2">
-                      {selectedUPS.delay_shutdown && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Shutdown Delay</span>
-                          <span className="text-sm font-medium">{selectedUPS.delay_shutdown}</span>
-                        </div>
-                      )}
-                      {selectedUPS.delay_start && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Start Delay</span>
-                          <span className="text-sm font-medium">{selectedUPS.delay_start}</span>
-                        </div>
-                      )}
-                      {selectedUPS.timer_shutdown && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Shutdown Timer</span>
-                          <span className="text-sm font-medium">{selectedUPS.timer_shutdown}</span>
-                        </div>
-                      )}
-                      {selectedUPS.timer_reboot && (
-                        <div className="flex justify-between border-b border-border/50 pb-2">
-                          <span className="text-sm text-muted-foreground">Reboot Timer</span>
-                          <span className="text-sm font-medium">{selectedUPS.timer_reboot}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Raw Variables - Collapsible section with all UPS variables */}
-                {selectedUPS.raw_variables && Object.keys(selectedUPS.raw_variables).length > 0 && (
-                  <details className="rounded-lg border border-border/30 bg-background/50">
-                    <summary className="cursor-pointer p-4 font-medium text-sm hover:bg-accent/50 transition-colors">
-                      All UPS Variables ({Object.keys(selectedUPS.raw_variables).length})
-                    </summary>
-                    <div className="p-4 pt-0 max-h-[300px] overflow-y-auto">
-                      <div className="grid gap-1">
-                        {Object.entries(selectedUPS.raw_variables).map(([key, value]) => (
-                          <div key={key} className="flex justify-between border-b border-border/50 pb-1 text-xs">
-                            <span className="font-mono text-muted-foreground">{key}</span>
-                            <span className="font-mono">{value as string}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </details>
-                )}
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Network Summary - Clickable */}
       {hardwareData?.pci_devices &&

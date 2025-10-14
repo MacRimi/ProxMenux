@@ -536,14 +536,7 @@ def get_storage_info():
                             'pending_sectors': smart_data.get('pending_sectors', 0),
                             'crc_errors': smart_data.get('crc_errors', 0),
                             'rotation_rate': smart_data.get('rotation_rate', 0), # Added
-                            'power_cycles': smart_data.get('power_cycles', 0), # Added
-                            'disk_type': smart_data.get('disk_type', 'Unknown'), # Added from get_smart_data
-                            # Added wear indicators
-                            'percentage_used': smart_data.get('percentage_used'),
-                            'ssd_life_left': smart_data.get('ssd_life_left'),
-                            'wear_leveling_count': smart_data.get('wear_leveling_count'),
-                            'media_wearout_indicator': smart_data.get('media_wearout_indicator'),
-                            'total_lbas_written': smart_data.get('total_lbas_written'),
+                            'power_cycles': smart_data.get('power_cycles', 0) # Added
                         }
                         
                         storage_data['disk_count'] += 1
@@ -662,19 +655,9 @@ def get_smart_data(disk_name):
         'crc_errors': 0,
         'rotation_rate': 0,  # Added rotation rate (RPM)
         'power_cycles': 0,   # Added power cycle count
-        'disk_type': 'Unknown',  # Will be 'HDD', 'SSD', or 'NVMe'
-        'percentage_used': None,  # NVMe specific
-        'ssd_life_left': None,  # SSD specific (percentage remaining)
-        'wear_leveling_count': None,  # SSD specific
-        'media_wearout_indicator': None,  # SSD specific
-        'total_lbas_written': None,  # Both SSD and NVMe
     }
     
     print(f"[v0] ===== Starting SMART data collection for /dev/{disk_name} =====")
-    
-    if 'nvme' in disk_name.lower():
-        smart_data['disk_type'] = 'NVMe'
-        print(f"[v0] Detected NVMe disk based on device name")
     
     try:
         commands_to_try = [
@@ -737,15 +720,6 @@ def get_smart_data(disk_name):
                             if 'rotation_rate' in data:
                                 smart_data['rotation_rate'] = data['rotation_rate']
                                 print(f"[v0] Rotation Rate: {smart_data['rotation_rate']} RPM")
-                                
-                                # Classify disk type based on rotation rate
-                                if smart_data['disk_type'] == 'Unknown':
-                                    if data['rotation_rate'] == 0 or 'Solid State Device' in str(data.get('rotation_rate', '')):
-                                        smart_data['disk_type'] = 'SSD'
-                                        print(f"[v0] Detected SSD based on rotation rate")
-                                    elif isinstance(data['rotation_rate'], int) and data['rotation_rate'] > 0:
-                                        smart_data['disk_type'] = 'HDD'
-                                        print(f"[v0] Detected HDD based on rotation rate")
                             
                             # Extract SMART status
                             if 'smart_status' in data and 'passed' in data['smart_status']:
@@ -764,7 +738,6 @@ def get_smart_data(disk_name):
                                 for attr in data['ata_smart_attributes']['table']:
                                     attr_id = attr.get('id')
                                     raw_value = attr.get('raw', {}).get('value', 0)
-                                    normalized_value = attr.get('value', 0)
                                     
                                     if attr_id == 9:  # Power_On_Hours
                                         smart_data['power_on_hours'] = raw_value
@@ -789,22 +762,6 @@ def get_smart_data(disk_name):
                                     elif attr_id == 199:  # UDMA_CRC_Error_Count
                                         smart_data['crc_errors'] = raw_value
                                         print(f"[v0] CRC Errors (ID 199): {raw_value}")
-                                    elif attr_id == 177:  # Wear_Leveling_Count
-                                        smart_data['wear_leveling_count'] = normalized_value
-                                        print(f"[v0] Wear Leveling Count (ID 177): {normalized_value}")
-                                    elif attr_id == 231:  # SSD_Life_Left or Temperature
-                                        if normalized_value <= 100:  # Likely life left percentage
-                                            smart_data['ssd_life_left'] = normalized_value
-                                            print(f"[v0] SSD Life Left (ID 231): {normalized_value}%")
-                                    elif attr_id == 233:  # Media_Wearout_Indicator
-                                        smart_data['media_wearout_indicator'] = normalized_value
-                                        print(f"[v0] Media Wearout Indicator (ID 233): {normalized_value}")
-                                    elif attr_id == 202:  # Percent_Lifetime_Remain
-                                        smart_data['ssd_life_left'] = normalized_value
-                                        print(f"[v0] Percent Lifetime Remain (ID 202): {normalized_value}%")
-                                    elif attr_id == 241:  # Total_LBAs_Written
-                                        smart_data['total_lbas_written'] = raw_value
-                                        print(f"[v0] Total LBAs Written (ID 241): {raw_value}")
                             
                             # Parse NVMe SMART data
                             if 'nvme_smart_health_information_log' in data:
@@ -819,13 +776,7 @@ def get_smart_data(disk_name):
                                 if 'power_cycles' in nvme_data:
                                     smart_data['power_cycles'] = nvme_data['power_cycles']
                                     print(f"[v0] NVMe Power Cycles: {smart_data['power_cycles']}")
-                                if 'percentage_used' in nvme_data:
-                                    smart_data['percentage_used'] = nvme_data['percentage_used']
-                                    print(f"[v0] NVMe Percentage Used: {smart_data['percentage_used']}%")
-                                if 'data_units_written' in nvme_data:
-                                    smart_data['total_lbas_written'] = nvme_data['data_units_written']
-                                    print(f"[v0] NVMe Data Units Written: {smart_data['total_lbas_written']}")
-
+                            
                             # If we got good data, break out of the loop
                             if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
                                 print(f"[v0] Successfully extracted complete data from JSON (attempt {cmd_index + 1})")
@@ -861,19 +812,11 @@ def get_smart_data(disk_name):
                                     try:
                                         smart_data['rotation_rate'] = int(rate_str.split()[0])
                                         print(f"[v0] Found rotation rate: {smart_data['rotation_rate']} RPM")
-                                        # Classify as HDD
-                                        if smart_data['disk_type'] == 'Unknown':
-                                            smart_data['disk_type'] = 'HDD'
-                                            print(f"[v0] Detected HDD based on rotation rate")
                                     except (ValueError, IndexError):
                                         pass
                                 elif 'Solid State Device' in rate_str:
                                     smart_data['rotation_rate'] = 0  # SSD
                                     print(f"[v0] Found SSD (no rotation)")
-                                    # Classify as SSD
-                                    if smart_data['disk_type'] == 'Unknown':
-                                        smart_data['disk_type'] = 'SSD'
-                                        print(f"[v0] Detected SSD based on rotation rate")
                             
                             # SMART status detection
                             elif 'SMART overall-health self-assessment test result:' in line:
@@ -961,6 +904,7 @@ def get_smart_data(disk_name):
                             break
                         elif smart_data['model'] != 'Unknown' or smart_data['serial'] != 'Unknown':
                             print(f"[v0] Extracted partial data from text output, continuing to next attempt...")
+                
                 else:
                     print(f"[v0] No usable output (return code {result_code}), trying next command...")
             
@@ -1403,7 +1347,7 @@ def get_network_info():
         }
 
 def get_proxmox_vms():
-    """Get Proxmox VM and LXC information using pvesh command - only from local node"""
+    """Get Proxmox VM and LXC information (requires pvesh command) - only from local node"""
     try:
         all_vms = []
         
@@ -1547,54 +1491,20 @@ def get_ipmi_power():
         'power_meter': power_meter
     }
 
-# 
 def get_ups_info():
-    """Get UPS information from NUT (upsc) - supports both local and remote UPS"""
-    ups_list = []
+    """Get UPS information from NUT (upsc)"""
+    ups_data = {}
     
     try:
-        configured_ups = []
-        try:
-            with open('/etc/nut/upsmon.conf', 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    # Parse MONITOR lines: MONITOR <upsname>@<hostname>:<port> <powervalue> <username> <password> <type>
-                    if line.startswith('MONITOR') and not line.startswith('#'):
-                        parts = line.split()
-                        if len(parts) >= 2:
-                            ups_identifier = parts[1]  # e.g., "apc@localhost" or "ups@192.168.1.10"
-                            configured_ups.append(ups_identifier)
-                            print(f"[v0] Found configured UPS in upsmon.conf: {ups_identifier}")
-        except FileNotFoundError:
-            print("[v0] /etc/nut/upsmon.conf not found, will try local detection only")
-        except Exception as e:
-            print(f"[v0] Error reading upsmon.conf: {e}")
-        
-        all_ups_names = set(configured_ups)
-        
-        # Also try to list local UPS devices
-        try:
-            result = subprocess.run(['upsc', '-l'], capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                local_ups = result.stdout.strip().split('\n')
-                for ups in local_ups:
-                    if ups:
-                        all_ups_names.add(ups)
-                        print(f"[v0] Found local UPS: {ups}")
-        except Exception as e:
-            print(f"[v0] Error listing local UPS: {e}")
-        
-        for ups_name in all_ups_names:
-            if not ups_name:
-                continue
+        # First, list available UPS devices
+        result = subprocess.run(['upsc', '-l'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            ups_list = result.stdout.strip().split('\n')
+            if ups_list and ups_list[0]:
+                ups_name = ups_list[0]
+                print(f"[v0] Found UPS: {ups_name}")
                 
-            ups_data = {
-                'name': ups_name,
-                'raw_variables': {}  # Store all raw variables for the modal
-            }
-            
-            try:
-                print(f"[v0] Querying UPS: {ups_name}")
+                # Get detailed UPS info
                 result = subprocess.run(['upsc', ups_name], capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
                     for line in result.stdout.split('\n'):
@@ -1603,220 +1513,69 @@ def get_ups_info():
                             key = key.strip()
                             value = value.strip()
                             
-                            # Store all raw variables
-                            ups_data['raw_variables'][key] = value
-                            
-                            # Device Information
+                            # Map common UPS variables
                             if key == 'device.model':
                                 ups_data['model'] = value
-                            elif key == 'device.mfr':
-                                ups_data['manufacturer'] = value
-                            elif key == 'device.serial':
-                                ups_data['serial'] = value
-                            elif key == 'device.type':
-                                ups_data['device_type'] = value
-                            
-                            # Status
                             elif key == 'ups.status':
                                 ups_data['status'] = value
-                            elif key == 'ups.beeper.status':
-                                ups_data['beeper_status'] = value
-                            elif key == 'ups.test.result':
-                                ups_data['test_result'] = value
-                            
-                            # Battery
                             elif key == 'battery.charge':
                                 ups_data['battery_charge'] = f"{value}%"
-                                ups_data['battery_charge_raw'] = float(value)
-                            elif key == 'battery.charge.low':
-                                ups_data['battery_charge_low'] = f"{value}%"
                             elif key == 'battery.runtime':
+                                # Convert seconds to minutes
                                 try:
                                     runtime_sec = int(value)
                                     runtime_min = runtime_sec // 60
                                     ups_data['time_left'] = f"{runtime_min} minutes"
-                                    ups_data['battery_runtime_seconds'] = runtime_sec
                                 except ValueError:
                                     ups_data['time_left'] = value
-                            elif key == 'battery.runtime.low':
-                                ups_data['battery_runtime_low'] = f"{value}s"
-                            elif key == 'battery.voltage':
-                                ups_data['battery_voltage'] = f"{value}V"
-                            elif key == 'battery.voltage.nominal':
-                                ups_data['battery_voltage_nominal'] = f"{value}V"
-                            elif key == 'battery.type':
-                                ups_data['battery_type'] = value
-                            elif key == 'battery.mfr.date':
-                                ups_data['battery_mfr_date'] = value
-                            
-                            # Power
                             elif key == 'ups.load':
                                 ups_data['load_percent'] = f"{value}%"
-                                ups_data['load_raw'] = float(value)
-                            elif key == 'ups.realpower':
-                                ups_data['real_power'] = f"{value}W"
-                            elif key == 'ups.realpower.nominal':
-                                ups_data['realpower_nominal'] = f"{value}W"
-                            elif key == 'ups.power':
-                                ups_data['apparent_power'] = f"{value}VA"
-                            elif key == 'ups.power.nominal':
-                                ups_data['power_nominal'] = f"{value}VA"
-                            
-                            # Input
                             elif key == 'input.voltage':
                                 ups_data['line_voltage'] = f"{value}V"
-                                ups_data['input_voltage'] = f"{value}V"
-                            elif key == 'input.voltage.nominal':
-                                ups_data['input_voltage_nominal'] = f"{value}V"
-                            elif key == 'input.frequency':
-                                ups_data['input_frequency'] = f"{value}Hz"
-                            elif key == 'input.transfer.reason':
-                                ups_data['transfer_reason'] = value
-                            elif key == 'input.transfer.high':
-                                ups_data['input_transfer_high'] = f"{value}V"
-                            elif key == 'input.transfer.low':
-                                ups_data['input_transfer_low'] = f"{value}V"
-                            
-                            # Output
-                            elif key == 'output.voltage':
-                                ups_data['output_voltage'] = f"{value}V"
-                            elif key == 'output.voltage.nominal':
-                                ups_data['output_voltage_nominal'] = f"{value}V"
-                            elif key == 'output.frequency':
-                                ups_data['output_frequency'] = f"{value}Hz"
-                            
-                            # Driver
-                            elif key == 'driver.name':
-                                ups_data['driver_name'] = value
-                            elif key == 'driver.version':
-                                ups_data['driver_version'] = value
-                            elif key == 'driver.version.internal':
-                                ups_data['driver_version_internal'] = value
-                            elif key == 'driver.parameter.pollfreq':
-                                ups_data['driver_poll_freq'] = value
-                            elif key == 'driver.parameter.pollinterval':
-                                ups_data['driver_poll_interval'] = value
-                            
-                            # Firmware
-                            elif key == 'ups.firmware':
-                                ups_data['firmware'] = value
-                            elif key == 'ups.mfr':
-                                ups_data['ups_manufacturer'] = value
-                            elif key == 'ups.mfr.date':
-                                ups_data['ups_mfr_date'] = value
-                            elif key == 'ups.productid':
-                                ups_data['product_id'] = value
-                            elif key == 'ups.vendorid':
-                                ups_data['vendor_id'] = value
-                            
-                            # Timers
-                            elif key == 'ups.delay.shutdown':
-                                ups_data['delay_shutdown'] = f"{value}s"
-                            elif key == 'ups.delay.start':
-                                ups_data['delay_start'] = f"{value}s"
-                            elif key == 'ups.timer.shutdown':
-                                ups_data['timer_shutdown'] = f"{value}s"
-                            elif key == 'ups.timer.reboot':
-                                ups_data['timer_reboot'] = f"{value}s"
+                            elif key == 'ups.realpower':
+                                ups_data['real_power'] = f"{value}W"
                     
-                    ups_list.append(ups_data)
-                    print(f"[v0] Successfully queried UPS: {ups_name}")
-                    
-            except subprocess.TimeoutExpired:
-                print(f"[v0] Timeout querying UPS: {ups_name}")
-            except Exception as e:
-                print(f"[v0] Error querying UPS {ups_name}: {e}")
-                
+                    print(f"[v0] UPS data: {ups_data}")
     except FileNotFoundError:
-        print("[v0] upsc command not found - NUT client not installed")
+        print("[v0] upsc not found")
     except Exception as e:
-        print(f"[v0] Error in get_ups_info: {e}")
+        print(f"[v0] Error getting UPS info: {e}")
     
-    # Return first UPS for backward compatibility, or None if no UPS found
-    return ups_list[0] if ups_list else None
+    return ups_data
 
-# </CHANGE>
-
-# Moved helper functions for system info up
-# def get_system_info(): ... (moved up)
-
-# New function for identifying GPU types
-def identify_gpu_type(gpu_name, vendor):
-    """
-    Identify GPU type with more granular classification:
-    - Integrated: GPUs integrated in CPU/chipset (Intel HD/UHD, AMD APU)
-    - PCI - BMC: Management GPUs (Matrox G200, ASPEED)
-    - PCI - Professional: Professional GPUs (Quadro, FirePro, Radeon Pro)
-    - PCI - Gaming: Gaming GPUs (GeForce, Radeon RX)
-    - PCI - Compute: Compute GPUs (Tesla, Instinct)
-    - PCI - Discrete: Generic discrete GPU (fallback)
-    """
-    gpu_name_lower = gpu_name.lower()
+def identify_temperature_sensor(sensor_name, adapter):
+    """Identify what a temperature sensor corresponds to"""
+    sensor_lower = sensor_name.lower()
+    adapter_lower = adapter.lower() if adapter else ""
     
-    # Check for BMC/Management GPUs first (these are PCI but for management)
-    bmc_keywords = ['g200', 'mga g200', 'ast1', 'ast2', 'aspeed']
-    for keyword in bmc_keywords:
-        if keyword in gpu_name_lower:
-            return 'PCI - BMC'
+    # CPU/Package temperatures
+    if "package" in sensor_lower or "tctl" in sensor_lower or "tccd" in sensor_lower:
+        return "CPU Package"
+    if "core" in sensor_lower:
+        core_num = re.search(r'(\d+)', sensor_name)
+        return f"CPU Core {core_num.group(1)}" if core_num else "CPU Core"
     
-    # Check for truly integrated GPUs (in CPU/chipset)
-    integrated_keywords = [
-        'hd graphics', 'uhd graphics', 'iris graphics', 'iris xe graphics',
-        'radeon vega', 'radeon graphics',  # AMD APU integrated
-        'tegra',  # NVIDIA Tegra (rare)
-    ]
-    for keyword in integrated_keywords:
-        if keyword in gpu_name_lower:
-            # Make sure it's not Arc (which is discrete)
-            if 'arc' not in gpu_name_lower:
-                return 'Integrated'
+    # Motherboard/Chipset
+    if "temp1" in sensor_lower and ("isa" in adapter_lower or "acpi" in adapter_lower):
+        return "Motherboard/Chipset"
+    if "pch" in sensor_lower or "chipset" in sensor_lower:
+        return "Chipset"
     
-    # Check for Professional GPUs
-    professional_keywords = ['quadro', 'firepro', 'radeon pro', 'firegl']
-    for keyword in professional_keywords:
-        if keyword in gpu_name_lower:
-            return 'PCI - Professional'
+    # Storage (NVMe, SATA)
+    if "nvme" in sensor_lower or "composite" in sensor_lower:
+        return "NVMe SSD"
+    if "sata" in sensor_lower or "ata" in sensor_lower:
+        return "SATA Drive"
     
-    # Check for Compute GPUs
-    compute_keywords = ['tesla', 'instinct', 'mi100', 'mi200', 'mi300']
-    for keyword in compute_keywords:
-        if keyword in gpu_name_lower:
-            return 'PCI - Compute'
+    # GPU
+    if any(gpu in adapter_lower for gpu in ["nouveau", "amdgpu", "radeon", "i915"]):
+        return "GPU"
     
-    # Check for Gaming GPUs
-    gaming_keywords = [
-        'geforce', 'rtx', 'gtx', 'titan',  # NVIDIA gaming
-        'radeon rx', 'radeon r9', 'radeon r7', 'radeon r5', 'radeon vii',  # AMD gaming
-        'arc a'  # Intel Arc gaming
-    ]
-    for keyword in gaming_keywords:
-        if keyword in gpu_name_lower:
-            return 'PCI - Gaming'
+    # Network adapters
+    if "pci" in adapter_lower and "temp" in sensor_lower:
+        return "PCI Device"
     
-    # Fallback logic based on vendor
-    if vendor == 'Intel':
-        # Intel Arc is discrete gaming, everything else is typically integrated
-        if 'arc' in gpu_name_lower:
-            return 'PCI - Gaming'
-        else:
-            return 'Integrated'
-    elif vendor == 'NVIDIA':
-        # Most NVIDIA GPUs are discrete
-        return 'PCI - Discrete'
-    elif vendor == 'AMD':
-        # AMD APUs are integrated, others are discrete
-        if 'ryzen' in gpu_name_lower or 'athlon' in gpu_name_lower:
-            return 'Integrated'
-        return 'PCI - Discrete'
-    elif vendor == 'Matrox':
-        # Matrox G200 series are BMC
-        return 'Integrated'
-    elif vendor == 'ASPEED':
-        # ASPEED AST series are BMC
-        return 'Integrated'
-    
-    # Default to PCI - Discrete if we can't determine
-    return 'PCI - Discrete'
+    return sensor_name
 
 def get_temperature_info():
     """Get detailed temperature information from sensors command"""
@@ -1875,12 +1634,11 @@ def get_temperature_info():
                                 high_value = float(high_match.group(1)) if high_match else 0
                                 crit_value = float(crit_match.group(1)) if crit_match else 0
                                 
-                                sensor_info = identify_temperature_sensor(sensor_name, current_adapter)
+                                identified_name = identify_temperature_sensor(sensor_name, current_adapter)
                                 
                                 temperatures.append({
-                                    'name': sensor_info['display_name'],
+                                    'name': identified_name,
                                     'original_name': sensor_name,
-                                    'category': sensor_info['category'],
                                     'current': temp_value,
                                     'high': high_value,
                                     'critical': crit_value,
@@ -2797,6 +2555,7 @@ def get_detailed_gpu_info(gpu):
     print(f"[v0] ===== Exiting get_detailed_gpu_info for GPU {slot} =====", flush=True)
     return detailed_info
 
+
 def get_pci_device_info(pci_slot):
     """Get detailed PCI device information for a given slot"""
     pci_info = {}
@@ -2896,6 +2655,111 @@ def get_network_hardware_info(pci_slot):
     
     return net_info
 
+def get_gpu_info():
+    """Detect and return information about GPUs in the system"""
+    gpus = []
+    
+    try:
+        result = subprocess.run(['lspci'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                # Match VGA, 3D, Display controllers
+                if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
+
+                    parts = line.split(' ', 1)
+                    if len(parts) >= 2:
+                        slot = parts[0].strip()  
+                        remaining = parts[1]
+                        
+                        if ':' in remaining:
+                            class_and_name = remaining.split(':', 1)
+                            gpu_name = class_and_name[1].strip() if len(class_and_name) > 1 else remaining.strip()
+                        else:
+                            gpu_name = remaining.strip()
+                        
+                        # Determine vendor
+                        vendor = 'Unknown'
+                        if 'NVIDIA' in gpu_name or 'nVidia' in gpu_name:
+                            vendor = 'NVIDIA'
+                        elif 'AMD' in gpu_name or 'ATI' in gpu_name or 'Radeon' in gpu_name:
+                            vendor = 'AMD'
+                        elif 'Intel' in gpu_name:
+                            vendor = 'Intel'
+                        
+                        gpu = {
+                            'slot': slot,
+                            'name': gpu_name,
+                            'vendor': vendor,
+                            'type': 'Discrete' if vendor in ['NVIDIA', 'AMD'] else 'Integrated'
+                        }
+                        
+                        pci_info = get_pci_device_info(slot)
+                        if pci_info:
+                            gpu['pci_class'] = pci_info.get('class', '')
+                            gpu['pci_driver'] = pci_info.get('driver', '')
+                            gpu['pci_kernel_module'] = pci_info.get('kernel_module', '')
+                        
+                        # detailed_info = get_detailed_gpu_info(gpu) # Removed this call here
+                        # gpu.update(detailed_info)             # It will be called later in api_gpu_realtime
+                        
+                        gpus.append(gpu)
+                        print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+
+    except Exception as e:
+        print(f"[v0] Error detecting GPUs from lspci: {e}")
+    
+    try:
+        result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            current_adapter = None
+            
+            for line in result.stdout.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Detect adapter line
+                if line.startswith('Adapter:'):
+                    current_adapter = line.replace('Adapter:', '').strip()
+                    continue
+                
+                # Look for GPU-related sensors (nouveau, amdgpu, radeon, i915)
+                if ':' in line and not line.startswith(' '):
+                    parts = line.split(':', 1)
+                    sensor_name = parts[0].strip()
+                    value_part = parts[1].strip()
+                    
+                    # Check if this is a GPU sensor
+                    gpu_sensor_keywords = ['nouveau', 'amdgpu', 'radeon', 'i915']
+                    is_gpu_sensor = any(keyword in current_adapter.lower() if current_adapter else False for keyword in gpu_sensor_keywords)
+                    
+                    if is_gpu_sensor:
+                        # Try to match this sensor to a GPU
+                        for gpu in gpus:
+                            # Match nouveau to NVIDIA, amdgpu/radeon to AMD, i915 to Intel
+                            if (('nouveau' in current_adapter.lower() and gpu['vendor'] == 'NVIDIA') or
+                                (('amdgpu' in current_adapter.lower() or 'radeon' in current_adapter.lower()) and gpu['vendor'] == 'AMD') or
+                                ('i915' in current_adapter.lower() and gpu['vendor'] == 'Intel')):
+                                
+                                # Parse temperature (only if not already set by nvidia-smi)
+                                if 'temperature' not in gpu or gpu['temperature'] is None:
+                                    if '°C' in value_part or 'C' in value_part:
+                                        temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
+                                        if temp_match:
+                                            gpu['temperature'] = float(temp_match.group(1))
+                                            print(f"[v0] GPU {gpu['name']}: Temperature = {gpu['temperature']}°C")
+                                
+                                # Parse fan speed
+                                elif 'RPM' in value_part:
+                                    rpm_match = re.search(r'([\d.]+)\s*RPM', value_part)
+                                    if rpm_match:
+                                        gpu['fan_speed'] = int(float(rpm_match.group(1)))
+                                        gpu['fan_unit'] = 'RPM'
+                                        print(f"[v0] GPU {gpu['name']}: Fan = {gpu['fan_speed']} RPM")
+    except Exception as e:
+        print(f"[v0] Error enriching GPU data from sensors: {e}")
+    
+    return gpus
 
 def get_disk_hardware_info(disk_name):
     """Get detailed hardware information for a disk"""
@@ -3310,16 +3174,15 @@ def get_hardware_info():
                             # Use identify_temperature_sensor to make names more user-friendly
                             identified_name = identify_temperature_sensor(entry.label if entry.label else sensor_name, sensor_name)
                             
-                            temperatures.append({
-                                'name': identified_name['display_name'],
+                            hardware_data['sensors']['temperatures'].append({
+                                'name': identified_name,
                                 'original_name': entry.label if entry.label else sensor_name,
-                                'category': identified_name['category'],
                                 'current': entry.current,
                                 'high': entry.high if entry.high else 0,
                                 'critical': entry.critical if entry.critical else 0
                             })
                     
-                    print(f"[v0] Temperature sensors: {len(temperatures)} found")
+                    print(f"[v0] Temperature sensors: {len(hardware_data['sensors']['temperatures'])} found")
             
             try:
                 result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
@@ -3556,7 +3419,9 @@ def api_logs():
                             'level': level,
                             'service': log_entry.get('_SYSTEMD_UNIT', log_entry.get('SYSLOG_IDENTIFIER', 'system')),
                             'message': log_entry.get('MESSAGE', ''),
-                            'source': 'journal'
+                            'source': 'journalctl',
+                            'pid': log_entry.get('_PID', ''),
+                            'hostname': log_entry.get('_HOSTNAME', '')
                         })
                     except (json.JSONDecodeError, ValueError) as e:
                         continue
@@ -3821,7 +3686,7 @@ def api_backups():
                         try:
                             # Get content of storage
                             content_result = subprocess.run(
-                                ['pvesh', 'get', f'/nodes/{storage.get("node", "localhost")}/storage/{storage_id}/content', '--output-format', 'json'],
+                                ['pvesh', 'get', f'/nodes/localhost/storage/{storage_id}/content', '--output-format', 'json'],
                                 capture_output=True, text=True, timeout=10)
                             
                             if content_result.returncode == 0:
@@ -3861,7 +3726,7 @@ def api_backups():
                                             'timestamp': ctime
                                         })
                         except Exception as e:
-                            print(f"Error getting content for storage {storage_id} on node {storage.get('node', 'localhost')}: {e}")
+                            print(f"Error getting content for storage {storage_id}: {e}")
                             continue
         except Exception as e:
             print(f"Error getting storage list: {e}")
@@ -4202,7 +4067,7 @@ def api_prometheus():
             # GPU metrics
             pci_devices = hardware_info.get('pci_devices', [])
             for device in pci_devices:
-                if device.get('type') == 'Graphics Card': # Changed from 'GPU' to 'Graphics Card' to match pci_devices categorization
+                if device.get('type') == 'GPU':
                     gpu_name = device.get('device', 'unknown').replace(' ', '_')
                     gpu_vendor = device.get('vendor', 'unknown')
                     
@@ -4277,22 +4142,27 @@ def api_prometheus():
                 if ups.get('battery_charge') is not None:
                     metrics.append(f'# HELP proxmox_ups_battery_charge_percent UPS battery charge percentage')
                     metrics.append(f'# TYPE proxmox_ups_battery_charge_percent gauge')
-                    metrics.append(f'proxmox_ups_battery_charge_percent{{node="{node}",ups="{ups_name}"}} {ups["battery_charge_raw"]} {timestamp}') # Use raw value for metric
+                    metrics.append(f'proxmox_ups_battery_charge_percent{{node="{node}",ups="{ups_name}"}} {ups["battery_charge"]} {timestamp}')
                 
-                if ups.get('load_raw') is not None: # Changed from 'load' to 'load_percent'
+                if ups.get('load') is not None:
                     metrics.append(f'# HELP proxmox_ups_load_percent UPS load percentage')
                     metrics.append(f'# TYPE proxmox_ups_load_percent gauge')
-                    metrics.append(f'proxmox_ups_load_percent{{node="{node}",ups="{ups_name}"}} {ups["load_raw"]} {timestamp}')
+                    metrics.append(f'proxmox_ups_load_percent{{node="{node}",ups="{ups_name}"}} {ups["load"]} {timestamp}')
                 
-                if ups.get('battery_runtime_seconds') is not None: # Use seconds for metric
+                if ups.get('runtime'):
+                    # Convert runtime to seconds
+                    runtime_str = ups['runtime']
+                    runtime_seconds = 0
+                    if 'minutes' in runtime_str:
+                        runtime_seconds = int(runtime_str.split()[0]) * 60
                     metrics.append(f'# HELP proxmox_ups_runtime_seconds UPS runtime in seconds')
                     metrics.append(f'# TYPE proxmox_ups_runtime_seconds gauge')
-                    metrics.append(f'proxmox_ups_runtime_seconds{{node="{node}",ups="{ups_name}"}} {ups["battery_runtime_seconds"]} {timestamp}')
+                    metrics.append(f'proxmox_ups_runtime_seconds{{node="{node}",ups="{ups_name}"}} {runtime_seconds} {timestamp}')
                 
                 if ups.get('input_voltage') is not None:
                     metrics.append(f'# HELP proxmox_ups_input_voltage_volts UPS input voltage in volts')
                     metrics.append(f'# TYPE proxmox_ups_input_voltage_volts gauge')
-                    metrics.append(f'proxmox_ups_input_voltage_volts{{node="{node}",ups="{ups_name}"}} {float(ups["input_voltage"].replace("V", ""))} {timestamp}') # Extract numeric value
+                    metrics.append(f'proxmox_ups_input_voltage_volts{{node="{node}",ups="{ups_name}"}} {ups["input_voltage"]} {timestamp}')
         except Exception as e:
             print(f"[v0] Error getting hardware metrics for Prometheus: {e}")
         
@@ -4410,7 +4280,7 @@ def api_hardware():
         print(f"[v0] /api/hardware returning data")
         print(f"[v0] - CPU: {formatted_data['cpu'].get('model', 'Unknown')}")
         print(f"[v0] - Temperatures: {len(formatted_data['temperatures'])} sensors")
-        print(f"[v0] - Fans: {len(formatted_data['fans'])} fans") # Includes IPMI fans
+        print(f"[v0] - Fans: {len(formatted_data['fans'])} fans") # Now includes IPMI fans
         print(f"[v0] - Power supplies: {len(formatted_data['power_supplies'])} PSUs")
         print(f"[v0] - Power meter: {'Yes' if formatted_data['power_meter'] else 'No'}")
         print(f"[v0] - UPS: {'Yes' if formatted_data['ups'] else 'No'}")
