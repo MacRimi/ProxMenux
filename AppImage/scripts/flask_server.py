@@ -841,37 +841,37 @@ def get_smart_data(disk_name):
                                     elif attr_id == 194:  # Temperature_Celsius
                                         if smart_data['temperature'] == 0:
                                             smart_data['temperature'] = raw_value
-                                            print(f"[v0] Temperature (ID 194): {raw_value}°C")
+                                            print(f"[v0] Temperature (ID 194): {smart_data['temperature']}°C")
                                     elif attr_id == 190:  # Airflow_Temperature_Cel
                                         if smart_data['temperature'] == 0:
                                             smart_data['temperature'] = raw_value
-                                            print(f"[v0] Airflow Temperature (ID 190): {raw_value}°C")
+                                            print(f"[v0] Airflow Temperature (ID 190): {smart_data['temperature']}°C")
                                     elif attr_id == 5:  # Reallocated_Sector_Ct
                                         smart_data['reallocated_sectors'] = raw_value
-                                        print(f"[v0] Reallocated Sectors (ID 5): {raw_value}")
+                                        print(f"[v0] Reallocated Sectors (ID 5): {smart_data['reallocated_sectors']}")
                                     elif attr_id == 197:  # Current_Pending_Sector
                                         smart_data['pending_sectors'] = raw_value
-                                        print(f"[v0] Pending Sectors (ID 197): {raw_value}")
+                                        print(f"[v0] Pending Sectors (ID 197): {smart_data['pending_sectors']}")
                                     elif attr_id == 199:  # UDMA_CRC_Error_Count
                                         smart_data['crc_errors'] = raw_value
-                                        print(f"[v0] CRC Errors (ID 199): {raw_value}")
-                                    elif attr_id == 233:  # Media_Wearout_Indicator (Intel/Samsung SSD)
+                                        print(f"[v0] CRC Errors (ID 199): {smart_data['crc_errors']}")
+                                    elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
                                         # Valor normalizado: 100 = nuevo, 0 = gastado
                                         # Invertimos para mostrar desgaste: 0% = nuevo, 100% = gastado
                                         smart_data['media_wearout_indicator'] = 100 - normalized_value
                                         print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
-                                    elif attr_id == 177:  # Wear_Leveling_Count
+                                    elif attr_id == '177':  # Wear_Leveling_Count
                                         # Valor normalizado: 100 = nuevo, 0 = gastado
                                         smart_data['wear_leveling_count'] = 100 - normalized_value
                                         print(f"[v0] Wear Leveling Count (ID 177): {smart_data['wear_leveling_count']}% used")
-                                    elif attr_id == 202:  # Percentage_Lifetime_Remain (algunos fabricantes)
+                                    elif attr_id == '202':  # Percentage_Lifetime_Remain (algunos fabricantes)
                                         # Valor normalizado: 100 = nuevo, 0 = gastado
                                         smart_data['ssd_life_left'] = normalized_value
                                         print(f"[v0] SSD Life Left (ID 202): {smart_data['ssd_life_left']}%")
-                                    elif attr_id == 231:  # SSD_Life_Left (algunos fabricantes)
+                                    elif attr_id == '231':  # SSD_Life_Left (algunos fabricantes)
                                         smart_data['ssd_life_left'] = normalized_value
                                         print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
-                                    elif attr_id == 241:  # Total_LBAs_Written
+                                    elif attr_id == '241':  # Total_LBAs_Written
                                         # Convertir a GB (raw_value es en sectores de 512 bytes)
                                         total_gb = (raw_value * 512) / (1024 * 1024 * 1024)
                                         smart_data['total_lbas_written'] = round(total_gb, 2)
@@ -994,6 +994,35 @@ def get_smart_data(disk_name):
                                         elif attr_id == '199':  # CRC Errors
                                             smart_data['crc_errors'] = int(raw_value)
                                             print(f"[v0] CRC Errors: {smart_data['crc_errors']}")
+                                        elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
+                                            # Valor normalizado: 100 = nuevo, 0 = gastado
+                                            # Invertimos para mostrar desgaste: 0% = nuevo, 100% = gastado
+                                            normalized_value = int(parts[3]) if len(parts) > 3 else 100
+                                            smart_data['media_wearout_indicator'] = 100 - normalized_value
+                                            print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
+                                        elif attr_id == '177':  # Wear_Leveling_Count
+                                            # Valor normalizado: 100 = nuevo, 0 = gastado
+                                            normalized_value = int(parts[3]) if len(parts) > 3 else 100
+                                            smart_data['wear_leveling_count'] = 100 - normalized_value
+                                            print(f"[v0] Wear Leveling Count (ID 177): {smart_data['wear_leveling_count']}% used")
+                                        elif attr_id == '202':  # Percentage_Lifetime_Remain (algunos fabricantes)
+                                            # Valor normalizado: 100 = nuevo, 0 = gastado
+                                            normalized_value = int(parts[3]) if len(parts) > 3 else 100
+                                            smart_data['ssd_life_left'] = normalized_value
+                                            print(f"[v0] SSD Life Left (ID 202): {smart_data['ssd_life_left']}%")
+                                        elif attr_id == '231':  # SSD_Life_Left (algunos fabricantes)
+                                            normalized_value = int(parts[3]) if len(parts) > 3 else 100
+                                            smart_data['ssd_life_left'] = normalized_value
+                                            print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
+                                        elif attr_id == '241':  # Total_LBAs_Written
+                                            # Convertir a GB (raw_value es en sectores de 512 bytes)
+                                            try:
+                                                raw_int = int(raw_value.replace(',', ''))
+                                                total_gb = (raw_int * 512) / (1024 * 1024 * 1024)
+                                                smart_data['total_lbas_written'] = round(total_gb, 2)
+                                                print(f"[v0] Total LBAs Written (ID 241): {smart_data['total_lbas_written']} GB")
+                                            except ValueError:
+                                                pass
                                             
                                     except (ValueError, IndexError) as e:
                                         print(f"[v0] Error parsing attribute line '{line}': {e}")
@@ -1869,6 +1898,7 @@ def get_temperature_info():
         'temperatures': temperatures,
         'power_meter': power_meter
     }
+
 
 # --- GPU Monitoring Functions ---
 
