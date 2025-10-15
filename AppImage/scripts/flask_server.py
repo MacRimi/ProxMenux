@@ -855,6 +855,26 @@ def get_smart_data(disk_name):
                                     elif attr_id == 199:  # UDMA_CRC_Error_Count
                                         smart_data['crc_errors'] = raw_value
                                         print(f"[v0] CRC Errors (ID 199): {smart_data['crc_errors']}")
+                                    elif attr_id == '230': 
+                                        try:
+                                            wear_used = None
+                                            rv = str(raw_value).strip()
+
+                                            if rv.startswith("0x") and len(rv) >= 8:
+                                                # 0x001c0014... -> '001c' -> 0x001c = 28
+                                                wear_hex = rv[4:8]
+                                                wear_used = int(wear_hex, 16)
+                                            else:
+                                                wear_used = int(rv)
+
+                                            if wear_used is None or wear_used < 0 or wear_used > 100:
+                                                wear_used = max(0, min(100, 100 - int(normalized_value)))
+
+                                            smart_data['media_wearout_indicator'] = wear_used                   
+                                            smart_data['ssd_life_left'] = max(0, 100 - wear_used)              
+                                            print(f"[v0] Media Wearout Indicator (ID 230): {wear_used}% used, {smart_data['ssd_life_left']}% life left")
+                                        except Exception as e:
+                                            print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")    
                                     elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
                                         # Valor normalizado: 100 = nuevo, 0 = gastado
                                         # Invertimos para mostrar desgaste: 0% = nuevo, 100% = gastado
@@ -999,6 +1019,27 @@ def get_smart_data(disk_name):
                                         elif attr_id == '199':  # CRC Errors
                                             smart_data['crc_errors'] = int(raw_value)
                                             print(f"[v0] CRC Errors: {smart_data['crc_errors']}")
+                                        elif attr_id == '230': 
+                                            try:
+                                                wear_used = None
+                                                raw_str = str(raw_value).strip()
+
+                                                if raw_str.startswith("0x") and len(raw_str) >= 8:
+  
+                                                    wear_hex = raw_str[4:8]
+                                                    wear_used = int(wear_hex, 16)
+                                                else:
+                                                    wear_used = int(raw_str)
+
+                                                if wear_used is None or wear_used < 0 or wear_used > 100:
+                                                    normalized_value = int(parts[3]) if len(parts) > 3 else 100
+                                                    wear_used = max(0, min(100, 100 - normalized_value))
+
+                                                smart_data['media_wearout_indicator'] = wear_used
+                                                smart_data['ssd_life_left'] = max(0, 100 - wear_used)
+                                                print(f"[v0] Media Wearout Indicator (ID 230): {wear_used}% used, {smart_data['ssd_life_left']}% life left")
+                                            except Exception as e:
+                                                print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")    
                                         elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
                                             normalized_value = int(parts[3]) if len(parts) > 3 else 100
                                             smart_data['media_wearout_indicator'] = 100 - normalized_value
