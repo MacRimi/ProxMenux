@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Thermometer, Square } from "lucide-react"
+import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -387,6 +387,12 @@ export function StorageOverview() {
     return { nvme, ssd, hdd }
   }
 
+  const getWearProgressColor = (wearPercent: number): string => {
+    if (wearPercent < 70) return "[&>div]:bg-blue-500"
+    if (wearPercent < 85) return "[&>div]:bg-yellow-500"
+    return "[&>div]:bg-red-500"
+  }
+
   const diskHealthBreakdown = getDiskHealthBreakdown()
   const diskTypesBreakdown = getDiskTypesBreakdown()
 
@@ -405,12 +411,6 @@ export function StorageOverview() {
       </div>
     )
   }
-
-  const disksWithTemp = storageData.disks.filter((disk) => disk.temperature > 0)
-  const hottestDisk =
-    disksWithTemp.length > 0
-      ? disksWithTemp.reduce((hottest, disk) => (disk.temperature > hottest.temperature ? disk : hottest))
-      : null
 
   const totalProxmoxUsed =
     proxmoxStorage && proxmoxStorage.storage
@@ -494,24 +494,6 @@ export function StorageOverview() {
                   <span className="text-blue-500">{diskTypesBreakdown.hdd} HDD</span>
                 </>
               )}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Hottest Disk */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hottest Disk</CardTitle>
-            <Thermometer className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${hottestDisk ? getTempColor(hottestDisk.temperature, hottestDisk.name, hottestDisk.rotation_rate) : "text-gray-500"}`}
-            >
-              {hottestDisk ? `${hottestDisk.temperature}°C` : "N/A"}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {hottestDisk ? `/dev/${hottestDisk.name}` : "No temperature data"}
             </p>
           </CardContent>
         </Card>
@@ -769,13 +751,7 @@ export function StorageOverview() {
                       </div>
                       <Progress
                         value={getWearIndicator(selectedDisk)!.value}
-                        className={`h-2 ${
-                          getWearIndicator(selectedDisk)!.value > 80
-                            ? "[&>div]:bg-red-500"
-                            : getWearIndicator(selectedDisk)!.value > 50
-                              ? "[&>div]:bg-yellow-500"
-                              : "[&>div]:bg-green-500"
-                        }`}
+                        className={`h-2 ${getWearProgressColor(getWearIndicator(selectedDisk)!.value)}`}
                       />
                     </div>
                     {getEstimatedLifeRemaining(selectedDisk) && (
