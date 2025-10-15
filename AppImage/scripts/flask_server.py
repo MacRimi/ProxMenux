@@ -622,10 +622,16 @@ def get_storage_info():
             total_used = 0
             total_available = 0
             
+            zfs_disks = set()
+            
             for partition in disk_partitions:
                 try:
                     # Skip special filesystems
                     if partition.fstype in ['tmpfs', 'devtmpfs', 'squashfs', 'overlay']:
+                        continue
+                    
+                    if partition.fstype == 'zfs':
+                        print(f"[v0] Skipping ZFS filesystem {partition.mountpoint}, will count from pool data")
                         continue
                     
                     partition_usage = psutil.disk_usage(partition.mountpoint)
@@ -658,34 +664,67 @@ def get_storage_info():
                     print(f"Error accessing partition {partition.device}: {e}")
                     continue
             
+            try:
+                result = subprocess.run(['zpool', 'list', '-H', '-p', '-o', 'name,size,alloc,free,health'], 
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    for line in result.stdout.strip().split('\n'):
+                        if line:
+                            parts = line.split('\t')
+                            if len(parts) >= 5:
+                                pool_name = parts[0]
+                                pool_size_bytes = int(parts[1])
+                                pool_alloc_bytes = int(parts[2])
+                                pool_free_bytes = int(parts[3])
+                                pool_health = parts[4]
+                                
+                                total_used += pool_alloc_bytes
+                                total_available += pool_free_bytes
+                                
+                                print(f"[v0] ZFS Pool {pool_name}: allocated={pool_alloc_bytes / (1024**3):.2f}GB, free={pool_free_bytes / (1024**3):.2f}GB")
+                                
+                                def format_zfs_size(size_bytes):
+                                    size_tb = size_bytes / (1024**4)
+                                    size_gb = size_bytes / (1024**3)
+                                    if size_tb >= 1:
+                                        return f"{size_tb:.1f}T"
+                                    else:
+                                        return f"{size_gb:.1f}G"
+                                
+                                pool_info = {
+                                    'name': pool_name,
+                                    'size': format_zfs_size(pool_size_bytes),
+                                    'allocated': format_zfs_size(pool_alloc_bytes),
+                                    'free': format_zfs_size(pool_free_bytes),
+                                    'health': pool_health
+                                }
+                                storage_data['zfs_pools'].append(pool_info)
+                                
+                                try:
+                                    pool_status = subprocess.run(['zpool', 'status', pool_name], 
+                                                               capture_output=True, text=True, timeout=5)
+                                    if pool_status.returncode == 0:
+                                        for status_line in pool_status.stdout.split('\n'):
+                                            for disk_name in physical_disks.keys():
+                                                if disk_name in status_line:
+                                                    zfs_disks.add(disk_name)
+                                except Exception as e:
+                                    print(f"Error getting ZFS pool status for {pool_name}: {e}")
+                                    
+            except FileNotFoundError:
+                print("[v0] Note: ZFS not installed")
+            except Exception as e:
+                print(f"[v0] Note: ZFS not available or no pools: {e}")
+            
             storage_data['used'] = round(total_used / (1024**3), 1)
             storage_data['available'] = round(total_available / (1024**3), 1)
+            
+            print(f"[v0] Total storage used: {storage_data['used']}GB (including ZFS pools)")
             
         except Exception as e:
             print(f"Error getting partition info: {e}")
         
         storage_data['disks'] = list(physical_disks.values())
-        
-        try:
-            result = subprocess.run(['zpool', 'list', '-H', '-o', 'name,size,alloc,free,health'], 
-                                  capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                for line in result.stdout.strip().split('\n'):
-                    if line:
-                        parts = line.split('\t')
-                        if len(parts) >= 5:
-                            pool_info = {
-                                'name': parts[0],
-                                'size': parts[1],
-                                'allocated': parts[2],
-                                'free': parts[3],
-                                'health': parts[4]
-                            }
-                            storage_data['zfs_pools'].append(pool_info)
-        except FileNotFoundError:
-            print("Note: ZFS not installed")
-        except Exception as e:
-            print(f"Note: ZFS not available or no pools: {e}")
         
         return storage_data
         
@@ -1025,7 +1064,7 @@ def get_smart_data(disk_name):
                                                 raw_str = str(raw_value).strip()
 
                                                 if raw_str.startswith("0x") and len(raw_str) >= 8:
-  
+      
                                                     wear_hex = raw_str[4:8]
                                                     wear_used = int(wear_hex, 16)
                                                 else:
@@ -1797,7 +1836,7 @@ def get_ups_info():
                     
             except Exception as e:
                 print(f"[v0] Error getting UPS info for {ups_spec}: {e}")
-                
+        
     except FileNotFoundError:
         print("[v0] upsc not found")
     except Exception as e:
@@ -2136,7 +2175,7 @@ def get_detailed_gpu_info(gpu):
                         clients = best_json['clients']
                         processes = []
                         
-                        for client_id, client_data in clients.items():
+                        for client_id, client_data in clients:
                             process_info = {
                                 'name': client_data.get('name', 'Unknown'),
                                 'pid': client_data.get('pid', 'Unknown'),
@@ -3277,19 +3316,50 @@ def get_hardware_info():
         # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
         try:
             # Try nvidia-smi first
-            result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,temperature.gpu,power.draw', '--format=csv,noheader,nounits'], 
+            result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.used,temperature.gpu,power.draw,utilization.gpu,utilization.memory,clocks.graphics,clocks.memory', '--format=csv,noheader,nounits'], 
                                   capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
-                for line in result.stdout.strip().split('\n'):
+                for i, line in enumerate(result.stdout.strip().split('\n')):
                     if line:
                         parts = line.split(',')
-                        if len(parts) >= 4:
+                        if len(parts) >= 9: # Adjusted to match the query fields
+                            gpu_name = parts[0].strip()
+                            mem_total = parts[1].strip()
+                            mem_used = parts[2].strip()
+                            temp = parts[3].strip() if parts[3].strip() != 'N/A' else None
+                            power = parts[4].strip() if parts[4].strip() != 'N/A' else None
+                            gpu_util = parts[5].strip() if parts[5].strip() != 'N/A' else None
+                            mem_util = parts[6].strip() if parts[6].strip() != 'N/A' else None
+                            graphics_clock = parts[7].strip() if parts[7].strip() != 'N/A' else None
+                            memory_clock = parts[8].strip() if parts[8].strip() != 'N/A' else None
+                            
+                            # Try to find the corresponding PCI slot using nvidia-smi -L
+                            try:
+                                list_gpus_cmd = ['nvidia-smi', '-L']
+                                list_gpus_result = subprocess.run(list_gpus_cmd, capture_output=True, text=True, timeout=5)
+                                pci_slot = None
+                                if list_gpus_result.returncode == 0:
+                                    for gpu_line in list_gpus_result.stdout.strip().split('\n'):
+                                        if gpu_name in gpu_line:
+                                            slot_match = re.search(r'PCI Device (\S+):', gpu_line)
+                                            if slot_match:
+                                                pci_slot = slot_match.group(1)
+                                                break
+                            except:
+                                pass # Ignore errors here, pci_slot will remain None
+                            
                             hardware_data['graphics_cards'].append({
-                                'name': parts[0].strip(),
-                                'memory': parts[1].strip(),
-                                'temperature': int(parts[2].strip().split(' ')[0]) if parts[2].strip() != 'N/A' and 'C' in parts[2] else 0,
-                                'power_draw': parts[3].strip(),
-                                'vendor': 'NVIDIA'
+                                'name': gpu_name,
+                                'vendor': 'NVIDIA',
+                                'slot': pci_slot,
+                                'memory_total': mem_total,
+                                'memory_used': mem_used,
+                                'temperature': int(temp) if temp else None,
+                                'power_draw': power,
+                                'utilization_gpu': gpu_util,
+                                'utilization_memory': mem_util,
+                                'clock_graphics': graphics_clock,
+                                'clock_memory': memory_clock,
                             })
             
             # Always check lspci for all GPUs (integrated and discrete)
@@ -3300,6 +3370,7 @@ def get_hardware_info():
                     if any(keyword in line for keyword in ['VGA compatible controller', '3D controller', 'Display controller']):
                         parts = line.split(':', 2)
                         if len(parts) >= 3:
+                            slot = parts[0].strip()
                             gpu_name = parts[2].strip()
                             
                             # Determine vendor
@@ -3310,6 +3381,8 @@ def get_hardware_info():
                                 vendor = 'AMD'
                             elif 'Intel' in gpu_name:
                                 vendor = 'Intel'
+                            elif 'Matrox' in gpu_name:
+                                vendor = 'Matrox'
                             
                             # Check if this GPU is already in the list (from nvidia-smi)
                             already_exists = False
@@ -3319,14 +3392,18 @@ def get_hardware_info():
                                     # Update vendor if it was previously unknown
                                     if existing_gpu['vendor'] == 'Unknown':
                                         existing_gpu['vendor'] = vendor
+                                    # Update slot if not already set
+                                    if not existing_gpu.get('slot') and slot:
+                                        existing_gpu['slot'] = slot
                                     break
                             
                             if not already_exists:
                                 hardware_data['graphics_cards'].append({
                                     'name': gpu_name,
-                                    'vendor': vendor
+                                    'vendor': vendor,
+                                    'slot': slot
                                 })
-                                print(f"[v0] Found GPU: {gpu_name} ({vendor})")
+                                print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
             
             print(f"[v0] Graphics cards: {len(hardware_data['graphics_cards'])} found")
         except Exception as e:
@@ -3550,6 +3627,14 @@ def get_hardware_info():
             hardware_data['ups'] = ups_info
         
         hardware_data['gpus'] = get_gpu_info()
+        
+        # Enrich PCI devices with GPU info where applicable
+        for pci_device in hardware_data['pci_devices']:
+            if pci_device.get('type') == 'Graphics Card':
+                for gpu in hardware_data['gpus']:
+                    if pci_device.get('slot') == gpu.get('slot'):
+                        pci_device['gpu_info'] = gpu # Add the detected GPU info directly
+                        break
         
         return hardware_data
         
@@ -4334,74 +4419,73 @@ def api_prometheus():
                     metrics.append(f'proxmox_fan_speed_rpm{{node="{node}",fan="{fan_name}"}} {fan["speed"]} {timestamp}')
             
             # GPU metrics
-            pci_devices = hardware_info.get('pci_devices', [])
-            for device in pci_devices:
-                if device.get('type') == 'Graphics Card': # Changed from 'GPU' to 'Graphics Card' to match pci_devices type
-                    gpu_name = device.get('device', 'unknown').replace(' ', '_')
-                    gpu_vendor = device.get('vendor', 'unknown')
-                    
-                    # GPU Temperature
-                    if device.get('gpu_temperature') is not None:
-                        metrics.append(f'# HELP proxmox_gpu_temperature_celsius GPU temperature in Celsius')
-                        metrics.append(f'# TYPE proxmox_gpu_temperature_celsius gauge')
-                        metrics.append(f'proxmox_gpu_temperature_celsius{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {device["gpu_temperature"]} {timestamp}')
-                    
-                    # GPU Utilization
-                    if device.get('gpu_utilization') is not None:
-                        metrics.append(f'# HELP proxmox_gpu_utilization_percent GPU utilization percentage')
-                        metrics.append(f'# TYPE proxmox_gpu_utilization_percent gauge')
-                        metrics.append(f'proxmox_gpu_utilization_percent{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {device["gpu_utilization"]} {timestamp}')
-                    
-                    # GPU Memory
-                    if device.get('gpu_memory_used') and device.get('gpu_memory_total'):
-                        try:
-                            # Extract numeric values from strings like "1024 MiB"
-                            mem_used = float(device['gpu_memory_used'].split()[0])
-                            mem_total = float(device['gpu_memory_total'].split()[0])
-                            mem_used_bytes = mem_used * 1024 * 1024  # Convert MiB to bytes
-                            mem_total_bytes = mem_total * 1024 * 1024
-                            
-                            metrics.append(f'# HELP proxmox_gpu_memory_used_bytes GPU memory used in bytes')
-                            metrics.append(f'# TYPE proxmox_gpu_memory_used_bytes gauge')
-                            metrics.append(f'proxmox_gpu_memory_used_bytes{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {mem_used_bytes} {timestamp}')
-                            
-                            metrics.append(f'# HELP proxmox_gpu_memory_total_bytes GPU memory total in bytes')
-                            metrics.append(f'# TYPE proxmox_gpu_memory_total_bytes gauge')
-                            metrics.append(f'proxmox_gpu_memory_total_bytes{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {mem_total_bytes} {timestamp}')
-                        except (ValueError, IndexError):
-                            pass
-                    
-                    # GPU Power Draw (NVIDIA only)
-                    if device.get('gpu_power_draw'):
-                        try:
-                            # Extract numeric value from string like "75.5 W"
-                            power_draw = float(device['gpu_power_draw'].split()[0])
-                            metrics.append(f'# HELP proxmox_gpu_power_draw_watts GPU power draw in watts')
-                            metrics.append(f'# TYPE proxmox_gpu_power_draw_watts gauge')
-                            metrics.append(f'proxmox_gpu_power_draw_watts{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {power_draw} {timestamp}')
-                        except (ValueError, IndexError):
-                            pass
-                    
-                    # GPU Clock Speeds (NVIDIA only)
-                    if device.get('gpu_clock_speed'):
-                        try:
-                            # Extract numeric value from string like "1500 MHz"
-                            clock_speed = float(device['gpu_clock_speed'].split()[0])
-                            metrics.append(f'# HELP proxmox_gpu_clock_speed_mhz GPU clock speed in MHz')
-                            metrics.append(f'# TYPE proxmox_gpu_clock_speed_mhz gauge')
-                            metrics.append(f'proxmox_gpu_clock_speed_mhz{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {clock_speed} {timestamp}')
-                        except (ValueError, IndexError):
-                            pass
-                    
-                    if device.get('gpu_memory_clock'):
-                        try:
-                            # Extract numeric value from string like "5001 MHz"
-                            mem_clock = float(device['gpu_memory_clock'].split()[0])
-                            metrics.append(f'# HELP proxmox_gpu_memory_clock_mhz GPU memory clock speed in MHz')
-                            metrics.append(f'# TYPE proxmox_gpu_memory_clock_mhz gauge')
-                            metrics.append(f'proxmox_gpu_memory_clock_mhz{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}"}} {mem_clock} {timestamp}')
-                        except (ValueError, IndexError):
-                            pass
+            for gpu in hardware_info.get('gpus', []): # Changed from pci_devices to gpus
+                gpu_name = gpu.get('name', 'unknown').replace(' ', '_')
+                gpu_vendor = gpu.get('vendor', 'unknown')
+                gpu_slot = gpu.get('slot', 'unknown') # Use slot for matching
+                
+                # GPU Temperature
+                if gpu.get('temperature') is not None:
+                    metrics.append(f'# HELP proxmox_gpu_temperature_celsius GPU temperature in Celsius')
+                    metrics.append(f'# TYPE proxmox_gpu_temperature_celsius gauge')
+                    metrics.append(f'proxmox_gpu_temperature_celsius{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {gpu["temperature"]} {timestamp}')
+                
+                # GPU Utilization
+                if gpu.get('utilization_gpu') is not None:
+                    metrics.append(f'# HELP proxmox_gpu_utilization_percent GPU utilization percentage')
+                    metrics.append(f'# TYPE proxmox_gpu_utilization_percent gauge')
+                    metrics.append(f'proxmox_gpu_utilization_percent{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {gpu["utilization_gpu"]} {timestamp}')
+                
+                # GPU Memory
+                if gpu.get('memory_used') and gpu.get('memory_total'):
+                    try:
+                        # Extract numeric values from strings like "1024 MiB"
+                        mem_used = float(gpu['memory_used'].split()[0])
+                        mem_total = float(gpu['memory_total'].split()[0])
+                        mem_used_bytes = mem_used * 1024 * 1024  # Convert MiB to bytes
+                        mem_total_bytes = mem_total * 1024 * 1024
+                        
+                        metrics.append(f'# HELP proxmox_gpu_memory_used_bytes GPU memory used in bytes')
+                        metrics.append(f'# TYPE proxmox_gpu_memory_used_bytes gauge')
+                        metrics.append(f'proxmox_gpu_memory_used_bytes{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {mem_used_bytes} {timestamp}')
+                        
+                        metrics.append(f'# HELP proxmox_gpu_memory_total_bytes GPU memory total in bytes')
+                        metrics.append(f'# TYPE proxmox_gpu_memory_total_bytes gauge')
+                        metrics.append(f'proxmox_gpu_memory_total_bytes{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {mem_total_bytes} {timestamp}')
+                    except (ValueError, IndexError):
+                        pass
+                
+                # GPU Power Draw (NVIDIA only)
+                if gpu.get('power_draw'):
+                    try:
+                        # Extract numeric value from string like "75.5 W"
+                        power_draw = float(gpu['power_draw'].split()[0])
+                        metrics.append(f'# HELP proxmox_gpu_power_draw_watts GPU power draw in watts')
+                        metrics.append(f'# TYPE proxmox_gpu_power_draw_watts gauge')
+                        metrics.append(f'proxmox_gpu_power_draw_watts{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {power_draw} {timestamp}')
+                    except (ValueError, IndexError):
+                        pass
+                
+                # GPU Clock Speeds (NVIDIA only)
+                if gpu.get('clock_graphics'):
+                    try:
+                        # Extract numeric value from string like "1500 MHz"
+                        clock_speed = float(gpu['clock_graphics'].split()[0])
+                        metrics.append(f'# HELP proxmox_gpu_clock_speed_mhz GPU clock speed in MHz')
+                        metrics.append(f'# TYPE proxmox_gpu_clock_speed_mhz gauge')
+                        metrics.append(f'proxmox_gpu_clock_speed_mhz{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {clock_speed} {timestamp}')
+                    except (ValueError, IndexError):
+                        pass
+                
+                if gpu.get('clock_memory'):
+                    try:
+                        # Extract numeric value from string like "5001 MHz"
+                        mem_clock = float(gpu['clock_memory'].split()[0])
+                        metrics.append(f'# HELP proxmox_gpu_memory_clock_mhz GPU memory clock speed in MHz')
+                        metrics.append(f'# TYPE proxmox_gpu_memory_clock_mhz gauge')
+                        metrics.append(f'proxmox_gpu_memory_clock_mhz{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {mem_clock} {timestamp}')
+                    except (ValueError, IndexError):
+                        pass
             
             # UPS metrics
             ups = hardware_info.get('ups')
@@ -4411,22 +4495,17 @@ def api_prometheus():
                 if ups.get('battery_charge') is not None:
                     metrics.append(f'# HELP proxmox_ups_battery_charge_percent UPS battery charge percentage')
                     metrics.append(f'# TYPE proxmox_ups_battery_charge_percent gauge')
-                    metrics.append(f'proxmox_ups_battery_charge_percent{{node="{node}",ups="{ups_name}"}} {ups["battery_charge"]} {timestamp}')
+                    metrics.append(f'proxmox_ups_battery_charge_percent{{node="{node}",ups="{ups_name}"}} {ups["battery_charge_raw"]} {timestamp}')
                 
                 if ups.get('load') is not None:
                     metrics.append(f'# HELP proxmox_ups_load_percent UPS load percentage')
                     metrics.append(f'# TYPE proxmox_ups_load_percent gauge')
-                    metrics.append(f'proxmox_ups_load_percent{{node="{node}",ups="{ups_name}"}} {ups["load"]} {timestamp}')
+                    metrics.append(f'proxmox_ups_load_percent{{node="{node}",ups="{ups_name}"}} {ups["load_percent_raw"]} {timestamp}')
                 
-                if ups.get('runtime'):
-                    # Convert runtime to seconds
-                    runtime_str = ups['runtime']
-                    runtime_seconds = 0
-                    if 'minutes' in runtime_str:
-                        runtime_seconds = int(runtime_str.split()[0]) * 60
+                if ups.get('time_left_seconds') is not None: # Use seconds for counter
                     metrics.append(f'# HELP proxmox_ups_runtime_seconds UPS runtime in seconds')
-                    metrics.append(f'# TYPE proxmox_ups_runtime_seconds gauge')
-                    metrics.append(f'proxmox_ups_runtime_seconds{{node="{node}",ups="{ups_name}"}} {runtime_seconds} {timestamp}')
+                    metrics.append(f'# TYPE proxmox_ups_runtime_seconds gauge') # Use gauge if it's current remaining time
+                    metrics.append(f'proxmox_ups_runtime_seconds{{node="{node}",ups="{ups_name}"}} {ups["time_left_seconds"]} {timestamp}')
                 
                 if ups.get('input_voltage') is not None:
                     metrics.append(f'# HELP proxmox_ups_input_voltage_volts UPS input voltage in volts')
