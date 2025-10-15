@@ -1622,7 +1622,23 @@ export default function Hardware() {
               {selectedDisk.type && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-sm font-medium text-muted-foreground">Type</span>
-                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">{selectedDisk.type}</Badge>
+                  <Badge
+                    className={(() => {
+                      const lowerType = selectedDisk.type.toLowerCase()
+                      if (lowerType.includes("nvme")) {
+                        return "bg-purple-500/10 text-purple-500 border-purple-500/20"
+                      }
+                      if (lowerType.includes("ssd")) {
+                        return "bg-cyan-500/10 text-cyan-500 border-cyan-500/20"
+                      }
+                      if (lowerType.includes("hdd")) {
+                        return "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                      }
+                      return "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                    })()}
+                  >
+                    {selectedDisk.type}
+                  </Badge>
                 </div>
               )}
 
