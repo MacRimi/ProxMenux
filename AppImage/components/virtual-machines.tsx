@@ -521,6 +521,13 @@ export function VirtualMachines() {
                         </Badge>
                         <span className="font-semibold text-foreground">{vm.name}</span>
                         <span className="text-sm text-muted-foreground">ID: {vm.vmid}</span>
+                        {lxcIP && (
+                          <span
+                            className={`text-sm hidden sm:inline ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
+                          >
+                            IP: {lxcIP}
+                          </span>
+                        )}
                         <span className="text-sm text-muted-foreground ml-auto hidden sm:inline">
                           Uptime: {formatUptime(vm.uptime)}
                         </span>
