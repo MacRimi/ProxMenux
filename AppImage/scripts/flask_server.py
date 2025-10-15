@@ -1624,6 +1624,7 @@ def get_ipmi_power():
     }
 
 
+# START OF CHANGES FOR get_ups_info
 def get_ups_info():
     """Get UPS information from NUT (upsc) - supports both local and remote UPS"""
     ups_list = []
@@ -1666,19 +1667,20 @@ def get_ups_info():
         except Exception as e:
             print(f"[v0] Error listing local UPS: {e}")
         
-        # Combine configured and local UPS
-        all_ups = set()
+        all_ups = {}
         
-        # Add configured UPS
+        # Add configured UPS first (priority)
         for ups_spec, ups_info in configured_ups.items():
-            all_ups.add((ups_spec, ups_info['host'], ups_info['is_remote']))
+            ups_name = ups_info['name']
+            all_ups[ups_name] = (ups_spec, ups_info['host'], ups_info['is_remote'])
         
-        # Add local UPS that might not be in config
+        # Add local UPS only if not already in configured list
         for ups_name in local_ups:
-            all_ups.add((ups_name, 'localhost', False))
+            if ups_name not in all_ups:
+                all_ups[ups_name] = (ups_name, 'localhost', False)
         
         # Get detailed info for each UPS
-        for ups_spec, ups_host, is_remote in all_ups:
+        for ups_name, (ups_spec, ups_host, is_remote) in all_ups.items():
             try:
                 ups_data = {
                     'name': ups_spec.split('@')[0] if '@' in ups_spec else ups_spec,
@@ -1761,6 +1763,7 @@ def get_ups_info():
         print(f"[v0] Error in get_ups_info: {e}")
     
     return ups_list
+# END OF CHANGES FOR get_ups_info
 
 
 def identify_temperature_sensor(sensor_name, adapter):
@@ -2018,7 +2021,7 @@ def get_detailed_gpu_info(gpu):
                                         if 'clients' in json_data:
                                             client_count = len(json_data['clients'])
                                             print(f"[v0] *** FOUND CLIENTS SECTION with {client_count} client(s) ***", flush=True)
-                                            for client_id, client_data in json_data['clients'].items():
+                                            for client_id, client_data in json_data['clients']:
                                                 client_name = client_data.get('name', 'Unknown')
                                                 client_pid = client_data.get('pid', 'Unknown')
                                                 print(f"[v0]   - Client: {client_name} (PID: {client_pid})", flush=True)
