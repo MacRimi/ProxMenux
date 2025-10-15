@@ -83,3 +83,11 @@ If you find **ProxMenux** useful, consider giving it a ⭐ on GitHub to help oth
 </div>
 
 Support the project on Ko-fi!
+
+## Contributors
+<a href="https://github.com/MacRimi/ProxMenux/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=MacRimi/ProxMenux" />
+</a>
+
+[contrib.rocks](https://contrib.rocks).
+
