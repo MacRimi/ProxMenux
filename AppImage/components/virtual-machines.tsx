@@ -500,20 +500,11 @@ export function VirtualMachines() {
                     className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
                     onClick={() => handleVMClick(vm)}
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge
-                          variant="outline"
-                          className={`text-xs flex-shrink-0 ${getStatusColor(vm.status)} hidden sm:flex`}
-                        >
+                    <div className="hidden sm:block">
+                      <div className="flex items-center gap-2 flex-wrap mb-3">
+                        <Badge variant="outline" className={`text-xs flex-shrink-0 ${getStatusColor(vm.status)}`}>
                           {getStatusIcon(vm.status)}
                           {vm.status.toUpperCase()}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className={`text-xs flex-shrink-0 p-1.5 ${getStatusColor(vm.status)} flex sm:hidden`}
-                        >
-                          {getStatusIcon(vm.status)}
                         </Badge>
                         <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
                           {typeBadge.icon}
@@ -522,88 +513,123 @@ export function VirtualMachines() {
                         <span className="font-semibold text-foreground">{vm.name}</span>
                         <span className="text-sm text-muted-foreground">ID: {vm.vmid}</span>
                         {lxcIP && (
-                          <span
-                            className={`text-sm hidden sm:inline ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
-                          >
+                          <span className={`text-sm ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}>
                             IP: {lxcIP}
                           </span>
                         )}
-                        <span className="text-sm text-muted-foreground ml-auto hidden sm:inline">
-                          Uptime: {formatUptime(vm.uptime)}
-                        </span>
+                        <span className="text-sm text-muted-foreground ml-auto">Uptime: {formatUptime(vm.uptime)}</span>
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap sm:hidden">
+
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
+                          <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(cpuPercent))}`}>
+                            {cpuPercent}%
+                          </div>
+                          <Progress
+                            value={Number.parseFloat(cpuPercent)}
+                            className={`h-1.5 ${getProgressColor(Number.parseFloat(cpuPercent))}`}
+                          />
+                        </div>
+
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Memory</div>
+                          <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(memPercent))}`}>
+                            {memGB} / {maxMemGB} GB
+                          </div>
+                          <Progress
+                            value={Number.parseFloat(memPercent)}
+                            className={`h-1.5 ${getProgressColor(Number.parseFloat(memPercent))}`}
+                          />
+                        </div>
+
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Disk Usage</div>
+                          <div
+                            className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(diskPercent))}`}
+                          >
+                            {diskGB} / {maxDiskGB} GB
+                          </div>
+                          <Progress
+                            value={Number.parseFloat(diskPercent)}
+                            className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
+                          />
+                        </div>
+
+                        <div className="hidden md:block">
+                          <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
+                          <div className="text-sm font-semibold space-y-0.5">
+                            <div className="flex items-center gap-1">
+                              <HardDrive className="h-3 w-3 text-green-500" />
+                              <span className="text-green-500">↓ {formatBytes(vm.diskread)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <HardDrive className="h-3 w-3 text-blue-500" />
+                              <span className="text-blue-500">↑ {formatBytes(vm.diskwrite)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
+                          <div className="text-sm font-semibold space-y-0.5">
+                            <div className="flex items-center gap-1">
+                              <Network className="h-3 w-3 text-green-500" />
+                              <span className="text-green-500">↓ {formatBytes(vm.netin)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Network className="h-3 w-3 text-blue-500" />
+                              <span className="text-blue-500">↑ {formatBytes(vm.netout)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="sm:hidden space-y-2">
+                      {/* Line 1: Status badge + Type badge + Name + ID */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className={`text-xs flex-shrink-0 p-1.5 ${getStatusColor(vm.status)}`}>
+                          {getStatusIcon(vm.status)}
+                        </Badge>
+                        <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
+                          {typeBadge.icon}
+                          {typeBadge.label}
+                        </Badge>
+                        <span className="font-semibold text-foreground">{vm.name}</span>
+                        <span className="text-sm text-muted-foreground">ID: {vm.vmid}</span>
+                      </div>
+
+                      {/* Line 2: IP + Uptime */}
+                      <div className="flex items-center gap-3 text-sm">
                         {lxcIP && (
                           <span
-                            className={`text-sm flex items-center gap-1 ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
+                            className={`flex items-center gap-1 ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
                           >
                             <Network className="h-3 w-3" />
                             {lxcIP}
                           </span>
                         )}
-                        <span className="text-sm text-muted-foreground">Uptime: {formatUptime(vm.uptime)}</span>
+                        <span className="text-muted-foreground">Uptime: {formatUptime(vm.uptime)}</span>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
-                        <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(cpuPercent))}`}>
-                          {cpuPercent}%
+                      {/* Line 3: CPU, Memory, Disk (numbers only with colors) */}
+                      <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-1">
+                          <Cpu className="h-3 w-3 text-muted-foreground" />
+                          <span className={getUsageColor(Number.parseFloat(cpuPercent))}>{cpuPercent}%</span>
                         </div>
-                        <Progress
-                          value={Number.parseFloat(cpuPercent)}
-                          className={`h-1.5 ${getProgressColor(Number.parseFloat(cpuPercent))}`}
-                        />
-                      </div>
-
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Memory</div>
-                        <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(memPercent))}`}>
-                          {memGB} / {maxMemGB} GB
+                        <div className="flex items-center gap-1">
+                          <MemoryStick className="h-3 w-3 text-muted-foreground" />
+                          <span className={getUsageColor(Number.parseFloat(memPercent))}>
+                            {memGB}/{maxMemGB} GB
+                          </span>
                         </div>
-                        <Progress
-                          value={Number.parseFloat(memPercent)}
-                          className={`h-1.5 ${getProgressColor(Number.parseFloat(memPercent))}`}
-                        />
-                      </div>
-
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Disk Usage</div>
-                        <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(diskPercent))}`}>
-                          {diskGB} / {maxDiskGB} GB
-                        </div>
-                        <Progress
-                          value={Number.parseFloat(diskPercent)}
-                          className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
-                        />
-                      </div>
-
-                      <div className="hidden md:block">
-                        <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
-                        <div className="text-sm font-semibold space-y-0.5">
-                          <div className="flex items-center gap-1">
-                            <HardDrive className="h-3 w-3 text-green-500" />
-                            <span className="text-green-500">↓ {formatBytes(vm.diskread)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <HardDrive className="h-3 w-3 text-blue-500" />
-                            <span className="text-blue-500">↑ {formatBytes(vm.diskwrite)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
-                        <div className="text-sm font-semibold space-y-0.5">
-                          <div className="flex items-center gap-1">
-                            <Network className="h-3 w-3 text-green-500" />
-                            <span className="text-green-500">↓ {formatBytes(vm.netin)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Network className="h-3 w-3 text-blue-500" />
-                            <span className="text-blue-500">↑ {formatBytes(vm.netout)}</span>
-                          </div>
+                        <div className="flex items-center gap-1">
+                          <HardDrive className="h-3 w-3 text-muted-foreground" />
+                          <span className={getUsageColor(Number.parseFloat(diskPercent))}>
+                            {diskGB}/{maxDiskGB} GB
+                          </span>
                         </div>
                       </div>
                     </div>
