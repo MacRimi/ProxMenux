@@ -207,7 +207,7 @@ export function ProxmoxDashboard() {
       <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 md:px-6 py-4 md:py-4">
           {/* Logo and Title */}
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-start justify-between gap-3">
             {/* Logo and Title */}
             <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
               <div className="w-16 h-16 md:w-10 md:h-10 relative flex items-center justify-center bg-primary/10 flex-shrink-0">
