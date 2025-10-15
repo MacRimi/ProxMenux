@@ -172,15 +172,15 @@ export function StorageOverview() {
     // Aplicar rangos de temperatura según el tipo
     switch (diskType) {
       case "NVMe":
-        // NVMe: ≤60°C verde, 61-70°C amarillo, >70°C rojo
-        if (temp <= 60) return "text-green-500"
-        if (temp <= 70) return "text-yellow-500"
+        // NVMe: ≤70°C verde, 71-80°C amarillo, >80°C rojo
+        if (temp <= 70) return "text-green-500"
+        if (temp <= 80) return "text-yellow-500"
         return "text-red-500"
 
       case "SSD":
-        // SSD: ≤55°C verde, 56-65°C amarillo, >65°C rojo
-        if (temp <= 55) return "text-green-500"
-        if (temp <= 65) return "text-yellow-500"
+        // SSD: ≤59°C verde, 60-70°C amarillo, >70°C rojo
+        if (temp <= 59) return "text-green-500"
+        if (temp <= 70) return "text-yellow-500"
         return "text-red-500"
 
       case "HDD":
