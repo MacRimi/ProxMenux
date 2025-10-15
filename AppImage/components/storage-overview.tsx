@@ -368,7 +368,27 @@ export function StorageOverview() {
     return { normal, warning, critical }
   }
 
+  const getDiskTypesBreakdown = () => {
+    if (!storageData || !storageData.disks) {
+      return { nvme: 0, ssd: 0, hdd: 0 }
+    }
+
+    let nvme = 0
+    let ssd = 0
+    let hdd = 0
+
+    storageData.disks.forEach((disk) => {
+      const diskType = getDiskType(disk.name, disk.rotation_rate)
+      if (diskType === "NVMe") nvme++
+      else if (diskType === "SSD") ssd++
+      else if (diskType === "HDD") hdd++
+    })
+
+    return { nvme, ssd, hdd }
+  }
+
   const diskHealthBreakdown = getDiskHealthBreakdown()
+  const diskTypesBreakdown = getDiskTypesBreakdown()
 
   if (loading) {
     return (
@@ -446,6 +466,32 @@ export function StorageOverview() {
                 <>
                   {", "}
                   <span className="text-red-500">{diskHealthBreakdown.critical} critical</span>
+                </>
+              )}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Disk Types */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Disk Types</CardTitle>
+            <HardDrive className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{storageData.disk_count} disks</div>
+            <p className="text-xs mt-1">
+              {diskTypesBreakdown.nvme > 0 && <span className="text-purple-500">{diskTypesBreakdown.nvme} NVMe</span>}
+              {diskTypesBreakdown.ssd > 0 && (
+                <>
+                  {diskTypesBreakdown.nvme > 0 && ", "}
+                  <span className="text-cyan-500">{diskTypesBreakdown.ssd} SSD</span>
+                </>
+              )}
+              {diskTypesBreakdown.hdd > 0 && (
+                <>
+                  {(diskTypesBreakdown.nvme > 0 || diskTypesBreakdown.ssd > 0) && ", "}
+                  <span className="text-blue-500">{diskTypesBreakdown.hdd} HDD</span>
                 </>
               )}
             </p>
