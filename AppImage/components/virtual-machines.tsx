@@ -616,17 +616,17 @@ export function VirtualMachines() {
                       {/* Line 3: CPU, Memory, Disk (numbers only with colors) */}
                       <div className="flex items-center gap-4 text-sm">
                         <div className="flex items-center gap-1">
-                          <Cpu className="h-3 w-3 text-muted-foreground" />
+                          <Cpu className="h-3 w-3 text-blue-500" />
                           <span className={getUsageColor(Number.parseFloat(cpuPercent))}>{cpuPercent}%</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <MemoryStick className="h-3 w-3 text-muted-foreground" />
+                          <MemoryStick className="h-3 w-3 text-blue-500" />
                           <span className={getUsageColor(Number.parseFloat(memPercent))}>
                             {memGB}/{maxMemGB} GB
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <HardDrive className="h-3 w-3 text-muted-foreground" />
+                          <HardDrive className="h-3 w-3 text-blue-500" />
                           <span className={getUsageColor(Number.parseFloat(diskPercent))}>
                             {diskGB}/{maxDiskGB} GB
                           </span>

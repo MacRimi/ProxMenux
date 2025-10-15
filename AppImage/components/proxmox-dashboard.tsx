@@ -209,13 +209,13 @@ export function ProxmoxDashboard() {
           <div className="flex items-center justify-between gap-3">
             {/* Logo and Title */}
             <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
-              <div className="w-10 h-10 md:w-10 md:h-10 relative flex items-center justify-center bg-primary/10 flex-shrink-0">
+              <div className="w-16 h-16 md:w-10 md:h-10 relative flex items-center justify-center bg-primary/10 flex-shrink-0">
                 <Image
                   src="/images/proxmenux-logo.png"
                   alt="ProxMenux Logo"
-                  width={40}
-                  height={40}
-                  className="object-contain"
+                  width={64}
+                  height={64}
+                  className="object-contain md:w-10 md:h-10"
                   priority
                   onError={(e) => {
                     console.log("[v0] Logo failed to load, using fallback icon")
@@ -227,11 +227,15 @@ export function ProxmoxDashboard() {
                     }
                   }}
                 />
-                <Server className="h-5 w-5 md:h-6 md:w-6 text-primary absolute fallback-icon hidden" />
+                <Server className="h-8 w-8 md:h-6 md:w-6 text-primary absolute fallback-icon hidden" />
               </div>
               <div className="min-w-0">
                 <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">ProxMenux Monitor</h1>
                 <p className="text-xs md:text-sm text-muted-foreground">Proxmox System Dashboard</p>
+                <div className="lg:hidden flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                  <Server className="h-3 w-3" />
+                  <span className="truncate">Node: {systemStatus.serverName}</span>
+                </div>
               </div>
             </div>
 
@@ -240,7 +244,7 @@ export function ProxmoxDashboard() {
               <div className="flex items-center space-x-2">
                 <Server className="h-4 w-4 text-muted-foreground" />
                 <div className="text-sm">
-                  <div className="font-medium text-foreground">{systemStatus.serverName}</div>
+                  <div className="font-medium text-foreground">Node: {systemStatus.serverName}</div>
                 </div>
               </div>
 
@@ -281,11 +285,7 @@ export function ProxmoxDashboard() {
           </div>
 
           {/* Mobile Server Info */}
-          <div className="lg:hidden mt-2 flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Server className="h-3 w-3" />
-              <span className="truncate">{systemStatus.serverName}</span>
-            </div>
+          <div className="lg:hidden mt-2 flex items-center justify-end text-xs text-muted-foreground">
             <span className="whitespace-nowrap">Uptime: {systemStatus.uptime}</span>
           </div>
         </div>
