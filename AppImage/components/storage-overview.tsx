@@ -327,6 +327,49 @@ export function StorageOverview() {
     return `~${remainingYears.toFixed(1)} years`
   }
 
+  const getDiskHealthBreakdown = () => {
+    if (!storageData || !storageData.disks) {
+      return { normal: 0, warning: 0, critical: 0 }
+    }
+
+    let normal = 0
+    let warning = 0
+    let critical = 0
+
+    storageData.disks.forEach((disk) => {
+      if (disk.temperature === 0) {
+        // Si no hay temperatura, considerarlo normal
+        normal++
+        return
+      }
+
+      const diskType = getDiskType(disk.name, disk.rotation_rate)
+
+      switch (diskType) {
+        case "NVMe":
+          if (disk.temperature <= 70) normal++
+          else if (disk.temperature <= 80) warning++
+          else critical++
+          break
+        case "SSD":
+          if (disk.temperature <= 59) normal++
+          else if (disk.temperature <= 70) warning++
+          else critical++
+          break
+        case "HDD":
+        default:
+          if (disk.temperature <= 45) normal++
+          else if (disk.temperature <= 55) warning++
+          else critical++
+          break
+      }
+    })
+
+    return { normal, warning, critical }
+  }
+
+  const diskHealthBreakdown = getDiskHealthBreakdown()
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -383,21 +426,28 @@ export function StorageOverview() {
           </CardContent>
         </Card>
 
+        {/* Disk Health */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Disk Health</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-500">{storageData.healthy_disks}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {storageData.warning_disks > 0 && (
-                <span className="text-yellow-500">{storageData.warning_disks} warning </span>
+            <div className="text-2xl font-bold">{storageData.disk_count} disks</div>
+            <p className="text-xs mt-1">
+              <span className="text-green-500">{diskHealthBreakdown.normal} normal</span>
+              {diskHealthBreakdown.warning > 0 && (
+                <>
+                  {", "}
+                  <span className="text-yellow-500">{diskHealthBreakdown.warning} warning</span>
+                </>
               )}
-              {storageData.critical_disks > 0 && (
-                <span className="text-red-500">{storageData.critical_disks} critical</span>
+              {diskHealthBreakdown.critical > 0 && (
+                <>
+                  {", "}
+                  <span className="text-red-500">{diskHealthBreakdown.critical} critical</span>
+                </>
               )}
-              {storageData.warning_disks === 0 && storageData.critical_disks === 0 && "All disks healthy"}
             </p>
           </CardContent>
         </Card>
