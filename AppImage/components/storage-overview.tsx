@@ -399,12 +399,14 @@ export function StorageOverview() {
   const totalProxmoxUsed =
     proxmoxStorage && proxmoxStorage.storage
       ? proxmoxStorage.storage
-          .filter((storage) => storage.total > 0 && storage.status.toLowerCase() === "active")
+          .filter(
+            (storage) => storage && storage.total > 0 && storage.status && storage.status.toLowerCase() === "active",
+          )
           .reduce((sum, storage) => sum + storage.used, 0)
       : 0
 
   const usagePercent =
-    storageData.total > 0 ? ((totalProxmoxUsed / (storageData.total * 1024)) * 100).toFixed(2) : "0.00"
+    storageData && storageData.total > 0 ? ((totalProxmoxUsed / (storageData.total * 1024)) * 100).toFixed(2) : "0.00"
 
   if (loading) {
     return (
@@ -511,76 +513,78 @@ export function StorageOverview() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {proxmoxStorage.storage.map((storage) => (
-                <div key={storage.name} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    {/* Desktop: Icon + Name + Badge tipo alineados horizontalmente */}
-                    <div className="hidden md:flex items-center gap-3">
-                      <Database className="h-5 w-5 text-muted-foreground" />
-                      <h3 className="font-semibold text-lg">{storage.name}</h3>
-                      <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
-                    </div>
-
-                    <div className="flex md:hidden items-center gap-2 flex-1">
-                      <Database className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                      <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
-                      <h3 className="font-semibold text-base flex-1 min-w-0 truncate">{storage.name}</h3>
-                      {getStatusIcon(storage.status)}
-                    </div>
-
-                    {/* Desktop: Badge active + Porcentaje */}
-                    <div className="hidden md:flex items-center gap-2">
-                      <Badge
-                        className={
-                          storage.status === "active"
-                            ? "bg-green-500/10 text-green-500 border-green-500/20"
-                            : "bg-gray-500/10 text-gray-500 border-gray-500/20"
-                        }
-                      >
-                        {storage.status}
-                      </Badge>
-                      <span className="text-sm font-medium">{storage.percent}%</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Progress
-                      value={storage.percent}
-                      className={`h-2 ${
-                        storage.percent > 90
-                          ? "[&>div]:bg-red-500"
-                          : storage.percent > 75
-                            ? "[&>div]:bg-yellow-500"
-                            : "[&>div]:bg-blue-500"
-                      }`}
-                    />
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Total</p>
-                        <p className="font-medium">{storage.total.toLocaleString()} GB</p>
+              {proxmoxStorage.storage
+                .filter((storage) => storage && storage.name && storage.total > 0)
+                .map((storage) => (
+                  <div key={storage.name} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      {/* Desktop: Icon + Name + Badge tipo alineados horizontalmente */}
+                      <div className="hidden md:flex items-center gap-3">
+                        <Database className="h-5 w-5 text-muted-foreground" />
+                        <h3 className="font-semibold text-lg">{storage.name}</h3>
+                        <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground">Used</p>
-                        <p
-                          className={`font-medium ${
-                            storage.percent > 90
-                              ? "text-red-400"
-                              : storage.percent > 75
-                                ? "text-yellow-400"
-                                : "text-blue-400"
-                          }`}
+
+                      <div className="flex md:hidden items-center gap-2 flex-1">
+                        <Database className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        <Badge className={getStorageTypeBadge(storage.type)}>{storage.type}</Badge>
+                        <h3 className="font-semibold text-base flex-1 min-w-0 truncate">{storage.name}</h3>
+                        {getStatusIcon(storage.status)}
+                      </div>
+
+                      {/* Desktop: Badge active + Porcentaje */}
+                      <div className="hidden md:flex items-center gap-2">
+                        <Badge
+                          className={
+                            storage.status === "active"
+                              ? "bg-green-500/10 text-green-500 border-green-500/20"
+                              : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                          }
                         >
-                          {storage.used.toLocaleString()} GB
-                        </p>
+                          {storage.status}
+                        </Badge>
+                        <span className="text-sm font-medium">{storage.percent}%</span>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground">Available</p>
-                        <p className="font-medium text-green-400">{storage.available.toLocaleString()} GB</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Progress
+                        value={storage.percent}
+                        className={`h-2 ${
+                          storage.percent > 90
+                            ? "[&>div]:bg-red-500"
+                            : storage.percent > 75
+                              ? "[&>div]:bg-yellow-500"
+                              : "[&>div]:bg-blue-500"
+                        }`}
+                      />
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Total</p>
+                          <p className="font-medium">{storage.total.toLocaleString()} GB</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Used</p>
+                          <p
+                            className={`font-medium ${
+                              storage.percent > 90
+                                ? "text-red-400"
+                                : storage.percent > 75
+                                  ? "text-yellow-400"
+                                  : "text-blue-400"
+                            }`}
+                          >
+                            {storage.used.toLocaleString()} GB
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Available</p>
+                          <p className="font-medium text-green-400">{storage.available.toLocaleString()} GB</p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           </CardContent>
         </Card>
