@@ -664,13 +664,24 @@ def get_storage_info():
                     print(f"Error accessing partition {partition.device}: {e}")
                     continue
             
+            print(f"[v0] Starting ZFS pool detection...")
             try:
                 result = subprocess.run(['zpool', 'list', '-H', '-p', '-o', 'name,size,alloc,free,health'], 
                                       capture_output=True, text=True, timeout=5)
+                print(f"[v0] zpool list return code: {result.returncode}")
+                print(f"[v0] zpool list stdout: {result.stdout}")
+                print(f"[v0] zpool list stderr: {result.stderr}")
+                
                 if result.returncode == 0:
-                    for line in result.stdout.strip().split('\n'):
+                    lines = result.stdout.strip().split('\n')
+                    print(f"[v0] Found {len(lines)} ZFS pool(s)")
+                    
+                    for line in lines:
                         if line:
                             parts = line.split('\t')
+                            print(f"[v0] Processing ZFS line: {line}")
+                            print(f"[v0] Split into {len(parts)} parts: {parts}")
+                            
                             if len(parts) >= 5:
                                 pool_name = parts[0]
                                 pool_size_bytes = int(parts[1])
@@ -678,10 +689,17 @@ def get_storage_info():
                                 pool_free_bytes = int(parts[3])
                                 pool_health = parts[4]
                                 
-                                total_used += pool_alloc_bytes
-                                total_available += pool_free_bytes
+                                print(f"[v0] ZFS Pool {pool_name}:")
+                                print(f"[v0]   - Size: {pool_size_bytes} bytes ({pool_size_bytes / (1024**3):.2f}GB)")
+                                print(f"[v0]   - Allocated: {pool_alloc_bytes} bytes ({pool_alloc_bytes / (1024**3):.2f}GB)")
+                                print(f"[v0]   - Free: {pool_free_bytes} bytes ({pool_free_bytes / (1024**3):.2f}GB)")
+                                print(f"[v0]   - Health: {pool_health}")
                                 
-                                print(f"[v0] ZFS Pool {pool_name}: allocated={pool_alloc_bytes / (1024**3):.2f}GB, free={pool_free_bytes / (1024**3):.2f}GB")
+                                print(f"[v0] Adding {pool_alloc_bytes} bytes to total_used (before: {total_used})")
+                                total_used += pool_alloc_bytes
+                                print(f"[v0] total_used after adding ZFS: {total_used} bytes ({total_used / (1024**3):.2f}GB)")
+                                
+                                total_available += pool_free_bytes
                                 
                                 def format_zfs_size(size_bytes):
                                     size_tb = size_bytes / (1024**4)
@@ -699,6 +717,7 @@ def get_storage_info():
                                     'health': pool_health
                                 }
                                 storage_data['zfs_pools'].append(pool_info)
+                                print(f"[v0] Added pool info to storage_data: {pool_info}")
                                 
                                 try:
                                     pool_status = subprocess.run(['zpool', 'status', pool_name], 
@@ -709,16 +728,24 @@ def get_storage_info():
                                                 if disk_name in status_line:
                                                     zfs_disks.add(disk_name)
                                 except Exception as e:
-                                    print(f"Error getting ZFS pool status for {pool_name}: {e}")
+                                    print(f"[v0] Error getting ZFS pool status for {pool_name}: {e}")
+                            else:
+                                print(f"[v0] WARNING: ZFS line has less than 5 parts, skipping: {line}")
+                else:
+                    print(f"[v0] zpool list command failed with return code {result.returncode}")
                                     
             except FileNotFoundError:
-                print("[v0] Note: ZFS not installed")
+                print("[v0] Note: ZFS not installed (zpool command not found)")
             except Exception as e:
-                print(f"[v0] Note: ZFS not available or no pools: {e}")
+                print(f"[v0] Error running zpool list: {e}")
+                import traceback
+                print(f"[v0] Traceback: {traceback.format_exc()}")
             
+            print(f"[v0] Final total_used before conversion: {total_used} bytes ({total_used / (1024**3):.2f}GB)")
             storage_data['used'] = round(total_used / (1024**3), 1)
             storage_data['available'] = round(total_available / (1024**3), 1)
             
+            print(f"[v0] Final storage_data['used']: {storage_data['used']}GB")
             print(f"[v0] Total storage used: {storage_data['used']}GB (including ZFS pools)")
             
         except Exception as e:
@@ -932,7 +959,6 @@ def get_smart_data(disk_name):
                                         print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
                                     elif attr_id == '241':  # Total_LBAs_Written
                                         # Convertir a GB (raw_value es en sectores de 512 bytes)
-                                        # Corrected the conversion for Total_LBAs_Written (ID 241)
                                         try:
                                             raw_int = int(raw_value.replace(',', ''))
                                             total_gb = (raw_int * 512) / (1024 * 1024 * 1024)
@@ -1632,8 +1658,15 @@ def get_ipmi_fans():
                         value_str = parts[1]
                         unit = parts[2] if len(parts) > 2 else ''
                         
-                        # Skip "DutyCycle" and "Presence" entries
-                        if 'dutycycle' in name.lower() or 'presence' in name.lower():
+                        # This allows fans like "FAN1" but skips "FAN1 DutyCycle" or "FAN1 Presence"
+                        name_lower = name.lower()
+                        if name_lower.endswith('dutycycle') or name_lower.endswith('presence'):
+                            print(f"[v0] Skipping IPMI sensor (duty/presence): {name}")
+                            continue
+                        
+                        # Skip if value is not a number or is "na"
+                        if value_str.lower() in ['na', 'n/a', '']:
+                            print(f"[v0] Skipping IPMI fan with no value: {name}")
                             continue
                         
                         try:
@@ -1645,6 +1678,7 @@ def get_ipmi_fans():
                             })
                             print(f"[v0] IPMI Fan: {name} = {value} {unit}")
                         except ValueError:
+                            print(f"[v0] Skipping IPMI fan with invalid value: {name} = {value_str}")
                             continue
         
         print(f"[v0] Found {len(fans)} IPMI fans")
@@ -2607,7 +2641,7 @@ def get_detailed_gpu_info(gpu):
                                     mem_clock = clocks['GFX_MCLK']
                                     if 'value' in mem_clock:
                                         detailed_info['clock_memory'] = f"{mem_clock['value']} MHz"
-                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']} MHz", flush=True)
+                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']}", flush=True)
                                         data_retrieved = True
                             
                             # Parse GPU activity (gpu_activity.GFX)
@@ -4018,7 +4052,7 @@ def api_notifications_download():
 
 @app.route('/api/backups', methods=['GET'])
 def api_backups():
-    """Get list of all backup files from Proxmox storage"""
+    """Get list of backup files from Proxmox storage"""
     try:
         backups = []
         
@@ -4628,7 +4662,7 @@ def api_hardware():
         print(f"[v0] /api/hardware returning data")
         print(f"[v0] - CPU: {formatted_data['cpu'].get('model', 'Unknown')}")
         print(f"[v0] - Temperatures: {len(formatted_data['temperatures'])} sensors")
-        print(f"[v0] - Fans: {len(formatted_data['fans'])} fans") # Now includes IPMI fans
+        print(f"[v0] - Fans: {len(formatted_data['fans'])} fans") # Includes IPMI fans
         print(f"[v0] - Power supplies: {len(formatted_data['power_supplies'])} PSUs")
         print(f"[v0] - Power meter: {'Yes' if formatted_data['power_meter'] else 'No'}")
         print(f"[v0] - UPS: {'Yes' if formatted_data['ups'] else 'No'}")
