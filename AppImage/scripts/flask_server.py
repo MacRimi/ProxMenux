@@ -1658,15 +1658,8 @@ def get_ipmi_fans():
                         value_str = parts[1]
                         unit = parts[2] if len(parts) > 2 else ''
                         
-                        # This allows fans like "FAN1" but skips "FAN1 DutyCycle" or "FAN1 Presence"
-                        name_lower = name.lower()
-                        if name_lower.endswith('dutycycle') or name_lower.endswith('presence'):
-                            print(f"[v0] Skipping IPMI sensor (duty/presence): {name}")
-                            continue
-                        
-                        # Skip if value is not a number or is "na"
-                        if value_str.lower() in ['na', 'n/a', '']:
-                            print(f"[v0] Skipping IPMI fan with no value: {name}")
+                        # Skip "DutyCycle" and "Presence" entries
+                        if 'dutycycle' in name.lower() or 'presence' in name.lower():
                             continue
                         
                         try:
@@ -1678,7 +1671,6 @@ def get_ipmi_fans():
                             })
                             print(f"[v0] IPMI Fan: {name} = {value} {unit}")
                         except ValueError:
-                            print(f"[v0] Skipping IPMI fan with invalid value: {name} = {value_str}")
                             continue
         
         print(f"[v0] Found {len(fans)} IPMI fans")
@@ -2147,6 +2139,8 @@ def get_detailed_gpu_info(gpu):
                                             break
                                     except json.JSONDecodeError:
                                         pass
+                                    except Exception as e: # Catch any other JSON processing errors
+                                        print(f"[v0] Error processing JSON object: {e}", flush=True)
                                     buffer = ""
                                     in_json = False
                             elif in_json:
@@ -3605,8 +3599,8 @@ def get_hardware_info():
                                     })
                                     print(f"[v0] Fan sensor: {identified_name} ({sensor_name}) = {fan_speed} RPM")
                     
-                    hardware_data['sensors']['fans'] = fans
-                    print(f"[v0] Found {len(fans)} fan sensor(s)")
+                    hardware_data['sensors']['fans'].extend(fans)
+                    print(f"[v0] Found {len(fans)} fan sensor(s) from sensors command")
             except Exception as e:
                 print(f"[v0] Error getting fan info: {e}")
         except Exception as e:
