@@ -674,7 +674,6 @@ export default function Hardware() {
               )
             })}
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">Click on a device for detailed hardware information</p>
         </Card>
       )}
 
@@ -1036,7 +1035,6 @@ export default function Hardware() {
               </div>
             ))}
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">Click on a device for detailed hardware information</p>
         </Card>
       )}
 
@@ -1146,6 +1144,41 @@ export default function Hardware() {
         </Card>
       )}
 
+      {/* Fans */}
+      {hardwareData?.fans && hardwareData.fans.length > 0 && (
+        <Card className="border-border/50 bg-card/50 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <FanIcon className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">System Fans</h2>
+            <Badge variant="outline" className="ml-auto">
+              {hardwareData.fans.length} fans
+            </Badge>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {hardwareData.fans.map((fan, index) => {
+              const isPercentage = fan.unit === "percent" || fan.unit === "%"
+              const percentage = isPercentage ? fan.speed : Math.min((fan.speed / 5000) * 100, 100)
+
+              return (
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{fan.name}</span>
+                    <span className="text-sm font-semibold text-blue-500">
+                      {isPercentage ? `${fan.speed.toFixed(0)} percent` : `${fan.speed.toFixed(0)} ${fan.unit}`}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div className="h-full bg-blue-500 transition-all" style={{ width: `${percentage}%` }} />
+                  </div>
+                  {fan.adapter && <span className="text-xs text-muted-foreground">{fan.adapter}</span>}
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
       {/* UPS */}
       {hardwareData?.ups && Array.isArray(hardwareData.ups) && hardwareData.ups.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
@@ -1230,7 +1263,6 @@ export default function Hardware() {
               )
             })}
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">Click on a device for detailed hardware information</p>
         </Card>
       )}
 
@@ -1429,41 +1461,6 @@ export default function Hardware() {
         </DialogContent>
       </Dialog>
 
-      {/* Fans */}
-      {hardwareData?.fans && hardwareData.fans.length > 0 && (
-        <Card className="border-border/50 bg-card/50 p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <FanIcon className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">System Fans</h2>
-            <Badge variant="outline" className="ml-auto">
-              {hardwareData.fans.length} fans
-            </Badge>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {hardwareData.fans.map((fan, index) => {
-              const isPercentage = fan.unit === "percent" || fan.unit === "%"
-              const percentage = isPercentage ? fan.speed : Math.min((fan.speed / 5000) * 100, 100)
-
-              return (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{fan.name}</span>
-                    <span className="text-sm font-semibold text-blue-500">
-                      {isPercentage ? `${fan.speed.toFixed(0)} percent` : `${fan.speed.toFixed(0)} ${fan.unit}`}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                    <div className="h-full bg-blue-500 transition-all" style={{ width: `${percentage}%` }} />
-                  </div>
-                  {fan.adapter && <span className="text-xs text-muted-foreground">{fan.adapter}</span>}
-                </div>
-              )
-            })}
-          </div>
-        </Card>
-      )}
-
       {/* Network Summary - Clickable */}
       {hardwareData?.pci_devices &&
         hardwareData.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length > 0 && (
@@ -1562,45 +1559,29 @@ export default function Hardware() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {hardwareData.storage_devices.map((device, index) => {
-              const getDiskTypeBadgeColor = (type: string) => {
-                const lowerType = type.toLowerCase()
-                if (lowerType.includes("nvme")) {
-                  return "bg-purple-500/10 text-purple-500 border-purple-500/20"
-                }
-                if (lowerType.includes("ssd")) {
-                  return "bg-cyan-500/10 text-cyan-500 border-cyan-500/20"
-                }
-                if (lowerType.includes("hdd")) {
-                  return "bg-blue-500/10 text-blue-500 border-blue-500/20"
-                }
-                return "bg-gray-500/10 text-gray-500 border-gray-500/20"
-              }
-
-              return (
-                <div
-                  key={index}
-                  onClick={() => setSelectedDisk(device)}
-                  className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-3 transition-colors hover:bg-background/80"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-sm font-medium truncate flex-1">{device.name}</span>
-                    <Badge className={`${getDiskTypeBadgeColor(device.type)} px-2.5 py-0.5 shrink-0`}>
-                      {device.type}
-                    </Badge>
-                  </div>
-                  {device.size && <p className="text-sm font-medium">{formatMemory(device.size)}</p>}
-                  {device.model && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 break-words">{device.model}</p>
-                  )}
-                  {device.driver && (
-                    <p className="mt-1 font-mono text-xs text-green-500 truncate">Driver: {device.driver}</p>
-                  )}
+            {hardwareData.storage_devices.map((device, index) => (
+              <div
+                key={index}
+                onClick={() => setSelectedDisk(device)}
+                className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-3 transition-colors hover:bg-background/80"
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-sm font-medium truncate flex-1">{device.name}</span>
+                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 px-2.5 py-0.5 shrink-0">
+                    {device.type}
+                  </Badge>
                 </div>
-              )
-            })}
+                {device.size && <p className="text-sm font-medium">{formatMemory(device.size)}</p>}
+                {device.model && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 break-words">{device.model}</p>
+                )}
+                {device.driver && (
+                  <p className="mt-1 font-mono text-xs text-green-500 truncate">Driver: {device.driver}</p>
+                )}
+              </div>
+            ))}
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">Click on a storage device for detailed information</p>
+          <p className="mt-4 text-xs text-muted-foreground">Click on a device for detailed hardware information</p>
         </Card>
       )}
 
@@ -1622,23 +1603,7 @@ export default function Hardware() {
               {selectedDisk.type && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-sm font-medium text-muted-foreground">Type</span>
-                  <Badge
-                    className={(() => {
-                      const lowerType = selectedDisk.type.toLowerCase()
-                      if (lowerType.includes("nvme")) {
-                        return "bg-purple-500/10 text-purple-500 border-purple-500/20"
-                      }
-                      if (lowerType.includes("ssd")) {
-                        return "bg-cyan-500/10 text-cyan-500 border-cyan-500/20"
-                      }
-                      if (lowerType.includes("hdd")) {
-                        return "bg-blue-500/10 text-blue-500 border-blue-500/20"
-                      }
-                      return "bg-gray-500/10 text-gray-500 border-gray-500/20"
-                    })()}
-                  >
-                    {selectedDisk.type}
-                  </Badge>
+                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">{selectedDisk.type}</Badge>
                 </div>
               )}
 
