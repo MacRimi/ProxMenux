@@ -1696,6 +1696,18 @@
     }
   },
   {
+    "name": "Guardian",
+    "slug": "guardian",
+    "desc": "Guardian is a lightweight companion app for Plex that lets you monitor, approve or block devices in real time. It helps you enforce per-user or global policies, stop unwanted sessions automatically and grant temporary access - all through a simple web interface.",
+    "script": "ct/guardian.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/guardian.sh",
+    "categories": [
+      13
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Habitica",
     "slug": "habitica",
     "desc": "Habitica is an open-source habit-building program that treats your life like a role-playing game. Level up as you succeed, lose HP as you fail, and earn Gold to buy weapons and armor!",
@@ -2402,6 +2414,20 @@
       14
     ],
     "notes": [],
+    "type": "ct"
+  },
+  {
+    "name": "LimeSurvey",
+    "slug": "limesurvey",
+    "desc": "LimeSurvey is the simple, quick and anonymous online survey tool that's bursting with juicy insights. Calling students, professionals and enterprises: design a survey and get the best insights, it\u2019s free and as easy as squeezing a lime. Make a free online survey now!",
+    "script": "ct/limesurvey.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/limesurvey.sh",
+    "categories": [
+      25
+    ],
+    "notes": [
+      "You will need to input database credentials into LimeSurvey installer. Use `cat ~/limesurvey.creds` inside LXC."
+    ],
     "type": "ct"
   },
   {
