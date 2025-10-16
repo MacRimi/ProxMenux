@@ -932,7 +932,6 @@ def get_smart_data(disk_name):
                                         print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
                                     elif attr_id == '241':  # Total_LBAs_Written
                                         # Convertir a GB (raw_value es en sectores de 512 bytes)
-                                        # Corrected the conversion for Total_LBAs_Written (ID 241)
                                         try:
                                             raw_int = int(raw_value.replace(',', ''))
                                             total_gb = (raw_int * 512) / (1024 * 1024 * 1024)
@@ -1194,10 +1193,29 @@ def get_proxmox_storage():
                 name = parts[0]
                 storage_type = parts[1]
                 status = parts[2]
-                total = int(parts[3])
-                used = int(parts[4])
-                available = int(parts[5])
-                percent = float(parts[6].rstrip('%')) if len(parts) > 6 else 0.0
+                
+                try:
+                    total = int(parts[3])
+                    used = int(parts[4])
+                    available = int(parts[5])
+                except (ValueError, IndexError):
+                    print(f"[v0] Skipping storage {name} - invalid numeric data")
+                    continue
+                
+                try:
+                    percent = float(parts[6].rstrip('%')) if len(parts) > 6 and parts[6] != 'N/A' else 0.0
+                except (ValueError, IndexError):
+                    percent = 0.0
+                
+                # Si total es 0, significa que hay un error de conexión o el datastore no está disponible
+                if total == 0:
+                    print(f"[v0] Skipping storage {name} - invalid data (total=0, likely connection error)")
+                    continue
+                
+                # Si el status es "inactive", también lo omitimos
+                if status.lower() == "inactive":
+                    print(f"[v0] Skipping storage {name} - status is inactive")
+                    continue
                 
                 # Convert bytes to GB
                 total_gb = round(total / (1024**2), 2)
@@ -2922,7 +2940,7 @@ def get_network_hardware_info(pci_slot):
                     if width_match:
                         net_info['current_link_width'] = f"x{width_match.group(1)}"
         
-        # Get network interface name and status
+        # Get interface name and status
         try:
             result = subprocess.run(['ls', '/sys/class/net/'], 
                                   capture_output=True, text=True, timeout=5)
@@ -2959,8 +2977,6 @@ def get_network_hardware_info(pci_slot):
     
     return net_info
 
-# The get_gpu_info function is updated to include Matrox vendor detection
-# and uses the new identify_gpu_type function.
 def get_gpu_info():
     """Detect and return information about GPUs in the system"""
     gpus = []
@@ -4628,7 +4644,7 @@ def api_hardware():
         print(f"[v0] /api/hardware returning data")
         print(f"[v0] - CPU: {formatted_data['cpu'].get('model', 'Unknown')}")
         print(f"[v0] - Temperatures: {len(formatted_data['temperatures'])} sensors")
-        print(f"[v0] - Fans: {len(formatted_data['fans'])} fans") # Now includes IPMI fans
+        print(f"[v0] - Fans: {len(formatted_data['fans'])} fans") # Includes IPMI fans
         print(f"[v0] - Power supplies: {len(formatted_data['power_supplies'])} PSUs")
         print(f"[v0] - Power meter: {'Yes' if formatted_data['power_meter'] else 'No'}")
         print(f"[v0] - UPS: {'Yes' if formatted_data['ups'] else 'No'}")

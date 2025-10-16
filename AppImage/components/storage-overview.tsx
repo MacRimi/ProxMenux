@@ -396,6 +396,16 @@ export function StorageOverview() {
   const diskHealthBreakdown = getDiskHealthBreakdown()
   const diskTypesBreakdown = getDiskTypesBreakdown()
 
+  const totalProxmoxUsed =
+    proxmoxStorage && proxmoxStorage.storage
+      ? proxmoxStorage.storage
+          .filter((storage) => storage.total > 0 && storage.status.toLowerCase() === "active")
+          .reduce((sum, storage) => sum + storage.used, 0)
+      : 0
+
+  const usagePercent =
+    storageData.total > 0 ? ((totalProxmoxUsed / (storageData.total * 1024)) * 100).toFixed(2) : "0.00"
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -411,14 +421,6 @@ export function StorageOverview() {
       </div>
     )
   }
-
-  const totalProxmoxUsed =
-    proxmoxStorage && proxmoxStorage.storage
-      ? proxmoxStorage.storage.reduce((sum, storage) => sum + storage.used, 0)
-      : 0
-
-  const usagePercent =
-    storageData.total > 0 ? ((totalProxmoxUsed / (storageData.total * 1024)) * 100).toFixed(2) : "0.00"
 
   return (
     <div className="space-y-6">
