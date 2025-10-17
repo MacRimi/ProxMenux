@@ -501,12 +501,11 @@ export function VirtualMachines() {
                 const lxcIP = vm.type === "lxc" ? vmConfigs[vm.vmid] : null
 
                 return (
-                  <div
-                    key={vm.vmid}
-                    className="p-4 rounded-lg border-2 border-accent/20 bg-accent/10 hover:bg-accent/20 transition-colors cursor-pointer"
-                    onClick={() => handleVMClick(vm)}
-                  >
-                    <div className="hidden sm:block">
+                  <div key={vm.vmid}>
+                    <div
+                      className="hidden sm:block p-4 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => handleVMClick(vm)}
+                    >
                       <div className="flex items-center gap-2 flex-wrap mb-3">
                         <Badge variant="outline" className={`text-xs flex-shrink-0 ${getStatusColor(vm.status)}`}>
                           {getStatusIcon(vm.status)}
@@ -592,7 +591,10 @@ export function VirtualMachines() {
                       </div>
                     </div>
 
-                    <div className="sm:hidden">
+                    <div
+                      className="sm:hidden p-4 rounded-lg border border-border bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => handleVMClick(vm)}
+                    >
                       <div className="flex items-center gap-3">
                         {/* Status circle with play/stop icon */}
                         <div
