@@ -1169,78 +1169,86 @@ def get_smart_data(disk_name):
     print(f"[v0] ===== Final SMART data for /dev/{disk_name}: {smart_data} =====")
     return smart_data
 
+# START OF CHANGES FOR get_proxmox_storage
 def get_proxmox_storage():
-    """Get Proxmox storage information using pvesm status"""
+    """Get Proxmox storage information using pvesh (filtered by local node)"""
     try:
-        print("[v0] Getting Proxmox storage with pvesm status...")
-        result = subprocess.run(['pvesm', 'status'], capture_output=True, text=True, timeout=10)
+        local_node = socket.gethostname()
+        print(f"[v0] Getting Proxmox storage for local node: {local_node}")
+        
+        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'storage', '--output-format', 'json'], 
+                              capture_output=True, text=True, timeout=10)
         
         if result.returncode != 0:
-            print(f"[v0] pvesm status failed with return code {result.returncode}")
+            print(f"[v0] pvesh command failed with return code {result.returncode}")
             print(f"[v0] stderr: {result.stderr}")
             return {
-                'error': 'pvesm command not available or failed',
+                'error': 'pvesh command not available or failed',
                 'storage': []
             }
         
         storage_list = []
-        lines = result.stdout.strip().split('\n')
+        resources = json.loads(result.stdout)
         
-        # Parse each storage line
-        for line in lines[1:]:  # Skip header
-            parts = line.split()
-            if len(parts) >= 6:
-                name = parts[0]
-                storage_type = parts[1]
-                status = parts[2]
-                
-                try:
-                    total = int(parts[3])
-                    used = int(parts[4])
-                    available = int(parts[5])
-                except (ValueError, IndexError):
-                    print(f"[v0] Skipping storage {name} - invalid numeric data")
-                    continue
-                
-                try:
-                    percent = float(parts[6].rstrip('%')) if len(parts) > 6 and parts[6] != 'N/A' else 0.0
-                except (ValueError, IndexError):
-                    percent = 0.0
-                
-                # Si total es 0, significa que hay un error de conexión o el datastore no está disponible
-                if total == 0:
-                    print(f"[v0] Skipping storage {name} - invalid data (total=0, likely connection error)")
-                    continue
-                
-                # Si el status es "inactive", también lo omitimos
-                if status.lower() == "inactive":
-                    print(f"[v0] Skipping storage {name} - status is inactive")
-                    continue
-                
-                # Convert bytes to GB
-                total_gb = round(total / (1024**2), 2)
-                used_gb = round(used / (1024**2), 2)
-                available_gb = round(available / (1024**2), 2)
-                
-                storage_info = {
-                    'name': name,
-                    'type': storage_type,
-                    'status': status,
-                    'total': total_gb,
-                    'used': used_gb,
-                    'available': available_gb,
-                    'percent': round(percent, 2)
-                }
-                
-                print(f"[v0] Found storage: {name} ({storage_type}) - {used_gb}/{total_gb} GB ({percent}%)")
-                storage_list.append(storage_info)
+        for resource in resources:
+            node = resource.get('node', '')
+            
+            # Filtrar solo storage del nodo local
+            if node != local_node:
+                print(f"[v0] Skipping storage {resource.get('storage')} from remote node: {node}")
+                continue
+            
+            name = resource.get('storage', 'unknown')
+            storage_type = resource.get('plugintype', 'unknown')
+            status = resource.get('status', 'unknown')
+            
+            try:
+                total = int(resource.get('maxdisk', 0))
+                used = int(resource.get('disk', 0))
+                available = total - used if total > 0 else 0
+            except (ValueError, TypeError):
+                print(f"[v0] Skipping storage {name} - invalid numeric data")
+                continue
+            
+            # Si total es 0, significa que hay un error de conexión o el datastore no está disponible
+            if total == 0:
+                print(f"[v0] Skipping storage {name} - invalid data (total=0, likely connection error)")
+                continue
+            
+            # Si el status es "inactive", también lo omitimos
+            if status.lower() != "available":
+                print(f"[v0] Skipping storage {name} - status is not available: {status}")
+                continue
+            
+            # Calcular porcentaje
+            percent = (used / total * 100) if total > 0 else 0.0
+            
+            # Convert bytes to GB
+            total_gb = round(total / (1024**3), 2)
+            used_gb = round(used / (1024**3), 2)
+            available_gb = round(available / (1024**3), 2)
+            
+            storage_info = {
+                'name': name,
+                'type': storage_type,
+                'status': 'active',  # Normalizar status para compatibilidad con frontend
+                'total': total_gb,
+                'used': used_gb,
+                'available': available_gb,
+                'percent': round(percent, 2),
+                'node': node  # Incluir información del nodo
+            }
+            
+            print(f"[v0] Found storage on {node}: {name} ({storage_type}) - {used_gb}/{total_gb} GB ({percent:.2f}%)")
+            storage_list.append(storage_info)
         
+        print(f"[v0] Total storage entries on local node {local_node}: {len(storage_list)}")
         return {'storage': storage_list}
         
     except FileNotFoundError:
-        print("[v0] pvesm command not found - Proxmox not installed or not in PATH")
+        print("[v0] pvesh command not found - Proxmox not installed or not in PATH")
         return {
-            'error': 'pvesm command not found - Proxmox not installed',
+            'error': 'pvesh command not found - Proxmox not installed',
             'storage': []
         }
     except Exception as e:
@@ -1251,6 +1259,7 @@ def get_proxmox_storage():
             'error': f'Unable to get Proxmox storage: {str(e)}',
             'storage': []
         }
+# END OF CHANGES FOR get_proxmox_storage
 
 def get_interface_type(interface_name):
     """Detect the type of network interface"""
@@ -1814,7 +1823,10 @@ def get_ups_info():
                                 ups_data['status'] = value
                             elif key == 'battery.charge':
                                 ups_data['battery_charge'] = f"{value}%"
-                                ups_data['battery_charge_raw'] = float(value)
+                                try:
+                                    ups_data['battery_charge_raw'] = float(value)
+                                except ValueError:
+                                    ups_data['battery_charge_raw'] = None
                             elif key == 'battery.runtime':
                                 try:
                                     runtime_sec = int(value)
@@ -1823,13 +1835,17 @@ def get_ups_info():
                                     ups_data['time_left_seconds'] = runtime_sec
                                 except ValueError:
                                     ups_data['time_left'] = value
+                                    ups_data['time_left_seconds'] = None
                             elif key == 'battery.voltage':
                                 ups_data['battery_voltage'] = f"{value}V"
                             elif key == 'battery.date':
                                 ups_data['battery_date'] = value
                             elif key == 'ups.load':
                                 ups_data['load_percent'] = f"{value}%"
-                                ups_data['load_percent_raw'] = float(value)
+                                try:
+                                    ups_data['load_percent_raw'] = float(value)
+                                except ValueError:
+                                    ups_data['load_percent_raw'] = None
                             elif key == 'input.voltage':
                                 ups_data['input_voltage'] = f"{value}V"
                             elif key == 'input.frequency':
