@@ -249,54 +249,9 @@ export function NetworkMetrics() {
             </p>
           </CardContent>
         </Card>
-
-        <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Firewall Status</CardTitle>
-            <Router className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">Active</div>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
-                Protected
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">System protected</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Network Health</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground mb-2">
-              <Badge variant="outline" className={healthColor}>
-                {healthStatus}
-              </Badge>
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Packet Loss:</span>
-                <span
-                  className={`font-medium ${Number.parseFloat(avgPacketLoss) > 1 ? "text-red-500" : "text-green-500"}`}
-                >
-                  {avgPacketLoss}%
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Errors:</span>
-                <span className={`font-medium ${totalErrors > 100 ? "text-red-500" : "text-green-500"}`}>
-                  {totalErrors}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
+      {/* Physical Interfaces */}
       {networkData.physical_interfaces && networkData.physical_interfaces.length > 0 && (
         <Card className="bg-card border-border">
           <CardHeader>
@@ -316,7 +271,7 @@ export function NetworkMetrics() {
                 return (
                   <div
                     key={index}
-                    className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    className="flex flex-col gap-3 p-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
                     onClick={() => setSelectedInterface(interface_)}
                   >
                     {/* First row: Icon, Name, Type Badge, Status */}
@@ -402,7 +357,7 @@ export function NetworkMetrics() {
                 return (
                   <div
                     key={index}
-                    className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    className="hidden sm:flex flex-col gap-3 p-4 rounded-lg border border-white/10 bg-card hover:bg-white/5 transition-colors cursor-pointer"
                     onClick={() => setSelectedInterface(interface_)}
                   >
                     {/* First row: Icon, Name, Type Badge, Physical Interface (responsive), Status */}
@@ -517,7 +472,7 @@ export function NetworkMetrics() {
                 return (
                   <div
                     key={index}
-                    className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    className="sm:hidden flex flex-col gap-3 p-4 rounded-lg border border-white/10 bg-white/5 transition-colors cursor-pointer"
                     onClick={() => setSelectedInterface(interface_)}
                   >
                     {/* First row: Icon, Name, VM/LXC Badge, VM Name, Status */}

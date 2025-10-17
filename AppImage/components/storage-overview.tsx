@@ -644,7 +644,7 @@ export function StorageOverview() {
             {storageData.disks.map((disk) => (
               <div
                 key={disk.name}
-                className="border border-white/10 rounded-lg p-4 cursor-pointer bg-white/5 hover:bg-white/10 dark:bg-white/5 dark:hover:bg-white/10 transition-colors"
+                className="border border-white/10 rounded-lg p-4 cursor-pointer bg-card hover:bg-white/5 dark:bg-card dark:hover:bg-white/5 transition-colors"
                 onClick={() => handleDiskClick(disk)}
               >
                 <div className="space-y-2 mb-3">
