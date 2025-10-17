@@ -642,69 +642,135 @@ export function StorageOverview() {
         <CardContent>
           <div className="space-y-4">
             {storageData.disks.map((disk) => (
-              <div
-                key={disk.name}
-                className="border border-white/10 rounded-lg p-4 cursor-pointer bg-card hover:bg-white/5 dark:bg-card dark:hover:bg-white/5 transition-colors"
-                onClick={() => handleDiskClick(disk)}
-              >
-                <div className="space-y-2 mb-3">
-                  {/* Row 1: Device name and type badge */}
-                  <div className="flex items-center gap-2">
-                    <HardDrive className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                    <h3 className="font-semibold">/dev/{disk.name}</h3>
-                    <Badge className={getDiskTypeBadge(disk.name, disk.rotation_rate).className}>
-                      {getDiskTypeBadge(disk.name, disk.rotation_rate).label}
-                    </Badge>
+              <div key={disk.name}>
+                <div
+                  className="sm:hidden border border-white/10 rounded-lg p-4 cursor-pointer bg-white/5 transition-colors"
+                  onClick={() => handleDiskClick(disk)}
+                >
+                  <div className="space-y-2 mb-3">
+                    {/* Row 1: Device name and type badge */}
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      <h3 className="font-semibold">/dev/{disk.name}</h3>
+                      <Badge className={getDiskTypeBadge(disk.name, disk.rotation_rate).className}>
+                        {getDiskTypeBadge(disk.name, disk.rotation_rate).label}
+                      </Badge>
+                    </div>
+
+                    {/* Row 2: Model, temperature, and health status */}
+                    <div className="flex items-center justify-between gap-3 pl-7">
+                      {disk.model && disk.model !== "Unknown" && (
+                        <p className="text-sm text-muted-foreground truncate flex-1 min-w-0">{disk.model}</p>
+                      )}
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        {disk.temperature > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Thermometer
+                              className={`h-4 w-4 ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}
+                            />
+                            <span
+                              className={`text-sm font-medium ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}
+                            >
+                              {disk.temperature}°C
+                            </span>
+                          </div>
+                        )}
+                        {getHealthBadge(disk.health)}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Row 2: Model, temperature, and health status */}
-                  <div className="flex items-center justify-between gap-3 pl-7">
-                    {disk.model && disk.model !== "Unknown" && (
-                      <p className="text-sm text-muted-foreground truncate flex-1 min-w-0">{disk.model}</p>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    {disk.size_formatted && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Size</p>
+                        <p className="font-medium">{disk.size_formatted}</p>
+                      </div>
                     )}
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      {disk.temperature > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Thermometer
-                            className={`h-4 w-4 ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}
-                          />
-                          <span
-                            className={`text-sm font-medium ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}
-                          >
-                            {disk.temperature}°C
-                          </span>
-                        </div>
-                      )}
-                      {getHealthBadge(disk.health)}
-                    </div>
+                    {disk.smart_status && disk.smart_status !== "unknown" && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">SMART Status</p>
+                        <p className="font-medium capitalize">{disk.smart_status}</p>
+                      </div>
+                    )}
+                    {disk.power_on_hours !== undefined && disk.power_on_hours > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Power On Time</p>
+                        <p className="font-medium">{formatHours(disk.power_on_hours)}</p>
+                      </div>
+                    )}
+                    {disk.serial && disk.serial !== "Unknown" && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Serial</p>
+                        <p className="font-medium text-xs">{disk.serial}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  {disk.size_formatted && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Size</p>
-                      <p className="font-medium">{disk.size_formatted}</p>
+                <div
+                  className="hidden sm:block border border-white/10 rounded-lg p-4 cursor-pointer bg-card hover:bg-white/5 transition-colors"
+                  onClick={() => handleDiskClick(disk)}
+                >
+                  <div className="space-y-2 mb-3">
+                    {/* Row 1: Device name and type badge */}
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      <h3 className="font-semibold">/dev/{disk.name}</h3>
+                      <Badge className={getDiskTypeBadge(disk.name, disk.rotation_rate).className}>
+                        {getDiskTypeBadge(disk.name, disk.rotation_rate).label}
+                      </Badge>
                     </div>
-                  )}
-                  {disk.smart_status && disk.smart_status !== "unknown" && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">SMART Status</p>
-                      <p className="font-medium capitalize">{disk.smart_status}</p>
+
+                    {/* Row 2: Model, temperature, and health status */}
+                    <div className="flex items-center justify-between gap-3 pl-7">
+                      {disk.model && disk.model !== "Unknown" && (
+                        <p className="text-sm text-muted-foreground truncate flex-1 min-w-0">{disk.model}</p>
+                      )}
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        {disk.temperature > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Thermometer
+                              className={`h-4 w-4 ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}
+                            />
+                            <span
+                              className={`text-sm font-medium ${getTempColor(disk.temperature, disk.name, disk.rotation_rate)}`}
+                            >
+                              {disk.temperature}°C
+                            </span>
+                          </div>
+                        )}
+                        {getHealthBadge(disk.health)}
+                      </div>
                     </div>
-                  )}
-                  {disk.power_on_hours !== undefined && disk.power_on_hours > 0 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Power On Time</p>
-                      <p className="font-medium">{formatHours(disk.power_on_hours)}</p>
-                    </div>
-                  )}
-                  {disk.serial && disk.serial !== "Unknown" && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Serial</p>
-                      <p className="font-medium text-xs">{disk.serial}</p>
-                    </div>
-                  )}
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    {disk.size_formatted && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Size</p>
+                        <p className="font-medium">{disk.size_formatted}</p>
+                      </div>
+                    )}
+                    {disk.smart_status && disk.smart_status !== "unknown" && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">SMART Status</p>
+                        <p className="font-medium capitalize">{disk.smart_status}</p>
+                      </div>
+                    )}
+                    {disk.power_on_hours !== undefined && disk.power_on_hours > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Power On Time</p>
+                        <p className="font-medium">{formatHours(disk.power_on_hours)}</p>
+                      </div>
+                    )}
+                    {disk.serial && disk.serial !== "Unknown" && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Serial</p>
+                        <p className="font-medium text-xs">{disk.serial}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
