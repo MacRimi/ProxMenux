@@ -298,150 +298,156 @@ export function ProxmoxDashboard() {
       <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
           <div className="sticky top-[88px] md:top-[72px] left-0 right-0 z-40 mt-4 md:mt-4">
-            <div className="container mx-auto">
-              <TabsList className="hidden md:grid w-full grid-cols-6 bg-card border border-border">
-                <TabsTrigger
-                  value="overview"
-                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-                >
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger
-                  value="storage"
-                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-                >
-                  Storage
-                </TabsTrigger>
-                <TabsTrigger
-                  value="network"
-                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-                >
-                  Network
-                </TabsTrigger>
-                <TabsTrigger
-                  value="vms"
-                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-                >
-                  VMs & LXCs
-                </TabsTrigger>
-                <TabsTrigger
-                  value="hardware"
-                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-                >
-                  Hardware
-                </TabsTrigger>
-                <TabsTrigger
-                  value="logs"
-                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-                >
-                  System Logs
-                </TabsTrigger>
-              </TabsList>
+            <div
+              className={`transition-transform duration-300 ${
+                scrollDirection === "down" && !isAtTop ? "-translate-y-[200px]" : "translate-y-0"
+              }`}
+            >
+              <div className="container mx-auto">
+                <TabsList className="hidden md:grid w-full grid-cols-6 bg-card border border-border">
+                  <TabsTrigger
+                    value="overview"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+                  >
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="storage"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+                  >
+                    Storage
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="network"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+                  >
+                    Network
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="vms"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+                  >
+                    VMs & LXCs
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="hardware"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+                  >
+                    Hardware
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="logs"
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+                  >
+                    System Logs
+                  </TabsTrigger>
+                </TabsList>
 
-              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <div className="md:hidden">
-                  <SheetTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between bg-card border-border">
-                      <span>{getActiveTabLabel()}</span>
-                      <Menu className="h-4 w-4" />
-                    </Button>
-                  </SheetTrigger>
-                </div>
-                <SheetContent side="top" className="bg-card border-border">
-                  <div className="flex flex-col gap-2 mt-4">
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setActiveTab("overview")
-                        setMobileMenuOpen(false)
-                      }}
-                      className={`w-full justify-start gap-3 ${
-                        activeTab === "overview"
-                          ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                          : ""
-                      }`}
-                    >
-                      <LayoutDashboard className="h-5 w-5" />
-                      <span>Overview</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setActiveTab("storage")
-                        setMobileMenuOpen(false)
-                      }}
-                      className={`w-full justify-start gap-3 ${
-                        activeTab === "storage"
-                          ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                          : ""
-                      }`}
-                    >
-                      <HardDrive className="h-5 w-5" />
-                      <span>Storage</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setActiveTab("network")
-                        setMobileMenuOpen(false)
-                      }}
-                      className={`w-full justify-start gap-3 ${
-                        activeTab === "network"
-                          ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                          : ""
-                      }`}
-                    >
-                      <NetworkIcon className="h-5 w-5" />
-                      <span>Network</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setActiveTab("vms")
-                        setMobileMenuOpen(false)
-                      }}
-                      className={`w-full justify-start gap-3 ${
-                        activeTab === "vms"
-                          ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                          : ""
-                      }`}
-                    >
-                      <Box className="h-5 w-5" />
-                      <span>VMs & LXCs</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setActiveTab("hardware")
-                        setMobileMenuOpen(false)
-                      }}
-                      className={`w-full justify-start gap-3 ${
-                        activeTab === "hardware"
-                          ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                          : ""
-                      }`}
-                    >
-                      <Cpu className="h-5 w-5" />
-                      <span>Hardware</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setActiveTab("logs")
-                        setMobileMenuOpen(false)
-                      }}
-                      className={`w-full justify-start gap-3 ${
-                        activeTab === "logs"
-                          ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                          : ""
-                      }`}
-                    >
-                      <FileText className="h-5 w-5" />
-                      <span>System Logs</span>
-                    </Button>
+                <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                  <div className="md:hidden">
+                    <SheetTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between bg-card border-border">
+                        <span>{getActiveTabLabel()}</span>
+                        <Menu className="h-4 w-4" />
+                      </Button>
+                    </SheetTrigger>
                   </div>
-                </SheetContent>
-              </Sheet>
+                  <SheetContent side="top" className="bg-card border-border">
+                    <div className="flex flex-col gap-2 mt-4">
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setActiveTab("overview")
+                          setMobileMenuOpen(false)
+                        }}
+                        className={`w-full justify-start gap-3 ${
+                          activeTab === "overview"
+                            ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                            : ""
+                        }`}
+                      >
+                        <LayoutDashboard className="h-5 w-5" />
+                        <span>Overview</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setActiveTab("storage")
+                          setMobileMenuOpen(false)
+                        }}
+                        className={`w-full justify-start gap-3 ${
+                          activeTab === "storage"
+                            ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                            : ""
+                        }`}
+                      >
+                        <HardDrive className="h-5 w-5" />
+                        <span>Storage</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setActiveTab("network")
+                          setMobileMenuOpen(false)
+                        }}
+                        className={`w-full justify-start gap-3 ${
+                          activeTab === "network"
+                            ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                            : ""
+                        }`}
+                      >
+                        <NetworkIcon className="h-5 w-5" />
+                        <span>Network</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setActiveTab("vms")
+                          setMobileMenuOpen(false)
+                        }}
+                        className={`w-full justify-start gap-3 ${
+                          activeTab === "vms"
+                            ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                            : ""
+                        }`}
+                      >
+                        <Box className="h-5 w-5" />
+                        <span>VMs & LXCs</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setActiveTab("hardware")
+                          setMobileMenuOpen(false)
+                        }}
+                        className={`w-full justify-start gap-3 ${
+                          activeTab === "hardware"
+                            ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                            : ""
+                        }`}
+                      >
+                        <Cpu className="h-5 w-5" />
+                        <span>Hardware</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setActiveTab("logs")
+                          setMobileMenuOpen(false)
+                        }}
+                        className={`w-full justify-start gap-3 ${
+                          activeTab === "logs"
+                            ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                            : ""
+                        }`}
+                      >
+                        <FileText className="h-5 w-5" />
+                        <span>System Logs</span>
+                      </Button>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
             </div>
           </div>
 
