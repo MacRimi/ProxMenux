@@ -503,7 +503,7 @@ export function VirtualMachines() {
                 return (
                   <div key={vm.vmid}>
                     <div
-                      className="hidden sm:block p-4 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
+                      className="hidden sm:block p-4 rounded-lg border border-border bg-card hover:bg-white/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
                       onClick={() => handleVMClick(vm)}
                     >
                       <div className="flex items-center gap-2 flex-wrap mb-3">
@@ -592,7 +592,7 @@ export function VirtualMachines() {
                     </div>
 
                     <div
-                      className="sm:hidden p-4 rounded-lg border border-border bg-muted/50 transition-colors cursor-pointer"
+                      className="sm:hidden p-4 rounded-lg border border-white/10 bg-white/5 dark:bg-white/5 transition-colors cursor-pointer"
                       onClick={() => handleVMClick(vm)}
                     >
                       <div className="flex items-center gap-3">
