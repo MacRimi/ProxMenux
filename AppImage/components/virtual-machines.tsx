@@ -596,18 +596,11 @@ export function VirtualMachines() {
                       onClick={() => handleVMClick(vm)}
                     >
                       <div className="flex items-center gap-3">
-                        {/* Status circle with play/stop icon */}
-                        <div
-                          className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                            vm.status === "running" ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-                          }`}
-                        >
-                          {vm.status === "running" ? (
-                            <Play className="h-4 w-4 fill-current" />
-                          ) : (
-                            <Square className="h-4 w-4 fill-current" />
-                          )}
-                        </div>
+                        {vm.status === "running" ? (
+                          <Play className="h-5 w-5 text-green-500 fill-current flex-shrink-0" />
+                        ) : (
+                          <Square className="h-5 w-5 text-red-500 fill-current flex-shrink-0" />
+                        )}
 
                         <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
                           {typeBadge.label}
@@ -620,11 +613,7 @@ export function VirtualMachines() {
                           </div>
                         </div>
 
-                        {/* Status icons */}
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          {/* Network icon - always green */}
-                          <Network className="h-4 w-4 text-green-500" />
-
                           {/* CPU icon - color based on usage */}
                           <Cpu className={`h-4 w-4 ${getIconColor(Number.parseFloat(cpuPercent))}`} />
 

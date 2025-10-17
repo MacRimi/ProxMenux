@@ -866,7 +866,7 @@ export function SystemLogs() {
                   {displayedLogs.map((log, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer"
+                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 dark:bg-white/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
                       onClick={() => {
                         if (log.isEvent) {
                           setSelectedEvent(log.eventData)
@@ -958,7 +958,7 @@ export function SystemLogs() {
                   {backups.map((backup, index) => (
                     <div
                       key={index}
-                      className="flex items-start space-x-4 p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer"
+                      className="flex items-start space-x-4 p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 dark:bg-white/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
                       onClick={() => {
                         setSelectedBackup(backup)
                         setIsBackupModalOpen(true)
@@ -1011,7 +1011,7 @@ export function SystemLogs() {
                   {notifications.map((notification, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer overflow-hidden w-full"
+                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 dark:bg-white/5 dark:hover:bg-white/10 transition-colors cursor-pointer overflow-hidden w-full"
                       onClick={() => {
                         setSelectedNotification(notification)
                         setIsNotificationModalOpen(true)
