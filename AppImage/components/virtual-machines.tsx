@@ -145,6 +145,12 @@ const getUsageColor = (percent: number): string => {
   return "text-white"
 }
 
+const getIconColor = (percent: number): string => {
+  if (percent >= 80) return "text-red-500"
+  if (percent >= 50) return "text-yellow-500"
+  return "text-green-500"
+}
+
 const getProgressColor = (percent: number): string => {
   if (percent >= 80) return "[&>div]:bg-red-500"
   if (percent >= 50) return "[&>div]:bg-yellow-500"
@@ -586,50 +592,41 @@ export function VirtualMachines() {
                       </div>
                     </div>
 
-                    <div className="sm:hidden space-y-2">
-                      {/* Line 1: Status badge + Type badge + Name + ID */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className={`text-xs flex-shrink-0 p-1.5 ${getStatusColor(vm.status)}`}>
-                          {getStatusIcon(vm.status)}
-                        </Badge>
-                        <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
-                          {typeBadge.icon}
-                          {typeBadge.label}
-                        </Badge>
-                        <span className="font-semibold text-foreground">{vm.name}</span>
-                        <span className="text-sm text-muted-foreground">ID: {vm.vmid}</span>
-                      </div>
-
-                      {/* Line 2: IP + Uptime */}
-                      <div className="flex items-center gap-3 text-sm">
-                        {lxcIP && (
-                          <span
-                            className={`flex items-center gap-1 ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
-                          >
-                            <Network className="h-3 w-3" />
-                            {lxcIP}
-                          </span>
-                        )}
-                        <span className="text-muted-foreground">Uptime: {formatUptime(vm.uptime)}</span>
-                      </div>
-
-                      {/* Line 3: CPU, Memory, Disk (numbers only with colors) */}
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-1">
-                          <Cpu className="h-3 w-3 text-blue-500" />
-                          <span className={getUsageColor(Number.parseFloat(cpuPercent))}>{cpuPercent}%</span>
+                    <div className="sm:hidden">
+                      <div className="flex items-center gap-3">
+                        {/* Status circle with play/stop icon */}
+                        <div
+                          className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                            vm.status === "running" ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
+                          }`}
+                        >
+                          {vm.status === "running" ? (
+                            <Play className="h-4 w-4 fill-current" />
+                          ) : (
+                            <Square className="h-4 w-4 fill-current" />
+                          )}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <MemoryStick className="h-3 w-3 text-blue-500" />
-                          <span className={getUsageColor(Number.parseFloat(memPercent))}>
-                            {memGB}/{maxMemGB} GB
-                          </span>
+
+                        {/* Name and ID */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-foreground truncate">
+                            {vm.name} ({vm.vmid})
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <HardDrive className="h-3 w-3 text-blue-500" />
-                          <span className={getUsageColor(Number.parseFloat(diskPercent))}>
-                            {diskGB}/{maxDiskGB} GB
-                          </span>
+
+                        {/* Status icons */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {/* Network icon - always green */}
+                          <Network className="h-4 w-4 text-green-500" />
+
+                          {/* CPU icon - color based on usage */}
+                          <Cpu className={`h-4 w-4 ${getIconColor(Number.parseFloat(cpuPercent))}`} />
+
+                          {/* Memory icon - color based on usage */}
+                          <MemoryStick className={`h-4 w-4 ${getIconColor(Number.parseFloat(memPercent))}`} />
+
+                          {/* Disk icon - color based on usage */}
+                          <HardDrive className={`h-4 w-4 ${getIconColor(Number.parseFloat(diskPercent))}`} />
                         </div>
                       </div>
                     </div>
