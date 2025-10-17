@@ -356,7 +356,7 @@ export default function Hardware() {
 
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {hardwareData.memory_modules.map((module, index) => (
-              <div key={index} className="rounded-lg border border-border/30 bg-background/50 p-4">
+              <div key={index} className="rounded-lg border border-border/30 bg-background/60 p-4">
                 <div className="mb-2 font-medium text-sm">{module.slot}</div>
                 <div className="space-y-1">
                   {module.size && (
@@ -636,7 +636,7 @@ export default function Hardware() {
                 <div
                   key={index}
                   onClick={() => handleGPUClick(gpu)}
-                  className="cursor-pointer rounded-lg border border-border/30 bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+                  className="cursor-pointer rounded-lg border border-border/30 bg-muted/60 p-4 transition-colors hover:bg-muted/70"
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <span className="font-medium text-sm">{gpu.name}</span>
@@ -1021,7 +1021,7 @@ export default function Hardware() {
               <div
                 key={index}
                 onClick={() => setSelectedPCIDevice(device)}
-                className="cursor-pointer rounded-lg border border-border/30 bg-muted/30 p-3 transition-colors hover:bg-muted/50"
+                className="cursor-pointer rounded-lg border border-border/30 bg-muted/60 p-3 transition-colors hover:bg-muted/70"
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{device.type}</Badge>
@@ -1100,7 +1100,7 @@ export default function Hardware() {
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border border-border/30 bg-background/50 p-4">
+            <div className="flex items-center justify-between rounded-lg border border-border/30 bg-background/60 p-4">
               <div className="space-y-1">
                 <p className="text-sm font-medium">{hardwareData.power_meter.name}</p>
                 {hardwareData.power_meter.adapter && (
@@ -1129,7 +1129,7 @@ export default function Hardware() {
 
           <div className="grid gap-3 md:grid-cols-2">
             {hardwareData.power_supplies.map((psu, index) => (
-              <div key={index} className="rounded-lg border border-border/30 bg-background/50 p-4">
+              <div key={index} className="rounded-lg border border-border/30 bg-background/60 p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{psu.name}</span>
                   {psu.status && (
@@ -1210,7 +1210,7 @@ export default function Hardware() {
                 <div
                   key={index}
                   onClick={() => setSelectedUPS(ups)}
-                  className="cursor-pointer rounded-lg border border-border/30 bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+                  className="cursor-pointer rounded-lg border border-border/30 bg-muted/60 p-4 transition-colors hover:bg-muted/70"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex-1 min-w-0">
@@ -1480,7 +1480,7 @@ export default function Hardware() {
                   <div
                     key={index}
                     onClick={() => setSelectedNetwork(device)}
-                    className="cursor-pointer rounded-lg border border-border/30 bg-muted/30 p-3 transition-colors hover:bg-muted/50"
+                    className="cursor-pointer rounded-lg border border-border/30 bg-muted/60 p-3 transition-colors hover:bg-muted/70"
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="text-sm font-medium line-clamp-2 break-words flex-1">{device.device}</span>
@@ -1563,7 +1563,7 @@ export default function Hardware() {
               <div
                 key={index}
                 onClick={() => setSelectedDisk(device)}
-                className="cursor-pointer rounded-lg border border-border/30 bg-muted/30 p-3 transition-colors hover:bg-muted/50"
+                className="cursor-pointer rounded-lg border border-border/30 bg-muted/60 p-3 transition-colors hover:bg-muted/70"
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className="text-sm font-medium truncate flex-1">{device.name}</span>

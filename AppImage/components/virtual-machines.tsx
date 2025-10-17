@@ -503,7 +503,7 @@ export function VirtualMachines() {
                 return (
                   <div
                     key={vm.vmid}
-                    className="p-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+                    className="p-4 rounded-lg border border-border bg-muted/60 hover:bg-muted/70 transition-colors cursor-pointer"
                     onClick={() => handleVMClick(vm)}
                   >
                     <div className="hidden sm:block">
