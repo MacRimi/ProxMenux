@@ -503,7 +503,7 @@ export function VirtualMachines() {
                 return (
                   <div
                     key={vm.vmid}
-                    className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    className="p-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
                     onClick={() => handleVMClick(vm)}
                   >
                     <div className="hidden sm:block">
@@ -606,6 +606,10 @@ export function VirtualMachines() {
                             <Square className="h-4 w-4 fill-current" />
                           )}
                         </div>
+
+                        <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
+                          {typeBadge.label}
+                        </Badge>
 
                         {/* Name and ID */}
                         <div className="flex-1 min-w-0">

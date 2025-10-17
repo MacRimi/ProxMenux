@@ -636,7 +636,7 @@ export default function Hardware() {
                 <div
                   key={index}
                   onClick={() => handleGPUClick(gpu)}
-                  className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-4 transition-colors hover:bg-background/80"
+                  className="cursor-pointer rounded-lg border border-border/30 bg-muted/30 p-4 transition-colors hover:bg-muted/50"
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <span className="font-medium text-sm">{gpu.name}</span>
@@ -1021,7 +1021,7 @@ export default function Hardware() {
               <div
                 key={index}
                 onClick={() => setSelectedPCIDevice(device)}
-                className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-3 transition-colors hover:bg-background/80"
+                className="cursor-pointer rounded-lg border border-border/30 bg-muted/30 p-3 transition-colors hover:bg-muted/50"
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{device.type}</Badge>
@@ -1210,7 +1210,7 @@ export default function Hardware() {
                 <div
                   key={index}
                   onClick={() => setSelectedUPS(ups)}
-                  className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-4 transition-colors hover:bg-background/80"
+                  className="cursor-pointer rounded-lg border border-border/30 bg-muted/30 p-4 transition-colors hover:bg-muted/50"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex-1 min-w-0">
@@ -1480,7 +1480,7 @@ export default function Hardware() {
                   <div
                     key={index}
                     onClick={() => setSelectedNetwork(device)}
-                    className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-3 transition-colors hover:bg-background/80"
+                    className="cursor-pointer rounded-lg border border-border/30 bg-muted/30 p-3 transition-colors hover:bg-muted/50"
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="text-sm font-medium line-clamp-2 break-words flex-1">{device.device}</span>
@@ -1563,7 +1563,7 @@ export default function Hardware() {
               <div
                 key={index}
                 onClick={() => setSelectedDisk(device)}
-                className="cursor-pointer rounded-lg border border-border/30 bg-background/50 p-3 transition-colors hover:bg-background/80"
+                className="cursor-pointer rounded-lg border border-border/30 bg-muted/30 p-3 transition-colors hover:bg-muted/50"
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className="text-sm font-medium truncate flex-1">{device.name}</span>
