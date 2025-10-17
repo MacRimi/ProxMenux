@@ -316,7 +316,7 @@ export function NetworkMetrics() {
                 return (
                   <div
                     key={index}
-                    className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    className="flex flex-col gap-3 p-4 rounded-lg border border-white/10 bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
                     onClick={() => setSelectedInterface(interface_)}
                   >
                     {/* First row: Icon, Name, Type Badge, Status */}
@@ -402,7 +402,7 @@ export function NetworkMetrics() {
                 return (
                   <div
                     key={index}
-                    className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    className="flex flex-col gap-3 p-4 rounded-lg border border-white/10 bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
                     onClick={() => setSelectedInterface(interface_)}
                   >
                     {/* First row: Icon, Name, Type Badge, Physical Interface (responsive), Status */}
@@ -517,7 +517,7 @@ export function NetworkMetrics() {
                 return (
                   <div
                     key={index}
-                    className="flex flex-col gap-3 p-4 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"
+                    className="flex flex-col gap-3 p-4 rounded-lg border border-white/10 bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
                     onClick={() => setSelectedInterface(interface_)}
                   >
                     {/* First row: Icon, Name, VM/LXC Badge, VM Name, Status */}
