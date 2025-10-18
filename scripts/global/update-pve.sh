@@ -137,13 +137,13 @@ EOF
 Types: deb
 URIs: http://deb.debian.org/debian/
 Suites: ${TARGET_CODENAME} ${TARGET_CODENAME}-updates
-Components: main contrib non-free-firmware
+Components: main contrib non-free non-free-firmware
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
 Types: deb
 URIs: http://security.debian.org/debian-security/
 Suites: ${TARGET_CODENAME}-security
-Components: main contrib non-free-firmware
+Components: main contrib non-free non-free-firmware
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
 
