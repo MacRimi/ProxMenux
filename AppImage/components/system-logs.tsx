@@ -26,7 +26,6 @@ import {
   Mail,
   Menu,
   Terminal,
-  CalendarDays,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -108,7 +107,7 @@ export function SystemLogs() {
   const [serviceFilter, setServiceFilter] = useState("all")
   const [activeTab, setActiveTab] = useState("logs")
 
-  const [displayedLogsCount, setDisplayedLogsCount] = useState(500)
+  const [displayedLogsCount, setDisplayedLogsCount] = useState(50) // Increased from 500 to 50 for initial load, will use pagination
 
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
@@ -422,6 +421,48 @@ export function SystemLogs() {
     }
   }
 
+  const logsOnly: CombinedLogEntry[] = logs
+    .map((log) => ({ ...log, isEvent: false, sortTimestamp: new Date(log.timestamp).getTime() }))
+    .sort((a, b) => b.sortTimestamp - a.sortTimestamp)
+
+  const eventsOnly: CombinedLogEntry[] = events
+    .map((event) => ({
+      timestamp: event.starttime,
+      level: event.level,
+      service: event.type,
+      message: `${event.type}${event.vmid ? ` (VM/CT ${event.vmid})` : ""} - ${event.status}`,
+      source: `Node: ${event.node} • User: ${event.user}`,
+      isEvent: true,
+      eventData: event,
+      sortTimestamp: new Date(event.starttime).getTime(),
+    }))
+    .sort((a, b) => b.sortTimestamp - a.sortTimestamp)
+
+  // Filter logs only
+  const filteredLogsOnly = logsOnly.filter((log) => {
+    const matchesSearch =
+      log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.service.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesLevel = levelFilter === "all" || log.level === levelFilter
+    const matchesService = serviceFilter === "all" || log.service === serviceFilter
+
+    return matchesSearch && matchesLevel && matchesService
+  })
+
+  // Filter events only
+  const filteredEventsOnly = eventsOnly.filter((event) => {
+    const matchesSearch =
+      event.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.service.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesLevel = levelFilter === "all" || event.level === levelFilter
+    const matchesService = serviceFilter === "all" || event.service === serviceFilter
+
+    return matchesSearch && matchesLevel && matchesService
+  })
+
+  const displayedLogsOnly = filteredLogsOnly.slice(0, displayedLogsCount)
+  const displayedEventsOnly = filteredEventsOnly.slice(0, displayedLogsCount)
+
   const combinedLogs: CombinedLogEntry[] = [
     ...logs.map((log) => ({ ...log, isEvent: false, sortTimestamp: new Date(log.timestamp).getTime() })),
     ...events.map((event) => ({
@@ -609,28 +650,28 @@ export function SystemLogs() {
       case "logs":
         return <Terminal className="h-4 w-4" />
       case "events":
-        return <CalendarDays className="h-4 w-4" />
+        return <Activity className="h-4 w-4" />
       case "backups":
         return <Database className="h-4 w-4" />
       case "notifications":
         return <Bell className="h-4 w-4" />
       default:
-        return <FileText className="h-4 w-4" />
+        return <Terminal className="h-4 w-4" />
     }
   }
 
   const getSectionLabel = (section: string) => {
     switch (section) {
       case "logs":
-        return "Logs & Events"
+        return "Logs"
       case "events":
-        return "Recent Events"
+        return "Events"
       case "backups":
         return "Backups"
       case "notifications":
         return "Notifications"
       default:
-        return section
+        return "Logs"
     }
   }
 
@@ -717,12 +758,16 @@ export function SystemLogs() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="max-w-full overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="hidden md:grid w-full grid-cols-3">
+            <TabsList className="hidden md:grid w-full grid-cols-4">
               <TabsTrigger value="logs">
                 <Terminal className="h-4 w-4 mr-2" />
-                Logs & Events
+                Logs
+              </TabsTrigger>
+              <TabsTrigger value="events">
+                <Activity className="h-4 w-4 mr-2" />
+                Events
               </TabsTrigger>
               <TabsTrigger value="backups">
                 <Database className="h-4 w-4 mr-2" />
@@ -749,19 +794,30 @@ export function SystemLogs() {
                   </SheetHeader>
                   <div className="mt-6 space-y-2">
                     <Button
-                      variant={activeTab === "logs" ? "default" : "ghost"}
-                      className="w-full justify-start gap-3"
+                      variant={activeTab === "logs" ? "secondary" : "ghost"}
+                      className="w-full justify-start gap-2"
                       onClick={() => {
                         setActiveTab("logs")
                         setIsMobileMenuOpen(false)
                       }}
                     >
                       <Terminal className="h-4 w-4" />
-                      Logs & Events
+                      Logs
                     </Button>
                     <Button
-                      variant={activeTab === "backups" ? "default" : "ghost"}
-                      className="w-full justify-start gap-3"
+                      variant={activeTab === "events" ? "secondary" : "ghost"}
+                      className="w-full justify-start gap-2"
+                      onClick={() => {
+                        setActiveTab("events")
+                        setIsMobileMenuOpen(false)
+                      }}
+                    >
+                      <Activity className="h-4 w-4" />
+                      Events
+                    </Button>
+                    <Button
+                      variant={activeTab === "backups" ? "secondary" : "ghost"}
+                      className="w-full justify-start gap-2"
                       onClick={() => {
                         setActiveTab("backups")
                         setIsMobileMenuOpen(false)
@@ -771,8 +827,8 @@ export function SystemLogs() {
                       Backups
                     </Button>
                     <Button
-                      variant={activeTab === "notifications" ? "default" : "ghost"}
-                      className="w-full justify-start gap-3"
+                      variant={activeTab === "notifications" ? "secondary" : "ghost"}
+                      className="w-full justify-start gap-2"
                       onClick={() => {
                         setActiveTab("notifications")
                         setIsMobileMenuOpen(false)
@@ -922,6 +978,138 @@ export function SystemLogs() {
                       >
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Load More ({filteredCombinedLogs.length - displayedLogsCount} remaining)
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            {/* Events Tab */}
+            <TabsContent value="events" className="space-y-4 max-w-full overflow-hidden">
+              <div className="flex flex-col sm:flex-row gap-4 max-w-full">
+                <div className="flex-1 min-w-0">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search events..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 bg-background border-border"
+                    />
+                  </div>
+                </div>
+
+                <Select value={dateFilter} onValueChange={setDateFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
+                    <SelectValue placeholder="Time range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 day ago</SelectItem>
+                    <SelectItem value="3">3 days ago</SelectItem>
+                    <SelectItem value="7">1 week ago</SelectItem>
+                    <SelectItem value="14">2 weeks ago</SelectItem>
+                    <SelectItem value="30">1 month ago</SelectItem>
+                    <SelectItem value="custom">Custom days</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {dateFilter === "custom" && (
+                  <Input
+                    type="number"
+                    placeholder="Days ago"
+                    value={customDays}
+                    onChange={(e) => setCustomDays(e.target.value)}
+                    className="w-full sm:w-[120px] bg-background border-border"
+                    min="1"
+                  />
+                )}
+
+                <Select value={levelFilter} onValueChange={setLevelFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
+                    <SelectValue placeholder="Filter by level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Levels</SelectItem>
+                    <SelectItem value="error">Error</SelectItem>
+                    <SelectItem value="warning">Warning</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={serviceFilter} onValueChange={setServiceFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
+                    <SelectValue placeholder="Filter by event type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Event Types</SelectItem>
+                    {[...new Set(events.map((event) => event.type))].slice(0, 20).map((eventType) => (
+                      <SelectItem key={eventType} value={eventType}>
+                        {eventType}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button variant="outline" className="border-border bg-transparent" onClick={handleDownloadLogs}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Events
+                </Button>
+              </div>
+
+              <ScrollArea className="h-[600px] w-full rounded-md border border-border">
+                <div className="space-y-2 p-4">
+                  {displayedEventsOnly.map((event, index) => (
+                    <div
+                      key={index}
+                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden w-full"
+                      onClick={() => {
+                        setSelectedEvent(event.eventData)
+                        setIsEventModalOpen(true)
+                      }}
+                    >
+                      <div className="flex-shrink-0 flex gap-2 flex-wrap">
+                        <Badge variant="outline" className={getLevelColor(event.level)}>
+                          {getLevelIcon(event.level)}
+                          {event.level.toUpperCase()}
+                        </Badge>
+                        <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
+                          <Activity className="h-3 w-3 mr-1" />
+                          EVENT
+                        </Badge>
+                      </div>
+
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm font-medium text-foreground truncate flex-1 min-w-0">
+                            {event.service}
+                          </div>
+                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2 flex-shrink-0">
+                            {event.timestamp}
+                          </div>
+                        </div>
+                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-all">{event.message}</div>
+                        <div className="text-xs text-muted-foreground truncate break-all">{event.source}</div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {displayedEventsOnly.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No events found matching your criteria</p>
+                    </div>
+                  )}
+
+                  {displayedEventsOnly.length > 0 && displayedEventsOnly.length < filteredEventsOnly.length && (
+                    <div className="flex justify-center pt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => setDisplayedLogsCount((prev) => prev + 500)}
+                        className="border-border"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Load More ({filteredEventsOnly.length - displayedLogsCount} remaining)
                       </Button>
                     </div>
                   )}
@@ -1113,15 +1301,17 @@ export function SystemLogs() {
       </Dialog>
 
       <Dialog open={isEventModalOpen} onOpenChange={setIsEventModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
               Event Details
             </DialogTitle>
             <DialogDescription>Complete information about this event</DialogDescription>
-            {selectedEvent && (
-              <div className="flex gap-2 mt-2">
+          </DialogHeader>
+          {selectedEvent && (
+            <div className="space-y-4">
+              <div className="flex gap-2">
                 <Badge variant="outline" className={getLevelColor(selectedEvent.level)}>
                   {getLevelIcon(selectedEvent.level)}
                   {selectedEvent.level.toUpperCase()}
@@ -1131,10 +1321,6 @@ export function SystemLogs() {
                   EVENT
                 </Badge>
               </div>
-            )}
-          </DialogHeader>
-          {selectedEvent && (
-            <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <div className="text-sm font-medium text-muted-foreground mb-1">Message</div>
