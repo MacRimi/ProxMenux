@@ -121,7 +121,7 @@ export function SystemLogs() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  const [dateFilter, setDateFilter] = useState("1")
+  const [dateFilter, setDateFilter] = useState("1") // Changed from "now" to "1" to load 1 day by default
   const [customDays, setCustomDays] = useState("1")
 
   const getApiUrl = (endpoint: string) => {
@@ -132,12 +132,10 @@ export function SystemLogs() {
   }
 
   useEffect(() => {
-    // Initial fetch might be redundant if dateFilter is not "now" anymore, but keeping for now
-    // if (dateFilter === "now") {
     fetchAllData()
-    // }
   }, [])
 
+  // CHANGE: Simplified useEffect - always fetch logs with date filter (no more "now" option)
   useEffect(() => {
     console.log("[v0] Date filter changed:", dateFilter, "Custom days:", customDays)
     setLoading(true)
@@ -156,37 +154,36 @@ export function SystemLogs() {
 
   useEffect(() => {
     console.log("[v0] Level or service filter changed:", levelFilter, serviceFilter)
-    setLoading(true)
-    fetchSystemLogs()
-      .then((newLogs) => {
-        console.log(
-          "[v0] Loaded logs for filters - Level:",
-          levelFilter,
-          "Service:",
-          serviceFilter,
-          "Count:",
-          newLogs.length,
-        )
-        setLogs(newLogs)
-        setLoading(false)
-      })
-      .catch((err) => {
-        console.error("[v0] Error loading logs:", err)
-        setLoading(false)
-      })
+    if (levelFilter !== "all" || serviceFilter !== "all") {
+      setLoading(true)
+      fetchSystemLogs()
+        .then((newLogs) => {
+          console.log(
+            "[v0] Loaded logs for filters - Level:",
+            levelFilter,
+            "Service:",
+            serviceFilter,
+            "Count:",
+            newLogs.length,
+          )
+          setLogs(newLogs)
+          setLoading(false)
+        })
+        .catch((err) => {
+          console.error("[v0] Error loading logs:", err)
+          setLoading(false)
+        })
+    } else {
+      // Only reload all data if we're on "now" and all filters are cleared
+      // This else block is now theoretically unreachable given the change above, but kept for safety
+      fetchAllData()
+    }
   }, [levelFilter, serviceFilter])
 
   const fetchAllData = async () => {
     try {
       setLoading(true)
       setError(null)
-
-      // NOTE: Backend endpoints should filter data by current node only
-      // When a node belongs to a cluster, only show data for that specific node:
-      // - /api/logs - should return logs only from current node
-      // - /api/backups - should return backups only from current node
-      // - /api/events - should return events only from current node
-      // - /api/notifications - should return notifications only from current node
 
       const [logsRes, backupsRes, eventsRes, notificationsRes] = await Promise.all([
         fetchSystemLogs(),
@@ -224,6 +221,7 @@ export function SystemLogs() {
       let apiUrl = getApiUrl("/api/logs")
       const params = new URLSearchParams()
 
+      // CHANGE: Always add since_days parameter (no more "now" option)
       const daysAgo = dateFilter === "custom" ? Number.parseInt(customDays) : Number.parseInt(dateFilter)
       params.append("since_days", daysAgo.toString())
       console.log("[v0] Fetching logs since_days:", daysAgo)
@@ -289,10 +287,10 @@ export function SystemLogs() {
     try {
       // Generate filename based on active filters
       const filters = []
-      if (dateFilter !== "30") {
-        const days = dateFilter === "custom" ? customDays : dateFilter
-        filters.push(`${days}days`)
-      }
+      // CHANGE: Always include days in filename (no more "now" option)
+      const days = dateFilter === "custom" ? customDays : dateFilter
+      filters.push(`${days}days`)
+
       if (levelFilter !== "all") {
         filters.push(levelFilter)
       }
@@ -312,7 +310,7 @@ export function SystemLogs() {
         `Total Entries: ${filteredCombinedLogs.length.toLocaleString()}`,
         ``,
         `Filters Applied:`,
-        `- Date Range: ${dateFilter === "custom" ? `${customDays} days ago` : `${dateFilter} days ago`}`,
+        `- Date Range: ${dateFilter === "now" ? "Current logs" : dateFilter === "custom" ? `${customDays} days ago` : `${dateFilter} days ago`}`,
         `- Level: ${levelFilter === "all" ? "All Levels" : levelFilter}`,
         `- Service: ${serviceFilter === "all" ? "All Services" : serviceFilter}`,
         `- Search: ${searchTerm || "None"}`,
@@ -812,7 +810,6 @@ export function SystemLogs() {
                     <SelectItem value="7">1 week ago</SelectItem>
                     <SelectItem value="14">2 weeks ago</SelectItem>
                     <SelectItem value="30">1 month ago</SelectItem>
-                    <SelectItem value="90">3 months ago</SelectItem>
                     <SelectItem value="custom">Custom days</SelectItem>
                   </SelectContent>
                 </Select>
@@ -827,6 +824,18 @@ export function SystemLogs() {
                     min="1"
                   />
                 )}
+
+                <Select value={levelFilter} onValueChange={setLevelFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
+                    <SelectValue placeholder="Filter by level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Levels</SelectItem>
+                    <SelectItem value="error">Error</SelectItem>
+                    <SelectItem value="warning">Warning</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                  </SelectContent>
+                </Select>
 
                 <Select value={serviceFilter} onValueChange={setServiceFilter}>
                   <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
@@ -848,18 +857,18 @@ export function SystemLogs() {
                 </Button>
               </div>
 
-              <ScrollArea className="h-[600px] w-full rounded-md border border-border overflow-x-hidden">
-                <div className="space-y-2 p-4 max-w-full">
+              <ScrollArea className="h-[600px] w-full rounded-md border border-border">
+                <div className="space-y-2 p-4">
                   {displayedLogs.map((log, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer max-w-full overflow-hidden"
+                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
                       onClick={() => {
                         if (log.isEvent) {
                           setSelectedEvent(log.eventData)
                           setIsEventModalOpen(true)
                         } else {
-                          setSelectedLog(log as SystemLog)
+                          setSelectedLog(log as SystemLog) // Cast to SystemLog for dialog
                           setIsLogModalOpen(true)
                         }
                       }}
@@ -877,19 +886,15 @@ export function SystemLogs() {
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0 max-w-full overflow-hidden">
-                        <div className="flex items-center justify-between mb-1 gap-2">
-                          <div className="text-sm font-medium text-foreground truncate flex-1 min-w-0">
-                            {log.service}
-                          </div>
-                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap flex-shrink-0">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm font-medium text-foreground truncate">{log.service}</div>
+                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
                             {log.timestamp}
                           </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-all overflow-hidden">
-                          {log.message}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate break-all">
+                        <div className="text-sm text-foreground mb-1 line-clamp-2">{log.message}</div>
+                        <div className="text-xs text-muted-foreground truncate">
                           {log.source}
                           {log.pid && ` • PID: ${log.pid}`}
                           {log.hostname && ` • Host: ${log.hostname}`}
@@ -949,7 +954,7 @@ export function SystemLogs() {
                   {backups.map((backup, index) => (
                     <div
                       key={index}
-                      className="flex items-start space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden"
+                      className="flex items-start space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
                       onClick={() => {
                         setSelectedBackup(backup)
                         setIsBackupModalOpen(true)
@@ -959,7 +964,7 @@ export function SystemLogs() {
                         <HardDrive className="h-5 w-5 text-blue-500" />
                       </div>
 
-                      <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className={getBackupTypeColor(backup.volid)}>
@@ -976,9 +981,7 @@ export function SystemLogs() {
                             {backup.size_human}
                           </Badge>
                         </div>
-                        <div className="text-xs text-muted-foreground mb-1 truncate break-words">
-                          Storage: {backup.storage}
-                        </div>
+                        <div className="text-xs text-muted-foreground mb-1 truncate">Storage: {backup.storage}</div>
                         <div className="text-xs text-muted-foreground flex items-center">
                           <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
                           <span className="truncate">{backup.created}</span>
@@ -1024,11 +1027,11 @@ export function SystemLogs() {
                       <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                           <div className="text-sm font-medium text-foreground truncate">{notification.service}</div>
-                          <div className="text-xs text-muted-foreground font-mono truncate flex-shrink-0">
+                          <div className="text-xs text-muted-foreground font-mono truncate">
                             {notification.timestamp}
                           </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-words overflow-hidden">
+                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-all overflow-hidden">
                           {notification.message}
                         </div>
                         <div className="text-xs text-muted-foreground break-words overflow-hidden">
@@ -1052,57 +1055,53 @@ export function SystemLogs() {
       </Card>
 
       <Dialog open={isLogModalOpen} onOpenChange={setIsLogModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto w-[96vw] sm:w-full mx-2 sm:mx-auto">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg pr-8">
-              <FileText className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-              <span className="truncate">Log Details</span>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Log Details
             </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Complete information about this log entry
-            </DialogDescription>
+            <DialogDescription>Complete information about this log entry</DialogDescription>
           </DialogHeader>
           {selectedLog && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Level</div>
-                  <Badge variant="outline" className={`${getLevelColor(selectedLog.level)} text-xs`}>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Level</div>
+                  <Badge variant="outline" className={getLevelColor(selectedLog.level)}>
                     {getLevelIcon(selectedLog.level)}
                     {selectedLog.level.toUpperCase()}
                   </Badge>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Service</div>
-                  <div className="text-xs sm:text-sm text-foreground break-words">{selectedLog.service}</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Service</div>
+                  <div className="text-sm text-foreground break-words">{selectedLog.service}</div>
                 </div>
-                <div className="md:col-span-2">
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Timestamp</div>
-                  <div className="text-xs sm:text-sm text-foreground font-mono break-all">{selectedLog.timestamp}</div>
+                <div className="sm:col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
+                  <div className="text-sm text-foreground font-mono break-words">{selectedLog.timestamp}</div>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Source</div>
-                  <div className="text-xs sm:text-sm text-foreground break-words">{selectedLog.source}</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Source</div>
+                  <div className="text-sm text-foreground break-words">{selectedLog.source}</div>
                 </div>
                 {selectedLog.pid && (
                   <div>
-                    <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Process ID</div>
-                    <div className="text-xs sm:text-sm text-foreground font-mono">{selectedLog.pid}</div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">Process ID</div>
+                    <div className="text-sm text-foreground font-mono">{selectedLog.pid}</div>
                   </div>
                 )}
                 {selectedLog.hostname && (
-                  <div className="md:col-span-2">
-                    <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Hostname</div>
-                    <div className="text-xs sm:text-sm text-foreground break-words">{selectedLog.hostname}</div>
+                  <div className="sm:col-span-2">
+                    <div className="text-sm font-medium text-muted-foreground mb-1">Hostname</div>
+                    <div className="text-sm text-foreground break-words">{selectedLog.hostname}</div>
                   </div>
                 )}
               </div>
               <div>
-                <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Message</div>
-                <div className="p-3 sm:p-4 rounded-lg bg-muted/50 border border-border max-h-[180px] sm:max-h-[300px] overflow-y-auto">
-                  <pre className="text-xs sm:text-sm text-foreground whitespace-pre-wrap break-all font-mono">
-                    {selectedLog.message}
-                  </pre>
+                <div className="text-sm font-medium text-muted-foreground mb-2">Message</div>
+                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                  <pre className="text-sm text-foreground whitespace-pre-wrap break-words">{selectedLog.message}</pre>
                 </div>
               </div>
             </div>
@@ -1111,20 +1110,20 @@ export function SystemLogs() {
       </Dialog>
 
       <Dialog open={isEventModalOpen} onOpenChange={setIsEventModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto w-[96vw] sm:w-full mx-2 sm:mx-auto">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg pr-8">
-              <Activity className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-              <span className="truncate">Event Details</span>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Event Details
             </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">Complete information about this event</DialogDescription>
+            <DialogDescription>Complete information about this event</DialogDescription>
             {selectedEvent && (
               <div className="flex gap-2 mt-2">
-                <Badge variant="outline" className={`${getLevelColor(selectedEvent.level)} text-xs`}>
+                <Badge variant="outline" className={getLevelColor(selectedEvent.level)}>
                   {getLevelIcon(selectedEvent.level)}
                   {selectedEvent.level.toUpperCase()}
                 </Badge>
-                <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20 text-xs">
+                <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
                   <Activity className="h-3 w-3 mr-1" />
                   EVENT
                 </Badge>
@@ -1133,46 +1132,46 @@ export function SystemLogs() {
           </DialogHeader>
           {selectedEvent && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                <div className="md:col-span-2">
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Message</div>
-                  <div className="text-xs sm:text-sm text-foreground break-words">{selectedEvent.status}</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Message</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.status}</div>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Type</div>
-                  <div className="text-xs sm:text-sm text-foreground break-words">{selectedEvent.type}</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.type}</div>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Node</div>
-                  <div className="text-xs sm:text-sm text-foreground">{selectedEvent.node}</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Node</div>
+                  <div className="text-sm text-foreground">{selectedEvent.node}</div>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">User</div>
-                  <div className="text-xs sm:text-sm text-foreground break-words">{selectedEvent.user}</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">User</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.user}</div>
                 </div>
                 {selectedEvent.vmid && (
                   <div>
-                    <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">VM/CT ID</div>
-                    <div className="text-xs sm:text-sm text-foreground font-mono">{selectedEvent.vmid}</div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">VM/CT ID</div>
+                    <div className="text-sm text-foreground font-mono">{selectedEvent.vmid}</div>
                   </div>
                 )}
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Duration</div>
-                  <div className="text-xs sm:text-sm text-foreground">{selectedEvent.duration}</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Duration</div>
+                  <div className="text-sm text-foreground">{selectedEvent.duration}</div>
                 </div>
-                <div className="md:col-span-2">
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Start Time</div>
-                  <div className="text-xs sm:text-sm text-foreground break-words">{selectedEvent.starttime}</div>
+                <div className="sm:col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Start Time</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.starttime}</div>
                 </div>
-                <div className="md:col-span-2">
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">End Time</div>
-                  <div className="text-xs sm:text-sm text-foreground break-words">{selectedEvent.endtime}</div>
+                <div className="sm:col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">End Time</div>
+                  <div className="text-sm text-foreground break-words">{selectedEvent.endtime}</div>
                 </div>
               </div>
               <div>
-                <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">UPID</div>
-                <div className="p-3 sm:p-4 rounded-lg bg-muted/50 border border-border max-h-[180px] sm:max-h-[300px] overflow-y-auto">
-                  <pre className="text-xs sm:text-sm text-foreground font-mono whitespace-pre-wrap break-all">
+                <div className="text-sm font-medium text-muted-foreground mb-2">UPID</div>
+                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                  <pre className="text-sm text-foreground font-mono whitespace-pre-wrap break-all">
                     {selectedEvent.upid}
                   </pre>
                 </div>
@@ -1183,54 +1182,54 @@ export function SystemLogs() {
       </Dialog>
 
       <Dialog open={isBackupModalOpen} onOpenChange={setIsBackupModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto w-[96vw] sm:w-full mx-2 sm:mx-auto">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg pr-8">
-              <Database className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-              <span className="truncate">Backup Details</span>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Backup Details
             </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">Complete information about this backup</DialogDescription>
+            <DialogDescription>Complete information about this backup</DialogDescription>
           </DialogHeader>
           {selectedBackup && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Type</div>
-                  <Badge variant="outline" className={`${getBackupTypeColor(selectedBackup.volid)} text-xs`}>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
+                  <Badge variant="outline" className={getBackupTypeColor(selectedBackup.volid)}>
                     {getBackupTypeLabel(selectedBackup.volid)}
                   </Badge>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Storage Type</div>
-                  <Badge variant="outline" className={`${getBackupStorageColor(selectedBackup.volid)} text-xs`}>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Storage Type</div>
+                  <Badge variant="outline" className={getBackupStorageColor(selectedBackup.volid)}>
                     {getBackupStorageLabel(selectedBackup.volid)}
                   </Badge>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Storage</div>
-                  <div className="text-xs sm:text-sm text-foreground break-words">{selectedBackup.storage}</div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Storage</div>
+                  <div className="text-sm text-foreground break-words">{selectedBackup.storage}</div>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Size</div>
-                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Size</div>
+                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                     {selectedBackup.size_human}
                   </Badge>
                 </div>
                 {selectedBackup.vmid && (
                   <div>
-                    <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">VM/CT ID</div>
-                    <div className="text-xs sm:text-sm text-foreground font-mono">{selectedBackup.vmid}</div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">VM/CT ID</div>
+                    <div className="text-sm text-foreground font-mono">{selectedBackup.vmid}</div>
                   </div>
                 )}
-                <div className="md:col-span-2">
-                  <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Created</div>
-                  <div className="text-xs sm:text-sm text-foreground break-words">{selectedBackup.created}</div>
+                <div className="sm:col-span-2">
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Created</div>
+                  <div className="text-sm text-foreground break-words">{selectedBackup.created}</div>
                 </div>
               </div>
               <div>
-                <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Volume ID</div>
-                <div className="p-3 sm:p-4 rounded-lg bg-muted/50 border border-border max-h-[180px] sm:max-h-[300px] overflow-y-auto">
-                  <pre className="text-xs sm:text-sm text-foreground font-mono whitespace-pre-wrap break-all">
+                <div className="text-sm font-medium text-muted-foreground mb-2">Volume ID</div>
+                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                  <pre className="text-sm text-foreground font-mono whitespace-pre-wrap break-all">
                     {selectedBackup.volid}
                   </pre>
                 </div>

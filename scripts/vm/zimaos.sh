@@ -706,7 +706,13 @@ function select_custom_image() {
   FILE=$(basename "$LOADER_FILE")
 }
 
-function download_loader() {
+
+
+# ==========================================================
+
+
+
+function download_loader_() {
   echo -e "${DGN}${TAB}Retrieving ZimaOS image${CL}"
 
   case $LOADER_TYPE in
@@ -762,6 +768,72 @@ function download_loader() {
     select_loader
   fi
 }
+
+
+
+
+
+function download_loader() {
+  echo -e "${DGN}${TAB}Retrieving ZimaOS image${CL}"
+
+
+  API_URL="https://api.github.com/repos/IceWhaleTech/ZimaOS/releases/latest"
+
+
+  DOWNLOAD_URL=$(curl -fsSL "$API_URL" \
+    | grep -Eo '"browser_download_url":\s*"[^"]*zimaos-x86_64-[^"]*_installer\.img"' \
+    | head -1 \
+    | cut -d '"' -f 4)
+
+
+  if [[ -z "$DOWNLOAD_URL" ]]; then
+    TAG=$(curl -fsSL "$API_URL" | grep -Eo '"tag_name":\s*"[^"]+"' | cut -d '"' -f 4 | head -1)
+    if [[ -n "$TAG" ]]; then
+      DOWNLOAD_URL="https://github.com/IceWhaleTech/ZimaOS/releases/download/${TAG}/zimaos-x86_64-${TAG}_installer.img"
+    fi
+  fi
+
+  if [[ -z "$DOWNLOAD_URL" ]]; then
+    msg_error "Failed to get latest ZimaOS release URL"
+    sleep 2; select_loader; return
+  fi
+
+  FILE="$(basename "$DOWNLOAD_URL")"
+  LOADER_FILE="$IMAGES_DIR/$FILE"
+
+
+  if [[ -f "$LOADER_FILE" ]]; then
+    if whiptail --backtitle "ProxMenuX" --title "FILE EXISTS" \
+      --yesno "$(translate "ZimaOS image already exists: $FILE\n\nDo you want to re-download it?")" 10 70; then
+      rm -f "$LOADER_FILE"
+    else
+      echo -e "${DGN}${TAB}Using existing file: ${BGN}$FILE${CL}"
+      echo -e "${DGN}${TAB}ZimaOS Image: ${BGN}$FILE${CL}"
+      echo -e "${DGN}${TAB}File Size: ${BGN}$(du -h "$LOADER_FILE" | cut -f1)${CL}"
+      return
+    fi
+  fi
+
+
+  if ! curl -fL --retry 3 --retry-delay 2 --retry-connrefused \
+        --progress-bar -o "$LOADER_FILE" "$DOWNLOAD_URL"; then
+    msg_error "Failed to download ZimaOS image"
+    rm -f "$LOADER_FILE"
+    sleep 2; select_loader; return
+  fi
+
+
+  if [[ ! -s "$LOADER_FILE" ]] || [[ $(stat -c%s "$LOADER_FILE") -lt $((100*1024*1024)) ]]; then
+    msg_error "Downloaded file is empty or unexpectedly small"
+    rm -f "$LOADER_FILE"
+    sleep 2; select_loader; return
+  fi
+
+  msg_ok "Downloaded ZimaOS image successfully: $FILE"
+  echo -e "${DGN}${TAB}ZimaOS Image: ${BGN}$FILE${CL}"
+  echo -e "${DGN}${TAB}File Size: ${BGN}$(du -h "$LOADER_FILE" | cut -f1)${CL}"
+}
+
 
 # ==========================================================
 
