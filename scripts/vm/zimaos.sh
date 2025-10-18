@@ -786,12 +786,12 @@ function download_loader() {
     | cut -d '"' -f 4)
 
 
-  if [[ -z "$DOWNLOAD_URL" ]]; then
-    TAG=$(curl -fsSL "$API_URL" | grep -Eo '"tag_name":\s*"[^"]+"' | cut -d '"' -f 4 | head -1)
-    if [[ -n "$TAG" ]]; then
-      DOWNLOAD_URL="https://github.com/IceWhaleTech/ZimaOS/releases/download/${TAG}/zimaos-x86_64-${TAG}_installer.img"
-    fi
-  fi
+#  if [[ -z "$DOWNLOAD_URL" ]]; then
+#    TAG=$(curl -fsSL "$API_URL" | grep -Eo '"tag_name":\s*"[^"]+"' | cut -d '"' -f 4 | head -1)
+#    if [[ -n "$TAG" ]]; then
+#      DOWNLOAD_URL="https://github.com/IceWhaleTech/ZimaOS/releases/download/${TAG}/zimaos-x86_64-${TAG}_installer.img"
+#    fi
+#  fi
 
   if [[ -z "$DOWNLOAD_URL" ]]; then
     msg_error "Failed to get latest ZimaOS release URL"
