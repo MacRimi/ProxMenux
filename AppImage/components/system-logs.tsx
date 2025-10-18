@@ -181,6 +181,13 @@ export function SystemLogs() {
       setLoading(true)
       setError(null)
 
+      // NOTE: Backend endpoints should filter data by current node only
+      // When a node belongs to a cluster, only show data for that specific node:
+      // - /api/logs - should return logs only from current node
+      // - /api/backups - should return backups only from current node
+      // - /api/events - should return events only from current node
+      // - /api/notifications - should return notifications only from current node
+
       const [logsRes, backupsRes, eventsRes, notificationsRes] = await Promise.all([
         fetchSystemLogs(),
         fetch(getApiUrl("/api/backups")),
@@ -889,10 +896,8 @@ export function SystemLogs() {
                             {log.timestamp}
                           </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-words overflow-hidden">
-                          {log.message}
-                        </div>
-                        <div className="text-xs text-muted-foreground break-words overflow-hidden">
+                        <div className="text-sm text-foreground mb-1 truncate">{log.message}</div>
+                        <div className="text-xs text-muted-foreground truncate">
                           {log.source}
                           {log.pid && ` • PID: ${log.pid}`}
                           {log.hostname && ` • Host: ${log.hostname}`}
