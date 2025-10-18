@@ -95,7 +95,13 @@ interface CombinedLogEntry {
   sortTimestamp: number
 }
 
-export function SystemLogs() {
+// ADDED: Props interface
+interface SystemLogsProps {
+  nodeName?: string
+}
+
+// MODIFIED: Added props destructuring
+export function SystemLogs({ nodeName }: SystemLogsProps = {}) {
   const [logs, setLogs] = useState<SystemLog[]>([])
   const [backups, setBackups] = useState<Backup[]>([])
   const [events, setEvents] = useState<Event[]>([])
@@ -121,14 +127,18 @@ export function SystemLogs() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  const [dateFilter, setDateFilter] = useState("30") // Changed from "now" to "30" to load all recent logs by default
+  const [dateFilter, setDateFilter] = useState("1")
   const [customDays, setCustomDays] = useState("1")
 
   const getApiUrl = (endpoint: string) => {
     if (typeof window !== "undefined") {
-      return `${window.location.protocol}//${window.location.hostname}:8008${endpoint}`
+      // MODIFIED: Appended nodeName to URL if provided
+      const baseUrl = `${window.location.protocol}//${window.location.hostname}:8008${endpoint}`
+      return nodeName ? `${baseUrl}?node=${nodeName}` : baseUrl
     }
-    return `http://localhost:8008${endpoint}`
+    // MODIFIED: Appended nodeName to URL if provided
+    const baseUrl = `http://localhost:8008${endpoint}`
+    return nodeName ? `${baseUrl}?node=${nodeName}` : baseUrl
   }
 
   useEffect(() => {
@@ -152,7 +162,7 @@ export function SystemLogs() {
         console.error("[v0] Error loading logs:", err)
         setLoading(false)
       })
-  }, [dateFilter, customDays])
+  }, [dateFilter, customDays, nodeName]) // Added nodeName dependency
 
   useEffect(() => {
     console.log("[v0] Level or service filter changed:", levelFilter, serviceFilter)
@@ -174,16 +184,19 @@ export function SystemLogs() {
         console.error("[v0] Error loading logs:", err)
         setLoading(false)
       })
-  }, [levelFilter, serviceFilter])
+  }, [levelFilter, serviceFilter, nodeName]) // Added nodeName dependency
 
   const fetchAllData = async () => {
     try {
       setLoading(true)
       setError(null)
 
+      // Similar to how /api/vms filters VMs/LXCs by node. This ensures that in a cluster
+      // environment, only backups from the current node are displayed.
       const [logsRes, backupsRes, eventsRes, notificationsRes] = await Promise.all([
         fetchSystemLogs(),
-        fetch(getApiUrl("/api/backups")),
+        // MODIFIED: getApiUrl will now include nodeName if provided
+        fetch(getApiUrl("/api/backups")), // Backend should filter by node
         fetch(getApiUrl("/api/events?limit=50")),
         fetch(getApiUrl("/api/notifications")),
       ])
@@ -295,8 +308,8 @@ export function SystemLogs() {
       if (searchTerm) {
         filters.push("searched")
       }
-
-      const filename = `proxmox_logs_${filters.length > 0 ? filters.join("_") + "_" : ""}${new Date().toISOString().split("T")[0]}.txt`
+      // MODIFIED: Include nodeName in filename if available
+      const filename = `proxmox_logs${nodeName ? `_${nodeName}` : ""}_${filters.length > 0 ? filters.join("_") + "_" : ""}${new Date().toISOString().split("T")[0]}.txt`
 
       // Generate log content
       const logContent = [
@@ -309,6 +322,8 @@ export function SystemLogs() {
         `- Level: ${levelFilter === "all" ? "All Levels" : levelFilter}`,
         `- Service: ${serviceFilter === "all" ? "All Services" : serviceFilter}`,
         `- Search: ${searchTerm || "None"}`,
+        // MODIFIED: Include Node in filters if available
+        nodeName && `- Node: ${nodeName}`,
         ``,
         `${"=".repeat(80)}`,
         ``,
@@ -352,6 +367,7 @@ export function SystemLogs() {
       if (upid) {
         // Try to fetch the complete task log from Proxmox
         try {
+          // MODIFIED: getApiUrl will now include nodeName if provided
           const response = await fetch(getApiUrl(`/api/task-log/${encodeURIComponent(upid)}`))
 
           if (response.ok) {
@@ -439,7 +455,10 @@ export function SystemLogs() {
     const matchesLevel = levelFilter === "all" || log.level === levelFilter
     const matchesService = serviceFilter === "all" || log.service === serviceFilter
 
-    return matchesSearch && matchesLevel && matchesService
+    // MODIFIED: Filter by nodeName if provided
+    const matchesNode = !nodeName || log.source.includes(`Node: ${nodeName}`)
+
+    return matchesSearch && matchesLevel && matchesService && matchesNode
   })
 
   const displayedLogs = filteredCombinedLogs.slice(0, displayedLogsCount)
@@ -536,7 +555,10 @@ export function SystemLogs() {
     info: logs.filter((log) => ["info", "notice", "debug"].includes(log.level)).length,
   }
 
-  const uniqueServices = [...new Set(logs.map((log) => log.service))]
+  // MODIFIED: Filter uniqueServices by nodeName if provided
+  const uniqueServices = [
+    ...new Set(logs.filter((log) => !nodeName || log.source.includes(`Node: ${nodeName}`)).map((log) => log.service)),
+  ]
 
   const getBackupType = (volid: string): "vm" | "lxc" => {
     if (volid.includes("/vm/") || volid.includes("vzdump-qemu")) {
@@ -578,14 +600,16 @@ export function SystemLogs() {
     return type === "pbs" ? "PBS" : "PVE"
   }
 
+  // MODIFIED: Filter backups by nodeName if provided
+  const filteredBackups = nodeName ? backups.filter((b) => b.storage.includes(nodeName)) : backups
   const backupStats = {
-    total: backups.length,
-    totalSize: backups.reduce((sum, b) => sum + b.size, 0),
-    qemu: backups.filter((b) => {
+    total: filteredBackups.length,
+    totalSize: filteredBackups.reduce((sum, b) => sum + b.size, 0),
+    qemu: filteredBackups.filter((b) => {
       // Check if volid contains /vm/ for QEMU or vzdump-qemu for PVE
       return b.volid.includes("/vm/") || b.volid.includes("vzdump-qemu")
     }).length,
-    lxc: backups.filter((b) => {
+    lxc: filteredBackups.filter((b) => {
       // Check if volid contains /ct/ for LXC or vzdump-lxc for PVE
       return b.volid.includes("/ct/") || b.volid.includes("vzdump-lxc")
     }).length,
@@ -629,7 +653,8 @@ export function SystemLogs() {
     }
   }
 
-  if (loading && logs.length === 0 && events.length === 0) {
+  // MODIFIED: Conditionally render loading state based on nodeName
+  if (loading && logs.length === 0 && events.length === 0 && backups.length === 0 && notifications.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -639,7 +664,7 @@ export function SystemLogs() {
 
   return (
     <div className="space-y-6">
-      {loading && (logs.length > 0 || events.length > 0) && (
+      {loading && (logs.length > 0 || events.length > 0 || backups.length > 0 || notifications.length > 0) && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-card border border-border shadow-lg">
             <RefreshCw className="h-12 w-12 animate-spin text-primary" />
@@ -705,6 +730,8 @@ export function SystemLogs() {
             <CardTitle className="text-foreground flex items-center">
               <Activity className="h-5 w-5 mr-2" />
               System Logs & Events
+              {/* MODIFIED: Display nodeName if provided */}
+              {nodeName && <span className="text-muted-foreground ml-2 text-sm">({nodeName})</span>}
             </CardTitle>
             <Button variant="outline" size="sm" onClick={fetchAllData} disabled={loading}>
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
@@ -833,19 +860,22 @@ export function SystemLogs() {
                   </SelectContent>
                 </Select>
 
-                <Select value={serviceFilter} onValueChange={setServiceFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
-                    <SelectValue placeholder="Filter by service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Services</SelectItem>
-                    {uniqueServices.slice(0, 20).map((service) => (
-                      <SelectItem key={service} value={service}>
-                        {service}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* MODIFIED: Only show service filter if not filtering by a specific node */}
+                {!nodeName && (
+                  <Select value={serviceFilter} onValueChange={setServiceFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
+                      <SelectValue placeholder="Filter by service" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Services</SelectItem>
+                      {uniqueServices.slice(0, 20).map((service) => (
+                        <SelectItem key={service} value={service}>
+                          {service}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
 
                 <Button variant="outline" className="border-border bg-transparent" onClick={handleDownloadLogs}>
                   <Download className="h-4 w-4 mr-2" />
@@ -858,7 +888,7 @@ export function SystemLogs() {
                   {displayedLogs.map((log, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden"
+                      className="flex flex-col space-y-2 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden"
                       onClick={() => {
                         if (log.isEvent) {
                           setSelectedEvent(log.eventData)
@@ -884,17 +914,13 @@ export function SystemLogs() {
 
                       <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex flex-col gap-1 mb-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="text-sm font-medium text-foreground truncate flex-1 min-w-0">
-                              {log.service}
-                            </div>
-                          </div>
+                          <div className="text-sm font-medium text-foreground truncate">{log.service}</div>
                           <div className="text-xs text-muted-foreground font-mono truncate">{log.timestamp}</div>
                         </div>
                         <div className="text-sm text-foreground mb-1 line-clamp-2 break-words overflow-hidden">
                           {log.message}
                         </div>
-                        <div className="text-xs text-muted-foreground truncate">
+                        <div className="text-xs text-muted-foreground break-words overflow-hidden">
                           {log.source}
                           {log.pid && ` • PID: ${log.pid}`}
                           {log.hostname && ` • Host: ${log.hostname}`}
@@ -951,7 +977,7 @@ export function SystemLogs() {
 
               <ScrollArea className="h-[500px] w-full rounded-md border border-border">
                 <div className="space-y-2 p-4">
-                  {backups.map((backup, index) => (
+                  {filteredBackups.map((backup, index) => (
                     <div
                       key={index}
                       className="flex items-start space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden"
@@ -992,7 +1018,7 @@ export function SystemLogs() {
                     </div>
                   ))}
 
-                  {backups.length === 0 && (
+                  {filteredBackups.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>No backups found</p>

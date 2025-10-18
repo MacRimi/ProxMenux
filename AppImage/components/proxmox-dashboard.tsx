@@ -455,7 +455,7 @@ export function ProxmoxDashboard() {
           </TabsContent>
 
           <TabsContent value="logs" className="space-y-4 md:space-y-6">
-            <SystemLogs key={`logs-${componentKey}`} />
+            <SystemLogs key={`logs-${componentKey}`} nodeName={systemStatus.serverName} />
           </TabsContent>
         </Tabs>
 
