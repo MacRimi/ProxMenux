@@ -788,7 +788,7 @@ export function SystemLogs() {
               </Sheet>
             </div>
 
-            <TabsContent value="logs" className="space-y-4">
+            <TabsContent value="logs" className="space-y-4 overflow-hidden">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
