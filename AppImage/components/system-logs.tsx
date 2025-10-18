@@ -786,9 +786,9 @@ export function SystemLogs() {
               </Sheet>
             </div>
 
-            <TabsContent value="logs" className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
+            <TabsContent value="logs" className="space-y-4 max-w-full overflow-hidden">
+              <div className="flex flex-col sm:flex-row gap-4 max-w-full">
+                <div className="flex-1 min-w-0">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -857,12 +857,12 @@ export function SystemLogs() {
                 </Button>
               </div>
 
-              <ScrollArea className="h-[600px] w-full rounded-md border border-border overflow-x-hidden">
-                <div className="space-y-2 p-4 w-full">
+              <ScrollArea className="h-[600px] w-full overflow-x-hidden rounded-md border border-border">
+                <div className="space-y-2 p-4">
                   {displayedLogs.map((log, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer overflow-hidden w-full max-w-full"
+                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-muted/50 sm:bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer overflow-hidden w-full"
                       onClick={() => {
                         if (log.isEvent) {
                           setSelectedEvent(log.eventData)
@@ -888,8 +888,10 @@ export function SystemLogs() {
 
                       <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm font-medium text-foreground truncate">{log.service}</div>
-                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
+                          <div className="text-sm font-medium text-foreground truncate flex-1 min-w-0">
+                            {log.service}
+                          </div>
+                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2 flex-shrink-0">
                             {log.timestamp}
                           </div>
                         </div>
