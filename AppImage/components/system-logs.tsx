@@ -786,6 +786,7 @@ export function SystemLogs() {
               </Sheet>
             </div>
 
+            {/* Logs & Events Tab */}
             <TabsContent value="logs" className="space-y-4 max-w-full overflow-hidden">
               <div className="flex flex-col sm:flex-row gap-4 max-w-full">
                 <div className="flex-1 min-w-0">
@@ -857,12 +858,12 @@ export function SystemLogs() {
                 </Button>
               </div>
 
-              <ScrollArea className="h-[600px] w-full overflow-x-hidden rounded-md border border-border">
+              <ScrollArea className="h-[600px] w-full rounded-md border border-border">
                 <div className="space-y-2 p-4">
                   {displayedLogs.map((log, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-muted/50 sm:bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer overflow-hidden w-full"
+                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden w-full"
                       onClick={() => {
                         if (log.isEvent) {
                           setSelectedEvent(log.eventData)
@@ -873,7 +874,7 @@ export function SystemLogs() {
                         }
                       }}
                     >
-                      <div className="flex-shrink-0 flex gap-2">
+                      <div className="flex-shrink-0 flex gap-2 flex-wrap">
                         <Badge variant="outline" className={getLevelColor(log.level)}>
                           {getLevelIcon(log.level)}
                           {log.level.toUpperCase()}
