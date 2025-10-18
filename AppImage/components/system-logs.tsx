@@ -849,11 +849,11 @@ export function SystemLogs() {
               </div>
 
               <ScrollArea className="h-[600px] w-full rounded-md border border-border">
-                <div className="space-y-2 p-4 max-w-full overflow-hidden">
+                <div className="space-y-2 p-4">
                   {displayedLogs.map((log, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden w-full max-w-full"
+                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden w-full"
                       onClick={() => {
                         if (log.isEvent) {
                           setSelectedEvent(log.eventData)
