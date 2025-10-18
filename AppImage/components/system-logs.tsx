@@ -95,13 +95,13 @@ interface CombinedLogEntry {
   sortTimestamp: number
 }
 
-// ADDED: Props interface
+// MODIFIED: Fixed props interface - nodeName is already optional
 interface SystemLogsProps {
   nodeName?: string
 }
 
-// MODIFIED: Added props destructuring
-export function SystemLogs({ nodeName }: SystemLogsProps = {}) {
+// MODIFIED: Fixed function signature - removed incorrect default value syntax
+export function SystemLogs({ nodeName }: SystemLogsProps) {
   const [logs, setLogs] = useState<SystemLog[]>([])
   const [backups, setBackups] = useState<Backup[]>([])
   const [events, setEvents] = useState<Event[]>([])
