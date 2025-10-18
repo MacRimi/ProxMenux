@@ -865,7 +865,7 @@ export function SystemLogs() {
                   {displayedLogs.map((log, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden"
+                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden w-full"
                       onClick={() => {
                         if (log.isEvent) {
                           setSelectedEvent(log.eventData)
@@ -896,8 +896,10 @@ export function SystemLogs() {
                             {log.timestamp}
                           </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1 truncate">{log.message}</div>
-                        <div className="text-xs text-muted-foreground truncate">
+                        <div className="text-sm text-foreground mb-1 truncate overflow-hidden min-w-0">
+                          {log.message}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate overflow-hidden">
                           {log.source}
                           {log.pid && ` • PID: ${log.pid}`}
                           {log.hostname && ` • Host: ${log.hostname}`}
