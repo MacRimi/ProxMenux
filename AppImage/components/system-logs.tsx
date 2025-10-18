@@ -488,6 +488,7 @@ export function SystemLogs() {
     return matchesSearch && matchesLevel && matchesService
   })
 
+  // CHANGE: Re-assigning displayedLogs to use the filteredCombinedLogs
   const displayedLogs = filteredCombinedLogs.slice(0, displayedLogsCount)
   const hasMoreLogs = displayedLogsCount < filteredCombinedLogs.length
 
@@ -759,6 +760,7 @@ export function SystemLogs() {
           </div>
         </CardHeader>
         <CardContent className="max-w-full overflow-hidden">
+          {/* CHANGE: TabsList modified for new structure */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="hidden md:grid w-full grid-cols-4">
               <TabsTrigger value="logs">
@@ -842,7 +844,7 @@ export function SystemLogs() {
               </Sheet>
             </div>
 
-            {/* Logs & Events Tab */}
+            {/* Logs Tab - Ahora incluye logs y eventos unificados */}
             <TabsContent value="logs" className="space-y-4 max-w-full overflow-hidden">
               <div className="flex flex-col sm:flex-row gap-4 max-w-full">
                 <div className="flex-1 min-w-0">
@@ -850,6 +852,7 @@ export function SystemLogs() {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search logs & events..."
+                      // CHANGE: Renamed searchTerm to searchQuery
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 bg-background border-border"
@@ -921,7 +924,7 @@ export function SystemLogs() {
                       key={index}
                       className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden box-border"
                       onClick={() => {
-                        if (log.isEvent) {
+                        if (log.eventData) {
                           setSelectedEvent(log.eventData)
                           setIsEventModalOpen(true)
                         } else {
@@ -935,7 +938,7 @@ export function SystemLogs() {
                           {getLevelIcon(log.level)}
                           {log.level.toUpperCase()}
                         </Badge>
-                        {log.isEvent && (
+                        {log.eventData && (
                           <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
                             <Activity className="h-3 w-3 mr-1" />
                             EVENT
@@ -965,7 +968,7 @@ export function SystemLogs() {
                   {displayedLogs.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No logs or events found matching your criteria</p>
+                      <p>No logs found matching your criteria</p>
                     </div>
                   )}
 
@@ -978,138 +981,6 @@ export function SystemLogs() {
                       >
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Load More ({filteredCombinedLogs.length - displayedLogsCount} remaining)
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-
-            {/* Events Tab */}
-            <TabsContent value="events" className="space-y-4 max-w-full overflow-hidden">
-              <div className="flex flex-col sm:flex-row gap-4 max-w-full">
-                <div className="flex-1 min-w-0">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search events..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 bg-background border-border"
-                    />
-                  </div>
-                </div>
-
-                <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
-                    <SelectValue placeholder="Time range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 day ago</SelectItem>
-                    <SelectItem value="3">3 days ago</SelectItem>
-                    <SelectItem value="7">1 week ago</SelectItem>
-                    <SelectItem value="14">2 weeks ago</SelectItem>
-                    <SelectItem value="30">1 month ago</SelectItem>
-                    <SelectItem value="custom">Custom days</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {dateFilter === "custom" && (
-                  <Input
-                    type="number"
-                    placeholder="Days ago"
-                    value={customDays}
-                    onChange={(e) => setCustomDays(e.target.value)}
-                    className="w-full sm:w-[120px] bg-background border-border"
-                    min="1"
-                  />
-                )}
-
-                <Select value={levelFilter} onValueChange={setLevelFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
-                    <SelectValue placeholder="Filter by level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Levels</SelectItem>
-                    <SelectItem value="error">Error</SelectItem>
-                    <SelectItem value="warning">Warning</SelectItem>
-                    <SelectItem value="info">Info</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={serviceFilter} onValueChange={setServiceFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px] bg-background border-border">
-                    <SelectValue placeholder="Filter by event type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Event Types</SelectItem>
-                    {[...new Set(events.map((event) => event.type))].slice(0, 20).map((eventType) => (
-                      <SelectItem key={eventType} value={eventType}>
-                        {eventType}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Button variant="outline" className="border-border bg-transparent" onClick={handleDownloadLogs}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Events
-                </Button>
-              </div>
-
-              <ScrollArea className="h-[600px] w-full rounded-md border border-border">
-                <div className="space-y-2 p-4">
-                  {displayedEventsOnly.map((event, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden w-full"
-                      onClick={() => {
-                        setSelectedEvent(event.eventData)
-                        setIsEventModalOpen(true)
-                      }}
-                    >
-                      <div className="flex-shrink-0 flex gap-2 flex-wrap">
-                        <Badge variant="outline" className={getLevelColor(event.level)}>
-                          {getLevelIcon(event.level)}
-                          {event.level.toUpperCase()}
-                        </Badge>
-                        <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
-                          <Activity className="h-3 w-3 mr-1" />
-                          EVENT
-                        </Badge>
-                      </div>
-
-                      <div className="flex-1 min-w-0 overflow-hidden">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm font-medium text-foreground truncate flex-1 min-w-0">
-                            {event.service}
-                          </div>
-                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2 flex-shrink-0">
-                            {event.timestamp}
-                          </div>
-                        </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-all">{event.message}</div>
-                        <div className="text-xs text-muted-foreground truncate break-all">{event.source}</div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {displayedEventsOnly.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No events found matching your criteria</p>
-                    </div>
-                  )}
-
-                  {displayedEventsOnly.length > 0 && displayedEventsOnly.length < filteredEventsOnly.length && (
-                    <div className="flex justify-center pt-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => setDisplayedLogsCount((prev) => prev + 500)}
-                        className="border-border"
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Load More ({filteredEventsOnly.length - displayedLogsCount} remaining)
                       </Button>
                     </div>
                   )}
@@ -1246,7 +1117,7 @@ export function SystemLogs() {
       </Card>
 
       <Dialog open={isLogModalOpen} onOpenChange={setIsLogModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -1266,15 +1137,17 @@ export function SystemLogs() {
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Service</div>
-                  <div className="text-sm text-foreground break-words">{selectedLog.service}</div>
+                  <div className="text-sm text-foreground break-all overflow-hidden">{selectedLog.service}</div>
                 </div>
                 <div className="sm:col-span-2">
                   <div className="text-sm font-medium text-muted-foreground mb-1">Timestamp</div>
-                  <div className="text-sm text-foreground font-mono break-words">{selectedLog.timestamp}</div>
+                  <div className="text-sm text-foreground font-mono break-all overflow-hidden">
+                    {selectedLog.timestamp}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground mb-1">Source</div>
-                  <div className="text-sm text-foreground break-words">{selectedLog.source}</div>
+                  <div className="text-sm text-foreground break-all overflow-hidden">{selectedLog.source}</div>
                 </div>
                 {selectedLog.pid && (
                   <div>
@@ -1285,14 +1158,16 @@ export function SystemLogs() {
                 {selectedLog.hostname && (
                   <div className="sm:col-span-2">
                     <div className="text-sm font-medium text-muted-foreground mb-1">Hostname</div>
-                    <div className="text-sm text-foreground break-words">{selectedLog.hostname}</div>
+                    <div className="text-sm text-foreground break-all overflow-hidden">{selectedLog.hostname}</div>
                   </div>
                 )}
               </div>
               <div>
                 <div className="text-sm font-medium text-muted-foreground mb-2">Message</div>
-                <div className="p-4 rounded-lg bg-muted/50 border border-border">
-                  <pre className="text-sm text-foreground whitespace-pre-wrap break-words">{selectedLog.message}</pre>
+                <div className="p-4 rounded-lg bg-muted/50 border border-border overflow-hidden">
+                  <pre className="text-sm text-foreground whitespace-pre-wrap break-all overflow-hidden">
+                    {selectedLog.message}
+                  </pre>
                 </div>
               </div>
             </div>
