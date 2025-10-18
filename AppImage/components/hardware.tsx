@@ -234,7 +234,7 @@ export default function Hardware() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-6">
+      <div className="space-y-6">
         <div className="text-center py-8">
           <div className="text-lg font-medium text-foreground mb-2">Loading hardware data...</div>
         </div>
@@ -243,7 +243,7 @@ export default function Hardware() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* System Information - CPU & Motherboard */}
       {(hardwareData?.cpu || hardwareData?.motherboard) && (
         <Card className="border-border/50 bg-card/50 p-6">
