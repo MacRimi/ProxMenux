@@ -697,7 +697,7 @@ export function SystemLogs() {
       )}
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Entries</CardTitle>
@@ -760,16 +760,11 @@ export function SystemLogs() {
           </div>
         </CardHeader>
         <CardContent className="max-w-full overflow-hidden">
-          {/* CHANGE: TabsList modified for new structure */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="hidden md:grid w-full grid-cols-4">
+            <TabsList className="hidden md:grid w-full grid-cols-3">
               <TabsTrigger value="logs">
                 <Terminal className="h-4 w-4 mr-2" />
                 Logs
-              </TabsTrigger>
-              <TabsTrigger value="events">
-                <Activity className="h-4 w-4 mr-2" />
-                Events
               </TabsTrigger>
               <TabsTrigger value="backups">
                 <Database className="h-4 w-4 mr-2" />
@@ -805,17 +800,6 @@ export function SystemLogs() {
                     >
                       <Terminal className="h-4 w-4" />
                       Logs
-                    </Button>
-                    <Button
-                      variant={activeTab === "events" ? "secondary" : "ghost"}
-                      className="w-full justify-start gap-2"
-                      onClick={() => {
-                        setActiveTab("events")
-                        setIsMobileMenuOpen(false)
-                      }}
-                    >
-                      <Activity className="h-4 w-4" />
-                      Events
                     </Button>
                     <Button
                       variant={activeTab === "backups" ? "secondary" : "ghost"}
