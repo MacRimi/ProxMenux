@@ -862,13 +862,13 @@ export function SystemLogs() {
                   {displayedLogs.map((log, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
+                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer overflow-hidden"
                       onClick={() => {
                         if (log.isEvent) {
                           setSelectedEvent(log.eventData)
                           setIsEventModalOpen(true)
                         } else {
-                          setSelectedLog(log as SystemLog) // Cast to SystemLog for dialog
+                          setSelectedLog(log as SystemLog)
                           setIsLogModalOpen(true)
                         }
                       }}
@@ -886,15 +886,15 @@ export function SystemLogs() {
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex items-center justify-between mb-1">
                           <div className="text-sm font-medium text-foreground truncate">{log.service}</div>
                           <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
                             {log.timestamp}
                           </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2">{log.message}</div>
-                        <div className="text-xs text-muted-foreground truncate">
+                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-all">{log.message}</div>
+                        <div className="text-xs text-muted-foreground truncate break-all">
                           {log.source}
                           {log.pid && ` • PID: ${log.pid}`}
                           {log.hostname && ` • Host: ${log.hostname}`}
