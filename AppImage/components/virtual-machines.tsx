@@ -140,21 +140,31 @@ const formatStorage = (sizeInGB: number): string => {
 }
 
 const getUsageColor = (percent: number): string => {
-  if (percent >= 80) return "text-red-500"
-  if (percent >= 50) return "text-yellow-500"
+  if (percent >= 95) return "text-red-500"
+  if (percent >= 86) return "text-orange-500"
+  if (percent >= 71) return "text-yellow-500"
   return "text-white"
 }
 
 const getIconColor = (percent: number): string => {
-  if (percent >= 80) return "text-red-500"
-  if (percent >= 50) return "text-yellow-500"
+  if (percent >= 95) return "text-red-500"
+  if (percent >= 86) return "text-orange-500"
+  if (percent >= 71) return "text-yellow-500"
   return "text-green-500"
 }
 
 const getProgressColor = (percent: number): string => {
-  if (percent >= 80) return "[&>div]:bg-red-500"
-  if (percent >= 50) return "[&>div]:bg-yellow-500"
+  if (percent >= 95) return "[&>div]:bg-red-500"
+  if (percent >= 86) return "[&>div]:bg-orange-500"
+  if (percent >= 71) return "[&>div]:bg-yellow-500"
   return "[&>div]:bg-blue-500"
+}
+
+const getModalProgressColor = (percent: number): string => {
+  if (percent >= 95) return "bg-red-500"
+  if (percent >= 86) return "bg-orange-500"
+  if (percent >= 71) return "bg-yellow-500"
+  return "bg-blue-500"
 }
 
 export function VirtualMachines() {
@@ -342,17 +352,17 @@ export function VirtualMachines() {
 
   const getMemoryUsageColor = (percent: number | null) => {
     if (percent === null) return "bg-blue-500"
-    if (percent >= 90) return "bg-red-500"
-    if (percent >= 80) return "bg-orange-500"
-    if (percent >= 60) return "bg-yellow-500"
-    return "bg-green-500"
+    if (percent >= 95) return "bg-red-500"
+    if (percent >= 86) return "bg-orange-500"
+    if (percent >= 71) return "bg-yellow-500"
+    return "bg-blue-500"
   }
 
   const getMemoryPercentTextColor = (percent: number | null) => {
     if (percent === null) return "text-muted-foreground"
-    if (percent >= 90) return "text-red-500"
-    if (percent >= 80) return "text-orange-500"
-    if (percent >= 60) return "text-yellow-500"
+    if (percent >= 95) return "text-red-500"
+    if (percent >= 86) return "text-orange-500"
+    if (percent >= 71) return "text-yellow-500"
     return "text-green-500"
   }
 
@@ -684,7 +694,7 @@ export function VirtualMachines() {
                       </div>
                       <Progress
                         value={selectedVM.cpu * 100}
-                        className={`h-1.5 ${getProgressColor(selectedVM.cpu * 100)}`}
+                        className={`h-1.5 ${getModalProgressColor(selectedVM.cpu * 100)}`}
                       />
                     </div>
                     <div>
@@ -696,7 +706,7 @@ export function VirtualMachines() {
                       </div>
                       <Progress
                         value={(selectedVM.mem / selectedVM.maxmem) * 100}
-                        className={`h-1.5 ${getProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                        className={`h-1.5 ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
                       />
                     </div>
                     <div>
@@ -708,7 +718,7 @@ export function VirtualMachines() {
                       </div>
                       <Progress
                         value={(selectedVM.disk / selectedVM.maxdisk) * 100}
-                        className={`h-1.5 ${getProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                        className={`h-1.5 ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
                       />
                     </div>
                     <div>
