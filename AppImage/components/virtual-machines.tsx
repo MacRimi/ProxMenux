@@ -380,7 +380,7 @@ export function VirtualMachines() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total VMs & LXCs</CardTitle>
@@ -602,8 +602,8 @@ export function VirtualMachines() {
                           <Square className="h-5 w-5 text-red-500 fill-current flex-shrink-0" />
                         )}
 
-                        <Badge variant="outline" className={`text-xs flex-shrink-0 ${typeBadge.color}`}>
-                          {typeBadge.label}
+                        <Badge variant="outline" className={`${getTypeBadge(vm.type).color} flex-shrink-0`}>
+                          {getTypeBadge(vm.type).label}
                         </Badge>
 
                         {/* Name and ID */}
