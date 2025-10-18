@@ -896,10 +896,10 @@ export function SystemLogs() {
                             {log.timestamp}
                           </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1 truncate overflow-hidden min-w-0">
+                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-words overflow-hidden">
                           {log.message}
                         </div>
-                        <div className="text-xs text-muted-foreground truncate overflow-hidden">
+                        <div className="text-xs text-muted-foreground break-words overflow-hidden">
                           {log.source}
                           {log.pid && ` • PID: ${log.pid}`}
                           {log.hostname && ` • Host: ${log.hostname}`}
