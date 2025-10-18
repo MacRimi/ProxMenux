@@ -161,10 +161,10 @@ const getProgressColor = (percent: number): string => {
 }
 
 const getModalProgressColor = (percent: number): string => {
-  if (percent >= 95) return "bg-red-500"
-  if (percent >= 86) return "bg-orange-500"
-  if (percent >= 71) return "bg-yellow-500"
-  return "bg-blue-500"
+  if (percent >= 95) return "[&>div]:bg-red-500"
+  if (percent >= 86) return "[&>div]:bg-orange-500"
+  if (percent >= 71) return "[&>div]:bg-yellow-500"
+  return "[&>div]:bg-blue-500"
 }
 
 export function VirtualMachines() {
