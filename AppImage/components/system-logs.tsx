@@ -974,20 +974,31 @@ export function SystemLogs() {
 
             {/* Backups Tab */}
             <TabsContent value="backups" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <Card className="bg-card/50 border-border">
-                  <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-cyan-500">{backupStats.qemu}</div>
-                    <p className="text-xs text-muted-foreground mt-1">QEMU Backups</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-card/50 border-border">
-                  <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-orange-500">{backupStats.lxc}</div>
-                    <p className="text-xs text-muted-foreground mt-1">LXC Backups</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-card/50 border-border">
+              <div className="space-y-4 mb-4">
+                {/* First row: VM and LXC backups */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <Card className="bg-card/50 border-border">
+                    <CardContent className="pt-6">
+                      <div className="text-2xl font-bold text-cyan-500">{backupStats.qemu}</div>
+                      <p className="text-xs text-muted-foreground mt-1">VM Backups</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-card/50 border-border">
+                    <CardContent className="pt-6">
+                      <div className="text-2xl font-bold text-orange-500">{backupStats.lxc}</div>
+                      <p className="text-xs text-muted-foreground mt-1">LXC Backups</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-card/50 border-border hidden md:block">
+                    <CardContent className="pt-6">
+                      <div className="text-2xl font-bold text-foreground">{formatBytes(backupStats.totalSize)}</div>
+                      <p className="text-xs text-muted-foreground mt-1">Total Size</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Second row: Total Size (mobile only, full width) */}
+                <Card className="bg-card/50 border-border md:hidden">
                   <CardContent className="pt-6">
                     <div className="text-2xl font-bold text-foreground">{formatBytes(backupStats.totalSize)}</div>
                     <p className="text-xs text-muted-foreground mt-1">Total Size</p>
