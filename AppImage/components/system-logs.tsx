@@ -121,7 +121,7 @@ export function SystemLogs() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  const [dateFilter, setDateFilter] = useState("now")
+  const [dateFilter, setDateFilter] = useState("30") // Changed from "now" to "30" to load all recent logs by default
   const [customDays, setCustomDays] = useState("1")
 
   const getApiUrl = (endpoint: string) => {
@@ -132,54 +132,48 @@ export function SystemLogs() {
   }
 
   useEffect(() => {
+    // Initial fetch might be redundant if dateFilter is not "now" anymore, but keeping for now
+    // if (dateFilter === "now") {
     fetchAllData()
+    // }
   }, [])
 
   useEffect(() => {
     console.log("[v0] Date filter changed:", dateFilter, "Custom days:", customDays)
-    if (dateFilter !== "now") {
-      setLoading(true)
-      fetchSystemLogs()
-        .then((newLogs) => {
-          console.log("[v0] Loaded logs for date filter:", dateFilter, "Count:", newLogs.length)
-          console.log("[v0] First log:", newLogs[0])
-          setLogs(newLogs)
-          setLoading(false)
-        })
-        .catch((err) => {
-          console.error("[v0] Error loading logs:", err)
-          setLoading(false)
-        })
-    } else {
-      fetchAllData()
-    }
+    setLoading(true)
+    fetchSystemLogs()
+      .then((newLogs) => {
+        console.log("[v0] Loaded logs for date filter:", dateFilter, "Count:", newLogs.length)
+        console.log("[v0] First log:", newLogs[0])
+        setLogs(newLogs)
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error("[v0] Error loading logs:", err)
+        setLoading(false)
+      })
   }, [dateFilter, customDays])
 
   useEffect(() => {
     console.log("[v0] Level or service filter changed:", levelFilter, serviceFilter)
-    if (levelFilter !== "all" || serviceFilter !== "all") {
-      setLoading(true)
-      fetchSystemLogs()
-        .then((newLogs) => {
-          console.log(
-            "[v0] Loaded logs for filters - Level:",
-            levelFilter,
-            "Service:",
-            serviceFilter,
-            "Count:",
-            newLogs.length,
-          )
-          setLogs(newLogs)
-          setLoading(false)
-        })
-        .catch((err) => {
-          console.error("[v0] Error loading logs:", err)
-          setLoading(false)
-        })
-    } else if (dateFilter === "now") {
-      // Only reload all data if we're on "now" and all filters are cleared
-      fetchAllData()
-    }
+    setLoading(true)
+    fetchSystemLogs()
+      .then((newLogs) => {
+        console.log(
+          "[v0] Loaded logs for filters - Level:",
+          levelFilter,
+          "Service:",
+          serviceFilter,
+          "Count:",
+          newLogs.length,
+        )
+        setLogs(newLogs)
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error("[v0] Error loading logs:", err)
+        setLoading(false)
+      })
   }, [levelFilter, serviceFilter])
 
   const fetchAllData = async () => {
@@ -223,11 +217,9 @@ export function SystemLogs() {
       let apiUrl = getApiUrl("/api/logs")
       const params = new URLSearchParams()
 
-      if (dateFilter !== "now") {
-        const daysAgo = dateFilter === "custom" ? Number.parseInt(customDays) : Number.parseInt(dateFilter)
-        params.append("since_days", daysAgo.toString())
-        console.log("[v0] Fetching logs since_days:", daysAgo)
-      }
+      const daysAgo = dateFilter === "custom" ? Number.parseInt(customDays) : Number.parseInt(dateFilter)
+      params.append("since_days", daysAgo.toString())
+      console.log("[v0] Fetching logs since_days:", daysAgo)
 
       if (levelFilter !== "all") {
         const priorityMap: Record<string, string> = {
@@ -290,7 +282,7 @@ export function SystemLogs() {
     try {
       // Generate filename based on active filters
       const filters = []
-      if (dateFilter !== "now") {
+      if (dateFilter !== "30") {
         const days = dateFilter === "custom" ? customDays : dateFilter
         filters.push(`${days}days`)
       }
@@ -313,7 +305,7 @@ export function SystemLogs() {
         `Total Entries: ${filteredCombinedLogs.length.toLocaleString()}`,
         ``,
         `Filters Applied:`,
-        `- Date Range: ${dateFilter === "now" ? "Current logs" : dateFilter === "custom" ? `${customDays} days ago` : `${dateFilter} days ago`}`,
+        `- Date Range: ${dateFilter === "custom" ? `${customDays} days ago` : `${dateFilter} days ago`}`,
         `- Level: ${levelFilter === "all" ? "All Levels" : levelFilter}`,
         `- Service: ${serviceFilter === "all" ? "All Services" : serviceFilter}`,
         `- Search: ${searchTerm || "None"}`,
@@ -808,12 +800,12 @@ export function SystemLogs() {
                     <SelectValue placeholder="Time range" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="now">Current logs</SelectItem>
                     <SelectItem value="1">1 day ago</SelectItem>
                     <SelectItem value="3">3 days ago</SelectItem>
                     <SelectItem value="7">1 week ago</SelectItem>
                     <SelectItem value="14">2 weeks ago</SelectItem>
                     <SelectItem value="30">1 month ago</SelectItem>
+                    <SelectItem value="90">3 months ago</SelectItem>
                     <SelectItem value="custom">Custom days</SelectItem>
                   </SelectContent>
                 </Select>
@@ -891,11 +883,13 @@ export function SystemLogs() {
                       </div>
 
                       <div className="flex-1 min-w-0 overflow-hidden">
-                        <div className="flex items-center justify-between mb-1 gap-2">
-                          <div className="text-sm font-medium text-foreground truncate">{log.service}</div>
-                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2 flex-shrink-0">
-                            {log.timestamp}
+                        <div className="flex flex-col gap-1 mb-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-sm font-medium text-foreground truncate flex-1 min-w-0">
+                              {log.service}
+                            </div>
                           </div>
+                          <div className="text-xs text-muted-foreground font-mono truncate">{log.timestamp}</div>
                         </div>
                         <div className="text-sm text-foreground mb-1 line-clamp-2 break-words overflow-hidden">
                           {log.message}
