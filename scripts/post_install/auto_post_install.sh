@@ -942,6 +942,54 @@ EOF
     systemctl restart cron >/dev/null 2>&1 || true
     msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 90% of") $LOG2RAM_SIZE"
 
+
+    msg_info "$(translate "Adjusting systemd-journald limits to match Log2RAM size...")"
+
+
+    if [[ -f /etc/systemd/journald.conf ]]; then
+        cp -n /etc/systemd/journald.conf /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)
+
+    fi
+
+    SIZE_MB=$(echo "$LOG2RAM_SIZE" | tr -dc '0-9')
+
+
+    USE_MB=$(( SIZE_MB * 55 / 100 ))    
+    KEEP_MB=$(( SIZE_MB * 10 / 100 ))   
+    RUNTIME_MB=$(( SIZE_MB * 25 / 100 )) 
+
+
+    [ "$USE_MB" -lt 80 ] && USE_MB=80
+    [ "$RUNTIME_MB" -lt 32 ] && RUNTIME_MB=32
+    [ "$KEEP_MB" -lt 8 ] && KEEP_MB=8
+
+
+    sed -i '/^\[Journal\]/,$d' /etc/systemd/journald.conf 2>/dev/null || true
+    tee -a /etc/systemd/journald.conf >/dev/null <<EOF
+    [Journal]
+    Storage=persistent
+    SplitMode=none
+    RateLimitIntervalSec=30s
+    RateLimitBurst=1000
+    ForwardToSyslog=no
+    ForwardToWall=no
+    Seal=no
+    Compress=yes
+    SystemMaxUse=${USE_MB}M
+    SystemKeepFree=${KEEP_MB}M
+    RuntimeMaxUse=${RUNTIME_MB}M
+    MaxLevelStore=warning
+    MaxLevelSyslog=warning
+    MaxLevelKMsg=warning
+    MaxLevelConsole=notice
+    MaxLevelWall=crit
+    EOF
+
+    systemctl restart systemd-journald >/dev/null 2>&1 || true
+    msg_ok "$(translate "Backup created:") /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
+    msg_ok "$(translate "Journald configuration adjusted to") ${USE_MB}M (Log2RAM ${LOG2RAM_SIZE})"
+
+
     register_tool "log2ram" true
 }
 
