@@ -866,18 +866,18 @@ export function SystemLogs() {
                   {displayedLogs.map((log, index) => (
                     <div
                       key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
+                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden"
                       onClick={() => {
                         if (log.isEvent) {
                           setSelectedEvent(log.eventData)
                           setIsEventModalOpen(true)
                         } else {
-                          setSelectedLog(log as SystemLog) // Cast to SystemLog for dialog
+                          setSelectedLog(log as SystemLog)
                           setIsLogModalOpen(true)
                         }
                       }}
                     >
-                      <div className="flex-shrink-0 flex gap-2">
+                      <div className="flex-shrink-0 flex gap-2 flex-wrap">
                         <Badge variant="outline" className={getLevelColor(log.level)}>
                           {getLevelIcon(log.level)}
                           {log.level.toUpperCase()}
@@ -890,14 +890,16 @@ export function SystemLogs() {
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex items-center justify-between mb-1 gap-2">
                           <div className="text-sm font-medium text-foreground truncate">{log.service}</div>
-                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2">
+                          <div className="text-xs text-muted-foreground font-mono whitespace-nowrap ml-2 flex-shrink-0">
                             {log.timestamp}
                           </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2">{log.message}</div>
+                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-words overflow-hidden">
+                          {log.message}
+                        </div>
                         <div className="text-xs text-muted-foreground truncate">
                           {log.source}
                           {log.pid && ` • PID: ${log.pid}`}
@@ -958,7 +960,7 @@ export function SystemLogs() {
                   {backups.map((backup, index) => (
                     <div
                       key={index}
-                      className="flex items-start space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
+                      className="flex items-start space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden"
                       onClick={() => {
                         setSelectedBackup(backup)
                         setIsBackupModalOpen(true)
@@ -968,7 +970,7 @@ export function SystemLogs() {
                         <HardDrive className="h-5 w-5 text-blue-500" />
                       </div>
 
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className={getBackupTypeColor(backup.volid)}>
@@ -985,7 +987,9 @@ export function SystemLogs() {
                             {backup.size_human}
                           </Badge>
                         </div>
-                        <div className="text-xs text-muted-foreground mb-1 truncate">Storage: {backup.storage}</div>
+                        <div className="text-xs text-muted-foreground mb-1 truncate break-words">
+                          Storage: {backup.storage}
+                        </div>
                         <div className="text-xs text-muted-foreground flex items-center">
                           <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
                           <span className="truncate">{backup.created}</span>
@@ -1031,11 +1035,11 @@ export function SystemLogs() {
                       <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                           <div className="text-sm font-medium text-foreground truncate">{notification.service}</div>
-                          <div className="text-xs text-muted-foreground font-mono truncate">
+                          <div className="text-xs text-muted-foreground font-mono truncate flex-shrink-0">
                             {notification.timestamp}
                           </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-all overflow-hidden">
+                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-words overflow-hidden">
                           {notification.message}
                         </div>
                         <div className="text-xs text-muted-foreground break-words overflow-hidden">
