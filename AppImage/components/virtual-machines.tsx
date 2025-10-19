@@ -525,8 +525,10 @@ export function VirtualMachines() {
                           {typeBadge.icon}
                           {typeBadge.label}
                         </Badge>
-                        <span className="font-semibold text-foreground">{vm.name}</span>
-                        <span className="text-sm text-muted-foreground">ID: {vm.vmid}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-foreground truncate">{vm.name}</div>
+                          <div className="text-[10px] text-muted-foreground">ID: {vm.vmid}</div>
+                        </div>
                         {lxcIP && (
                           <span className={`text-sm ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}>
                             IP: {lxcIP}
@@ -618,9 +620,8 @@ export function VirtualMachines() {
 
                         {/* Name and ID */}
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-foreground truncate">
-                            {vm.name} ({vm.vmid})
-                          </div>
+                          <div className="font-semibold text-foreground truncate">{vm.name}</div>
+                          <div className="text-[10px] text-muted-foreground">ID: {vm.vmid}</div>
                         </div>
 
                         <div className="flex items-center gap-3 flex-shrink-0">
