@@ -1,64 +1,67 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 
-interface MetricsDialogProps {
-  open: boolean
-  onClose: () => void
+interface MetricsViewProps {
   vmid: number
   vmName: string
   vmType: "qemu" | "lxc"
   metricType: "cpu" | "memory" | "network" | "disk"
+  onBack: () => void
 }
 
 const TIMEFRAME_OPTIONS = [
-  { value: "hour", label: "1 Hora" },
-  { value: "day", label: "24 Horas" },
-  { value: "week", label: "7 Días" },
-  { value: "month", label: "30 Días" },
-  { value: "year", label: "1 Año" },
+  { value: "hour", label: "1 Hour" },
+  { value: "day", label: "24 Hours" },
+  { value: "week", label: "7 Days" },
+  { value: "month", label: "30 Days" },
+  { value: "year", label: "1 Year" },
 ]
 
 const METRIC_TITLES = {
-  cpu: "Uso de CPU",
-  memory: "Uso de Memoria",
-  network: "Tráfico de Red",
-  disk: "I/O de Disco",
+  cpu: "CPU Usage",
+  memory: "Memory Usage",
+  network: "Network Traffic",
+  disk: "Disk I/O",
 }
 
-export function MetricsDialog({ open, onClose, vmid, vmName, vmType, metricType }: MetricsDialogProps) {
+export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: MetricsViewProps) {
   const [timeframe, setTimeframe] = useState("week")
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (open) {
-      fetchMetrics()
-    }
-  }, [open, vmid, timeframe])
+    fetchMetrics()
+  }, [vmid, timeframe])
 
   const fetchMetrics = async () => {
     setLoading(true)
     setError(null)
 
+    console.log("[v0] Fetching metrics for VMID:", vmid, "Timeframe:", timeframe, "Type:", vmType)
+
     try {
       const response = await fetch(`http://localhost:8008/api/vms/${vmid}/metrics?timeframe=${timeframe}`)
 
+      console.log("[v0] Response status:", response.status)
+
       if (!response.ok) {
-        throw new Error("Failed to fetch metrics")
+        const errorData = await response.json()
+        console.error("[v0] Error response:", errorData)
+        throw new Error(errorData.error || "Failed to fetch metrics")
       }
 
       const result = await response.json()
+      console.log("[v0] Metrics data received:", result)
 
       // Transform data for charts
       const transformedData = result.data.map((item: any) => ({
-        time: new Date(item.time * 1000).toLocaleString("es-ES", {
+        time: new Date(item.time * 1000).toLocaleString("en-US", {
           month: "short",
           day: "numeric",
           hour: timeframe === "hour" ? "2-digit" : undefined,
@@ -75,10 +78,11 @@ export function MetricsDialog({ open, onClose, vmid, vmName, vmType, metricType 
         diskwrite: item.diskwrite ? (item.diskwrite / 1024 / 1024).toFixed(2) : 0,
       }))
 
+      console.log("[v0] Transformed data:", transformedData.length, "points")
       setData(transformedData)
-    } catch (err) {
+    } catch (err: any) {
       console.error("[v0] Error fetching metrics:", err)
-      setError("Error al cargar las métricas")
+      setError(err.message || "Error loading metrics")
     } finally {
       setLoading(false)
     }
@@ -104,7 +108,7 @@ export function MetricsDialog({ open, onClose, vmid, vmName, vmType, metricType 
     if (data.length === 0) {
       return (
         <div className="flex items-center justify-center h-96">
-          <p className="text-muted-foreground">No hay datos disponibles</p>
+          <p className="text-muted-foreground">No data available</p>
         </div>
       )
     }
@@ -139,7 +143,7 @@ export function MetricsDialog({ open, onClose, vmid, vmName, vmType, metricType 
                 labelStyle={{ color: "hsl(var(--foreground))" }}
               />
               <Legend />
-              <Line type="monotone" dataKey="memory" stroke="#10b981" name="Memoria %" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="memory" stroke="#10b981" name="Memory %" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         )
@@ -159,8 +163,8 @@ export function MetricsDialog({ open, onClose, vmid, vmName, vmType, metricType 
                 labelStyle={{ color: "hsl(var(--foreground))" }}
               />
               <Legend />
-              <Line type="monotone" dataKey="netin" stroke="#3b82f6" name="Entrada (MB)" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="netout" stroke="#8b5cf6" name="Salida (MB)" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="netin" stroke="#3b82f6" name="In (MB)" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="netout" stroke="#8b5cf6" name="Out (MB)" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         )
@@ -180,19 +184,12 @@ export function MetricsDialog({ open, onClose, vmid, vmName, vmType, metricType 
                 labelStyle={{ color: "hsl(var(--foreground))" }}
               />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="diskread"
-                stroke="#10b981"
-                name="Lectura (MB)"
-                strokeWidth={2}
-                dot={false}
-              />
+              <Line type="monotone" dataKey="diskread" stroke="#10b981" name="Read (MB)" strokeWidth={2} dot={false} />
               <Line
                 type="monotone"
                 dataKey="diskwrite"
                 stroke="#f59e0b"
-                name="Escritura (MB)"
+                name="Write (MB)"
                 strokeWidth={2}
                 dot={false}
               />
@@ -203,42 +200,40 @@ export function MetricsDialog({ open, onClose, vmid, vmName, vmType, metricType 
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
-        {/* Fixed Header */}
-        <DialogHeader className="p-6 pb-4 border-b">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <DialogTitle className="text-xl">
-                  {METRIC_TITLES[metricType]} - {vmName}
-                </DialogTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  VMID: {vmid} • Tipo: {vmType.toUpperCase()}
-                </p>
-              </div>
+    <div className="flex flex-col h-full">
+      {/* Fixed Header */}
+      <div className="p-6 pb-4 border-b shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={onBack}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h2 className="text-xl font-semibold">
+                {METRIC_TITLES[metricType]} - {vmName}
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                VMID: {vmid} • Type: {vmType.toUpperCase()}
+              </p>
             </div>
-            <Select value={timeframe} onValueChange={setTimeframe}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TIMEFRAME_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
-        </DialogHeader>
+          <Select value={timeframe} onValueChange={setTimeframe}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TIMEFRAME_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6">{renderChart()}</div>
-      </DialogContent>
-    </Dialog>
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto p-6">{renderChart()}</div>
+    </div>
   )
 }
