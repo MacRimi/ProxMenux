@@ -3758,35 +3758,52 @@ def api_vm_metrics(vmid):
     try:
         timeframe = request.args.get('timeframe', 'week')  # hour, day, week, month, year
         
+        print(f"[v0] ===== METRICS REQUEST =====")
+        print(f"[v0] VMID: {vmid}")
+        print(f"[v0] Timeframe: {timeframe}")
+        
         # Validate timeframe
         valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
         if timeframe not in valid_timeframes:
+            print(f"[v0] ERROR: Invalid timeframe: {timeframe}")
             return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
         
         # Get local node name
         local_node = socket.gethostname()
+        print(f"[v0] Local node: {local_node}")
         
         # First, determine if it's a qemu VM or lxc container
+        print(f"[v0] Checking if VMID {vmid} is QEMU...")
         result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/qemu/{vmid}/status/current', '--output-format', 'json'],
                               capture_output=True, text=True, timeout=10)
         
         vm_type = 'qemu'
         if result.returncode != 0:
+            print(f"[v0] Not QEMU, checking if LXC...")
             # Try LXC
             result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/lxc/{vmid}/status/current', '--output-format', 'json'],
                                   capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
                 vm_type = 'lxc'
+                print(f"[v0] Found as LXC")
             else:
+                print(f"[v0] ERROR: VM/LXC {vmid} not found")
                 return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+        else:
+            print(f"[v0] Found as QEMU")
         
         # Get RRD data
+        print(f"[v0] Fetching RRD data for {vm_type} {vmid} with timeframe {timeframe}...")
         rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/{vm_type}/{vmid}/rrddata', 
                                     '--timeframe', timeframe, '--output-format', 'json'],
                                    capture_output=True, text=True, timeout=10)
         
         if rrd_result.returncode == 0:
+            print(f"[v0] RRD data fetched successfully")
+            print(f"[v0] RRD output length: {len(rrd_result.stdout)} bytes")
             rrd_data = json.loads(rrd_result.stdout)
+            print(f"[v0] RRD data points: {len(rrd_data)}")
+            print(f"[v0] ===== METRICS REQUEST SUCCESS =====")
             return jsonify({
                 'vmid': vmid,
                 'type': vm_type,
@@ -3794,10 +3811,14 @@ def api_vm_metrics(vmid):
                 'data': rrd_data
             })
         else:
+            print(f"[v0] ERROR: Failed to get RRD data")
+            print(f"[v0] stderr: {rrd_result.stderr}")
+            print(f"[v0] ===== METRICS REQUEST FAILED =====")
             return jsonify({'error': f'Failed to get RRD data: {rrd_result.stderr}'}), 500
             
     except Exception as e:
-        print(f"Error getting VM metrics: {e}")
+        print(f"[v0] EXCEPTION in api_vm_metrics: {e}")
+        print(f"[v0] ===== METRICS REQUEST EXCEPTION =====")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/logs', methods=['GET'])

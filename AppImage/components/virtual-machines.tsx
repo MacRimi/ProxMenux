@@ -187,7 +187,6 @@ export function VirtualMachines() {
   const [vmConfigs, setVmConfigs] = useState<Record<number, string>>({})
   const [currentView, setCurrentView] = useState<"main" | "metrics">("main")
   const [selectedMetric, setSelectedMetric] = useState<"cpu" | "memory" | "disk" | "network" | null>(null)
-  const [metricsDialogOpen, setMetricsDialogOpen] = useState(false) // Declare and initialize metricsDialogOpen
 
   useEffect(() => {
     const fetchLXCIPs = async () => {
@@ -239,7 +238,6 @@ export function VirtualMachines() {
   const handleMetricClick = (metric: "cpu" | "memory" | "disk" | "network") => {
     setSelectedMetric(metric)
     setCurrentView("metrics")
-    setMetricsDialogOpen(true) // Open the metrics dialog
   }
 
   const handleBackToMain = () => {
@@ -561,7 +559,6 @@ export function VirtualMachines() {
                             className="cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={() => {
                               setSelectedMetric("cpu")
-                              setMetricsDialogOpen(true)
                             }}
                           >
                             <div
@@ -582,7 +579,6 @@ export function VirtualMachines() {
                             className="cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={() => {
                               setSelectedMetric("memory")
-                              setMetricsDialogOpen(true)
                             }}
                           >
                             <div
@@ -603,7 +599,6 @@ export function VirtualMachines() {
                             className="cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={() => {
                               setSelectedMetric("disk")
-                              setMetricsDialogOpen(true)
                             }}
                           >
                             <div
@@ -723,7 +718,6 @@ export function VirtualMachines() {
           setVMDetails(null)
           setCurrentView("main")
           setSelectedMetric(null)
-          setMetricsDialogOpen(false) // Close the metrics dialog when the VM dialog is closed
         }}
       >
         <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col p-0">
@@ -770,7 +764,9 @@ export function VirtualMachines() {
                             <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
                             <div
                               className="cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => handleMetricClick("cpu")}
+                              onClick={() => {
+                                setSelectedMetric("cpu")
+                              }}
                             >
                               <div className={`font-semibold mb-1 ${getUsageColor(selectedVM.cpu * 100)}`}>
                                 {(selectedVM.cpu * 100).toFixed(1)}%
@@ -785,7 +781,9 @@ export function VirtualMachines() {
                             <div className="text-xs text-muted-foreground mb-1">Memory</div>
                             <div
                               className="cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => handleMetricClick("memory")}
+                              onClick={() => {
+                                setSelectedMetric("memory")
+                              }}
                             >
                               <div
                                 className={`font-semibold mb-1 ${getUsageColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
@@ -803,7 +801,9 @@ export function VirtualMachines() {
                             <div className="text-xs text-muted-foreground mb-1">Disk</div>
                             <div
                               className="cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => handleMetricClick("disk")}
+                              onClick={() => {
+                                setSelectedMetric("disk")
+                              }}
                             >
                               <div
                                 className={`font-semibold mb-1 ${getUsageColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
@@ -825,7 +825,9 @@ export function VirtualMachines() {
                             <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
                             <div
                               className="cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => handleMetricClick("disk")}
+                              onClick={() => {
+                                setSelectedMetric("disk")
+                              }}
                             >
                               <div className="text-sm text-green-500 flex items-center gap-1">
                                 <span>↓</span>
@@ -841,7 +843,9 @@ export function VirtualMachines() {
                             <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
                             <div
                               className="cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => handleMetricClick("network")}
+                              onClick={() => {
+                                setSelectedMetric("network")
+                              }}
                             >
                               <div className="text-sm text-green-500 flex items-center gap-1">
                                 <span>↓</span>
