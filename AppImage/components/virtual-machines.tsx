@@ -397,7 +397,7 @@ export function VirtualMachines() {
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{safeVMData.length}</div>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">{safeVMData.length}</div>
             <div className="vm-badges mt-2">
               <Badge variant="outline" className="vm-badge bg-green-500/10 text-green-500 border-green-500/20">
                 {safeVMData.filter((vm) => vm.status === "running").length} Running
@@ -416,7 +416,7 @@ export function VirtualMachines() {
             <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-xl lg:text-2xl font-bold text-foreground">
               {(safeVMData.reduce((sum, vm) => sum + (vm.cpu || 0), 0) * 100).toFixed(0)}%
             </div>
             <p className="text-xs text-muted-foreground mt-2">Allocated CPU usage</p>
@@ -432,7 +432,7 @@ export function VirtualMachines() {
             {/* Memory Usage (current) */}
             {physicalMemoryGB !== null && usedMemoryGB !== null && memoryUsagePercent !== null ? (
               <div>
-                <div className="text-2xl font-bold text-foreground">{usedMemoryGB.toFixed(1)} GB</div>
+                <div className="text-xl lg:text-2xl font-bold text-foreground">{usedMemoryGB.toFixed(1)} GB</div>
                 <div className="text-xs text-muted-foreground mt-1">
                   <span className={getMemoryPercentTextColor(memoryUsagePercent)}>
                     {memoryUsagePercent.toFixed(1)}%
@@ -443,7 +443,7 @@ export function VirtualMachines() {
               </div>
             ) : (
               <div>
-                <div className="text-2xl font-bold text-muted-foreground">--</div>
+                <div className="text-xl lg:text-2xl font-bold text-muted-foreground">--</div>
                 <div className="text-xs text-muted-foreground mt-1">Loading memory usage...</div>
               </div>
             )}
@@ -479,7 +479,7 @@ export function VirtualMachines() {
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-xl lg:text-2xl font-bold text-foreground">
               {formatStorage(safeVMData.reduce((sum, vm) => sum + (vm.maxdisk || 0), 0) / 1024 ** 3)}
             </div>
             <p className="text-xs text-muted-foreground mt-2">Allocated disk space</p>
@@ -488,9 +488,9 @@ export function VirtualMachines() {
       </div>
 
       <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center">
-            <Server className="h-5 w-5 mr-2" />
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-foreground">
+            <Server className="h-6 w-6" />
             Virtual Machines & Containers
           </CardTitle>
         </CardHeader>
@@ -623,15 +623,42 @@ export function VirtualMachines() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {/* CPU icon - color based on usage */}
-                          <Cpu className={`h-4 w-4 ${getIconColor(Number.parseFloat(cpuPercent))}`} />
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          {/* CPU icon with percentage */}
+                          <div className="flex flex-col items-center gap-0.5">
+                            {vm.status === "running" && (
+                              <span className="text-[10px] font-medium text-muted-foreground">{cpuPercent}%</span>
+                            )}
+                            <Cpu
+                              className={`h-4 w-4 ${
+                                vm.status === "stopped" ? "text-gray-500" : getIconColor(Number.parseFloat(cpuPercent))
+                              }`}
+                            />
+                          </div>
 
-                          {/* Memory icon - color based on usage */}
-                          <MemoryStick className={`h-4 w-4 ${getIconColor(Number.parseFloat(memPercent))}`} />
+                          {/* Memory icon with percentage */}
+                          <div className="flex flex-col items-center gap-0.5">
+                            {vm.status === "running" && (
+                              <span className="text-[10px] font-medium text-muted-foreground">{memPercent}%</span>
+                            )}
+                            <MemoryStick
+                              className={`h-4 w-4 ${
+                                vm.status === "stopped" ? "text-gray-500" : getIconColor(Number.parseFloat(memPercent))
+                              }`}
+                            />
+                          </div>
 
-                          {/* Disk icon - color based on usage */}
-                          <HardDrive className={`h-4 w-4 ${getIconColor(Number.parseFloat(diskPercent))}`} />
+                          {/* Disk icon with percentage */}
+                          <div className="flex flex-col items-center gap-0.5">
+                            {vm.status === "running" && (
+                              <span className="text-[10px] font-medium text-muted-foreground">{diskPercent}%</span>
+                            )}
+                            <HardDrive
+                              className={`h-4 w-4 ${
+                                vm.status === "stopped" ? "text-gray-500" : getIconColor(Number.parseFloat(diskPercent))
+                              }`}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
