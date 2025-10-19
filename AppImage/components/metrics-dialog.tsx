@@ -46,7 +46,13 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
     console.log("[v0] Fetching metrics for VMID:", vmid, "Timeframe:", timeframe, "Type:", vmType)
 
     try {
-      const response = await fetch(`http://localhost:8008/api/vms/${vmid}/metrics?timeframe=${timeframe}`)
+      const baseUrl =
+        typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+      const apiUrl = `${baseUrl}/api/vms/${vmid}/metrics?timeframe=${timeframe}`
+
+      console.log("[v0] Fetching from URL:", apiUrl)
+
+      const response = await fetch(apiUrl)
 
       console.log("[v0] Response status:", response.status)
 
