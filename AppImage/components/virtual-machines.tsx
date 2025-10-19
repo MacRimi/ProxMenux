@@ -20,6 +20,7 @@ import {
   Container,
 } from "lucide-react"
 import useSWR from "swr"
+import { MetricsDialog } from "./metrics-dialog"
 
 interface VMData {
   vmid: number
@@ -184,6 +185,8 @@ export function VirtualMachines() {
   const [controlLoading, setControlLoading] = useState(false)
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [vmConfigs, setVmConfigs] = useState<Record<number, string>>({})
+  const [metricsDialogOpen, setMetricsDialogOpen] = useState(false)
+  const [selectedMetric, setSelectedMetric] = useState<"cpu" | "memory" | "disk" | "network" | null>(null)
 
   useEffect(() => {
     const fetchLXCIPs = async () => {
@@ -540,37 +543,65 @@ export function VirtualMachines() {
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                         <div>
                           <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
-                          <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(cpuPercent))}`}>
-                            {cpuPercent}%
+                          <div
+                            className="cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => {
+                              setSelectedMetric("cpu")
+                              setMetricsDialogOpen(true)
+                            }}
+                          >
+                            <div
+                              className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(cpuPercent))}`}
+                            >
+                              {cpuPercent}%
+                            </div>
+                            <Progress
+                              value={Number.parseFloat(cpuPercent)}
+                              className={`h-1.5 ${getProgressColor(Number.parseFloat(cpuPercent))}`}
+                            />
                           </div>
-                          <Progress
-                            value={Number.parseFloat(cpuPercent)}
-                            className={`h-1.5 ${getProgressColor(Number.parseFloat(cpuPercent))}`}
-                          />
                         </div>
 
                         <div>
                           <div className="text-xs text-muted-foreground mb-1">Memory</div>
-                          <div className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(memPercent))}`}>
-                            {memGB} / {maxMemGB} GB
+                          <div
+                            className="cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => {
+                              setSelectedMetric("memory")
+                              setMetricsDialogOpen(true)
+                            }}
+                          >
+                            <div
+                              className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(memPercent))}`}
+                            >
+                              {memGB} / {maxMemGB} GB
+                            </div>
+                            <Progress
+                              value={Number.parseFloat(memPercent)}
+                              className={`h-1.5 ${getProgressColor(Number.parseFloat(memPercent))}`}
+                            />
                           </div>
-                          <Progress
-                            value={Number.parseFloat(memPercent)}
-                            className={`h-1.5 ${getProgressColor(Number.parseFloat(memPercent))}`}
-                          />
                         </div>
 
                         <div>
                           <div className="text-xs text-muted-foreground mb-1">Disk Usage</div>
                           <div
-                            className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(diskPercent))}`}
+                            className="cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => {
+                              setSelectedMetric("disk")
+                              setMetricsDialogOpen(true)
+                            }}
                           >
-                            {diskGB} / {maxDiskGB} GB
+                            <div
+                              className={`text-sm font-semibold mb-1 ${getUsageColor(Number.parseFloat(diskPercent))}`}
+                            >
+                              {diskGB} / {maxDiskGB} GB
+                            </div>
+                            <Progress
+                              value={Number.parseFloat(diskPercent)}
+                              className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
+                            />
                           </div>
-                          <Progress
-                            value={Number.parseFloat(diskPercent)}
-                            className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
-                          />
                         </div>
 
                         <div className="hidden md:block">
@@ -718,37 +749,62 @@ export function VirtualMachines() {
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
-                        <div className={`font-semibold mb-1 ${getUsageColor(selectedVM.cpu * 100)}`}>
-                          {(selectedVM.cpu * 100).toFixed(1)}%
+                        <div
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => {
+                            setSelectedMetric("cpu")
+                            setMetricsDialogOpen(true)
+                          }}
+                        >
+                          <div className={`font-semibold mb-1 ${getUsageColor(selectedVM.cpu * 100)}`}>
+                            {(selectedVM.cpu * 100).toFixed(1)}%
+                          </div>
+                          <Progress
+                            value={selectedVM.cpu * 100}
+                            className={`h-1.5 ${getModalProgressColor(selectedVM.cpu * 100)}`}
+                          />
                         </div>
-                        <Progress
-                          value={selectedVM.cpu * 100}
-                          className={`h-1.5 ${getModalProgressColor(selectedVM.cpu * 100)}`}
-                        />
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">Memory</div>
                         <div
-                          className={`font-semibold mb-1 ${getUsageColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => {
+                            setSelectedMetric("memory")
+                            setMetricsDialogOpen(true)
+                          }}
                         >
-                          {(selectedVM.mem / 1024 ** 3).toFixed(1)} / {(selectedVM.maxmem / 1024 ** 3).toFixed(1)} GB
+                          <div
+                            className={`font-semibold mb-1 ${getUsageColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                          >
+                            {(selectedVM.mem / 1024 ** 3).toFixed(1)} / {(selectedVM.maxmem / 1024 ** 3).toFixed(1)} GB
+                          </div>
+                          <Progress
+                            value={(selectedVM.mem / selectedVM.maxmem) * 100}
+                            className={`h-1.5 ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                          />
                         </div>
-                        <Progress
-                          value={(selectedVM.mem / selectedVM.maxmem) * 100}
-                          className={`h-1.5 ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
-                        />
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">Disk</div>
                         <div
-                          className={`font-semibold mb-1 ${getUsageColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => {
+                            setSelectedMetric("disk")
+                            setMetricsDialogOpen(true)
+                          }}
                         >
-                          {(selectedVM.disk / 1024 ** 3).toFixed(1)} / {(selectedVM.maxdisk / 1024 ** 3).toFixed(1)} GB
+                          <div
+                            className={`font-semibold mb-1 ${getUsageColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                          >
+                            {(selectedVM.disk / 1024 ** 3).toFixed(1)} / {(selectedVM.maxdisk / 1024 ** 3).toFixed(1)}{" "}
+                            GB
+                          </div>
+                          <Progress
+                            value={(selectedVM.disk / selectedVM.maxdisk) * 100}
+                            className={`h-1.5 ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                          />
                         </div>
-                        <Progress
-                          value={(selectedVM.disk / selectedVM.maxdisk) * 100}
-                          className={`h-1.5 ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
-                        />
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">Uptime</div>
@@ -756,23 +812,39 @@ export function VirtualMachines() {
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
-                        <div className="text-sm font-semibold">
-                          <div className="flex items-center gap-1">
-                            <span className="text-green-500">↓ {formatBytes(selectedVM.diskread)}</span>
+                        <div
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => {
+                            setSelectedMetric("disk")
+                            setMetricsDialogOpen(true)
+                          }}
+                        >
+                          <div className="text-sm text-green-500 flex items-center gap-1">
+                            <span>↓</span>
+                            <span>{((selectedVM.diskread || 0) / 1024 ** 2).toFixed(2)} MB</span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-blue-500">↑ {formatBytes(selectedVM.diskwrite)}</span>
+                          <div className="text-sm text-blue-500 flex items-center gap-1">
+                            <span>↑</span>
+                            <span>{((selectedVM.diskwrite || 0) / 1024 ** 2).toFixed(2)} MB</span>
                           </div>
                         </div>
                       </div>
                       <div>
                         <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
-                        <div className="text-sm font-semibold">
-                          <div className="flex items-center gap-1">
-                            <span className="text-green-500">↓ {formatBytes(selectedVM.netin)}</span>
+                        <div
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => {
+                            setSelectedMetric("network")
+                            setMetricsDialogOpen(true)
+                          }}
+                        >
+                          <div className="text-sm text-green-500 flex items-center gap-1">
+                            <span>↓</span>
+                            <span>{((selectedVM.netin || 0) / 1024 ** 2).toFixed(2)} MB</span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-blue-500">↑ {formatBytes(selectedVM.netout)}</span>
+                          <div className="text-sm text-blue-500 flex items-center gap-1">
+                            <span>↑</span>
+                            <span>{((selectedVM.netout || 0) / 1024 ** 2).toFixed(2)} MB</span>
                           </div>
                         </div>
                       </div>
@@ -978,18 +1050,25 @@ export function VirtualMachines() {
                 <StopCircle className="h-4 w-4 mr-2" />
                 Force Stop
               </Button>
-              <Button
-                className="w-full col-span-2 bg-purple-600 hover:bg-purple-700 text-white"
-                disabled={controlLoading}
-                onClick={() => selectedVM && handleDownloadLogs(selectedVM.vmid, selectedVM.name)}
-              >
-                <HardDrive className="h-4 w-4 mr-2" />
-                Download Logs
-              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* MetricsDialog component usage */}
+      {selectedVM && selectedMetric && (
+        <MetricsDialog
+          open={metricsDialogOpen}
+          onClose={() => {
+            setMetricsDialogOpen(false)
+            setSelectedMetric(null)
+          }}
+          vmid={selectedVM.vmid}
+          vmName={selectedVM.name}
+          vmType={selectedVM.type}
+          metricType={selectedMetric}
+        />
+      )}
     </div>
   )
 }
