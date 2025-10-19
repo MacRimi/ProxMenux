@@ -3752,6 +3752,54 @@ def api_vms():
     """Get virtual machine information"""
     return jsonify(get_proxmox_vms())
 
+@app.route('/api/vms/<int:vmid>/metrics', methods=['GET'])
+def api_vm_metrics(vmid):
+    """Get historical metrics (RRD data) for a specific VM/LXC"""
+    try:
+        timeframe = request.args.get('timeframe', 'week')  # hour, day, week, month, year
+        
+        # Validate timeframe
+        valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
+        if timeframe not in valid_timeframes:
+            return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
+        
+        # Get local node name
+        local_node = socket.gethostname()
+        
+        # First, determine if it's a qemu VM or lxc container
+        result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/qemu/{vmid}/status/current', '--output-format', 'json'],
+                              capture_output=True, text=True, timeout=10)
+        
+        vm_type = 'qemu'
+        if result.returncode != 0:
+            # Try LXC
+            result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/lxc/{vmid}/status/current', '--output-format', 'json'],
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                vm_type = 'lxc'
+            else:
+                return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+        
+        # Get RRD data
+        rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/{vm_type}/{vmid}/rrddata', 
+                                    '--timeframe', timeframe, '--output-format', 'json'],
+                                   capture_output=True, text=True, timeout=10)
+        
+        if rrd_result.returncode == 0:
+            rrd_data = json.loads(rrd_result.stdout)
+            return jsonify({
+                'vmid': vmid,
+                'type': vm_type,
+                'timeframe': timeframe,
+                'data': rrd_data
+            })
+        else:
+            return jsonify({'error': f'Failed to get RRD data: {rrd_result.stderr}'}), 500
+            
+    except Exception as e:
+        print(f"Error getting VM metrics: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/logs', methods=['GET'])
 def api_logs():
     """Get system logs"""
@@ -4619,6 +4667,7 @@ def api_info():
             '/api/proxmox-storage',
             '/api/network',
             '/api/vms',
+            '/api/vms/<vmid>/metrics', # Added endpoint for RRD data
             '/api/logs',
             '/api/health',
             '/api/hardware',
