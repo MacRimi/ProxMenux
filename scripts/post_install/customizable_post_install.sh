@@ -3436,7 +3436,7 @@ EOF
     chmod +x "$profile_script"
 
 
-    ensure_aliases() {
+    ensure_aliases_() {
         local bashrc="/root/.bashrc"
         [[ -f "$bashrc" ]] || touch "$bashrc"
 
@@ -3472,6 +3472,44 @@ EOF
 
         awk '!seen[$0]++' "$bashrc" > "${bashrc}.tmp" && mv "${bashrc}.tmp" "$bashrc"
     }
+
+
+    ensure_aliases() {
+    local bashrc="/root/.bashrc"
+    [[ -f "$bashrc" ]] || touch "$bashrc"
+
+    if ! grep -q "shopt -s expand_aliases" "$bashrc" 2>/dev/null; then
+        echo "shopt -s expand_aliases" >> "$bashrc"
+    fi
+
+    local -a ALIASES=(
+        "aptup=apt update && apt dist-upgrade"
+        "lxcclean=bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/clean-lxcs.sh)\""
+        "lxcupdate=bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/update-lxcs.sh)\""
+        "kernelclean=bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/kernel-clean.sh)\""
+        "cpugov=bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/scaling-governor.sh)\""
+        "lxctrim=bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/fstrim.sh)\""
+        "updatecerts=pvecm updatecerts"
+        "seqwrite=sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4M --size=32G --readwrite=write --ramp_time=4"
+        "seqread=sync;  fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4M --size=32G --readwrite=read  --ramp_time=4"
+        "ranwrite=sync; fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4k --size=4G --readwrite=randwrite --ramp_time=4"
+        "ranread=sync;  fio --randrepeat=1 --ioengine=libaio --direct=1 --name=test --filename=test --bs=4k --size=4G --readwrite=randread  --ramp_time=4"
+    )
+
+    for entry in "${ALIASES[@]}"; do
+        local name="${entry%%=*}"
+        local cmd="${entry#*=}"
+
+        local safe_cmd=${cmd//\'/\'\\\'\'}
+
+        sed -i -E "/^[[:space:]]*alias[[:space:]]+${name}=.*/d" "$bashrc"
+
+        printf "alias %s='%s'\n" "$name" "$safe_cmd" >> "$bashrc"
+    done
+
+    . "$bashrc"
+    }
+
 
     ensure_aliases
     msg_ok "$(translate "Aliases added to .bashrc")"
