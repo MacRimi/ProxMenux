@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Loader2 } from "lucide-react"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 
 interface MetricsViewProps {
   vmid: number
@@ -131,170 +131,239 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
     }
   }
 
+  const formatXAxisTick = (tick: any) => {
+    return tick
+  }
+
   const renderChart = () => {
     if (loading) {
       return (
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex items-center justify-center h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       )
     }
 
     if (error) {
       return (
-        <div className="flex items-center justify-center h-96">
-          <p className="text-destructive">{error}</p>
+        <div className="flex items-center justify-center h-[400px]">
+          <p className="text-red-500">{error}</p>
         </div>
       )
     }
 
     if (data.length === 0) {
       return (
-        <div className="flex items-center justify-center h-96">
+        <div className="flex items-center justify-center h-[400px]">
           <p className="text-muted-foreground">No data available</p>
         </div>
       )
     }
 
-    const tickInterval = Math.ceil(data.length / 10)
+    // Calculate tick interval based on data length
+    const tickInterval = Math.ceil(data.length / 8)
 
     switch (metricType) {
       case "cpu":
         return (
           <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <AreaChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
                 stroke="currentColor"
-                tick={{ fill: "currentColor", fontSize: 12 }}
                 className="text-foreground"
+                tick={{ fill: "currentColor" }}
                 angle={-45}
                 textAnchor="end"
                 height={80}
                 interval={tickInterval}
+                tickFormatter={formatXAxisTick}
               />
               <YAxis
                 stroke="currentColor"
+                className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                className="text-foreground"
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2)]}
+                allowDataOverflow={false}
               />
               <Tooltip
-                contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
-                labelStyle={{ color: "hsl(var(--foreground))" }}
+                contentStyle={{
+                  backgroundColor: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "6px",
+                }}
               />
               <Legend />
-              <Line type="monotone" dataKey="cpu" stroke="#3b82f6" name="CPU %" strokeWidth={2} dot={false} />
-            </LineChart>
+              <Area
+                type="monotone"
+                dataKey="cpu"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                fill="#3b82f6"
+                fillOpacity={0.3}
+                name="CPU %"
+              />
+            </AreaChart>
           </ResponsiveContainer>
         )
 
       case "memory":
         return (
           <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <AreaChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
                 stroke="currentColor"
-                tick={{ fill: "currentColor", fontSize: 12 }}
                 className="text-foreground"
+                tick={{ fill: "currentColor" }}
                 angle={-45}
                 textAnchor="end"
                 height={80}
                 interval={tickInterval}
+                tickFormatter={formatXAxisTick}
               />
               <YAxis
                 stroke="currentColor"
+                className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                className="text-foreground"
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2)]}
+                allowDataOverflow={false}
               />
               <Tooltip
-                contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
-                labelStyle={{ color: "hsl(var(--foreground))" }}
+                contentStyle={{
+                  backgroundColor: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "6px",
+                }}
               />
               <Legend />
-              <Line type="monotone" dataKey="memory" stroke="#10b981" name="Memory %" strokeWidth={2} dot={false} />
-            </LineChart>
+              <Area
+                type="monotone"
+                dataKey="memory"
+                stroke="#10b981"
+                fill="#10b981"
+                fillOpacity={0.3}
+                strokeWidth={2}
+                name="Memory %"
+              />
+            </AreaChart>
           </ResponsiveContainer>
         )
 
       case "network":
         return (
           <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <AreaChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
                 stroke="currentColor"
-                tick={{ fill: "currentColor", fontSize: 12 }}
                 className="text-foreground"
+                tick={{ fill: "currentColor" }}
                 angle={-45}
                 textAnchor="end"
                 height={80}
                 interval={tickInterval}
+                tickFormatter={formatXAxisTick}
               />
               <YAxis
                 stroke="currentColor"
+                className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                className="text-foreground"
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2)]}
+                allowDataOverflow={false}
               />
               <Tooltip
-                contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
-                labelStyle={{ color: "hsl(var(--foreground))" }}
+                contentStyle={{
+                  backgroundColor: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "6px",
+                }}
               />
               <Legend />
-              <Line type="monotone" dataKey="netin" stroke="#10b981" name="Download (MB)" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="netout" stroke="#3b82f6" name="Upload (MB)" strokeWidth={2} dot={false} />
-            </LineChart>
+              <Area
+                type="monotone"
+                dataKey="netin"
+                stroke="#10b981"
+                fill="#10b981"
+                fillOpacity={0.3}
+                strokeWidth={2}
+                name="Download (MB)"
+              />
+              <Area
+                type="monotone"
+                dataKey="netout"
+                stroke="#3b82f6"
+                fill="#3b82f6"
+                fillOpacity={0.3}
+                strokeWidth={2}
+                name="Upload (MB)"
+              />
+            </AreaChart>
           </ResponsiveContainer>
         )
 
       case "disk":
         return (
           <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <AreaChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
                 stroke="currentColor"
-                tick={{ fill: "currentColor", fontSize: 12 }}
                 className="text-foreground"
+                tick={{ fill: "currentColor" }}
                 angle={-45}
                 textAnchor="end"
                 height={80}
                 interval={tickInterval}
+                tickFormatter={formatXAxisTick}
               />
               <YAxis
                 stroke="currentColor"
+                className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                className="text-foreground"
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2)]}
+                allowDataOverflow={false}
               />
               <Tooltip
-                contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
-                labelStyle={{ color: "hsl(var(--foreground))" }}
+                contentStyle={{
+                  backgroundColor: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "6px",
+                }}
               />
               <Legend />
-              <Line type="monotone" dataKey="diskread" stroke="#10b981" name="Read (MB)" strokeWidth={2} dot={false} />
-              <Line
+              <Area
+                type="monotone"
+                dataKey="diskread"
+                stroke="#10b981"
+                fill="#10b981"
+                fillOpacity={0.3}
+                strokeWidth={2}
+                name="Read (MB)"
+              />
+              <Area
                 type="monotone"
                 dataKey="diskwrite"
                 stroke="#3b82f6"
-                name="Write (MB)"
+                fill="#3b82f6"
+                fillOpacity={0.3}
                 strokeWidth={2}
-                dot={false}
+                name="Write (MB)"
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         )
+
+      default:
+        return null
     }
   }
 
