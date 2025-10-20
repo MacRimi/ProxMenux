@@ -179,6 +179,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 tick={{ fill: "currentColor" }}
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
                 className="text-foreground"
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
               />
               <Tooltip
                 contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
@@ -210,6 +211,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 tick={{ fill: "currentColor" }}
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
                 className="text-foreground"
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
               />
               <Tooltip
                 contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
@@ -241,6 +243,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 tick={{ fill: "currentColor" }}
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
                 className="text-foreground"
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
               />
               <Tooltip
                 contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
@@ -273,6 +276,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 tick={{ fill: "currentColor" }}
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
                 className="text-foreground"
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
               />
               <Tooltip
                 contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
