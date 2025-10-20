@@ -167,7 +167,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
       case "cpu":
         return (
           <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data}>
+            <AreaChart data={data} margin={{ bottom: 70 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -185,7 +185,14 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2)]}
+                domain={[
+                  0,
+                  (dataMax: number) => {
+                    const percentMargin = Math.ceil(dataMax * 1.1)
+                    const fixedMargin = dataMax + 5
+                    return Math.max(percentMargin, fixedMargin, 10)
+                  },
+                ]}
                 allowDataOverflow={false}
               />
               <Tooltip
@@ -212,7 +219,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
       case "memory":
         return (
           <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data}>
+            <AreaChart data={data} margin={{ bottom: 70 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -230,7 +237,14 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2)]}
+                domain={[
+                  0,
+                  (dataMax: number) => {
+                    const percentMargin = Math.ceil(dataMax * 1.1)
+                    const fixedMargin = dataMax + 5
+                    return Math.max(percentMargin, fixedMargin, 10)
+                  },
+                ]}
                 allowDataOverflow={false}
               />
               <Tooltip
@@ -257,7 +271,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
       case "network":
         return (
           <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data}>
+            <AreaChart data={data} margin={{ bottom: 70 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -275,7 +289,14 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2)]}
+                domain={[
+                  0,
+                  (dataMax: number) => {
+                    const percentMargin = Math.ceil(dataMax * 1.1)
+                    const fixedMargin = dataMax + 5
+                    return Math.max(percentMargin, fixedMargin, 10)
+                  },
+                ]}
                 allowDataOverflow={false}
               />
               <Tooltip
@@ -311,7 +332,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
       case "disk":
         return (
           <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data}>
+            <AreaChart data={data} margin={{ bottom: 70 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -329,7 +350,14 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2)]}
+                domain={[
+                  0,
+                  (dataMax: number) => {
+                    const percentMargin = Math.ceil(dataMax * 1.1)
+                    const fixedMargin = dataMax + 5
+                    return Math.max(percentMargin, fixedMargin, 10)
+                  },
+                ]}
                 allowDataOverflow={false}
               />
               <Tooltip
