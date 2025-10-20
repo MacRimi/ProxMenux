@@ -264,9 +264,10 @@ else
 fi
     
   export OS_TYPE="windows"
-  export LANGUAGE=C
-  export LANG=C
-  export LC_ALL=C
+  export LANG=en_US.UTF-8
+  export LC_ALL=en_US.UTF-8
+  export LANGUAGE=en_US:en
+
   load_language
   initialize_cache
 
@@ -276,9 +277,10 @@ fi
 else
   msg_warn "$(translate "No ISO was generated.")"
   rm -rf "$TMP_DIR" "$CONVERTER"
-  export LANGUAGE=C
-  export LANG=C
-  export LC_ALL=C
+  export LANG=en_US.UTF-8
+  export LC_ALL=en_US.UTF-8
+  export LANGUAGE=en_US:en
+
   load_language
   initialize_cache
   msg_success "$(translate "Press Enter to return to menu...")"

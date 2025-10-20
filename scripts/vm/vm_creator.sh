@@ -449,7 +449,7 @@ select_interface_type
 </table>
 
 <p>
-<a href='https://macrimi.github.io/ProxMenux/docs/create-vm/synology' target='_blank'><img src='https://img.shields.io/badge/📚_Docs-blue' alt='Docs'></a>
+<a href='https://macrimi.github.io/ProxMenux/docs/create-vm' target='_blank'><img src='https://img.shields.io/badge/📚_Docs-blue' alt='Docs'></a>
 <a href='https://github.com/MacRimi/ProxMenux/blob/main/scripts/vm/create_vm.sh' target='_blank'><img src='https://img.shields.io/badge/💻_Code-green' alt='Code'></a>
 <a href='https://ko-fi.com/macrimi' target='_blank'><img src='https://img.shields.io/badge/☕_Ko--fi-red' alt='Ko-fi'></a>
 </p>
