@@ -724,22 +724,55 @@ export function VirtualMachines() {
           {currentView === "main" ? (
             <>
               <DialogHeader className="pb-4 border-b border-border px-6 pt-6">
-                <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Server className="h-5 w-5 flex-shrink-0" />
-                    <span className="text-lg truncate">{selectedVM?.name}</span>
-                  </div>
-                  {selectedVM && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline" className={`${getTypeBadge(selectedVM.type).color} flex-shrink-0`}>
-                        {getTypeBadge(selectedVM.type).icon}
-                        {getTypeBadge(selectedVM.type).label}
-                      </Badge>
-                      <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
-                        {selectedVM.status.toUpperCase()}
-                      </Badge>
+                <DialogTitle className="flex flex-col gap-3">
+                  <div className="hidden sm:flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Server className="h-5 w-5 flex-shrink-0" />
+                      <span className="text-lg truncate">{selectedVM?.name}</span>
+                      {selectedVM && <span className="text-sm text-muted-foreground">ID: {selectedVM.vmid}</span>}
                     </div>
-                  )}
+                    {selectedVM && (
+                      <>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className={`${getTypeBadge(selectedVM.type).color} flex-shrink-0`}>
+                            {getTypeBadge(selectedVM.type).icon}
+                            {getTypeBadge(selectedVM.type).label}
+                          </Badge>
+                          <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
+                            {selectedVM.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                        {selectedVM.status === "running" && (
+                          <span className="text-sm text-muted-foreground ml-auto">
+                            Uptime: {formatUptime(selectedVM.uptime)}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <div className="sm:hidden flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Server className="h-5 w-5 flex-shrink-0" />
+                      <span className="text-lg truncate">{selectedVM?.name}</span>
+                      {selectedVM && <span className="text-sm text-muted-foreground">ID: {selectedVM.vmid}</span>}
+                    </div>
+                    {selectedVM && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className={`${getTypeBadge(selectedVM.type).color} flex-shrink-0`}>
+                          {getTypeBadge(selectedVM.type).icon}
+                          {getTypeBadge(selectedVM.type).label}
+                        </Badge>
+                        <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
+                          {selectedVM.status.toUpperCase()}
+                        </Badge>
+                        {selectedVM.status === "running" && (
+                          <span className="text-sm text-muted-foreground">
+                            Uptime: {formatUptime(selectedVM.uptime)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </DialogTitle>
               </DialogHeader>
 
@@ -752,14 +785,6 @@ export function VirtualMachines() {
                           Basic Information
                         </h3>
                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">Name</div>
-                            <div className="font-semibold text-foreground">{selectedVM.name}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">VMID</div>
-                            <div className="font-semibold text-foreground">{selectedVM.vmid}</div>
-                          </div>
                           <div>
                             <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
                             <div
@@ -810,10 +835,6 @@ export function VirtualMachines() {
                                 className={`h-1.5 ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
                               />
                             </div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">Uptime</div>
-                            <div className="font-semibold text-foreground">{formatUptime(selectedVM.uptime)}</div>
                           </div>
                           <div>
                             <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
@@ -1055,7 +1076,6 @@ export function VirtualMachines() {
               </div>
             </>
           ) : (
-            /* Render metrics view when currentView is "metrics" */
             selectedVM &&
             selectedMetric && (
               <MetricsView
