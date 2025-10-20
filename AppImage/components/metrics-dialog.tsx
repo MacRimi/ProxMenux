@@ -43,19 +43,27 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
     setLoading(true)
     setError(null)
 
+    console.log("[v0] Fetching metrics for VMID:", vmid, "Timeframe:", timeframe, "Type:", vmType)
+
     try {
       const baseUrl =
         typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
       const apiUrl = `${baseUrl}/api/vms/${vmid}/metrics?timeframe=${timeframe}`
 
+      console.log("[v0] Fetching from URL:", apiUrl)
+
       const response = await fetch(apiUrl)
+
+      console.log("[v0] Response status:", response.status)
 
       if (!response.ok) {
         const errorData = await response.json()
+        console.error("[v0] Error response:", errorData)
         throw new Error(errorData.error || "Failed to fetch metrics")
       }
 
       const result = await response.json()
+      console.log("[v0] Metrics data received:", result)
 
       const transformedData = result.data.map((item: any) => {
         const date = new Date(item.time * 1000)
@@ -113,8 +121,10 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
         }
       })
 
+      console.log("[v0] Transformed data:", transformedData.length, "points")
       setData(transformedData)
     } catch (err: any) {
+      console.error("[v0] Error fetching metrics:", err)
       setError(err.message || "Error loading metrics")
     } finally {
       setLoading(false)
@@ -156,7 +166,9 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
     switch (metricType) {
       case "cpu":
         const maxCpuValue = Math.max(...data.map((d) => d.cpu || 0))
-        const cpuDomainMax = Math.ceil(maxCpuValue * 1.15)
+        const cpuDomainMax = Math.ceil(maxCpuValue * 1.15) // 15% margin
+        console.log("[v0] CPU - Max value:", maxCpuValue, "Domain max:", cpuDomainMax, "Data points:", data.length)
+        console.log("[v0] CPU - Sample data:", data.slice(0, 3))
 
         return (
           <ResponsiveContainer width="100%" height={400}>
@@ -204,7 +216,16 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
 
       case "memory":
         const maxMemoryValue = Math.max(...data.map((d) => d.memory || 0))
-        const memoryDomainMax = Math.ceil(maxMemoryValue * 1.15)
+        const memoryDomainMax = Math.ceil(maxMemoryValue * 1.15) // 15% margin
+        console.log(
+          "[v0] Memory - Max value:",
+          maxMemoryValue,
+          "Domain max:",
+          memoryDomainMax,
+          "Data points:",
+          data.length,
+        )
+        console.log("[v0] Memory - Sample data:", data.slice(0, 3))
 
         return (
           <ResponsiveContainer width="100%" height={400}>
@@ -252,7 +273,24 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
 
       case "network":
         const maxNetworkValue = Math.max(...data.map((d) => Math.max(d.netin || 0, d.netout || 0)))
-        const networkDomainMax = Math.ceil(maxNetworkValue * 1.15)
+        const networkDomainMax = Math.ceil(maxNetworkValue * 1.15) // 15% margin
+        console.log(
+          "[v0] Network - Max value:",
+          maxNetworkValue,
+          "Domain max:",
+          networkDomainMax,
+          "Data points:",
+          data.length,
+        )
+        console.log("[v0] Network - Sample data:", data.slice(0, 3))
+        console.log(
+          "[v0] Network - All netin values:",
+          data.map((d) => d.netin),
+        )
+        console.log(
+          "[v0] Network - All netout values:",
+          data.map((d) => d.netout),
+        )
 
         return (
           <ResponsiveContainer width="100%" height={400}>
@@ -309,7 +347,9 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
 
       case "disk":
         const maxDiskValue = Math.max(...data.map((d) => Math.max(d.diskread || 0, d.diskwrite || 0)))
-        const diskDomainMax = Math.ceil(maxDiskValue * 1.15)
+        const diskDomainMax = Math.ceil(maxDiskValue * 1.15) // 15% margin
+        console.log("[v0] Disk - Max value:", maxDiskValue, "Domain max:", diskDomainMax, "Data points:", data.length)
+        console.log("[v0] Disk - Sample data:", data.slice(0, 3))
 
         return (
           <ResponsiveContainer width="100%" height={400}>
