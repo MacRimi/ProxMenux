@@ -167,7 +167,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
       case "cpu":
         return (
           <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data} margin={{ bottom: 70 }}>
+            <AreaChart data={data} margin={{ bottom: 100 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -202,7 +202,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                   borderRadius: "6px",
                 }}
               />
-              <Legend />
+              <Legend wrapperStyle={{ paddingTop: "20px" }} />
               <Area
                 type="monotone"
                 dataKey="cpu"
@@ -219,7 +219,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
       case "memory":
         return (
           <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data} margin={{ bottom: 70 }}>
+            <AreaChart data={data} margin={{ bottom: 100 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -254,7 +254,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                   borderRadius: "6px",
                 }}
               />
-              <Legend />
+              <Legend wrapperStyle={{ paddingTop: "20px" }} />
               <Area
                 type="monotone"
                 dataKey="memory"
@@ -269,9 +269,14 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
         )
 
       case "network":
+        const maxNetworkValue = Math.max(...data.map((d) => Math.max(d.netin || 0, d.netout || 0)))
+        const networkPercentMargin = Math.ceil(maxNetworkValue * 1.1)
+        const networkFixedMargin = maxNetworkValue + 5
+        const networkDomainMax = Math.max(networkPercentMargin, networkFixedMargin, 10)
+
         return (
           <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data} margin={{ bottom: 70 }}>
+            <AreaChart data={data} margin={{ bottom: 100 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -289,14 +294,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[
-                  0,
-                  (dataMax: number) => {
-                    const percentMargin = Math.ceil(dataMax * 1.1)
-                    const fixedMargin = dataMax + 5
-                    return Math.max(percentMargin, fixedMargin, 10)
-                  },
-                ]}
+                domain={[0, networkDomainMax]}
                 allowDataOverflow={false}
               />
               <Tooltip
@@ -306,7 +304,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                   borderRadius: "6px",
                 }}
               />
-              <Legend />
+              <Legend wrapperStyle={{ paddingTop: "20px" }} />
               <Area
                 type="monotone"
                 dataKey="netin"
@@ -330,9 +328,14 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
         )
 
       case "disk":
+        const maxDiskValue = Math.max(...data.map((d) => Math.max(d.diskread || 0, d.diskwrite || 0)))
+        const diskPercentMargin = Math.ceil(maxDiskValue * 1.1)
+        const diskFixedMargin = maxDiskValue + 5
+        const diskDomainMax = Math.max(diskPercentMargin, diskFixedMargin, 10)
+
         return (
           <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data} margin={{ bottom: 70 }}>
+            <AreaChart data={data} margin={{ bottom: 100 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -350,14 +353,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[
-                  0,
-                  (dataMax: number) => {
-                    const percentMargin = Math.ceil(dataMax * 1.1)
-                    const fixedMargin = dataMax + 5
-                    return Math.max(percentMargin, fixedMargin, 10)
-                  },
-                ]}
+                domain={[0, diskDomainMax]}
                 allowDataOverflow={false}
               />
               <Tooltip
@@ -367,7 +363,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                   borderRadius: "6px",
                 }}
               />
-              <Legend />
+              <Legend wrapperStyle={{ paddingTop: "20px" }} />
               <Area
                 type="monotone"
                 dataKey="diskread"
