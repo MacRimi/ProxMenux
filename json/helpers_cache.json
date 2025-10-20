@@ -1603,24 +1603,6 @@
     "type": "ct"
   },
   {
-    "name": "GoMFT",
-    "slug": "gomft",
-    "desc": "GoMFT is a web-based managed file transfer application built with Go, leveraging rclone for robust file transfer capabilities. It provides a user-friendly interface for configuring, scheduling, and monitoring file transfers across various storage providers.",
-    "script": "ct/gomft.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/gomft.sh",
-    "categories": [
-      7
-    ],
-    "notes": [
-      "For additional configuration options check the documentation."
-    ],
-    "type": "ct",
-    "default_credentials": {
-      "username": "admin@example.com",
-      "password": "admin"
-    }
-  },
-  {
     "name": "Gotify",
     "slug": "gotify",
     "desc": "Gotify is a simple server for sending and receiving messages",
