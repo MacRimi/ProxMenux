@@ -65,24 +65,61 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
       const result = await response.json()
       console.log("[v0] Metrics data received:", result)
 
-      // Transform data for charts
-      const transformedData = result.data.map((item: any) => ({
-        time: new Date(item.time * 1000).toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-          hour: timeframe === "hour" ? "2-digit" : undefined,
-          minute: timeframe === "hour" ? "2-digit" : undefined,
-        }),
-        timestamp: item.time,
-        cpu: item.cpu ? (item.cpu * 100).toFixed(2) : 0,
-        memory: item.mem ? ((item.mem / item.maxmem) * 100).toFixed(2) : 0,
-        memoryMB: item.mem ? (item.mem / 1024 / 1024).toFixed(0) : 0,
-        maxMemoryMB: item.maxmem ? (item.maxmem / 1024 / 1024).toFixed(0) : 0,
-        netin: item.netin ? (item.netin / 1024 / 1024).toFixed(2) : 0,
-        netout: item.netout ? (item.netout / 1024 / 1024).toFixed(2) : 0,
-        diskread: item.diskread ? (item.diskread / 1024 / 1024).toFixed(2) : 0,
-        diskwrite: item.diskwrite ? (item.diskwrite / 1024 / 1024).toFixed(2) : 0,
-      }))
+      const transformedData = result.data.map((item: any) => {
+        const date = new Date(item.time * 1000)
+        let timeLabel = ""
+
+        // Format time based on timeframe
+        if (timeframe === "hour") {
+          // For 1 hour: show HH:mm
+          timeLabel = date.toLocaleString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+        } else if (timeframe === "day") {
+          // For 24 hours: show HH:mm
+          timeLabel = date.toLocaleString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+        } else if (timeframe === "week") {
+          // For 7 days: show Mon DD HH:mm
+          timeLabel = date.toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+        } else if (timeframe === "month") {
+          // For 30 days: show Mon DD
+          timeLabel = date.toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+        } else {
+          // For 1 year: show Mon YYYY
+          timeLabel = date.toLocaleString("en-US", {
+            month: "short",
+            year: "numeric",
+          })
+        }
+
+        return {
+          time: timeLabel,
+          timestamp: item.time,
+          cpu: item.cpu ? (item.cpu * 100).toFixed(2) : 0,
+          memory: item.mem ? ((item.mem / item.maxmem) * 100).toFixed(2) : 0,
+          memoryMB: item.mem ? (item.mem / 1024 / 1024).toFixed(0) : 0,
+          maxMemoryMB: item.maxmem ? (item.maxmem / 1024 / 1024).toFixed(0) : 0,
+          netin: item.netin ? (item.netin / 1024 / 1024).toFixed(2) : 0,
+          netout: item.netout ? (item.netout / 1024 / 1024).toFixed(2) : 0,
+          diskread: item.diskread ? (item.diskread / 1024 / 1024).toFixed(2) : 0,
+          diskwrite: item.diskwrite ? (item.diskwrite / 1024 / 1024).toFixed(2) : 0,
+        }
+      })
 
       console.log("[v0] Transformed data:", transformedData.length, "points")
       setData(transformedData)
@@ -119,13 +156,24 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
       )
     }
 
+    const tickInterval = Math.ceil(data.length / 10)
+
     switch (metricType) {
       case "cpu":
         return (
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="currentColor" tick={{ fill: "currentColor" }} className="text-foreground" />
+              <XAxis
+                dataKey="time"
+                stroke="currentColor"
+                tick={{ fill: "currentColor", fontSize: 12 }}
+                className="text-foreground"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                interval={tickInterval}
+              />
               <YAxis
                 stroke="currentColor"
                 tick={{ fill: "currentColor" }}
@@ -147,7 +195,16 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="currentColor" tick={{ fill: "currentColor" }} className="text-foreground" />
+              <XAxis
+                dataKey="time"
+                stroke="currentColor"
+                tick={{ fill: "currentColor", fontSize: 12 }}
+                className="text-foreground"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                interval={tickInterval}
+              />
               <YAxis
                 stroke="currentColor"
                 tick={{ fill: "currentColor" }}
@@ -169,7 +226,16 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="currentColor" tick={{ fill: "currentColor" }} className="text-foreground" />
+              <XAxis
+                dataKey="time"
+                stroke="currentColor"
+                tick={{ fill: "currentColor", fontSize: 12 }}
+                className="text-foreground"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                interval={tickInterval}
+              />
               <YAxis
                 stroke="currentColor"
                 tick={{ fill: "currentColor" }}
@@ -181,8 +247,8 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 labelStyle={{ color: "hsl(var(--foreground))" }}
               />
               <Legend />
-              <Line type="monotone" dataKey="netin" stroke="#3b82f6" name="In (MB)" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="netout" stroke="#8b5cf6" name="Out (MB)" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="netin" stroke="#10b981" name="Download (MB)" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="netout" stroke="#3b82f6" name="Upload (MB)" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         )
@@ -192,7 +258,16 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="currentColor" tick={{ fill: "currentColor" }} className="text-foreground" />
+              <XAxis
+                dataKey="time"
+                stroke="currentColor"
+                tick={{ fill: "currentColor", fontSize: 12 }}
+                className="text-foreground"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                interval={tickInterval}
+              />
               <YAxis
                 stroke="currentColor"
                 tick={{ fill: "currentColor" }}
@@ -208,7 +283,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
               <Line
                 type="monotone"
                 dataKey="diskwrite"
-                stroke="#f59e0b"
+                stroke="#3b82f6"
                 name="Write (MB)"
                 strokeWidth={2}
                 dot={false}
