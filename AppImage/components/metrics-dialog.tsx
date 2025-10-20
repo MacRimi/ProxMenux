@@ -125,11 +125,12 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="hsl(var(--foreground))" tick={{ fill: "hsl(var(--foreground))" }} />
+              <XAxis dataKey="time" stroke="currentColor" tick={{ fill: "currentColor" }} className="text-foreground" />
               <YAxis
-                stroke="hsl(var(--foreground))"
-                tick={{ fill: "hsl(var(--foreground))" }}
-                label={{ value: "%", angle: -90, position: "insideLeft", fill: "hsl(var(--foreground))" }}
+                stroke="currentColor"
+                tick={{ fill: "currentColor" }}
+                label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
+                className="text-foreground"
               />
               <Tooltip
                 contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
@@ -146,11 +147,12 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="hsl(var(--foreground))" tick={{ fill: "hsl(var(--foreground))" }} />
+              <XAxis dataKey="time" stroke="currentColor" tick={{ fill: "currentColor" }} className="text-foreground" />
               <YAxis
-                stroke="hsl(var(--foreground))"
-                tick={{ fill: "hsl(var(--foreground))" }}
-                label={{ value: "%", angle: -90, position: "insideLeft", fill: "hsl(var(--foreground))" }}
+                stroke="currentColor"
+                tick={{ fill: "currentColor" }}
+                label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
+                className="text-foreground"
               />
               <Tooltip
                 contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
@@ -167,11 +169,12 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="hsl(var(--foreground))" tick={{ fill: "hsl(var(--foreground))" }} />
+              <XAxis dataKey="time" stroke="currentColor" tick={{ fill: "currentColor" }} className="text-foreground" />
               <YAxis
-                stroke="hsl(var(--foreground))"
-                tick={{ fill: "hsl(var(--foreground))" }}
-                label={{ value: "MB", angle: -90, position: "insideLeft", fill: "hsl(var(--foreground))" }}
+                stroke="currentColor"
+                tick={{ fill: "currentColor" }}
+                label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
+                className="text-foreground"
               />
               <Tooltip
                 contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
@@ -189,11 +192,12 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="hsl(var(--foreground))" tick={{ fill: "hsl(var(--foreground))" }} />
+              <XAxis dataKey="time" stroke="currentColor" tick={{ fill: "currentColor" }} className="text-foreground" />
               <YAxis
-                stroke="hsl(var(--foreground))"
-                tick={{ fill: "hsl(var(--foreground))" }}
-                label={{ value: "MB", angle: -90, position: "insideLeft", fill: "hsl(var(--foreground))" }}
+                stroke="currentColor"
+                tick={{ fill: "currentColor" }}
+                label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
+                className="text-foreground"
               />
               <Tooltip
                 contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
