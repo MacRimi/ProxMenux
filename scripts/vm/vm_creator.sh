@@ -182,11 +182,29 @@ function create_vm() {
 
 
 
-  qm create "$VMID" -agent 1${MACHINE} -tablet 0 -localtime 1${BIOS_TYPE}${CPU_TYPE} \
-    -cores "$CORE_COUNT" -memory "$RAM_SIZE" -name "$HN" -tags proxmenux \
-    -net0 "virtio,bridge=$BRG,macaddr=$MAC$VLAN$MTU" -ostype "$GUEST_OS_TYPE" \
-    -scsihw virtio-scsi-pci \
-    $( [[ -n "$SERIAL_PORT" ]] && echo "-serial0 $SERIAL_PORT" ) >/dev/null 2>&1
+ # qm create "$VMID" -agent 1${MACHINE} -tablet 0 -localtime 1${BIOS_TYPE}${CPU_TYPE} \
+ #   -cores "$CORE_COUNT" -memory "$RAM_SIZE" -name "$HN" -tags proxmenux \
+ #   -net0 "virtio,bridge=$BRG,macaddr=$MAC$VLAN$MTU" -ostype "$GUEST_OS_TYPE" \
+ #   -scsihw virtio-scsi-pci \
+ #   $( [[ -n "$SERIAL_PORT" ]] && echo "-serial0 $SERIAL_PORT" ) >/dev/null 2>&1
+
+
+qm create "$VMID" \
+  -agent 1${MACHINE:+ $MACHINE} \
+  -localtime 1${BIOS_TYPE:+ $BIOS_TYPE}${CPU_TYPE:+ $CPU_TYPE} \
+  -cores "$CORE_COUNT" \
+  -memory "$RAM_SIZE" \
+  -name "$HN" \
+  -tags proxmenux \
+  -net0 "virtio,bridge=$BRG,macaddr=$MAC$VLAN$MTU" \
+  -ostype "$GUEST_OS_TYPE" \
+  -scsihw virtio-scsi-pci \
+  $( [[ -n "$SERIAL_PORT" ]] && echo "-serial0 $SERIAL_PORT" ) \
+  >/dev/null 2>&1
+
+if [[ "$OS_TYPE" == "2" ]]; then
+  qm set "$VMID" -tablet 1 >/dev/null 2>&1
+fi
 
   msg_ok "$(translate "Base VM created with ID") $VMID"
 
