@@ -110,14 +110,14 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
         return {
           time: timeLabel,
           timestamp: item.time,
-          cpu: item.cpu ? (item.cpu * 100).toFixed(2) : 0,
-          memory: item.mem ? ((item.mem / item.maxmem) * 100).toFixed(2) : 0,
-          memoryMB: item.mem ? (item.mem / 1024 / 1024).toFixed(0) : 0,
-          maxMemoryMB: item.maxmem ? (item.maxmem / 1024 / 1024).toFixed(0) : 0,
-          netin: item.netin ? (item.netin / 1024 / 1024).toFixed(2) : 0,
-          netout: item.netout ? (item.netout / 1024 / 1024).toFixed(2) : 0,
-          diskread: item.diskread ? (item.diskread / 1024 / 1024).toFixed(2) : 0,
-          diskwrite: item.diskwrite ? (item.diskwrite / 1024 / 1024).toFixed(2) : 0,
+          cpu: item.cpu ? Number((item.cpu * 100).toFixed(2)) : 0,
+          memory: item.mem ? Number(((item.mem / item.maxmem) * 100).toFixed(2)) : 0,
+          memoryMB: item.mem ? Number((item.mem / 1024 / 1024).toFixed(0)) : 0,
+          maxMemoryMB: item.maxmem ? Number((item.maxmem / 1024 / 1024).toFixed(0)) : 0,
+          netin: item.netin ? Number((item.netin / 1024 / 1024).toFixed(2)) : 0,
+          netout: item.netout ? Number((item.netout / 1024 / 1024).toFixed(2)) : 0,
+          diskread: item.diskread ? Number((item.diskread / 1024 / 1024).toFixed(2)) : 0,
+          diskwrite: item.diskwrite ? Number((item.diskwrite / 1024 / 1024).toFixed(2)) : 0,
         }
       })
 
@@ -165,6 +165,9 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
 
     switch (metricType) {
       case "cpu":
+        const maxCpuValue = Math.max(...data.map((d) => d.cpu || 0))
+        const cpuDomainMax = Math.ceil(maxCpuValue * 1.15) // 15% margin
+
         return (
           <ResponsiveContainer width="100%" height={400}>
             <AreaChart data={data} margin={{ bottom: 100 }}>
@@ -185,14 +188,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[
-                  0,
-                  (dataMax: number) => {
-                    const percentMargin = Math.ceil(dataMax * 1.1)
-                    const fixedMargin = dataMax + 5
-                    return Math.max(percentMargin, fixedMargin, 10)
-                  },
-                ]}
+                domain={[0, cpuDomainMax]}
                 allowDataOverflow={false}
               />
               <Tooltip
@@ -217,6 +213,9 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
         )
 
       case "memory":
+        const maxMemoryValue = Math.max(...data.map((d) => d.memory || 0))
+        const memoryDomainMax = Math.ceil(maxMemoryValue * 1.15) // 15% margin
+
         return (
           <ResponsiveContainer width="100%" height={400}>
             <AreaChart data={data} margin={{ bottom: 100 }}>
@@ -237,14 +236,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[
-                  0,
-                  (dataMax: number) => {
-                    const percentMargin = Math.ceil(dataMax * 1.1)
-                    const fixedMargin = dataMax + 5
-                    return Math.max(percentMargin, fixedMargin, 10)
-                  },
-                ]}
+                domain={[0, memoryDomainMax]}
                 allowDataOverflow={false}
               />
               <Tooltip
@@ -270,9 +262,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
 
       case "network":
         const maxNetworkValue = Math.max(...data.map((d) => Math.max(d.netin || 0, d.netout || 0)))
-        const networkPercentMargin = Math.ceil(maxNetworkValue * 1.1)
-        const networkFixedMargin = maxNetworkValue + 5
-        const networkDomainMax = Math.max(networkPercentMargin, networkFixedMargin, 10)
+        const networkDomainMax = Math.ceil(maxNetworkValue * 1.15) // 15% margin
 
         return (
           <ResponsiveContainer width="100%" height={400}>
@@ -329,9 +319,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
 
       case "disk":
         const maxDiskValue = Math.max(...data.map((d) => Math.max(d.diskread || 0, d.diskwrite || 0)))
-        const diskPercentMargin = Math.ceil(maxDiskValue * 1.1)
-        const diskFixedMargin = maxDiskValue + 5
-        const diskDomainMax = Math.max(diskPercentMargin, diskFixedMargin, 10)
+        const diskDomainMax = Math.ceil(maxDiskValue * 1.15) // 15% margin
 
         return (
           <ResponsiveContainer width="100%" height={400}>
