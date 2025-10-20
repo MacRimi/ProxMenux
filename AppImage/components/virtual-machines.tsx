@@ -790,7 +790,10 @@ export function VirtualMachines() {
                             <div className="text-xs text-muted-foreground mb-1">CPU Usage</div>
                             <div
                               className="cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => handleMetricClick("cpu")}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleMetricClick("cpu")
+                              }}
                             >
                               <div className={`font-semibold mb-1 ${getUsageColor(selectedVM.cpu * 100)}`}>
                                 {(selectedVM.cpu * 100).toFixed(1)}%
@@ -805,7 +808,10 @@ export function VirtualMachines() {
                             <div className="text-xs text-muted-foreground mb-1">Memory</div>
                             <div
                               className="cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => handleMetricClick("memory")}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleMetricClick("memory")
+                              }}
                             >
                               <div
                                 className={`font-semibold mb-1 ${getUsageColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
@@ -823,7 +829,10 @@ export function VirtualMachines() {
                             <div className="text-xs text-muted-foreground mb-1">Disk</div>
                             <div
                               className="cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => handleMetricClick("disk")}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleMetricClick("disk")
+                              }}
                             >
                               <div
                                 className={`font-semibold mb-1 ${getUsageColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
@@ -841,7 +850,10 @@ export function VirtualMachines() {
                             <div className="text-xs text-muted-foreground mb-1">Disk I/O</div>
                             <div
                               className="cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => handleMetricClick("disk")}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleMetricClick("disk")
+                              }}
                             >
                               <div className="text-sm text-green-500 flex items-center gap-1">
                                 <span>↓</span>
@@ -857,7 +869,10 @@ export function VirtualMachines() {
                             <div className="text-xs text-muted-foreground mb-1">Network I/O</div>
                             <div
                               className="cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => handleMetricClick("network")}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleMetricClick("network")
+                              }}
                             >
                               <div className="text-sm text-green-500 flex items-center gap-1">
                                 <span>↓</span>
