@@ -125,8 +125,12 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" />
-              <YAxis stroke="hsl(var(--muted-foreground))" label={{ value: "%", angle: -90, position: "insideLeft" }} />
+              <XAxis dataKey="time" stroke="hsl(var(--foreground))" tick={{ fill: "hsl(var(--foreground))" }} />
+              <YAxis
+                stroke="hsl(var(--foreground))"
+                tick={{ fill: "hsl(var(--foreground))" }}
+                label={{ value: "%", angle: -90, position: "insideLeft", fill: "hsl(var(--foreground))" }}
+              />
               <Tooltip
                 contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
                 labelStyle={{ color: "hsl(var(--foreground))" }}
@@ -142,8 +146,12 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" />
-              <YAxis stroke="hsl(var(--muted-foreground))" label={{ value: "%", angle: -90, position: "insideLeft" }} />
+              <XAxis dataKey="time" stroke="hsl(var(--foreground))" tick={{ fill: "hsl(var(--foreground))" }} />
+              <YAxis
+                stroke="hsl(var(--foreground))"
+                tick={{ fill: "hsl(var(--foreground))" }}
+                label={{ value: "%", angle: -90, position: "insideLeft", fill: "hsl(var(--foreground))" }}
+              />
               <Tooltip
                 contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
                 labelStyle={{ color: "hsl(var(--foreground))" }}
@@ -159,10 +167,11 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" />
+              <XAxis dataKey="time" stroke="hsl(var(--foreground))" tick={{ fill: "hsl(var(--foreground))" }} />
               <YAxis
-                stroke="hsl(var(--muted-foreground))"
-                label={{ value: "MB", angle: -90, position: "insideLeft" }}
+                stroke="hsl(var(--foreground))"
+                tick={{ fill: "hsl(var(--foreground))" }}
+                label={{ value: "MB", angle: -90, position: "insideLeft", fill: "hsl(var(--foreground))" }}
               />
               <Tooltip
                 contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
@@ -180,10 +189,11 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" />
+              <XAxis dataKey="time" stroke="hsl(var(--foreground))" tick={{ fill: "hsl(var(--foreground))" }} />
               <YAxis
-                stroke="hsl(var(--muted-foreground))"
-                label={{ value: "MB", angle: -90, position: "insideLeft" }}
+                stroke="hsl(var(--foreground))"
+                tick={{ fill: "hsl(var(--foreground))" }}
+                label={{ value: "MB", angle: -90, position: "insideLeft", fill: "hsl(var(--foreground))" }}
               />
               <Tooltip
                 contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
