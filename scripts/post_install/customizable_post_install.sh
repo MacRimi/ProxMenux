@@ -3911,6 +3911,13 @@ EOF
     [[ "$BAK_OK" = "0" ]] && msg_ok "$(translate "Backup created:") /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
     msg_ok "$(translate "Journald configuration adjusted to") ${USE_MB}M (Log2RAM ${LOG2RAM_SIZE})"
 
+    mkdir -p /var/log/pveproxy
+    chown -R www-data:www-data /var/log/pveproxy
+    chmod 0750 /var/log/pveproxy
+
+    mkdir -p /var/log.hdd/pveproxy
+    chown -R www-data:www-data /var/log.hdd/pveproxy
+    chmod 0750 /var/log.hdd/pveproxy
 
     systemctl restart cron >/dev/null 2>&1 || true
     systemctl restart log2ram >/dev/null 2>&1 || true
