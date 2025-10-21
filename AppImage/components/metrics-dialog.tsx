@@ -10,7 +10,6 @@ interface MetricsViewProps {
   vmid: number
   vmName: string
   vmType: "qemu" | "lxc"
-  metricType: "cpu" | "memory" | "network" | "disk"
   onBack: () => void
 }
 
@@ -22,14 +21,7 @@ const TIMEFRAME_OPTIONS = [
   { value: "year", label: "1 Year" },
 ]
 
-const METRIC_TITLES = {
-  cpu: "CPU Usage",
-  memory: "Memory Usage",
-  network: "Network Traffic",
-  disk: "Disk I/O",
-}
-
-export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: MetricsViewProps) {
+export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) {
   const [timeframe, setTimeframe] = useState("week")
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -61,23 +53,19 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
         const date = new Date(item.time * 1000)
         let timeLabel = ""
 
-        // Format time based on timeframe
         if (timeframe === "hour") {
-          // For 1 hour: show HH:mm
           timeLabel = date.toLocaleString("en-US", {
             hour: "2-digit",
             minute: "2-digit",
             hour12: false,
           })
         } else if (timeframe === "day") {
-          // For 24 hours: show HH:mm
           timeLabel = date.toLocaleString("en-US", {
             hour: "2-digit",
             minute: "2-digit",
             hour12: false,
           })
         } else if (timeframe === "week") {
-          // For 7 days: show Mon DD HH:mm
           timeLabel = date.toLocaleString("en-US", {
             month: "short",
             day: "numeric",
@@ -86,13 +74,11 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
             hour12: false,
           })
         } else if (timeframe === "month") {
-          // For 30 days: show Mon DD
           timeLabel = date.toLocaleString("en-US", {
             month: "short",
             day: "numeric",
           })
         } else {
-          // For 1 year: show Mon YYYY
           timeLabel = date.toLocaleString("en-US", {
             month: "short",
             year: "numeric",
@@ -125,7 +111,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
     return tick
   }
 
-  const renderChart = () => {
+  const renderAllCharts = () => {
     if (loading) {
       return (
         <div className="flex items-center justify-center h-[400px]">
@@ -150,17 +136,15 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
       )
     }
 
-    // Calculate tick interval based on data length
     const tickInterval = Math.ceil(data.length / 8)
 
-    switch (metricType) {
-      case "cpu":
-        const maxCpuValue = Math.max(...data.map((d) => d.cpu || 0))
-        const cpuDomainMax = Math.ceil(maxCpuValue * 1.15) // 15% margin
-
-        return (
-          <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data} margin={{ bottom: 100 }}>
+    return (
+      <div className="space-y-8">
+        {/* CPU Chart */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4">CPU Usage</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={data} margin={{ bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -169,7 +153,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 tick={{ fill: "currentColor" }}
                 angle={-45}
                 textAnchor="end"
-                height={80}
+                height={60}
                 interval={tickInterval}
                 tickFormatter={formatXAxisTick}
               />
@@ -178,8 +162,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[0, cpuDomainMax]}
-                allowDataOverflow={false}
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
               />
               <Tooltip
                 contentStyle={{
@@ -188,7 +171,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                   borderRadius: "6px",
                 }}
               />
-              <Legend wrapperStyle={{ paddingTop: "20px" }} />
+              <Legend wrapperStyle={{ paddingTop: "10px" }} />
               <Area
                 type="monotone"
                 dataKey="cpu"
@@ -200,15 +183,13 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
               />
             </AreaChart>
           </ResponsiveContainer>
-        )
+        </div>
 
-      case "memory":
-        const maxMemoryValue = Math.max(...data.map((d) => d.memory || 0))
-        const memoryDomainMax = Math.ceil(maxMemoryValue * 1.15) // 15% margin
-
-        return (
-          <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data} margin={{ bottom: 100 }}>
+        {/* Memory Chart */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Memory Usage</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={data} margin={{ bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -217,7 +198,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 tick={{ fill: "currentColor" }}
                 angle={-45}
                 textAnchor="end"
-                height={80}
+                height={60}
                 interval={tickInterval}
                 tickFormatter={formatXAxisTick}
               />
@@ -226,8 +207,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[0, memoryDomainMax]}
-                allowDataOverflow={false}
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
               />
               <Tooltip
                 contentStyle={{
@@ -236,7 +216,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                   borderRadius: "6px",
                 }}
               />
-              <Legend wrapperStyle={{ paddingTop: "20px" }} />
+              <Legend wrapperStyle={{ paddingTop: "10px" }} />
               <Area
                 type="monotone"
                 dataKey="memory"
@@ -248,15 +228,13 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
               />
             </AreaChart>
           </ResponsiveContainer>
-        )
+        </div>
 
-      case "network":
-        const maxNetworkValue = Math.max(...data.map((d) => Math.max(d.netin || 0, d.netout || 0)))
-        const networkDomainMax = Math.ceil(maxNetworkValue * 1.15) // 15% margin
-
-        return (
-          <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data} margin={{ bottom: 100 }}>
+        {/* Disk I/O Chart */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Disk I/O</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={data} margin={{ bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
               <XAxis
                 dataKey="time"
@@ -265,7 +243,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 tick={{ fill: "currentColor" }}
                 angle={-45}
                 textAnchor="end"
-                height={80}
+                height={60}
                 interval={tickInterval}
                 tickFormatter={formatXAxisTick}
               />
@@ -274,8 +252,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[0, networkDomainMax]}
-                allowDataOverflow={false}
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
               />
               <Tooltip
                 contentStyle={{
@@ -284,64 +261,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
                   borderRadius: "6px",
                 }}
               />
-              <Legend wrapperStyle={{ paddingTop: "20px" }} />
-              <Area
-                type="monotone"
-                dataKey="netin"
-                stroke="#10b981"
-                fill="#10b981"
-                fillOpacity={0.3}
-                strokeWidth={2}
-                name="Download (MB)"
-              />
-              <Area
-                type="monotone"
-                dataKey="netout"
-                stroke="#3b82f6"
-                fill="#3b82f6"
-                fillOpacity={0.3}
-                strokeWidth={2}
-                name="Upload (MB)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        )
-
-      case "disk":
-        const maxDiskValue = Math.max(...data.map((d) => Math.max(d.diskread || 0, d.diskwrite || 0)))
-        const diskDomainMax = Math.ceil(maxDiskValue * 1.15) // 15% margin
-
-        return (
-          <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data} margin={{ bottom: 100 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
-              <XAxis
-                dataKey="time"
-                stroke="currentColor"
-                className="text-foreground"
-                tick={{ fill: "currentColor" }}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-                interval={tickInterval}
-                tickFormatter={formatXAxisTick}
-              />
-              <YAxis
-                stroke="currentColor"
-                className="text-foreground"
-                tick={{ fill: "currentColor" }}
-                label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[0, diskDomainMax]}
-                allowDataOverflow={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "6px",
-                }}
-              />
-              <Legend wrapperStyle={{ paddingTop: "20px" }} />
+              <Legend wrapperStyle={{ paddingTop: "10px" }} />
               <Area
                 type="monotone"
                 dataKey="diskread"
@@ -362,11 +282,63 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
               />
             </AreaChart>
           </ResponsiveContainer>
-        )
+        </div>
 
-      default:
-        return null
-    }
+        {/* Network I/O Chart */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Network I/O</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={data} margin={{ bottom: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
+              <XAxis
+                dataKey="time"
+                stroke="currentColor"
+                className="text-foreground"
+                tick={{ fill: "currentColor" }}
+                angle={-45}
+                textAnchor="end"
+                height={60}
+                interval={tickInterval}
+                tickFormatter={formatXAxisTick}
+              />
+              <YAxis
+                stroke="currentColor"
+                className="text-foreground"
+                tick={{ fill: "currentColor" }}
+                label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "6px",
+                }}
+              />
+              <Legend wrapperStyle={{ paddingTop: "10px" }} />
+              <Area
+                type="monotone"
+                dataKey="netin"
+                stroke="#10b981"
+                fill="#10b981"
+                fillOpacity={0.3}
+                strokeWidth={2}
+                name="Download (MB)"
+              />
+              <Area
+                type="monotone"
+                dataKey="netout"
+                stroke="#3b82f6"
+                fill="#3b82f6"
+                fillOpacity={0.3}
+                strokeWidth={2}
+                name="Upload (MB)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -379,9 +351,7 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h2 className="text-xl font-semibold">
-                {METRIC_TITLES[metricType]} - {vmName}
-              </h2>
+              <h2 className="text-xl font-semibold">Metrics - {vmName}</h2>
               <p className="text-sm text-muted-foreground mt-1">
                 VMID: {vmid} • Type: {vmType.toUpperCase()}
               </p>
@@ -402,8 +372,8 @@ export function MetricsView({ vmid, vmName, vmType, metricType, onBack }: Metric
         </div>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-6">{renderChart()}</div>
+      {/* Scrollable Content with all charts */}
+      <div className="flex-1 overflow-y-auto p-6">{renderAllCharts()}</div>
     </div>
   )
 }

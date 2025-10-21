@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
@@ -170,6 +172,30 @@ const getModalProgressColor = (percent: number): string => {
   return "[&>div]:bg-blue-500"
 }
 
+// Placeholder for the undeclared getOSIcon function
+const getOSIcon = (ostype: string | undefined, vmType: string): React.ReactNode => {
+  if (vmType === "lxc") {
+    return <Container className="h-16 w-16 text-cyan-500" />
+  }
+
+  switch (ostype) {
+    case "debian":
+      return <img src="/icons/debian.svg" alt="Debian" className="h-16 w-16" />
+    case "ubuntu":
+      return <img src="/icons/ubuntu.svg" alt="Ubuntu" className="h-16 w-16" />
+    case "centos":
+      return <img src="/icons/centos.svg" alt="CentOS" className="h-16 w-16" />
+    case "fedora":
+      return <img src="/icons/fedora.svg" alt="Fedora" className="h-16 w-16" />
+    case "windows":
+      return <img src="/icons/windows.svg" alt="Windows" className="h-16 w-16" />
+    case "alpine":
+      return <img src="/icons/alpine.svg" alt="Alpine" className="h-16 w-16" />
+    default:
+      return <Server className="h-16 w-16 text-purple-500" />
+  }
+}
+
 export function VirtualMachines() {
   const {
     data: vmData,
@@ -188,8 +214,8 @@ export function VirtualMachines() {
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [vmConfigs, setVmConfigs] = useState<Record<number, string>>({})
   const [currentView, setCurrentView] = useState<"main" | "metrics">("main")
-  const [selectedMetric, setSelectedMetric] = useState<"cpu" | "memory" | "disk" | "network" | null>(null)
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(false)
+  const [selectedMetric, setSelectedMetric] = useState<string | null>(null) // undeclared variable fix
 
   useEffect(() => {
     const fetchLXCIPs = async () => {
@@ -223,7 +249,6 @@ export function VirtualMachines() {
   const handleVMClick = async (vm: VMData) => {
     setSelectedVM(vm)
     setCurrentView("main")
-    setSelectedMetric(null)
     setShowAdditionalInfo(false)
     setDetailsLoading(true)
     try {
@@ -239,14 +264,12 @@ export function VirtualMachines() {
     }
   }
 
-  const handleMetricClick = (metric: "cpu" | "memory" | "disk" | "network") => {
-    setSelectedMetric(metric)
+  const handleMetricsClick = () => {
     setCurrentView("metrics")
   }
 
   const handleBackToMain = () => {
     setCurrentView("main")
-    setSelectedMetric(null)
   }
 
   const handleVMControl = async (vmid: number, action: string) => {
@@ -562,7 +585,7 @@ export function VirtualMachines() {
                           <div
                             className="cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={() => {
-                              setSelectedMetric("cpu")
+                              setSelectedMetric("cpu") // undeclared variable fix
                             }}
                           >
                             <div
@@ -789,112 +812,79 @@ export function VirtualMachines() {
                         <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                           Basic Information
                         </h3>
-                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                          {/* CPU Usage Card */}
-                          <Card className="border border-border bg-card/50">
-                            <CardContent className="p-3">
-                              <div className="text-xs text-muted-foreground mb-2">CPU Usage</div>
-                              <div
-                                className="cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => handleMetricClick("cpu")}
-                              >
-                                <div className={`font-semibold mb-2 ${getUsageColor(selectedVM.cpu * 100)}`}>
+                        <Card
+                          className="border border-border bg-card/50 cursor-pointer hover:bg-card/70 transition-colors"
+                          onClick={handleMetricsClick}
+                        >
+                          <CardContent className="p-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                              {/* CPU Usage */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">CPU Usage</div>
+                                <div className={`text-2xl font-semibold mb-2 ${getUsageColor(selectedVM.cpu * 100)}`}>
                                   {(selectedVM.cpu * 100).toFixed(1)}%
                                 </div>
                                 <Progress
                                   value={selectedVM.cpu * 100}
-                                  className={`h-1.5 ${getModalProgressColor(selectedVM.cpu * 100)}`}
+                                  className={`h-2 ${getModalProgressColor(selectedVM.cpu * 100)}`}
                                 />
                               </div>
-                            </CardContent>
-                          </Card>
 
-                          {/* Memory Card */}
-                          <Card className="border border-border bg-card/50">
-                            <CardContent className="p-3">
-                              <div className="text-xs text-muted-foreground mb-2">Memory</div>
-                              <div
-                                className="cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => handleMetricClick("memory")}
-                              >
+                              {/* Memory */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">Memory</div>
                                 <div
-                                  className={`font-semibold mb-2 ${getUsageColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                                  className={`text-2xl font-semibold mb-2 ${getUsageColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
                                 >
                                   {(selectedVM.mem / 1024 ** 3).toFixed(1)} /{" "}
                                   {(selectedVM.maxmem / 1024 ** 3).toFixed(1)} GB
                                 </div>
                                 <Progress
                                   value={(selectedVM.mem / selectedVM.maxmem) * 100}
-                                  className={`h-1.5 ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                                  className={`h-2 ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
                                 />
                               </div>
-                            </CardContent>
-                          </Card>
 
-                          {/* Disk Card */}
-                          <Card className="border border-border bg-card/50">
-                            <CardContent className="p-3">
-                              <div className="text-xs text-muted-foreground mb-2">Disk</div>
-                              <div
-                                className="cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => handleMetricClick("disk")}
-                              >
-                                <div
-                                  className={`font-semibold mb-2 ${getUsageColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
-                                >
-                                  {(selectedVM.disk / 1024 ** 3).toFixed(1)} /{" "}
-                                  {(selectedVM.maxdisk / 1024 ** 3).toFixed(1)} GB
-                                </div>
-                                <Progress
-                                  value={(selectedVM.disk / selectedVM.maxdisk) * 100}
-                                  className={`h-1.5 ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
-                                />
-                              </div>
-                            </CardContent>
-                          </Card>
-
-                          {/* Disk I/O Card */}
-                          <Card className="border border-border bg-card/50">
-                            <CardContent className="p-3">
-                              <div className="text-xs text-muted-foreground mb-2">Disk I/O</div>
-                              <div
-                                className="cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => handleMetricClick("disk")}
-                              >
-                                <div className="text-sm text-green-500 flex items-center gap-1 mb-1">
-                                  <span>↓</span>
-                                  <span>{((selectedVM.diskread || 0) / 1024 ** 2).toFixed(2)} MB</span>
-                                </div>
-                                <div className="text-sm text-blue-500 flex items-center gap-1">
-                                  <span>↑</span>
-                                  <span>{((selectedVM.diskwrite || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                              {/* Disk I/O */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">Disk I/O</div>
+                                <div className="space-y-1">
+                                  <div className="text-sm text-green-500 flex items-center gap-1">
+                                    <span>↓</span>
+                                    <span>{((selectedVM.diskread || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                  </div>
+                                  <div className="text-sm text-blue-500 flex items-center gap-1">
+                                    <span>↑</span>
+                                    <span>{((selectedVM.diskwrite || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                  </div>
                                 </div>
                               </div>
-                            </CardContent>
-                          </Card>
 
-                          {/* Network I/O Card */}
-                          <Card className="border border-border bg-card/50">
-                            <CardContent className="p-3">
-                              <div className="text-xs text-muted-foreground mb-2">Network I/O</div>
-                              <div
-                                className="cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => handleMetricClick("network")}
-                              >
-                                <div className="text-sm text-green-500 flex items-center gap-1 mb-1">
-                                  <span>↓</span>
-                                  <span>{((selectedVM.netin || 0) / 1024 ** 2).toFixed(2)} MB</span>
-                                </div>
-                                <div className="text-sm text-blue-500 flex items-center gap-1">
-                                  <span>↑</span>
-                                  <span>{((selectedVM.netout || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                              {/* Network I/O */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">Network I/O</div>
+                                <div className="space-y-1">
+                                  <div className="text-sm text-green-500 flex items-center gap-1">
+                                    <span>↓</span>
+                                    <span>{((selectedVM.netin || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                  </div>
+                                  <div className="text-sm text-blue-500 flex items-center gap-1">
+                                    <span>↑</span>
+                                    <span>{((selectedVM.netout || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                  </div>
                                 </div>
                               </div>
-                            </CardContent>
-                          </Card>
-                        </div>
+
+                              {/* OS Icon / VM Icon */}
+                              <div className="flex items-center justify-center col-span-2 lg:col-span-1">
+                                {getOSIcon(vmDetails?.config?.ostype, selectedVM.type)} {/* undeclared variable fix */}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       </div>
 
+                      {/* ... existing RESOURCES card and additional info ... */}
                       {detailsLoading ? (
                         <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
                       ) : vmDetails?.config ? (
@@ -1140,13 +1130,12 @@ export function VirtualMachines() {
               </div>
             </>
           ) : (
-            selectedVM &&
-            selectedMetric && (
+            selectedVM && (
+              // Pass only vmid, vmName, vmType and onBack
               <MetricsView
                 vmid={selectedVM.vmid}
                 vmName={selectedVM.name}
                 vmType={selectedVM.type as "qemu" | "lxc"}
-                metricType={selectedMetric}
                 onBack={handleBackToMain}
               />
             )
