@@ -4834,7 +4834,6 @@ def api_vm_details(vmid):
                     os_info = {}
                     if vm_type == 'lxc' and resource.get('status') == 'running':
                         try:
-                            print(f"[v0] Reading /etc/os-release for LXC {vmid}...")
                             os_release_result = subprocess.run(
                                 ['pct', 'exec', str(vmid), '--', 'cat', '/etc/os-release'],
                                 capture_output=True, text=True, timeout=5)
@@ -4851,12 +4850,8 @@ def api_vm_details(vmid):
                                         os_info['name'] = line.split('=', 1)[1].strip('"').strip("'")
                                     elif line.startswith('PRETTY_NAME='):
                                         os_info['pretty_name'] = line.split('=', 1)[1].strip('"').strip("'")
-                                
-                                print(f"[v0] OS Info for LXC {vmid}: {os_info}")
-                            else:
-                                print(f"[v0] Failed to read /etc/os-release for LXC {vmid}: {os_release_result.stderr}")
                         except Exception as e:
-                            print(f"[v0] Error reading OS info for LXC {vmid}: {e}")
+                            pass  # Silently handle errors
                     
                     response_data = {
                         **resource,
@@ -4883,7 +4878,7 @@ def api_vm_logs(vmid):
     """Download real logs for a specific VM/LXC (not task history)"""
     try:
         # Get VM type and node
-        result = subprocess.run(['pvesh', 'get', f'/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
                               capture_output=True, text=True, timeout=10)
         
         if result.returncode == 0:
