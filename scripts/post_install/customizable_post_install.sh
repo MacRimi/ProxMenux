@@ -3552,130 +3552,7 @@ update_pve_appliance_manager() {
 
 
 
-
 configure_log2ram_() {
-
-    msg_info2 "$(translate "Preparing Log2RAM configuration")"
-    sleep 2
-
-
-    if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1 && systemctl list-units --all | grep -q log2ram; then
-        msg_ok "$(translate "Log2RAM is already installed and configured correctly.")"
-        register_tool "log2ram" true
-        return 0
-    fi
-
-    RAM_SIZE_GB=$(free -g | awk '/^Mem:/{print $2}')
-    [[ -z "$RAM_SIZE_GB" || "$RAM_SIZE_GB" -eq 0 ]] && RAM_SIZE_GB=4
-
-    if (( RAM_SIZE_GB <= 8 )); then
-        DEFAULT_SIZE="128"
-        DEFAULT_HOURS="1"
-    elif (( RAM_SIZE_GB <= 16 )); then
-        DEFAULT_SIZE="256"
-        DEFAULT_HOURS="3"
-    else
-        DEFAULT_SIZE="512"
-        DEFAULT_HOURS="6"
-    fi
-
-
-    USER_SIZE=$(whiptail --title "Log2RAM" --inputbox "$(translate "Enter the maximum size (in MB) to allocate for /var/log in RAM (e.g. 128, 256, 512):")\n\n$(translate "Recommended for $RAM_SIZE_GB GB RAM:") ${DEFAULT_SIZE}M" 12 70 "$DEFAULT_SIZE" 3>&1 1>&2 2>&3) || return 0
-    LOG2RAM_SIZE="${USER_SIZE}M"
-
-
-    CRON_HOURS=$(whiptail --title "Log2RAM" --radiolist "$(translate "Select the sync interval (in hours):")\n\n$(translate "Suggested interval: every $DEFAULT_HOURS hour(s)")" 15 70 5 \
-        "1" "$(translate "Every hour")" OFF \
-        "3" "$(translate "Every 3 hours")" OFF \
-        "6" "$(translate "Every 6 hours")" OFF \
-        "12" "$(translate "Every 12 hours")" OFF \
-        3>&1 1>&2 2>&3) || return 0
-
-
-    if whiptail --title "Log2RAM" --yesno "$(translate "Enable auto-sync if /var/log exceeds 90% of its size?")" 10 60; then
-        ENABLE_AUTOSYNC=true
-    else
-        ENABLE_AUTOSYNC=false
-    fi
-
-
-    msg_info "$(translate "Installing Log2RAM from GitHub...")"
-    rm -rf /tmp/log2ram
-
-
-    if ! command -v git >/dev/null 2>&1; then
-        msg_info "$(translate "Installing required package: git")"
-        apt-get update -qq >/dev/null 2>&1
-        apt-get install -y git >/dev/null 2>&1
-    fi
-
-    git clone https://github.com/azlux/log2ram.git /tmp/log2ram >/dev/null 2>&1
-    cd /tmp/log2ram || return 1
-    bash install.sh >/dev/null 2>&1
-
-    if [[ -f /etc/log2ram.conf ]] && systemctl list-units --all | grep -q log2ram; then
-        msg_ok "$(translate "Log2RAM installed successfully")"
-    else
-        msg_error "$(translate "Failed to install Log2RAM.")"
-        return 1
-    fi
-
-
-    sed -i "s/^SIZE=.*/SIZE=$LOG2RAM_SIZE/" /etc/log2ram.conf
-    LOG2RAM_BIN="$(command -v log2ram || echo /usr/local/bin/log2ram)"
-    rm -f /etc/cron.daily/log2ram /etc/cron.weekly/log2ram /etc/cron.monthly/log2ram 2>/dev/null || true
-    rm -f /etc/cron.hourly/log2ram
-
-    {
-    echo 'MAILTO=""'
-    echo "0 */$CRON_HOURS * * * root $LOG2RAM_BIN write >/dev/null 2>&1"
-    } > /etc/cron.d/log2ram
-    
-    chmod 0644 /etc/cron.d/log2ram
-    chown root:root /etc/cron.d/log2ram
-    msg_ok "$(translate "Log2RAM write scheduled every") $CRON_HOURS $(translate "hour(s)")"
-
-
-    if [[ "$ENABLE_AUTOSYNC" == true ]]; then
-        cat << 'EOF' > /usr/local/bin/log2ram-check.sh
-#!/bin/bash
-CONF_FILE="/etc/log2ram.conf"
-LIMIT_KB=$(grep '^SIZE=' "$CONF_FILE" | cut -d'=' -f2 | tr -d 'M')000
-USED_KB=$(df /var/log --output=used | tail -1)
-THRESHOLD=$(( LIMIT_KB * 90 / 100 ))
-if (( USED_KB > THRESHOLD )); then
-    $(command -v log2ram) write
-fi
-EOF
-        chmod +x /usr/local/bin/log2ram-check.sh
-
-       {
-        echo 'MAILTO=""'
-        echo "*/5 * * * * root /usr/local/bin/log2ram-check.sh >/dev/null 2>&1"
-        } > /etc/cron.d/log2ram-auto-sync
-        chmod 0644 /etc/cron.d/log2ram-auto-sync
-        chown root:root /etc/cron.d/log2ram-auto-sync
-
-        msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 90% of") $LOG2RAM_SIZE"
-    else
-        rm -f /usr/local/bin/log2ram-check.sh /etc/cron.d/log2ram-auto-sync
-        msg_info2 "$(translate "Auto-sync was not enabled")"
-    fi
-
-    sleep 1
-    systemctl restart log2ram
-    msg_success "$(translate "Log2RAM installation and configuration completed successfully.")"
-    register_tool "log2ram" true
-    # NECESSARY_REBOOT=1
-}
-
-
-
-
-
-
-
-configure_log2ram() {
     msg_info2 "$(translate "Preparing Log2RAM configuration")"
     sleep 2
 
@@ -3825,6 +3702,230 @@ EOF
     msg_success "$(translate "Log2RAM installation and configuration completed successfully.")"
     register_tool "log2ram" true
 }
+
+
+
+
+
+
+
+
+configure_log2ram() {
+    msg_info2 "$(translate "Preparing Log2RAM configuration")"
+    sleep 1
+
+
+    RAM_SIZE_GB=$(free -g | awk '/^Mem:/{print $2}')
+    [[ -z "$RAM_SIZE_GB" || "$RAM_SIZE_GB" -eq 0 ]] && RAM_SIZE_GB=4
+
+    if (( RAM_SIZE_GB <= 8 )); then
+        DEFAULT_SIZE="128"   # MiB
+        DEFAULT_HOURS="1"
+    elif (( RAM_SIZE_GB <= 16 )); then
+        DEFAULT_SIZE="256"
+        DEFAULT_HOURS="3"
+    else
+        DEFAULT_SIZE="512"
+        DEFAULT_HOURS="6"
+    fi
+
+
+    USER_SIZE=$(whiptail --title "Log2RAM" --inputbox \
+        "$(translate "Enter the maximum size (in MB) to allocate for /var/log in RAM (e.g. 128, 256, 512):")\n\n$(translate "Recommended for $RAM_SIZE_GB GB RAM:") ${DEFAULT_SIZE}M" \
+        12 70 "$DEFAULT_SIZE" 3>&1 1>&2 2>&3) || return 0
+
+    if ! [[ "$USER_SIZE" =~ ^[0-9]+$ ]]; then
+        msg_error "$(translate "Invalid size. Please enter a number in MB (e.g., 128, 256, 512).")"
+        return 1
+    fi
+    (( USER_SIZE < 64 ))  && USER_SIZE=64      # mínimo razonable
+    (( USER_SIZE > 8192 )) && USER_SIZE=8192   # límite de seguridad
+    LOG2RAM_SIZE="${USER_SIZE}M"
+
+   
+    CRON_HOURS=$(whiptail --title "Log2RAM" --radiolist \
+        "$(translate "Select the sync interval (in hours):")\n\n$(translate "Suggested interval: every $DEFAULT_HOURS hour(s)")" \
+        15 70 5 \
+        "1"  "$(translate "Every hour")"     $([[ "$DEFAULT_HOURS" = "1"  ]] && echo ON || echo OFF) \
+        "3"  "$(translate "Every 3 hours")"  $([[ "$DEFAULT_HOURS" = "3"  ]] && echo ON || echo OFF) \
+        "6"  "$(translate "Every 6 hours")"  $([[ "$DEFAULT_HOURS" = "6"  ]] && echo ON || echo OFF) \
+        "12" "$(translate "Every 12 hours")" OFF \
+        3>&1 1>&2 2>&3) || return 0
+
+ 
+    if whiptail --title "Log2RAM" --yesno "$(translate "Enable auto-sync if /var/log exceeds 90% of its size?")" 10 60; then
+        ENABLE_AUTOSYNC=true
+    else
+        ENABLE_AUTOSYNC=false
+    fi
+
+  
+    msg_info "$(translate "Cleaning previous Log2RAM installation...")"
+    systemctl stop log2ram log2ram-daily.timer >/dev/null 2>&1 || true
+    systemctl disable log2ram log2ram-daily.timer >/dev/null 2>&1 || true
+
+    rm -f /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync \
+          /etc/cron.hourly/log2ram /etc/cron.daily/log2ram \
+          /etc/cron.weekly/log2ram /etc/cron.monthly/log2ram 2>/dev/null || true
+    rm -f /usr/local/bin/log2ram-check.sh /usr/local/bin/log2ram /usr/sbin/log2ram 2>/dev/null || true
+    rm -f /etc/systemd/system/log2ram.service \
+          /etc/systemd/system/log2ram-daily.timer \
+          /etc/systemd/system/log2ram-daily.service \
+          /etc/systemd/system/sysinit.target.wants/log2ram.service 2>/dev/null || true
+    rm -rf /etc/systemd/system/log2ram.service.d 2>/dev/null || true
+    rm -f /etc/log2ram.conf* 2>/dev/null || true
+    rm -rf /etc/logrotate.d/log2ram /var/log.hdd /tmp/log2ram 2>/dev/null || true
+
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    systemctl restart cron >/dev/null 2>&1 || true
+    msg_ok "$(translate "Previous installation cleaned")"
+
+   
+    msg_info "$(translate "Installing Log2RAM from GitHub...")"
+    if ! command -v git >/dev/null 2>&1; then
+        msg_info "$(translate "Installing required package: git")"
+        apt-get update -qq >/dev/null 2>&1
+        apt-get install -y git >/dev/null 2>&1
+    fi
+
+    rm -rf /tmp/log2ram 2>/dev/null || true
+    if ! git clone https://github.com/azlux/log2ram.git /tmp/log2ram >/dev/null 2>>/tmp/log2ram_install.log; then
+        msg_error "$(translate "Failed to clone log2ram repository. Check /tmp/log2ram_install.log")"
+        return 1
+    fi
+
+    cd /tmp/log2ram || { msg_error "$(translate "Failed to access log2ram directory")"; return 1; }
+    if ! bash install.sh >>/tmp/log2ram_install.log 2>&1; then
+        msg_error "$(translate "Failed to run log2ram installer. Check /tmp/log2ram_install.log")"
+        return 1
+    fi
+
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    systemctl enable --now log2ram >/dev/null 2>&1 || true
+
+    if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1; then
+        msg_ok "$(translate "Log2RAM installed successfully")"
+    else
+        msg_error "$(translate "Log2RAM installation verification failed. Check /tmp/log2ram_install.log")"
+        return 1
+    fi
+
+  
+    sed -i "s/^SIZE=.*/SIZE=$LOG2RAM_SIZE/" /etc/log2ram.conf
+    LOG2RAM_BIN="$(command -v log2ram || echo /usr/sbin/log2ram)"
+
+    cat > /etc/cron.d/log2ram <<EOF
+# Log2RAM periodic sync - Created by ProxMenux
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+0 */$CRON_HOURS * * * root $LOG2RAM_BIN write >/dev/null 2>&1
+EOF
+    chmod 0644 /etc/cron.d/log2ram
+    chown root:root /etc/cron.d/log2ram
+    msg_ok "$(translate "Log2RAM write scheduled every") $CRON_HOURS $(translate "hour(s)")"
+
+   
+    if [[ "$ENABLE_AUTOSYNC" == true ]]; then
+        cat > /usr/local/bin/log2ram-check.sh <<'EOF'
+#!/usr/bin/env bash
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+CONF_FILE="/etc/log2ram.conf"
+L2R_BIN="$(command -v log2ram || true)"
+[[ -z "$L2R_BIN" && -x /usr/sbin/log2ram ]] && L2R_BIN="/usr/sbin/log2ram"
+[[ -z "$L2R_BIN" ]] && exit 0
+
+SIZE_MiB="$(grep -E '^SIZE=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2 | tr -dc '0-9')"
+[[ -z "$SIZE_MiB" ]] && SIZE_MiB=128
+LIMIT_BYTES=$(( SIZE_MiB * 1024 * 1024 ))
+THRESHOLD_BYTES=$(( LIMIT_BYTES * 90 / 100 ))
+
+USED_BYTES="$(df -B1 --output=used /var/log 2>/dev/null | tail -1 | tr -dc '0-9')"
+[[ -z "$USED_BYTES" ]] && exit 0
+
+LOCK="/run/log2ram-check.lock"
+exec 9>"$LOCK" 2>/dev/null || exit 0
+flock -n 9 || exit 0
+
+if (( USED_BYTES > THRESHOLD_BYTES )); then
+  "$L2R_BIN" write 2>/dev/null || true
+fi
+EOF
+        chmod +x /usr/local/bin/log2ram-check.sh
+
+        cat > /etc/cron.d/log2ram-auto-sync <<'EOF'
+# Log2RAM auto-sync based on /var/log usage - Created by ProxMenux
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+*/5 * * * * root /usr/local/bin/log2ram-check.sh >/dev/null 2>&1
+EOF
+        chmod 0644 /etc/cron.d/log2ram-auto-sync
+        chown root:root /etc/cron.d/log2ram-auto-sync
+        msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 90% of") $LOG2RAM_SIZE"
+    else
+        rm -f /usr/local/bin/log2ram-check.sh /etc/cron.d/log2ram-auto-sync 2>/dev/null || true
+        msg_info2 "$(translate "Auto-sync was not enabled")"
+    fi
+
+    # --- Ajuste de systemd-journald proporcional al tamaño de Log2RAM ---
+    msg_info "$(translate "Adjusting systemd-journald limits to match Log2RAM size...")"
+
+    if [[ -f /etc/systemd/journald.conf ]]; then
+        cp -n /etc/systemd/journald.conf "/etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
+        BAK_OK=$?
+    fi
+
+    SIZE_MB=$(echo "$LOG2RAM_SIZE" | tr -dc '0-9')
+    # Repartos: 55% persistente / 10% libre / 25% runtime   (pisos mínimos)
+    USE_MB=$(( SIZE_MB * 55 / 100 ))
+    KEEP_MB=$(( SIZE_MB * 10 / 100 ))
+    RUNTIME_MB=$(( SIZE_MB * 25 / 100 ))
+    [ "$USE_MB"     -lt 80 ] && USE_MB=80
+    [ "$RUNTIME_MB" -lt 32 ] && RUNTIME_MB=32
+    [ "$KEEP_MB"    -lt 8  ] && KEEP_MB=8
+
+    # Reescribir bloque [Journal] de forma segura
+    sed -i '/^\[Journal\]/,$d' /etc/systemd/journald.conf 2>/dev/null || true
+    tee -a /etc/systemd/journald.conf >/dev/null <<EOF
+[Journal]
+Storage=persistent
+SplitMode=none
+RateLimitIntervalSec=30s
+RateLimitBurst=1000
+ForwardToSyslog=no
+ForwardToWall=no
+Seal=no
+Compress=yes
+SystemMaxUse=${USE_MB}M
+SystemKeepFree=${KEEP_MB}M
+RuntimeMaxUse=${RUNTIME_MB}M
+MaxLevelStore=warning
+MaxLevelSyslog=warning
+MaxLevelKMsg=warning
+MaxLevelConsole=notice
+MaxLevelWall=crit
+EOF
+
+    systemctl restart systemd-journald >/dev/null 2>&1 || true
+    [[ "$BAK_OK" = "0" ]] && msg_ok "$(translate "Backup created:") /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
+    msg_ok "$(translate "Journald configuration adjusted to") ${USE_MB}M (Log2RAM ${LOG2RAM_SIZE})"
+
+
+    systemctl restart cron >/dev/null 2>&1 || true
+    systemctl restart log2ram >/dev/null 2>&1 || true
+
+
+    log2ram write >/dev/null 2>&1 || true
+    log2ram clean >/dev/null 2>&1 || true
+    systemctl restart rsyslog >/dev/null 2>&1 || true
+
+    msg_success "$(translate "Log2RAM installation and configuration completed successfully.")"
+    register_tool "log2ram" true
+}
+
+
+
 
 
 
