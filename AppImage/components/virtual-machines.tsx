@@ -748,7 +748,7 @@ export function VirtualMachines() {
           setShowAdditionalInfo(false)
         }}
       >
-        <DialogContent className="max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
           {currentView === "main" ? (
             <>
               <DialogHeader className="pb-4 border-b border-border px-6 pt-6">
