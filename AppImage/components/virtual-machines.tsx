@@ -890,9 +890,7 @@ export function VirtualMachines() {
                                 </div>
                               </div>
 
-                              <div className="flex items-center justify-center">
-                                {getOSIcon(vmDetails?.config?.ostype, selectedVM.type)}
-                              </div>
+                              <div className="flex items-center justify-center">{/* Empty space - no logo */}</div>
                             </div>
                           </CardContent>
                         </Card>

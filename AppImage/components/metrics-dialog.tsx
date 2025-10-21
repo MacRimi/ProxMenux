@@ -342,7 +342,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-[90vh]">
       {/* Fixed Header */}
       <div className="p-6 pb-4 border-b shrink-0">
         <div className="flex items-center justify-between">
@@ -373,7 +373,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
       </div>
 
       {/* Scrollable Content with all charts */}
-      <div className="flex-1 overflow-y-auto p-6 max-h-0">{renderAllCharts()}</div>
+      <div className="flex-1 overflow-y-auto p-6 min-h-0">{renderAllCharts()}</div>
     </div>
   )
 }
