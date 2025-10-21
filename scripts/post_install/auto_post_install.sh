@@ -964,26 +964,26 @@ EOF
     [ "$KEEP_MB" -lt 8 ] && KEEP_MB=8
 
 
-    sed -i '/^\[Journal\]/,$d' /etc/systemd/journald.conf 2>/dev/null || true
-    tee -a /etc/systemd/journald.conf >/dev/null <<EOF
-    [Journal]
-    Storage=persistent
-    SplitMode=none
-    RateLimitIntervalSec=30s
-    RateLimitBurst=1000
-    ForwardToSyslog=no
-    ForwardToWall=no
-    Seal=no
-    Compress=yes
-    SystemMaxUse=${USE_MB}M
-    SystemKeepFree=${KEEP_MB}M
-    RuntimeMaxUse=${RUNTIME_MB}M
-    MaxLevelStore=warning
-    MaxLevelSyslog=warning
-    MaxLevelKMsg=warning
-    MaxLevelConsole=notice
-    MaxLevelWall=crit
-    EOF
+sed -i '/^\[Journal\]/,$d' /etc/systemd/journald.conf 2>/dev/null || true
+tee -a /etc/systemd/journald.conf >/dev/null <<EOF
+[Journal]
+Storage=persistent
+SplitMode=none
+RateLimitIntervalSec=30s
+RateLimitBurst=1000
+ForwardToSyslog=no
+ForwardToWall=no
+Seal=no
+Compress=yes
+SystemMaxUse=${USE_MB}M
+SystemKeepFree=${KEEP_MB}M
+RuntimeMaxUse=${RUNTIME_MB}M
+MaxLevelStore=warning
+MaxLevelSyslog=warning
+MaxLevelKMsg=warning
+MaxLevelConsole=notice
+MaxLevelWall=crit
+EOF
 
     systemctl restart systemd-journald >/dev/null 2>&1 || true
     msg_ok "$(translate "Backup created:") /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
