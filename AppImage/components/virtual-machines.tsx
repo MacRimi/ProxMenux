@@ -809,9 +809,6 @@ export function VirtualMachines() {
                   {selectedVM && (
                     <>
                       <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                          Basic Information
-                        </h3>
                         <Card
                           className="border border-border bg-card/50 cursor-pointer hover:bg-card/70 transition-colors"
                           onClick={handleMetricsClick}
@@ -1102,9 +1099,6 @@ export function VirtualMachines() {
               </div>
 
               <div className="border-t border-border bg-background px-6 py-4 mt-auto">
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                  Control Actions
-                </h3>
                 <div className="grid grid-cols-2 gap-3">
                   <Button
                     className="w-full bg-green-600 hover:bg-green-700 text-white"

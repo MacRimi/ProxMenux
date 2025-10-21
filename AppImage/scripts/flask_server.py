@@ -4831,12 +4831,45 @@ def api_vm_details(vmid):
                     if config_result.returncode == 0:
                         config = json.loads(config_result.stdout)
                     
-                    return jsonify({
+                    os_info = {}
+                    if vm_type == 'lxc' and resource.get('status') == 'running':
+                        try:
+                            print(f"[v0] Reading /etc/os-release for LXC {vmid}...")
+                            os_release_result = subprocess.run(
+                                ['pct', 'exec', str(vmid), '--', 'cat', '/etc/os-release'],
+                                capture_output=True, text=True, timeout=5)
+                            
+                            if os_release_result.returncode == 0:
+                                # Parse /etc/os-release content
+                                for line in os_release_result.stdout.split('\n'):
+                                    line = line.strip()
+                                    if line.startswith('ID='):
+                                        os_info['id'] = line.split('=', 1)[1].strip('"').strip("'")
+                                    elif line.startswith('VERSION_ID='):
+                                        os_info['version_id'] = line.split('=', 1)[1].strip('"').strip("'")
+                                    elif line.startswith('NAME='):
+                                        os_info['name'] = line.split('=', 1)[1].strip('"').strip("'")
+                                    elif line.startswith('PRETTY_NAME='):
+                                        os_info['pretty_name'] = line.split('=', 1)[1].strip('"').strip("'")
+                                
+                                print(f"[v0] OS Info for LXC {vmid}: {os_info}")
+                            else:
+                                print(f"[v0] Failed to read /etc/os-release for LXC {vmid}: {os_release_result.stderr}")
+                        except Exception as e:
+                            print(f"[v0] Error reading OS info for LXC {vmid}: {e}")
+                    
+                    response_data = {
                         **resource,
                         'config': config,
                         'node': node,
                         'vm_type': vm_type
-                    })
+                    }
+                    
+                    # Add OS info if available
+                    if os_info:
+                        response_data['os_info'] = os_info
+                    
+                    return jsonify(response_data)
             
             return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
         else:
@@ -4904,7 +4937,7 @@ def api_vm_control(vmid):
             return jsonify({'error': 'Invalid action'}), 400
         
         # Get VM type and node
-        result = subprocess.run(['pvesh', 'get', f'/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
                               capture_output=True, text=True, timeout=10)
         
         if result.returncode == 0:

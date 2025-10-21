@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Loader2 } from "lucide-react"
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
 interface MetricsViewProps {
   vmid: number
@@ -90,8 +90,8 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
           timestamp: item.time,
           cpu: item.cpu ? Number((item.cpu * 100).toFixed(2)) : 0,
           memory: item.mem ? Number(((item.mem / item.maxmem) * 100).toFixed(2)) : 0,
-          memoryMB: item.mem ? Number((item.mem / 1024 / 1024).toFixed(0)) : 0,
-          maxMemoryMB: item.maxmem ? Number((item.maxmem / 1024 / 1024).toFixed(0)) : 0,
+          memoryGB: item.mem ? Number((item.mem / 1024 / 1024 / 1024).toFixed(2)) : 0,
+          maxMemoryGB: item.maxmem ? Number((item.maxmem / 1024 / 1024 / 1024).toFixed(2)) : 0,
           netin: item.netin ? Number((item.netin / 1024 / 1024).toFixed(2)) : 0,
           netout: item.netout ? Number((item.netout / 1024 / 1024).toFixed(2)) : 0,
           diskread: item.diskread ? Number((item.diskread / 1024 / 1024).toFixed(2)) : 0,
@@ -162,7 +162,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
+                domain={[0, "dataMax"]}
               />
               <Tooltip
                 contentStyle={{
@@ -171,7 +171,6 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                   borderRadius: "6px",
                 }}
               />
-              <Legend wrapperStyle={{ paddingTop: "10px" }} />
               <Area
                 type="monotone"
                 dataKey="cpu"
@@ -206,8 +205,8 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 stroke="currentColor"
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
-                label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
+                label={{ value: "GB", angle: -90, position: "insideLeft", fill: "currentColor" }}
+                domain={[0, "dataMax"]}
               />
               <Tooltip
                 contentStyle={{
@@ -216,15 +215,14 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                   borderRadius: "6px",
                 }}
               />
-              <Legend wrapperStyle={{ paddingTop: "10px" }} />
               <Area
                 type="monotone"
-                dataKey="memory"
+                dataKey="memoryGB"
                 stroke="#10b981"
                 fill="#10b981"
                 fillOpacity={0.3}
                 strokeWidth={2}
-                name="Memory %"
+                name="Memory GB"
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -252,7 +250,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
+                domain={[0, "dataMax"]}
               />
               <Tooltip
                 contentStyle={{
@@ -261,7 +259,6 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                   borderRadius: "6px",
                 }}
               />
-              <Legend wrapperStyle={{ paddingTop: "10px" }} />
               <Area
                 type="monotone"
                 dataKey="diskread"
@@ -306,7 +303,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15)]}
+                domain={[0, "dataMax"]}
               />
               <Tooltip
                 contentStyle={{
@@ -315,7 +312,6 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                   borderRadius: "6px",
                 }}
               />
-              <Legend wrapperStyle={{ paddingTop: "10px" }} />
               <Area
                 type="monotone"
                 dataKey="netin"
