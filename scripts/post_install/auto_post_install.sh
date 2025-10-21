@@ -986,6 +986,14 @@ MaxLevelWall=crit
 EOF
 
 
+    mkdir -p /var/log/pveproxy
+    chown -R www-data:www-data /var/log/pveproxy
+    chmod 0750 /var/log/pveproxy
+
+    mkdir -p /var/log.hdd/pveproxy
+    chown -R www-data:www-data /var/log.hdd/pveproxy
+    chmod 0750 /var/log.hdd/pveproxy
+
     systemctl restart systemd-journald >/dev/null 2>&1 || true
     msg_ok "$(translate "Backup created:") /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
     msg_ok "$(translate "Journald configuration adjusted to") ${USE_MB}M (Log2RAM ${LOG2RAM_SIZE})"
