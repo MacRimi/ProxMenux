@@ -845,6 +845,21 @@ export function VirtualMachines() {
                                 />
                               </div>
 
+                              {/* Disk */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">Disk</div>
+                                <div
+                                  className={`text-2xl font-semibold mb-2 ${getUsageColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                                >
+                                  {(selectedVM.disk / 1024 ** 3).toFixed(1)} /{" "}
+                                  {(selectedVM.maxdisk / 1024 ** 3).toFixed(1)} GB
+                                </div>
+                                <Progress
+                                  value={(selectedVM.disk / selectedVM.maxdisk) * 100}
+                                  className={`h-2 ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                                />
+                              </div>
+
                               {/* Disk I/O */}
                               <div>
                                 <div className="text-xs text-muted-foreground mb-2">Disk I/O</div>
@@ -875,9 +890,8 @@ export function VirtualMachines() {
                                 </div>
                               </div>
 
-                              {/* OS Icon / VM Icon */}
-                              <div className="flex items-center justify-center col-span-2 lg:col-span-1">
-                                {getOSIcon(vmDetails?.config?.ostype, selectedVM.type)} {/* undeclared variable fix */}
+                              <div className="flex items-center justify-center">
+                                {getOSIcon(vmDetails?.config?.ostype, selectedVM.type)}
                               </div>
                             </div>
                           </CardContent>

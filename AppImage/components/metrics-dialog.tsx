@@ -373,7 +373,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
       </div>
 
       {/* Scrollable Content with all charts */}
-      <div className="flex-1 overflow-y-auto p-6">{renderAllCharts()}</div>
+      <div className="flex-1 overflow-y-auto p-6 min-h-0">{renderAllCharts()}</div>
     </div>
   )
 }
