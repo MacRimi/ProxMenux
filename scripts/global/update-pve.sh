@@ -313,7 +313,7 @@ EOF
     lvm_repair_check
     cleanup_duplicate_repos
 
-    msg_info "$(translate "Performing system cleanup...")"
+    #msg_info "$(translate "Performing system cleanup...")"
     apt-get -y autoremove > /dev/null 2>&1 || true
     apt-get -y autoclean > /dev/null 2>&1 || true
     msg_ok "$(translate "Cleanup finished")"
