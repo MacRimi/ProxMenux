@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Loader2 } from "lucide-react"
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 
 interface MetricsViewProps {
   vmid: number
@@ -259,6 +259,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                   borderRadius: "6px",
                 }}
               />
+              <Legend verticalAlign="top" height={36} iconType="line" wrapperStyle={{ paddingBottom: "10px" }} />
               <Area
                 type="monotone"
                 dataKey="diskread"
@@ -266,7 +267,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fill="#10b981"
                 fillOpacity={0.3}
                 strokeWidth={2}
-                name="Read (MB)"
+                name="Read"
               />
               <Area
                 type="monotone"
@@ -275,7 +276,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fill="#3b82f6"
                 fillOpacity={0.3}
                 strokeWidth={2}
-                name="Write (MB)"
+                name="Write"
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -312,6 +313,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                   borderRadius: "6px",
                 }}
               />
+              <Legend verticalAlign="top" height={36} iconType="line" wrapperStyle={{ paddingBottom: "10px" }} />
               <Area
                 type="monotone"
                 dataKey="netin"
@@ -319,7 +321,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fill="#10b981"
                 fillOpacity={0.3}
                 strokeWidth={2}
-                name="Download (MB)"
+                name="Download"
               />
               <Area
                 type="monotone"
@@ -328,7 +330,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fill="#3b82f6"
                 fillOpacity={0.3}
                 strokeWidth={2}
-                name="Upload (MB)"
+                name="Upload"
               />
             </AreaChart>
           </ResponsiveContainer>

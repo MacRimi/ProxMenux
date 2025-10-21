@@ -72,6 +72,12 @@ interface VMDetails extends VMData {
   config?: VMConfig
   node?: string
   vm_type?: string
+  os_info?: {
+    id?: string
+    version_id?: string
+    name?: string
+    pretty_name?: string
+  }
 }
 
 const fetcher = async (url: string) => {
@@ -172,27 +178,72 @@ const getModalProgressColor = (percent: number): string => {
   return "[&>div]:bg-blue-500"
 }
 
-// Placeholder for the undeclared getOSIcon function
-const getOSIcon = (ostype: string | undefined, vmType: string): React.ReactNode => {
-  if (vmType === "lxc") {
-    return <Container className="h-16 w-16 text-cyan-500" />
+const getOSIcon = (osInfo: VMDetails["os_info"] | undefined, vmType: string): React.ReactNode => {
+  // Only show logo for LXCs, VMs show nothing
+  if (vmType !== "lxc") {
+    return null
   }
 
-  switch (ostype) {
+  const osId = osInfo?.id?.toLowerCase()
+
+  // Try to use SVG icons for common distributions
+  switch (osId) {
     case "debian":
-      return <img src="/icons/debian.svg" alt="Debian" className="h-16 w-16" />
+      return (
+        <img
+          src="/icons/debian.svg"
+          alt="Debian"
+          className="h-16 w-16"
+          onError={(e) => {
+            // Fallback to Container icon if SVG doesn't exist
+            e.currentTarget.style.display = "none"
+            e.currentTarget.parentElement!.innerHTML =
+              '<div class="flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="text-cyan-500"><path d="M22 7.7c0-.6-.4-1.2-.8-1.5l-6.3-3.9a1.72 1.72 0 0 0-1.7 0l-10.3 6c-.5.2-.9.8-.9 1.4v6.6c0 .5.4 1.2.8 1.5l6.3 3.9a1.72 1.72 0 0 0 1.7 0l10.3-6c.5-.3.9-1 .9-1.5Z"/><path d="M10 21.9V14L2.1 9.1"/><path d="m10 14 11.9-6.9"/><path d="M14 19.8v-8.1"/><path d="M18 17.5V9.4"/></svg></div>'
+          }}
+        />
+      )
     case "ubuntu":
-      return <img src="/icons/ubuntu.svg" alt="Ubuntu" className="h-16 w-16" />
-    case "centos":
-      return <img src="/icons/centos.svg" alt="CentOS" className="h-16 w-16" />
-    case "fedora":
-      return <img src="/icons/fedora.svg" alt="Fedora" className="h-16 w-16" />
-    case "windows":
-      return <img src="/icons/windows.svg" alt="Windows" className="h-16 w-16" />
+      return (
+        <img
+          src="/icons/ubuntu.svg"
+          alt="Ubuntu"
+          className="h-16 w-16"
+          onError={(e) => {
+            e.currentTarget.style.display = "none"
+            e.currentTarget.parentElement!.innerHTML =
+              '<div class="flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="text-orange-500"><path d="M22 7.7c0-.6-.4-1.2-.8-1.5l-6.3-3.9a1.72 1.72 0 0 0-1.7 0l-10.3 6c-.5.2-.9.8-.9 1.4v6.6c0 .5.4 1.2.8 1.5l6.3 3.9a1.72 1.72 0 0 0 1.7 0l10.3-6c.5-.3.9-1 .9-1.5Z"/><path d="M10 21.9V14L2.1 9.1"/><path d="m10 14 11.9-6.9"/><path d="M14 19.8v-8.1"/><path d="M18 17.5V9.4"/></svg></div>'
+          }}
+        />
+      )
     case "alpine":
-      return <img src="/icons/alpine.svg" alt="Alpine" className="h-16 w-16" />
+      return (
+        <img
+          src="/icons/alpine.svg"
+          alt="Alpine"
+          className="h-16 w-16"
+          onError={(e) => {
+            e.currentTarget.style.display = "none"
+            e.currentTarget.parentElement!.innerHTML =
+              '<div class="flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="text-blue-400"><path d="M22 7.7c0-.6-.4-1.2-.8-1.5l-6.3-3.9a1.72 1.72 0 0 0-1.7 0l-10.3 6c-.5.2-.9.8-.9 1.4v6.6c0 .5.4 1.2.8 1.5l6.3 3.9a1.72 1.72 0 0 0 1.7 0l10.3-6c.5-.3.9-1 .9-1.5Z"/><path d="M10 21.9V14L2.1 9.1"/><path d="m10 14 11.9-6.9"/><path d="M14 19.8v-8.1"/><path d="M18 17.5V9.4"/></svg></div>'
+          }}
+        />
+      )
+    case "arch":
+      return (
+        <img
+          src="/icons/arch.svg"
+          alt="Arch"
+          className="h-16 w-16"
+          onError={(e) => {
+            e.currentTarget.style.display = "none"
+            e.currentTarget.parentElement!.innerHTML =
+              '<div class="flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="text-blue-500"><path d="M22 7.7c0-.6-.4-1.2-.8-1.5l-6.3-3.9a1.72 1.72 0 0 0-1.7 0l-10.3 6c-.5.2-.9.8-.9 1.4v6.6c0 .5.4 1.2.8 1.5l6.3 3.9a1.72 1.72 0 0 0 1.7 0l10.3-6c.5-.3.9-1 .9-1.5Z"/><path d="M10 21.9V14L2.1 9.1"/><path d="m10 14 11.9-6.9"/><path d="M14 19.8v-8.1"/><path d="M18 17.5V9.4"/></svg></div>'
+          }}
+        />
+      )
     default:
-      return <Server className="h-16 w-16 text-purple-500" />
+      // Generic LXC container icon
+      return <Container className="h-16 w-16 text-cyan-500" />
   }
 }
 
@@ -887,7 +938,9 @@ export function VirtualMachines() {
                                 </div>
                               </div>
 
-                              <div className="flex items-center justify-center">{/* Empty space - no logo */}</div>
+                              <div className="flex items-center justify-center">
+                                {getOSIcon(vmDetails?.os_info, selectedVM.type)}
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
