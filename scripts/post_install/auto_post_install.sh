@@ -964,8 +964,8 @@ EOF
     [ "$KEEP_MB" -lt 8 ] && KEEP_MB=8
 
 
-sed -i '/^\[Journal\]/,$d' /etc/systemd/journald.conf 2>/dev/null || true
-cat >> /etc/systemd/journald.conf <<EOF
+    sed -i '/^\[Journal\]/,$d' /etc/systemd/journald.conf 2>/dev/null || true
+    tee -a /etc/systemd/journald.conf >/dev/null <<EOF
 [Journal]
 Storage=persistent
 SplitMode=none
