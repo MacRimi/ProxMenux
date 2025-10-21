@@ -965,7 +965,7 @@ EOF
 
 
 sed -i '/^\[Journal\]/,$d' /etc/systemd/journald.conf 2>/dev/null || true
-tee -a /etc/systemd/journald.conf >/dev/null <<EOF
+cat >> /etc/systemd/journald.conf <<EOF
 [Journal]
 Storage=persistent
 SplitMode=none
@@ -984,6 +984,7 @@ MaxLevelKMsg=warning
 MaxLevelConsole=notice
 MaxLevelWall=crit
 EOF
+
 
     systemctl restart systemd-journald >/dev/null 2>&1 || true
     msg_ok "$(translate "Backup created:") /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
