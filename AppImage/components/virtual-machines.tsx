@@ -821,7 +821,7 @@ export function VirtualMachines() {
                               {/* CPU Usage */}
                               <div>
                                 <div className="text-xs text-muted-foreground mb-2">CPU Usage</div>
-                                <div className={`text-2xl font-semibold mb-2 ${getUsageColor(selectedVM.cpu * 100)}`}>
+                                <div className={`text-base font-semibold mb-2 ${getUsageColor(selectedVM.cpu * 100)}`}>
                                   {(selectedVM.cpu * 100).toFixed(1)}%
                                 </div>
                                 <Progress
@@ -834,7 +834,7 @@ export function VirtualMachines() {
                               <div>
                                 <div className="text-xs text-muted-foreground mb-2">Memory</div>
                                 <div
-                                  className={`text-2xl font-semibold mb-2 ${getUsageColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                                  className={`text-base font-semibold mb-2 ${getUsageColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
                                 >
                                   {(selectedVM.mem / 1024 ** 3).toFixed(1)} /{" "}
                                   {(selectedVM.maxmem / 1024 ** 3).toFixed(1)} GB
@@ -849,7 +849,7 @@ export function VirtualMachines() {
                               <div>
                                 <div className="text-xs text-muted-foreground mb-2">Disk</div>
                                 <div
-                                  className={`text-2xl font-semibold mb-2 ${getUsageColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                                  className={`text-base font-semibold mb-2 ${getUsageColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
                                 >
                                   {(selectedVM.disk / 1024 ** 3).toFixed(1)} /{" "}
                                   {(selectedVM.maxdisk / 1024 ** 3).toFixed(1)} GB
