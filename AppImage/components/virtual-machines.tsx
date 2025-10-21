@@ -179,11 +179,11 @@ const getModalProgressColor = (percent: number): string => {
 }
 
 const getOSIcon = (osInfo: VMDetails["os_info"] | undefined, vmType: string): React.ReactNode => {
-  if (vmType !== "lxc") {
+  if (vmType !== "lxc" || !osInfo?.id) {
     return null
   }
 
-  const osId = osInfo?.id?.toLowerCase()
+  const osId = osInfo.id.toLowerCase()
 
   switch (osId) {
     case "debian":
@@ -195,7 +195,7 @@ const getOSIcon = (osInfo: VMDetails["os_info"] | undefined, vmType: string): Re
     case "arch":
       return <img src="/icons/arch.svg" alt="Arch" className="h-16 w-16" />
     default:
-      return <Container className="h-16 w-16 text-cyan-500" />
+      return null
   }
 }
 
@@ -283,7 +283,7 @@ export function VirtualMachines() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ action }),
+        body: JSON.JSON.stringify({ action }),
       })
 
       if (response.ok) {
