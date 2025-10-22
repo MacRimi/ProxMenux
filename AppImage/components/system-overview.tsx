@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
 import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Network } from "lucide-react"
+import { NodeMetricsCharts } from "./node-metrics-charts"
 
 interface SystemData {
   cpu_usage: number
@@ -514,6 +515,9 @@ export function SystemOverview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Node Metrics Charts */}
+      <NodeMetricsCharts />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Storage Summary */}

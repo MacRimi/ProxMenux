@@ -1,0 +1,343 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { Loader2, TrendingUp, MemoryStick } from "lucide-react"
+
+const TIMEFRAME_OPTIONS = [
+  { value: "hour", label: "1 Hour" },
+  { value: "day", label: "24 Hours" },
+  { value: "week", label: "7 Days" },
+  { value: "month", label: "30 Days" },
+]
+
+interface NodeMetricsData {
+  time: string
+  timestamp: number
+  cpu: number
+  load: number
+  memoryTotal: number
+  memoryUsed: number
+  memoryFree: number
+  memoryZfsArc: number
+}
+
+export function NodeMetricsCharts() {
+  const [timeframe, setTimeframe] = useState("day")
+  const [data, setData] = useState<NodeMetricsData[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchMetrics()
+  }, [timeframe])
+
+  const fetchMetrics = async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const baseUrl =
+        typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+      const apiUrl = `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
+
+      const response = await fetch(apiUrl)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to fetch node metrics")
+      }
+
+      const result = await response.json()
+
+      const transformedData = result.data.map((item: any) => {
+        const date = new Date(item.time * 1000)
+        let timeLabel = ""
+
+        if (timeframe === "hour") {
+          timeLabel = date.toLocaleString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+        } else if (timeframe === "day") {
+          timeLabel = date.toLocaleString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+        } else if (timeframe === "week") {
+          timeLabel = date.toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            hour12: false,
+          })
+        } else {
+          timeLabel = date.toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+        }
+
+        return {
+          time: timeLabel,
+          timestamp: item.time,
+          cpu: item.cpu ? Number((item.cpu * 100).toFixed(2)) : 0,
+          load: item.loadavg ? Number(item.loadavg[0].toFixed(2)) : 0,
+          memoryTotal: item.memtotal ? Number((item.memtotal / 1024 / 1024 / 1024).toFixed(2)) : 0,
+          memoryUsed: item.memused ? Number((item.memused / 1024 / 1024 / 1024).toFixed(2)) : 0,
+          memoryFree: item.memfree ? Number((item.memfree / 1024 / 1024 / 1024).toFixed(2)) : 0,
+          memoryZfsArc: item.zfsarc ? Number((item.zfsarc / 1024 / 1024 / 1024).toFixed(2)) : 0,
+        }
+      })
+
+      setData(transformedData)
+    } catch (err: any) {
+      console.error("[v0] Error fetching node metrics:", err)
+      setError(err.message || "Error loading metrics")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const tickInterval = Math.ceil(data.length / 8)
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center h-[300px]">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center h-[300px]">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center h-[300px]">
+              <p className="text-muted-foreground text-sm">Metrics data not available yet</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center h-[300px]">
+              <p className="text-muted-foreground text-sm">Metrics data not available yet</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (data.length === 0) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center h-[300px]">
+              <p className="text-muted-foreground text-sm">No metrics data available</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center h-[300px]">
+              <p className="text-muted-foreground text-sm">No metrics data available</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Timeframe Selector */}
+      <div className="flex justify-end">
+        <Select value={timeframe} onValueChange={setTimeframe}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TIMEFRAME_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* CPU Usage + Load Average Chart */}
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center">
+              <TrendingUp className="h-5 w-5 mr-2" />
+              CPU Usage & Load Average
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={data} margin={{ bottom: 60, left: 10, right: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
+                <XAxis
+                  dataKey="time"
+                  stroke="currentColor"
+                  className="text-foreground"
+                  tick={{ fill: "currentColor", fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                  interval={tickInterval}
+                />
+                <YAxis
+                  yAxisId="left"
+                  stroke="currentColor"
+                  className="text-foreground"
+                  tick={{ fill: "currentColor", fontSize: 12 }}
+                  label={{ value: "CPU %", angle: -90, position: "insideLeft", fill: "currentColor" }}
+                  domain={[0, 100]}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  stroke="currentColor"
+                  className="text-foreground"
+                  tick={{ fill: "currentColor", fontSize: 12 }}
+                  label={{ value: "Load", angle: 90, position: "insideRight", fill: "currentColor" }}
+                  domain={[0, "dataMax"]}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--background))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "6px",
+                  }}
+                />
+                <Legend verticalAlign="top" height={36} iconType="line" wrapperStyle={{ paddingBottom: "10px" }} />
+                <Area
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="cpu"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fill="#3b82f6"
+                  fillOpacity={0.3}
+                  name="CPU %"
+                />
+                <Area
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="load"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fill="#10b981"
+                  fillOpacity={0.3}
+                  name="Load Avg"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Memory Usage Chart */}
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center">
+              <MemoryStick className="h-5 w-5 mr-2" />
+              Memory Usage
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={data} margin={{ bottom: 60, left: 10, right: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
+                <XAxis
+                  dataKey="time"
+                  stroke="currentColor"
+                  className="text-foreground"
+                  tick={{ fill: "currentColor", fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                  interval={tickInterval}
+                />
+                <YAxis
+                  stroke="currentColor"
+                  className="text-foreground"
+                  tick={{ fill: "currentColor", fontSize: 12 }}
+                  label={{ value: "GB", angle: -90, position: "insideLeft", fill: "currentColor" }}
+                  domain={[0, "dataMax"]}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--background))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "6px",
+                  }}
+                />
+                <Legend verticalAlign="top" height={36} iconType="line" wrapperStyle={{ paddingBottom: "10px" }} />
+                <Area
+                  type="monotone"
+                  dataKey="memoryTotal"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fill="#3b82f6"
+                  fillOpacity={0.1}
+                  name="Total"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="memoryUsed"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fill="#10b981"
+                  fillOpacity={0.3}
+                  name="Used"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="memoryZfsArc"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  fill="#f59e0b"
+                  fillOpacity={0.3}
+                  name="ZFS ARC"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="memoryFree"
+                  stroke="#06b6d4"
+                  strokeWidth={2}
+                  fill="#06b6d4"
+                  fillOpacity={0.3}
+                  name="Available"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
