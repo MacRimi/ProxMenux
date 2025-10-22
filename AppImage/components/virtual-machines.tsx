@@ -1217,7 +1217,7 @@ export function VirtualMachines() {
                                           }
                                           return (
                                             <div
-                                              className={`text-sm text-foreground ${processed.isHtml ? "prose prose-sm max-w-none dark:prose-invert" : "whitespace-pre-wrap"}`}
+                                              className={`text-sm text-foreground proxmenux-notes ${processed.isHtml ? "prose prose-sm max-w-none dark:prose-invert" : "whitespace-pre-wrap"}`}
                                               dangerouslySetInnerHTML={{ __html: processed.html }}
                                             />
                                           )
