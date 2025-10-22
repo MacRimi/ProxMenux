@@ -65,6 +65,46 @@ interface VMConfig {
   scsi0?: string
   ide0?: string
   boot?: string
+  description?: string // Added for notes
+  // Hardware specific
+  numa?: boolean
+  bios?: string
+  machine?: string
+  vga?: string
+  agent?: boolean
+  tablet?: boolean
+  localtime?: boolean
+  // Storage specific
+  scsihw?: string
+  efidisk0?: string
+  tpmstate0?: string
+  // Mount points for LXC
+  mp0?: string
+  mp1?: string
+  mp2?: string
+  mp3?: string
+  mp4?: string
+  mp5?: string
+  // PCI Passthrough
+  hostpci0?: string
+  hostpci1?: string
+  hostpci2?: string
+  hostpci3?: string
+  hostpci4?: string
+  hostpci5?: string
+  // USB Devices
+  usb0?: string
+  usb1?: string
+  usb2?: string
+  // Serial Devices
+  serial0?: string
+  serial1?: string
+  // Advanced
+  vmgenid?: string
+  smbios1?: string
+  meta?: string
+  // CPU
+  cpu?: string
   [key: string]: any
 }
 
@@ -218,6 +258,7 @@ export function VirtualMachines() {
   const [vmConfigs, setVmConfigs] = useState<Record<number, string>>({})
   const [currentView, setCurrentView] = useState<"main" | "metrics">("main")
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(false)
+  const [showNotes, setShowNotes] = useState(false)
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null) // undeclared variable fix
 
   useEffect(() => {
@@ -552,7 +593,7 @@ export function VirtualMachines() {
                 return (
                   <div key={vm.vmid}>
                     <div
-                      className="hidden sm:block p-4 rounded-lg border border-border bg-card hover:bg-white/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                      className="hidden sm:block p-4 rounded-lg border border-border bg-card hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
                       onClick={() => handleVMClick(vm)}
                     >
                       <div className="flex items-center gap-2 flex-wrap mb-3">
@@ -745,6 +786,7 @@ export function VirtualMachines() {
           setCurrentView("main")
           setSelectedMetric(null)
           setShowAdditionalInfo(false)
+          setShowNotes(false)
         }}
       >
         <DialogContent className="max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
@@ -809,7 +851,7 @@ export function VirtualMachines() {
                     <>
                       <div>
                         <Card
-                          className="cursor-pointer rounded-lg border border-black/10 dark:border-white/10 sm:border-border max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-card sm:hover:bg-black/5 sm:dark:hover:bg-white/5 p-4 transition-colors group"
+                          className="cursor-pointer rounded-lg border border-black/10 dark:border-white/10 sm:border-border max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-card sm:hover:bg-black/5 sm:dark:hover:bg-white/5 transition-colors group"
                           onClick={handleMetricsClick}
                         >
                           <CardContent className="p-4">
@@ -898,201 +940,483 @@ export function VirtualMachines() {
                       {detailsLoading ? (
                         <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
                       ) : vmDetails?.config ? (
-                        <Card className="border border-border bg-card/50">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-4">
-                              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                                Resources
-                              </h3>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
-                                className="text-xs max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-transparent sm:hover:bg-black/5 sm:dark:hover:bg-white/5"
-                              >
-                                {showAdditionalInfo ? (
-                                  <>
-                                    <ChevronUp className="h-3 w-3 mr-1" />
-                                    Less Info
-                                  </>
-                                ) : (
-                                  <>
-                                    <ChevronDown className="h-3 w-3 mr-1" />+ Info
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                              {vmDetails.config.cores && (
-                                <div>
-                                  <div className="text-xs text-muted-foreground mb-1">CPU Cores</div>
-                                  <div className="font-semibold text-blue-500">{vmDetails.config.cores}</div>
-                                </div>
-                              )}
-                              {vmDetails.config.memory && (
-                                <div>
-                                  <div className="text-xs text-muted-foreground mb-1">Memory</div>
-                                  <div className="font-semibold text-blue-500">{vmDetails.config.memory} MB</div>
-                                </div>
-                              )}
-                              {vmDetails.config.swap && (
-                                <div>
-                                  <div className="text-xs text-muted-foreground mb-1">Swap</div>
-                                  <div className="font-semibold text-foreground">{vmDetails.config.swap} MB</div>
-                                </div>
-                              )}
-                              {selectedVM.type === "lxc" && (
-                                <div>
-                                  <div className="text-xs text-muted-foreground mb-1">IP Address</div>
-                                  <div
-                                    className={`font-semibold ${extractIPFromConfig(vmDetails.config) === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
+                        <>
+                          <Card className="border border-border bg-card/50">
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                                  Resources
+                                </h3>
+                                <div className="flex gap-2">
+                                  {vmDetails.config.description && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setShowNotes(!showNotes)}
+                                      className="text-xs max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-transparent sm:hover:bg-black/5 sm:dark:hover:bg-white/5"
+                                    >
+                                      {showNotes ? (
+                                        <>
+                                          <ChevronUp className="h-3 w-3 mr-1" />
+                                          Hide Notes
+                                        </>
+                                      ) : (
+                                        <>
+                                          <ChevronDown className="h-3 w-3 mr-1" />
+                                          Notes
+                                        </>
+                                      )}
+                                    </Button>
+                                  )}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
+                                    className="text-xs max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-transparent sm:hover:bg-black/5 sm:dark:hover:bg-white/5"
                                   >
-                                    {extractIPFromConfig(vmDetails.config)}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {showAdditionalInfo && (
-                              <div className="mt-6 pt-6 border-t border-border space-y-6">
-                                {vmDetails.config.rootfs && (
-                                  <div>
-                                    <div className="text-xs text-muted-foreground mb-1">Root Filesystem</div>
-                                    <div className="font-medium text-foreground text-sm break-all font-mono">
-                                      {vmDetails.config.rootfs}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {Object.keys(vmDetails.config)
-                                  .filter((key) => key.match(/^(scsi|sata|ide|virtio)\d+$/))
-                                  .map((diskKey) => (
-                                    <div key={diskKey}>
-                                      <div className="text-xs text-muted-foreground mb-1">
-                                        {diskKey.toUpperCase().replace(/(\d+)/, " $1")}
-                                      </div>
-                                      <div className="font-medium text-foreground text-sm break-all font-mono">
-                                        {vmDetails.config[diskKey]}
-                                      </div>
-                                    </div>
-                                  ))}
-
-                                <div>
-                                  <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                    Network
-                                  </h4>
-                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                    {Object.keys(vmDetails.config)
-                                      .filter((key) => key.match(/^net\d+$/))
-                                      .map((netKey) => (
-                                        <div key={netKey}>
-                                          <div className="text-xs text-muted-foreground mb-1">
-                                            Network Interface {netKey.replace("net", "")}
-                                          </div>
-                                          <div className="font-medium text-green-500 text-sm break-all font-mono">
-                                            {vmDetails.config[netKey]}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    {vmDetails.config.nameserver && (
-                                      <div>
-                                        <div className="text-xs text-muted-foreground mb-1">DNS Nameserver</div>
-                                        <div className="font-medium text-foreground font-mono">
-                                          {vmDetails.config.nameserver}
-                                        </div>
-                                      </div>
+                                    {showAdditionalInfo ? (
+                                      <>
+                                        <ChevronUp className="h-3 w-3 mr-1" />
+                                        Less Info
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ChevronDown className="h-3 w-3 mr-1" />+ Info
+                                      </>
                                     )}
-                                    {vmDetails.config.searchdomain && (
-                                      <div>
-                                        <div className="text-xs text-muted-foreground mb-1">Search Domain</div>
-                                        <div className="font-medium text-foreground">
-                                          {vmDetails.config.searchdomain}
-                                        </div>
-                                      </div>
-                                    )}
-                                    {vmDetails.config.hostname && (
-                                      <div>
-                                        <div className="text-xs text-muted-foreground mb-1">Hostname</div>
-                                        <div className="font-medium text-foreground">{vmDetails.config.hostname}</div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                    Options
-                                  </h4>
-                                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {vmDetails.config.onboot !== undefined && (
-                                      <div>
-                                        <div className="text-xs text-muted-foreground mb-1">Start on Boot</div>
-                                        <Badge
-                                          variant="outline"
-                                          className={
-                                            vmDetails.config.onboot
-                                              ? "bg-green-500/10 text-green-500 border-green-500/20"
-                                              : "bg-red-500/10 text-red-500 border-red-500/20"
-                                          }
-                                        >
-                                          {vmDetails.config.onboot ? "Yes" : "No"}
-                                        </Badge>
-                                      </div>
-                                    )}
-                                    {vmDetails.config.unprivileged !== undefined && (
-                                      <div>
-                                        <div className="text-xs text-muted-foreground mb-1">Unprivileged</div>
-                                        <Badge
-                                          variant="outline"
-                                          className={
-                                            vmDetails.config.unprivileged
-                                              ? "bg-green-500/10 text-green-500 border-green-500/20"
-                                              : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                                          }
-                                        >
-                                          {vmDetails.config.unprivileged ? "Yes" : "No"}
-                                        </Badge>
-                                      </div>
-                                    )}
-                                    {vmDetails.config.ostype && (
-                                      <div>
-                                        <div className="text-xs text-muted-foreground mb-1">OS Type</div>
-                                        <div className="font-medium text-foreground">{vmDetails.config.ostype}</div>
-                                      </div>
-                                    )}
-                                    {vmDetails.config.arch && (
-                                      <div>
-                                        <div className="text-xs text-muted-foreground mb-1">Architecture</div>
-                                        <div className="font-medium text-foreground">{vmDetails.config.arch}</div>
-                                      </div>
-                                    )}
-                                    {vmDetails.config.boot && (
-                                      <div>
-                                        <div className="text-xs text-muted-foreground mb-1">Boot Order</div>
-                                        <div className="font-medium text-foreground">{vmDetails.config.boot}</div>
-                                      </div>
-                                    )}
-                                    {vmDetails.config.sockets && (
-                                      <div>
-                                        <div className="text-xs text-muted-foreground mb-1">CPU Sockets</div>
-                                        <div className="font-medium text-foreground">{vmDetails.config.sockets}</div>
-                                      </div>
-                                    )}
-                                    {vmDetails.config.features && (
-                                      <div className="col-span-2 lg:col-span-3">
-                                        <div className="text-xs text-muted-foreground mb-1">Features</div>
-                                        <div className="font-medium text-foreground text-sm">
-                                          {vmDetails.config.features}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
+                                  </Button>
                                 </div>
                               </div>
-                            )}
-                          </CardContent>
-                        </Card>
+
+                              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                {vmDetails.config.cores && (
+                                  <div>
+                                    <div className="text-xs text-muted-foreground mb-1">CPU Cores</div>
+                                    <div className="font-semibold text-blue-500">{vmDetails.config.cores}</div>
+                                  </div>
+                                )}
+                                {vmDetails.config.memory && (
+                                  <div>
+                                    <div className="text-xs text-muted-foreground mb-1">Memory</div>
+                                    <div className="font-semibold text-blue-500">{vmDetails.config.memory} MB</div>
+                                  </div>
+                                )}
+                                {vmDetails.config.swap && (
+                                  <div>
+                                    <div className="text-xs text-muted-foreground mb-1">Swap</div>
+                                    <div className="font-semibold text-foreground">{vmDetails.config.swap} MB</div>
+                                  </div>
+                                )}
+                                {selectedVM.type === "lxc" && (
+                                  <div>
+                                    <div className="text-xs text-muted-foreground mb-1">IP Address</div>
+                                    <div
+                                      className={`font-semibold ${extractIPFromConfig(vmDetails.config) === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
+                                    >
+                                      {extractIPFromConfig(vmDetails.config)}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {showNotes && vmDetails.config.description && (
+                                <div className="mt-6 pt-6 border-t border-border">
+                                  <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                    Notes
+                                  </h4>
+                                  <div className="bg-muted/50 p-4 rounded-lg">
+                                    <pre className="text-sm text-foreground whitespace-pre-wrap font-sans">
+                                      {decodeURIComponent(vmDetails.config.description.replace(/%0A/g, "\n"))}
+                                    </pre>
+                                  </div>
+                                </div>
+                              )}
+
+                              {showAdditionalInfo && (
+                                <div className="mt-6 pt-6 border-t border-border space-y-6">
+                                  {/* Hardware Section */}
+                                  <div>
+                                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                      Hardware
+                                    </h4>
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                                      {vmDetails.config.sockets && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">CPU Sockets</div>
+                                          <div className="font-medium text-foreground">{vmDetails.config.sockets}</div>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.cpu && (
+                                        <div className="col-span-2">
+                                          <div className="text-xs text-muted-foreground mb-1">CPU Type</div>
+                                          <div className="font-medium text-foreground text-sm font-mono">
+                                            {vmDetails.config.cpu}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.numa !== undefined && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">NUMA</div>
+                                          <Badge
+                                            variant="outline"
+                                            className={
+                                              vmDetails.config.numa
+                                                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                                : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                                            }
+                                          >
+                                            {vmDetails.config.numa ? "Enabled" : "Disabled"}
+                                          </Badge>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.bios && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">BIOS</div>
+                                          <div className="font-medium text-foreground">{vmDetails.config.bios}</div>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.machine && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">Machine Type</div>
+                                          <div className="font-medium text-foreground">{vmDetails.config.machine}</div>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.vga && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">VGA</div>
+                                          <div className="font-medium text-foreground">{vmDetails.config.vga}</div>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.agent !== undefined && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">QEMU Agent</div>
+                                          <Badge
+                                            variant="outline"
+                                            className={
+                                              vmDetails.config.agent
+                                                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                                : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                                            }
+                                          >
+                                            {vmDetails.config.agent ? "Enabled" : "Disabled"}
+                                          </Badge>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.tablet !== undefined && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">Tablet Pointer</div>
+                                          <Badge
+                                            variant="outline"
+                                            className={
+                                              vmDetails.config.tablet
+                                                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                                : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                                            }
+                                          >
+                                            {vmDetails.config.tablet ? "Enabled" : "Disabled"}
+                                          </Badge>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.localtime !== undefined && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">Local Time</div>
+                                          <Badge
+                                            variant="outline"
+                                            className={
+                                              vmDetails.config.localtime
+                                                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                                : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                                            }
+                                          >
+                                            {vmDetails.config.localtime ? "Enabled" : "Disabled"}
+                                          </Badge>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Storage Section */}
+                                  <div>
+                                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                      Storage
+                                    </h4>
+                                    <div className="space-y-3">
+                                      {vmDetails.config.rootfs && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">Root Filesystem</div>
+                                          <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
+                                            {vmDetails.config.rootfs}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.scsihw && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">SCSI Controller</div>
+                                          <div className="font-medium text-foreground">{vmDetails.config.scsihw}</div>
+                                        </div>
+                                      )}
+                                      {Object.keys(vmDetails.config)
+                                        .filter((key) => key.match(/^(scsi|sata|ide|virtio)\d+$/))
+                                        .map((diskKey) => (
+                                          <div key={diskKey}>
+                                            <div className="text-xs text-muted-foreground mb-1">
+                                              {diskKey.toUpperCase().replace(/(\d+)/, " $1")}
+                                            </div>
+                                            <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
+                                              {vmDetails.config[diskKey]}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      {vmDetails.config.efidisk0 && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">EFI Disk</div>
+                                          <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
+                                            {vmDetails.config.efidisk0}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.tpmstate0 && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">TPM State</div>
+                                          <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
+                                            {vmDetails.config.tpmstate0}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {/* Mount points for LXC */}
+                                      {Object.keys(vmDetails.config)
+                                        .filter((key) => key.match(/^mp\d+$/))
+                                        .map((mpKey) => (
+                                          <div key={mpKey}>
+                                            <div className="text-xs text-muted-foreground mb-1">
+                                              Mount Point {mpKey.replace("mp", "")}
+                                            </div>
+                                            <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
+                                              {vmDetails.config[mpKey]}
+                                            </div>
+                                          </div>
+                                        ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Network Section */}
+                                  <div>
+                                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                      Network
+                                    </h4>
+                                    <div className="space-y-3">
+                                      {Object.keys(vmDetails.config)
+                                        .filter((key) => key.match(/^net\d+$/))
+                                        .map((netKey) => (
+                                          <div key={netKey}>
+                                            <div className="text-xs text-muted-foreground mb-1">
+                                              Network Interface {netKey.replace("net", "")}
+                                            </div>
+                                            <div className="font-medium text-green-500 text-sm break-all font-mono bg-muted/50 p-2 rounded">
+                                              {vmDetails.config[netKey]}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                        {vmDetails.config.nameserver && (
+                                          <div>
+                                            <div className="text-xs text-muted-foreground mb-1">DNS Nameserver</div>
+                                            <div className="font-medium text-foreground font-mono">
+                                              {vmDetails.config.nameserver}
+                                            </div>
+                                          </div>
+                                        )}
+                                        {vmDetails.config.searchdomain && (
+                                          <div>
+                                            <div className="text-xs text-muted-foreground mb-1">Search Domain</div>
+                                            <div className="font-medium text-foreground">
+                                              {vmDetails.config.searchdomain}
+                                            </div>
+                                          </div>
+                                        )}
+                                        {vmDetails.config.hostname && (
+                                          <div>
+                                            <div className="text-xs text-muted-foreground mb-1">Hostname</div>
+                                            <div className="font-medium text-foreground">
+                                              {vmDetails.config.hostname}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* PCI Devices Section */}
+                                  {Object.keys(vmDetails.config).some((key) => key.match(/^hostpci\d+$/)) && (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                        PCI Passthrough
+                                      </h4>
+                                      <div className="space-y-3">
+                                        {Object.keys(vmDetails.config)
+                                          .filter((key) => key.match(/^hostpci\d+$/))
+                                          .map((pciKey) => (
+                                            <div key={pciKey}>
+                                              <div className="text-xs text-muted-foreground mb-1">
+                                                {pciKey.toUpperCase().replace(/(\d+)/, " $1")}
+                                              </div>
+                                              <div className="font-medium text-purple-500 text-sm break-all font-mono bg-muted/50 p-2 rounded">
+                                                {vmDetails.config[pciKey]}
+                                              </div>
+                                            </div>
+                                          ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* USB Devices Section */}
+                                  {Object.keys(vmDetails.config).some((key) => key.match(/^usb\d+$/)) && (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                        USB Devices
+                                      </h4>
+                                      <div className="space-y-3">
+                                        {Object.keys(vmDetails.config)
+                                          .filter((key) => key.match(/^usb\d+$/))
+                                          .map((usbKey) => (
+                                            <div key={usbKey}>
+                                              <div className="text-xs text-muted-foreground mb-1">
+                                                {usbKey.toUpperCase().replace(/(\d+)/, " $1")}
+                                              </div>
+                                              <div className="font-medium text-blue-500 text-sm break-all font-mono bg-muted/50 p-2 rounded">
+                                                {vmDetails.config[usbKey]}
+                                              </div>
+                                            </div>
+                                          ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Serial Devices Section */}
+                                  {Object.keys(vmDetails.config).some((key) => key.match(/^serial\d+$/)) && (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                        Serial Ports
+                                      </h4>
+                                      <div className="space-y-3">
+                                        {Object.keys(vmDetails.config)
+                                          .filter((key) => key.match(/^serial\d+$/))
+                                          .map((serialKey) => (
+                                            <div key={serialKey}>
+                                              <div className="text-xs text-muted-foreground mb-1">
+                                                {serialKey.toUpperCase().replace(/(\d+)/, " $1")}
+                                              </div>
+                                              <div className="font-medium text-foreground font-mono">
+                                                {vmDetails.config[serialKey]}
+                                              </div>
+                                            </div>
+                                          ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Options Section */}
+                                  <div>
+                                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                      Options
+                                    </h4>
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                                      {vmDetails.config.onboot !== undefined && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">Start on Boot</div>
+                                          <Badge
+                                            variant="outline"
+                                            className={
+                                              vmDetails.config.onboot
+                                                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                                : "bg-red-500/10 text-red-500 border-red-500/20"
+                                            }
+                                          >
+                                            {vmDetails.config.onboot ? "Yes" : "No"}
+                                          </Badge>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.unprivileged !== undefined && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">Unprivileged</div>
+                                          <Badge
+                                            variant="outline"
+                                            className={
+                                              vmDetails.config.unprivileged
+                                                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                                : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                                            }
+                                          >
+                                            {vmDetails.config.unprivileged ? "Yes" : "No"}
+                                          </Badge>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.ostype && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">OS Type</div>
+                                          <div className="font-medium text-foreground">{vmDetails.config.ostype}</div>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.arch && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">Architecture</div>
+                                          <div className="font-medium text-foreground">{vmDetails.config.arch}</div>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.boot && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">Boot Order</div>
+                                          <div className="font-medium text-foreground">{vmDetails.config.boot}</div>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.features && (
+                                        <div className="col-span-2 lg:col-span-3">
+                                          <div className="text-xs text-muted-foreground mb-1">Features</div>
+                                          <div className="font-medium text-foreground text-sm">
+                                            {vmDetails.config.features}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Advanced Section */}
+                                  <div>
+                                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                      Advanced
+                                    </h4>
+                                    <div className="space-y-3">
+                                      {vmDetails.config.vmgenid && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">VM Generation ID</div>
+                                          <div className="font-medium text-muted-foreground text-sm font-mono">
+                                            {vmDetails.config.vmgenid}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.smbios1 && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">SMBIOS</div>
+                                          <div className="font-medium text-muted-foreground text-sm font-mono break-all">
+                                            {vmDetails.config.smbios1}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {vmDetails.config.meta && (
+                                        <div>
+                                          <div className="text-xs text-muted-foreground mb-1">Metadata</div>
+                                          <div className="font-medium text-muted-foreground text-sm font-mono">
+                                            {vmDetails.config.meta}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </>
                       ) : null}
                     </>
                   )}
