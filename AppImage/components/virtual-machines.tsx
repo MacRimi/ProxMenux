@@ -809,7 +809,7 @@ export function VirtualMachines() {
                     <>
                       <div>
                         <Card
-                          className="cursor-pointer rounded-lg border border-black/10 dark:border-white/10 sm:border-border bg-black/5 dark:bg-white/5 sm:bg-card sm:hover:bg-white/5 dark:sm:hover:bg-white/5 p-4 transition-colors group"
+                          className="cursor-pointer rounded-lg border border-black/10 dark:border-white/10 sm:border-border max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-card sm:hover:bg-black/5 sm:dark:hover:bg-white/5 p-4 transition-colors group"
                           onClick={handleMetricsClick}
                         >
                           <CardContent className="p-4">
@@ -908,7 +908,7 @@ export function VirtualMachines() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
-                                className="text-xs bg-black/5 dark:bg-white/5 sm:bg-transparent sm:hover:bg-white/5 dark:sm:hover:bg-white/5"
+                                className="text-xs max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-transparent sm:hover:bg-black/5 sm:dark:hover:bg-white/5"
                               >
                                 {showAdditionalInfo ? (
                                   <>
