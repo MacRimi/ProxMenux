@@ -139,104 +139,106 @@
 }
 
 /* ===================== */
-/* Base layer            */
+/* Base styles           */
 /* ===================== */
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+/* Removed @layer base to fix Tailwind CSS v4 compatibility */
+* {
+  border-color: var(--border);
+  outline-color: color-mix(in oklch, var(--ring), transparent 50%);
+}
 
-  body {
-    @apply bg-background text-foreground;
-  }
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
 
-  /* Foco accesible */
-  :is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus {
-    @apply outline-none;
-  }
-  :is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
-    @apply ring-2;
-    --tw-ring-color: var(--ring);
-    --tw-ring-opacity: 0.5; /* equivalente al /50 */
-  }
+/* Foco accesible */
+:is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus {
+  outline: none;
+}
+
+:is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--ring), transparent 50%);
+  outline-offset: 2px;
 }
 
 /* ===================== */
-/* Ajustes para Charts   */
+/* Component styles      */
 /* ===================== */
-@layer components {
-  /* Recharts axis */
-  .recharts-cartesian-axis-tick tspan {
-    fill: var(--muted-foreground);
-  }
-  .recharts-cartesian-axis-line,
-  .recharts-cartesian-grid line {
-    stroke: var(--border);
-  }
+/* Removed @layer components to fix Tailwind CSS v4 compatibility */
 
-  /* Chart.js axis */
-  .chartjs-render-monitor text {
-    fill: var(--muted-foreground);
-  }
-  .chartjs-render-monitor line {
-    stroke: var(--border);
-  }
+/* Recharts axis */
+.recharts-cartesian-axis-tick tspan {
+  fill: var(--muted-foreground);
+}
 
-  /* Estilos personalizados para notas de ProxMenux */
-  /* Asegura que el contenido HTML de ProxMenux se renderice correctamente */
-  .proxmenux-notes {
-    /* Centrar el contenido */
-    text-align: center;
-  }
+.recharts-cartesian-axis-line,
+.recharts-cartesian-grid line {
+  stroke: var(--border);
+}
 
-  /* Asegurar que las tablas dentro de las notas se vean correctamente */
-  .proxmenux-notes table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0 auto;
-  }
+/* Chart.js axis */
+.chartjs-render-monitor text {
+  fill: var(--muted-foreground);
+}
 
-  .proxmenux-notes table td {
-    vertical-align: middle;
-    padding: 0.5rem;
-  }
+.chartjs-render-monitor line {
+  stroke: var(--border);
+}
 
-  /* Asegurar que las imágenes dentro de las notas se vean correctamente */
-  .proxmenux-notes img {
-    display: inline-block;
-    max-width: 100%;
-    height: auto;
-  }
+/* Estilos personalizados para notas de ProxMenux */
+/* Asegura que el contenido HTML de ProxMenux se renderice correctamente */
+.proxmenux-notes {
+  text-align: center;
+}
 
-  /* Asegurar que los enlaces (badges) se mantengan en línea horizontal */
-  .proxmenux-notes p a {
-    display: inline-block;
-    margin-right: 0.25rem;
-    margin-bottom: 0.25rem;
-  }
+/* Asegurar que las tablas dentro de las notas se vean correctamente */
+.proxmenux-notes table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto;
+}
 
-  .proxmenux-notes p a img {
-    display: inline-block;
-    vertical-align: middle;
-  }
+.proxmenux-notes table td {
+  vertical-align: middle;
+  padding: 0.5rem;
+}
 
-  /* Añadir separador visual después de la tabla (similar a Proxmox) */
-  .proxmenux-notes table + p {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
-  }
+/* Asegurar que las imágenes dentro de las notas se vean correctamente */
+.proxmenux-notes img {
+  display: inline-block;
+  max-width: 100%;
+  height: auto;
+}
 
-  /* Estilos para los párrafos de información de discos */
-  .proxmenux-notes div p {
-    margin: 0.25rem 0;
-  }
+/* Asegurar que los enlaces (badges) se mantengan en línea horizontal */
+.proxmenux-notes p a {
+  display: inline-block;
+  margin-right: 0.25rem;
+  margin-bottom: 0.25rem;
+}
 
-  /* Asegurar que los títulos se vean correctamente */
-  .proxmenux-notes h1,
-  .proxmenux-notes h2,
-  .proxmenux-notes h3 {
-    margin: 0;
-    line-height: 1.2;
-  }
+.proxmenux-notes p a img {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Añadir separador visual después de la tabla (similar a Proxmox) */
+.proxmenux-notes table + p {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Estilos para los párrafos de información de discos */
+.proxmenux-notes div p {
+  margin: 0.25rem 0;
+}
+
+/* Asegurar que los títulos se vean correctamente */
+.proxmenux-notes h1,
+.proxmenux-notes h2,
+.proxmenux-notes h3 {
+  margin: 0;
+  line-height: 1.2;
 }
