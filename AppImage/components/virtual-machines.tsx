@@ -632,7 +632,7 @@ export function VirtualMachines() {
             margin: 0.5rem 0;
           }
           
-          /* Ensure tables are styled correctly */
+          /* Ensure tables are styled correctly and centered */
           table {
             margin: 0 auto;
           }
@@ -642,15 +642,21 @@ export function VirtualMachines() {
             text-align: center;
           }
           
-          /* Style the second cell of the table to match Proxmox UI */
+          /* Remove border-left since logo already has the line, keep text left-aligned */
           table td:nth-child(2) {
             text-align: left;
             padding-left: 16px;
-            border-left: 2px solid rgba(255, 255, 255, 0.2);
           }
           
-          /* Ensure h1 and p in the second cell are left-aligned */
-          table td:nth-child(2) h1,
+          /* Increase h1 font size for VM name */
+          table td:nth-child(2) h1 {
+            text-align: left;
+            font-size: 2rem;
+            font-weight: bold;
+            line-height: 1.2;
+          }
+          
+          /* Ensure p in the second cell is left-aligned */
           table td:nth-child(2) p {
             text-align: left;
           }
