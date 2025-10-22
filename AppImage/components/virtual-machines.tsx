@@ -481,8 +481,23 @@ export function VirtualMachines() {
 
   const processDescription = (description: string): { html: string; isHtml: boolean; error: boolean } => {
     try {
-      // Try to decode
-      const decoded = decodeURIComponent(description.replace(/%0A/g, "\n"))
+      let decoded: string
+      try {
+        decoded = decodeURIComponent(description.replace(/%0A/g, "\n"))
+      } catch (e) {
+        // If decodeURIComponent fails, try manual decoding of common sequences
+        decoded = description
+          .replace(/%0A/g, "\n")
+          .replace(/%20/g, " ")
+          .replace(/%3A/g, ":")
+          .replace(/%2F/g, "/")
+          .replace(/%3D/g, "=")
+          .replace(/%3C/g, "<")
+          .replace(/%3E/g, ">")
+          .replace(/%22/g, '"')
+          .replace(/%27/g, "'")
+          .replace(/%26/g, "&")
+      }
 
       // Check if it contains HTML
       if (isHTML(decoded)) {
@@ -492,9 +507,9 @@ export function VirtualMachines() {
       // If it's plain text, convert \n to <br>
       return { html: decoded.replace(/\n/g, "<br>"), isHtml: false, error: false }
     } catch (error) {
-      // If decoding fails, return the original content
+      // If all decoding fails, return error
       console.error("Error decoding description:", error)
-      return { html: description, isHtml: false, error: true }
+      return { html: "", isHtml: false, error: true }
     }
   }
 
@@ -516,12 +531,12 @@ export function VirtualMachines() {
     setSavingNotes(true)
     try {
       const response = await fetch(`/api/vms/${selectedVM.vmid}/config`, {
-        method: "POST",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          description: encodeURIComponent(editedNotes).replace(/\n/g, "%0A"),
+          description: encodeURIComponent(editedNotes),
         }),
       })
 
@@ -531,7 +546,7 @@ export function VirtualMachines() {
           ...vmDetails,
           config: {
             ...vmDetails.config,
-            description: encodeURIComponent(editedNotes).replace(/\n/g, "%0A"),
+            description: encodeURIComponent(editedNotes),
           },
         })
         setIsEditingNotes(false)
