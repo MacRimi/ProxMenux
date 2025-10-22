@@ -820,7 +820,7 @@ export function VirtualMachines() {
                                 </div>
                                 <Progress
                                   value={selectedVM.cpu * 100}
-                                  className={`h-2 bg-background/30 group-hover:bg-background/30 transition-colors ${getModalProgressColor(selectedVM.cpu * 100)}`}
+                                  className={`h-2 sm:group-hover:bg-background/50 transition-colors ${getModalProgressColor(selectedVM.cpu * 100)}`}
                                 />
                               </div>
 
@@ -835,7 +835,7 @@ export function VirtualMachines() {
                                 </div>
                                 <Progress
                                   value={(selectedVM.mem / selectedVM.maxmem) * 100}
-                                  className={`h-2 bg-background/30 group-hover:bg-background/30 transition-colors ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                                  className={`h-2 sm:group-hover:bg-background/50 transition-colors ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
                                 />
                               </div>
 
@@ -850,7 +850,7 @@ export function VirtualMachines() {
                                 </div>
                                 <Progress
                                   value={(selectedVM.disk / selectedVM.maxdisk) * 100}
-                                  className={`h-2 bg-background/30 group-hover:bg-background/30 transition-colors ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                                  className={`h-2 sm:group-hover:bg-background/50 transition-colors ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
                                 />
                               </div>
 
