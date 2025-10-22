@@ -43,14 +43,22 @@ export function NodeMetricsCharts() {
         typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
       const apiUrl = `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
 
+      console.log("[v0] Fetching node metrics from:", apiUrl)
+
       const response = await fetch(apiUrl)
+
+      console.log("[v0] Response status:", response.status)
+      console.log("[v0] Response ok:", response.ok)
 
       if (!response.ok) {
         const errorData = await response.json()
+        console.log("[v0] Error response data:", errorData)
         throw new Error(errorData.error || "Failed to fetch node metrics")
       }
 
       const result = await response.json()
+      console.log("[v0] Node metrics result:", result)
+      console.log("[v0] Data points received:", result.data?.length || 0)
 
       const transformedData = result.data.map((item: any) => {
         const date = new Date(item.time * 1000)
@@ -94,9 +102,14 @@ export function NodeMetricsCharts() {
         }
       })
 
+      console.log("[v0] Transformed data sample:", transformedData[0])
+      console.log("[v0] Total transformed data points:", transformedData.length)
+
       setData(transformedData)
     } catch (err: any) {
       console.error("[v0] Error fetching node metrics:", err)
+      console.error("[v0] Error message:", err.message)
+      console.error("[v0] Error stack:", err.stack)
       setError(err.message || "Error loading metrics")
     } finally {
       setLoading(false)

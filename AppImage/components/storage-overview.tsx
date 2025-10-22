@@ -427,14 +427,14 @@ export function StorageOverview() {
   return (
     <div className="space-y-6">
       {/* Storage Summary */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Storage</CardTitle>
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{storageData.total.toFixed(1)} TB</div>
+            <div className="text-xl lg:text-2xl font-bold">{storageData.total.toFixed(1)} TB</div>
             <p className="text-xs text-muted-foreground mt-1">{storageData.disk_count} physical disks</p>
           </CardContent>
         </Card>
@@ -445,7 +445,7 @@ export function StorageOverview() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatStorage(totalProxmoxUsed)}</div>
+            <div className="text-xl lg:text-2xl font-bold">{formatStorage(totalProxmoxUsed)}</div>
             <p className="text-xs text-muted-foreground mt-1">{usagePercent}% used</p>
           </CardContent>
         </Card>
@@ -457,7 +457,7 @@ export function StorageOverview() {
             <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{storageData.disk_count} disks</div>
+            <div className="text-xl lg:text-2xl font-bold">{storageData.disk_count} disks</div>
             <p className="text-xs mt-1">
               <span className="text-green-500">{diskHealthBreakdown.normal} normal</span>
               {diskHealthBreakdown.warning > 0 && (
@@ -483,7 +483,7 @@ export function StorageOverview() {
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{storageData.disk_count} disks</div>
+            <div className="text-xl lg:text-2xl font-bold">{storageData.disk_count} disks</div>
             <p className="text-xs mt-1">
               {diskTypesBreakdown.nvme > 0 && <span className="text-purple-500">{diskTypesBreakdown.nvme} NVMe</span>}
               {diskTypesBreakdown.ssd > 0 && (
