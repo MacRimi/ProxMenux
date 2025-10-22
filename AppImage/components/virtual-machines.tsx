@@ -259,7 +259,10 @@ export function VirtualMachines() {
   const [currentView, setCurrentView] = useState<"main" | "metrics">("main")
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
-  const [selectedMetric, setSelectedMetric] = useState<string | null>(null) // undeclared variable fix
+  const [isEditingNotes, setIsEditingNotes] = useState(false)
+  const [editedNotes, setEditedNotes] = useState("")
+  const [savingNotes, setSavingNotes] = useState(false)
+  const [selectedMetric, setSelectedMetric] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchLXCIPs = async () => {
@@ -294,6 +297,9 @@ export function VirtualMachines() {
     setSelectedVM(vm)
     setCurrentView("main")
     setShowAdditionalInfo(false)
+    setShowNotes(false)
+    setIsEditingNotes(false)
+    setEditedNotes("")
     setDetailsLoading(true)
     try {
       const response = await fetch(`/api/vms/${vm.vmid}`)
@@ -466,6 +472,84 @@ export function VirtualMachines() {
         <div className="text-center py-8 text-red-500">Error loading virtual machines: {error.message}</div>
       </div>
     )
+  }
+
+  const isHTML = (str: string): boolean => {
+    const htmlRegex = /<\/?[a-z][\s\S]*>/i
+    return htmlRegex.test(str)
+  }
+
+  const processDescription = (description: string): { html: string; isHtml: boolean; error: boolean } => {
+    try {
+      // Try to decode
+      const decoded = decodeURIComponent(description.replace(/%0A/g, "\n"))
+
+      // Check if it contains HTML
+      if (isHTML(decoded)) {
+        return { html: decoded, isHtml: true, error: false }
+      }
+
+      // If it's plain text, convert \n to <br>
+      return { html: decoded.replace(/\n/g, "<br>"), isHtml: false, error: false }
+    } catch (error) {
+      // If decoding fails, return the original content
+      console.error("Error decoding description:", error)
+      return { html: description, isHtml: false, error: true }
+    }
+  }
+
+  const handleEditNotes = () => {
+    if (vmDetails?.config?.description) {
+      try {
+        const decoded = decodeURIComponent(vmDetails.config.description.replace(/%0A/g, "\n"))
+        setEditedNotes(decoded)
+      } catch (error) {
+        setEditedNotes(vmDetails.config.description)
+      }
+    }
+    setIsEditingNotes(true)
+  }
+
+  const handleSaveNotes = async () => {
+    if (!selectedVM || !vmDetails) return
+
+    setSavingNotes(true)
+    try {
+      const response = await fetch(`/api/vms/${selectedVM.vmid}/config`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          description: encodeURIComponent(editedNotes).replace(/\n/g, "%0A"),
+        }),
+      })
+
+      if (response.ok) {
+        // Update local state
+        setVMDetails({
+          ...vmDetails,
+          config: {
+            ...vmDetails.config,
+            description: encodeURIComponent(editedNotes).replace(/\n/g, "%0A"),
+          },
+        })
+        setIsEditingNotes(false)
+      } else {
+        console.error("Failed to save notes")
+        alert("Failed to save notes. Please try again.")
+      }
+    } catch (error) {
+      console.error("Error saving notes:", error)
+      alert("Error saving notes. Please try again.")
+    } finally {
+      setSavingNotes(false)
+    }
+  }
+
+  const handleCancelEditNotes = () => {
+    setIsEditingNotes(false)
+    setEditedNotes("")
   }
 
   return (
@@ -787,6 +871,8 @@ export function VirtualMachines() {
           setSelectedMetric(null)
           setShowAdditionalInfo(false)
           setShowNotes(false)
+          setIsEditingNotes(false)
+          setEditedNotes("")
         }}
       >
         <DialogContent className="max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
@@ -936,7 +1022,6 @@ export function VirtualMachines() {
                         </Card>
                       </div>
 
-                      {/* ... existing RESOURCES card and additional info ... */}
                       {detailsLoading ? (
                         <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
                       ) : vmDetails?.config ? (
@@ -1021,18 +1106,69 @@ export function VirtualMachines() {
 
                               {showNotes && vmDetails.config.description && (
                                 <div className="mt-6 pt-6 border-t border-border">
-                                  <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                    Notes
-                                  </h4>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                                      Notes
+                                    </h4>
+                                    {!isEditingNotes && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleEditNotes}
+                                        className="text-xs bg-transparent"
+                                      >
+                                        Edit
+                                      </Button>
+                                    )}
+                                  </div>
                                   <div className="bg-muted/50 p-4 rounded-lg">
-                                    <div
-                                      className="text-sm text-foreground prose prose-sm max-w-none dark:prose-invert"
-                                      dangerouslySetInnerHTML={{
-                                        __html: decodeURIComponent(
-                                          vmDetails.config.description.replace(/%0A/g, "\n"),
-                                        ).replace(/\n/g, "<br>"),
-                                      }}
-                                    />
+                                    {isEditingNotes ? (
+                                      <div className="space-y-3">
+                                        <textarea
+                                          value={editedNotes}
+                                          onChange={(e) => setEditedNotes(e.target.value)}
+                                          className="w-full min-h-[200px] p-3 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                                          placeholder="Enter notes here..."
+                                        />
+                                        <div className="flex gap-2 justify-end">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleCancelEditNotes}
+                                            disabled={savingNotes}
+                                          >
+                                            Cancel
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            onClick={handleSaveNotes}
+                                            disabled={savingNotes}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                          >
+                                            {savingNotes ? "Saving..." : "Save"}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        {(() => {
+                                          const processed = processDescription(vmDetails.config.description)
+                                          if (processed.error) {
+                                            return (
+                                              <div className="text-sm text-red-500">
+                                                Error decoding notes. Please edit to fix.
+                                              </div>
+                                            )
+                                          }
+                                          return (
+                                            <div
+                                              className={`text-sm text-foreground ${processed.isHtml ? "prose prose-sm max-w-none dark:prose-invert" : "whitespace-pre-wrap"}`}
+                                              dangerouslySetInnerHTML={{ __html: processed.html }}
+                                            />
+                                          )
+                                        })()}
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                               )}
