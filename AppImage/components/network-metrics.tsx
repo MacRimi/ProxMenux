@@ -215,15 +215,15 @@ export function NetworkMetrics() {
           <CardContent>
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Received:</span>
+                <span className="text-sm text-muted-foreground hidden lg:inline">Received:</span>
                 <span className="text-base lg:text-xl font-bold text-green-500">↓ {trafficInFormatted}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Sent:</span>
+                <span className="text-sm text-muted-foreground hidden lg:inline">Sent:</span>
                 <span className="text-base lg:text-xl font-bold text-blue-500">↑ {trafficOutFormatted}</span>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Total data transferred</p>
+            <p className="text-xs text-muted-foreground mt-2 hidden lg:block">Total data transferred</p>
           </CardContent>
         </Card>
 
@@ -250,54 +250,6 @@ export function NetworkMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Firewall Status</CardTitle>
-            <Router className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-green-500">Active</div>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
-                Protected
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">System protected</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Network Health</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground mb-2">
-              <Badge variant="outline" className={healthColor}>
-                {healthStatus}
-              </Badge>
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Packet Loss:</span>
-                <span
-                  className={`font-medium ${Number.parseFloat(avgPacketLoss) > 1 ? "text-red-500" : "text-green-500"}`}
-                >
-                  {avgPacketLoss}%
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Errors:</span>
-                <span className={`font-medium ${totalErrors > 100 ? "text-red-500" : "text-green-500"}`}>
-                  {totalErrors}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {networkData.physical_interfaces && networkData.physical_interfaces.length > 0 && (
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
@@ -381,7 +333,7 @@ export function NetworkMetrics() {
             </div>
           </CardContent>
         </Card>
-      )}
+      </div>
 
       {networkData.bridge_interfaces && networkData.bridge_interfaces.length > 0 && (
         <Card className="bg-card border-border">

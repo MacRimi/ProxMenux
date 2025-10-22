@@ -3101,76 +3101,6 @@ def get_gpu_info():
     
     return gpus
 
-def get_disk_hardware_info(disk_name):
-    """Get detailed hardware information for a disk"""
-    disk_info = {}
-    
-    try:
-        # Get disk type (HDD, SSD, NVMe)
-        result = subprocess.run(['lsblk', '-d', '-n', '-o', 'NAME,ROTA,TYPE'], 
-                              capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            for line in result.stdout.strip().split('\n'):
-                parts = line.split()
-                if len(parts) >= 2 and parts[0] == disk_name:
-                    rota = parts[1]
-                    disk_info['type'] = 'HDD' if rota == '1' else 'SSD'
-                    if disk_name.startswith('nvme'):
-                        disk_info['type'] = 'NVMe SSD'
-                    break # Found the correct disk
-        
-        # Get driver/kernel module
-        try:
-            # For NVMe
-            if disk_name.startswith('nvme'):
-                disk_info['driver'] = 'nvme'
-                disk_info['interface'] = 'PCIe/NVMe'
-            # For SATA/SAS
-            else:
-                result = subprocess.run(['udevadm', 'info', '--query=property', f'/dev/{disk_name}'], 
-                                      capture_output=True, text=True, timeout=5)
-                if result.returncode == 0:
-                    for line in result.stdout.split('\n'):
-                        if 'ID_BUS=' in line:
-                            bus = line.split('=')[1].strip()
-                            disk_info['interface'] = bus.upper()
-                        if 'ID_MODEL=' in line:
-                            model = line.split('=')[1].strip()
-                            disk_info['model'] = model
-                        if 'ID_SERIAL_SHORT=' in line:
-                            serial = line.split('=')[1].strip()
-                            disk_info['serial'] = serial
-        except Exception as e:
-            print(f"[v0] Error getting disk driver info: {e}")
-            
-        # Get SMART data
-        try:
-            result = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
-                                  capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                for line in result.stdout.split('\n'):
-                    if 'Model Family:' in line:
-                        disk_info['family'] = line.split(':', 1)[1].strip()
-                    elif 'Device Model:' in line or 'Model Number:' in line:
-                        disk_info['model'] = line.split(':', 1)[1].strip()
-                    elif 'Serial Number:' in line:
-                        disk_info['serial'] = line.split(':', 1)[1].strip()
-                    elif 'Firmware Version:' in line:
-                        disk_info['firmware'] = line.split(':', 1)[1].strip()
-                    elif 'Rotation Rate:' in line:
-                        disk_info['rotation_rate'] = line.split(':', 1)[1].strip()
-                    elif 'Form Factor:' in line:
-                        disk_info['form_factor'] = line.split(':', 1)[1].strip()
-                    elif 'SATA Version is:' in line:
-                        disk_info['sata_version'] = line.split(':', 1)[1].strip()
-        except Exception as e:
-            print(f"[v0] Error getting SMART info: {e}")
-            
-    except Exception as e:
-        print(f"[v0] Error getting disk hardware info: {e}")
-    
-    return disk_info
-
 def get_hardware_info():
     """Get comprehensive hardware information"""
     try:
@@ -3752,6 +3682,7 @@ def api_vms():
     """Get virtual machine information"""
     return jsonify(get_proxmox_vms())
 
+# Add the new api_vm_metrics endpoint here
 @app.route('/api/vms/<int:vmid>/metrics', methods=['GET'])
 def api_vm_metrics(vmid):
     """Get historical metrics (RRD data) for a specific VM/LXC"""
@@ -3819,6 +3750,53 @@ def api_vm_metrics(vmid):
     except Exception as e:
         print(f"[v0] EXCEPTION in api_vm_metrics: {e}")
         print(f"[v0] ===== METRICS REQUEST EXCEPTION =====")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/node/metrics', methods=['GET'])
+def api_node_metrics():
+    """Get historical metrics (RRD data) for the node"""
+    try:
+        timeframe = request.args.get('timeframe', 'week')  # hour, day, week, month, year
+        
+        print(f"[v0] ===== NODE METRICS REQUEST =====")
+        print(f"[v0] Timeframe: {timeframe}")
+        
+        # Validate timeframe
+        valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
+        if timeframe not in valid_timeframes:
+            print(f"[v0] ERROR: Invalid timeframe: {timeframe}")
+            return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
+        
+        # Get local node name
+        local_node = socket.gethostname()
+        print(f"[v0] Local node: {local_node}")
+        
+        # Get RRD data for the node
+        print(f"[v0] Fetching RRD data for node {local_node} with timeframe {timeframe}...")
+        rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/rrddata', 
+                                    '--timeframe', timeframe, '--output-format', 'json'],
+                                   capture_output=True, text=True, timeout=10)
+        
+        if rrd_result.returncode == 0:
+            print(f"[v0] RRD data fetched successfully")
+            print(f"[v0] RRD output length: {len(rrd_result.stdout)} bytes")
+            rrd_data = json.loads(rrd_result.stdout)
+            print(f"[v0] RRD data points: {len(rrd_data)}")
+            print(f"[v0] ===== NODE METRICS REQUEST SUCCESS =====")
+            return jsonify({
+                'node': local_node,
+                'timeframe': timeframe,
+                'data': rrd_data
+            })
+        else:
+            print(f"[v0] ERROR: Failed to get RRD data")
+            print(f"[v0] stderr: {rrd_result.stderr}")
+            print(f"[v0] ===== NODE METRICS REQUEST FAILED =====")
+            return jsonify({'error': f'Failed to get RRD data: {rrd_result.stderr}'}), 500
+            
+    except Exception as e:
+        print(f"[v0] EXCEPTION in api_node_metrics: {e}")
+        print(f"[v0] ===== NODE METRICS REQUEST EXCEPTION =====")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/logs', methods=['GET'])
@@ -3934,6 +3912,8 @@ def api_logs_download():
         if result.returncode == 0:
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
+                f.write(f"ProxMenux Log ({log_type}, since {since_days if since_days else f'{hours}h'}) - Generated: {datetime.now().isoformat()}\n")
+                f.write("=" * 80 + "\n\n")
                 f.write(result.stdout)
                 temp_path = f.name
             
@@ -4098,7 +4078,7 @@ def api_notifications_download():
         if result.returncode == 0:
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
-                f.write(f"Notification Log - {timestamp}\n")
+                f.write(f"ProxMenux Log - Notification around: {timestamp}\n")
                 f.write(f"Time Window: {since_time} to {until_time}\n")
                 f.write("=" * 80 + "\n\n")
                 f.write(result.stdout)
@@ -4689,6 +4669,7 @@ def api_info():
             '/api/network',
             '/api/vms',
             '/api/vms/<vmid>/metrics', # Added endpoint for RRD data
+            '/api/node/metrics', # Added node metrics endpoint
             '/api/logs',
             '/api/health',
             '/api/hardware',
@@ -5020,7 +5001,7 @@ def api_vm_config_update(vmid):
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus
+    # API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics
     
     import sys
     import logging
@@ -5034,6 +5015,6 @@ if __name__ == '__main__':
     cli.show_server_banner = lambda *x: None
     
     # Print only essential information
-    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus")
+    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
