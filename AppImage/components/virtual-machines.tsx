@@ -577,17 +577,16 @@ export function VirtualMachines() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          description: encodeURIComponent(editedNotes),
+          description: editedNotes, // Send as-is, pvesh will handle encoding
         }),
       })
 
       if (response.ok) {
-        // Update local state
         setVMDetails({
           ...vmDetails,
           config: {
             ...vmDetails.config,
-            description: encodeURIComponent(editedNotes),
+            description: editedNotes, // Store unencoded
           },
         })
         setIsEditingNotes(false)
