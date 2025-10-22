@@ -283,7 +283,7 @@ export function VirtualMachines() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.JSON.stringify({ action }),
+        body: JSON.stringify({ action }),
       })
 
       if (response.ok) {
@@ -807,10 +807,10 @@ export function VirtualMachines() {
                     <>
                       <div>
                         <Card
-                          className="cursor-pointer rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 p-4 transition-colors group"
+                          className="cursor-pointer rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors group"
                           onClick={handleMetricsClick}
                         >
-                          <CardContent className="p-0">
+                          <CardContent className="p-4">
                             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                               {/* CPU Usage */}
                               <div>
@@ -906,7 +906,7 @@ export function VirtualMachines() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
-                                className="text-xs"
+                                className="text-xs bg-white/5 sm:bg-transparent hover:bg-white/5"
                               >
                                 {showAdditionalInfo ? (
                                   <>
