@@ -1025,9 +1025,12 @@ export function VirtualMachines() {
                                     Notes
                                   </h4>
                                   <div className="bg-muted/50 p-4 rounded-lg">
-                                    <pre className="text-sm text-foreground whitespace-pre-wrap font-sans">
-                                      {decodeURIComponent(vmDetails.config.description.replace(/%0A/g, "\n"))}
-                                    </pre>
+                                    <div
+                                      className="text-sm text-foreground prose prose-sm max-w-none dark:prose-invert"
+                                      dangerouslySetInnerHTML={{
+                                        __html: decodeURIComponent(vmDetails.config.description.replace(/%0A/g, "\n")),
+                                      }}
+                                    />
                                   </div>
                                 </div>
                               )}
@@ -1381,37 +1384,39 @@ export function VirtualMachines() {
                                   </div>
 
                                   {/* Advanced Section */}
-                                  <div>
-                                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                      Advanced
-                                    </h4>
-                                    <div className="space-y-3">
-                                      {vmDetails.config.vmgenid && (
-                                        <div>
-                                          <div className="text-xs text-muted-foreground mb-1">VM Generation ID</div>
-                                          <div className="font-medium text-muted-foreground text-sm font-mono">
-                                            {vmDetails.config.vmgenid}
+                                  {(vmDetails.config.vmgenid || vmDetails.config.smbios1 || vmDetails.config.meta) && (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                        Advanced
+                                      </h4>
+                                      <div className="space-y-3">
+                                        {vmDetails.config.vmgenid && (
+                                          <div>
+                                            <div className="text-xs text-muted-foreground mb-1">VM Generation ID</div>
+                                            <div className="font-medium text-muted-foreground text-sm font-mono">
+                                              {vmDetails.config.vmgenid}
+                                            </div>
                                           </div>
-                                        </div>
-                                      )}
-                                      {vmDetails.config.smbios1 && (
-                                        <div>
-                                          <div className="text-xs text-muted-foreground mb-1">SMBIOS</div>
-                                          <div className="font-medium text-muted-foreground text-sm font-mono break-all">
-                                            {vmDetails.config.smbios1}
+                                        )}
+                                        {vmDetails.config.smbios1 && (
+                                          <div>
+                                            <div className="text-xs text-muted-foreground mb-1">SMBIOS</div>
+                                            <div className="font-medium text-muted-foreground text-sm font-mono break-all">
+                                              {vmDetails.config.smbios1}
+                                            </div>
                                           </div>
-                                        </div>
-                                      )}
-                                      {vmDetails.config.meta && (
-                                        <div>
-                                          <div className="text-xs text-muted-foreground mb-1">Metadata</div>
-                                          <div className="font-medium text-muted-foreground text-sm font-mono">
-                                            {vmDetails.config.meta}
+                                        )}
+                                        {vmDetails.config.meta && (
+                                          <div>
+                                            <div className="text-xs text-muted-foreground mb-1">Metadata</div>
+                                            <div className="font-medium text-muted-foreground text-sm font-mono">
+                                              {vmDetails.config.meta}
+                                            </div>
                                           </div>
-                                        </div>
-                                      )}
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
+                                  )}
                                 </div>
                               )}
                             </CardContent>
