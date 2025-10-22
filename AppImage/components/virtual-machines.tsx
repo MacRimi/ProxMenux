@@ -668,7 +668,7 @@ export function VirtualMachines() {
                     </div>
 
                     <div
-                      className="sm:hidden p-4 rounded-lg border border-white/10 bg-white/5 dark:bg-white/5 transition-colors cursor-pointer"
+                      className="sm:hidden p-4 rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 transition-colors cursor-pointer"
                       onClick={() => handleVMClick(vm)}
                     >
                       <div className="flex items-center gap-3">
@@ -807,7 +807,7 @@ export function VirtualMachines() {
                     <>
                       <div>
                         <Card
-                          className="cursor-pointer rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 p-4 transition-colors group"
+                          className="cursor-pointer rounded-lg border border-black/10 dark:border-white/10 sm:border-border bg-black/5 dark:bg-white/5 sm:bg-card sm:hover:bg-white/5 dark:sm:hover:bg-white/5 p-4 transition-colors group"
                           onClick={handleMetricsClick}
                         >
                           <CardContent className="p-4">
@@ -820,7 +820,7 @@ export function VirtualMachines() {
                                 </div>
                                 <Progress
                                   value={selectedVM.cpu * 100}
-                                  className={`h-2 sm:group-hover:bg-background/50 transition-colors ${getModalProgressColor(selectedVM.cpu * 100)}`}
+                                  className={`h-2 max-sm:bg-background sm:group-hover:bg-background/50 transition-colors ${getModalProgressColor(selectedVM.cpu * 100)}`}
                                 />
                               </div>
 
@@ -835,7 +835,7 @@ export function VirtualMachines() {
                                 </div>
                                 <Progress
                                   value={(selectedVM.mem / selectedVM.maxmem) * 100}
-                                  className={`h-2 sm:group-hover:bg-background/50 transition-colors ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                                  className={`h-2 max-sm:bg-background sm:group-hover:bg-background/50 transition-colors ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
                                 />
                               </div>
 
@@ -850,7 +850,7 @@ export function VirtualMachines() {
                                 </div>
                                 <Progress
                                   value={(selectedVM.disk / selectedVM.maxdisk) * 100}
-                                  className={`h-2 sm:group-hover:bg-background/50 transition-colors ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                                  className={`h-2 max-sm:bg-background sm:group-hover:bg-background/50 transition-colors ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
                                 />
                               </div>
 
@@ -906,7 +906,7 @@ export function VirtualMachines() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
-                                className="text-xs bg-white/5 sm:bg-transparent sm:hover:bg-white/5"
+                                className="text-xs bg-black/5 dark:bg-white/5 sm:bg-transparent sm:hover:bg-white/5 dark:sm:hover:bg-white/5"
                               >
                                 {showAdditionalInfo ? (
                                   <>
