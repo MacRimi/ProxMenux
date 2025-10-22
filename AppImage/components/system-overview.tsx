@@ -443,14 +443,14 @@ export function SystemOverview() {
   return (
     <div className="space-y-6">
       {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">CPU Usage</CardTitle>
             <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{systemData.cpu_usage}%</div>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">{systemData.cpu_usage}%</div>
             <Progress value={systemData.cpu_usage} className="mt-2 [&>div]:bg-blue-500" />
             <p className="text-xs text-muted-foreground mt-2">Real-time usage</p>
           </CardContent>
@@ -462,7 +462,7 @@ export function SystemOverview() {
             <MemoryStick className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{systemData.memory_used.toFixed(1)} GB</div>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">{systemData.memory_used.toFixed(1)} GB</div>
             <Progress value={systemData.memory_usage} className="mt-2 [&>div]:bg-blue-500" />
             <p className="text-xs text-muted-foreground mt-2">
               <span className="text-green-500 font-medium">{systemData.memory_usage.toFixed(1)}%</span> of{" "}
@@ -477,7 +477,7 @@ export function SystemOverview() {
             <Thermometer className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-xl lg:text-2xl font-bold text-foreground">
               {systemData.temperature === 0 ? "N/A" : `${systemData.temperature}°C`}
             </div>
             <div className="flex items-center mt-2">
@@ -497,7 +497,7 @@ export function SystemOverview() {
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{vmStats.running}</div>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">{vmStats.running}</div>
             <div className="mt-2 flex flex-wrap gap-1">
               <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                 {vmStats.running} Running

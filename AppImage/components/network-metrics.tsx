@@ -206,7 +206,7 @@ export function NetworkMetrics() {
   return (
     <div className="space-y-6">
       {/* Network Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Network Traffic</CardTitle>
@@ -216,11 +216,11 @@ export function NetworkMetrics() {
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Received:</span>
-                <span className="text-xl font-bold text-green-500">↓ {trafficInFormatted}</span>
+                <span className="text-base lg:text-xl font-bold text-green-500">↓ {trafficInFormatted}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Sent:</span>
-                <span className="text-xl font-bold text-blue-500">↑ {trafficOutFormatted}</span>
+                <span className="text-base lg:text-xl font-bold text-blue-500">↑ {trafficOutFormatted}</span>
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">Total data transferred</p>
@@ -233,7 +233,7 @@ export function NetworkMetrics() {
             <Network className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-xl lg:text-2xl font-bold text-foreground">
               {(networkData.physical_active_count ?? 0) + (networkData.bridge_active_count ?? 0)}
             </div>
             <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -256,7 +256,7 @@ export function NetworkMetrics() {
             <Router className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-500">Active</div>
+            <div className="text-xl lg:text-2xl font-bold text-green-500">Active</div>
             <div className="flex items-center gap-2 mt-2">
               <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
                 Protected
@@ -272,7 +272,7 @@ export function NetworkMetrics() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground mb-2">
+            <div className="text-xl lg:text-2xl font-bold text-foreground mb-2">
               <Badge variant="outline" className={healthColor}>
                 {healthStatus}
               </Badge>

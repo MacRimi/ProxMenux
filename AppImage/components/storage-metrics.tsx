@@ -109,14 +109,14 @@ export function StorageMetrics() {
   return (
     <div className="space-y-6">
       {/* Storage Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Storage</CardTitle>
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{storageData.total.toFixed(1)} GB</div>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">{storageData.total.toFixed(1)} GB</div>
             <Progress value={usagePercent} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2">
               {storageData.used.toFixed(1)} GB used • {storageData.available.toFixed(1)} GB available
@@ -130,7 +130,7 @@ export function StorageMetrics() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{storageData.used.toFixed(1)} GB</div>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">{storageData.used.toFixed(1)} GB</div>
             <Progress value={usagePercent} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2">{usagePercent.toFixed(1)}% of total space</p>
           </CardContent>
@@ -144,7 +144,7 @@ export function StorageMetrics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{storageData.available.toFixed(1)} GB</div>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">{storageData.available.toFixed(1)} GB</div>
             <div className="flex items-center mt-2">
               <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                 {((storageData.available / storageData.total) * 100).toFixed(1)}% Free
@@ -162,7 +162,7 @@ export function StorageMetrics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{storageData.disks.length}</div>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">{storageData.disks.length}</div>
             <div className="flex items-center space-x-2 mt-2">
               <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                 {storageData.disks.filter((d) => d.health === "healthy").length} Healthy
