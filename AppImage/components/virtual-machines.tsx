@@ -642,6 +642,19 @@ export function VirtualMachines() {
             text-align: center;
           }
           
+          /* Style the second cell of the table to match Proxmox UI */
+          table td:nth-child(2) {
+            text-align: left;
+            padding-left: 16px;
+            border-left: 2px solid rgba(255, 255, 255, 0.2);
+          }
+          
+          /* Ensure h1 and p in the second cell are left-aligned */
+          table td:nth-child(2) h1,
+          table td:nth-child(2) p {
+            text-align: left;
+          }
+          
           /* Add separator after tables */
           table + p {
             margin-top: 1rem;
