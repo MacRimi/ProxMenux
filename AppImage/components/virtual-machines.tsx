@@ -154,7 +154,7 @@ const getUsageColor = (percent: number): string => {
   if (percent >= 95) return "text-red-500"
   if (percent >= 86) return "text-orange-500"
   if (percent >= 71) return "text-yellow-500"
-  return "text-white"
+  return "text-foreground"
 }
 
 const getIconColor = (percent: number): string => {
@@ -696,7 +696,7 @@ export function VirtualMachines() {
                             )}
                             <Cpu
                               className={`h-4 w-4 ${
-                                vm.status === "stopped" ? "text-gray-500" : getIconColor(Number.parseFloat(cpuPercent))
+                                vm.status === "stopped" ? "text-gray-500" : getUsageColor(Number.parseFloat(cpuPercent))
                               }`}
                             />
                           </div>
@@ -708,7 +708,7 @@ export function VirtualMachines() {
                             )}
                             <MemoryStick
                               className={`h-4 w-4 ${
-                                vm.status === "stopped" ? "text-gray-500" : getIconColor(Number.parseFloat(memPercent))
+                                vm.status === "stopped" ? "text-gray-500" : getUsageColor(Number.parseFloat(memPercent))
                               }`}
                             />
                           </div>
@@ -720,7 +720,9 @@ export function VirtualMachines() {
                             )}
                             <HardDrive
                               className={`h-4 w-4 ${
-                                vm.status === "stopped" ? "text-gray-500" : getIconColor(Number.parseFloat(diskPercent))
+                                vm.status === "stopped"
+                                  ? "text-gray-500"
+                                  : getUsageColor(Number.parseFloat(diskPercent))
                               }`}
                             />
                           </div>
