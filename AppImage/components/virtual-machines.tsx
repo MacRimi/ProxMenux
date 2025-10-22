@@ -632,8 +632,9 @@ export function VirtualMachines() {
             margin: 0.5rem 0;
           }
           
-          /* Ensure tables are styled correctly and centered */
+          /* Override inline width and center the table */
           table {
+            width: auto !important;
             margin: 0 auto;
           }
           
