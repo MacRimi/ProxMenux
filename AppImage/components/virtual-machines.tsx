@@ -807,7 +807,7 @@ export function VirtualMachines() {
                     <>
                       <div>
                         <Card
-                          className="border border-border bg-card/50 cursor-pointer hover:bg-card/70 transition-colors"
+                          className="hidden sm:block border border-border bg-card cursor-pointer hover:bg-white/5 dark:hover:bg-white/5 transition-colors group"
                           onClick={handleMetricsClick}
                         >
                           <CardContent className="p-4">
@@ -820,7 +820,7 @@ export function VirtualMachines() {
                                 </div>
                                 <Progress
                                   value={selectedVM.cpu * 100}
-                                  className={`h-2 ${getModalProgressColor(selectedVM.cpu * 100)}`}
+                                  className={`h-2 bg-background group-hover:bg-background/50 ${getModalProgressColor(selectedVM.cpu * 100)}`}
                                 />
                               </div>
 
@@ -835,7 +835,7 @@ export function VirtualMachines() {
                                 </div>
                                 <Progress
                                   value={(selectedVM.mem / selectedVM.maxmem) * 100}
-                                  className={`h-2 ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                                  className={`h-2 bg-background group-hover:bg-background/50 ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
                                 />
                               </div>
 
@@ -850,7 +850,92 @@ export function VirtualMachines() {
                                 </div>
                                 <Progress
                                   value={(selectedVM.disk / selectedVM.maxdisk) * 100}
-                                  className={`h-2 ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                                  className={`h-2 bg-background group-hover:bg-background/50 ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                                />
+                              </div>
+
+                              {/* Disk I/O */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">Disk I/O</div>
+                                <div className="space-y-1">
+                                  <div className="text-sm text-green-500 flex items-center gap-1">
+                                    <span>↓</span>
+                                    <span>{((selectedVM.diskread || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                  </div>
+                                  <div className="text-sm text-blue-500 flex items-center gap-1">
+                                    <span>↑</span>
+                                    <span>{((selectedVM.diskwrite || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Network I/O */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">Network I/O</div>
+                                <div className="space-y-1">
+                                  <div className="text-sm text-green-500 flex items-center gap-1">
+                                    <span>↓</span>
+                                    <span>{((selectedVM.netin || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                  </div>
+                                  <div className="text-sm text-blue-500 flex items-center gap-1">
+                                    <span>↑</span>
+                                    <span>{((selectedVM.netout || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-center">
+                                {getOSIcon(vmDetails?.os_info, selectedVM.type)}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card
+                          className="sm:hidden border border-white/10 bg-white/5 dark:bg-white/5 cursor-pointer"
+                          onClick={handleMetricsClick}
+                        >
+                          <CardContent className="p-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                              {/* CPU Usage */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">CPU Usage</div>
+                                <div className={`text-base font-semibold mb-2 ${getUsageColor(selectedVM.cpu * 100)}`}>
+                                  {(selectedVM.cpu * 100).toFixed(1)}%
+                                </div>
+                                <Progress
+                                  value={selectedVM.cpu * 100}
+                                  className={`h-2 bg-background/50 ${getModalProgressColor(selectedVM.cpu * 100)}`}
+                                />
+                              </div>
+
+                              {/* Memory */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">Memory</div>
+                                <div
+                                  className={`text-base font-semibold mb-2 ${getUsageColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                                >
+                                  {(selectedVM.mem / 1024 ** 3).toFixed(1)} /{" "}
+                                  {(selectedVM.maxmem / 1024 ** 3).toFixed(1)} GB
+                                </div>
+                                <Progress
+                                  value={(selectedVM.mem / selectedVM.maxmem) * 100}
+                                  className={`h-2 bg-background/50 ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}
+                                />
+                              </div>
+
+                              {/* Disk */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">Disk</div>
+                                <div
+                                  className={`text-base font-semibold mb-2 ${getUsageColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
+                                >
+                                  {(selectedVM.disk / 1024 ** 3).toFixed(1)} /{" "}
+                                  {(selectedVM.maxdisk / 1024 ** 3).toFixed(1)} GB
+                                </div>
+                                <Progress
+                                  value={(selectedVM.disk / selectedVM.maxdisk) * 100}
+                                  className={`h-2 bg-background/50 ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}
                                 />
                               </div>
 
