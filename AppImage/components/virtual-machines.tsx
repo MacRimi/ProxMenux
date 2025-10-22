@@ -1028,7 +1028,9 @@ export function VirtualMachines() {
                                     <div
                                       className="text-sm text-foreground prose prose-sm max-w-none dark:prose-invert"
                                       dangerouslySetInnerHTML={{
-                                        __html: decodeURIComponent(vmDetails.config.description.replace(/%0A/g, "\n")),
+                                        __html: decodeURIComponent(
+                                          vmDetails.config.description.replace(/%0A/g, "\n"),
+                                        ).replace(/\n/g, "<br>"),
                                       }}
                                     />
                                   </div>
