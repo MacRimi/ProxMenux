@@ -27,14 +27,16 @@ interface NodeMetricsData {
 export function NodeMetricsCharts() {
   const [timeframe, setTimeframe] = useState("day")
   const [data, setData] = useState<NodeMetricsData[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    console.log("[v0] NodeMetricsCharts component mounted")
     fetchMetrics()
   }, [timeframe])
 
   const fetchMetrics = async () => {
+    console.log("[v0] fetchMetrics called with timeframe:", timeframe)
     setLoading(true)
     setError(null)
 
@@ -51,16 +53,31 @@ export function NodeMetricsCharts() {
       console.log("[v0] Response ok:", response.ok)
 
       if (!response.ok) {
-        const errorData = await response.json()
-        console.log("[v0] Error response data:", errorData)
-        throw new Error(errorData.error || "Failed to fetch node metrics")
+        const errorText = await response.text()
+        console.log("[v0] Error response text:", errorText)
+        throw new Error(`Failed to fetch node metrics: ${response.status}`)
       }
 
       const result = await response.json()
       console.log("[v0] Node metrics result:", result)
-      console.log("[v0] Data points received:", result.data?.length || 0)
+      console.log("[v0] Result keys:", Object.keys(result))
+      console.log("[v0] Data array length:", result.data?.length || 0)
 
-      const transformedData = result.data.map((item: any) => {
+      if (!result.data || !Array.isArray(result.data)) {
+        console.error("[v0] Invalid data format - data is not an array:", result)
+        throw new Error("Invalid data format received from server")
+      }
+
+      if (result.data.length === 0) {
+        console.warn("[v0] No data points received")
+        setData([])
+        setLoading(false)
+        return
+      }
+
+      console.log("[v0] First data point sample:", result.data[0])
+
+      const transformedData = result.data.map((item: any, index: number) => {
         const date = new Date(item.time * 1000)
         let timeLabel = ""
 
@@ -90,7 +107,7 @@ export function NodeMetricsCharts() {
           })
         }
 
-        return {
+        const transformed = {
           time: timeLabel,
           timestamp: item.time,
           cpu: item.cpu ? Number((item.cpu * 100).toFixed(2)) : 0,
@@ -100,10 +117,16 @@ export function NodeMetricsCharts() {
           memoryFree: item.memfree ? Number((item.memfree / 1024 / 1024 / 1024).toFixed(2)) : 0,
           memoryZfsArc: item.zfsarc ? Number((item.zfsarc / 1024 / 1024 / 1024).toFixed(2)) : 0,
         }
+
+        if (index === 0) {
+          console.log("[v0] First transformed data point:", transformed)
+        }
+
+        return transformed
       })
 
-      console.log("[v0] Transformed data sample:", transformedData[0])
       console.log("[v0] Total transformed data points:", transformedData.length)
+      console.log("[v0] Setting data state with", transformedData.length, "points")
 
       setData(transformedData)
     } catch (err: any) {
@@ -112,13 +135,17 @@ export function NodeMetricsCharts() {
       console.error("[v0] Error stack:", err.stack)
       setError(err.message || "Error loading metrics")
     } finally {
+      console.log("[v0] fetchMetrics finally block - setting loading to false")
       setLoading(false)
     }
   }
 
   const tickInterval = Math.ceil(data.length / 8)
 
+  console.log("[v0] Render state - loading:", loading, "error:", error, "data length:", data.length)
+
   if (loading) {
+    console.log("[v0] Rendering loading state")
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-card border-border">
@@ -140,19 +167,22 @@ export function NodeMetricsCharts() {
   }
 
   if (error) {
+    console.log("[v0] Rendering error state:", error)
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <div className="flex items-center justify-center h-[300px]">
+            <div className="flex flex-col items-center justify-center h-[300px] gap-2">
               <p className="text-muted-foreground text-sm">Metrics data not available yet</p>
+              <p className="text-xs text-red-500">{error}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-6">
-            <div className="flex items-center justify-center h-[300px]">
+            <div className="flex flex-col items-center justify-center h-[300px] gap-2">
               <p className="text-muted-foreground text-sm">Metrics data not available yet</p>
+              <p className="text-xs text-red-500">{error}</p>
             </div>
           </CardContent>
         </Card>
@@ -161,6 +191,7 @@ export function NodeMetricsCharts() {
   }
 
   if (data.length === 0) {
+    console.log("[v0] Rendering no data state")
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-card border-border">
@@ -180,6 +211,8 @@ export function NodeMetricsCharts() {
       </div>
     )
   }
+
+  console.log("[v0] Rendering charts with", data.length, "data points")
 
   return (
     <div className="space-y-6">
