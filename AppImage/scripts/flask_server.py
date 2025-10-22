@@ -4972,6 +4972,53 @@ def api_vm_control(vmid):
         print(f"Error controlling VM: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/vms/<int:vmid>/config', methods=['PUT'])
+def api_vm_config_update(vmid):
+    """Update VM/LXC configuration (description/notes)"""
+    try:
+        data = request.get_json()
+        description = data.get('description', '')
+        
+        # Get VM type and node
+        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+                              capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            resources = json.loads(result.stdout)
+            vm_info = None
+            for resource in resources:
+                if resource.get('vmid') == vmid:
+                    vm_info = resource
+                    break
+            
+            if not vm_info:
+                return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+            
+            vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
+            node = vm_info.get('node', 'pve')
+            
+            # Update configuration with description
+            config_result = subprocess.run(
+                ['pvesh', 'set', f'/nodes/{node}/{vm_type}/{vmid}/config', '-description', description],
+                capture_output=True, text=True, timeout=30)
+            
+            if config_result.returncode == 0:
+                return jsonify({
+                    'success': True,
+                    'vmid': vmid,
+                    'message': f'Successfully updated configuration for {vm_info.get("name")}'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': config_result.stderr
+                }), 500
+        else:
+            return jsonify({'error': 'Failed to get VM details'}), 500
+    except Exception as e:
+        print(f"Error updating VM configuration: {e}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus
     
