@@ -1,11 +1,13 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@custom-variant dark (&:is(.dark *));
-
+/* ===================== */
+/* Light Mode (default)  */
+/* ===================== */
 :root {
-  --background: oklch(1 0 0); /* blanco */
-  --foreground: oklch(0.145 0 0); /* casi negro */
+  --background: oklch(1 0 0);              /* blanco */
+  --foreground: oklch(0.145 0 0);          /* casi negro */
 
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
@@ -13,14 +15,14 @@
   --popover: var(--card);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.205 0 0); /* gris oscuro */
-  --primary-foreground: oklch(0.985 0 0); /* blanco */
+  --primary: oklch(0.205 0 0);             /* gris oscuro */
+  --primary-foreground: oklch(0.985 0 0);  /* blanco */
 
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: var(--primary);
 
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0); /* gris medio */
+  --muted-foreground: oklch(0.556 0 0);    /* gris medio */
 
   --accent: oklch(0.97 0 0);
   --accent-foreground: var(--primary);
@@ -54,8 +56,8 @@
 /* Dark Mode (gris)      */
 /* ===================== */
 .dark {
-  --background: oklch(0.22 0 0); /* gris oscuro */
-  --foreground: oklch(0.97 0 0); /* blanco/gris claro */
+  --background: oklch(0.22 0 0);           /* gris oscuro */
+  --foreground: oklch(0.97 0 0);           /* blanco/gris claro */
 
   --card: oklch(0.24 0 0);
   --card-foreground: var(--foreground);
@@ -63,7 +65,7 @@
   --popover: var(--card);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.83 0 0); /* casi blanco */
+  --primary: oklch(0.83 0 0);              /* casi blanco */
   --primary-foreground: var(--background);
 
   --secondary: oklch(0.28 0 0);
@@ -82,8 +84,8 @@
   --input: var(--border);
   --ring: oklch(0.55 0 0);
 
-  --chart-1: oklch(0.6 0.2 255);
-  --chart-2: oklch(0.7 0.16 165);
+  --chart-1: oklch(0.60 0.20 255);
+  --chart-2: oklch(0.70 0.16 165);
   --chart-3: oklch(0.76 0.19 70);
   --chart-4: oklch(0.63 0.25 305);
   --chart-5: oklch(0.66 0.24 20);
@@ -98,147 +100,47 @@
   --sidebar-ring: var(--ring);
 }
 
-@theme inline {
-  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+/* ===================== */
+/* Base layer            */
+/* ===================== */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Foco accesible */
+  :is(button,[role="button"],a,input,select,textarea,[tabindex]:not([tabindex="-1"])):focus {
+    @apply outline-none;
+  }
+  :is(button,[role="button"],a,input,select,textarea,[tabindex]:not([tabindex="-1"])):focus-visible {
+    @apply ring-2;
+    --tw-ring-color: var(--ring);
+    --tw-ring-opacity: 0.5; /* equivalente al /50 */
+  }
 }
 
 /* ===================== */
-/* Base styles           */
+/* Ajustes para Charts   */
 /* ===================== */
-/* Removed @layer base to fix Tailwind CSS v4 compatibility */
-* {
-  border-color: var(--border);
-  outline-color: color-mix(in oklch, var(--ring), transparent 50%);
-}
+@layer components {
+  /* Recharts axis */
+  .recharts-cartesian-axis-tick tspan {
+    fill: var(--muted-foreground);
+  }
+  .recharts-cartesian-axis-line,
+  .recharts-cartesian-grid line {
+    stroke: var(--border);
+  }
 
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-}
-
-/* Foco accesible */
-:is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus {
-  outline: none;
-}
-
-:is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
-  outline: 2px solid color-mix(in oklch, var(--ring), transparent 50%);
-  outline-offset: 2px;
-}
-
-/* ===================== */
-/* Component styles      */
-/* ===================== */
-/* Removed @layer components to fix Tailwind CSS v4 compatibility */
-
-/* Recharts axis */
-.recharts-cartesian-axis-tick tspan {
-  fill: var(--muted-foreground);
-}
-
-.recharts-cartesian-axis-line,
-.recharts-cartesian-grid line {
-  stroke: var(--border);
-}
-
-/* Chart.js axis */
-.chartjs-render-monitor text {
-  fill: var(--muted-foreground);
-}
-
-.chartjs-render-monitor line {
-  stroke: var(--border);
-}
-
-/* Estilos personalizados para notas de ProxMenux */
-/* Asegura que el contenido HTML de ProxMenux se renderice correctamente */
-.proxmenux-notes {
-  text-align: center;
-}
-
-/* Asegurar que las tablas dentro de las notas se vean correctamente */
-.proxmenux-notes table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0 auto;
-}
-
-.proxmenux-notes table td {
-  vertical-align: middle;
-  padding: 0.5rem;
-}
-
-/* Asegurar que las imágenes dentro de las notas se vean correctamente */
-.proxmenux-notes img {
-  display: inline-block;
-  max-width: 100%;
-  height: auto;
-}
-
-/* Asegurar que los enlaces (badges) se mantengan en línea horizontal */
-.proxmenux-notes p a {
-  display: inline-block;
-  margin-right: 0.25rem;
-  margin-bottom: 0.25rem;
-}
-
-.proxmenux-notes p a img {
-  display: inline-block;
-  vertical-align: middle;
-}
-
-/* Añadir separador visual después de la tabla (similar a Proxmox) */
-.proxmenux-notes table + p {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-}
-
-/* Estilos para los párrafos de información de discos */
-.proxmenux-notes div p {
-  margin: 0.25rem 0;
-}
-
-/* Asegurar que los títulos se vean correctamente */
-.proxmenux-notes h1,
-.proxmenux-notes h2,
-.proxmenux-notes h3 {
-  margin: 0;
-  line-height: 1.2;
+  /* Chart.js axis */
+  .chartjs-render-monitor text {
+    fill: var(--muted-foreground);
+  }
+  .chartjs-render-monitor line {
+    stroke: var(--border);
+  }
 }

@@ -609,6 +609,53 @@ export function VirtualMachines() {
 
   return (
     <div className="space-y-6">
+      <style jsx>{`
+        .proxmenux-notes {
+          /* Reset any inherited styles */
+          all: revert;
+          
+          /* Ensure links display inline */
+          a {
+            display: inline-block;
+            margin-right: 4px;
+            text-decoration: none;
+          }
+          
+          /* Ensure images display inline */
+          img {
+            display: inline-block;
+            vertical-align: middle;
+          }
+          
+          /* Ensure paragraphs with links display inline */
+          p {
+            margin: 0.5rem 0;
+          }
+          
+          /* Ensure tables are styled correctly */
+          table {
+            margin: 0 auto;
+          }
+          
+          /* Ensure divs respect centering */
+          div[align="center"] {
+            text-align: center;
+          }
+          
+          /* Add separator after tables */
+          table + p {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+          }
+        }
+        
+        .proxmenux-notes-plaintext {
+          white-space: pre-wrap;
+          font-family: monospace;
+        }
+      `}</style>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1217,7 +1264,7 @@ export function VirtualMachines() {
                                           }
                                           return (
                                             <div
-                                              className={`text-sm text-foreground proxmenux-notes ${processed.isHtml ? "prose prose-sm max-w-none dark:prose-invert" : "whitespace-pre-wrap"}`}
+                                              className={`text-sm text-foreground ${processed.isHtml ? "proxmenux-notes" : "proxmenux-notes-plaintext"}`}
                                               dangerouslySetInnerHTML={{ __html: processed.html }}
                                             />
                                           )
@@ -1660,7 +1707,6 @@ export function VirtualMachines() {
             </>
           ) : (
             selectedVM && (
-              // Pass only vmid, vmName, vmType and onBack
               <MetricsView
                 vmid={selectedVM.vmid}
                 vmName={selectedVM.name}
