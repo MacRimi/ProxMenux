@@ -2138,6 +2138,20 @@
     }
   },
   {
+    "name": "jotty",
+    "slug": "jotty",
+    "desc": "A simple, self-hosted app for your checklists and notes. Tired of bloated, cloud-based to-do apps? jotty is a lightweight alternative for managing your personal checklists and notes. It's built with Next.js 14, is easy to deploy, and keeps all your data on your own server.",
+    "script": "ct/jotty.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/jotty.sh",
+    "categories": [
+      12
+    ],
+    "notes": [
+      "jotty was previously named rwMarkable"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Jupyter Notebook",
     "slug": "jupyternotebook",
     "desc": "The Jupyter Notebook is an open-source web application that allows you to create and share documents that contain live code, equations, visualizations and narrative text. Uses include: data cleaning and transformation, numerical simulation, statistical modeling, data visualization, machine learning, and much more.",
@@ -4416,18 +4430,6 @@
       "To set admin password on Debian, type `cd /var/lib/rustdesk-api && rustdesk-api reset-admin-pwd <yournewpasswordhere>` inside LXC.",
       "To see admin password on Alpine, type `cat ~/rustdesk.creds` inside LXC."
     ],
-    "type": "ct"
-  },
-  {
-    "name": "rwMarkable",
-    "slug": "rwmarkable",
-    "desc": "A simple, self-hosted app for your checklists and notes. Tired of bloated, cloud-based to-do apps? rwMarkable is a lightweight alternative for managing your personal checklists and notes. It's built with Next.js 14, is easy to deploy, and keeps all your data on your own server.",
-    "script": "ct/rwmarkable.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/rwmarkable.sh",
-    "categories": [
-      12
-    ],
-    "notes": [],
     "type": "ct"
   },
   {
