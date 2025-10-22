@@ -479,25 +479,70 @@ export function VirtualMachines() {
     return htmlRegex.test(str)
   }
 
+  const decodeRecursively = (str: string, maxIterations = 5): string => {
+    let decoded = str
+    let iteration = 0
+
+    while (iteration < maxIterations) {
+      try {
+        const nextDecoded = decodeURIComponent(decoded.replace(/%0A/g, "\n"))
+
+        // If decoding didn't change anything, we're done
+        if (nextDecoded === decoded) {
+          break
+        }
+
+        decoded = nextDecoded
+
+        // If there are no more encoded characters, we're done
+        if (!/(%[0-9A-F]{2})/i.test(decoded)) {
+          break
+        }
+
+        iteration++
+      } catch (e) {
+        // If decoding fails, try manual decoding of common sequences
+        try {
+          decoded = decoded
+            .replace(/%0A/g, "\n")
+            .replace(/%20/g, " ")
+            .replace(/%3A/g, ":")
+            .replace(/%2F/g, "/")
+            .replace(/%3D/g, "=")
+            .replace(/%3C/g, "<")
+            .replace(/%3E/g, ">")
+            .replace(/%22/g, '"')
+            .replace(/%27/g, "'")
+            .replace(/%26/g, "&")
+            .replace(/%23/g, "#")
+            .replace(/%25/g, "%")
+            .replace(/%2B/g, "+")
+            .replace(/%2C/g, ",")
+            .replace(/%3B/g, ";")
+            .replace(/%3F/g, "?")
+            .replace(/%40/g, "@")
+            .replace(/%5B/g, "[")
+            .replace(/%5D/g, "]")
+            .replace(/%7B/g, "{")
+            .replace(/%7D/g, "}")
+            .replace(/%7C/g, "|")
+            .replace(/%5C/g, "\\")
+            .replace(/%5E/g, "^")
+            .replace(/%60/g, "`")
+          break
+        } catch (manualError) {
+          // If manual decoding also fails, return what we have
+          break
+        }
+      }
+    }
+
+    return decoded
+  }
+
   const processDescription = (description: string): { html: string; isHtml: boolean; error: boolean } => {
     try {
-      let decoded: string
-      try {
-        decoded = decodeURIComponent(description.replace(/%0A/g, "\n"))
-      } catch (e) {
-        // If decodeURIComponent fails, try manual decoding of common sequences
-        decoded = description
-          .replace(/%0A/g, "\n")
-          .replace(/%20/g, " ")
-          .replace(/%3A/g, ":")
-          .replace(/%2F/g, "/")
-          .replace(/%3D/g, "=")
-          .replace(/%3C/g, "<")
-          .replace(/%3E/g, ">")
-          .replace(/%22/g, '"')
-          .replace(/%27/g, "'")
-          .replace(/%26/g, "&")
-      }
+      const decoded = decodeRecursively(description)
 
       // Check if it contains HTML
       if (isHTML(decoded)) {
@@ -515,12 +560,8 @@ export function VirtualMachines() {
 
   const handleEditNotes = () => {
     if (vmDetails?.config?.description) {
-      try {
-        const decoded = decodeURIComponent(vmDetails.config.description.replace(/%0A/g, "\n"))
-        setEditedNotes(decoded)
-      } catch (error) {
-        setEditedNotes(vmDetails.config.description)
-      }
+      const decoded = decodeRecursively(vmDetails.config.description)
+      setEditedNotes(decoded)
     }
     setIsEditingNotes(true)
   }
