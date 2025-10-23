@@ -261,7 +261,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                   borderRadius: "6px",
                 }}
               />
-              <Legend content={renderDiskLegend} />
+              <Legend content={renderDiskLegend} verticalAlign="top" />
               <Area
                 type="monotone"
                 dataKey="diskread"
@@ -317,7 +317,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                   borderRadius: "6px",
                 }}
               />
-              <Legend content={renderNetworkLegend} />
+              <Legend content={renderNetworkLegend} verticalAlign="top" />
               <Area
                 type="monotone"
                 dataKey="netin"
