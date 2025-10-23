@@ -76,8 +76,15 @@ export function NodeMetricsCharts() {
       }
 
       console.log("[v0] First data point sample:", result.data[0])
+      console.log("[v0] First data point loadavg field:", result.data[0]?.loadavg)
+      console.log("[v0] loadavg type:", typeof result.data[0]?.loadavg)
+      console.log("[v0] loadavg is array:", Array.isArray(result.data[0]?.loadavg))
+      if (result.data[0]?.loadavg) {
+        console.log("[v0] loadavg length:", result.data[0].loadavg.length)
+        console.log("[v0] loadavg[0]:", result.data[0].loadavg[0])
+      }
 
-      const transformedData = result.data.map((item: any, index: number) => {
+      const transformedData = result.data.map((item: any) => {
         const date = new Date(item.time * 1000)
         let timeLabel = ""
 
@@ -107,45 +114,23 @@ export function NodeMetricsCharts() {
           })
         }
 
-        const transformed = {
+        return {
           time: timeLabel,
           timestamp: item.time,
           cpu: item.cpu ? Number((item.cpu * 100).toFixed(2)) : 0,
-          load:
-            item.loadavg && Array.isArray(item.loadavg) && item.loadavg.length > 0
-              ? Number(item.loadavg[0].toFixed(2))
-              : 0,
+          load: item.loadavg
+            ? typeof item.loadavg === "number"
+              ? Number(item.loadavg.toFixed(2))
+              : Array.isArray(item.loadavg) && item.loadavg.length > 0
+                ? Number(item.loadavg[0].toFixed(2))
+                : 0
+            : 0,
           memoryTotal: item.memtotal ? Number((item.memtotal / 1024 / 1024 / 1024).toFixed(2)) : 0,
           memoryUsed: item.memused ? Number((item.memused / 1024 / 1024 / 1024).toFixed(2)) : 0,
           memoryFree: item.memfree ? Number((item.memfree / 1024 / 1024 / 1024).toFixed(2)) : 0,
           memoryZfsArc: item.zfsarc ? Number((item.zfsarc / 1024 / 1024 / 1024).toFixed(2)) : 0,
         }
-
-        if (index < 5 || index === result.data.length - 1) {
-          console.log(`[v0] Data point ${index}:`, {
-            rawCpu: item.cpu,
-            transformedCpu: transformed.cpu,
-            rawLoad: item.loadavg,
-            transformedLoad: transformed.load,
-          })
-        }
-
-        return transformed
       })
-
-      const cpuValues = transformedData.map((d) => d.cpu)
-      const minCpu = Math.min(...cpuValues)
-      const maxCpu = Math.max(...cpuValues)
-      const avgCpu = cpuValues.reduce((a, b) => a + b, 0) / cpuValues.length
-      console.log("[v0] CPU Statistics:", {
-        min: minCpu,
-        max: maxCpu,
-        avg: avgCpu.toFixed(2),
-        sampleSize: cpuValues.length,
-      })
-
-      console.log("[v0] Total transformed data points:", transformedData.length)
-      console.log("[v0] Setting data state with", transformedData.length, "points")
 
       setData(transformedData)
     } catch (err: any) {
