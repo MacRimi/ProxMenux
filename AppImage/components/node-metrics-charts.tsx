@@ -24,11 +24,56 @@ interface NodeMetricsData {
   memoryZfsArc: number
 }
 
+const CustomCpuTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
+        <p className="text-sm font-semibold text-white mb-2">{label}</p>
+        <div className="space-y-1.5">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+              <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
+              <span className="text-sm font-semibold text-white">{entry.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  return null
+}
+
+const CustomMemoryTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
+        <p className="text-sm font-semibold text-white mb-2">{label}</p>
+        <div className="space-y-1.5">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+              <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
+              <span className="text-sm font-semibold text-white">{entry.value} GB</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  return null
+}
+
 export function NodeMetricsCharts() {
   const [timeframe, setTimeframe] = useState("day")
   const [data, setData] = useState<NodeMetricsData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [visibleLines, setVisibleLines] = useState({
+    cpu: { cpu: true, load: true },
+    memory: { memoryTotal: true, memoryUsed: true, memoryZfsArc: true, memoryFree: true },
+  })
 
   useEffect(() => {
     console.log("[v0] NodeMetricsCharts component mounted")
@@ -145,6 +190,39 @@ export function NodeMetricsCharts() {
   }
 
   const tickInterval = Math.ceil(data.length / 8)
+
+  const handleLegendClick = (chartType: "cpu" | "memory", dataKey: string) => {
+    setVisibleLines((prev) => ({
+      ...prev,
+      [chartType]: {
+        ...prev[chartType],
+        [dataKey as keyof (typeof prev)[typeof chartType]]:
+          !prev[chartType][dataKey as keyof (typeof prev)[typeof chartType]],
+      },
+    }))
+  }
+
+  const renderLegend = (chartType: "cpu" | "memory") => (props: any) => {
+    const { payload } = props
+    return (
+      <div className="flex justify-center gap-4 pb-2 flex-wrap">
+        {payload.map((entry: any, index: number) => {
+          const isVisible = visibleLines[chartType][entry.dataKey as keyof (typeof visibleLines)[typeof chartType]]
+          return (
+            <div
+              key={`legend-${index}`}
+              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => handleLegendClick(chartType, entry.dataKey)}
+              style={{ opacity: isVisible ? 1 : 0.4 }}
+            >
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: entry.color }} />
+              <span className="text-sm text-foreground">{entry.value}</span>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
 
   console.log("[v0] Render state - loading:", loading, "error:", error, "data length:", data.length)
 
@@ -277,14 +355,8 @@ export function NodeMetricsCharts() {
                   label={{ value: "Load", angle: 90, position: "insideRight", fill: "currentColor" }}
                   domain={[0, "dataMax"]}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "6px",
-                  }}
-                />
-                <Legend verticalAlign="top" height={36} iconType="line" wrapperStyle={{ paddingBottom: "10px" }} />
+                <Tooltip content={<CustomCpuTooltip />} />
+                <Legend verticalAlign="top" height={36} content={renderLegend("cpu")} />
                 <Area
                   yAxisId="left"
                   type="monotone"
@@ -294,6 +366,7 @@ export function NodeMetricsCharts() {
                   fill="#3b82f6"
                   fillOpacity={0.3}
                   name="CPU %"
+                  hide={!visibleLines.cpu.cpu}
                 />
                 <Area
                   yAxisId="right"
@@ -304,6 +377,7 @@ export function NodeMetricsCharts() {
                   fill="#10b981"
                   fillOpacity={0.3}
                   name="Load Avg"
+                  hide={!visibleLines.cpu.load}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -339,14 +413,8 @@ export function NodeMetricsCharts() {
                   label={{ value: "GB", angle: -90, position: "insideLeft", fill: "currentColor" }}
                   domain={[0, "dataMax"]}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "6px",
-                  }}
-                />
-                <Legend verticalAlign="top" height={36} iconType="line" wrapperStyle={{ paddingBottom: "10px" }} />
+                <Tooltip content={<CustomMemoryTooltip />} />
+                <Legend verticalAlign="top" height={36} content={renderLegend("memory")} />
                 <Area
                   type="monotone"
                   dataKey="memoryTotal"
@@ -355,6 +423,7 @@ export function NodeMetricsCharts() {
                   fill="#3b82f6"
                   fillOpacity={0.1}
                   name="Total"
+                  hide={!visibleLines.memory.memoryTotal}
                 />
                 <Area
                   type="monotone"
@@ -364,6 +433,7 @@ export function NodeMetricsCharts() {
                   fill="#10b981"
                   fillOpacity={0.3}
                   name="Used"
+                  hide={!visibleLines.memory.memoryUsed}
                 />
                 <Area
                   type="monotone"
@@ -373,6 +443,7 @@ export function NodeMetricsCharts() {
                   fill="#f59e0b"
                   fillOpacity={0.3}
                   name="ZFS ARC"
+                  hide={!visibleLines.memory.memoryZfsArc}
                 />
                 <Area
                   type="monotone"
@@ -382,6 +453,7 @@ export function NodeMetricsCharts() {
                   fill="#06b6d4"
                   fillOpacity={0.3}
                   name="Available"
+                  hide={!visibleLines.memory.memoryFree}
                 />
               </AreaChart>
             </ResponsiveContainer>
