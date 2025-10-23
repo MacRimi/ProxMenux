@@ -160,11 +160,7 @@ export function ProxmoxDashboard() {
     }
   }, [lastScrollY])
 
-
-    window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [lastScrollY])
-
+  
   const refreshData = async () => {
     setIsRefreshing(true)
     await fetchSystemData()
