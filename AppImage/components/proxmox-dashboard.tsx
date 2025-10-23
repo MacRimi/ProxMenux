@@ -130,25 +130,37 @@ export function ProxmoxDashboard() {
   }, [fetchSystemData])
 
   useEffect(() => {
+    let hideTimeout: ReturnType<typeof setTimeout> | null = null
+    let lastPosition = window.scrollY
+
     const handleScroll = () => {
       const currentScrollY = window.scrollY
+      const delta = currentScrollY - lastPosition
 
-      if (currentScrollY < 90) {
+      // Siempre visible al principio
+      if (currentScrollY < 50) {
         setShowNavigation(true)
-      } else if (currentScrollY > lastScrollY + 12) {
-        // Scrolling down - hide navigation
-        setShowNavigation(false)
-      } else if (currentScrollY < lastScrollY - 12) {
-        // Scrolling up - show navigation
+      } 
+      // Oculta en cuanto se detecta desplazamiento hacia abajo
+      else if (delta > 2) {
+        if (hideTimeout) clearTimeout(hideTimeout)
+        hideTimeout = setTimeout(() => setShowNavigation(false), 50)
+      } 
+      // Muestra al mover un poco hacia arriba
+      else if (delta < -2) {
+        if (hideTimeout) clearTimeout(hideTimeout)
         setShowNavigation(true)
       }
 
-      setLastScrollY(currentScrollY)
+      lastPosition = currentScrollY
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [lastScrollY])
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+      if (hideTimeout) clearTimeout(hideTimeout)
+    }
+  }, [])
 
   const refreshData = async () => {
     setIsRefreshing(true)
@@ -317,11 +329,11 @@ export function ProxmoxDashboard() {
 
       <div
         className={`sticky z-40 bg-background
-          top-[120px] md:top-[76px] 
-          transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
+          top-[120px] md:top-[76px]
+          transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]
           ${showNavigation
             ? "translate-y-0 opacity-100"
-            : "-translate-y-full opacity-0 pointer-events-none"}
+            : "-translate-y-[120%] opacity-0 pointer-events-none"}
         `}
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
