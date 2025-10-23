@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
@@ -135,11 +133,11 @@ export function ProxmoxDashboard() {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
 
-      // Only hide navigation if scrolled down more than 100px
-      if (currentScrollY < 100) {
+      if (currentScrollY < 50) {
+        // Show navigation when near top
         setShowNavigation(true)
-      } else if (currentScrollY > lastScrollY) {
-        // Scrolling down - hide navigation
+      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down - hide navigation (only after 100px)
         setShowNavigation(false)
       } else if (currentScrollY < lastScrollY) {
         // Scrolling up - show navigation
@@ -319,12 +317,16 @@ export function ProxmoxDashboard() {
       </header>
 
       <div
-        className={`sticky top-[var(--header-height)] z-40 bg-background transition-transform duration-300 ${
-          showNavigation ? "translate-y-0" : "-translate-y-full"
+        className={`sticky bg-background border-b border-border transition-transform duration-300 ease-in-out ${
+          showNavigation ? "translate-y-0" : "-translate-y-[calc(100%+1px)]"
         }`}
-        style={{ "--header-height": "88px" } as React.CSSProperties}
+        style={{
+          top: "0",
+          zIndex: 40,
+          marginTop: "0",
+        }}
       >
-        <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
+        <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6 pb-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
             <TabsList className="hidden md:grid w-full grid-cols-6 bg-card border border-border">
               <TabsTrigger
