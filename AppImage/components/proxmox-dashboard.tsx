@@ -133,12 +133,12 @@ export function ProxmoxDashboard() {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
 
-      if (currentScrollY < 90) {
+      if (currentScrollY < 100) {
         setShowNavigation(true)
-      } else if (currentScrollY > lastScrollY + 12) {
+      } else if (currentScrollY > lastScrollY + 20) {
         // Scrolling down - hide navigation
         setShowNavigation(false)
-      } else if (currentScrollY < lastScrollY - 12) {
+      } else if (currentScrollY < lastScrollY - 20) {
         // Scrolling up - show navigation
         setShowNavigation(true)
       }
@@ -316,11 +316,9 @@ export function ProxmoxDashboard() {
       </header>
 
       <div
-        className={`sticky z-40 bg-background
-          top-[80px] md:top-[92px]   /* header + pequeño gap */
-          transition-transform duration-300 ease-in-out will-change-transform
-          ${showNavigation ? "translate-y-0 opacity-100" : "-translate-y-[110%] opacity-0 pointer-events-none"}
-        `}
+        className={`sticky z-40 bg-background transition-all duration-300 ease-in-out ${
+          showNavigation ? "top-[100px] md:top-[88px]" : "-top-[100px] md:top-[88px] md:-translate-y-[120%]"
+        }`}
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
