@@ -129,23 +129,17 @@ export function ProxmoxDashboard() {
     return () => clearInterval(interval)
   }, [fetchSystemData])
 
-
   useEffect(() => {
-    let hideTimeout: ReturnType<typeof setTimeout> | null = null
-
     const handleScroll = () => {
       const currentScrollY = window.scrollY
-      const scrollingDown = currentScrollY > lastScrollY
-      const scrollingUp = currentScrollY < lastScrollY
 
-      if (currentScrollY < 150) {
-        if (hideTimeout) clearTimeout(hideTimeout)
+      if (currentScrollY < 90) {
         setShowNavigation(true)
-      } else if (scrollingDown) {
-        if (hideTimeout) clearTimeout(hideTimeout)
-        hideTimeout = setTimeout(() => setShowNavigation(false), 100)
-      } else if (scrollingUp) {
-        if (hideTimeout) clearTimeout(hideTimeout)
+      } else if (currentScrollY > lastScrollY + 12) {
+        // Scrolling down - hide navigation
+        setShowNavigation(false)
+      } else if (currentScrollY < lastScrollY - 12) {
+        // Scrolling up - show navigation
         setShowNavigation(true)
       }
 
@@ -153,14 +147,9 @@ export function ProxmoxDashboard() {
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll)
-      if (hideTimeout) clearTimeout(hideTimeout)
-    }
+    return () => window.removeEventListener("scroll", handleScroll)
   }, [lastScrollY])
 
-  
   const refreshData = async () => {
     setIsRefreshing(true)
     await fetchSystemData()
@@ -330,7 +319,7 @@ export function ProxmoxDashboard() {
         className={`sticky z-40 bg-background
           top-[80px] md:top-[92px]   /* header + pequeño gap */
           transition-transform duration-300 ease-in-out will-change-transform
-          ${showNavigation ? "translate-y-0 opacity-100" : "-translate-y-[100%] opacity-0 pointer-events-none"}
+          ${showNavigation ? "translate-y-0 opacity-100" : "-translate-y-[110%] opacity-0 pointer-events-none"}
         `}
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
