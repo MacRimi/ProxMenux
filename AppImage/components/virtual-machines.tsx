@@ -562,6 +562,8 @@ export function VirtualMachines() {
     if (vmDetails?.config?.description) {
       const decoded = decodeRecursively(vmDetails.config.description)
       setEditedNotes(decoded)
+    } else {
+      setEditedNotes("") // Ensure editedNotes is empty if no description exists
     }
     setIsEditingNotes(true)
   }
@@ -1155,26 +1157,24 @@ export function VirtualMachines() {
                                   Resources
                                 </h3>
                                 <div className="flex gap-2">
-                                  {vmDetails.config.description && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setShowNotes(!showNotes)}
-                                      className="text-xs max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-transparent sm:hover:bg-black/5 sm:dark:hover:bg-white/5"
-                                    >
-                                      {showNotes ? (
-                                        <>
-                                          <ChevronUp className="h-3 w-3 mr-1" />
-                                          Hide Notes
-                                        </>
-                                      ) : (
-                                        <>
-                                          <ChevronDown className="h-3 w-3 mr-1" />
-                                          Notes
-                                        </>
-                                      )}
-                                    </Button>
-                                  )}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowNotes(!showNotes)}
+                                    className="text-xs max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-transparent sm:hover:bg-black/5 sm:dark:hover:bg-white/5"
+                                  >
+                                    {showNotes ? (
+                                      <>
+                                        <ChevronUp className="h-3 w-3 mr-1" />
+                                        Hide Notes
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ChevronDown className="h-3 w-3 mr-1" />
+                                        Notes
+                                      </>
+                                    )}
+                                  </Button>
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -1226,7 +1226,7 @@ export function VirtualMachines() {
                                 )}
                               </div>
 
-                              {showNotes && vmDetails.config.description && (
+                              {showNotes && (
                                 <div className="mt-6 pt-6 border-t border-border">
                                   <div className="flex items-center justify-between mb-3">
                                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -1271,7 +1271,7 @@ export function VirtualMachines() {
                                           </Button>
                                         </div>
                                       </div>
-                                    ) : (
+                                    ) : vmDetails.config.description ? (
                                       <>
                                         {(() => {
                                           const processed = processDescription(vmDetails.config.description)
@@ -1290,6 +1290,10 @@ export function VirtualMachines() {
                                           )
                                         })()}
                                       </>
+                                    ) : (
+                                      <div className="text-sm text-muted-foreground italic">
+                                        No notes yet. Click Edit to add notes.
+                                      </div>
                                     )}
                                   </div>
                                 </div>
