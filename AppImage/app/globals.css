@@ -150,56 +150,42 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+/* Removed @layer directives for Tailwind v4 compatibility */
+/* Base styles without @layer wrapper */
+* {
+  border-color: var(--border);
+  outline-color: color-mix(in oklch, var(--ring) 50%, transparent);
 }
 
-/* ===================== */
-/* Base layer            */
-/* ===================== */
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
-
-  /* Foco accesible */
-  :is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus {
-    @apply outline-none;
-  }
-  :is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
-    @apply ring-2;
-    --tw-ring-color: var(--ring);
-    --tw-ring-opacity: 0.5; /* equivalente al /50 */
-  }
+body {
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
-/* ===================== */
-/* Ajustes para Charts   */
-/* ===================== */
-@layer components {
-  /* Recharts axis */
-  .recharts-cartesian-axis-tick tspan {
-    fill: var(--muted-foreground);
-  }
-  .recharts-cartesian-axis-line,
-  .recharts-cartesian-grid line {
-    stroke: var(--border);
-  }
+/* Accessible focus styles */
+:is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus {
+  outline: none;
+}
 
-  /* Chart.js axis */
-  .chartjs-render-monitor text {
-    fill: var(--muted-foreground);
-  }
-  .chartjs-render-monitor line {
-    stroke: var(--border);
-  }
+:is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--ring) 50%, transparent);
+  outline-offset: 2px;
+}
+
+/* Chart component styles */
+.recharts-cartesian-axis-tick tspan {
+  fill: var(--muted-foreground);
+}
+
+.recharts-cartesian-axis-line,
+.recharts-cartesian-grid line {
+  stroke: var(--border);
+}
+
+.chartjs-render-monitor text {
+  fill: var(--muted-foreground);
+}
+
+.chartjs-render-monitor line {
+  stroke: var(--border);
 }
