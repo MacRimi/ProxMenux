@@ -401,6 +401,23 @@ export function SystemOverview() {
 
   const localStorage = proxmoxStorageData?.storage.find((s) => s.name === "local")
 
+  const vmLxcStorages = proxmoxStorageData?.storage.filter(
+    (s) =>
+      // Include only local storage types that can host VMs/LXCs
+      (s.type === "lvm" || s.type === "lvmthin" || s.type === "zfspool" || s.type === "btrfs" || s.type === "dir") &&
+      // Exclude network storage
+      s.type !== "nfs" &&
+      s.type !== "cifs" &&
+      s.type !== "iscsi" &&
+      // Exclude the "local" storage (used for ISOs/templates)
+      s.name !== "local",
+  )
+
+  const vmLxcStorageTotal = vmLxcStorages?.reduce((acc, s) => acc + s.total, 0) || 0
+  const vmLxcStorageUsed = vmLxcStorages?.reduce((acc, s) => acc + s.used, 0) || 0
+  const vmLxcStorageAvailable = vmLxcStorages?.reduce((acc, s) => acc + s.available, 0) || 0
+  const vmLxcStoragePercent = vmLxcStorageTotal > 0 ? (vmLxcStorageUsed / vmLxcStorageTotal) * 100 : 0
+
   const getLoadStatus = (load: number, cores: number) => {
     if (load < cores) {
       return { status: "Normal", color: "bg-green-500/10 text-green-500 border-green-500/20" }
@@ -542,29 +559,38 @@ export function SystemOverview() {
                   </div>
                 </div>
 
-                <div className="space-y-2 pb-3 border-b border-border">
-                  <div className="text-xs font-medium text-muted-foreground mb-2">Node Storage</div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Used:</span>
-                    <span className="text-sm font-semibold text-foreground">{storageData.used.toFixed(1)} GB</span>
+                {vmLxcStorages && vmLxcStorages.length > 0 ? (
+                  <div className="space-y-2 pb-3 border-b border-border">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">VM/LXC Storage</div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">Used:</span>
+                      <span className="text-sm font-semibold text-foreground">{formatStorage(vmLxcStorageUsed)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">Available:</span>
+                      <span className="text-sm font-semibold text-green-500">
+                        {formatStorage(vmLxcStorageAvailable)}
+                      </span>
+                    </div>
+                    <Progress value={vmLxcStoragePercent} className="mt-2 [&>div]:bg-blue-500" />
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-xs text-muted-foreground">
+                        {formatStorage(vmLxcStorageUsed)} / {formatStorage(vmLxcStorageTotal)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{vmLxcStoragePercent.toFixed(1)}%</span>
+                    </div>
+                    {vmLxcStorages.length > 1 && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {vmLxcStorages.length} storage volume{vmLxcStorages.length > 1 ? "s" : ""}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Available:</span>
-                    <span className="text-sm font-semibold text-green-500">{storageData.available.toFixed(1)} GB</span>
+                ) : (
+                  <div className="space-y-2 pb-3 border-b border-border">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">VM/LXC Storage</div>
+                    <div className="text-center py-4 text-muted-foreground text-sm">No VM/LXC storage configured</div>
                   </div>
-                  <Progress
-                    value={(storageData.used / (storageData.used + storageData.available)) * 100}
-                    className="mt-2 [&>div]:bg-blue-500"
-                  />
-                  <div className="flex justify-between items-center mt-1">
-                    <span className="text-xs text-muted-foreground">
-                      {storageData.used.toFixed(1)} / {(storageData.used + storageData.available).toFixed(1)} GB
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {((storageData.used / (storageData.used + storageData.available)) * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
+                )}
 
                 {localStorage && (
                   <div className="space-y-2">
