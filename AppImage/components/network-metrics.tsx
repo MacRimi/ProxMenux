@@ -215,15 +215,15 @@ export function NetworkMetrics() {
           <CardContent>
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Received:</span>
+                <span className="text-sm text-muted-foreground hidden md:inline">Received:</span>
                 <span className="text-base lg:text-xl font-bold text-green-500">↓ {trafficInFormatted}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Sent:</span>
+                <span className="text-sm text-muted-foreground hidden md:inline">Sent:</span>
                 <span className="text-base lg:text-xl font-bold text-blue-500">↑ {trafficOutFormatted}</span>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Total data transferred</p>
+            <p className="text-xs text-muted-foreground mt-2 hidden md:block">Total data transferred</p>
           </CardContent>
         </Card>
 
