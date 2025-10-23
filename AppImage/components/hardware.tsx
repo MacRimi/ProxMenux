@@ -22,6 +22,34 @@ import useSWR from "swr"
 import { useState, useEffect } from "react"
 import { type HardwareData, type GPU, type PCIDevice, type StorageDevice, fetcher } from "../types/hardware"
 
+const parseLsblkSize = (sizeStr: string | undefined): number => {
+  if (!sizeStr) return 0
+
+  // Remove spaces and convert to uppercase
+  const cleaned = sizeStr.trim().toUpperCase()
+
+  // Extract number and unit
+  const match = cleaned.match(/^([\d.]+)([KMGT]?)$/)
+  if (!match) return 0
+
+  const value = Number.parseFloat(match[1])
+  const unit = match[2] || "K" // Default to KB if no unit
+
+  // Convert to KB
+  switch (unit) {
+    case "K":
+      return value
+    case "M":
+      return value * 1024
+    case "G":
+      return value * 1024 * 1024
+    case "T":
+      return value * 1024 * 1024 * 1024
+    default:
+      return value
+  }
+}
+
 const formatMemory = (memoryKB: number | string): string => {
   const kb = typeof memoryKB === "string" ? Number.parseFloat(memoryKB) : memoryKB
 
@@ -1571,7 +1599,7 @@ export default function Hardware() {
                     {device.type}
                   </Badge>
                 </div>
-                {device.size && <p className="text-sm font-medium">{formatMemory(device.size)}</p>}
+                {device.size && <p className="text-sm font-medium">{formatMemory(parseLsblkSize(device.size))}</p>}
                 {device.model && (
                   <p className="text-xs text-muted-foreground line-clamp-2 break-words">{device.model}</p>
                 )}
@@ -1610,7 +1638,7 @@ export default function Hardware() {
               {selectedDisk.size && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-sm font-medium text-muted-foreground">Capacity</span>
-                  <span className="text-sm font-medium">{formatMemory(selectedDisk.size)}</span>
+                  <span className="text-sm font-medium">{formatMemory(parseLsblkSize(selectedDisk.size))}</span>
                 </div>
               )}
 
