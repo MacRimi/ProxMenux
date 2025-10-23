@@ -144,7 +144,7 @@ export function ProxmoxDashboard() {
       // Oculta en cuanto se detecta desplazamiento hacia abajo
       else if (delta > 2) {
         if (hideTimeout) clearTimeout(hideTimeout)
-        hideTimeout = setTimeout(() => setShowNavigation(false), 50)
+        hideTimeout = setTimeout(() => setShowNavigation(false), 20)
       } 
       // Muestra al mover un poco hacia arriba
       else if (delta < -2) {
@@ -330,7 +330,7 @@ export function ProxmoxDashboard() {
       <div
         className={`sticky z-40 bg-background
           top-[120px] md:top-[76px]
-          transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]
+          transition-all duration-600 ease-[cubic-bezier(0.4,0,0.2,1)]
           ${showNavigation
             ? "translate-y-0 opacity-100"
             : "-translate-y-[120%] opacity-0 pointer-events-none"}
