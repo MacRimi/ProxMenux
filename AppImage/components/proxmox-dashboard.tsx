@@ -317,7 +317,7 @@ export function ProxmoxDashboard() {
 
       <div
         className={`sticky z-40 bg-background transition-all duration-300 ease-in-out ${
-          showNavigation ? "top-[120px] md:top-[88px]" : "-top-[100x] md:top-[88px] md:-translate-y-[120%]"
+          showNavigation ? "top-[120px] md:top-[88px]" : "-top-[100x] md:top-[96px] md:-translate-y-[120%]"
         }`}
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
