@@ -26,6 +26,8 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hiddenDiskLines, setHiddenDiskLines] = useState<string[]>([])
+  const [hiddenNetworkLines, setHiddenNetworkLines] = useState<string[]>([])
 
   useEffect(() => {
     fetchMetrics()
@@ -259,7 +261,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                   borderRadius: "6px",
                 }}
               />
-              <Legend verticalAlign="top" height={36} iconType="line" wrapperStyle={{ paddingBottom: "10px" }} />
+              <Legend content={renderDiskLegend} />
               <Area
                 type="monotone"
                 dataKey="diskread"
@@ -268,6 +270,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fillOpacity={0.3}
                 strokeWidth={2}
                 name="Read"
+                hide={hiddenDiskLines.includes("diskread")}
               />
               <Area
                 type="monotone"
@@ -277,6 +280,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fillOpacity={0.3}
                 strokeWidth={2}
                 name="Write"
+                hide={hiddenDiskLines.includes("diskwrite")}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -313,7 +317,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                   borderRadius: "6px",
                 }}
               />
-              <Legend verticalAlign="top" height={36} iconType="line" wrapperStyle={{ paddingBottom: "10px" }} />
+              <Legend content={renderNetworkLegend} />
               <Area
                 type="monotone"
                 dataKey="netin"
@@ -322,6 +326,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fillOpacity={0.3}
                 strokeWidth={2}
                 name="Download"
+                hide={hiddenNetworkLines.includes("netin")}
               />
               <Area
                 type="monotone"
@@ -331,10 +336,71 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 fillOpacity={0.3}
                 strokeWidth={2}
                 name="Upload"
+                hide={hiddenNetworkLines.includes("netout")}
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
+      </div>
+    )
+  }
+
+  const handleDiskLegendClick = (dataKey: string) => {
+    setHiddenDiskLines((prev) => {
+      if (prev.includes(dataKey)) {
+        return prev.filter((key) => key !== dataKey)
+      } else {
+        return [...prev, dataKey]
+      }
+    })
+  }
+
+  const handleNetworkLegendClick = (dataKey: string) => {
+    setHiddenNetworkLines((prev) => {
+      if (prev.includes(dataKey)) {
+        return prev.filter((key) => key !== dataKey)
+      } else {
+        return [...prev, dataKey]
+      }
+    })
+  }
+
+  const renderDiskLegend = (props: any) => {
+    const { payload } = props
+    return (
+      <div className="flex justify-center gap-6 pb-2">
+        {payload.map((entry: any) => (
+          <button
+            key={entry.dataKey}
+            onClick={() => handleDiskLegendClick(entry.dataKey)}
+            className={`flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-100 ${
+              hiddenDiskLines.includes(entry.dataKey) ? "opacity-40" : "opacity-100"
+            }`}
+          >
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span className="text-sm">{entry.value}</span>
+          </button>
+        ))}
+      </div>
+    )
+  }
+
+  const renderNetworkLegend = (props: any) => {
+    const { payload } = props
+    return (
+      <div className="flex justify-center gap-6 pb-2">
+        {payload.map((entry: any) => (
+          <button
+            key={entry.dataKey}
+            onClick={() => handleNetworkLegendClick(entry.dataKey)}
+            className={`flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-100 ${
+              hiddenNetworkLines.includes(entry.dataKey) ? "opacity-40" : "opacity-100"
+            }`}
+          >
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span className="text-sm">{entry.value}</span>
+          </button>
+        ))}
       </div>
     )
   }
