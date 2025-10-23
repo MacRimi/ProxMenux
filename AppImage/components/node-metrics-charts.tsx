@@ -290,7 +290,7 @@ export function NodeMetricsCharts() {
                   className="text-foreground"
                   tick={{ fill: "currentColor", fontSize: 12 }}
                   label={{ value: "Load", angle: 90, position: "insideRight", fill: "currentColor" }}
-                  domain={[0, "dataMax"]}
+                  domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
                 />
                 <Tooltip
                   contentStyle={{
