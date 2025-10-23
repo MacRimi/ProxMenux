@@ -399,9 +399,7 @@ export function SystemOverview() {
 
   const tempStatus = getTemperatureStatus(systemData.temperature)
 
-  const localStorage = proxmoxStorageData?.storage.find(
-    (s) => s.name === "local-lvm" || s.name === "local-zfs" || s.name === "local",
-  )
+  const localStorage = proxmoxStorageData?.storage.find((s) => s.name === "local")
 
   const getLoadStatus = (load: number, cores: number) => {
     if (load < cores) {
@@ -531,54 +529,65 @@ export function SystemOverview() {
           <CardContent>
             {storageData ? (
               <div className="space-y-4">
-                <div className="flex justify-between items-center pb-3 border-b border-border">
-                  <span className="text-sm text-muted-foreground">Total Capacity:</span>
-                  <span className="text-lg font-semibold text-foreground">{storageData.total} TB</span>
+                <div className="space-y-2 pb-3 border-b border-border">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Total Capacity:</span>
+                    <span className="text-lg font-semibold text-foreground">{storageData.total} TB</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Physical Disks:</span>
+                    <span className="text-sm font-semibold text-foreground">
+                      {storageData.disk_count} disk{storageData.disk_count !== 1 ? "s" : ""}
+                    </span>
+                  </div>
                 </div>
 
-                {localStorage ? (
-                  <>
-                    <div className="pt-2">
-                      <div className="text-xs text-muted-foreground mb-2">System Storage ({localStorage.name})</div>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm text-muted-foreground">Used:</span>
-                        <span className="text-sm font-semibold text-foreground">{localStorage.used} GB</span>
-                      </div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-muted-foreground">Available:</span>
-                        <span className="text-sm font-semibold text-green-500">{localStorage.available} GB</span>
-                      </div>
-                      <Progress value={localStorage.percent} className="mt-2 [&>div]:bg-blue-500" />
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-xs text-muted-foreground">
-                          {localStorage.used} / {localStorage.total} GB
-                        </span>
-                        <span className="text-xs text-muted-foreground">{localStorage.percent.toFixed(1)}%</span>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
+                <div className="space-y-2 pb-3 border-b border-border">
+                  <div className="text-xs font-medium text-muted-foreground mb-2">Node Storage</div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Used:</span>
+                    <span className="text-sm font-semibold text-foreground">{storageData.used.toFixed(1)} GB</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Available:</span>
+                    <span className="text-sm font-semibold text-green-500">{storageData.available.toFixed(1)} GB</span>
+                  </div>
+                  <Progress
+                    value={(storageData.used / (storageData.used + storageData.available)) * 100}
+                    className="mt-2 [&>div]:bg-blue-500"
+                  />
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-xs text-muted-foreground">
+                      {storageData.used.toFixed(1)} / {(storageData.used + storageData.available).toFixed(1)} GB
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {((storageData.used / (storageData.used + storageData.available)) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+
+                {localStorage && (
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">Local Storage (System)</div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Used:</span>
-                      <span className="text-lg font-semibold text-foreground">{storageData.used} GB</span>
+                      <span className="text-xs text-muted-foreground">Used:</span>
+                      <span className="text-sm font-semibold text-foreground">{formatStorage(localStorage.used)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Available:</span>
-                      <span className="text-lg font-semibold text-green-500">{storageData.available} GB</span>
+                      <span className="text-xs text-muted-foreground">Available:</span>
+                      <span className="text-sm font-semibold text-green-500">
+                        {formatStorage(localStorage.available)}
+                      </span>
                     </div>
-                    <Progress
-                      value={(storageData.used / (storageData.used + storageData.available)) * 100}
-                      className="mt-2 [&>div]:bg-blue-500"
-                    />
-                  </>
+                    <Progress value={localStorage.percent} className="mt-2 [&>div]:bg-purple-500" />
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-xs text-muted-foreground">
+                        {formatStorage(localStorage.used)} / {formatStorage(localStorage.total)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{localStorage.percent.toFixed(1)}%</span>
+                    </div>
+                  </div>
                 )}
-
-                <div className="pt-2 border-t border-border">
-                  <p className="text-xs text-muted-foreground">
-                    {storageData.disk_count} physical disk{storageData.disk_count !== 1 ? "s" : ""} configured
-                  </p>
-                </div>
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">Storage data not available</div>

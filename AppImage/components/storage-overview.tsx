@@ -515,6 +515,7 @@ export function StorageOverview() {
             <div className="space-y-4">
               {proxmoxStorage.storage
                 .filter((storage) => storage && storage.name && storage.total > 0)
+                .sort((a, b) => a.name.localeCompare(b.name))
                 .map((storage) => (
                   <div key={storage.name} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
@@ -612,15 +613,15 @@ export function StorageOverview() {
                   </div>
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <p className="text-muted-foreground">Size</p>
+                      <p className="text-sm text-muted-foreground">Size</p>
                       <p className="font-medium">{pool.size}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Allocated</p>
+                      <p className="text-sm text-muted-foreground">Allocated</p>
                       <p className="font-medium">{pool.allocated}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Free</p>
+                      <p className="text-sm text-muted-foreground">Free</p>
                       <p className="font-medium">{pool.free}</p>
                     </div>
                   </div>
