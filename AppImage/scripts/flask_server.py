@@ -105,11 +105,17 @@ def get_cpu_temperature():
         if hasattr(psutil, "sensors_temperatures"):
             temps = psutil.sensors_temperatures()
             if temps:
-                # Priority order for temperature sensors
-                sensor_priority = ['coretemp', 'cpu_thermal', 'acpi', 'thermal_zone']
+                # Priority order for temperature sensors:
+                # - coretemp: Intel CPU sensor
+                # - k10temp: AMD CPU sensor (Ryzen, EPYC, etc.)
+                # - cpu_thermal: Generic CPU thermal sensor
+                # - zenpower: Alternative AMD sensor (if zenpower driver is used)
+                # - acpitz: ACPI thermal zone (fallback, usually motherboard)
+                sensor_priority = ['coretemp', 'k10temp', 'cpu_thermal', 'zenpower', 'acpitz']
                 for sensor_name in sensor_priority:
                     if sensor_name in temps and temps[sensor_name]:
                         temp = temps[sensor_name][0].current
+                        print(f"[v0] Using temperature sensor: {sensor_name} = {temp}°C")
                         break
                 
                 # If no priority sensor found, use first available
@@ -117,6 +123,7 @@ def get_cpu_temperature():
                     for name, entries in temps.items():
                         if entries:
                             temp = entries[0].current
+                            print(f"[v0] Using fallback temperature sensor: {name} = {temp}°C")
                             break
     except Exception as e:
         print(f"Warning: Error reading temperature sensors: {e}")
@@ -1509,7 +1516,7 @@ def get_network_info():
                 bond_info = get_bond_info(interface_name)
                 interface_info['bond_mode'] = bond_info['mode']
                 interface_info['bond_slaves'] = bond_info['slaves']
-                interface_info['bond_active_slave'] = bond_info['active_slave']
+                interface_info['bond_active_slave'] = bond_info['bond_active_slave']
             
             if interface_type == 'bridge':
                 bridge_info = get_bridge_info(interface_name)
@@ -4725,7 +4732,7 @@ def api_hardware():
             'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
             'memory_modules': hardware_info.get('memory_modules', []),
             'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_info
-            'pci_devices': hardware_info.get('pci_devices', []),
+            'pci_devices': hardware_info.get('pci_devices', []),  # Fixed: use hardware_info
             'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
             'fans': all_fans, # Return combined fans (sensors + IPMI)
             'power_supplies': hardware_info.get('ipmi_power', {}).get('power_supplies', []),
