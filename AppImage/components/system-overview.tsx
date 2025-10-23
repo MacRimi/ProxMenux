@@ -575,9 +575,9 @@ export function SystemOverview() {
                     <Progress value={vmLxcStoragePercent} className="mt-2 [&>div]:bg-blue-500" />
                     <div className="flex justify-between items-center mt-1">
                       <span className="text-xs text-muted-foreground">
-                        {formatStorage(vmLxcStorageUsed)} / {formatStorage(vmLxcStorageTotal)}
+                        {formatStorage(vmLxcStorageAvailable)} available of {formatStorage(vmLxcStorageTotal)}
                       </span>
-                      <span className="text-xs text-muted-foreground">{vmLxcStoragePercent.toFixed(1)}%</span>
+                      <span className="text-xs text-muted-foreground">{vmLxcStoragePercent.toFixed(1)}% used</span>
                     </div>
                     {vmLxcStorages.length > 1 && (
                       <div className="text-xs text-muted-foreground mt-1">
