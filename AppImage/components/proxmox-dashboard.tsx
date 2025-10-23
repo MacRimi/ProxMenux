@@ -316,9 +316,13 @@ export function ProxmoxDashboard() {
       </header>
 
       <div
-        className={`sticky z-40 bg-background transition-all duration-300 ease-in-out ${
-          showNavigation ? "top-[120px] md:top-[88px]" : "-top-[100x] md:top-[96px] md:-translate-y-[120%]"
-        }`}
+        className={`sticky z-40 bg-background
+          top-[120px] md:top-[76px] 
+          transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
+          ${showNavigation
+            ? "translate-y-0 opacity-100"
+            : "-translate-y-full opacity-0 pointer-events-none"}
+        `}
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
