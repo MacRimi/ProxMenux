@@ -121,11 +121,27 @@ export function NodeMetricsCharts() {
           memoryZfsArc: item.zfsarc ? Number((item.zfsarc / 1024 / 1024 / 1024).toFixed(2)) : 0,
         }
 
-        if (index === 0) {
-          console.log("[v0] First transformed data point:", transformed)
+        if (index < 5 || index === result.data.length - 1) {
+          console.log(`[v0] Data point ${index}:`, {
+            rawCpu: item.cpu,
+            transformedCpu: transformed.cpu,
+            rawLoad: item.loadavg,
+            transformedLoad: transformed.load,
+          })
         }
 
         return transformed
+      })
+
+      const cpuValues = transformedData.map((d) => d.cpu)
+      const minCpu = Math.min(...cpuValues)
+      const maxCpu = Math.max(...cpuValues)
+      const avgCpu = cpuValues.reduce((a, b) => a + b, 0) / cpuValues.length
+      console.log("[v0] CPU Statistics:", {
+        min: minCpu,
+        max: maxCpu,
+        avg: avgCpu.toFixed(2),
+        sampleSize: cpuValues.length,
       })
 
       console.log("[v0] Total transformed data points:", transformedData.length)

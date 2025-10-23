@@ -743,6 +743,11 @@ def get_storage_info():
             'critical_disks': 0
         }
 
+# Define get_disk_hardware_info (stub for now, will be replaced by lsblk parsing)
+def get_disk_hardware_info(disk_name):
+    """Placeholder for disk hardware info - to be populated by lsblk later."""
+    return {}
+
 def get_smart_data(disk_name):
     """Get SMART data for a specific disk - Enhanced with multiple device type attempts"""
     smart_data = {
@@ -3269,11 +3274,33 @@ def get_hardware_info():
         except Exception as e:
             print(f"[v0] Error getting memory info: {e}")
         
-        storage_info = get_storage_info()
-        for device in storage_info.get('disks', []):
-            hw_info = get_disk_hardware_info(device['name'])
-            device.update(hw_info)
-        hardware_data['storage_devices'] = storage_info.get('disks', [])
+        # </CHANGE> Commented out get_disk_hardware_info call as function doesn't exist
+        # storage_info = get_storage_info()
+        # for device in storage_info.get('disks', []):
+        #     hw_info = get_disk_hardware_info(device['name'])
+        #     device.update(hw_info)
+        # hardware_data['storage_devices'] = storage_info.get('disks', [])
+        
+        # Storage Devices - simplified version without hardware info
+        try:
+            result = subprocess.run(['lsblk', '-J', '-o', 'NAME,SIZE,TYPE,MOUNTPOINT,MODEL'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                import json
+                lsblk_data = json.loads(result.stdout)
+                storage_devices = []
+                for device in lsblk_data.get('blockdevices', []):
+                    if device.get('type') == 'disk':
+                        storage_devices.append({
+                            'name': device.get('name', ''),
+                            'size': device.get('size', ''),
+                            'model': device.get('model', 'Unknown'),
+                            'type': device.get('type', 'disk')
+                        })
+                hardware_data['storage_devices'] = storage_devices
+                print(f"[v0] Storage devices: {len(storage_devices)} found")
+        except Exception as e:
+            print(f"[v0] Error getting storage info: {e}")
         
         # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
         try:
@@ -4078,8 +4105,7 @@ def api_notifications_download():
         if result.returncode == 0:
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
-                f.write(f"ProxMenux Log - Notification around: {timestamp}\n")
-                f.write(f"Time Window: {since_time} to {until_time}\n")
+                f.write(f"ProxMenux Log ({log_type}, since {since_days if since_days else f'{hours}h'}) - Generated: {datetime.now().isoformat()}\n")
                 f.write("=" * 80 + "\n\n")
                 f.write(result.stdout)
                 temp_path = f.name
