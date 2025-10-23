@@ -111,7 +111,10 @@ export function NodeMetricsCharts() {
           time: timeLabel,
           timestamp: item.time,
           cpu: item.cpu ? Number((item.cpu * 100).toFixed(2)) : 0,
-          load: item.loadavg ? Number(item.loadavg[0].toFixed(2)) : 0,
+          load:
+            item.loadavg && Array.isArray(item.loadavg) && item.loadavg.length > 0
+              ? Number(item.loadavg[0].toFixed(2))
+              : 0,
           memoryTotal: item.memtotal ? Number((item.memtotal / 1024 / 1024 / 1024).toFixed(2)) : 0,
           memoryUsed: item.memused ? Number((item.memused / 1024 / 1024 / 1024).toFixed(2)) : 0,
           memoryFree: item.memfree ? Number((item.memfree / 1024 / 1024 / 1024).toFixed(2)) : 0,
