@@ -135,10 +135,10 @@ export function ProxmoxDashboard() {
 
       if (currentScrollY < 100) {
         setShowNavigation(true)
-      } else if (currentScrollY > lastScrollY + 10) {
+      } else if (currentScrollY > lastScrollY + 20) {
         // Scrolling down - hide navigation
         setShowNavigation(false)
-      } else if (currentScrollY < lastScrollY - 14) {
+      } else if (currentScrollY < lastScrollY - 20) {
         // Scrolling up - show navigation
         setShowNavigation(true)
       }
@@ -317,7 +317,7 @@ export function ProxmoxDashboard() {
 
       <div
         className={`sticky z-40 bg-background transition-all duration-300 ease-in-out ${
-          showNavigation ? "top-[280px] md:top-[88px]" : "-top-[100px] md:top-[88px] md:-translate-y-[120%]"
+          showNavigation ? "top-[240px] md:top-[88px]" : "-top-[100px] md:top-[88px] md:-translate-y-[120%]"
         }`}
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
