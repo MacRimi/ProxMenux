@@ -133,11 +133,11 @@ export function ProxmoxDashboard() {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
 
-      if (currentScrollY < 50) {
-        // Show navigation when near top
+      if (currentScrollY < 10) {
+        // Always show navigation when at the very top
         setShowNavigation(true)
-      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scrolling down - hide navigation (only after 100px)
+      } else if (currentScrollY > lastScrollY && currentScrollY > 80) {
+        // Scrolling down - hide navigation (only after 80px)
         setShowNavigation(false)
       } else if (currentScrollY < lastScrollY) {
         // Scrolling up - show navigation
@@ -228,7 +228,7 @@ export function ProxmoxDashboard() {
         </div>
       )}
 
-      <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
+      <header className="border-b border-border bg-card fixed top-0 left-0 right-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 md:px-6 py-4 md:py-4">
           {/* Logo and Title */}
           <div className="flex items-start justify-between gap-3">
@@ -317,13 +317,11 @@ export function ProxmoxDashboard() {
       </header>
 
       <div
-        className={`sticky bg-background border-b border-border transition-transform duration-300 ease-in-out ${
-          showNavigation ? "translate-y-0" : "-translate-y-[calc(100%+1px)]"
+        className={`fixed left-0 right-0 bg-background border-b border-border transition-transform duration-300 ease-in-out z-40 ${
+          showNavigation ? "translate-y-0" : "-translate-y-full"
         }`}
         style={{
-          top: "0",
-          zIndex: 40,
-          marginTop: "0",
+          top: "var(--header-height, 88px)",
         }}
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6 pb-4">
@@ -475,7 +473,10 @@ export function ProxmoxDashboard() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
+      <div
+        className="container mx-auto px-4 md:px-6 py-4 md:py-6"
+        style={{ paddingTop: "var(--content-padding, 160px)" }}
+      >
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
           <TabsContent value="overview" className="space-y-4 md:space-y-6 mt-0">
             <SystemOverview key={`overview-${componentKey}`} />
