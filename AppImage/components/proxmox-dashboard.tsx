@@ -129,8 +129,9 @@ export function ProxmoxDashboard() {
     return () => clearInterval(interval)
   }, [fetchSystemData])
 
+
   useEffect(() => {
-    let hideTimeout: NodeJS.Timeout | null = null
+    let hideTimeout: ReturnType<typeof setTimeout> | null = null
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY
@@ -138,15 +139,12 @@ export function ProxmoxDashboard() {
       const scrollingUp = currentScrollY < lastScrollY
 
       if (currentScrollY < 150) {
-        // Top of page → always show
         if (hideTimeout) clearTimeout(hideTimeout)
         setShowNavigation(true)
       } else if (scrollingDown) {
-        // Scrolling down → hide smoothly after small delay
         if (hideTimeout) clearTimeout(hideTimeout)
         hideTimeout = setTimeout(() => setShowNavigation(false), 100)
       } else if (scrollingUp) {
-        // Scrolling up → show immediately
         if (hideTimeout) clearTimeout(hideTimeout)
         setShowNavigation(true)
       }
