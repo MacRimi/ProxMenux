@@ -319,7 +319,7 @@ export function ProxmoxDashboard() {
         className={`sticky z-40 bg-background
           top-[80px] md:top-[92px]   /* header + pequeño gap */
           transition-transform duration-300 ease-in-out will-change-transform
-          ${showNavigation ? "translate-y-0 opacity-100" : "-translate-y-[120%] opacity-0 pointer-events-none"}
+          ${showNavigation ? "translate-y-0 opacity-100" : "-translate-y-[100%] opacity-0 pointer-events-none"}
         `}
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
