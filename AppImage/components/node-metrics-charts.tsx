@@ -281,7 +281,7 @@ export function NodeMetricsCharts() {
                   className="text-foreground"
                   tick={{ fill: "currentColor", fontSize: 12 }}
                   label={{ value: "CPU %", angle: -90, position: "insideLeft", fill: "currentColor" }}
-                  domain={[0, 100]}
+                  domain={[0, "dataMax"]}
                 />
                 <YAxis
                   yAxisId="right"
@@ -290,7 +290,7 @@ export function NodeMetricsCharts() {
                   className="text-foreground"
                   tick={{ fill: "currentColor", fontSize: 12 }}
                   label={{ value: "Load", angle: 90, position: "insideRight", fill: "currentColor" }}
-                  domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
+                  domain={[0, "dataMax"]}
                 />
                 <Tooltip
                   contentStyle={{
