@@ -321,7 +321,7 @@ export function ProxmoxDashboard() {
           showNavigation ? "translate-y-0" : "-translate-y-full"
         }`}
         style={{
-          top: "var(--header-height, 88px)",
+          top: "88px",
         }}
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6 pb-4">
@@ -473,10 +473,7 @@ export function ProxmoxDashboard() {
         </div>
       </div>
 
-      <div
-        className="container mx-auto px-4 md:px-6 py-4 md:py-6"
-        style={{ paddingTop: "var(--content-padding, 160px)" }}
-      >
+      <div className="container mx-auto px-4 md:px-6 py-4 md:py-6" style={{ paddingTop: "160px" }}>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
           <TabsContent value="overview" className="space-y-4 md:space-y-6 mt-0">
             <SystemOverview key={`overview-${componentKey}`} />

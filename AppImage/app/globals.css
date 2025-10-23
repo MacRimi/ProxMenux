@@ -49,9 +49,7 @@
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
 
-  /* Added layout variables for header and navigation positioning */
-  --header-height: 88px;
-  --content-padding: 160px;
+  /* Removed custom layout variables that were causing compilation issues */
 }
 
 /* ===================== */
@@ -102,13 +100,7 @@
   --sidebar-ring: var(--ring);
 }
 
-/* Added media query for mobile layout variables */
-@media (max-width: 1023px) {
-  :root {
-    --header-height: 140px;
-    --content-padding: 220px;
-  }
-}
+/* Removed media query for mobile layout variables */
 
 @theme inline {
   /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
