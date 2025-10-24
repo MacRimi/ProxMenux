@@ -133,8 +133,11 @@ const getMonitoringToolRecommendation = (vendor: string): string => {
 const improveSensorLabel = (sensorName: string, adapter: string): string => {
   const adapterLower = adapter?.toLowerCase() || ""
 
+  console.log("[v0] improveSensorLabel called:", { sensorName, adapter, adapterLower })
+
   // Detect NVIDIA sensors (nouveau or nvidia driver)
   if (adapterLower.includes("nouveau") || adapterLower.includes("nvidia")) {
+    console.log("[v0] NVIDIA sensor detected!")
     // Improve temperature labels
     if (sensorName.toLowerCase().includes("temp")) {
       return "NVIDIA GPU Temperature"
@@ -609,10 +612,12 @@ export default function Hardware() {
                     const isHot = temp.current > (temp.high || 80)
                     const isCritical = temp.current > (temp.critical || 90)
 
+                    const displayName = improveSensorLabel(temp.name, temp.adapter)
+
                     return (
                       <div key={index} className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{temp.name}</span>
+                          <span className="text-sm font-medium">{displayName}</span>
                           <span
                             className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
                           >
