@@ -20,6 +20,50 @@ fi
 load_language
 initialize_cache
 
+
+
+
+ensure_apex_group_and_udev() {
+  msg_info "Ensuring apex group and udev rules..."
+
+
+  if ! getent group apex >/dev/null; then
+    groupadd --system apex || true
+    msg_ok "System group 'apex' created"
+  else
+    msg_ok "System group 'apex' already exists"
+  fi
+
+
+  cat >/etc/udev/rules.d/99-coral-apex.rules <<'EOF'
+# Coral / Google APEX TPU (M.2 / PCIe)
+# Assign group "apex" and safe permissions to device nodes
+KERNEL=="apex_*", GROUP="apex", MODE="0660"
+SUBSYSTEM=="apex", GROUP="apex", MODE="0660"
+EOF
+
+
+  if [[ -f /usr/lib/udev/rules.d/60-gasket-dkms.rules ]]; then
+    sed -i 's/GROUP="[^"]*"/GROUP="apex"/g' /usr/lib/udev/rules.d/60-gasket-dkms.rules || true
+  fi
+
+
+  udevadm control --reload-rules
+  udevadm trigger --subsystem-match=apex || true
+
+  msg_ok "apex group and udev rules are in place"
+
+
+  if ls -l /dev/apex_* 2>/dev/null | grep -q ' apex '; then
+    msg_ok "Coral TPU device nodes detected with correct group (apex)"
+  else
+    msg_warn "apex device node not found yet; a reboot may be required"
+  fi
+}
+
+
+
+
 pre_install_prompt() {
   if ! dialog --title "$(translate 'Coral TPU Installation')" --yesno \
     "\n$(translate 'Installing Coral TPU drivers requires rebooting the server after installation. Do you want to proceed?')" 10 70; then
@@ -94,6 +138,7 @@ install_coral_host() {
   msg_ok   "$(translate 'Drivers compiled and installed via DKMS.')"
 
 
+  ensure_apex_group_and_udev
 
   msg_info "$(translate 'Loading modules...')"
   modprobe gasket >>"$LOG_FILE" 2>&1 || true
