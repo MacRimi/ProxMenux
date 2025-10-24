@@ -13,6 +13,7 @@ interface NetworkMetricsData {
 
 interface NetworkTrafficChartProps {
   timeframe: string
+  onTotalsCalculated?: (totals: { received: number; sent: number }) => void
 }
 
 const CustomNetworkTooltip = ({ active, payload, label }: any) => {
@@ -25,7 +26,7 @@ const CustomNetworkTooltip = ({ active, payload, label }: any) => {
             <div key={index} className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
               <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
-              <span className="text-sm font-semibold text-white">{entry.value} GB</span>
+              <span className="text-sm font-semibold text-white">{entry.value.toFixed(3)} GB</span>
             </div>
           ))}
         </div>
@@ -35,7 +36,7 @@ const CustomNetworkTooltip = ({ active, payload, label }: any) => {
   return null
 }
 
-export function NetworkTrafficChart({ timeframe }: NetworkTrafficChartProps) {
+export function NetworkTrafficChart({ timeframe, onTotalsCalculated }: NetworkTrafficChartProps) {
   const [data, setData] = useState<NetworkMetricsData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -75,7 +76,8 @@ export function NetworkTrafficChart({ timeframe }: NetworkTrafficChartProps) {
         return
       }
 
-      const transformedData = result.data.map((item: any) => {
+      // RRD data contains rate (bytes/second), we need to calculate traffic per interval
+      const transformedData = result.data.map((item: any, index: number) => {
         const date = new Date(item.time * 1000)
         let timeLabel = ""
 
@@ -105,15 +107,33 @@ export function NetworkTrafficChart({ timeframe }: NetworkTrafficChartProps) {
           })
         }
 
+        // Calculate time interval between data points (in seconds)
+        let intervalSeconds = 60 // Default to 1 minute
+        if (index > 0) {
+          intervalSeconds = item.time - result.data[index - 1].time
+        }
+
+        // Convert rate (bytes/second) to traffic in this interval (GB)
+        // netin and netout are in bytes/second, multiply by interval to get total bytes
+        const netInBytes = (item.netin || 0) * intervalSeconds
+        const netOutBytes = (item.netout || 0) * intervalSeconds
+
         return {
           time: timeLabel,
           timestamp: item.time,
-          netIn: item.netin ? Number((item.netin / 1024 / 1024 / 1024).toFixed(2)) : 0,
-          netOut: item.netout ? Number((item.netout / 1024 / 1024 / 1024).toFixed(2)) : 0,
+          netIn: Number((netInBytes / 1024 / 1024 / 1024).toFixed(4)),
+          netOut: Number((netOutBytes / 1024 / 1024 / 1024).toFixed(4)),
         }
       })
 
       setData(transformedData)
+
+      const totalReceived = transformedData.reduce((sum: number, item: NetworkMetricsData) => sum + item.netIn, 0)
+      const totalSent = transformedData.reduce((sum: number, item: NetworkMetricsData) => sum + item.netOut, 0)
+
+      if (onTotalsCalculated) {
+        onTotalsCalculated({ received: totalReceived, sent: totalSent })
+      }
     } catch (err: any) {
       console.error("[v0] Error fetching network metrics:", err)
       setError(err.message || "Error loading metrics")
@@ -197,7 +217,7 @@ export function NetworkTrafficChart({ timeframe }: NetworkTrafficChartProps) {
           className="text-foreground"
           tick={{ fill: "currentColor", fontSize: 12 }}
           label={{ value: "GB", angle: -90, position: "insideLeft", fill: "currentColor" }}
-          domain={[0, "dataMax"]}
+          domain={[0, "auto"]}
         />
         <Tooltip content={<CustomNetworkTooltip />} />
         <Legend verticalAlign="top" height={36} content={renderLegend} />

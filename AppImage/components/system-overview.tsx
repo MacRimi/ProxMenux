@@ -232,6 +232,7 @@ export function SystemOverview() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [networkTimeframe, setNetworkTimeframe] = useState("day")
+  const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
 
   useEffect(() => {
     const fetchData = async () => {
@@ -396,7 +397,7 @@ export function SystemOverview() {
       return `${sizeInGB.toFixed(1)} GB`
     } else {
       // 1024 GB or more, show in TB
-      return `${(sizeInGB / 1024).toFixed(1)} TB`
+      return `${(sizeInGB / 1024).toFixed(2)} TB`
     }
   }
 
@@ -458,6 +459,21 @@ export function SystemOverview() {
   }
 
   const loadStatus = getLoadStatus(systemData.load_average[0], systemData.cpu_cores || 8)
+
+  const getTimeframeLabel = (timeframe: string): string => {
+    switch (timeframe) {
+      case "hour":
+        return "1h"
+      case "day":
+        return "24h"
+      case "week":
+        return "7d"
+      case "month":
+        return "30d"
+      default:
+        return timeframe
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -693,19 +709,21 @@ export function SystemOverview() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Received:</span>
                     <span className="text-lg font-semibold text-green-500 flex items-center gap-1">
-                      ↓ {formatStorage(networkData.traffic.bytes_recv / 1024 ** 3)}
+                      ↓ {formatStorage(networkTotals.received)}
+                      <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Sent:</span>
                     <span className="text-lg font-semibold text-blue-500 flex items-center gap-1">
-                      ↑ {formatStorage(networkData.traffic.bytes_sent / 1024 ** 3)}
+                      ↑ {formatStorage(networkTotals.sent)}
+                      <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-border">
-                  <NetworkTrafficChart timeframe={networkTimeframe} />
+                  <NetworkTrafficChart timeframe={networkTimeframe} onTotalsCalculated={setNetworkTotals} />
                 </div>
               </div>
             ) : (
