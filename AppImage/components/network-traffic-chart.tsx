@@ -1,0 +1,227 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { Loader2 } from "lucide-react"
+
+interface NetworkMetricsData {
+  time: string
+  timestamp: number
+  netIn: number
+  netOut: number
+}
+
+interface NetworkTrafficChartProps {
+  timeframe: string
+}
+
+const CustomNetworkTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
+        <p className="text-sm font-semibold text-white mb-2">{label}</p>
+        <div className="space-y-1.5">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+              <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
+              <span className="text-sm font-semibold text-white">{entry.value} GB</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  return null
+}
+
+export function NetworkTrafficChart({ timeframe }: NetworkTrafficChartProps) {
+  const [data, setData] = useState<NetworkMetricsData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [visibleLines, setVisibleLines] = useState({
+    netIn: true,
+    netOut: true,
+  })
+
+  useEffect(() => {
+    fetchMetrics()
+  }, [timeframe])
+
+  const fetchMetrics = async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const baseUrl =
+        typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+      const apiUrl = `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
+
+      const response = await fetch(apiUrl)
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch node metrics: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (!result.data || !Array.isArray(result.data)) {
+        throw new Error("Invalid data format received from server")
+      }
+
+      if (result.data.length === 0) {
+        setData([])
+        setLoading(false)
+        return
+      }
+
+      const transformedData = result.data.map((item: any) => {
+        const date = new Date(item.time * 1000)
+        let timeLabel = ""
+
+        if (timeframe === "hour") {
+          timeLabel = date.toLocaleString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+        } else if (timeframe === "day") {
+          timeLabel = date.toLocaleString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+        } else if (timeframe === "week") {
+          timeLabel = date.toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            hour12: false,
+          })
+        } else {
+          timeLabel = date.toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+        }
+
+        return {
+          time: timeLabel,
+          timestamp: item.time,
+          netIn: item.netin ? Number((item.netin / 1024 / 1024 / 1024).toFixed(2)) : 0,
+          netOut: item.netout ? Number((item.netout / 1024 / 1024 / 1024).toFixed(2)) : 0,
+        }
+      })
+
+      setData(transformedData)
+    } catch (err: any) {
+      console.error("[v0] Error fetching network metrics:", err)
+      setError(err.message || "Error loading metrics")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const tickInterval = Math.ceil(data.length / 8)
+
+  const handleLegendClick = (dataKey: string) => {
+    setVisibleLines((prev) => ({
+      ...prev,
+      [dataKey]: !prev[dataKey as keyof typeof prev],
+    }))
+  }
+
+  const renderLegend = (props: any) => {
+    const { payload } = props
+    return (
+      <div className="flex justify-center gap-4 pb-2 flex-wrap">
+        {payload.map((entry: any, index: number) => {
+          const isVisible = visibleLines[entry.dataKey as keyof typeof visibleLines]
+          return (
+            <div
+              key={`legend-${index}`}
+              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => handleLegendClick(entry.dataKey)}
+              style={{ opacity: isVisible ? 1 : 0.4 }}
+            >
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: entry.color }} />
+              <span className="text-sm text-foreground">{entry.value}</span>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[200px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[200px] gap-2">
+        <p className="text-muted-foreground text-sm">Network metrics not available yet</p>
+        <p className="text-xs text-red-500">{error}</p>
+      </div>
+    )
+  }
+
+  if (data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[200px]">
+        <p className="text-muted-foreground text-sm">No network metrics available</p>
+      </div>
+    )
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={200}>
+      <AreaChart data={data} margin={{ bottom: 40, left: 10, right: 10 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
+        <XAxis
+          dataKey="time"
+          stroke="currentColor"
+          className="text-foreground"
+          tick={{ fill: "currentColor", fontSize: 12 }}
+          angle={-45}
+          textAnchor="end"
+          height={40}
+          interval={tickInterval}
+        />
+        <YAxis
+          stroke="currentColor"
+          className="text-foreground"
+          tick={{ fill: "currentColor", fontSize: 12 }}
+          label={{ value: "GB", angle: -90, position: "insideLeft", fill: "currentColor" }}
+          domain={[0, "dataMax"]}
+        />
+        <Tooltip content={<CustomNetworkTooltip />} />
+        <Legend verticalAlign="top" height={36} content={renderLegend} />
+        <Area
+          type="monotone"
+          dataKey="netIn"
+          stroke="#10b981"
+          strokeWidth={2}
+          fill="#10b981"
+          fillOpacity={0.3}
+          name="Received"
+          hide={!visibleLines.netIn}
+        />
+        <Area
+          type="monotone"
+          dataKey="netOut"
+          stroke="#3b82f6"
+          strokeWidth={2}
+          fill="#3b82f6"
+          fillOpacity={0.3}
+          name="Sent"
+          hide={!visibleLines.netOut}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  )
+}

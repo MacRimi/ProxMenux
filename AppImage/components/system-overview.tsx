@@ -6,6 +6,8 @@ import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
 import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Network } from "lucide-react"
 import { NodeMetricsCharts } from "./node-metrics-charts"
+import { NetworkTrafficChart } from "./network-traffic-chart"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 
 interface SystemData {
   cpu_usage: number
@@ -229,6 +231,7 @@ export function SystemOverview() {
   const [networkData, setNetworkData] = useState<NetworkData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [networkTimeframe, setNetworkTimeframe] = useState("day")
 
   useEffect(() => {
     const fetchData = async () => {
@@ -624,9 +627,22 @@ export function SystemOverview() {
         {/* Network Summary */}
         <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <Network className="h-5 w-5 mr-2" />
-              Network Overview
+            <CardTitle className="text-foreground flex items-center justify-between">
+              <div className="flex items-center">
+                <Network className="h-5 w-5 mr-2" />
+                Network Overview
+              </div>
+              <Select value={networkTimeframe} onValueChange={setNetworkTimeframe}>
+                <SelectTrigger className="w-28 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hour">1 Hour</SelectItem>
+                  <SelectItem value="day">24 Hours</SelectItem>
+                  <SelectItem value="week">7 Days</SelectItem>
+                  <SelectItem value="month">30 Days</SelectItem>
+                </SelectContent>
+              </Select>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -686,6 +702,10 @@ export function SystemOverview() {
                       ↑ {formatStorage(networkData.traffic.bytes_sent / 1024 ** 3)}
                     </span>
                   </div>
+                </div>
+
+                <div className="pt-3 border-t border-border">
+                  <NetworkTrafficChart timeframe={networkTimeframe} />
                 </div>
               </div>
             ) : (
