@@ -130,36 +130,6 @@ const getMonitoringToolRecommendation = (vendor: string): string => {
   return "To get extended GPU monitoring information, please install the appropriate GPU monitoring tools for your hardware."
 }
 
-const improveSensorLabel = (sensorName: string, adapter: string, chipName?: string): string => {
-  const adapterLower = adapter?.toLowerCase() || ""
-  const chipNameLower = chipName?.toLowerCase() || ""
-  const sensorNameLower = sensorName?.toLowerCase() || ""
-
-  const isNVIDIA =
-    adapterLower.includes("nouveau") ||
-    adapterLower.includes("nvidia") ||
-    chipNameLower.includes("nouveau") ||
-    chipNameLower.includes("nvidia")
-
-  if (isNVIDIA) {
-    // Improve temperature labels
-    if (sensorNameLower.includes("temp")) {
-      return "NVIDIA GPU Temperature"
-    }
-    // Improve fan labels
-    if (sensorNameLower.includes("fan")) {
-      return "NVIDIA GPU Fan"
-    }
-    // Improve PWM labels
-    if (sensorNameLower.includes("pwm")) {
-      return "NVIDIA GPU PWM"
-    }
-  }
-
-  // Return original name if no improvement needed
-  return sensorName
-}
-
 const groupAndSortTemperatures = (temperatures: any[]) => {
   const groups = {
     CPU: [] as any[],
@@ -172,16 +142,8 @@ const groupAndSortTemperatures = (temperatures: any[]) => {
   temperatures.forEach((temp) => {
     const nameLower = temp.name.toLowerCase()
     const adapterLower = temp.adapter?.toLowerCase() || ""
-    const chipNameLower = temp.chip_name?.toLowerCase() || ""
 
-    if (
-      adapterLower.includes("nouveau") ||
-      adapterLower.includes("nvidia") ||
-      chipNameLower.includes("nouveau") ||
-      chipNameLower.includes("nvidia")
-    ) {
-      groups.GPU.push(temp)
-    } else if (nameLower.includes("cpu") || nameLower.includes("core") || nameLower.includes("package")) {
+    if (nameLower.includes("cpu") || nameLower.includes("core") || nameLower.includes("package")) {
       groups.CPU.push(temp)
     } else if (nameLower.includes("gpu") || adapterLower.includes("gpu")) {
       groups.GPU.push(temp)
@@ -530,12 +492,10 @@ export default function Hardware() {
                     const isHot = temp.current > (temp.high || 80)
                     const isCritical = temp.current > (temp.critical || 90)
 
-                    const displayName = improveSensorLabel(temp.name, temp.adapter, temp.chip_name)
-
                     return (
                       <div key={index} className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{displayName}</span>
+                          <span className="text-sm font-medium">{temp.name}</span>
                           <span
                             className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
                           >
@@ -622,12 +582,10 @@ export default function Hardware() {
                     const isHot = temp.current > (temp.high || 80)
                     const isCritical = temp.current > (temp.critical || 90)
 
-                    const displayName = improveSensorLabel(temp.name, temp.adapter, temp.chip_name)
-
                     return (
                       <div key={index} className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{displayName}</span>
+                          <span className="text-sm font-medium">{temp.name}</span>
                           <span
                             className={`text-sm font-semibold ${isCritical ? "text-red-500" : isHot ? "text-orange-500" : "text-green-500"}`}
                           >
@@ -1240,12 +1198,10 @@ export default function Hardware() {
               const isPercentage = fan.unit === "percent" || fan.unit === "%"
               const percentage = isPercentage ? fan.speed : Math.min((fan.speed / 5000) * 100, 100)
 
-              const displayName = improveSensorLabel(fan.name, fan.adapter, fan.chip_name)
-
               return (
                 <div key={index} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{displayName}</span>
+                    <span className="text-sm font-medium">{fan.name}</span>
                     <span className="text-sm font-semibold text-blue-500">
                       {isPercentage ? `${fan.speed.toFixed(0)} percent` : `${fan.speed.toFixed(0)} ${fan.unit}`}
                     </span>
