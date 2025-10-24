@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
@@ -155,96 +155,14 @@ export function NetworkMetrics() {
   const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null)
   const [timeframe, setTimeframe] = useState<"hour" | "day" | "week" | "month" | "year">("day")
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
-  const [vmLxcTraffic, setVmLxcTraffic] = useState<Record<number, { received: number; sent: number }>>({})
+  // REMOVED: const [vmLxcTraffic, setVmLxcTraffic] = useState<Record<number, { received: number; sent: number }>>({})
 
   const { data: interfaceHistoricalData } = useSWR<any>(`/api/node/metrics?timeframe=${timeframe}`, fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: false,
   })
 
-  useEffect(() => {
-    console.log("[v0] ===== VM/LXC TRAFFIC FETCH EFFECT TRIGGERED =====")
-    console.log("[v0] Timeframe:", timeframe)
-    console.log("[v0] VM/LXC interfaces count:", networkData?.vm_lxc_interfaces?.length)
-
-    if (!networkData?.vm_lxc_interfaces || networkData.vm_lxc_interfaces.length === 0) {
-      console.log("[v0] No VM/LXC interfaces found, skipping fetch")
-      return
-    }
-
-    const fetchVMTraffic = async () => {
-      console.log("[v0] Starting VM/LXC traffic fetch for timeframe:", timeframe)
-      const trafficData: Record<number, { received: number; sent: number }> = {}
-
-      for (const iface of networkData.vm_lxc_interfaces) {
-        if (!iface.vmid || !iface.vm_type) {
-          console.log(`[v0] Skipping interface ${iface.name}: missing vmid or vm_type`)
-          continue
-        }
-
-        try {
-          console.log(`[v0] Fetching metrics for VM/LXC ${iface.vmid} (${iface.vm_type})...`)
-          const response = await fetch(`/api/vm/${iface.vmid}/metrics?timeframe=${timeframe}&type=${iface.vm_type}`)
-
-          if (!response.ok) {
-            console.log(`[v0] Failed to fetch metrics for VM/LXC ${iface.vmid}: ${response.status}`)
-            continue
-          }
-
-          const data = await response.json()
-          console.log(`[v0] VM/LXC ${iface.vmid} RRD data received:`, {
-            dataPoints: data.rrddata?.length,
-            hasData: !!data.rrddata,
-          })
-
-          if (!data.rrddata || data.rrddata.length === 0) {
-            console.log(`[v0] No RRD data for VM/LXC ${iface.vmid}`)
-            continue
-          }
-
-          let totalReceived = 0
-          let totalSent = 0
-
-          const timeInterval =
-            data.rrddata.length > 1
-              ? (data.rrddata[data.rrddata.length - 1].time - data.rrddata[0].time) / (data.rrddata.length - 1)
-              : 60
-
-          console.log(`[v0] VM/LXC ${iface.vmid} time interval: ${timeInterval}s, data points: ${data.rrddata.length}`)
-
-          for (const point of data.rrddata) {
-            if (point.netin !== null && point.netin !== undefined && !isNaN(point.netin)) {
-              totalReceived += point.netin * timeInterval
-            }
-            if (point.netout !== null && point.netout !== undefined && !isNaN(point.netout)) {
-              totalSent += point.netout * timeInterval
-            }
-          }
-
-          console.log(`[v0] VM/LXC ${iface.vmid} calculated traffic:`, {
-            received: totalReceived,
-            sent: totalSent,
-            receivedFormatted: formatBytes(totalReceived),
-            sentFormatted: formatBytes(totalSent),
-          })
-
-          trafficData[iface.vmid] = {
-            received: totalReceived,
-            sent: totalSent,
-          }
-        } catch (error) {
-          console.error(`[v0] Error fetching traffic for VM/LXC ${iface.vmid}:`, error)
-        }
-      }
-
-      console.log("[v0] Final VM/LXC traffic data:", trafficData)
-      console.log("[v0] Setting VM/LXC traffic state...")
-      setVmLxcTraffic(trafficData)
-      console.log("[v0] ===== VM/LXC TRAFFIC FETCH COMPLETE =====")
-    }
-
-    fetchVMTraffic()
-  }, [networkData, timeframe]) // Changed dependency from networkData?.vm_lxc_interfaces to networkData
+  // REMOVED: useEffect for VM/LXC traffic fetch
 
   if (isLoading) {
     return (
@@ -277,8 +195,10 @@ export function NetworkMetrics() {
     )
   }
 
-  const trafficInFormatted = formatStorage(networkData.traffic.bytes_recv * 1024 * 1024 * 1024) // Convert GB to bytes
-  const trafficOutFormatted = formatStorage(networkData.traffic.bytes_sent * 1024 * 1024 * 1024)
+  // REMOVED: const trafficInFormatted = formatStorage(networkData.traffic.bytes_recv * 1024 * 1024 * 1024) // Convert GB to bytes
+  // REMOVED: const trafficOutFormatted = formatStorage(networkData.traffic.bytes_sent * 1024 * 1024 * 1024)
+  const trafficInFormatted = formatStorage(networkData.traffic.bytes_recv)
+  const trafficOutFormatted = formatStorage(networkData.traffic.bytes_sent)
   const packetsRecvK = networkData.traffic.packets_recv ? (networkData.traffic.packets_recv / 1000).toFixed(0) : "0"
 
   const totalErrors = (networkData.traffic.errin || 0) + (networkData.traffic.errout || 0)
@@ -328,11 +248,15 @@ export function NetworkMetrics() {
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground hidden md:inline">Received:</span>
-                <span className="text-base lg:text-xl font-bold text-green-500">↓ {trafficInFormatted}</span>
+                <span className="text-base lg:text-xl font-bold text-green-500">
+                  ↓ {formatStorage(networkData.traffic.bytes_recv)}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground hidden md:inline">Sent:</span>
-                <span className="text-base lg:text-xl font-bold text-blue-500">↑ {trafficOutFormatted}</span>
+                <span className="text-base lg:text-xl font-bold text-blue-500">
+                  ↑ {formatStorage(networkData.traffic.bytes_sent)}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -445,9 +369,9 @@ export function NetworkMetrics() {
             <div className="space-y-4">
               {networkData.vm_lxc_interfaces.map((interface_, index) => {
                 const vmTypeBadge = getVMTypeBadge(interface_.vm_type)
-                const trafficData = interface_.vmid && vmLxcTraffic[interface_.vmid]
-                const bytesRecv = trafficData ? trafficData.received : interface_.bytes_recv
-                const bytesSent = trafficData ? trafficData.sent : interface_.bytes_sent
+                // REMOVED: const trafficData = interface_.vmid && vmLxcTraffic[interface_.vmid]
+                // REMOVED: const bytesRecv = trafficData ? trafficData.received : interface_.bytes_recv
+                // REMOVED: const bytesSent = trafficData ? trafficData.sent : interface_.bytes_sent
 
                 return (
                   <div
@@ -497,9 +421,9 @@ export function NetworkMetrics() {
                       <div className="col-span-2 md:col-span-1">
                         <div className="text-sm text-muted-foreground">Traffic</div>
                         <div className="font-medium text-foreground text-xs">
-                          <span className="text-green-500">↓ {formatBytes(bytesRecv)}</span>
+                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
                           {" / "}
-                          <span className="text-blue-500">↑ {formatBytes(bytesSent)}</span>
+                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
                         </div>
                       </div>
 
