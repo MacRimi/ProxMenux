@@ -694,7 +694,7 @@ export function VirtualMachines() {
                 {safeVMData.filter((vm) => vm.status === "stopped").length} Stopped
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Virtual machines configured</p>
+            <p className="text-xs text-muted-foreground mt-2 hidden lg:block">Virtual machines configured</p>
           </CardContent>
         </Card>
 
@@ -738,8 +738,30 @@ export function VirtualMachines() {
 
             {/* Allocated RAM (configured) */}
             <div className="pt-3 border-t border-border">
-              <div className="flex items-center justify-between">
+              {/* Layout para desktop (sin cambios) */}
+              <div className="hidden lg:flex items-center justify-between">
                 <div>
+                  <div className="text-lg font-semibold text-foreground">{totalAllocatedMemoryGB} GB</div>
+                  <div className="text-xs text-muted-foreground">Allocated RAM</div>
+                </div>
+                {physicalMemoryGB !== null && (
+                  <div>
+                    {isMemoryOvercommit ? (
+                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                        Exceeds Physical
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                        Within Limits
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Layout para móvil (44.0 GB y Allocated RAM en la misma línea, badge debajo) */}
+              <div className="lg:hidden space-y-2">
+                <div className="flex items-baseline gap-2">
                   <div className="text-lg font-semibold text-foreground">{totalAllocatedMemoryGB} GB</div>
                   <div className="text-xs text-muted-foreground">Allocated RAM</div>
                 </div>
