@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
@@ -155,11 +155,57 @@ export function NetworkMetrics() {
   const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null)
   const [timeframe, setTimeframe] = useState<"hour" | "day" | "week" | "month" | "year">("day")
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
+  const [vmLxcTraffic, setVmLxcTraffic] = useState<Record<number, { received: number; sent: number }>>({})
 
   const { data: interfaceHistoricalData } = useSWR<any>(`/api/node/metrics?timeframe=${timeframe}`, fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: false,
   })
+
+  useEffect(() => {
+    if (!networkData?.vm_lxc_interfaces) return
+
+    const fetchVMTraffic = async () => {
+      const trafficData: Record<number, { received: number; sent: number }> = {}
+
+      for (const iface of networkData.vm_lxc_interfaces) {
+        if (!iface.vmid || !iface.vm_type) continue
+
+        try {
+          const response = await fetch(`/api/vm/${iface.vmid}/metrics?timeframe=${timeframe}&type=${iface.vm_type}`)
+          if (!response.ok) continue
+
+          const data = await response.json()
+          if (!data.rrddata) continue
+
+          // Calculate total traffic from RRD data
+          let totalReceived = 0
+          let totalSent = 0
+
+          for (const point of data.rrddata) {
+            if (point.netin !== null && point.netin !== undefined) {
+              // netin is in bytes/second, multiply by interval to get total bytes
+              totalReceived += point.netin * (data.rrddata.length > 1 ? 60 : 1) // Assume 60 second intervals
+            }
+            if (point.netout !== null && point.netout !== undefined) {
+              totalSent += point.netout * (data.rrddata.length > 1 ? 60 : 1)
+            }
+          }
+
+          trafficData[iface.vmid] = {
+            received: totalReceived,
+            sent: totalSent,
+          }
+        } catch (error) {
+          console.error(`[v0] Error fetching traffic for VM/LXC ${iface.vmid}:`, error)
+        }
+      }
+
+      setVmLxcTraffic(trafficData)
+    }
+
+    fetchVMTraffic()
+  }, [networkData?.vm_lxc_interfaces, timeframe])
 
   if (isLoading) {
     return (
@@ -360,6 +406,9 @@ export function NetworkMetrics() {
             <div className="space-y-4">
               {networkData.vm_lxc_interfaces.map((interface_, index) => {
                 const vmTypeBadge = getVMTypeBadge(interface_.vm_type)
+                const trafficData = interface_.vmid && vmLxcTraffic[interface_.vmid]
+                const bytesRecv = trafficData ? trafficData.received : interface_.bytes_recv
+                const bytesSent = trafficData ? trafficData.sent : interface_.bytes_sent
 
                 return (
                   <div
@@ -409,9 +458,9 @@ export function NetworkMetrics() {
                       <div className="col-span-2 md:col-span-1">
                         <div className="text-sm text-muted-foreground">Traffic</div>
                         <div className="font-medium text-foreground text-xs">
-                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
+                          <span className="text-green-500">↓ {formatBytes(bytesRecv)}</span>
                           {" / "}
-                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
+                          <span className="text-blue-500">↑ {formatBytes(bytesSent)}</span>
                         </div>
                       </div>
 
