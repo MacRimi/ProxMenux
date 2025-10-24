@@ -130,24 +130,34 @@ const getMonitoringToolRecommendation = (vendor: string): string => {
   return "To get extended GPU monitoring information, please install the appropriate GPU monitoring tools for your hardware."
 }
 
-const improveSensorLabel = (sensorName: string, adapter: string): string => {
+const improveSensorLabel = (sensorName: string, adapter: string, chipName?: string): string => {
   const adapterLower = adapter?.toLowerCase() || ""
+  const chipNameLower = chipName?.toLowerCase() || ""
+  const sensorNameLower = sensorName?.toLowerCase() || ""
 
-  console.log("[v0] improveSensorLabel called:", { sensorName, adapter, adapterLower })
+  console.log("[v0] improveSensorLabel called:", { sensorName, adapter, chipName, adapterLower, chipNameLower })
 
-  // Detect NVIDIA sensors (nouveau or nvidia driver)
-  if (adapterLower.includes("nouveau") || adapterLower.includes("nvidia")) {
-    console.log("[v0] NVIDIA sensor detected!")
+  const isNVIDIA =
+    adapterLower.includes("nouveau") ||
+    adapterLower.includes("nvidia") ||
+    chipNameLower.includes("nouveau") ||
+    chipNameLower.includes("nvidia") ||
+    // If it's a PCI adapter and the sensor name suggests it's a GPU sensor
+    (adapterLower.includes("pci") &&
+      (sensorNameLower.includes("temp") || sensorNameLower.includes("fan") || sensorNameLower.includes("pwm")))
+
+  if (isNVIDIA) {
+    console.log("[v0] NVIDIA/GPU sensor detected!")
     // Improve temperature labels
-    if (sensorName.toLowerCase().includes("temp")) {
+    if (sensorNameLower.includes("temp")) {
       return "NVIDIA GPU Temperature"
     }
     // Improve fan labels
-    if (sensorName.toLowerCase().includes("fan")) {
+    if (sensorNameLower.includes("fan")) {
       return "NVIDIA GPU Fan"
     }
     // Improve PWM labels
-    if (sensorName.toLowerCase().includes("pwm")) {
+    if (sensorNameLower.includes("pwm")) {
       return "NVIDIA GPU PWM"
     }
   }
@@ -520,7 +530,7 @@ export default function Hardware() {
                     const isHot = temp.current > (temp.high || 80)
                     const isCritical = temp.current > (temp.critical || 90)
 
-                    const displayName = improveSensorLabel(temp.name, temp.adapter)
+                    const displayName = improveSensorLabel(temp.name, temp.adapter, temp.chip_name)
 
                     return (
                       <div key={index} className="space-y-2">
@@ -612,7 +622,7 @@ export default function Hardware() {
                     const isHot = temp.current > (temp.high || 80)
                     const isCritical = temp.current > (temp.critical || 90)
 
-                    const displayName = improveSensorLabel(temp.name, temp.adapter)
+                    const displayName = improveSensorLabel(temp.name, temp.adapter, temp.chip_name)
 
                     return (
                       <div key={index} className="space-y-2">
@@ -1230,7 +1240,7 @@ export default function Hardware() {
               const isPercentage = fan.unit === "percent" || fan.unit === "%"
               const percentage = isPercentage ? fan.speed : Math.min((fan.speed / 5000) * 100, 100)
 
-              const displayName = improveSensorLabel(fan.name, fan.adapter)
+              const displayName = improveSensorLabel(fan.name, fan.adapter, fan.chip_name)
 
               return (
                 <div key={index} className="space-y-2">
