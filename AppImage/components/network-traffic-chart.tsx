@@ -100,6 +100,12 @@ export function NetworkTrafficChart({ timeframe, onTotalsCalculated }: NetworkTr
             hour: "2-digit",
             hour12: false,
           })
+        } else if (timeframe === "year") {
+          timeLabel = date.toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })
         } else {
           timeLabel = date.toLocaleString("en-US", {
             month: "short",

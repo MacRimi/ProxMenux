@@ -470,6 +470,8 @@ export function SystemOverview() {
         return "7d"
       case "month":
         return "30d"
+      case "year":
+        return "1y"
       default:
         return timeframe
     }
@@ -657,6 +659,7 @@ export function SystemOverview() {
                   <SelectItem value="day">24 Hours</SelectItem>
                   <SelectItem value="week">7 Days</SelectItem>
                   <SelectItem value="month">30 Days</SelectItem>
+                  <SelectItem value="year">1 Year</SelectItem>
                 </SelectContent>
               </Select>
             </CardTitle>
