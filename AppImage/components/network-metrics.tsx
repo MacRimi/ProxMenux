@@ -153,6 +153,7 @@ export function NetworkMetrics() {
 
   const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null)
   const [timeframe, setTimeframe] = useState<"hour" | "day" | "week" | "month" | "year">("day")
+  const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
 
   if (isLoading) {
     return (
@@ -185,8 +186,8 @@ export function NetworkMetrics() {
     )
   }
 
-  const trafficInFormatted = formatStorage(networkData.traffic.bytes_recv)
-  const trafficOutFormatted = formatStorage(networkData.traffic.bytes_sent)
+  const trafficInFormatted = formatStorage(networkTotals.received * 1024 * 1024 * 1024) // Convert GB to bytes
+  const trafficOutFormatted = formatStorage(networkTotals.sent * 1024 * 1024 * 1024)
   const packetsRecvK = networkData.traffic.packets_recv ? (networkData.traffic.packets_recv / 1000).toFixed(0) : "0"
 
   const totalErrors = (networkData.traffic.errin || 0) + (networkData.traffic.errout || 0)
@@ -204,6 +205,23 @@ export function NetworkMetrics() {
   } else if (Number.parseFloat(avgPacketLoss) >= 1 || totalErrors >= 100) {
     healthStatus = "Warning"
     healthColor = "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+  }
+
+  const getTimeframeLabel = () => {
+    switch (timeframe) {
+      case "hour":
+        return "1 Hour"
+      case "day":
+        return "24 Hours"
+      case "week":
+        return "7 Days"
+      case "month":
+        return "30 Days"
+      case "year":
+        return "1 Year"
+      default:
+        return "24 Hours"
+    }
   }
 
   return (
@@ -317,7 +335,18 @@ export function NetworkMetrics() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <NetworkTrafficChart timeframe={timeframe} />
+          <div className="flex flex-col gap-4 mb-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Received:</span>
+              <span className="text-xl font-bold text-green-500">↓ {trafficInFormatted}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Sent:</span>
+              <span className="text-xl font-bold text-blue-500">↑ {trafficOutFormatted}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Data transferred in {getTimeframeLabel().toLowerCase()}</p>
+          </div>
+          <NetworkTrafficChart timeframe={timeframe} onTotalsCalculated={setNetworkTotals} />
         </CardContent>
       </Card>
 
