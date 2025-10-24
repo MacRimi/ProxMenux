@@ -1,13 +1,13 @@
+cat > 0001-fix-apex-group-and-udev-rules.patch <<'PATCH'
 diff --git a/install_coral_pve9.sh b/install_coral_pve9.sh
-index 1111111..2222222 100755
 --- a/install_coral_pve9.sh
 +++ b/install_coral_pve9.sh
-@@ -1,5 +1,58 @@
+@@ -1,6 +1,55 @@
  #!/usr/bin/env bash
  # ==========================================================
  # ProxMenux - Coral TPU Installer for Proxmox VE 9
  # ==========================================================
-
+ 
 +# ----------------------------------------------------------
 +# Ensure apex group and udev rules are present
 +# ----------------------------------------------------------
@@ -16,21 +16,21 @@ index 1111111..2222222 100755
 +
 +  # Create the apex group if it doesn't exist
 +  if ! getent group apex >/dev/null; then
-+    groupadd --system apex
++    groupadd --system apex || true
 +    msg_ok "System group 'apex' created"
 +  else
 +    msg_ok "System group 'apex' already exists"
 +  fi
 +
-+  # Add or replace local udev rule for Coral / APEX TPU
++  # Local udev rule for Coral / APEX TPU
 +  cat >/etc/udev/rules.d/99-coral-apex.rules <<'EOF'
 +# Coral / Google APEX TPU (M.2 / PCIe)
-+# Assigns group "apex" and safe permissions to device nodes
++# Assign group "apex" and safe permissions to device nodes
 +KERNEL=="apex_*", GROUP="apex", MODE="0660"
 +SUBSYSTEM=="apex", GROUP="apex", MODE="0660"
 +EOF
 +
-+  # If gasket-dkms rule exists, make sure it uses the correct group
++  # Ensure gasket-dkms rule uses the correct group
 +  if [[ -f /usr/lib/udev/rules.d/60-gasket-dkms.rules ]]; then
 +    sed -i 's/GROUP="[^"]*"/GROUP="apex"/g' /usr/lib/udev/rules.d/60-gasket-dkms.rules || true
 +  fi
@@ -49,11 +49,10 @@ index 1111111..2222222 100755
 +  fi
 +}
 +
-+
-@@ -210,6 +263,10 @@ install_coral_host() {
+@@ -210,6 +259,10 @@ install_coral_host() {
      msg_ok "DKMS module built and installed successfully"
    fi
-
+ 
 +  # Ensure group and udev setup before loading drivers
 +  ensure_apex_group_and_udev
 +
@@ -61,3 +60,4 @@ index 1111111..2222222 100755
    modprobe gasket >>"$LOG_FILE" 2>&1 || true
    modprobe apex   >>"$LOG_FILE" 2>&1 || true
    sleep 1
+PATCH
