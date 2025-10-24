@@ -130,6 +130,18 @@ export function ProxmoxDashboard() {
   }, [fetchSystemData])
 
   useEffect(() => {
+    if (
+      systemStatus.serverName &&
+      systemStatus.serverName !== "Loading..." &&
+      systemStatus.serverName !== "Server Offline"
+    ) {
+      document.title = `${systemStatus.serverName} - ProxMenux Monitor`
+    } else {
+      document.title = "ProxMenux Monitor"
+    }
+  }, [systemStatus.serverName])
+
+  useEffect(() => {
     let hideTimeout: ReturnType<typeof setTimeout> | null = null
     let lastPosition = window.scrollY
 
@@ -139,12 +151,10 @@ export function ProxmoxDashboard() {
 
       if (currentScrollY < 50) {
         setShowNavigation(true)
-      } 
-      else if (delta > 2) {
+      } else if (delta > 2) {
         if (hideTimeout) clearTimeout(hideTimeout)
         hideTimeout = setTimeout(() => setShowNavigation(false), 20)
-      } 
-      else if (delta < -2) {
+      } else if (delta < -2) {
         if (hideTimeout) clearTimeout(hideTimeout)
         setShowNavigation(true)
       }
@@ -328,9 +338,7 @@ export function ProxmoxDashboard() {
         className={`sticky z-40 bg-background
           top-[120px] md:top-[76px]
           transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]
-          ${showNavigation
-            ? "translate-y-0 opacity-100"
-            : "-translate-y-[120%] opacity-0 pointer-events-none"}
+          ${showNavigation ? "translate-y-0 opacity-100" : "-translate-y-[120%] opacity-0 pointer-events-none"}
         `}
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
