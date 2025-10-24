@@ -191,35 +191,6 @@ export function NetworkMetrics() {
     )
   }
 
-  const calculateInterfaceTraffic = (interfaceName: string) => {
-    if (!interfaceHistoricalData?.data) {
-      return { received: 0, sent: 0 }
-    }
-
-    let totalReceived = 0
-    let totalSent = 0
-
-    // Sum up the traffic from RRD data
-    for (const point of interfaceHistoricalData.data) {
-      const netinKey = `netin:${interfaceName}`
-      const netoutKey = `netout:${interfaceName}`
-
-      if (point[netinKey] !== null && point[netinKey] !== undefined) {
-        // RRD data is in bytes/second, multiply by time interval to get total bytes
-        // Assuming 1 minute intervals for most timeframes
-        const interval = 60 // seconds
-        totalReceived += point[netinKey] * interval
-      }
-
-      if (point[netoutKey] !== null && point[netoutKey] !== undefined) {
-        const interval = 60
-        totalSent += point[netoutKey] * interval
-      }
-    }
-
-    return { received: totalReceived, sent: totalSent }
-  }
-
   const trafficInFormatted = formatStorage(networkTotals.received * 1024 * 1024 * 1024) // Convert GB to bytes
   const trafficOutFormatted = formatStorage(networkTotals.sent * 1024 * 1024 * 1024)
   const packetsRecvK = networkData.traffic.packets_recv ? (networkData.traffic.packets_recv / 1000).toFixed(0) : "0"
@@ -387,7 +358,6 @@ export function NetworkMetrics() {
           <div className="space-y-4">
             {networkData.physical_interfaces.map((interface_, index) => {
               const typeBadge = getInterfaceTypeBadge(interface_.type)
-              const traffic = calculateInterfaceTraffic(interface_.name)
 
               return (
                 <div
@@ -436,9 +406,9 @@ export function NetworkMetrics() {
                     <div className="col-span-2 md:col-span-1">
                       <div className="text-muted-foreground text-xs">Traffic</div>
                       <div className="font-medium text-foreground text-xs">
-                        <span className="text-green-500">↓ {formatBytes(traffic.received)}</span>
+                        <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
                         {" / "}
-                        <span className="text-blue-500">↑ {formatBytes(traffic.sent)}</span>
+                        <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
                       </div>
                     </div>
 
@@ -473,7 +443,6 @@ export function NetworkMetrics() {
             <div className="space-y-4">
               {networkData.bridge_interfaces.map((interface_, index) => {
                 const typeBadge = getInterfaceTypeBadge(interface_.type)
-                const traffic = calculateInterfaceTraffic(interface_.name)
 
                 return (
                   <div
@@ -550,9 +519,9 @@ export function NetworkMetrics() {
                       <div className="col-span-2 md:col-span-1">
                         <div className="text-muted-foreground text-xs">Traffic</div>
                         <div className="font-medium text-foreground text-xs">
-                          <span className="text-green-500">↓ {formatBytes(traffic.received)}</span>
+                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
                           {" / "}
-                          <span className="text-blue-500">↑ {formatBytes(traffic.sent)}</span>
+                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
                         </div>
                       </div>
 
@@ -589,7 +558,6 @@ export function NetworkMetrics() {
             <div className="space-y-4">
               {networkData.vm_lxc_interfaces.map((interface_, index) => {
                 const vmTypeBadge = getVMTypeBadge(interface_.vm_type)
-                const traffic = calculateInterfaceTraffic(interface_.name)
 
                 return (
                   <div
@@ -639,9 +607,9 @@ export function NetworkMetrics() {
                       <div className="col-span-2 md:col-span-1">
                         <div className="text-sm text-muted-foreground">Traffic</div>
                         <div className="font-medium text-foreground text-xs">
-                          <span className="text-green-500">↓ {formatBytes(traffic.received)}</span>
+                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
                           {" / "}
-                          <span className="text-blue-500">↑ {formatBytes(traffic.sent)}</span>
+                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
                         </div>
                       </div>
 
