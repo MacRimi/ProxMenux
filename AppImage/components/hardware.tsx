@@ -135,34 +135,44 @@ const improveSensorLabel = (sensorName: string, adapter: string, chipName?: stri
   const chipNameLower = chipName?.toLowerCase() || ""
   const sensorNameLower = sensorName?.toLowerCase() || ""
 
-  console.log("[v0] improveSensorLabel called:", { sensorName, adapter, chipName, adapterLower, chipNameLower })
+  console.log("[v0] improveSensorLabel called:", {
+    sensorName,
+    adapter,
+    chipName,
+    sensorNameLower,
+    adapterLower,
+    chipNameLower,
+  })
 
   const isNVIDIA =
     adapterLower.includes("nouveau") ||
     adapterLower.includes("nvidia") ||
     chipNameLower.includes("nouveau") ||
-    chipNameLower.includes("nvidia") ||
-    // If it's a PCI adapter and the sensor name suggests it's a GPU sensor
-    (adapterLower.includes("pci") &&
-      (sensorNameLower.includes("temp") || sensorNameLower.includes("fan") || sensorNameLower.includes("pwm")))
+    chipNameLower.includes("nvidia")
+
+  console.log("[v0] isNVIDIA:", isNVIDIA)
 
   if (isNVIDIA) {
-    console.log("[v0] NVIDIA/GPU sensor detected!")
+    console.log("[v0] NVIDIA/GPU sensor detected! Improving label...")
     // Improve temperature labels
     if (sensorNameLower.includes("temp")) {
+      console.log("[v0] Returning: NVIDIA GPU Temperature")
       return "NVIDIA GPU Temperature"
     }
     // Improve fan labels
     if (sensorNameLower.includes("fan")) {
+      console.log("[v0] Returning: NVIDIA GPU Fan")
       return "NVIDIA GPU Fan"
     }
     // Improve PWM labels
     if (sensorNameLower.includes("pwm")) {
+      console.log("[v0] Returning: NVIDIA GPU PWM")
       return "NVIDIA GPU PWM"
     }
   }
 
   // Return original name if no improvement needed
+  console.log("[v0] No improvement needed, returning original:", sensorName)
   return sensorName
 }
 
@@ -622,7 +632,13 @@ export default function Hardware() {
                     const isHot = temp.current > (temp.high || 80)
                     const isCritical = temp.current > (temp.critical || 90)
 
+                    console.log("[v0] PCI temp sensor:", {
+                      name: temp.name,
+                      adapter: temp.adapter,
+                      chip_name: temp.chip_name,
+                    })
                     const displayName = improveSensorLabel(temp.name, temp.adapter, temp.chip_name)
+                    console.log("[v0] PCI displayName:", displayName)
 
                     return (
                       <div key={index} className="space-y-2">
