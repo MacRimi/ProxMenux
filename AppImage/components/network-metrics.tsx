@@ -404,7 +404,7 @@ export function NetworkMetrics() {
                     </div>
 
                     <div className="col-span-2 md:col-span-1">
-                      <div className="text-muted-foreground text-xs">Traffic Statistics</div>
+                      <div className="text-muted-foreground text-xs">Traffic since last boot</div>
                       <div className="font-medium text-foreground text-xs">
                         <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
                         {" / "}
@@ -517,7 +517,7 @@ export function NetworkMetrics() {
                       </div>
 
                       <div className="col-span-2 md:col-span-1">
-                        <div className="text-muted-foreground text-xs">Traffic Statistics</div>
+                        <div className="text-muted-foreground text-xs">Traffic since last boot</div>
                         <div className="font-medium text-foreground text-xs">
                           <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
                           {" / "}
@@ -605,7 +605,7 @@ export function NetworkMetrics() {
                       </div>
 
                       <div className="col-span-2 md:col-span-1">
-                        <div className="text-sm text-muted-foreground">Traffic Statistics</div>
+                        <div className="text-sm text-muted-foreground">Traffic since last boot</div>
                         <div className="font-medium text-foreground text-xs">
                           <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
                           {" / "}
@@ -775,7 +775,7 @@ export function NetworkMetrics() {
 
               {/* Traffic Statistics */}
               <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Traffic Statistics</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Traffic since last boot</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-sm text-muted-foreground">Bytes Received</div>
