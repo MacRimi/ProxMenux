@@ -135,44 +135,28 @@ const improveSensorLabel = (sensorName: string, adapter: string, chipName?: stri
   const chipNameLower = chipName?.toLowerCase() || ""
   const sensorNameLower = sensorName?.toLowerCase() || ""
 
-  console.log("[v0] improveSensorLabel called:", {
-    sensorName,
-    adapter,
-    chipName,
-    sensorNameLower,
-    adapterLower,
-    chipNameLower,
-  })
-
   const isNVIDIA =
     adapterLower.includes("nouveau") ||
     adapterLower.includes("nvidia") ||
     chipNameLower.includes("nouveau") ||
     chipNameLower.includes("nvidia")
 
-  console.log("[v0] isNVIDIA:", isNVIDIA)
-
   if (isNVIDIA) {
-    console.log("[v0] NVIDIA/GPU sensor detected! Improving label...")
     // Improve temperature labels
     if (sensorNameLower.includes("temp")) {
-      console.log("[v0] Returning: NVIDIA GPU Temperature")
       return "NVIDIA GPU Temperature"
     }
     // Improve fan labels
     if (sensorNameLower.includes("fan")) {
-      console.log("[v0] Returning: NVIDIA GPU Fan")
       return "NVIDIA GPU Fan"
     }
     // Improve PWM labels
     if (sensorNameLower.includes("pwm")) {
-      console.log("[v0] Returning: NVIDIA GPU PWM")
       return "NVIDIA GPU PWM"
     }
   }
 
   // Return original name if no improvement needed
-  console.log("[v0] No improvement needed, returning original:", sensorName)
   return sensorName
 }
 
@@ -190,19 +174,12 @@ const groupAndSortTemperatures = (temperatures: any[]) => {
     const adapterLower = temp.adapter?.toLowerCase() || ""
     const chipNameLower = temp.chip_name?.toLowerCase() || ""
 
-    console.log("[v0] Classifying temperature sensor:", {
-      name: temp.name,
-      adapter: temp.adapter,
-      chip_name: temp.chip_name,
-    })
-
     if (
       adapterLower.includes("nouveau") ||
       adapterLower.includes("nvidia") ||
       chipNameLower.includes("nouveau") ||
       chipNameLower.includes("nvidia")
     ) {
-      console.log("[v0] Classified as GPU (NVIDIA)")
       groups.GPU.push(temp)
     } else if (nameLower.includes("cpu") || nameLower.includes("core") || nameLower.includes("package")) {
       groups.CPU.push(temp)
@@ -215,14 +192,6 @@ const groupAndSortTemperatures = (temperatures: any[]) => {
     } else {
       groups.OTHER.push(temp)
     }
-  })
-
-  console.log("[v0] Temperature groups:", {
-    CPU: groups.CPU.length,
-    GPU: groups.GPU.length,
-    NVME: groups.NVME.length,
-    PCI: groups.PCI.length,
-    OTHER: groups.OTHER.length,
   })
 
   return groups
@@ -653,13 +622,7 @@ export default function Hardware() {
                     const isHot = temp.current > (temp.high || 80)
                     const isCritical = temp.current > (temp.critical || 90)
 
-                    console.log("[v0] PCI temp sensor:", {
-                      name: temp.name,
-                      adapter: temp.adapter,
-                      chip_name: temp.chip_name,
-                    })
                     const displayName = improveSensorLabel(temp.name, temp.adapter, temp.chip_name)
-                    console.log("[v0] PCI displayName:", displayName)
 
                     return (
                       <div key={index} className="space-y-2">
