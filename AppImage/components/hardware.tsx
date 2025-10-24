@@ -188,8 +188,21 @@ const groupAndSortTemperatures = (temperatures: any[]) => {
   temperatures.forEach((temp) => {
     const nameLower = temp.name.toLowerCase()
     const adapterLower = temp.adapter?.toLowerCase() || ""
+    const chipNameLower = temp.chip_name?.toLowerCase() || ""
 
-    if (adapterLower.includes("nouveau") || adapterLower.includes("nvidia")) {
+    console.log("[v0] Classifying temperature sensor:", {
+      name: temp.name,
+      adapter: temp.adapter,
+      chip_name: temp.chip_name,
+    })
+
+    if (
+      adapterLower.includes("nouveau") ||
+      adapterLower.includes("nvidia") ||
+      chipNameLower.includes("nouveau") ||
+      chipNameLower.includes("nvidia")
+    ) {
+      console.log("[v0] Classified as GPU (NVIDIA)")
       groups.GPU.push(temp)
     } else if (nameLower.includes("cpu") || nameLower.includes("core") || nameLower.includes("package")) {
       groups.CPU.push(temp)
@@ -202,6 +215,14 @@ const groupAndSortTemperatures = (temperatures: any[]) => {
     } else {
       groups.OTHER.push(temp)
     }
+  })
+
+  console.log("[v0] Temperature groups:", {
+    CPU: groups.CPU.length,
+    GPU: groups.GPU.length,
+    NVME: groups.NVME.length,
+    PCI: groups.PCI.length,
+    OTHER: groups.OTHER.length,
   })
 
   return groups
