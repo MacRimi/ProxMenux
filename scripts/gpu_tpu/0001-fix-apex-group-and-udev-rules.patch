@@ -49,7 +49,9 @@ diff --git a/install_coral_pve9.sh b/install_coral_pve9.sh
 +  fi
 +}
 +
-@@ -210,6 +259,10 @@ install_coral_host() {
+@@ -1,0 +1,0 @@
+@@ -100,0 +149,0 @@
+@@ -200,6 +249,10 @@ install_coral_host() {
      msg_ok "DKMS module built and installed successfully"
    fi
  
