@@ -6,6 +6,8 @@ import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Wifi, Activity, Network, Router, AlertCircle, Zap } from "lucide-react"
 import useSWR from "swr"
+import { NetworkTrafficChart } from "./network-traffic-chart"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 
 interface NetworkData {
   interfaces: NetworkInterface[]
@@ -150,6 +152,7 @@ export function NetworkMetrics() {
   })
 
   const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null)
+  const [timeframe, setTimeframe] = useState<"hour" | "day" | "week" | "month" | "year">("day")
 
   if (isLoading) {
     return (
@@ -288,6 +291,35 @@ export function NetworkMetrics() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Timeframe Selector */}
+      <div className="flex justify-end">
+        <Select value={timeframe} onValueChange={(value: any) => setTimeframe(value)}>
+          <SelectTrigger className="w-[180px] bg-card border-border">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="hour">1 Hour</SelectItem>
+            <SelectItem value="day">24 Hours</SelectItem>
+            <SelectItem value="week">7 Days</SelectItem>
+            <SelectItem value="month">30 Days</SelectItem>
+            <SelectItem value="year">1 Year</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Network Traffic Card with Chart */}
+      <Card className="bg-card border-border">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-foreground flex items-center">
+            <Activity className="h-5 w-5 mr-2" />
+            Network Traffic
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <NetworkTrafficChart timeframe={timeframe} />
+        </CardContent>
+      </Card>
 
       {/* Physical Interfaces section */}
       <Card className="bg-card border-border">
