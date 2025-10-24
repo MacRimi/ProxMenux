@@ -759,12 +759,10 @@ export function VirtualMachines() {
                 )}
               </div>
 
-              {/* Layout para móvil (44.0 GB y Allocated RAM en la misma línea, badge debajo) */}
-              <div className="lg:hidden space-y-2">
-                <div className="flex items-baseline gap-2">
-                  <div className="text-lg font-semibold text-foreground">{totalAllocatedMemoryGB} GB</div>
-                  <div className="text-xs text-muted-foreground">Allocated RAM</div>
-                </div>
+              {/* Layout para móvil (44.0 GB solo, Allocated RAM en otra línea, badge en tercera línea) */}
+              <div className="lg:hidden space-y-1">
+                <div className="text-lg font-semibold text-foreground">{totalAllocatedMemoryGB} GB</div>
+                <div className="text-xs text-muted-foreground">Allocated RAM</div>
                 {physicalMemoryGB !== null && (
                   <div>
                     {isMemoryOvercommit ? (
