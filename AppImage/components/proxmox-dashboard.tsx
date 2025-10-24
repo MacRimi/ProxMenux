@@ -137,16 +137,13 @@ export function ProxmoxDashboard() {
       const currentScrollY = window.scrollY
       const delta = currentScrollY - lastPosition
 
-      // Siempre visible al principio
       if (currentScrollY < 50) {
         setShowNavigation(true)
       } 
-      // Oculta en cuanto se detecta desplazamiento hacia abajo
       else if (delta > 2) {
         if (hideTimeout) clearTimeout(hideTimeout)
         hideTimeout = setTimeout(() => setShowNavigation(false), 20)
       } 
-      // Muestra al mover un poco hacia arriba
       else if (delta < -2) {
         if (hideTimeout) clearTimeout(hideTimeout)
         setShowNavigation(true)

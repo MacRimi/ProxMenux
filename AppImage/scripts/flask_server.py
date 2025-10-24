@@ -1516,7 +1516,7 @@ def get_network_info():
                 bond_info = get_bond_info(interface_name)
                 interface_info['bond_mode'] = bond_info['mode']
                 interface_info['bond_slaves'] = bond_info['slaves']
-                interface_info['bond_active_slave'] = bond_info['bond_active_slave']
+                interface_info['bond_active_slave'] = bond_info['active_slave']
             
             if interface_type == 'bridge':
                 bridge_info = get_bridge_info(interface_name)
