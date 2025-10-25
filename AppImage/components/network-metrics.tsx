@@ -146,7 +146,7 @@ export function NetworkMetrics() {
     error,
     isLoading,
   } = useSWR<NetworkData>("/api/network", fetcher, {
-    refreshInterval: 30000, // Refresh every 30 seconds
+    refreshInterval: 60000, // Refresh every 60 seconds
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
   })
@@ -214,9 +214,19 @@ export function NetworkMetrics() {
     healthColor = "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
   }
 
-  const totalBandwidth = [...(networkData.physical_interfaces || []), ...(networkData.bridge_interfaces || [])]
-    .filter((iface) => iface.status === "up")
-    .reduce((sum, iface) => sum + (iface.speed || 0), 0)
+  const allInterfaces = [
+    ...(networkData.physical_interfaces || []),
+    ...(networkData.bridge_interfaces || []),
+    ...(networkData.vm_lxc_interfaces || []),
+  ]
+
+  const topInterface = allInterfaces.reduce((top, iface) => {
+    const ifaceTraffic = (iface.bytes_recv || 0) + (iface.bytes_sent || 0)
+    const topTraffic = (top.bytes_recv || 0) + (top.bytes_sent || 0)
+    return ifaceTraffic > topTraffic ? iface : top
+  }, allInterfaces[0] || { name: "N/A", type: "unknown", bytes_recv: 0, bytes_sent: 0 })
+
+  const topInterfaceTraffic = (topInterface.bytes_recv || 0) + (topInterface.bytes_sent || 0)
 
   const getTimeframeLabel = () => {
     switch (timeframe) {
@@ -283,15 +293,17 @@ export function NetworkMetrics() {
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Bandwidth</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Top Interface</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground">{formatSpeed(totalBandwidth)}</div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Combined speed of {(networkData.physical_active_count ?? 0) + (networkData.bridge_active_count ?? 0)}{" "}
-              active interfaces
-            </p>
+            <div className="text-xl lg:text-2xl font-bold text-foreground truncate">{topInterface.name}</div>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="outline" className={getInterfaceTypeBadge(topInterface.type).color}>
+                {getInterfaceTypeBadge(topInterface.type).label}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">Total traffic: {formatBytes(topInterfaceTraffic)}</p>
           </CardContent>
         </Card>
 
@@ -636,7 +648,7 @@ export function NetworkMetrics() {
 
       {/* Interface Details Modal */}
       <Dialog open={!!selectedInterface} onOpenChange={() => setSelectedInterface(null)}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Router className="h-5 w-5" />

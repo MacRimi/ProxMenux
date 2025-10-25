@@ -208,7 +208,7 @@ export function NetworkTrafficChart({ timeframe, interfaceName, onTotalsCalculat
 
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <AreaChart data={data} margin={{ bottom: 80, left: 30 }}>
+      <AreaChart data={data} margin={{ bottom: 80 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
         <XAxis
           dataKey="time"
