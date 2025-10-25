@@ -13,6 +13,7 @@ interface NetworkMetricsData {
 
 interface NetworkTrafficChartProps {
   timeframe: string
+  interfaceName?: string
   onTotalsCalculated?: (totals: { received: number; sent: number }) => void
 }
 
@@ -36,7 +37,7 @@ const CustomNetworkTooltip = ({ active, payload, label }: any) => {
   return null
 }
 
-export function NetworkTrafficChart({ timeframe, onTotalsCalculated }: NetworkTrafficChartProps) {
+export function NetworkTrafficChart({ timeframe, interfaceName, onTotalsCalculated }: NetworkTrafficChartProps) {
   const [data, setData] = useState<NetworkMetricsData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,7 +48,7 @@ export function NetworkTrafficChart({ timeframe, onTotalsCalculated }: NetworkTr
 
   useEffect(() => {
     fetchMetrics()
-  }, [timeframe])
+  }, [timeframe, interfaceName])
 
   const fetchMetrics = async () => {
     setLoading(true)
@@ -56,12 +57,17 @@ export function NetworkTrafficChart({ timeframe, onTotalsCalculated }: NetworkTr
     try {
       const baseUrl =
         typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-      const apiUrl = `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
+
+      const apiUrl = interfaceName
+        ? `${baseUrl}/api/network/${interfaceName}/metrics?timeframe=${timeframe}`
+        : `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
+
+      console.log("[v0] Fetching network metrics from:", apiUrl)
 
       const response = await fetch(apiUrl)
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch node metrics: ${response.status}`)
+        throw new Error(`Failed to fetch network metrics: ${response.status}`)
       }
 
       const result = await response.json()
@@ -76,7 +82,6 @@ export function NetworkTrafficChart({ timeframe, onTotalsCalculated }: NetworkTr
         return
       }
 
-      // RRD data contains rate (bytes/second), we need to calculate traffic per interval
       const transformedData = result.data.map((item: any, index: number) => {
         const date = new Date(item.time * 1000)
         let timeLabel = ""
@@ -113,14 +118,11 @@ export function NetworkTrafficChart({ timeframe, onTotalsCalculated }: NetworkTr
           })
         }
 
-        // Calculate time interval between data points (in seconds)
-        let intervalSeconds = 60 // Default to 1 minute
+        let intervalSeconds = 60
         if (index > 0) {
           intervalSeconds = item.time - result.data[index - 1].time
         }
 
-        // Convert rate (bytes/second) to traffic in this interval (GB)
-        // netin and netout are in bytes/second, multiply by interval to get total bytes
         const netInBytes = (item.netin || 0) * intervalSeconds
         const netOutBytes = (item.netout || 0) * intervalSeconds
 
