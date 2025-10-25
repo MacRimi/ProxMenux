@@ -350,8 +350,9 @@ EOF
 
 uninstall_logrotate() {
     msg_info "$(translate "Restoring original logrotate configuration...")"
-    
-    # Restore from backup if it exists
+
+    [ -f /etc/logrotate.d/pveproxy ] && rm -f /etc/logrotate.d/pveproxy
+
     if [ -f /etc/logrotate.conf.bak ]; then
         mv /etc/logrotate.conf.bak /etc/logrotate.conf
         systemctl restart logrotate >/dev/null 2>&1
@@ -469,20 +470,24 @@ uninstall_apt_ipv4() {
 uninstall_network_optimization() {
     msg_info "$(translate "Removing network optimizations...")"
     
-    # Remove ProxMenux network configuration
     rm -f /etc/sysctl.d/99-network.conf
-    
-    # Remove interfaces.d source line if we added it
+
     local interfaces_file="/etc/network/interfaces"
     if [ -f "$interfaces_file" ]; then
-        # Only remove if it's the last line and looks like our addition
         if tail -1 "$interfaces_file" | grep -q "^source /etc/network/interfaces.d/\*$"; then
             sed -i '$d' "$interfaces_file"
         fi
     fi
     
-    # Reload sysctl
-    sysctl --system >/dev/null 2>&1
+    rm -f /etc/sysctl.d/97-proxmenux-fwbr.conf \
+        /etc/sysctl.d/98-proxmenux-rpf.conf
+
+    systemctl disable --now proxmenux-fwbr-tune.service >/dev/null 2>&1 || true
+    rm -f /etc/systemd/system/proxmenux-fwbr-tune.service
+
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    sysctl --system >/dev/null 2>&1 || true
+
     
     msg_ok "$(translate "Network optimizations removed")"
     register_tool "network_optimization" false
