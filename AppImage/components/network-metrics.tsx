@@ -155,6 +155,7 @@ export function NetworkMetrics() {
   const [timeframe, setTimeframe] = useState<"hour" | "day" | "week" | "month" | "year">("day")
   const [modalTimeframe, setModalTimeframe] = useState<"hour" | "day" | "week" | "month" | "year">("day")
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
+  const [interfaceTotals, setInterfaceTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
 
   const { data: interfaceHistoricalData } = useSWR<any>(`/api/node/metrics?timeframe=${timeframe}`, fetcher, {
     refreshInterval: 30000,
@@ -633,13 +634,13 @@ export function NetworkMetrics() {
 
       {/* Interface Details Modal */}
       <Dialog open={!!selectedInterface} onOpenChange={() => setSelectedInterface(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 justify-between">
-              <div className="flex items-center gap-2">
-                <Router className="h-5 w-5" />
-                {selectedInterface?.name} - Interface Details
-              </div>
+            <DialogTitle className="flex items-center gap-2">
+              <Router className="h-5 w-5" />
+              {selectedInterface?.name} - Interface Details
+            </DialogTitle>
+            <div className="flex justify-end pt-2">
               <Select value={modalTimeframe} onValueChange={(value: any) => setModalTimeframe(value)}>
                 <SelectTrigger className="w-[140px] bg-card border-border">
                   <SelectValue />
@@ -652,7 +653,7 @@ export function NetworkMetrics() {
                   <SelectItem value="year">1 Year</SelectItem>
                 </SelectContent>
               </Select>
-            </DialogTitle>
+            </div>
           </DialogHeader>
 
           {selectedInterface && (
@@ -788,74 +789,80 @@ export function NetworkMetrics() {
                 </div>
               )}
 
-              {/* Traffic Statistics */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Traffic since last boot</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Bytes Received</div>
-                    <div className="font-medium text-green-500">{formatBytes(selectedInterface.bytes_recv)}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Bytes Sent</div>
-                    <div className="font-medium text-blue-500">{formatBytes(selectedInterface.bytes_sent)}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Packets Received</div>
-                    <div className="font-medium">{selectedInterface.packets_recv?.toLocaleString() || "N/A"}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Packets Sent</div>
-                    <div className="font-medium">{selectedInterface.packets_sent?.toLocaleString() || "N/A"}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Errors In</div>
-                    <div className="font-medium text-red-500">{selectedInterface.errors_in || 0}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Errors Out</div>
-                    <div className="font-medium text-red-500">{selectedInterface.errors_out || 0}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Drops In</div>
-                    <div className="font-medium text-yellow-500">{selectedInterface.drops_in || 0}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Drops Out</div>
-                    <div className="font-medium text-yellow-500">{selectedInterface.drops_out || 0}</div>
-                  </div>
-                  {selectedInterface.packet_loss_in !== undefined && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Traffic Statistics - Left Column */}
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">Traffic since last boot</h3>
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-sm text-muted-foreground">Packet Loss In</div>
-                      <div
-                        className={`font-medium ${selectedInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
-                      >
-                        {selectedInterface.packet_loss_in}%
+                      <div className="text-sm text-muted-foreground">Bytes Received</div>
+                      <div className="font-medium text-green-500">
+                        {formatStorage(interfaceTotals.received * 1024 * 1024 * 1024)}
                       </div>
                     </div>
-                  )}
-                  {selectedInterface.packet_loss_out !== undefined && (
                     <div>
-                      <div className="text-sm text-muted-foreground">Packet Loss Out</div>
-                      <div
-                        className={`font-medium ${selectedInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
-                      >
-                        {selectedInterface.packet_loss_out}%
+                      <div className="text-sm text-muted-foreground">Bytes Sent</div>
+                      <div className="font-medium text-blue-500">
+                        {formatStorage(interfaceTotals.sent * 1024 * 1024 * 1024)}
                       </div>
                     </div>
-                  )}
+                    <div>
+                      <div className="text-sm text-muted-foreground">Packets Received</div>
+                      <div className="font-medium">{selectedInterface.packets_recv?.toLocaleString() || "N/A"}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Packets Sent</div>
+                      <div className="font-medium">{selectedInterface.packets_sent?.toLocaleString() || "N/A"}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Errors In</div>
+                      <div className="font-medium text-red-500">{selectedInterface.errors_in || 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Errors Out</div>
+                      <div className="font-medium text-red-500">{selectedInterface.errors_out || 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Drops In</div>
+                      <div className="font-medium text-yellow-500">{selectedInterface.drops_in || 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Drops Out</div>
+                      <div className="font-medium text-yellow-500">{selectedInterface.drops_out || 0}</div>
+                    </div>
+                    {selectedInterface.packet_loss_in !== undefined && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Packet Loss In</div>
+                        <div
+                          className={`font-medium ${selectedInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
+                        >
+                          {selectedInterface.packet_loss_in}%
+                        </div>
+                      </div>
+                    )}
+                    {selectedInterface.packet_loss_out !== undefined && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Packet Loss Out</div>
+                        <div
+                          className={`font-medium ${selectedInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
+                        >
+                          {selectedInterface.packet_loss_out}%
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Network Traffic Chart for the selected interface */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Network Traffic History</h3>
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <NetworkTrafficChart
-                    timeframe={modalTimeframe}
-                    interfaceName={selectedInterface.name}
-                    onTotalsCalculated={() => {}}
-                  />
+                {/* Network Traffic Chart - Right Column */}
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">Network Traffic History</h3>
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <NetworkTrafficChart
+                      timeframe={modalTimeframe}
+                      interfaceName={selectedInterface.name}
+                      onTotalsCalculated={setInterfaceTotals}
+                    />
+                  </div>
                 </div>
               </div>
 
