@@ -13,6 +13,7 @@ interface NetworkMetricsData {
 
 interface NetworkTrafficChartProps {
   timeframe: string
+  interfaceName?: string // Added optional interfaceName prop for specific interface data
   onTotalsCalculated?: (totals: { received: number; sent: number }) => void
 }
 
@@ -36,7 +37,7 @@ const CustomNetworkTooltip = ({ active, payload, label }: any) => {
   return null
 }
 
-export function NetworkTrafficChart({ timeframe, onTotalsCalculated }: NetworkTrafficChartProps) {
+export function NetworkTrafficChart({ timeframe, interfaceName, onTotalsCalculated }: NetworkTrafficChartProps) {
   const [data, setData] = useState<NetworkMetricsData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,7 +48,7 @@ export function NetworkTrafficChart({ timeframe, onTotalsCalculated }: NetworkTr
 
   useEffect(() => {
     fetchMetrics()
-  }, [timeframe])
+  }, [timeframe, interfaceName])
 
   const fetchMetrics = async () => {
     setLoading(true)
@@ -56,12 +57,15 @@ export function NetworkTrafficChart({ timeframe, onTotalsCalculated }: NetworkTr
     try {
       const baseUrl =
         typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-      const apiUrl = `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
+
+      const apiUrl = interfaceName
+        ? `${baseUrl}/api/network/${interfaceName}/history?timeframe=${timeframe}`
+        : `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
 
       const response = await fetch(apiUrl)
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch node metrics: ${response.status}`)
+        throw new Error(`Failed to fetch network metrics: ${response.status}`)
       }
 
       const result = await response.json()
