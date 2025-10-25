@@ -426,10 +426,10 @@ force_apt_ipv4() {
 # ==========================================================
 
 apply_network_optimizations() {
-    msg_info "$(translate "Optimizing network settings...")"
-    NECESSARY_REBOOT=1
+  msg_info "$(translate "Optimizing network settings...")"
+  NECESSARY_REBOOT=1
 
-    cat <<'EOF' > /etc/sysctl.d/99-network.conf
+  cat <<'EOF' > /etc/sysctl.d/99-network.conf
 # ==========================================================
 # ProxMenux - Network tuning (PVE 9 compatible)
 # ==========================================================
@@ -440,20 +440,20 @@ net.core.rmem_max = 16777216
 net.core.wmem_max = 16777216
 net.core.somaxconn = 8192
 
-# IPv4
+# IPv4 hardening 
 net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.all.accept_source_route = 0
 net.ipv4.conf.all.secure_redirects = 0
 net.ipv4.conf.all.send_redirects = 0
-net.ipv4.conf.all.log_martians = 1
+net.ipv4.conf.all.log_martians = 0
 
 net.ipv4.conf.default.accept_redirects = 0
 net.ipv4.conf.default.accept_source_route = 0
 net.ipv4.conf.default.secure_redirects = 0
 net.ipv4.conf.default.send_redirects = 0
-net.ipv4.conf.default.log_martians = 1
+net.ipv4.conf.default.log_martians = 0
 
-# rp_filter: loose multi-homed/bridges
+# rp_filter: 
 net.ipv4.conf.all.rp_filter = 2
 net.ipv4.conf.default.rp_filter = 2
 
@@ -473,18 +473,36 @@ net.ipv4.tcp_wmem = 8192 65536 16777216
 net.unix.max_dgram_qlen = 4096
 EOF
 
+  sysctl --system > /dev/null 2>&1
 
-    sysctl --system > /dev/null 2>&1
+
+  cat >/etc/systemd/system/proxmenux-fwbr-tune.service <<'EOF'
+[Unit]
+Description=ProxMenux - Tune rp_filter/log_martians on virtual fw bridges
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'for i in /proc/sys/net/ipv4/conf/*; do n=${i##*/}; case "$n" in fwbr*|fwln*|fwpr*|tap*) echo 0 > /proc/sys/net/ipv4/conf/$n/rp_filter; echo 0 > /proc/sys/net/ipv4/conf/$n/log_martians; esac; done'
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  systemctl daemon-reload
+  systemctl enable --now proxmenux-fwbr-tune.service >/dev/null 2>&1 || true
 
 
-    local interfaces_file="/etc/network/interfaces"
-    if ! grep -q 'source /etc/network/interfaces.d/*' "$interfaces_file"; then
-        echo "source /etc/network/interfaces.d/*" >> "$interfaces_file"
-    fi
+  local interfaces_file="/etc/network/interfaces"
+  if ! grep -q 'source /etc/network/interfaces.d/*' "$interfaces_file"; then
+      echo "source /etc/network/interfaces.d/*" >> "$interfaces_file"
+  fi
 
-    msg_ok "$(translate "Network optimization completed")"
-    register_tool "network_optimization" true
+  msg_ok "$(translate "Network optimization completed")"
+  register_tool "network_optimization" true
 }
+
 
 
 
