@@ -2147,7 +2147,7 @@ def get_detailed_gpu_info(gpu):
                                         if 'clients' in json_data:
                                             client_count = len(json_data['clients'])
                                             print(f"[v0] *** FOUND CLIENTS SECTION with {client_count} client(s) ***", flush=True)
-                                            for client_id, client_data in json_data['clients']:
+                                            for client_id, client_data in json_data['clients'].items():
                                                 client_name = client_data.get('name', 'Unknown')
                                                 client_pid = client_data.get('pid', 'Unknown')
                                                 print(f"[v0]   - Client: {client_name} (PID: {client_pid})", flush=True)
@@ -2170,7 +2170,7 @@ def get_detailed_gpu_info(gpu):
                 # Terminate process
                 try:
                     process.terminate()
-                    _, stderr_output = process.communicate(timeout=0.5) # Use communicate with a smaller timeout
+                    _, stderr_output = process.communicate(timeout=1) 
                     if stderr_output:
                         print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
                 except subprocess.TimeoutExpired:
@@ -2221,7 +2221,7 @@ def get_detailed_gpu_info(gpu):
                         clients = best_json['clients']
                         processes = []
                         
-                        for client_id, client_data in clients:
+                        for client_id, client_data in clients.items():
                             process_info = {
                                 'name': client_data.get('name', 'Unknown'),
                                 'pid': client_data.get('pid', 'Unknown'),
@@ -2653,7 +2653,7 @@ def get_detailed_gpu_info(gpu):
                                     mem_clock = clocks['GFX_MCLK']
                                     if 'value' in mem_clock:
                                         detailed_info['clock_memory'] = f"{mem_clock['value']} MHz"
-                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']}", flush=True)
+                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']} MHz", flush=True)
                                         data_retrieved = True
                             
                             # Parse GPU activity (gpu_activity.GFX)
@@ -2695,15 +2695,15 @@ def get_detailed_gpu_info(gpu):
                                         
                                         print(f"[v0] VRAM Total: {detailed_info['memory_total']}", flush=True)
                                         data_retrieved = True
-                            
-                            # Calculate memory utilization percentage
-                            if detailed_info['memory_used'] and detailed_info['memory_total']:
-                                mem_used = int(detailed_info['memory_used'].replace(' MB', ''))
-                                mem_total = int(detailed_info['memory_total'].replace(' MB', ''))
-                                if mem_total > 0:
-                                    mem_util = (mem_used / mem_total) * 100
-                                    detailed_info['utilization_memory'] = round(mem_util, 1)
-                                    print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
+                                
+                                # Calculate memory utilization percentage
+                                if detailed_info['memory_used'] and detailed_info['memory_total']:
+                                    mem_used = int(detailed_info['memory_used'].replace(' MB', ''))
+                                    mem_total = int(detailed_info['memory_total'].replace(' MB', ''))
+                                    if mem_total > 0:
+                                        mem_util = (mem_used / mem_total) * 100
+                                        detailed_info['utilization_memory'] = round(mem_util, 1)
+                                        print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
                             
                             # Parse GRBM (Graphics Register Bus Manager) for engine utilization
                             if 'GRBM' in device:
