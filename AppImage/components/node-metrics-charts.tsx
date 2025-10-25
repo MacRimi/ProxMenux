@@ -326,7 +326,7 @@ export function NodeMetricsCharts() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={data} margin={{ bottom: 60, left: 10, right: 10 }}>
+              <AreaChart data={data} margin={{ bottom: 60, left: 30, right: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
                 <XAxis
                   dataKey="time"
@@ -394,7 +394,7 @@ export function NodeMetricsCharts() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={data} margin={{ bottom: 60, left: 10, right: 10 }}>
+              <AreaChart data={data} margin={{ bottom: 60, left: 30, right: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
                 <XAxis
                   dataKey="time"
