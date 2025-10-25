@@ -835,13 +835,66 @@ export function NetworkMetrics() {
                   </div>
                 </div>
               ) : selectedInterface.status.toLowerCase() === "up" && selectedInterface.vm_type === "vm" ? (
-                <div className="bg-muted/30 rounded-lg p-6 text-center">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Historical Metrics Not Available</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Proxmox does not store historical network metrics for individual VM interfaces. Only cumulative
-                    statistics since last boot are available below.
-                  </p>
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-4">Traffic Statistics</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Bytes Received</div>
+                      <div className="font-medium text-green-500 text-lg">
+                        {formatBytes(selectedInterface.bytes_recv)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Bytes Sent</div>
+                      <div className="font-medium text-blue-500 text-lg">
+                        {formatBytes(selectedInterface.bytes_sent)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Packets Received</div>
+                      <div className="font-medium">{selectedInterface.packets_recv?.toLocaleString() || "N/A"}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Packets Sent</div>
+                      <div className="font-medium">{selectedInterface.packets_sent?.toLocaleString() || "N/A"}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Errors In</div>
+                      <div className="font-medium text-red-500">{selectedInterface.errors_in || 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Errors Out</div>
+                      <div className="font-medium text-red-500">{selectedInterface.errors_out || 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Drops In</div>
+                      <div className="font-medium text-yellow-500">{selectedInterface.drops_in || 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Drops Out</div>
+                      <div className="font-medium text-yellow-500">{selectedInterface.drops_out || 0}</div>
+                    </div>
+                    {selectedInterface.packet_loss_in !== undefined && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Packet Loss In</div>
+                        <div
+                          className={`font-medium ${selectedInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
+                        >
+                          {selectedInterface.packet_loss_in}%
+                        </div>
+                      </div>
+                    )}
+                    {selectedInterface.packet_loss_out !== undefined && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Packet Loss Out</div>
+                        <div
+                          className={`font-medium ${selectedInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
+                        >
+                          {selectedInterface.packet_loss_out}%
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="bg-muted/30 rounded-lg p-6 text-center">
@@ -853,8 +906,8 @@ export function NetworkMetrics() {
                 </div>
               )}
 
-              {/* Cumulative Statistics - Only show if interface is UP */}
-              {selectedInterface.status.toLowerCase() === "up" && (
+              {/* Cumulative Statistics - Only show if interface is UP and NOT a VM interface */}
+              {selectedInterface.status.toLowerCase() === "up" && selectedInterface.vm_type !== "vm" && (
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-4">
                     Cumulative Statistics (Since Last Boot)
