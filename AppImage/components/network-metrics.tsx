@@ -153,22 +153,12 @@ export function NetworkMetrics() {
 
   const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null)
   const [timeframe, setTimeframe] = useState<"hour" | "day" | "week" | "month" | "year">("day")
-  const [interfaceTimeframe, setInterfaceTimeframe] = useState<"hour" | "day" | "week" | "month" | "year">("day")
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
 
   const { data: interfaceHistoricalData } = useSWR<any>(`/api/node/metrics?timeframe=${timeframe}`, fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: false,
   })
-
-  const { data: selectedInterfaceData, isLoading: interfaceDataLoading } = useSWR<any>(
-    selectedInterface ? `/api/network/${selectedInterface.name}/history?timeframe=${interfaceTimeframe}` : null,
-    fetcher,
-    {
-      refreshInterval: 30000,
-      revalidateOnFocus: false,
-    },
-  )
 
   if (isLoading) {
     return (
@@ -652,22 +642,6 @@ export function NetworkMetrics() {
 
           {selectedInterface && (
             <div className="space-y-6">
-              {/* Timeframe Selector */}
-              <div className="flex justify-end">
-                <Select value={interfaceTimeframe} onValueChange={(value: any) => setInterfaceTimeframe(value)}>
-                  <SelectTrigger className="w-[180px] bg-card border-border">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hour">1 Hour</SelectItem>
-                    <SelectItem value="day">24 Hours</SelectItem>
-                    <SelectItem value="week">7 Days</SelectItem>
-                    <SelectItem value="month">30 Days</SelectItem>
-                    <SelectItem value="year">1 Year</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* Basic Information */}
               <div>
                 <h3 className="text-sm font-semibold text-muted-foreground mb-3">Basic Information</h3>
@@ -796,39 +770,6 @@ export function NetworkMetrics() {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Network Traffic Chart */}
-              {selectedInterfaceData && (
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-                    Network Traffic -{" "}
-                    {interfaceTimeframe === "hour"
-                      ? "1 Hour"
-                      : interfaceTimeframe === "day"
-                        ? "24 Hours"
-                        : interfaceTimeframe === "week"
-                          ? "7 Days"
-                          : interfaceTimeframe === "month"
-                            ? "30 Days"
-                            : "1 Year"}
-                  </h3>
-                  {interfaceDataLoading ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <div className="text-sm">Loading historical data...</div>
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-border/30 bg-background/50 p-4">
-                      <NetworkTrafficChart
-                        timeframe={interfaceTimeframe}
-                        interfaceName={selectedInterface.name}
-                        onTotalsCalculated={(totals) => {
-                          // Optional: update totals if needed
-                        }}
-                      />
-                    </div>
-                  )}
                 </div>
               )}
 

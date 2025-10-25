@@ -2653,7 +2653,7 @@ def get_detailed_gpu_info(gpu):
                                     mem_clock = clocks['GFX_MCLK']
                                     if 'value' in mem_clock:
                                         detailed_info['clock_memory'] = f"{mem_clock['value']} MHz"
-                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']} MHz", flush=True)
+                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']}", flush=True)
                                         data_retrieved = True
                             
                             # Parse GPU activity (gpu_activity.GFX)
@@ -3710,6 +3710,92 @@ def api_proxmox_storage():
 def api_network():
     """Get network information"""
     return jsonify(get_network_info())
+
+@app.route('/api/network/<interface_name>/metrics', methods=['GET'])
+def api_network_interface_metrics(interface_name):
+    """Get historical metrics (RRD data) for a specific network interface"""
+    try:
+        timeframe = request.args.get('timeframe', 'day')  # hour, day, week, month, year
+        
+        print(f"[v0] ===== NETWORK INTERFACE METRICS REQUEST =====")
+        print(f"[v0] Interface: {interface_name}")
+        print(f"[v0] Timeframe: {timeframe}")
+        
+        # Validate timeframe
+        valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
+        if timeframe not in valid_timeframes:
+            print(f"[v0] ERROR: Invalid timeframe: {timeframe}")
+            return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
+        
+        # Get local node name
+        local_node = socket.gethostname()
+        print(f"[v0] Local node: {local_node}")
+        
+        # Determine interface type and get appropriate RRD data
+        interface_type = get_interface_type(interface_name)
+        print(f"[v0] Interface type: {interface_type}")
+        
+        rrd_data = []
+        
+        if interface_type == 'vm_lxc':
+            # For VM/LXC interfaces, get data from the VM/LXC RRD
+            vmid, vm_type = extract_vmid_from_interface(interface_name)
+            if vmid:
+                print(f"[v0] Fetching RRD data for {vm_type} {vmid}...")
+                rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/{vm_type}/{vmid}/rrddata', 
+                                            '--timeframe', timeframe, '--output-format', 'json'],
+                                           capture_output=True, text=True, timeout=10)
+                
+                if rrd_result.returncode == 0:
+                    all_data = json.loads(rrd_result.stdout)
+                    # Filter to only network-related fields
+                    for point in all_data:
+                        filtered_point = {'time': point.get('time')}
+                        # Add network fields if they exist
+                        for key in ['netin', 'netout', 'diskread', 'diskwrite']:
+                            if key in point:
+                                filtered_point[key] = point[key]
+                        rrd_data.append(filtered_point)
+                    print(f"[v0] RRD data points: {len(rrd_data)}")
+                else:
+                    print(f"[v0] ERROR: Failed to get RRD data for VM/LXC")
+                    print(f"[v0] stderr: {rrd_result.stderr}")
+        else:
+            # For physical/bridge interfaces, get data from node RRD
+            print(f"[v0] Fetching RRD data for node {local_node}...")
+            rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/rrddata', 
+                                        '--timeframe', timeframe, '--output-format', 'json'],
+                                       capture_output=True, text=True, timeout=10)
+            
+            if rrd_result.returncode == 0:
+                all_data = json.loads(rrd_result.stdout)
+                # Filter to only network-related fields for this interface
+                for point in all_data:
+                    filtered_point = {'time': point.get('time')}
+                    # Add network fields if they exist
+                    for key in ['netin', 'netout']:
+                        if key in point:
+                            filtered_point[key] = point[key]
+                    rrd_data.append(filtered_point)
+                print(f"[v0] RRD data points: {len(rrd_data)}")
+            else:
+                print(f"[v0] ERROR: Failed to get RRD data for node")
+                print(f"[v0] stderr: {rrd_result.stderr}")
+        
+        print(f"[v0] ===== NETWORK INTERFACE METRICS REQUEST SUCCESS =====")
+        return jsonify({
+            'interface': interface_name,
+            'type': interface_type,
+            'timeframe': timeframe,
+            'data': rrd_data
+        })
+            
+    except Exception as e:
+        print(f"[v0] EXCEPTION in api_network_interface_metrics: {e}")
+        print(f"[v0] ===== NETWORK INTERFACE METRICS REQUEST EXCEPTION =====")
+        return jsonify({'error': str(e)}), 500
+
+# ... existing code ...
 
 @app.route('/api/vms', methods=['GET'])
 def api_vms():
