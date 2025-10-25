@@ -70,6 +70,22 @@ interface NetworkInterface {
   vm_status?: string
 }
 
+interface FirewallStatus {
+  service_active: boolean
+  firewall_enabled: boolean
+  active: boolean
+  rules_count: number
+  status: string
+}
+
+interface DNSConfig {
+  dns_servers: string[]
+  search_domains: string[]
+  dns_working: boolean
+  primary_dns: string | null
+  secondary_dns: string | null
+}
+
 const getInterfaceTypeBadge = (type: string) => {
   switch (type) {
     case "physical":
@@ -149,6 +165,16 @@ export function NetworkMetrics() {
     refreshInterval: 30000, // Refresh every 30 seconds
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
+  })
+
+  const { data: firewallData } = useSWR<FirewallStatus>("/api/firewall/status", fetcher, {
+    refreshInterval: 60000,
+    revalidateOnFocus: false,
+  })
+
+  const { data: dnsData } = useSWR<DNSConfig>("/api/dns/config", fetcher, {
+    refreshInterval: 60000,
+    revalidateOnFocus: false,
   })
 
   const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null)
@@ -277,41 +303,82 @@ export function NetworkMetrics() {
           </CardContent>
         </Card>
 
-        {/* Firewall Status card */}
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Firewall Status</CardTitle>
             <Router className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-green-500">Active</div>
-            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 mt-2">
-              Protected
-            </Badge>
-            <p className="text-xs text-muted-foreground mt-2">System protected</p>
+            {firewallData ? (
+              <>
+                <div
+                  className={`text-xl lg:text-2xl font-bold ${firewallData.active ? "text-green-500" : "text-red-500"}`}
+                >
+                  {firewallData.active ? "Active" : "Inactive"}
+                </div>
+                <Badge
+                  variant="outline"
+                  className={
+                    firewallData.active
+                      ? "bg-green-500/10 text-green-500 border-green-500/20 mt-2"
+                      : "bg-red-500/10 text-red-500 border-red-500/20 mt-2"
+                  }
+                >
+                  {firewallData.active ? "Protected" : "Unprotected"}
+                </Badge>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {firewallData.active ? `${firewallData.rules_count} rules active` : "Firewall disabled"}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="text-xl lg:text-2xl font-bold text-muted-foreground">Loading...</div>
+                <p className="text-xs text-muted-foreground mt-2">Checking status</p>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {/* Network Health card */}
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Network Health</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">DNS Configuration</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <Badge variant="outline" className={healthColor}>
-              {healthStatus}
-            </Badge>
-            <div className="flex flex-col gap-1 mt-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Packet Loss:</span>
-                <span className="font-medium text-foreground">{avgPacketLoss}%</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Errors:</span>
-                <span className="font-medium text-foreground">{totalErrors}</span>
-              </div>
-            </div>
+            {dnsData ? (
+              <>
+                <Badge
+                  variant="outline"
+                  className={
+                    dnsData.dns_working
+                      ? "bg-green-500/10 text-green-500 border-green-500/20"
+                      : "bg-red-500/10 text-red-500 border-red-500/20"
+                  }
+                >
+                  {dnsData.dns_working ? "Working" : "Not Working"}
+                </Badge>
+                <div className="flex flex-col gap-1 mt-2 text-xs">
+                  {dnsData.primary_dns && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Primary:</span>
+                      <span className="font-medium text-foreground font-mono">{dnsData.primary_dns}</span>
+                    </div>
+                  )}
+                  {dnsData.secondary_dns && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Secondary:</span>
+                      <span className="font-medium text-foreground font-mono">{dnsData.secondary_dns}</span>
+                    </div>
+                  )}
+                  {!dnsData.primary_dns && <div className="text-muted-foreground">No DNS configured</div>}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-sm text-muted-foreground">Loading...</div>
+                <p className="text-xs text-muted-foreground mt-2">Checking DNS</p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -634,7 +701,7 @@ export function NetworkMetrics() {
 
       {/* Interface Details Modal */}
       <Dialog open={!!selectedInterface} onOpenChange={() => setSelectedInterface(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Router className="h-5 w-5" />
