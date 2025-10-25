@@ -220,11 +220,16 @@ export function NetworkMetrics() {
     ...(networkData.vm_lxc_interfaces || []),
   ]
 
-  const topInterface = allInterfaces.reduce((top, iface) => {
-    const ifaceTraffic = (iface.bytes_recv || 0) + (iface.bytes_sent || 0)
-    const topTraffic = (top.bytes_recv || 0) + (top.bytes_sent || 0)
-    return ifaceTraffic > topTraffic ? iface : top
-  }, allInterfaces[0] || { name: "N/A", type: "unknown", bytes_recv: 0, bytes_sent: 0 })
+  const vmLxcInterfaces = networkData.vm_lxc_interfaces || []
+
+  const topInterface =
+    vmLxcInterfaces.length > 0
+      ? vmLxcInterfaces.reduce((top, iface) => {
+          const ifaceTraffic = (iface.bytes_recv || 0) + (iface.bytes_sent || 0)
+          const topTraffic = (top.bytes_recv || 0) + (top.bytes_sent || 0)
+          return ifaceTraffic > topTraffic ? iface : top
+        }, vmLxcInterfaces[0])
+      : { name: "No VM/LXC", type: "unknown", bytes_recv: 0, bytes_sent: 0, vm_name: "N/A" }
 
   const topInterfaceTraffic = (topInterface.bytes_recv || 0) + (topInterface.bytes_sent || 0)
 
@@ -299,9 +304,18 @@ export function NetworkMetrics() {
           <CardContent>
             <div className="text-xl lg:text-2xl font-bold text-foreground truncate">{topInterface.name}</div>
             <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className={getInterfaceTypeBadge(topInterface.type).color}>
-                {getInterfaceTypeBadge(topInterface.type).label}
-              </Badge>
+              {topInterface.vm_type ? (
+                <Badge variant="outline" className={getVMTypeBadge(topInterface.vm_type).color}>
+                  {getVMTypeBadge(topInterface.vm_type).label}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className={getInterfaceTypeBadge(topInterface.type).color}>
+                  {getInterfaceTypeBadge(topInterface.type).label}
+                </Badge>
+              )}
+              {topInterface.vm_name && topInterface.vm_name !== "N/A" && (
+                <span className="text-xs text-muted-foreground truncate">→ {topInterface.vm_name}</span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">Total traffic: {formatBytes(topInterfaceTraffic)}</p>
           </CardContent>
@@ -648,7 +662,7 @@ export function NetworkMetrics() {
 
       {/* Interface Details Modal */}
       <Dialog open={!!selectedInterface} onOpenChange={() => setSelectedInterface(null)}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Router className="h-5 w-5" />
