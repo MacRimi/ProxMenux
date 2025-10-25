@@ -836,7 +836,7 @@ export function NetworkMetrics() {
                 </div>
               ) : selectedInterface.status.toLowerCase() === "up" && selectedInterface.vm_type === "vm" ? (
                 <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-4">Traffic Statistics</h3>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-4">Traffic since last boot</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <div className="text-sm text-muted-foreground">Bytes Received</div>
