@@ -803,26 +803,24 @@ export function NetworkMetrics() {
                           : "Last Year"}
                   )
                 </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Traffic Data - Left Column */}
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm text-muted-foreground">Bytes Received</div>
-                        <div className="font-medium text-green-500 text-lg">
-                          {formatStorage(interfaceTotals.received * 1024 * 1024 * 1024)}
-                        </div>
+                <div className="space-y-4">
+                  {/* Traffic Data - Top Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Bytes Received</div>
+                      <div className="font-medium text-green-500 text-lg">
+                        {formatStorage(interfaceTotals.received * 1024 * 1024 * 1024)}
                       </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Bytes Sent</div>
-                        <div className="font-medium text-blue-500 text-lg">
-                          {formatStorage(interfaceTotals.sent * 1024 * 1024 * 1024)}
-                        </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Bytes Sent</div>
+                      <div className="font-medium text-blue-500 text-lg">
+                        {formatStorage(interfaceTotals.sent * 1024 * 1024 * 1024)}
                       </div>
                     </div>
                   </div>
 
-                  {/* Network Traffic Chart - Right Column */}
+                  {/* Network Traffic Chart - Full Width Below */}
                   <div className="bg-muted/30 rounded-lg p-4">
                     <NetworkTrafficChart
                       timeframe={modalTimeframe}
