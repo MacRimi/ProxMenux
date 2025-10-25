@@ -233,8 +233,17 @@ skip_apt_languages() {
 
 # ==========================================================
 optimize_journald() {
+
+    if [ -f /etc/log2ram.conf ] || [ -d /var/log.hdd ]; then
+    return 0
+    fi
     msg_info "$(translate "Limiting size and optimizing journald...")"
     NECESSARY_REBOOT=1
+
+    local jf="/etc/systemd/journald.conf"
+    if ! grep -q "ProxMenux optimized journald" "$jf" 2>/dev/null; then
+        cp -a "$jf" "${jf}.bak" 2>/dev/null || true
+    fi
     
     cat <<EOF > /etc/systemd/journald.conf
 [Journal]
@@ -272,14 +281,16 @@ optimize_logrotate() {
     if ! grep -q "# ProxMenux optimized configuration" "$logrotate_conf"; then
         cp "$logrotate_conf" "$backup_conf"
         cat <<EOF > "$logrotate_conf"
-# ProxMenux optimized configuration
+# ProxMenux optimized configuration (Log2RAM-friendly)
 daily
 su root adm
 rotate 7
-create
-compress
 size=10M
+compress
 delaycompress
+missingok
+notifempty
+create 0640 root adm
 copytruncate
 include /etc/logrotate.d
 EOF
@@ -866,21 +877,21 @@ run_complete_optimization() {
     
     ensure_tools_json
     
+    force_apt_ipv4
     apt_upgrade
     remove_subscription_banner
     #configure_time_sync
     skip_apt_languages
-    optimize_journald
-    optimize_logrotate
     increase_system_limits
     configure_entropy
     optimize_memory_settings
     configure_kernel_panic
-    force_apt_ipv4
     apply_network_optimizations
     #disable_rpc
     customize_bashrc
     install_log2ram_auto
+    optimize_journald
+    optimize_logrotate
     setup_persistent_network
     
 
