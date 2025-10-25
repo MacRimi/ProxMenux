@@ -214,6 +214,10 @@ export function NetworkMetrics() {
     healthColor = "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
   }
 
+  const totalBandwidth = [...(networkData.physical_interfaces || []), ...(networkData.bridge_interfaces || [])]
+    .filter((iface) => iface.status === "up")
+    .reduce((sum, iface) => sum + (iface.speed || 0), 0)
+
   const getTimeframeLabel = () => {
     switch (timeframe) {
       case "hour":
@@ -277,22 +281,20 @@ export function NetworkMetrics() {
           </CardContent>
         </Card>
 
-        {/* Firewall Status card */}
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Firewall Status</CardTitle>
-            <Router className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Bandwidth</CardTitle>
+            <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-green-500">Active</div>
-            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 mt-2">
-              Protected
-            </Badge>
-            <p className="text-xs text-muted-foreground mt-2">System protected</p>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">{formatSpeed(totalBandwidth)}</div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Combined speed of {(networkData.physical_active_count ?? 0) + (networkData.bridge_active_count ?? 0)}{" "}
+              active interfaces
+            </p>
           </CardContent>
         </Card>
 
-        {/* Network Health card */}
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Network Health</CardTitle>
