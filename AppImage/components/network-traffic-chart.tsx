@@ -183,7 +183,7 @@ export function NetworkTrafficChart({ timeframe, interfaceName, onTotalsCalculat
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[200px]">
+      <div className="flex items-center justify-center h-[300px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
@@ -191,7 +191,7 @@ export function NetworkTrafficChart({ timeframe, interfaceName, onTotalsCalculat
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-[200px] gap-2">
+      <div className="flex flex-col items-center justify-center h-[300px] gap-2">
         <p className="text-muted-foreground text-sm">Network metrics not available yet</p>
         <p className="text-xs text-red-500">{error}</p>
       </div>
@@ -200,15 +200,15 @@ export function NetworkTrafficChart({ timeframe, interfaceName, onTotalsCalculat
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[200px]">
+      <div className="flex items-center justify-center h-[300px]">
         <p className="text-muted-foreground text-sm">No network metrics available</p>
       </div>
     )
   }
 
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <AreaChart data={data} margin={{ bottom: 40, left: 10, right: 10 }}>
+    <ResponsiveContainer width="100%" height={300}>
+      <AreaChart data={data} margin={{ bottom: 80, left: 10 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
         <XAxis
           dataKey="time"
@@ -217,7 +217,7 @@ export function NetworkTrafficChart({ timeframe, interfaceName, onTotalsCalculat
           tick={{ fill: "currentColor", fontSize: 12 }}
           angle={-45}
           textAnchor="end"
-          height={40}
+          height={60}
           interval={tickInterval}
         />
         <YAxis

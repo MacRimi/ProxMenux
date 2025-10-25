@@ -640,20 +640,22 @@ export function NetworkMetrics() {
               <Router className="h-5 w-5" />
               {selectedInterface?.name} - Interface Details
             </DialogTitle>
-            <div className="flex justify-end pt-2">
-              <Select value={modalTimeframe} onValueChange={(value: any) => setModalTimeframe(value)}>
-                <SelectTrigger className="w-[140px] bg-card border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hour">1 Hour</SelectItem>
-                  <SelectItem value="day">24 Hours</SelectItem>
-                  <SelectItem value="week">7 Days</SelectItem>
-                  <SelectItem value="month">30 Days</SelectItem>
-                  <SelectItem value="year">1 Year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {selectedInterface?.status.toLowerCase() === "up" && selectedInterface?.vm_type !== "vm" && (
+              <div className="flex justify-end pt-2">
+                <Select value={modalTimeframe} onValueChange={(value: any) => setModalTimeframe(value)}>
+                  <SelectTrigger className="w-[140px] bg-card border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hour">1 Hour</SelectItem>
+                    <SelectItem value="day">24 Hours</SelectItem>
+                    <SelectItem value="week">7 Days</SelectItem>
+                    <SelectItem value="month">30 Days</SelectItem>
+                    <SelectItem value="year">1 Year</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </DialogHeader>
 
           {selectedInterface && (
@@ -789,99 +791,122 @@ export function NetworkMetrics() {
                 </div>
               )}
 
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-4">
-                  Network Traffic Statistics (
-                  {modalTimeframe === "hour"
-                    ? "Last Hour"
-                    : modalTimeframe === "day"
-                      ? "Last 24 Hours"
-                      : modalTimeframe === "week"
-                        ? "Last 7 Days"
-                        : modalTimeframe === "month"
-                          ? "Last 30 Days"
-                          : "Last Year"}
-                  )
-                </h3>
-                <div className="space-y-4">
-                  {/* Traffic Data - Top Row */}
+              {/* Network Traffic Statistics - Only show if interface is UP and NOT a VM interface */}
+              {selectedInterface.status.toLowerCase() === "up" && selectedInterface.vm_type !== "vm" ? (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-4">
+                    Network Traffic Statistics (
+                    {modalTimeframe === "hour"
+                      ? "Last Hour"
+                      : modalTimeframe === "day"
+                        ? "Last 24 Hours"
+                        : modalTimeframe === "week"
+                          ? "Last 7 Days"
+                          : modalTimeframe === "month"
+                            ? "Last 30 Days"
+                            : "Last Year"}
+                    )
+                  </h3>
+                  <div className="space-y-4">
+                    {/* Traffic Data - Top Row */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Bytes Received</div>
+                        <div className="font-medium text-green-500 text-lg">
+                          {formatStorage(interfaceTotals.received * 1024 * 1024 * 1024)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Bytes Sent</div>
+                        <div className="font-medium text-blue-500 text-lg">
+                          {formatStorage(interfaceTotals.sent * 1024 * 1024 * 1024)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Network Traffic Chart - Full Width Below */}
+                    <div className="bg-muted/30 rounded-lg p-4">
+                      <NetworkTrafficChart
+                        timeframe={modalTimeframe}
+                        interfaceName={selectedInterface.name}
+                        onTotalsCalculated={setInterfaceTotals}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : selectedInterface.status.toLowerCase() === "up" && selectedInterface.vm_type === "vm" ? (
+                <div className="bg-muted/30 rounded-lg p-6 text-center">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Historical Metrics Not Available</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Proxmox does not store historical network metrics for individual VM interfaces. Only cumulative
+                    statistics since last boot are available below.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-muted/30 rounded-lg p-6 text-center">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Interface Inactive</h3>
+                  <p className="text-sm text-muted-foreground">
+                    This interface is currently down. Network traffic statistics are not available.
+                  </p>
+                </div>
+              )}
+
+              {/* Cumulative Statistics - Only show if interface is UP */}
+              {selectedInterface.status.toLowerCase() === "up" && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-4">
+                    Cumulative Statistics (Since Last Boot)
+                  </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-sm text-muted-foreground">Bytes Received</div>
-                      <div className="font-medium text-green-500 text-lg">
-                        {formatStorage(interfaceTotals.received * 1024 * 1024 * 1024)}
-                      </div>
+                      <div className="text-sm text-muted-foreground">Packets Received</div>
+                      <div className="font-medium">{selectedInterface.packets_recv?.toLocaleString() || "N/A"}</div>
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground">Bytes Sent</div>
-                      <div className="font-medium text-blue-500 text-lg">
-                        {formatStorage(interfaceTotals.sent * 1024 * 1024 * 1024)}
-                      </div>
+                      <div className="text-sm text-muted-foreground">Packets Sent</div>
+                      <div className="font-medium">{selectedInterface.packets_sent?.toLocaleString() || "N/A"}</div>
                     </div>
-                  </div>
-
-                  {/* Network Traffic Chart - Full Width Below */}
-                  <div className="bg-muted/30 rounded-lg p-4">
-                    <NetworkTrafficChart
-                      timeframe={modalTimeframe}
-                      interfaceName={selectedInterface.name}
-                      onTotalsCalculated={setInterfaceTotals}
-                    />
+                    <div>
+                      <div className="text-sm text-muted-foreground">Errors In</div>
+                      <div className="font-medium text-red-500">{selectedInterface.errors_in || 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Errors Out</div>
+                      <div className="font-medium text-red-500">{selectedInterface.errors_out || 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Drops In</div>
+                      <div className="font-medium text-yellow-500">{selectedInterface.drops_in || 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Drops Out</div>
+                      <div className="font-medium text-yellow-500">{selectedInterface.drops_out || 0}</div>
+                    </div>
+                    {selectedInterface.packet_loss_in !== undefined && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Packet Loss In</div>
+                        <div
+                          className={`font-medium ${selectedInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
+                        >
+                          {selectedInterface.packet_loss_in}%
+                        </div>
+                      </div>
+                    )}
+                    {selectedInterface.packet_loss_out !== undefined && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Packet Loss Out</div>
+                        <div
+                          className={`font-medium ${selectedInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
+                        >
+                          {selectedInterface.packet_loss_out}%
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-4">
-                  Cumulative Statistics (Since Last Boot)
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Packets Received</div>
-                    <div className="font-medium">{selectedInterface.packets_recv?.toLocaleString() || "N/A"}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Packets Sent</div>
-                    <div className="font-medium">{selectedInterface.packets_sent?.toLocaleString() || "N/A"}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Errors In</div>
-                    <div className="font-medium text-red-500">{selectedInterface.errors_in || 0}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Errors Out</div>
-                    <div className="font-medium text-red-500">{selectedInterface.errors_out || 0}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Drops In</div>
-                    <div className="font-medium text-yellow-500">{selectedInterface.drops_in || 0}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Drops Out</div>
-                    <div className="font-medium text-yellow-500">{selectedInterface.drops_out || 0}</div>
-                  </div>
-                  {selectedInterface.packet_loss_in !== undefined && (
-                    <div>
-                      <div className="text-sm text-muted-foreground">Packet Loss In</div>
-                      <div
-                        className={`font-medium ${selectedInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
-                      >
-                        {selectedInterface.packet_loss_in}%
-                      </div>
-                    </div>
-                  )}
-                  {selectedInterface.packet_loss_out !== undefined && (
-                    <div>
-                      <div className="text-sm text-muted-foreground">Packet Loss Out</div>
-                      <div
-                        className={`font-medium ${selectedInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
-                      >
-                        {selectedInterface.packet_loss_out}%
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              )}
 
               {/* Bond Information */}
               {selectedInterface.type === "bond" && selectedInterface.bond_slaves && (
