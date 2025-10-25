@@ -789,73 +789,40 @@ export function NetworkMetrics() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Traffic Statistics - Left Column */}
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">Traffic since last boot</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Bytes Received</div>
-                      <div className="font-medium text-green-500">
-                        {formatStorage(interfaceTotals.received * 1024 * 1024 * 1024)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Bytes Sent</div>
-                      <div className="font-medium text-blue-500">
-                        {formatStorage(interfaceTotals.sent * 1024 * 1024 * 1024)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Packets Received</div>
-                      <div className="font-medium">{selectedInterface.packets_recv?.toLocaleString() || "N/A"}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Packets Sent</div>
-                      <div className="font-medium">{selectedInterface.packets_sent?.toLocaleString() || "N/A"}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Errors In</div>
-                      <div className="font-medium text-red-500">{selectedInterface.errors_in || 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Errors Out</div>
-                      <div className="font-medium text-red-500">{selectedInterface.errors_out || 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Drops In</div>
-                      <div className="font-medium text-yellow-500">{selectedInterface.drops_in || 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Drops Out</div>
-                      <div className="font-medium text-yellow-500">{selectedInterface.drops_out || 0}</div>
-                    </div>
-                    {selectedInterface.packet_loss_in !== undefined && (
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4">
+                  Network Traffic Statistics (
+                  {modalTimeframe === "hour"
+                    ? "Last Hour"
+                    : modalTimeframe === "day"
+                      ? "Last 24 Hours"
+                      : modalTimeframe === "week"
+                        ? "Last 7 Days"
+                        : modalTimeframe === "month"
+                          ? "Last 30 Days"
+                          : "Last Year"}
+                  )
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Traffic Data - Left Column */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <div className="text-sm text-muted-foreground">Packet Loss In</div>
-                        <div
-                          className={`font-medium ${selectedInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
-                        >
-                          {selectedInterface.packet_loss_in}%
+                        <div className="text-sm text-muted-foreground">Bytes Received</div>
+                        <div className="font-medium text-green-500 text-lg">
+                          {formatStorage(interfaceTotals.received * 1024 * 1024 * 1024)}
                         </div>
                       </div>
-                    )}
-                    {selectedInterface.packet_loss_out !== undefined && (
                       <div>
-                        <div className="text-sm text-muted-foreground">Packet Loss Out</div>
-                        <div
-                          className={`font-medium ${selectedInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
-                        >
-                          {selectedInterface.packet_loss_out}%
+                        <div className="text-sm text-muted-foreground">Bytes Sent</div>
+                        <div className="font-medium text-blue-500 text-lg">
+                          {formatStorage(interfaceTotals.sent * 1024 * 1024 * 1024)}
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Network Traffic Chart - Right Column */}
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">Network Traffic History</h3>
+                  {/* Network Traffic Chart - Right Column */}
                   <div className="bg-muted/30 rounded-lg p-4">
                     <NetworkTrafficChart
                       timeframe={modalTimeframe}
@@ -863,6 +830,58 @@ export function NetworkMetrics() {
                       onTotalsCalculated={setInterfaceTotals}
                     />
                   </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4">
+                  Cumulative Statistics (Since Last Boot)
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Packets Received</div>
+                    <div className="font-medium">{selectedInterface.packets_recv?.toLocaleString() || "N/A"}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Packets Sent</div>
+                    <div className="font-medium">{selectedInterface.packets_sent?.toLocaleString() || "N/A"}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Errors In</div>
+                    <div className="font-medium text-red-500">{selectedInterface.errors_in || 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Errors Out</div>
+                    <div className="font-medium text-red-500">{selectedInterface.errors_out || 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Drops In</div>
+                    <div className="font-medium text-yellow-500">{selectedInterface.drops_in || 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Drops Out</div>
+                    <div className="font-medium text-yellow-500">{selectedInterface.drops_out || 0}</div>
+                  </div>
+                  {selectedInterface.packet_loss_in !== undefined && (
+                    <div>
+                      <div className="text-sm text-muted-foreground">Packet Loss In</div>
+                      <div
+                        className={`font-medium ${selectedInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
+                      >
+                        {selectedInterface.packet_loss_in}%
+                      </div>
+                    </div>
+                  )}
+                  {selectedInterface.packet_loss_out !== undefined && (
+                    <div>
+                      <div className="text-sm text-muted-foreground">Packet Loss Out</div>
+                      <div
+                        className={`font-medium ${selectedInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
+                      >
+                        {selectedInterface.packet_loss_out}%
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
