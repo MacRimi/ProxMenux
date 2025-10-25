@@ -165,45 +165,6 @@ remove_subscription_banner() {
 # ==========================================================
 
 
-configure_time_sync_() {
-    msg_info2 "$(translate "Configuring system time settings...")"
-
-
-    # Get public IP address
-    this_ip=$(dig +short myip.opendns.com @resolver1.opendns.com)
-    if [ -z "$this_ip" ]; then
-        msg_warn "$(translate "Failed to obtain public IP address")"
-        timezone="UTC"
-    else
-        # Get timezone based on IP
-        timezone=$(curl -s "https://ipapi.co/${this_ip}/timezone")
-        if [ -z "$timezone" ]; then
-            msg_warn "$(translate "Failed to determine timezone from IP address")"
-            timezone="UTC"
-        else
-            msg_ok "$(translate "Found timezone $timezone for IP $this_ip")"
-        fi
-    fi
-
-    # Set the timezone
-    if timedatectl set-timezone "$timezone"; then
-        msg_ok "$(translate "Timezone set to $timezone")"
-    else
-        msg_error "$(translate "Failed to set timezone to $timezone")"
-    fi
-
-    # Configure time synchronization
-    msg_info "$(translate "Enabling automatic time synchronization...")"
-    if timedatectl set-ntp true; then
-        systemctl restart postfix 2>/dev/null || true
-        msg_ok "$(translate "Automatic time synchronization enabled")"
-        register_tool "time_sync" true
-    else
-        msg_error "$(translate "Failed to enable automatic time synchronization")"
-    fi
-    
-
-}
 
 
 
@@ -531,16 +492,9 @@ EOF
 }
 
 
-# ==========================================================
-disable_rpc() {
-    msg_info "$(translate "Disabling portmapper/rpcbind for security...")"
-    
-    systemctl disable rpcbind > /dev/null 2>&1
-    systemctl stop rpcbind > /dev/null 2>&1
-    
-    msg_ok "$(translate "portmapper/rpcbind has been disabled and removed")"
-    register_tool "disable_rpc" true
-}
+
+
+
 
 # ==========================================================
 customize_bashrc_() {
@@ -623,163 +577,6 @@ EOF
 
 # ==========================================================
 
-
-
-install_log2ram_auto_() {
- 
-     msg_info "$(translate "Checking if system disk is SSD or M.2...")"
-
-    local is_ssd=false
-    local pool disks disk byid_path dev rot
-
-    if grep -qE '^root=ZFS=' /etc/kernel/cmdline 2>/dev/null || mount | grep -q 'on / type zfs'; then
-
-        pool=$(zfs list -Ho name,mountpoint 2>/dev/null | awk '$2=="/"{print $1}' | cut -d/ -f1)
-        disks=$(zpool status "$pool" 2>/dev/null | awk '/ONLINE/ && $1 !~ /:|mirror|raidz|log|spare|config|NAME|rpool|state/ {print $1}' | sort -u)
-
-        is_ssd=true
-        for disk in $disks; do
-            byid_path=$(readlink -f /dev/disk/by-id/*$disk* 2>/dev/null) || continue
-            dev=$(basename "$byid_path" | sed -E 's|[0-9]+$||' | sed -E 's|p$||')
-            rot=$(cat /sys/block/$dev/queue/rotational 2>/dev/null)
-            [[ "$rot" != "0" ]] && is_ssd=false && break
-        done
-    else
-
-        ROOT_PART=$(lsblk -no NAME,MOUNTPOINT | grep ' /$' | awk '{print $1}')
-        #SYSTEM_DISK=$(lsblk -no PKNAME /dev/$ROOT_PART 2>/dev/null)
-        SYSTEM_DISK=$(lsblk -no PKNAME /dev/$ROOT_PART 2>/dev/null | grep -E '^[a-z]+' | head -n1)
-        SYSTEM_DISK=${SYSTEM_DISK:-sda}
-        if [[ "$SYSTEM_DISK" == nvme* || "$(cat /sys/block/$SYSTEM_DISK/queue/rotational 2>/dev/null)" == "0" ]]; then
-            is_ssd=true
-        fi
-    fi
-
-    if [[ "$is_ssd" == true ]]; then
-        msg_ok "$(translate "System disk is SSD or M.2. Proceeding with Log2RAM setup.")"
-    else
-        if whiptail --yesno "$(translate "Do you want to install Log2RAM anyway to reduce log write load?")" \
-            10 70 --title "Log2RAM"; then
-            :
-        else
-            return 0
-        fi
-    fi
-
-
-
-    if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1 && systemctl list-units --all | grep -q log2ram; then
-        msg_ok "$(translate "Log2RAM is already installed and configured correctly.")"
-        register_tool "log2ram" true
-        return 0
-    fi
-    
-    msg_info "$(translate "Log2RAM proceeding with installation...")"
-    
-
-    if [[ -d /tmp/log2ram ]]; then
-        rm -rf /tmp/log2ram
-    fi
-    
-
-    [[ -f /etc/systemd/system/log2ram.service ]] && rm -f /etc/systemd/system/log2ram*
-    [[ -f /etc/systemd/system/log2ram-daily.service ]] && rm -f /etc/systemd/system/log2ram-daily.*
-    [[ -f /etc/cron.d/log2ram ]] && rm -f /etc/cron.d/log2ram*
-    [[ -f /usr/sbin/log2ram ]] && rm -f /usr/sbin/log2ram
-    [[ -f /etc/log2ram.conf ]] && rm -f /etc/log2ram.conf
-    [[ -f /usr/local/bin/log2ram-check.sh ]] && rm -f /usr/local/bin/log2ram-check.sh
-    [[ -d /var/log.hdd ]] && rm -rf /var/log.hdd
-    
-    systemctl daemon-reexec >/dev/null 2>&1 || true
-    systemctl daemon-reload >/dev/null 2>&1 || true
-    
-    
-
-    if ! command -v git >/dev/null 2>&1; then
-        apt-get update -qq >/dev/null 2>&1
-        apt-get install -y git >/dev/null 2>&1
-        #msg_ok "$(translate "Git installed successfully")"
-    fi
-    
-    if ! git clone https://github.com/azlux/log2ram.git /tmp/log2ram >/dev/null 2>>/tmp/log2ram_install.log; then
-        msg_error "$(translate "Failed to clone log2ram repository. Check /tmp/log2ram_install.log")"
-        return 1
-    fi
-    
-    cd /tmp/log2ram || {
-        msg_error "$(translate "Failed to access log2ram directory")"
-        return 1
-    }
-    
-    if ! bash install.sh >>/tmp/log2ram_install.log 2>&1; then
-        msg_error "$(translate "Failed to run log2ram installer. Check /tmp/log2ram_install.log")"
-        return 1
-    fi
-    
-
-    if [[ -f /etc/log2ram.conf ]] && command -v log2ram >/dev/null 2>&1; then
-        msg_ok "$(translate "Log2RAM installed successfully")"
-    else
-        msg_error "$(translate "Log2RAM installation verification failed. Check /tmp/log2ram_install.log")"
-        return 1
-    fi
-    
-
-    RAM_SIZE_GB=$(free -g | awk '/^Mem:/{print $2}')
-    [[ -z "$RAM_SIZE_GB" || "$RAM_SIZE_GB" -eq 0 ]] && RAM_SIZE_GB=4
-    
-    if (( RAM_SIZE_GB <= 8 )); then
-        LOG2RAM_SIZE="128M"
-        CRON_HOURS=1
-    elif (( RAM_SIZE_GB <= 16 )); then
-        LOG2RAM_SIZE="256M"
-        CRON_HOURS=3
-    else
-        LOG2RAM_SIZE="512M"
-        CRON_HOURS=6
-    fi
-    
-    msg_ok "$(translate "Detected RAM:") $RAM_SIZE_GB GB — $(translate "Log2RAM size set to:") $LOG2RAM_SIZE"
-    
-
-    sed -i "s/^SIZE=.*/SIZE=$LOG2RAM_SIZE/" /etc/log2ram.conf
-    LOG2RAM_BIN="$(command -v log2ram || echo /usr/local/bin/log2ram)"
-    rm -f /etc/cron.daily/log2ram /etc/cron.weekly/log2ram /etc/cron.monthly/log2ram 2>/dev/null || true
-    rm -f /etc/cron.hourly/log2ram
-
-    {
-    echo 'MAILTO=""'
-    echo "0 */$CRON_HOURS * * * root $LOG2RAM_BIN write >/dev/null 2>&1"
-    } > /etc/cron.d/log2ram
-    
-    chmod 0644 /etc/cron.d/log2ram
-    chown root:root /etc/cron.d/log2ram
-    msg_ok "$(translate "Log2RAM write scheduled every") $CRON_HOURS $(translate "hour(s)")"
-    
-
-    cat << 'EOF' > /usr/local/bin/log2ram-check.sh
-#!/bin/bash
-CONF_FILE="/etc/log2ram.conf"
-LIMIT_KB=$(grep '^SIZE=' "$CONF_FILE" | cut -d'=' -f2 | tr -d 'M')000
-USED_KB=$(df /var/log --output=used | tail -1)
-THRESHOLD=$(( LIMIT_KB * 90 / 100 ))
-
-if (( USED_KB > THRESHOLD )); then
-    $(command -v log2ram) write
-fi
-EOF
-    
-    chmod +x /usr/local/bin/log2ram-check.sh
-        {
-    echo 'MAILTO=""'
-    echo "*/5 * * * * root /usr/local/bin/log2ram-check.sh >/dev/null 2>&1"
-    } > /etc/cron.d/log2ram-auto-sync
-    chmod 0644 /etc/cron.d/log2ram-auto-sync
-    chown root:root /etc/cron.d/log2ram-auto-sync
-    msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 90% of") $LOG2RAM_SIZE"
-    
-    register_tool "log2ram" true
-}
 
 
 

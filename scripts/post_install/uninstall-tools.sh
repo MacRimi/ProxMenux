@@ -488,18 +488,7 @@ uninstall_network_optimization() {
     register_tool "network_optimization" false
 }
 
-################################################################
 
-uninstall_disable_rpc() {
-    msg_info "$(translate "Re-enabling RPC services...")"
-    
-    # Re-enable and start rpcbind
-    systemctl enable rpcbind >/dev/null 2>&1
-    systemctl start rpcbind >/dev/null 2>&1
-    
-    msg_ok "$(translate "RPC services re-enabled")"
-    register_tool "disable_rpc" false
-}
 
 ################################################################
 
@@ -599,6 +588,7 @@ uninstall_log2ram() {
     fi
 
     register_tool "log2ram" false
+    NECESSARY_REBOOT=1
 }
 
 
@@ -622,6 +612,7 @@ uninstall_persistent_network() {
     msg_ok "$(translate "Removed all .link files from") $LINK_DIR"
     msg_info "$(translate "Interface names will return to default systemd behavior.")"
     register_tool "persistent_network" false
+    NECESSARY_REBOOT=1
 }
 
 
@@ -809,8 +800,8 @@ show_uninstall_menu() {
         case "$tool" in
             lvm_repair) desc="LVM PV Headers Repair";;
             repo_cleanup) desc="Repository Cleanup";;
-            apt_upgrade) desc="APT Upgrade & Repository Config";;
-            subscription_banner) desc="Subscription Banner Removal";;
+            #apt_upgrade) desc="APT Upgrade & Repository Config";;
+            #subscription_banner) desc="Subscription Banner Removal";;
             time_sync) desc="Time Synchronization";;
             apt_languages) desc="APT Language Skip";;
             journald) desc="Journald Optimization";;
@@ -822,7 +813,6 @@ show_uninstall_menu() {
             apt_ipv4) desc="APT IPv4 Force";;
             kexec) desc="kexec for quick reboots";;
             network_optimization) desc="Network Optimizations";;
-            disable_rpc) desc="RPC/rpcbind Disable";;
             bashrc_custom) desc="Bashrc Customization";;
             figurine) desc="Figurine";;
             fastfetch) desc="Fastfetch";;
