@@ -205,30 +205,14 @@ configure_time_sync() {
 
 
 # ==========================================================
+
 skip_apt_languages() {
-    msg_info "$(translate "Configuring APT to skip downloading additional languages...")"
-    local default_locale=""
-    
-    if [ -f /etc/default/locale ]; then
-        default_locale=$(grep '^LANG=' /etc/default/locale | cut -d= -f2 | tr -d '"')
-    elif [ -f /etc/environment ]; then
-        default_locale=$(grep '^LANG=' /etc/environment | cut -d= -f2 | tr -d '"')
-    fi
-    
-    default_locale="${default_locale:-en_US.UTF-8}"
-    local normalized_locale=$(echo "$default_locale" | tr 'A-Z' 'a-z' | sed 's/utf-8/utf8/;s/-/_/')
-    
-    if ! locale -a | grep -qi "^$normalized_locale$"; then
-        if ! grep -qE "^${default_locale}[[:space:]]+UTF-8" /etc/locale.gen; then
-            echo "$default_locale UTF-8" >> /etc/locale.gen
-        fi
-        locale-gen "$default_locale" > /dev/null 2>&1
-    fi
-    
-    echo 'Acquire::Languages "none";' > /etc/apt/apt.conf.d/99-disable-translations
-    
-    msg_ok "$(translate "APT configured to skip additional languages")"
-    register_tool "apt_languages" true
+  msg_info "$(translate "Configuring APT to skip downloading additional languages...")"
+  cat > /etc/apt/apt.conf.d/99-disable-translations <<'EOF'
+Acquire::Languages "none";
+EOF
+  msg_ok "$(translate "APT configured to skip additional languages")"
+  register_tool "apt_languages" true
 }
 
 # ==========================================================
