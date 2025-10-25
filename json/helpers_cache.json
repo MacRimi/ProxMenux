@@ -5292,7 +5292,8 @@
       7
     ],
     "notes": [
-      "You probably want to drastically extend the storage space to fit whatever clients you want to back up"
+      "You probably want to drastically extend the storage space to fit whatever clients you want to back up",
+      "Directory `/opt/urbackup/backups` is set as initial backup path. Change it to your liking"
     ],
     "type": "ct"
   },
