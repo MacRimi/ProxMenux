@@ -153,6 +153,7 @@ export function NetworkMetrics() {
 
   const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null)
   const [timeframe, setTimeframe] = useState<"hour" | "day" | "week" | "month" | "year">("day")
+  const [modalTimeframe, setModalTimeframe] = useState<"hour" | "day" | "week" | "month" | "year">("day")
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
 
   const { data: interfaceHistoricalData } = useSWR<any>(`/api/node/metrics?timeframe=${timeframe}`, fetcher, {
@@ -634,9 +635,23 @@ export function NetworkMetrics() {
       <Dialog open={!!selectedInterface} onOpenChange={() => setSelectedInterface(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Router className="h-5 w-5" />
-              {selectedInterface?.name} - Interface Details
+            <DialogTitle className="flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                <Router className="h-5 w-5" />
+                {selectedInterface?.name} - Interface Details
+              </div>
+              <Select value={modalTimeframe} onValueChange={(value: any) => setModalTimeframe(value)}>
+                <SelectTrigger className="w-[140px] bg-card border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hour">1 Hour</SelectItem>
+                  <SelectItem value="day">24 Hours</SelectItem>
+                  <SelectItem value="week">7 Days</SelectItem>
+                  <SelectItem value="month">30 Days</SelectItem>
+                  <SelectItem value="year">1 Year</SelectItem>
+                </SelectContent>
+              </Select>
             </DialogTitle>
           </DialogHeader>
 
@@ -829,6 +844,18 @@ export function NetworkMetrics() {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Network Traffic Chart for the selected interface */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Network Traffic History</h3>
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <NetworkTrafficChart
+                    timeframe={modalTimeframe}
+                    interfaceName={selectedInterface.name}
+                    onTotalsCalculated={() => {}}
+                  />
                 </div>
               </div>
 
