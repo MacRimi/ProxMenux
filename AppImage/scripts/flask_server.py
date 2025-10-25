@@ -4375,1188 +4375,765 @@ def api_events():
             'total': 0
         })
 
-@app.route('/api/notifications', methods=['GET'])
-def api_notifications():
-    """Get Proxmox notification history"""
+@app.route('/api/task-log/<path:upid>')
+def get_task_log(upid):
+    """Get complete task log from Proxmox using UPID"""
     try:
-        notifications = []
+        print(f"[v0] Getting task log for UPID: {upid}")
         
-        # 1. Get notifications from journalctl (Proxmox notification service)
-        try:
-            cmd = [
-                'journalctl',
-                '-u', 'pve-ha-lrm',
-                '-u', 'pve-ha-crm',
-                '-u', 'pvedaemon',
-                '-u', 'pveproxy',
-                '-u', 'pvestatd',
-                '--grep', 'notification|email|webhook|alert|notify',
-                '-n', '100',
-                '--output', 'json',
-                '--no-pager'
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        # Proxmox stores files without trailing :: but API may include them
+        upid_clean = upid.rstrip(':')
+        print(f"[v0] Cleaned UPID: {upid_clean}")
+        
+        # Parse UPID to extract node name and calculate index
+        # UPID format: UPID:node:pid:pstart:starttime:type:id:user:
+        parts = upid_clean.split(':')
+        if len(parts) < 5:
+            print(f"[v0] Invalid UPID format: {upid_clean}")
+            return jsonify({'error': 'Invalid UPID format'}), 400
+        
+        node = parts[1]
+        starttime = parts[4]
+        
+        # Calculate index (last character of starttime in hex, lowercase)
+        index = starttime[-1].lower()
+        
+        print(f"[v0] Extracted node: {node}, starttime: {starttime}, index: {index}")
+        
+        # Try with cleaned UPID (no trailing colons)
+        log_file_path = f"/var/log/pve/tasks/{index}/{upid_clean}"
+        print(f"[v0] Trying log file: {log_file_path}")
+        
+        if os.path.exists(log_file_path):
+            with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                log_text = f.read()
+            print(f"[v0] Successfully read {len(log_text)} bytes from log file")
+            return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        
+        # Try with single trailing colon
+        log_file_path_single = f"/var/log/pve/tasks/{index}/{upid_clean}:"
+        print(f"[v0] Trying alternative path with single colon: {log_file_path_single}")
+        
+        if os.path.exists(log_file_path_single):
+            with open(log_file_path_single, 'r', encoding='utf-8', errors='ignore') as f:
+                log_text = f.read()
+            print(f"[v0] Successfully read {len(log_text)} bytes from alternative log file")
+            return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        
+        # Try with uppercase index
+        log_file_path_upper = f"/var/log/pve/tasks/{index.upper()}/{upid_clean}"
+        print(f"[v0] Trying uppercase index path: {log_file_path_upper}")
+        
+        if os.path.exists(log_file_path_upper):
+            with open(log_file_path_upper, 'r', encoding='utf-8', errors='ignore') as f:
+                log_text = f.read()
+            print(f"[v0] Successfully read {len(log_text)} bytes from uppercase index log file")
+            return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        
+        # List available files in the directory for debugging
+        tasks_dir = f"/var/log/pve/tasks/{index}"
+        if os.path.exists(tasks_dir):
+            available_files = os.listdir(tasks_dir)
+            print(f"[v0] Available files in {tasks_dir}: {available_files[:10]}")  # Show first 10
             
-            if result.returncode == 0:
-                for line in result.stdout.strip().split('\n'):
-                    if line:
-                        try:
-                            log_entry = json.loads(line)
-                            timestamp_us = int(log_entry.get('__REALTIME_TIMESTAMP', '0'))
-                            timestamp = datetime.fromtimestamp(timestamp_us / 1000000).strftime('%Y-%m-%d %H:%M:%S')
-                            
-                            message = log_entry.get('MESSAGE', '')
-                            
-                            # Determine notification type from message
-                            notif_type = 'info'
-                            if 'email' in message.lower():
-                                notif_type = 'email'
-                            elif 'webhook' in message.lower():
-                                notif_type = 'webhook'
-                            elif 'alert' in message.lower() or 'warning' in message.lower():
-                                notif_type = 'alert'
-                            elif 'error' in message.lower() or 'fail' in message.lower():
-                                notif_type = 'error'
-                            
-                            notifications.append({
-                                'timestamp': timestamp,
-                                'type': notif_type,
-                                'service': log_entry.get('_SYSTEMD_UNIT', 'proxmox'),
-                                'message': message,
-                                'source': 'journal'
-                            })
-                        except (json.JSONDecodeError, ValueError):
-                            continue
-        except Exception as e:
-            print(f"Error reading notification logs: {e}")
-        
-        # 2. Try to read Proxmox notification configuration
-        try:
-            notif_config_path = '/etc/pve/notifications.cfg'
-            if os.path.exists(notif_config_path):
-                with open(notif_config_path, 'r') as f:
-                    config_content = f.read()
-                    # Parse notification targets (emails, webhooks, etc.)
-                    for line in config_content.split('\n'):
-                        if line.strip() and not line.startswith('#'):
-                            notifications.append({
-                                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                                'type': 'config',
-                                'service': 'notification-config',
-                                'message': f'Notification target configured: {line.strip()}',
-                                'source': 'config'
-                            })
-        except Exception as e:
-            print(f"Error reading notification config: {e}")
-        
-        # 3. Get backup notifications from task log
-        try:
-            cmd = ['pvesh', 'get', '/cluster/tasks', '--output-format', 'json']
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                tasks = json.loads(result.stdout)
-                for task in tasks:
-                    if task.get('type') in ['vzdump', 'backup']:
-                        status = task.get('status', 'unknown')
-                        notif_type = 'success' if status == 'OK' else 'error' if status == 'stopped' else 'info'
-                        
-                        notifications.append({
-                            'timestamp': datetime.fromtimestamp(task.get('starttime', 0)).strftime('%Y-%m-%d %H:%M:%S'),
-                            'type': notif_type,
-                            'service': 'backup',
-                            'message': f"Backup task {task.get('upid', 'unknown')}: {status}",
-                            'source': 'task-log'
-                        })
-        except Exception as e:
-            print(f"Error reading task notifications: {e}")
-        
-        # Sort by timestamp (newest first)
-        notifications.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        return jsonify({
-            'notifications': notifications[:100],  # Limit to 100 most recent
-            'total': len(notifications)
-        })
-        
-    except Exception as e:
-        print(f"Error getting notifications: {e}")
-        return jsonify({
-            'error': str(e),
-            'notifications': [],
-            'total': 0
-        })
-
-@app.route('/api/notifications/download', methods=['GET'])
-def api_notifications_download():
-    """Download complete log for a specific notification"""
-    try:
-        timestamp = request.args.get('timestamp', '')
-        
-        if not timestamp:
-            return jsonify({'error': 'Timestamp parameter required'}), 400
-        
-        from datetime import datetime, timedelta
-        
-        try:
-            # Parse timestamp format: "2025-10-11 14:27:35"
-            dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-            # Use a very small time window (2 minutes) to get just this notification
-            since_time = (dt - timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
-            until_time = (dt + timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            # If parsing fails, use a default range
-            since_time = "2 minutes ago"
-            until_time = "now"
-        
-        # Get logs around the specific timestamp
-        cmd = [
-            'journalctl',
-            '--since', since_time,
-            '--until', until_time,
-            '-n', '50',  # Limit to 50 lines around the notification
-            '--no-pager'
-        ]
-        
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        
-        if result.returncode == 0:
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
-                f.write(f"ProxMenux Log ({log_type}, since {since_days if since_days else f'{hours}h'}) - Generated: {datetime.now().isoformat()}\n")
-                f.write("=" * 80 + "\n\n")
-                f.write(result.stdout)
-                temp_path = f.name
-            
-            return send_file(
-                temp_path,
-                mimetype='text/plain',
-                as_attachment=True,
-                download_name=f'notification_{timestamp.replace(":", "_").replace(" ", "_")}.log'
-            )
+            upid_prefix = ':'.join(parts[:5])  # Get first 5 parts of UPID
+            for filename in available_files:
+                if filename.startswith(upid_prefix):
+                    matched_file = f"{tasks_dir}/{filename}"
+                    print(f"[v0] Found matching file by prefix: {matched_file}")
+                    with open(matched_file, 'r', encoding='utf-8', errors='ignore') as f:
+                        log_text = f.read()
+                    print(f"[v0] Successfully read {len(log_text)} bytes from matched file")
+                    return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
         else:
-            return jsonify({'error': 'Failed to generate log file'}), 500
+            print(f"[v0] Tasks directory does not exist: {tasks_dir}")
+        
+        print(f"[v0] Log file not found after trying all variations")
+        return jsonify({'error': 'Log file not found', 'tried_paths': [log_file_path, log_file_path_single, log_file_path_upper]}), 404
             
     except Exception as e:
-        print(f"Error downloading logs: {e}")
+        print(f"[v0] Error fetching task log for UPID {upid}: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/backups', methods=['GET'])
-def api_backups():
-    """Get list of all backup files from Proxmox storage"""
+@app.route('/api/health', methods=['GET'])
+def api_health():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'version': '1.0.0'
+    })
+
+@app.route('/api/prometheus', methods=['GET'])
+def api_prometheus():
+    """Export metrics in Prometheus format"""
     try:
-        backups = []
+        metrics = []
+        timestamp = int(datetime.now().timestamp() * 1000)
+        node = socket.gethostname()
         
-        # Get list of storage locations
-        try:
-            result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'], 
-                                  capture_output=True, text=True, timeout=10)
+        # Get system data
+        cpu_usage = psutil.cpu_percent(interval=0.5)
+        memory = psutil.virtual_memory()
+        load_avg = os.getloadavg()
+        uptime_seconds = time.time() - psutil.boot_time()
+        
+        # System metrics
+        metrics.append(f'# HELP proxmox_cpu_usage CPU usage percentage')
+        metrics.append(f'# TYPE proxmox_cpu_usage gauge')
+        metrics.append(f'proxmox_cpu_usage{{node="{node}"}} {cpu_usage} {timestamp}')
+        
+        metrics.append(f'# HELP proxmox_memory_total_bytes Total memory in bytes')
+        metrics.append(f'# TYPE proxmox_memory_total_bytes gauge')
+        metrics.append(f'proxmox_memory_total_bytes{{node="{node}"}} {memory.total} {timestamp}')
+        
+        metrics.append(f'# HELP proxmox_memory_used_bytes Used memory in bytes')
+        metrics.append(f'# TYPE proxmox_memory_used_bytes gauge')
+        metrics.append(f'proxmox_memory_used_bytes{{node="{node}"}} {memory.used} {timestamp}')
+        
+        metrics.append(f'# HELP proxmox_memory_usage_percent Memory usage percentage')
+        metrics.append(f'# TYPE proxmox_memory_usage_percent gauge')
+        metrics.append(f'proxmox_memory_usage_percent{{node="{node}"}} {memory.percent} {timestamp}')
+        
+        metrics.append(f'# HELP proxmox_load_average System load average')
+        metrics.append(f'# TYPE proxmox_load_average gauge')
+        metrics.append(f'proxmox_load_average{{node="{node}",period="1m"}} {load_avg[0]} {timestamp}')
+        metrics.append(f'proxmox_load_average{{node="{node}",period="5m"}} {load_avg[1]} {timestamp}')
+        metrics.append(f'proxmox_load_average{{node="{node}",period="15m"}} {load_avg[2]} {timestamp}')
+        
+        metrics.append(f'# HELP proxmox_uptime_seconds System uptime in seconds')
+        metrics.append(f'# TYPE proxmox_uptime_seconds counter')
+        metrics.append(f'proxmox_uptime_seconds{{node="{node}"}} {uptime_seconds} {timestamp}')
+        
+        # Temperature
+        temp = get_cpu_temperature()
+        if temp:
+            metrics.append(f'# HELP proxmox_cpu_temperature_celsius CPU temperature in Celsius')
+            metrics.append(f'# TYPE proxmox_cpu_temperature_celsius gauge')
+            metrics.append(f'proxmox_cpu_temperature_celsius{{node="{node}"}} {temp} {timestamp}')
+        
+        # Storage metrics
+        storage_info = get_storage_info()
+        for disk in storage_info.get('disks', []):
+            disk_name = disk.get('name', 'unknown')
+            metrics.append(f'# HELP proxmox_disk_total_bytes Total disk space in bytes')
+            metrics.append(f'# TYPE proxmox_disk_total_bytes gauge')
+            metrics.append(f'proxmox_disk_total_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("total", 0)} {timestamp}')
             
-            if result.returncode == 0:
-                storages = json.loads(result.stdout)
+            metrics.append(f'# HELP proxmox_disk_used_bytes Used disk space in bytes')
+            metrics.append(f'# TYPE proxmox_disk_used_bytes gauge')
+            metrics.append(f'proxmox_disk_used_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("used", 0)} {timestamp}')
+            
+            metrics.append(f'# HELP proxmox_disk_usage_percent Disk usage percentage')
+            metrics.append(f'# TYPE proxmox_disk_usage_percent gauge')
+            metrics.append(f'proxmox_disk_usage_percent{{node="{node}",disk="{disk_name}"}} {disk.get("percent", 0)} {timestamp}')
+        
+        # Network metrics
+        network_info = get_network_info()
+        if 'traffic' in network_info:
+            metrics.append(f'# HELP proxmox_network_bytes_sent_total Total bytes sent')
+            metrics.append(f'# TYPE proxmox_network_bytes_sent_total counter')
+            metrics.append(f'proxmox_network_bytes_sent_total{{node="{node}"}} {network_info["traffic"].get("bytes_sent", 0)} {timestamp}')
+            
+            metrics.append(f'# HELP proxmox_network_bytes_received_total Total bytes received')
+            metrics.append(f'# TYPE proxmox_network_bytes_received_total counter')
+            metrics.append(f'proxmox_network_bytes_received_total{{node="{node}"}} {network_info["traffic"].get("bytes_recv", 0)} {timestamp}')
+        
+        # Per-interface network metrics
+        for interface in network_info.get('interfaces', []):
+            iface_name = interface.get('name', 'unknown')
+            if interface.get('status') == 'up':
+                metrics.append(f'# HELP proxmox_interface_bytes_sent_total Bytes sent per interface')
+                metrics.append(f'# TYPE proxmox_interface_bytes_sent_total counter')
+                metrics.append(f'proxmox_interface_bytes_sent_total{{node="{node}",interface="{iface_name}"}} {interface.get("bytes_sent", 0)} {timestamp}')
                 
-                # For each storage, get backup files
-                for storage in storages:
-                    storage_id = storage.get('storage')
-                    storage_type = storage.get('type')
+                metrics.append(f'# HELP proxmox_interface_bytes_received_total Bytes received per interface')
+                metrics.append(f'# TYPE proxmox_interface_bytes_received_total counter')
+                metrics.append(f'proxmox_interface_bytes_received_total{{node="{node}",interface="{iface_name}"}} {interface.get("bytes_recv", 0)} {timestamp}')
+        
+        # VM metrics
+        vms_data = get_proxmox_vms()
+        if isinstance(vms_data, list):
+            vms = vms_data
+            total_vms = len(vms)
+            running_vms = sum(1 for vm in vms if vm.get('status') == 'running')
+            stopped_vms = sum(1 for vm in vms if vm.get('status') == 'stopped')
+            
+            metrics.append(f'# HELP proxmox_vms_total Total number of VMs and LXCs')
+            metrics.append(f'# TYPE proxmox_vms_total gauge')
+            metrics.append(f'proxmox_vms_total{{node="{node}"}} {total_vms} {timestamp}')
+            
+            metrics.append(f'# HELP proxmox_vms_running Number of running VMs and LXCs')
+            metrics.append(f'# TYPE proxmox_vms_running gauge')
+            metrics.append(f'proxmox_vms_running{{node="{node}"}} {running_vms} {timestamp}')
+            
+            metrics.append(f'# HELP proxmox_vms_stopped Number of stopped VMs and LXCs')
+            metrics.append(f'# TYPE proxmox_vms_stopped gauge')
+            metrics.append(f'proxmox_vms_stopped{{node="{node}"}} {stopped_vms} {timestamp}')
+            
+            # Per-VM metrics
+            for vm in vms:
+                vmid = vm.get('vmid', 'unknown')
+                vm_name = vm.get('name', f'vm-{vmid}')
+                vm_status = 1 if vm.get('status') == 'running' else 0
+                
+                metrics.append(f'# HELP proxmox_vm_status VM status (1=running, 0=stopped)')
+                metrics.append(f'# TYPE proxmox_vm_status gauge')
+                metrics.append(f'proxmox_vm_status{{node="{node}",vmid="{vmid}",name="{vm_name}"}} {vm_status} {timestamp}')
+                
+                if vm.get('status') == 'running':
+                    metrics.append(f'# HELP proxmox_vm_cpu_usage VM CPU usage')
+                    metrics.append(f'# TYPE proxmox_vm_cpu_usage gauge')
+                    metrics.append(f'proxmox_vm_cpu_usage{{node="{node}",vmid="{vmid}",name="{vm_name}"}} {vm.get("cpu", 0)} {timestamp}')
                     
-                    # Only check storages that can contain backups
-                    if storage_type in ['dir', 'nfs', 'cifs', 'pbs']:
+                    metrics.append(f'# HELP proxmox_vm_memory_used_bytes VM memory used in bytes')
+                    metrics.append(f'# TYPE proxmox_vm_memory_used_bytes gauge')
+                    metrics.append(f'proxmox_vm_memory_used_bytes{{node="{node}",vmid="{vmid}",name="{vm_name}"}} {vm.get("mem", 0)} {timestamp}')
+                    
+                    metrics.append(f'# HELP proxmox_vm_memory_max_bytes VM memory max in bytes')
+                    metrics.append(f'# TYPE proxmox_vm_memory_max_bytes gauge')
+                    metrics.append(f'proxmox_vm_memory_max_bytes{{node="{node}",vmid="{vmid}",name="{vm_name}"}} {vm.get("maxmem", 0)} {timestamp}')
+        
+        # Hardware metrics (temperature, fans, UPS, GPU)
+        try:
+            hardware_info = get_hardware_info()
+            
+            # Disk temperatures
+            for device in hardware_info.get('storage_devices', []):
+                if device.get('temperature'):
+                    disk_name = device.get('name', 'unknown')
+                    metrics.append(f'# HELP proxmox_disk_temperature_celsius Disk temperature in Celsius')
+                    metrics.append(f'# TYPE proxmox_disk_temperature_celsius gauge')
+                    metrics.append(f'proxmox_disk_temperature_celsius{{node="{node}",disk="{disk_name}"}} {device["temperature"]} {timestamp}')
+            
+            # Fan speeds
+            all_fans = hardware_info.get('sensors', {}).get('fans', [])
+            all_fans.extend(hardware_info.get('ipmi_fans', []))
+            for fan in all_fans:
+                fan_name = fan.get('name', 'unknown').replace(' ', '_')
+                if fan.get('speed') is not None:
+                    metrics.append(f'# HELP proxmox_fan_speed_rpm Fan speed in RPM')
+                    metrics.append(f'# TYPE proxmox_fan_speed_rpm gauge')
+                    metrics.append(f'proxmox_fan_speed_rpm{{node="{node}",fan="{fan_name}"}} {fan["speed"]} {timestamp}')
+            
+            # GPU metrics
+            for gpu in hardware_info.get('gpus', []): # Changed from pci_devices to gpus
+                gpu_name = gpu.get('name', 'unknown').replace(' ', '_')
+                gpu_vendor = gpu.get('vendor', 'unknown')
+                gpu_slot = gpu.get('slot', 'unknown') # Use slot for matching
+                
+                # GPU Temperature
+                if gpu.get('temperature') is not None:
+                    metrics.append(f'# HELP proxmox_gpu_temperature_celsius GPU temperature in Celsius')
+                    metrics.append(f'# TYPE proxmox_gpu_temperature_celsius gauge')
+                    metrics.append(f'proxmox_gpu_temperature_celsius{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {gpu["temperature"]} {timestamp}')
+                
+                # GPU Utilization
+                if gpu.get('utilization_gpu') is not None:
+                    metrics.append(f'# HELP proxmox_gpu_utilization_percent GPU utilization percentage')
+                    metrics.append(f'# TYPE proxmox_gpu_utilization_percent gauge')
+                    metrics.append(f'proxmox_gpu_utilization_percent{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {gpu["utilization_gpu"]} {timestamp}')
+                
+                # GPU Memory
+                if gpu.get('memory_used') and gpu.get('memory_total'):
+                    try:
+                        # Extract numeric values from strings like "1024 MiB"
+                        mem_used = float(gpu['memory_used'].split()[0])
+                        mem_total = float(gpu['memory_total'].split()[0])
+                        mem_used_bytes = mem_used * 1024 * 1024  # Convert MiB to bytes
+                        mem_total_bytes = mem_total * 1024 * 1024
+                        
+                        metrics.append(f'# HELP proxmox_gpu_memory_used_bytes GPU memory used in bytes')
+                        metrics.append(f'# TYPE proxmox_gpu_memory_used_bytes gauge')
+                        metrics.append(f'proxmox_gpu_memory_used_bytes{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {mem_used_bytes} {timestamp}')
+                        
+                        metrics.append(f'# HELP proxmox_gpu_memory_total_bytes GPU memory total in bytes')
+                        metrics.append(f'# TYPE proxmox_gpu_memory_total_bytes gauge')
+                        metrics.append(f'proxmox_gpu_memory_total_bytes{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {mem_total_bytes} {timestamp}')
+                    except (ValueError, IndexError):
+                        pass
+                
+                # GPU Power Draw (NVIDIA only)
+                if gpu.get('power_draw'):
+                    try:
+                        # Extract numeric value from string like "75.5 W"
+                        power_draw = float(gpu['power_draw'].split()[0])
+                        metrics.append(f'# HELP proxmox_gpu_power_draw_watts GPU power draw in watts')
+                        metrics.append(f'# TYPE proxmox_gpu_power_draw_watts gauge')
+                        metrics.append(f'proxmox_gpu_power_draw_watts{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {power_draw} {timestamp}')
+                    except (ValueError, IndexError):
+                        pass
+                
+                # GPU Clock Speeds (NVIDIA only)
+                if gpu.get('clock_graphics'):
+                    try:
+                        # Extract numeric value from string like "1500 MHz"
+                        clock_speed = float(gpu['clock_graphics'].split()[0])
+                        metrics.append(f'# HELP proxmox_gpu_clock_speed_mhz GPU clock speed in MHz')
+                        metrics.append(f'# TYPE proxmox_gpu_clock_speed_mhz gauge')
+                        metrics.append(f'proxmox_gpu_clock_speed_mhz{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {clock_speed} {timestamp}')
+                    except (ValueError, IndexError):
+                        pass
+                
+                if gpu.get('clock_memory'):
+                    try:
+                        # Extract numeric value from string like "5001 MHz"
+                        mem_clock = float(gpu['clock_memory'].split()[0])
+                        metrics.append(f'# HELP proxmox_gpu_memory_clock_mhz GPU memory clock speed in MHz')
+                        metrics.append(f'# TYPE proxmox_gpu_memory_clock_mhz gauge')
+                        metrics.append(f'proxmox_gpu_memory_clock_mhz{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {mem_clock} {timestamp}')
+                    except (ValueError, IndexError):
+                        pass
+            
+            # UPS metrics
+            ups = hardware_info.get('ups')
+            if ups:
+                ups_name = ups.get('name', 'ups').replace(' ', '_')
+                
+                if ups.get('battery_charge') is not None:
+                    metrics.append(f'# HELP proxmox_ups_battery_charge_percent UPS battery charge percentage')
+                    metrics.append(f'# TYPE proxmox_ups_battery_charge_percent gauge')
+                    metrics.append(f'proxmox_ups_battery_charge_percent{{node="{node}",ups="{ups_name}"}} {ups["battery_charge_raw"]} {timestamp}')
+                
+                if ups.get('load') is not None:
+                    metrics.append(f'# HELP proxmox_ups_load_percent UPS load percentage')
+                    metrics.append(f'# TYPE proxmox_ups_load_percent gauge')
+                    metrics.append(f'proxmox_ups_load_percent{{node="{node}",ups="{ups_name}"}} {ups["load_percent_raw"]} {timestamp}')
+                
+                if ups.get('time_left_seconds') is not None: # Use seconds for counter
+                    metrics.append(f'# HELP proxmox_ups_runtime_seconds UPS runtime in seconds')
+                    metrics.append(f'# TYPE proxmox_ups_runtime_seconds gauge') # Use gauge if it's current remaining time
+                    metrics.append(f'proxmox_ups_runtime_seconds{{node="{node}",ups="{ups_name}"}} {ups["time_left_seconds"]} {timestamp}')
+                
+                if ups.get('input_voltage') is not None:
+                    metrics.append(f'# HELP proxmox_ups_input_voltage_volts UPS input voltage in volts')
+                    metrics.append(f'# TYPE proxmox_ups_input_voltage_volts gauge')
+                    metrics.append(f'proxmox_ups_input_voltage_volts{{node="{node}",ups="{ups_name}"}} {ups["input_voltage"]} {timestamp}')
+        except Exception as e:
+            print(f"[v0] Error getting hardware metrics for Prometheus: {e}")
+        
+        # Return metrics in Prometheus format
+        return '\n'.join(metrics) + '\n', 200, {'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'}
+        
+    except Exception as e:
+        print(f"Error generating Prometheus metrics: {e}")
+        import traceback
+        traceback.print_exc()
+        return f'# Error generating metrics: {str(e)}\n', 500, {'Content-Type': 'text/plain; charset=utf-8'}
+
+@app.route('/api/system-info', methods=['GET'])
+def api_system_info():
+    """Get system and node information for dashboard header"""
+    try:
+        hostname = socket.gethostname()
+        node_id = f"pve-{hostname}"
+        pve_version = None
+        
+        # Try to get Proxmox version
+        try:
+            result = subprocess.run(['pveversion'], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                pve_version = result.stdout.strip().split('\n')[0]
+        except:
+            pass
+        
+        # Try to get node info from Proxmox API
+        try:
+            result = subprocess.run(['pvesh', 'get', '/nodes', '--output-format', 'json'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                nodes = json.loads(result.stdout)
+                if nodes and len(nodes) > 0:
+                    node_info = nodes[0]
+                    node_id = node_info.get('node', node_id)
+                    hostname = node_info.get('node', hostname)
+        except:
+            pass
+        
+        response = {
+            'hostname': hostname,
+            'node_id': node_id,
+            'status': 'online',
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        if pve_version:
+            response['pve_version'] = pve_version
+        else:
+            response['error'] = 'Proxmox version not available - pveversion command not found'
+        
+        return jsonify(response)
+    except Exception as e:
+        print(f"Error getting system info: {e}")
+        return jsonify({
+            'error': f'Unable to access system information: {str(e)}',
+            'hostname': socket.gethostname(),
+            'status': 'error',
+            'timestamp': datetime.now().isoformat()
+        })
+
+@app.route('/api/info', methods=['GET'])
+def api_info():
+    """Root endpoint with API information"""
+    return jsonify({
+        'name': 'ProxMenux Monitor API',
+        'version': '1.0.0',
+        'endpoints': [
+            '/api/system',
+            '/api/system-info',
+            '/api/storage', 
+            '/api/proxmox-storage',
+            '/api/network',
+            '/api/vms',
+            '/api/vms/<vmid>/metrics', # Added endpoint for RRD data
+            '/api/node/metrics', # Added node metrics endpoint
+            '/api/logs',
+            '/api/health',
+            '/api/hardware',
+            '/api/gpu/<slot>/realtime', # Added endpoint for GPU monitoring
+            '/api/backups', # Added backup endpoint
+            '/api/events', # Added events endpoint
+            '/api/notifications', # Added notifications endpoint
+            '/api/task-log/<upid>', # Added task log endpoint
+            '/api/prometheus' # Added prometheus endpoint
+        ]
+    })
+
+@app.route('/api/hardware', methods=['GET'])
+def api_hardware():
+    """Get hardware information"""
+    try:
+        hardware_info = get_hardware_info()
+        
+        all_fans = hardware_info.get('sensors', {}).get('fans', [])
+        ipmi_fans = hardware_info.get('ipmi_fans', [])
+        all_fans.extend(ipmi_fans)
+        
+        # Format data for frontend
+        formatted_data = {
+            'cpu': hardware_info.get('cpu', {}),
+            'motherboard': hardware_info.get('motherboard', {}), # Corrected: use hardware_info
+            'bios': hardware_info.get('motherboard', {}).get('bios', {}), # Extract BIOS info
+            'memory_modules': hardware_info.get('memory_modules', []),
+            'storage_devices': hardware_info.get('storage_devices', []), # Fixed: use hardware_info
+            'pci_devices': hardware_info.get('pci_devices', []),  # Fixed: use hardware_info
+            'temperatures': hardware_info.get('sensors', {}).get('temperatures', []),
+            'fans': all_fans, # Return combined fans (sensors + IPMI)
+            'power_supplies': hardware_info.get('ipmi_power', {}).get('power_supplies', []),
+            'power_meter': hardware_info.get('power_meter'),
+            'ups': hardware_info.get('ups') if hardware_info.get('ups') else None,
+            'gpus': hardware_info.get('gpus', [])
+        }
+        
+        print(f"[v0] /api/hardware returning data")
+        print(f"[v0] - CPU: {formatted_data['cpu'].get('model', 'Unknown')}")
+        print(f"[v0] - Temperatures: {len(formatted_data['temperatures'])} sensors")
+        print(f"[v0] - Fans: {len(formatted_data['fans'])} fans") # Includes IPMI fans
+        print(f"[v0] - Power supplies: {len(formatted_data['power_supplies'])} PSUs")
+        print(f"[v0] - Power meter: {'Yes' if formatted_data['power_meter'] else 'No'}")
+        print(f"[v0] - UPS: {'Yes' if formatted_data['ups'] else 'No'}")
+        print(f"[v0] - GPUs: {len(formatted_data['gpus'])} found")
+        
+        return jsonify(formatted_data)
+    except Exception as e:
+        print(f"[v0] Error in api_hardware: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/gpu/<slot>/realtime', methods=['GET'])
+def api_gpu_realtime(slot):
+    """Get real-time GPU monitoring data for a specific GPU"""
+    try:
+        print(f"[v0] /api/gpu/{slot}/realtime - Getting GPU info...")
+        
+        gpus = get_gpu_info()
+        
+        gpu = None
+        for g in gpus:
+            # Match by slot or if the slot is a substring of the GPU's slot (e.g., '00:01.0' matching '00:01')
+            if g.get('slot') == slot or slot in g.get('slot', ''):
+                gpu = g
+                break
+        
+        if not gpu:
+            print(f"[v0] GPU with slot matching '{slot}' not found")
+            return jsonify({'error': 'GPU not found'}), 404
+        
+        print(f"[v0] Getting detailed monitoring data for GPU at slot {gpu.get('slot')}...")
+        detailed_info = get_detailed_gpu_info(gpu)
+        gpu.update(detailed_info)
+        
+        # Extract only the monitoring-related fields
+        realtime_data = {
+            'has_monitoring_tool': gpu.get('has_monitoring_tool', False),
+            'temperature': gpu.get('temperature'),
+            'fan_speed': gpu.get('fan_speed'),
+            'fan_unit': gpu.get('fan_unit'),
+            'utilization_gpu': gpu.get('utilization_gpu'),
+            'utilization_memory': gpu.get('utilization_memory'),
+            'memory_used': gpu.get('memory_used'),
+            'memory_total': gpu.get('memory_total'),
+            'memory_free': gpu.get('memory_free'),
+            'power_draw': gpu.get('power_draw'),
+            'power_limit': gpu.get('power_limit'),
+            'clock_graphics': gpu.get('clock_graphics'),
+            'clock_memory': gpu.get('clock_memory'),
+            'processes': gpu.get('processes', []),
+            # Intel/AMD specific engine utilization
+            'engine_render': gpu.get('engine_render'),
+            'engine_blitter': gpu.get('engine_blitter'),
+            'engine_video': gpu.get('engine_video'),
+            'engine_video_enhance': gpu.get('engine_video_enhance'),
+            # Added for NVIDIA/AMD specific engine info if available
+            'engine_encoder': gpu.get('engine_encoder'),
+            'engine_decoder': gpu.get('engine_decoder'),
+            'driver_version': gpu.get('driver_version') # Added driver_version
+        }
+        
+        print(f"[v0] /api/gpu/{slot}/realtime returning data")
+        print(f"[v0] - Vendor: {gpu.get('vendor')}")
+        print(f"[v0] - has_monitoring_tool: {realtime_data['has_monitoring_tool']}")
+        print(f"[v0] - utilization_gpu: {realtime_data['utilization_gpu']}")
+        print(f"[v0] - temperature: {realtime_data['temperature']}")
+        print(f"[v0] - processes: {len(realtime_data['processes'])} found")
+        print(f"[v0] - engines: render={realtime_data['engine_render']}, blitter={realtime_data['engine_blitter']}, video={realtime_data['engine_video']}, video_enhance={realtime_data['engine_video_enhance']}")
+        
+        return jsonify(realtime_data)
+    except Exception as e:
+        print(f"[v0] Error getting real-time GPU data: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/vms/<int:vmid>', methods=['GET'])
+def api_vm_details(vmid):
+    """Get detailed information for a specific VM/LXC"""
+    try:
+        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+                              capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            resources = json.loads(result.stdout)
+            for resource in resources:
+                if resource.get('vmid') == vmid:
+                    vm_type = 'lxc' if resource.get('type') == 'lxc' else 'qemu'
+                    node = resource.get('node', 'pve')
+                    
+                    # Get detailed config
+                    config_result = subprocess.run(
+                        ['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/config', '--output-format', 'json'],
+                        capture_output=True, text=True, timeout=10)
+                    
+                    config = {}
+                    if config_result.returncode == 0:
+                        config = json.loads(config_result.stdout)
+                    
+                    os_info = {}
+                    if vm_type == 'lxc' and resource.get('status') == 'running':
                         try:
-                            # Get content of storage
-                            content_result = subprocess.run(
-                                ['pvesh', 'get', f'/nodes/localhost/storage/{storage_id}/content', '--output-format', 'json'],
-                                capture_output=True, text=True, timeout=10)
+                            os_release_result = subprocess.run(
+                                ['pct', 'exec', str(vmid), '--', 'cat', '/etc/os-release'],
+                                capture_output=True, text=True, timeout=5)
                             
-                            if content_result.returncode == 0:
-                                contents = json.loads(content_result.stdout)
-                                
-                                for item in contents:
-                                    if item.get('content') == 'backup':
-                                        # Parse backup information
-                                        volid = item.get('volid', '')
-                                        size = item.get('size', 0)
-                                        ctime = item.get('ctime', 0)
-                                        
-                                        # Extract VMID from volid (format: storage:backup/vzdump-qemu-100-...)
-                                        vmid = None
-                                        backup_type = None
-                                        if 'vzdump-qemu-' in volid:
-                                            backup_type = 'qemu'
-                                            try:
-                                                vmid = volid.split('vzdump-qemu-')[1].split('-')[0]
-                                            except:
-                                                pass
-                                        elif 'vzdump-lxc-' in volid:
-                                            backup_type = 'lxc'
-                                            try:
-                                                vmid = volid.split('vzdump-lxc-')[1].split('-')[0]
-                                            except:
-                                                pass
-                                        
-                                        backups.append({
-                                            'volid': volid,
-                                            'storage': storage_id,
-                                            'vmid': vmid,
-                                            'type': backup_type,
-                                            'size': size,
-                                            'size_human': format_bytes(size),
-                                            'created': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M:%S'),
-                                            'timestamp': ctime
-                                        })
+                            if os_release_result.returncode == 0:
+                                # Parse /etc/os-release content
+                                for line in os_release_result.stdout.split('\n'):
+                                    line = line.strip()
+                                    if line.startswith('ID='):
+                                        os_info['id'] = line.split('=', 1)[1].strip('"').strip("'")
+                                    elif line.startswith('VERSION_ID='):
+                                        os_info['version_id'] = line.split('=', 1)[1].strip('"').strip("'")
+                                    elif line.startswith('NAME='):
+                                        os_info['name'] = line.split('=', 1)[1].strip('"').strip("'")
+                                    elif line.startswith('PRETTY_NAME='):
+                                        os_info['pretty_name'] = line.split('=', 1)[1].strip('"').strip("'")
                         except Exception as e:
-                            print(f"Error getting content for storage {storage_id}: {e}")
-                            continue
-        except Exception as e:
-            print(f"Error getting storage list: {e}")
-        
-        # Sort by creation time (newest first)
-        backups.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        return jsonify({
-            'backups': backups,
-            'total': len(backups)
-        })
-        
-    except Exception as e:
-        print(f"Error getting backups: {e}")
-        return jsonify({
-            'error': str(e),
-            'backups': [],
-            'total': 0
-        })
-
-@app.route('/api/events', methods=['GET'])
-def api_events():
-    """Get recent Proxmox events and tasks"""
-    try:
-        limit = request.args.get('limit', '50')
-        events = []
-        
-        try:
-            result = subprocess.run(['pvesh', 'get', '/cluster/tasks', '--output-format', 'json'], 
-                                  capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                tasks = json.loads(result.stdout)
-                
-                for task in tasks[:int(limit)]:
-                    upid = task.get('upid', '')
-                    task_type = task.get('type', 'unknown')
-                    status = task.get('status', 'unknown')
-                    node = task.get('node', 'unknown')
-                    user = task.get('user', 'unknown')
-                    vmid = task.get('id', '')
-                    starttime = task.get('starttime', 0)
-                    endtime = task.get('endtime', 0)
+                            pass  # Silently handle errors
                     
-                    # Calculate duration
-                    duration = ''
-                    if endtime and starttime:
-                        duration_sec = endtime - starttime
-                        if duration_sec < 60:
-                            duration = f"{duration_sec}s"
-                        elif duration_sec < 3600:
-                            duration = f"{duration_sec // 60}m {duration_sec % 60}s"
-                        else:
-                            hours = duration_sec // 3600
-                            minutes = (duration_sec % 3600) // 60
-                            duration = f"{hours}h {minutes}m"
-                    
-                    # Determine level based on status
-                    level = 'info'
-                    if status == 'OK':
-                        level = 'info'
-                    elif status in ['stopped', 'error']:
-                        level = 'error'
-                    elif status == 'running':
-                        level = 'warning'
-                    
-                    events.append({
-                        'upid': upid,
-                        'type': task_type,
-                        'status': status,
-                        'level': level,
+                    response_data = {
+                        **resource,
+                        'config': config,
                         'node': node,
-                        'user': user,
-                        'vmid': str(vmid) if vmid else '',
-                        'starttime': datetime.fromtimestamp(starttime).strftime('%Y-%m-%d %H:%M:%S') if starttime else '',
-                        'endtime': datetime.fromtimestamp(endtime).strftime('%Y-%m-%d %H:%M:%S') if endtime else 'Running',
-                        'duration': duration
-                    })
-        except Exception as e:
-            print(f"Error getting events: {e}")
-        
-        return jsonify({
-            'events': events,
-            'total': len(events)
-        })
-        
-    except Exception as e:
-        print(f"Error getting events: {e}")
-        return jsonify({
-            'error': str(e),
-            'events': [],
-            'total': 0
-        })
-
-@app.route('/api/notifications', methods=['GET'])
-def api_notifications():
-    """Get Proxmox notification history"""
-    try:
-        notifications = []
-        
-        # 1. Get notifications from journalctl (Proxmox notification service)
-        try:
-            cmd = [
-                'journalctl',
-                '-u', 'pve-ha-lrm',
-                '-u', 'pve-ha-crm',
-                '-u', 'pvedaemon',
-                '-u', 'pveproxy',
-                '-u', 'pvestatd',
-                '--grep', 'notification|email|webhook|alert|notify',
-                '-n', '100',
-                '--output', 'json',
-                '--no-pager'
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                        'vm_type': vm_type
+                    }
+                    
+                    # Add OS info if available
+                    if os_info:
+                        response_data['os_info'] = os_info
+                    
+                    return jsonify(response_data)
             
-            if result.returncode == 0:
-                for line in result.stdout.strip().split('\n'):
-                    if line:
-                        try:
-                            log_entry = json.loads(line)
-                            timestamp_us = int(log_entry.get('__REALTIME_TIMESTAMP', '0'))
-                            timestamp = datetime.fromtimestamp(timestamp_us / 1000000).strftime('%Y-%m-%d %H:%M:%S')
-                            
-                            message = log_entry.get('MESSAGE', '')
-                            
-                            # Determine notification type from message
-                            notif_type = 'info'
-                            if 'email' in message.lower():
-                                notif_type = 'email'
-                            elif 'webhook' in message.lower():
-                                notif_type = 'webhook'
-                            elif 'alert' in message.lower() or 'warning' in message.lower():
-                                notif_type = 'alert'
-                            elif 'error' in message.lower() or 'fail' in message.lower():
-                                notif_type = 'error'
-                            
-                            notifications.append({
-                                'timestamp': timestamp,
-                                'type': notif_type,
-                                'service': log_entry.get('_SYSTEMD_UNIT', 'proxmox'),
-                                'message': message,
-                                'source': 'journal'
-                            })
-                        except (json.JSONDecodeError, ValueError):
-                            continue
-        except Exception as e:
-            print(f"Error reading notification logs: {e}")
-        
-        # 2. Try to read Proxmox notification configuration
-        try:
-            notif_config_path = '/etc/pve/notifications.cfg'
-            if os.path.exists(notif_config_path):
-                with open(notif_config_path, 'r') as f:
-                    config_content = f.read()
-                    # Parse notification targets (emails, webhooks, etc.)
-                    for line in config_content.split('\n'):
-                        if line.strip() and not line.startswith('#'):
-                            notifications.append({
-                                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                                'type': 'config',
-                                'service': 'notification-config',
-                                'message': f'Notification target configured: {line.strip()}',
-                                'source': 'config'
-                            })
-        except Exception as e:
-            print(f"Error reading notification config: {e}")
-        
-        # 3. Get backup notifications from task log
-        try:
-            cmd = ['pvesh', 'get', '/cluster/tasks', '--output-format', 'json']
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                tasks = json.loads(result.stdout)
-                for task in tasks:
-                    if task.get('type') in ['vzdump', 'backup']:
-                        status = task.get('status', 'unknown')
-                        notif_type = 'success' if status == 'OK' else 'error' if status == 'stopped' else 'info'
-                        
-                        notifications.append({
-                            'timestamp': datetime.fromtimestamp(task.get('starttime', 0)).strftime('%Y-%m-%d %H:%M:%S'),
-                            'type': notif_type,
-                            'service': 'backup',
-                            'message': f"Backup task {task.get('upid', 'unknown')}: {status}",
-                            'source': 'task-log'
-                        })
-        except Exception as e:
-            print(f"Error reading task notifications: {e}")
-        
-        # Sort by timestamp (newest first)
-        notifications.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        return jsonify({
-            'notifications': notifications[:100],  # Limit to 100 most recent
-            'total': len(notifications)
-        })
-        
-    except Exception as e:
-        print(f"Error getting notifications: {e}")
-        return jsonify({
-            'error': str(e),
-            'notifications': [],
-            'total': 0
-        })
-
-@app.route('/api/notifications/download', methods=['GET'])
-def api_notifications_download():
-    """Download complete log for a specific notification"""
-    try:
-        timestamp = request.args.get('timestamp', '')
-        
-        if not timestamp:
-            return jsonify({'error': 'Timestamp parameter required'}), 400
-        
-        from datetime import datetime, timedelta
-        
-        try:
-            # Parse timestamp format: "2025-10-11 14:27:35"
-            dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-            # Use a very small time window (2 minutes) to get just this notification
-            since_time = (dt - timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
-            until_time = (dt + timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            # If parsing fails, use a default range
-            since_time = "2 minutes ago"
-            until_time = "now"
-        
-        # Get logs around the specific timestamp
-        cmd = [
-            'journalctl',
-            '--since', since_time,
-            '--until', until_time,
-            '-n', '50',  # Limit to 50 lines around the notification
-            '--no-pager'
-        ]
-        
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        
-        if result.returncode == 0:
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
-                f.write(f"ProxMenux Log ({log_type}, since {since_days if since_days else f'{hours}h'}) - Generated: {datetime.now().isoformat()}\n")
-                f.write("=" * 80 + "\n\n")
-                f.write(result.stdout)
-                temp_path = f.name
-            
-            return send_file(
-                temp_path,
-                mimetype='text/plain',
-                as_attachment=True,
-                download_name=f'notification_{timestamp.replace(":", "_").replace(" ", "_")}.log'
-            )
+            return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
         else:
-            return jsonify({'error': 'Failed to generate log file'}), 500
-            
+            return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
-        print(f"Error downloading logs: {e}")
+        print(f"Error getting VM details: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/backups', methods=['GET'])
-def api_backups():
-    """Get list of all backup files from Proxmox storage"""
+@app.route('/api/vms/<int:vmid>/logs', methods=['GET'])
+def api_vm_logs(vmid):
+    """Download real logs for a specific VM/LXC (not task history)"""
     try:
-        backups = []
-        
-        # Get list of storage locations
-        try:
-            result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'], 
-                                  capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                storages = json.loads(result.stdout)
-                
-                # For each storage, get backup files
-                for storage in storages:
-                    storage_id = storage.get('storage')
-                    storage_type = storage.get('type')
-                    
-                    # Only check storages that can contain backups
-                    if storage_type in ['dir', 'nfs', 'cifs', 'pbs']:
-                        try:
-                            # Get content of storage
-                            content_result = subprocess.run(
-                                ['pvesh', 'get', f'/nodes/localhost/storage/{storage_id}/content', '--output-format', 'json'],
-                                capture_output=True, text=True, timeout=10)
-                            
-                            if content_result.returncode == 0:
-                                contents = json.loads(content_result.stdout)
-                                
-                                for item in contents:
-                                    if item.get('content') == 'backup':
-                                        # Parse backup information
-                                        volid = item.get('volid', '')
-                                        size = item.get('size', 0)
-                                        ctime = item.get('ctime', 0)
-                                        
-                                        # Extract VMID from volid (format: storage:backup/vzdump-qemu-100-...)
-                                        vmid = None
-                                        backup_type = None
-                                        if 'vzdump-qemu-' in volid:
-                                            backup_type = 'qemu'
-                                            try:
-                                                vmid = volid.split('vzdump-qemu-')[1].split('-')[0]
-                                            except:
-                                                pass
-                                        elif 'vzdump-lxc-' in volid:
-                                            backup_type = 'lxc'
-                                            try:
-                                                vmid = volid.split('vzdump-lxc-')[1].split('-')[0]
-                                            except:
-                                                pass
-                                        
-                                        backups.append({
-                                            'volid': volid,
-                                            'storage': storage_id,
-                                            'vmid': vmid,
-                                            'type': backup_type,
-                                            'size': size,
-                                            'size_human': format_bytes(size),
-                                            'created': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M:%S'),
-                                            'timestamp': ctime
-                                        })
-                        except Exception as e:
-                            print(f"Error getting content for storage {storage_id}: {e}")
-                            continue
-        except Exception as e:
-            print(f"Error getting storage list: {e}")
-        
-        # Sort by creation time (newest first)
-        backups.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        return jsonify({
-            'backups': backups,
-            'total': len(backups)
-        })
-        
-    except Exception as e:
-        print(f"Error getting backups: {e}")
-        return jsonify({
-            'error': str(e),
-            'backups': [],
-            'total': 0
-        })
-
-@app.route('/api/events', methods=['GET'])
-def api_events():
-    """Get recent Proxmox events and tasks"""
-    try:
-        limit = request.args.get('limit', '50')
-        events = []
-        
-        try:
-            result = subprocess.run(['pvesh', 'get', '/cluster/tasks', '--output-format', 'json'], 
-                                  capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                tasks = json.loads(result.stdout)
-                
-                for task in tasks[:int(limit)]:
-                    upid = task.get('upid', '')
-                    task_type = task.get('type', 'unknown')
-                    status = task.get('status', 'unknown')
-                    node = task.get('node', 'unknown')
-                    user = task.get('user', 'unknown')
-                    vmid = task.get('id', '')
-                    starttime = task.get('starttime', 0)
-                    endtime = task.get('endtime', 0)
-                    
-                    # Calculate duration
-                    duration = ''
-                    if endtime and starttime:
-                        duration_sec = endtime - starttime
-                        if duration_sec < 60:
-                            duration = f"{duration_sec}s"
-                        elif duration_sec < 3600:
-                            duration = f"{duration_sec // 60}m {duration_sec % 60}s"
-                        else:
-                            hours = duration_sec // 3600
-                            minutes = (duration_sec % 3600) // 60
-                            duration = f"{hours}h {minutes}m"
-                    
-                    # Determine level based on status
-                    level = 'info'
-                    if status == 'OK':
-                        level = 'info'
-                    elif status in ['stopped', 'error']:
-                        level = 'error'
-                    elif status == 'running':
-                        level = 'warning'
-                    
-                    events.append({
-                        'upid': upid,
-                        'type': task_type,
-                        'status': status,
-                        'level': level,
-                        'node': node,
-                        'user': user,
-                        'vmid': str(vmid) if vmid else '',
-                        'starttime': datetime.fromtimestamp(starttime).strftime('%Y-%m-%d %H:%M:%S') if starttime else '',
-                        'endtime': datetime.fromtimestamp(endtime).strftime('%Y-%m-%d %H:%M:%S') if endtime else 'Running',
-                        'duration': duration
-                    })
-        except Exception as e:
-            print(f"Error getting events: {e}")
-        
-        return jsonify({
-            'events': events,
-            'total': len(events)
-        })
-        
-    except Exception as e:
-        print(f"Error getting events: {e}")
-        return jsonify({
-            'error': str(e),
-            'events': [],
-            'total': 0
-        })
-
-@app.route('/api/notifications', methods=['GET'])
-def api_notifications():
-    """Get Proxmox notification history"""
-    try:
-        notifications = []
-        
-        # 1. Get notifications from journalctl (Proxmox notification service)
-        try:
-            cmd = [
-                'journalctl',
-                '-u', 'pve-ha-lrm',
-                '-u', 'pve-ha-crm',
-                '-u', 'pvedaemon',
-                '-u', 'pveproxy',
-                '-u', 'pvestatd',
-                '--grep', 'notification|email|webhook|alert|notify',
-                '-n', '100',
-                '--output', 'json',
-                '--no-pager'
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                for line in result.stdout.strip().split('\n'):
-                    if line:
-                        try:
-                            log_entry = json.loads(line)
-                            timestamp_us = int(log_entry.get('__REALTIME_TIMESTAMP', '0'))
-                            timestamp = datetime.fromtimestamp(timestamp_us / 1000000).strftime('%Y-%m-%d %H:%M:%S')
-                            
-                            message = log_entry.get('MESSAGE', '')
-                            
-                            # Determine notification type from message
-                            notif_type = 'info'
-                            if 'email' in message.lower():
-                                notif_type = 'email'
-                            elif 'webhook' in message.lower():
-                                notif_type = 'webhook'
-                            elif 'alert' in message.lower() or 'warning' in message.lower():
-                                notif_type = 'alert'
-                            elif 'error' in message.lower() or 'fail' in message.lower():
-                                notif_type = 'error'
-                            
-                            notifications.append({
-                                'timestamp': timestamp,
-                                'type': notif_type,
-                                'service': log_entry.get('_SYSTEMD_UNIT', 'proxmox'),
-                                'message': message,
-                                'source': 'journal'
-                            })
-                        except (json.JSONDecodeError, ValueError):
-                            continue
-        except Exception as e:
-            print(f"Error reading notification logs: {e}")
-        
-        # 2. Try to read Proxmox notification configuration
-        try:
-            notif_config_path = '/etc/pve/notifications.cfg'
-            if os.path.exists(notif_config_path):
-                with open(notif_config_path, 'r') as f:
-                    config_content = f.read()
-                    # Parse notification targets (emails, webhooks, etc.)
-                    for line in config_content.split('\n'):
-                        if line.strip() and not line.startswith('#'):
-                            notifications.append({
-                                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                                'type': 'config',
-                                'service': 'notification-config',
-                                'message': f'Notification target configured: {line.strip()}',
-                                'source': 'config'
-                            })
-        except Exception as e:
-            print(f"Error reading notification config: {e}")
-        
-        # 3. Get backup notifications from task log
-        try:
-            cmd = ['pvesh', 'get', '/cluster/tasks', '--output-format', 'json']
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                tasks = json.loads(result.stdout)
-                for task in tasks:
-                    if task.get('type') in ['vzdump', 'backup']:
-                        status = task.get('status', 'unknown')
-                        notif_type = 'success' if status == 'OK' else 'error' if status == 'stopped' else 'info'
-                        
-                        notifications.append({
-                            'timestamp': datetime.fromtimestamp(task.get('starttime', 0)).strftime('%Y-%m-%d %H:%M:%S'),
-                            'type': notif_type,
-                            'service': 'backup',
-                            'message': f"Backup task {task.get('upid', 'unknown')}: {status}",
-                            'source': 'task-log'
-                        })
-        except Exception as e:
-            print(f"Error reading task notifications: {e}")
-        
-        # Sort by timestamp (newest first)
-        notifications.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        return jsonify({
-            'notifications': notifications[:100],  # Limit to 100 most recent
-            'total': len(notifications)
-        })
-        
-    except Exception as e:
-        print(f"Error getting notifications: {e}")
-        return jsonify({
-            'error': str(e),
-            'notifications': [],
-            'total': 0
-        })
-
-@app.route('/api/notifications/download', methods=['GET'])
-def api_notifications_download():
-    """Download complete log for a specific notification"""
-    try:
-        timestamp = request.args.get('timestamp', '')
-        
-        if not timestamp:
-            return jsonify({'error': 'Timestamp parameter required'}), 400
-        
-        from datetime import datetime, timedelta
-        
-        try:
-            # Parse timestamp format: "2025-10-11 14:27:35"
-            dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-            # Use a very small time window (2 minutes) to get just this notification
-            since_time = (dt - timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
-            until_time = (dt + timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            # If parsing fails, use a default range
-            since_time = "2 minutes ago"
-            until_time = "now"
-        
-        # Get logs around the specific timestamp
-        cmd = [
-            'journalctl',
-            '--since', since_time,
-            '--until', until_time,
-            '-n', '50',  # Limit to 50 lines around the notification
-            '--no-pager'
-        ]
-        
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        # Get VM type and node
+        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+                              capture_output=True, text=True, timeout=10)
         
         if result.returncode == 0:
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
-                f.write(f"ProxMenux Log ({log_type}, since {since_days if since_days else f'{hours}h'}) - Generated: {datetime.now().isoformat()}\n")
-                f.write("=" * 80 + "\n\n")
-                f.write(result.stdout)
-                temp_path = f.name
+            resources = json.loads(result.stdout)
+            vm_info = None
+            for resource in resources:
+                if resource.get('vmid') == vmid:
+                    vm_info = resource
+                    break
             
-            return send_file(
-                temp_path,
-                mimetype='text/plain',
-                as_attachment=True,
-                download_name=f'notification_{timestamp.replace(":", "_").replace(" ", "_")}.log'
-            )
+            if not vm_info:
+                return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+            
+            vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
+            node = vm_info.get('node', 'pve')
+            
+            # Get real logs from the container/VM (last 1000 lines)
+            log_result = subprocess.run(
+                ['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/log', '--start', '0', '--limit', '1000'],
+                capture_output=True, text=True, timeout=10)
+            
+            logs = []
+            if log_result.returncode == 0:
+                # Parse as plain text (each line is a log entry)
+                for i, line in enumerate(log_result.stdout.split('\n')):
+                    if line.strip():
+                        logs.append({'n': i, 't': line})
+            
+            return jsonify({
+                'vmid': vmid,
+                'name': vm_info.get('name'),
+                'type': vm_type,
+                'node': node,
+                'log_lines': len(logs),
+                'logs': logs
+            })
         else:
-            return jsonify({'error': 'Failed to generate log file'}), 500
-            
+            return jsonify({'error': 'Failed to get VM logs'}), 500
     except Exception as e:
-        print(f"Error downloading logs: {e}")
+        print(f"Error getting VM logs: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/backups', methods=['GET'])
-def api_backups():
-    """Get list of all backup files from Proxmox storage"""
+@app.route('/api/vms/<int:vmid>/control', methods=['POST'])
+def api_vm_control(vmid):
+    """Control VM/LXC (start, stop, shutdown, reboot)"""
     try:
-        backups = []
+        data = request.get_json()
+        action = data.get('action')  # start, stop, shutdown, reboot
         
-        # Get list of storage locations
-        try:
-            result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'], 
-                                  capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                storages = json.loads(result.stdout)
-                
-                # For each storage, get backup files
-                for storage in storages:
-                    storage_id = storage.get('storage')
-                    storage_type = storage.get('type')
-                    
-                    # Only check storages that can contain backups
-                    if storage_type in ['dir', 'nfs', 'cifs', 'pbs']:
-                        try:
-                            # Get content of storage
-                            content_result = subprocess.run(
-                                ['pvesh', 'get', f'/nodes/localhost/storage/{storage_id}/content', '--output-format', 'json'],
-                                capture_output=True, text=True, timeout=10)
-                            
-                            if content_result.returncode == 0:
-                                contents = json.loads(content_result.stdout)
-                                
-                                for item in contents:
-                                    if item.get('content') == 'backup':
-                                        # Parse backup information
-                                        volid = item.get('volid', '')
-                                        size = item.get('size', 0)
-                                        ctime = item.get('ctime', 0)
-                                        
-                                        # Extract VMID from volid (format: storage:backup/vzdump-qemu-100-...)
-                                        vmid = None
-                                        backup_type = None
-                                        if 'vzdump-qemu-' in volid:
-                                            backup_type = 'qemu'
-                                            try:
-                                                vmid = volid.split('vzdump-qemu-')[1].split('-')[0]
-                                            except:
-                                                pass
-                                        elif 'vzdump-lxc-' in volid:
-                                            backup_type = 'lxc'
-                                            try:
-                                                vmid = volid.split('vzdump-lxc-')[1].split('-')[0]
-                                            except:
-                                                pass
-                                        
-                                        backups.append({
-                                            'volid': volid,
-                                            'storage': storage_id,
-                                            'vmid': vmid,
-                                            'type': backup_type,
-                                            'size': size,
-                                            'size_human': format_bytes(size),
-                                            'created': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M:%S'),
-                                            'timestamp': ctime
-                                        })
-                        except Exception as e:
-                            print(f"Error getting content for storage {storage_id}: {e}")
-                            continue
-        except Exception as e:
-            print(f"Error getting storage list: {e}")
+        if action not in ['start', 'stop', 'shutdown', 'reboot']:
+            return jsonify({'error': 'Invalid action'}), 400
         
-        # Sort by creation time (newest first)
-        backups.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        return jsonify({
-            'backups': backups,
-            'total': len(backups)
-        })
-        
-    except Exception as e:
-        print(f"Error getting backups: {e}")
-        return jsonify({
-            'error': str(e),
-            'backups': [],
-            'total': 0
-        })
-
-@app.route('/api/events', methods=['GET'])
-def api_events():
-    """Get recent Proxmox events and tasks"""
-    try:
-        limit = request.args.get('limit', '50')
-        events = []
-        
-        try:
-            result = subprocess.run(['pvesh', 'get', '/cluster/tasks', '--output-format', 'json'], 
-                                  capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                tasks = json.loads(result.stdout)
-                
-                for task in tasks[:int(limit)]:
-                    upid = task.get('upid', '')
-                    task_type = task.get('type', 'unknown')
-                    status = task.get('status', 'unknown')
-                    node = task.get('node', 'unknown')
-                    user = task.get('user', 'unknown')
-                    vmid = task.get('id', '')
-                    starttime = task.get('starttime', 0)
-                    endtime = task.get('endtime', 0)
-                    
-                    # Calculate duration
-                    duration = ''
-                    if endtime and starttime:
-                        duration_sec = endtime - starttime
-                        if duration_sec < 60:
-                            duration = f"{duration_sec}s"
-                        elif duration_sec < 3600:
-                            duration = f"{duration_sec // 60}m {duration_sec % 60}s"
-                        else:
-                            hours = duration_sec // 3600
-                            minutes = (duration_sec % 3600) // 60
-                            duration = f"{hours}h {minutes}m"
-                    
-                    # Determine level based on status
-                    level = 'info'
-                    if status == 'OK':
-                        level = 'info'
-                    elif status in ['stopped', 'error']:
-                        level = 'error'
-                    elif status == 'running':
-                        level = 'warning'
-                    
-                    events.append({
-                        'upid': upid,
-                        'type': task_type,
-                        'status': status,
-                        'level': level,
-                        'node': node,
-                        'user': user,
-                        'vmid': str(vmid) if vmid else '',
-                        'starttime': datetime.fromtimestamp(starttime).strftime('%Y-%m-%d %H:%M:%S') if starttime else '',
-                        'endtime': datetime.fromtimestamp(endtime).strftime('%Y-%m-%d %H:%M:%S') if endtime else 'Running',
-                        'duration': duration
-                    })
-        except Exception as e:
-            print(f"Error getting events: {e}")
-        
-        return jsonify({
-            'events': events,
-            'total': len(events)
-        })
-        
-    except Exception as e:
-        print(f"Error getting events: {e}")
-        return jsonify({
-            'error': str(e),
-            'events': [],
-            'total': 0
-        })
-
-@app.route('/api/notifications', methods=['GET'])
-def api_notifications():
-    """Get Proxmox notification history"""
-    try:
-        notifications = []
-        
-        # 1. Get notifications from journalctl (Proxmox notification service)
-        try:
-            cmd = [
-                'journalctl',
-                '-u', 'pve-ha-lrm',
-                '-u', 'pve-ha-crm',
-                '-u', 'pvedaemon',
-                '-u', 'pveproxy',
-                '-u', 'pvestatd',
-                '--grep', 'notification|email|webhook|alert|notify',
-                '-n', '100',
-                '--output', 'json',
-                '--no-pager'
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                for line in result.stdout.strip().split('\n'):
-                    if line:
-                        try:
-                            log_entry = json.loads(line)
-                            timestamp_us = int(log_entry.get('__REALTIME_TIMESTAMP', '0'))
-                            timestamp = datetime.fromtimestamp(timestamp_us / 1000000).strftime('%Y-%m-%d %H:%M:%S')
-                            
-                            message = log_entry.get('MESSAGE', '')
-                            
-                            # Determine notification type from message
-                            notif_type = 'info'
-                            if 'email' in message.lower():
-                                notif_type = 'email'
-                            elif 'webhook' in message.lower():
-                                notif_type = 'webhook'
-                            elif 'alert' in message.lower() or 'warning' in message.lower():
-                                notif_type = 'alert'
-                            elif 'error' in message.lower() or 'fail' in message.lower():
-                                notif_type = 'error'
-                            
-                            notifications.append({
-                                'timestamp': timestamp,
-                                'type': notif_type,
-                                'service': log_entry.get('_SYSTEMD_UNIT', 'proxmox'),
-                                'message': message,
-                                'source': 'journal'
-                            })
-                        except (json.JSONDecodeError, ValueError):
-                            continue
-        except Exception as e:
-            print(f"Error reading notification logs: {e}")
-        
-        # 2. Try to read Proxmox notification configuration
-        try:
-            notif_config_path = '/etc/pve/notifications.cfg'
-            if os.path.exists(notif_config_path):
-                with open(notif_config_path, 'r') as f:
-                    config_content = f.read()
-                    # Parse notification targets (emails, webhooks, etc.)
-                    for line in config_content.split('\n'):
-                        if line.strip() and not line.startswith('#'):
-                            notifications.append({
-                                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                                'type': 'config',
-                                'service': 'notification-config',
-                                'message': f'Notification target configured: {line.strip()}',
-                                'source': 'config'
-                            })
-        except Exception as e:
-            print(f"Error reading notification config: {e}")
-        
-        # 3. Get backup notifications from task log
-        try:
-            cmd = ['pvesh', 'get', '/cluster/tasks', '--output-format', 'json']
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            
-            if result.returncode == 0:
-                tasks = json.loads(result.stdout)
-                for task in tasks:
-                    if task.get('type') in ['vzdump', 'backup']:
-                        status = task.get('status', 'unknown')
-                        notif_type = 'success' if status == 'OK' else 'error' if status == 'stopped' else 'info'
-                        
-                        notifications.append({
-                            'timestamp': datetime.fromtimestamp(task.get('starttime', 0)).strftime('%Y-%m-%d %H:%M:%S'),
-                            'type': notif_type,
-                            'service': 'backup',
-                            'message': f"Backup task {task.get('upid', 'unknown')}: {status}",
-                            'source': 'task-log'
-                        })
-        except Exception as e:
-            print(f"Error reading task notifications: {e}")
-        
-        # Sort by timestamp (newest first)
-        notifications.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        return jsonify({
-            'notifications': notifications[:100],  # Limit to 100 most recent
-            'total': len(notifications)
-        })
-        
-    except Exception as e:
-        print(f"Error getting notifications: {e}")
-        return jsonify({
-            'error': str(e),
-            'notifications': [],
-            'total': 0
-        })
-
-@app.route('/api/notifications/download', methods=['GET'])
-def api_notifications_download():
-    """Download complete log for a specific notification"""
-    try:
-        timestamp = request.args.get('timestamp', '')
-        
-        if not timestamp:
-            return jsonify({'error': 'Timestamp parameter required'}), 400
-        
-        from datetime import datetime, timedelta
-        
-        try:
-            # Parse timestamp format: "2025-10-11 14:27:35"
-            dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-            # Use a very small time window (2 minutes) to get just this notification
-            since_time = (dt - timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
-            until_time = (dt + timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            # If parsing fails, use a default range
-            since_time = "2 minutes ago"
-            until_time = "now"
-        
-        # Get logs around the specific timestamp
-        cmd = [
-            'journalctl',
-            '--since', since_time,
-            '--until', until_time,
-            '-n', '50',  # Limit to 50 lines around the notification
-            '--no-pager'
-        ]
-        
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        # Get VM type and node
+        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+                              capture_output=True, text=True, timeout=10)
         
         if result.returncode == 0:
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
-                f.write(f"ProxMenux Log ({log_type}, since {since_days if since_days else f'{hours}h'}) - Generated: {datetime.now().isoformat()}\n")
-                f.write("=" * 80 + "\n\n")
-                f.write(result.stdout)
-                temp_path = f.name
+            resources = json.loads(result.stdout)
+            vm_info = None
+            for resource in resources:
+                if resource.get('vmid') == vmid:
+                    vm_info = resource
+                    break
             
-            return send_file(
-                temp_path,
-                mimetype='text/plain',
-                as_attachment=True,
-                download_name=f'notification_{timestamp.replace(":", "_").replace(" ", "_")}.log'
-            )
+            if not vm_info:
+                return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+            
+            vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
+            node = vm_info.get('node', 'pve')
+            
+            # Execute action
+            control_result = subprocess.run(
+                ['pvesh', 'create', f'/nodes/{node}/{vm_type}/{vmid}/status/{action}'],
+                capture_output=True, text=True, timeout=30)
+            
+            if control_result.returncode == 0:
+                return jsonify({
+                    'success': True,
+                    'vmid': vmid,
+                    'action': action,
+                    'message': f'Successfully executed {action} on {vm_info.get("name")}'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': control_result.stderr
+                }), 500
         else:
-            return jsonify({'error': 'Failed to generate log file'}), 500
-            
+            return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
-        print(f"Error downloading logs: {e}")
+        print(f"Error controlling VM: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/backups', methods=['GET'])
-def api_backups():
-    """Get list of all backup files from Proxmox storage"""
+@app.route('/api/vms/<int:vmid>/config', methods=['PUT'])
+def api_vm_config_update(vmid):
+    """Update VM/LXC configuration (description/notes)"""
     try:
-        backups = []
+        data = request.get_json()
+        description = data.get('description', '')
         
-        # Get list of storage locations
-        try:
-            result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'], 
-                                  capture_output=True, text=True, timeout=10)
+        # Get VM type and node
+        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
+                              capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            resources = json.loads(result.stdout)
+            vm_info = None
+            for resource in resources:
+                if resource.get('vmid') == vmid:
+                    vm_info = resource
+                    break
             
-            if result.returncode == 0:
-                storages = json.loads(result.stdout)
-                
-                # For each storage, get backup files
-                for storage in storages:
-                    storage_id = storage.get('storage')
-                    storage_type = storage.get('type')
-                    
-                    # Only check storages that can contain backups
-                    if storage_type in ['dir', 'nfs', 'cifs', 'pbs']:
-                        try:
-                            # Get content of storage
-                            content_result = subprocess.run(
-                                ['pvesh', 'get', f'/nodes/localhost/storage/{storage_id}/content', '--output-format', 'json'],
-                                capture_output=True, text=True, timeout=10)
-                            
-                            if content_result.returncode == 0:
-                                contents = json.loads(content_result.stdout)
-                                
-                                for item in contents:
-                                    if item.get('content') == 'backup':
-                                        # Parse backup information
-                                        volid = item.get('volid', '')
-                                        size = item.get('size', 0)
-                                        ctime = item.get('ctime', 0)
-                                        
-                                        # Extract VMID from volid (format: storage:backup/vzdump-qemu-100-...)
-                                        vmid = None
-                                        backup_type = None
-                                        if 'vzdump-qemu-' in volid:
-                                            backup_type = 'qemu'
-                                            try:
-                                                vmid = volid.split('vzdump-qemu-')[1].split('-')[0]
+            if not vm_info:
+                return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+            
+            vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
+            node = vm_info.get('node', 'pve')
+            
+            # Update configuration with description
+            config_result = subprocess.run(
+                ['pvesh', 'set', f'/nodes/{node}/{vm_type}/{vmid}/config', '-description', description],
+                capture_output=True, text=True, timeout=30)
+            
+            if config_result.returncode == 0:
+                return jsonify({
+                    'success': True,
+                    'vmid': vmid,
+                    'message': f'Successfully updated configuration for {vm_info.get("name")}'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': config_result.stderr
+                }), 500
+        else:
+            return jsonify({'error': 'Failed to get VM details'}), 500
+    except Exception as e:
+        print(f"Error updating VM configuration: {e}")
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    # API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics
+    
+    import sys
+    import logging
+    
+    # Silence werkzeug logger
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    
+    # Silence Flask CLI banner (removes "Serving Flask app", "Debug mode", "WARNING" messages)
+    cli = sys.modules['flask.cli']
+    cli.show_server_banner = lambda *x: None
+    
+    # Print only essential information
+    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics")
+    
+    app.run(host='0.0.0.0', port=8008, debug=False)
