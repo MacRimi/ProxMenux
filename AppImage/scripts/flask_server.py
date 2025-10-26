@@ -5289,8 +5289,8 @@ def api_vm_config_update(vmid):
                     'error': config_result.stderr
                 }), 500
         else:
-            return jsonify({'error': 'Failed to get VM
-       except Exception as e:
+            return jsonify({'error': 'Failed to get VM details'}), 500
+    except Exception as e:
         print(f"Error updating VM configuration: {e}")
         return jsonify({'error': str(e)}), 500
 
