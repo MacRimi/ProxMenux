@@ -54,6 +54,7 @@ export function NetworkTrafficChart({
   })
 
   useEffect(() => {
+    setIsInitialLoad(true)
     fetchMetrics()
   }, [timeframe, interfaceName])
 
@@ -68,7 +69,9 @@ export function NetworkTrafficChart({
   }, [timeframe, interfaceName, refreshInterval])
 
   const fetchMetrics = async () => {
-    setLoading(true)
+    if (isInitialLoad) {
+      setLoading(true)
+    }
     setError(null)
 
     try {
@@ -202,7 +205,7 @@ export function NetworkTrafficChart({
     )
   }
 
-  if (loading) {
+  if (loading && isInitialLoad) {
     return (
       <div className="flex items-center justify-center h-[300px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -259,8 +262,9 @@ export function NetworkTrafficChart({
           fillOpacity={0.3}
           name="Received"
           hide={!visibleLines.netIn}
-          isAnimationActive={isInitialLoad}
-          animationDuration={800}
+          isAnimationActive={true}
+          animationDuration={300}
+          animationEasing="ease-in-out"
         />
         <Area
           type="monotone"
@@ -271,8 +275,9 @@ export function NetworkTrafficChart({
           fillOpacity={0.3}
           name="Sent"
           hide={!visibleLines.netOut}
-          isAnimationActive={isInitialLoad}
-          animationDuration={800}
+          isAnimationActive={true}
+          animationDuration={300}
+          animationEasing="ease-in-out"
         />
       </AreaChart>
     </ResponsiveContainer>
