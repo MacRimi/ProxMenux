@@ -163,18 +163,13 @@ export function NetworkMetrics() {
     revalidateOnReconnect: true,
   })
 
-  const { data: interfaceHistoricalData } = useSWR<any>(`/api/node/metrics?timeframe=${timeframe}`, fetcher, {
-    refreshInterval: 30000,
-    revalidateOnFocus: false,
-  })
-
-  const { data: interfaceTotalsData } = useSWR<{
-    timeframe: string
-    interfaces: Record<string, { received: number; sent: number }>
-  }>(`/api/network/interfaces/totals?timeframe=${timeframe}`, fetcher, {
-    refreshInterval: 60000,
-    revalidateOnFocus: false,
-  })
+  // const { data: interfaceTotalsData } = useSWR<{
+  //   timeframe: string
+  //   interfaces: Record<string, { received: number; sent: number }>
+  // }>(`/api/network/interfaces/totals?timeframe=${timeframe}`, fetcher, {
+  //   refreshInterval: 60000,
+  //   revalidateOnFocus: false,
+  // })
 
   if (isLoading) {
     return (
@@ -406,7 +401,7 @@ export function NetworkMetrics() {
           <div className="space-y-4">
             {networkData.physical_interfaces.map((interface_, index) => {
               const typeBadge = getInterfaceTypeBadge(interface_.type)
-              const interfaceTotals = interfaceTotalsData?.interfaces?.[interface_.name]
+              // const interfaceTotals = interfaceTotalsData?.interfaces?.[interface_.name] // Removed
 
               return (
                 <div
@@ -455,23 +450,10 @@ export function NetworkMetrics() {
                     <div className="col-span-2 md:col-span-1">
                       <div className="text-muted-foreground text-xs">Traffic ({getTimeframeLabel()})</div>
                       <div className="font-medium text-foreground text-xs">
-                        {interfaceTotals ? (
-                          <>
-                            <span className="text-green-500">
-                              ↓ {formatStorage(interfaceTotals.received * 1024 * 1024 * 1024)}
-                            </span>
-                            {" / "}
-                            <span className="text-blue-500">
-                              ↑ {formatStorage(interfaceTotals.sent * 1024 * 1024 * 1024)}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
-                            {" / "}
-                            <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
-                          </>
-                        )}
+                        {/* Removed timeframe-based data, will now show Traffic since last boot */}
+                        <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
+                        {" / "}
+                        <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
                       </div>
                     </div>
 
@@ -506,7 +488,7 @@ export function NetworkMetrics() {
             <div className="space-y-4">
               {networkData.bridge_interfaces.map((interface_, index) => {
                 const typeBadge = getInterfaceTypeBadge(interface_.type)
-                const interfaceTotals = interfaceTotalsData?.interfaces?.[interface_.name]
+                // const interfaceTotals = interfaceTotalsData?.interfaces?.[interface_.name] // Removed
 
                 return (
                   <div
@@ -583,23 +565,10 @@ export function NetworkMetrics() {
                       <div className="col-span-2 md:col-span-1">
                         <div className="text-muted-foreground text-xs">Traffic ({getTimeframeLabel()})</div>
                         <div className="font-medium text-foreground text-xs">
-                          {interfaceTotals ? (
-                            <>
-                              <span className="text-green-500">
-                                ↓ {formatStorage(interfaceTotals.received * 1024 * 1024 * 1024)}
-                              </span>
-                              {" / "}
-                              <span className="text-blue-500">
-                                ↑ {formatStorage(interfaceTotals.sent * 1024 * 1024 * 1024)}
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
-                              {" / "}
-                              <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
-                            </>
-                          )}
+                          {/* Removed timeframe-based data, will now show Traffic since last boot */}
+                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
+                          {" / "}
+                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
                         </div>
                       </div>
 
@@ -748,12 +717,12 @@ export function NetworkMetrics() {
 
                 const displayInterface = currentInterfaceData || selectedInterface
 
-                console.log("[v0] Selected Interface:", selectedInterface.name)
-                console.log("[v0] Selected Interface bytes_recv:", selectedInterface.bytes_recv)
-                console.log("[v0] Selected Interface bytes_sent:", selectedInterface.bytes_sent)
-                console.log("[v0] Display Interface bytes_recv:", displayInterface.bytes_recv)
-                console.log("[v0] Display Interface bytes_sent:", displayInterface.bytes_sent)
-                console.log("[v0] Modal Network Data available:", !!modalNetworkData)
+                // console.log("[v0] Selected Interface:", selectedInterface.name)
+                // console.log("[v0] Selected Interface bytes_recv:", selectedInterface.bytes_recv)
+                // console.log("[v0] Selected Interface bytes_sent:", selectedInterface.bytes_sent)
+                // console.log("[v0] Display Interface bytes_recv:", displayInterface.bytes_recv)
+                // console.log("[v0] Display Interface bytes_sent:", displayInterface.bytes_sent)
+                // console.log("[v0] Modal Network Data available:", !!modalNetworkData)
 
                 return (
                   <>
