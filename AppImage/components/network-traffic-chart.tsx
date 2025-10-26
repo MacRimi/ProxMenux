@@ -53,6 +53,8 @@ export function NetworkTrafficChart({
     netOut: true,
   })
 
+  console.log("[v0] NetworkTrafficChart refreshInterval:", refreshInterval, "interfaceName:", interfaceName)
+
   useEffect(() => {
     setIsInitialLoad(true)
     fetchMetrics()
@@ -60,11 +62,17 @@ export function NetworkTrafficChart({
 
   useEffect(() => {
     if (refreshInterval > 0) {
+      console.log("[v0] Setting up interval with refreshInterval:", refreshInterval)
+
       const interval = setInterval(() => {
+        console.log("[v0] Interval executing - fetching metrics for:", interfaceName || "node")
         fetchMetrics()
       }, refreshInterval)
 
-      return () => clearInterval(interval)
+      return () => {
+        console.log("[v0] Cleaning up interval")
+        clearInterval(interval)
+      }
     }
   }, [timeframe, interfaceName, refreshInterval])
 
