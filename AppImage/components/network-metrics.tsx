@@ -157,6 +157,12 @@ export function NetworkMetrics() {
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
   const [interfaceTotals, setInterfaceTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
 
+  const { data: modalNetworkData } = useSWR<NetworkData>(selectedInterface ? "/api/network" : null, fetcher, {
+    refreshInterval: 15000, // Refresh every 15 seconds when modal is open
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+  })
+
   const { data: interfaceHistoricalData } = useSWR<any>(`/api/node/metrics?timeframe=${timeframe}`, fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: false,
@@ -220,7 +226,11 @@ export function NetworkMetrics() {
     ...(networkData.vm_lxc_interfaces || []),
   ]
 
-  const vmLxcInterfaces = networkData.vm_lxc_interfaces || []
+  const vmLxcInterfaces = (networkData.vm_lxc_interfaces || []).sort((a, b) => {
+    const vmidA = a.vmid ?? Number.MAX_SAFE_INTEGER
+    const vmidB = b.vmid ?? Number.MAX_SAFE_INTEGER
+    return vmidA - vmidB
+  })
 
   const topInterface =
     vmLxcInterfaces.length > 0
@@ -586,7 +596,7 @@ export function NetworkMetrics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {networkData.vm_lxc_interfaces.map((interface_, index) => {
+              {vmLxcInterfaces.map((interface_, index) => {
                 const vmTypeBadge = getVMTypeBadge(interface_.vm_type)
 
                 return (
@@ -688,374 +698,399 @@ export function NetworkMetrics() {
 
           {selectedInterface && (
             <div className="space-y-6">
-              {/* Basic Information */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Basic Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Interface Name</div>
-                    <div className="font-medium">{selectedInterface.name}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Type</div>
-                    <Badge variant="outline" className={getInterfaceTypeBadge(selectedInterface.type).color}>
-                      {getInterfaceTypeBadge(selectedInterface.type).label}
-                    </Badge>
-                  </div>
-                  {selectedInterface.type === "bridge" && selectedInterface.bridge_physical_interface && (
-                    <div className="col-span-2">
-                      <div className="text-sm text-muted-foreground">Physical Interface</div>
-                      <div className="font-medium text-blue-500 text-lg break-all">
-                        {selectedInterface.bridge_physical_interface}
-                      </div>
-                      {selectedInterface.bridge_physical_interface.startsWith("bond") &&
-                        networkData?.physical_interfaces && (
-                          <>
-                            {(() => {
-                              const bondInterface = networkData.physical_interfaces.find(
-                                (iface) => iface.name === selectedInterface.bridge_physical_interface,
-                              )
-                              if (bondInterface?.bond_slaves && bondInterface.bond_slaves.length > 0) {
-                                return (
-                                  <div className="mt-2">
-                                    <div className="text-sm text-muted-foreground mb-2">Bond Members</div>
-                                    <div className="flex flex-wrap gap-2">
-                                      {bondInterface.bond_slaves.map((slave, idx) => (
-                                        <Badge
-                                          key={idx}
-                                          variant="outline"
-                                          className="bg-purple-500/10 text-purple-500 border-purple-500/20"
-                                        >
-                                          {slave}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )
-                              }
-                              return null
-                            })()}
-                          </>
+              {(() => {
+                // Find the current interface data from modalNetworkData if available
+                const currentInterfaceData = modalNetworkData
+                  ? [
+                      ...(modalNetworkData.physical_interfaces || []),
+                      ...(modalNetworkData.bridge_interfaces || []),
+                      ...(modalNetworkData.vm_lxc_interfaces || []),
+                    ].find((iface) => iface.name === selectedInterface.name)
+                  : selectedInterface
+
+                const displayInterface = currentInterfaceData || selectedInterface
+
+                return (
+                  <>
+                    {/* Basic Information */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">Basic Information</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Interface Name</div>
+                          <div className="font-medium">{displayInterface.name}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Type</div>
+                          <Badge variant="outline" className={getInterfaceTypeBadge(displayInterface.type).color}>
+                            {getInterfaceTypeBadge(displayInterface.type).label}
+                          </Badge>
+                        </div>
+                        {displayInterface.type === "bridge" && displayInterface.bridge_physical_interface && (
+                          <div className="col-span-2">
+                            <div className="text-sm text-muted-foreground">Physical Interface</div>
+                            <div className="font-medium text-blue-500 text-lg break-all">
+                              {displayInterface.bridge_physical_interface}
+                            </div>
+                            {displayInterface.bridge_physical_interface.startsWith("bond") &&
+                              modalNetworkData?.physical_interfaces && (
+                                <>
+                                  {(() => {
+                                    const bondInterface = modalNetworkData.physical_interfaces.find(
+                                      (iface) => iface.name === displayInterface.bridge_physical_interface,
+                                    )
+                                    if (bondInterface?.bond_slaves && bondInterface.bond_slaves.length > 0) {
+                                      return (
+                                        <div className="mt-2">
+                                          <div className="text-sm text-muted-foreground mb-2">Bond Members</div>
+                                          <div className="flex flex-wrap gap-2">
+                                            {bondInterface.bond_slaves.map((slave, idx) => (
+                                              <Badge
+                                                key={idx}
+                                                variant="outline"
+                                                className="bg-purple-500/10 text-purple-500 border-purple-500/20"
+                                              >
+                                                {slave}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )
+                                    }
+                                    return null
+                                  })()}
+                                </>
+                              )}
+                            {displayInterface.bridge_bond_slaves && displayInterface.bridge_bond_slaves.length > 0 && (
+                              <div className="mt-2">
+                                <div className="text-sm text-muted-foreground mb-2">Bond Members</div>
+                                <div className="flex flex-wrap gap-2">
+                                  {displayInterface.bridge_bond_slaves.map((slave, idx) => (
+                                    <Badge
+                                      key={idx}
+                                      variant="outline"
+                                      className="bg-purple-500/10 text-purple-500 border-purple-500/20"
+                                    >
+                                      {slave}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         )}
-                      {selectedInterface.bridge_bond_slaves && selectedInterface.bridge_bond_slaves.length > 0 && (
-                        <div className="mt-2">
-                          <div className="text-sm text-muted-foreground mb-2">Bond Members</div>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedInterface.bridge_bond_slaves.map((slave, idx) => (
-                              <Badge
-                                key={idx}
-                                variant="outline"
-                                className="bg-purple-500/10 text-purple-500 border-purple-500/20"
-                              >
-                                {slave}
-                              </Badge>
-                            ))}
+                        {displayInterface.type === "vm_lxc" && displayInterface.vm_name && (
+                          <div className="col-span-2">
+                            <div className="text-sm text-muted-foreground">VM/LXC Name</div>
+                            <div className="font-medium text-orange-500 text-lg flex items-center gap-2">
+                              {displayInterface.vm_name}
+                              {displayInterface.vm_type && (
+                                <Badge variant="outline" className={getVMTypeBadge(displayInterface.vm_type).color}>
+                                  {getVMTypeBadge(displayInterface.vm_type).label}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-sm text-muted-foreground">Status</div>
+                          <Badge
+                            variant="outline"
+                            className={
+                              displayInterface.status === "up"
+                                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                : "bg-red-500/10 text-red-500 border-red-500/20"
+                            }
+                          >
+                            {displayInterface.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Speed</div>
+                          <div className="font-medium">{formatSpeed(displayInterface.speed)}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Duplex</div>
+                          <div className="font-medium capitalize">{displayInterface.duplex}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">MTU</div>
+                          <div className="font-medium">{displayInterface.mtu}</div>
+                        </div>
+                        {displayInterface.mac_address && (
+                          <div className="col-span-2">
+                            <div className="text-sm text-muted-foreground">MAC Address</div>
+                            <div className="font-medium font-mono">{displayInterface.mac_address}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* IP Addresses */}
+                    {displayInterface.addresses.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-3">IP Addresses</h3>
+                        <div className="space-y-2">
+                          {displayInterface.addresses.map((addr, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                              <div>
+                                <div className="font-medium font-mono">{addr.ip}</div>
+                                <div className="text-sm text-muted-foreground">Netmask: {addr.netmask}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Network Traffic Statistics - Only show if interface is UP and NOT a VM interface */}
+                    {displayInterface.status.toLowerCase() === "up" && displayInterface.vm_type !== "vm" ? (
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-4">
+                          Network Traffic Statistics (
+                          {modalTimeframe === "hour"
+                            ? "Last Hour"
+                            : modalTimeframe === "day"
+                              ? "Last 24 Hours"
+                              : modalTimeframe === "week"
+                                ? "Last 7 Days"
+                                : modalTimeframe === "month"
+                                  ? "Last 30 Days"
+                                  : "Last Year"}
+                          )
+                        </h3>
+                        <div className="space-y-4">
+                          {/* Traffic Data - Top Row */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-sm text-muted-foreground">Bytes Received</div>
+                              <div className="font-medium text-green-500 text-lg">
+                                {formatStorage(interfaceTotals.received * 1024 * 1024 * 1024)}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Bytes Sent</div>
+                              <div className="font-medium text-blue-500 text-lg">
+                                {formatStorage(interfaceTotals.sent * 1024 * 1024 * 1024)}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Network Traffic Chart - Full Width Below */}
+                          <div className="bg-muted/30 rounded-lg p-4">
+                            <NetworkTrafficChart
+                              timeframe={modalTimeframe}
+                              interfaceName={displayInterface.name}
+                              onTotalsCalculated={setInterfaceTotals}
+                            />
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )}
-                  {selectedInterface.type === "vm_lxc" && selectedInterface.vm_name && (
-                    <div className="col-span-2">
-                      <div className="text-sm text-muted-foreground">VM/LXC Name</div>
-                      <div className="font-medium text-orange-500 text-lg flex items-center gap-2">
-                        {selectedInterface.vm_name}
-                        {selectedInterface.vm_type && (
-                          <Badge variant="outline" className={getVMTypeBadge(selectedInterface.vm_type).color}>
-                            {getVMTypeBadge(selectedInterface.vm_type).label}
-                          </Badge>
-                        )}
                       </div>
-                    </div>
-                  )}
-                  <div>
-                    <div className="text-sm text-muted-foreground">Status</div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        selectedInterface.status === "up"
-                          ? "bg-green-500/10 text-green-500 border-green-500/20"
-                          : "bg-red-500/10 text-red-500 border-red-500/20"
-                      }
-                    >
-                      {selectedInterface.status.toUpperCase()}
-                    </Badge>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Speed</div>
-                    <div className="font-medium">{formatSpeed(selectedInterface.speed)}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Duplex</div>
-                    <div className="font-medium capitalize">{selectedInterface.duplex}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">MTU</div>
-                    <div className="font-medium">{selectedInterface.mtu}</div>
-                  </div>
-                  {selectedInterface.mac_address && (
-                    <div className="col-span-2">
-                      <div className="text-sm text-muted-foreground">MAC Address</div>
-                      <div className="font-medium font-mono">{selectedInterface.mac_address}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                    ) : displayInterface.status.toLowerCase() === "up" && displayInterface.vm_type === "vm" ? (
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-4">Traffic since last boot</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Bytes Received</div>
+                            <div className="font-medium text-green-500 text-lg">
+                              {formatBytes(displayInterface.bytes_recv)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Bytes Sent</div>
+                            <div className="font-medium text-blue-500 text-lg">
+                              {formatBytes(displayInterface.bytes_sent)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Packets Received</div>
+                            <div className="font-medium">
+                              {displayInterface.packets_recv?.toLocaleString() || "N/A"}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Packets Sent</div>
+                            <div className="font-medium">
+                              {displayInterface.packets_sent?.toLocaleString() || "N/A"}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Errors In</div>
+                            <div className="font-medium text-red-500">{displayInterface.errors_in || 0}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Errors Out</div>
+                            <div className="font-medium text-red-500">{displayInterface.errors_out || 0}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Drops In</div>
+                            <div className="font-medium text-yellow-500">{displayInterface.drops_in || 0}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Drops Out</div>
+                            <div className="font-medium text-yellow-500">{displayInterface.drops_out || 0}</div>
+                          </div>
+                          {displayInterface.packet_loss_in !== undefined && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Packet Loss In</div>
+                              <div
+                                className={`font-medium ${displayInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
+                              >
+                                {displayInterface.packet_loss_in}%
+                              </div>
+                            </div>
+                          )}
+                          {displayInterface.packet_loss_out !== undefined && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Packet Loss Out</div>
+                              <div
+                                className={`font-medium ${displayInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
+                              >
+                                {displayInterface.packet_loss_out}%
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-muted/30 rounded-lg p-6 text-center">
+                        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                        <h3 className="text-lg font-semibold text-foreground mb-2">Interface Inactive</h3>
+                        <p className="text-sm text-muted-foreground">
+                          This interface is currently down. Network traffic statistics are not available.
+                        </p>
+                      </div>
+                    )}
 
-              {/* IP Addresses */}
-              {selectedInterface.addresses.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">IP Addresses</h3>
-                  <div className="space-y-2">
-                    {selectedInterface.addresses.map((addr, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    {/* Cumulative Statistics - Only show if interface is UP and NOT a VM interface */}
+                    {displayInterface.status.toLowerCase() === "up" && displayInterface.vm_type !== "vm" && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-4">
+                          Cumulative Statistics (Since Last Boot)
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Packets Received</div>
+                            <div className="font-medium">
+                              {displayInterface.packets_recv?.toLocaleString() || "N/A"}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Packets Sent</div>
+                            <div className="font-medium">
+                              {displayInterface.packets_sent?.toLocaleString() || "N/A"}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Errors In</div>
+                            <div className="font-medium text-red-500">{displayInterface.errors_in || 0}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Errors Out</div>
+                            <div className="font-medium text-red-500">{displayInterface.errors_out || 0}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Drops In</div>
+                            <div className="font-medium text-yellow-500">{displayInterface.drops_in || 0}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Drops Out</div>
+                            <div className="font-medium text-yellow-500">{displayInterface.drops_out || 0}</div>
+                          </div>
+                          {displayInterface.packet_loss_in !== undefined && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Packet Loss In</div>
+                              <div
+                                className={`font-medium ${displayInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
+                              >
+                                {displayInterface.packet_loss_in}%
+                              </div>
+                            </div>
+                          )}
+                          {displayInterface.packet_loss_out !== undefined && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Packet Loss Out</div>
+                              <div
+                                className={`font-medium ${displayInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
+                              >
+                                {displayInterface.packet_loss_out}%
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bond Information */}
+                    {displayInterface.type === "bond" && displayInterface.bond_slaves && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-3">Bond Configuration</h3>
+                        <div className="space-y-3">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Bonding Mode</div>
+                            <div className="font-medium">{displayInterface.bond_mode || "Unknown"}</div>
+                          </div>
+                          {displayInterface.bond_active_slave && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Active Slave</div>
+                              <div className="font-medium">{displayInterface.bond_active_slave}</div>
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-sm text-muted-foreground mb-2">Slave Interfaces</div>
+                            <div className="flex flex-wrap gap-2">
+                              {displayInterface.bond_slaves.map((slave, idx) => (
+                                <Badge
+                                  key={idx}
+                                  variant="outline"
+                                  className="bg-purple-500/10 text-purple-500 border-purple-500/20"
+                                >
+                                  {slave}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bridge Information */}
+                    {displayInterface.type === "bridge" && displayInterface.bridge_members && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-3">Bridge Configuration</h3>
                         <div>
-                          <div className="font-medium font-mono">{addr.ip}</div>
-                          <div className="text-sm text-muted-foreground">Netmask: {addr.netmask}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Network Traffic Statistics - Only show if interface is UP and NOT a VM interface */}
-              {selectedInterface.status.toLowerCase() === "up" && selectedInterface.vm_type !== "vm" ? (
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-4">
-                    Network Traffic Statistics (
-                    {modalTimeframe === "hour"
-                      ? "Last Hour"
-                      : modalTimeframe === "day"
-                        ? "Last 24 Hours"
-                        : modalTimeframe === "week"
-                          ? "Last 7 Days"
-                          : modalTimeframe === "month"
-                            ? "Last 30 Days"
-                            : "Last Year"}
-                    )
-                  </h3>
-                  <div className="space-y-4">
-                    {/* Traffic Data - Top Row */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm text-muted-foreground">Bytes Received</div>
-                        <div className="font-medium text-green-500 text-lg">
-                          {formatStorage(interfaceTotals.received * 1024 * 1024 * 1024)}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Bytes Sent</div>
-                        <div className="font-medium text-blue-500 text-lg">
-                          {formatStorage(interfaceTotals.sent * 1024 * 1024 * 1024)}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Network Traffic Chart - Full Width Below */}
-                    <div className="bg-muted/30 rounded-lg p-4">
-                      <NetworkTrafficChart
-                        timeframe={modalTimeframe}
-                        interfaceName={selectedInterface.name}
-                        onTotalsCalculated={setInterfaceTotals}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : selectedInterface.status.toLowerCase() === "up" && selectedInterface.vm_type === "vm" ? (
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-4">Traffic since last boot</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Bytes Received</div>
-                      <div className="font-medium text-green-500 text-lg">
-                        {formatBytes(selectedInterface.bytes_recv)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Bytes Sent</div>
-                      <div className="font-medium text-blue-500 text-lg">
-                        {formatBytes(selectedInterface.bytes_sent)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Packets Received</div>
-                      <div className="font-medium">{selectedInterface.packets_recv?.toLocaleString() || "N/A"}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Packets Sent</div>
-                      <div className="font-medium">{selectedInterface.packets_sent?.toLocaleString() || "N/A"}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Errors In</div>
-                      <div className="font-medium text-red-500">{selectedInterface.errors_in || 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Errors Out</div>
-                      <div className="font-medium text-red-500">{selectedInterface.errors_out || 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Drops In</div>
-                      <div className="font-medium text-yellow-500">{selectedInterface.drops_in || 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Drops Out</div>
-                      <div className="font-medium text-yellow-500">{selectedInterface.drops_out || 0}</div>
-                    </div>
-                    {selectedInterface.packet_loss_in !== undefined && (
-                      <div>
-                        <div className="text-sm text-muted-foreground">Packet Loss In</div>
-                        <div
-                          className={`font-medium ${selectedInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
-                        >
-                          {selectedInterface.packet_loss_in}%
+                          <div className="text-sm text-muted-foreground mb-2">Virtual Member Interfaces</div>
+                          <div className="flex flex-wrap gap-2">
+                            {displayInterface.bridge_members.length > 0 ? (
+                              displayInterface.bridge_members
+                                .filter(
+                                  (member) =>
+                                    !member.startsWith("enp") &&
+                                    !member.startsWith("eth") &&
+                                    !member.startsWith("eno") &&
+                                    !member.startsWith("ens") &&
+                                    !member.startsWith("wlan") &&
+                                    !member.startsWith("wlp"),
+                                )
+                                .map((member, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    variant="outline"
+                                    className="bg-green-500/10 text-green-500 border-green-500/20"
+                                  >
+                                    {member}
+                                  </Badge>
+                                ))
+                            ) : (
+                              <div className="text-sm text-muted-foreground">No virtual members</div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
-                    {selectedInterface.packet_loss_out !== undefined && (
-                      <div>
-                        <div className="text-sm text-muted-foreground">Packet Loss Out</div>
-                        <div
-                          className={`font-medium ${selectedInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
-                        >
-                          {selectedInterface.packet_loss_out}%
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-muted/30 rounded-lg p-6 text-center">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Interface Inactive</h3>
-                  <p className="text-sm text-muted-foreground">
-                    This interface is currently down. Network traffic statistics are not available.
-                  </p>
-                </div>
-              )}
-
-              {/* Cumulative Statistics - Only show if interface is UP and NOT a VM interface */}
-              {selectedInterface.status.toLowerCase() === "up" && selectedInterface.vm_type !== "vm" && (
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-4">
-                    Cumulative Statistics (Since Last Boot)
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Packets Received</div>
-                      <div className="font-medium">{selectedInterface.packets_recv?.toLocaleString() || "N/A"}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Packets Sent</div>
-                      <div className="font-medium">{selectedInterface.packets_sent?.toLocaleString() || "N/A"}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Errors In</div>
-                      <div className="font-medium text-red-500">{selectedInterface.errors_in || 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Errors Out</div>
-                      <div className="font-medium text-red-500">{selectedInterface.errors_out || 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Drops In</div>
-                      <div className="font-medium text-yellow-500">{selectedInterface.drops_in || 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Drops Out</div>
-                      <div className="font-medium text-yellow-500">{selectedInterface.drops_out || 0}</div>
-                    </div>
-                    {selectedInterface.packet_loss_in !== undefined && (
-                      <div>
-                        <div className="text-sm text-muted-foreground">Packet Loss In</div>
-                        <div
-                          className={`font-medium ${selectedInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
-                        >
-                          {selectedInterface.packet_loss_in}%
-                        </div>
-                      </div>
-                    )}
-                    {selectedInterface.packet_loss_out !== undefined && (
-                      <div>
-                        <div className="text-sm text-muted-foreground">Packet Loss Out</div>
-                        <div
-                          className={`font-medium ${selectedInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
-                        >
-                          {selectedInterface.packet_loss_out}%
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Bond Information */}
-              {selectedInterface.type === "bond" && selectedInterface.bond_slaves && (
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">Bond Configuration</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Bonding Mode</div>
-                      <div className="font-medium">{selectedInterface.bond_mode || "Unknown"}</div>
-                    </div>
-                    {selectedInterface.bond_active_slave && (
-                      <div>
-                        <div className="text-sm text-muted-foreground">Active Slave</div>
-                        <div className="font-medium">{selectedInterface.bond_active_slave}</div>
-                      </div>
-                    )}
-                    <div>
-                      <div className="text-sm text-muted-foreground mb-2">Slave Interfaces</div>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedInterface.bond_slaves.map((slave, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="outline"
-                            className="bg-purple-500/10 text-purple-500 border-purple-500/20"
-                          >
-                            {slave}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Bridge Information */}
-              {selectedInterface.type === "bridge" && selectedInterface.bridge_members && (
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">Bridge Configuration</h3>
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-2">Virtual Member Interfaces</div>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedInterface.bridge_members.length > 0 ? (
-                        selectedInterface.bridge_members
-                          .filter(
-                            (member) =>
-                              !member.startsWith("enp") &&
-                              !member.startsWith("eth") &&
-                              !member.startsWith("eno") &&
-                              !member.startsWith("ens") &&
-                              !member.startsWith("wlan") &&
-                              !member.startsWith("wlp"),
-                          )
-                          .map((member, idx) => (
-                            <Badge
-                              key={idx}
-                              variant="outline"
-                              className="bg-green-500/10 text-green-500 border-green-500/20"
-                            >
-                              {member}
-                            </Badge>
-                          ))
-                      ) : (
-                        <div className="text-sm text-muted-foreground">No virtual members</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
+                  </>
+                )
+              })()}
             </div>
           )}
         </DialogContent>
