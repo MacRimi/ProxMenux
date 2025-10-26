@@ -115,7 +115,7 @@ def get_cpu_temperature():
                 for sensor_name in sensor_priority:
                     if sensor_name in temps and temps[sensor_name]:
                         temp = temps[sensor_name][0].current
-                        print(f"[v0] Using temperature sensor: {sensor_name} = {temp}°C")
+
                         break
                 
                 # If no priority sensor found, use first available
@@ -123,7 +123,7 @@ def get_cpu_temperature():
                     for name, entries in temps.items():
                         if entries:
                             temp = entries[0].current
-                            print(f"[v0] Using fallback temperature sensor: {name} = {temp}°C")
+
                             break
     except Exception as e:
         print(f"Warning: Error reading temperature sensors: {e}")
@@ -3899,11 +3899,11 @@ def api_network_interface_metrics(interface_name):
         
         # Get local node name
         local_node = socket.gethostname()
-        print(f"[v0] Local node: {local_node}")
+
         
         # Determine interface type and get appropriate RRD data
         interface_type = get_interface_type(interface_name)
-        print(f"[v0] Interface type: {interface_type}")
+
         
         rrd_data = []
         
@@ -3911,7 +3911,7 @@ def api_network_interface_metrics(interface_name):
             # For VM/LXC interfaces, get data from the VM/LXC RRD
             vmid, vm_type = extract_vmid_from_interface(interface_name)
             if vmid:
-                print(f"[v0] Fetching RRD data for {vm_type} {vmid}...")
+
                 rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/{vm_type}/{vmid}/rrddata', 
                                             '--timeframe', timeframe, '--output-format', 'json'],
                                            capture_output=True, text=True, timeout=10)
@@ -3926,13 +3926,12 @@ def api_network_interface_metrics(interface_name):
                             if key in point:
                                 filtered_point[key] = point[key]
                         rrd_data.append(filtered_point)
-                    print(f"[v0] RRD data points: {len(rrd_data)}")
+
                 else:
                     print(f"[v0] ERROR: Failed to get RRD data for VM/LXC")
-                    print(f"[v0] stderr: {rrd_result.stderr}")
         else:
             # For physical/bridge interfaces, get data from node RRD
-            print(f"[v0] Fetching RRD data for node {local_node}...")
+
             rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/rrddata', 
                                         '--timeframe', timeframe, '--output-format', 'json'],
                                        capture_output=True, text=True, timeout=10)
@@ -3947,10 +3946,9 @@ def api_network_interface_metrics(interface_name):
                         if key in point:
                             filtered_point[key] = point[key]
                     rrd_data.append(filtered_point)
-                print(f"[v0] RRD data points: {len(rrd_data)}")
+
             else:
                 print(f"[v0] ERROR: Failed to get RRD data for node")
-                print(f"[v0] stderr: {rrd_result.stderr}")
         
 
         return jsonify({
@@ -3988,16 +3986,16 @@ def api_vm_metrics(vmid):
         
         # Get local node name
         local_node = socket.gethostname()
-        print(f"[v0] Local node: {local_node}")
+
         
         # First, determine if it's a qemu VM or lxc container
-        print(f"[v0] Checking if VMID {vmid} is QEMU...")
+
         result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/qemu/{vmid}/status/current', '--output-format', 'json'],
                               capture_output=True, text=True, timeout=10)
         
         vm_type = 'qemu'
         if result.returncode != 0:
-            print(f"[v0] Not QEMU, checking if LXC...")
+
             # Try LXC
             result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/lxc/{vmid}/status/current', '--output-format', 'json'],
                                   capture_output=True, text=True, timeout=10)
@@ -4053,7 +4051,7 @@ def api_node_metrics():
         print(f"[v0] Local node: {local_node}")
         
         # Get RRD data for the node
-        print(f"[v0] Fetching RRD data for node {local_node} with timeframe {timeframe}...")
+
         rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/rrddata', 
                                     '--timeframe', timeframe, '--output-format', 'json'],
                                    capture_output=True, text=True, timeout=10)
