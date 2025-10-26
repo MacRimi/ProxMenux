@@ -146,31 +146,7 @@ const fetchVMData = async (): Promise<VMData[]> => {
 const fetchStorageData = async (): Promise<StorageData | null> => {
   try {
     const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-    const apiUrl = `${baseUrl}/api/storage`
-
-    const response = await fetch(apiUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    return null
-  }
-}
-
-const fetchNetworkData = async (): Promise<NetworkData | null> => {
-  try {
-    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-    const apiUrl = `${baseUrl}/api/network`
+    const apiUrl = `${baseUrl}/api/storage/summary`
 
     const response = await fetch(apiUrl, {
       method: "GET",
@@ -213,6 +189,30 @@ const fetchProxmoxStorageData = async (): Promise<ProxmoxStorageData | null> => 
     return data
   } catch (error) {
     console.log("[v0] Proxmox storage data unavailable:", error instanceof Error ? error.message : "Unknown error")
+    return null
+  }
+}
+
+const fetchNetworkData = async (): Promise<NetworkData | null> => {
+  try {
+    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+    const apiUrl = `${baseUrl}/api/network`
+
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
     return null
   }
 }

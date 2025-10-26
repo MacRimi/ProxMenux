@@ -1087,7 +1087,7 @@ def get_smart_data(disk_name):
 
                                                 smart_data['media_wearout_indicator'] = wear_used
                                                 smart_data['ssd_life_left'] = max(0, 100 - wear_used)
-                                                print(f"[v0] Media Wearout Indicator (ID 230): {wear_used}% used, {smart_data['ssd_life_left']}% life left")
+                                                print(f"[v0] Media Wearout Indicator (ID 230): {smart_data['media_wearout_indicator']}% used, {smart_data['ssd_life_left']}% life left")
                                             except Exception as e:
                                                 print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")    
                                         elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
@@ -1274,6 +1274,79 @@ def get_proxmox_storage():
             'storage': []
         }
 # END OF CHANGES FOR get_proxmox_storage
+
+@app.route('/api/storage/summary', methods=['GET'])
+def api_storage_summary():
+    """Get storage summary without SMART data (optimized for Overview page)"""
+    try:
+        storage_data = {
+            'total': 0,
+            'used': 0,
+            'available': 0,
+            'disk_count': 0
+        }
+        
+        total_disk_size_bytes = 0
+        
+        # List all block devices without SMART data
+        result = subprocess.run(['lsblk', '-b', '-d', '-n', '-o', 'NAME,SIZE,TYPE'], 
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            for line in result.stdout.strip().split('\n'):
+                parts = line.split()
+                if len(parts) >= 3 and parts[2] == 'disk':
+                    disk_name = parts[0]
+                    
+                    # Skip ZFS zvol devices
+                    if disk_name.startswith('zd'):
+                        continue
+                    
+                    disk_size_bytes = int(parts[1])
+                    total_disk_size_bytes += disk_size_bytes
+                    storage_data['disk_count'] += 1
+        
+        storage_data['total'] = round(total_disk_size_bytes / (1024**4), 1)
+        
+        # Get disk usage for mounted partitions (without ZFS)
+        disk_partitions = psutil.disk_partitions()
+        total_used = 0
+        total_available = 0
+        
+        for partition in disk_partitions:
+            try:
+                # Skip special filesystems and ZFS
+                if partition.fstype in ['tmpfs', 'devtmpfs', 'squashfs', 'overlay', 'zfs']:
+                    continue
+                
+                partition_usage = psutil.disk_usage(partition.mountpoint)
+                total_used += partition_usage.used
+                total_available += partition_usage.free
+            except (PermissionError, OSError):
+                continue
+        
+        # Get ZFS pool data
+        try:
+            result = subprocess.run(['zpool', 'list', '-H', '-p', '-o', 'name,size,alloc,free'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if line:
+                        parts = line.split()
+                        if len(parts) >= 4:
+                            pool_alloc = int(parts[2])
+                            pool_free = int(parts[3])
+                            total_used += pool_alloc
+                            total_available += pool_free
+        except Exception:
+            pass
+        
+        storage_data['used'] = round(total_used / (1024**3), 1)
+        storage_data['available'] = round(total_available / (1024**3), 1)
+        
+        return jsonify(storage_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+# END OF CHANGE FOR /api/storage/summary
 
 def get_interface_type(interface_name):
     """Detect the type of network interface"""
@@ -2733,26 +2806,6 @@ def get_detailed_gpu_info(gpu):
                                     detailed_info['utilization_memory'] = round(mem_util, 1)
                                     print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
                             
-                            # Parse GRBM (Graphics Register Bus Manager) for engine utilization
-                            if 'GRBM' in device:
-                                grbm = device['GRBM']
-                                
-                                # Graphics Pipe (similar to Render/3D)
-                                if 'Graphics Pipe' in grbm:
-                                    gfx_pipe = grbm['Graphics Pipe']
-                                    if 'value' in gfx_pipe:
-                                        detailed_info['engine_render'] = f"{gfx_pipe['value']:.1f}%"
-                            
-                            # Parse GRBM2 for additional engine info
-                            if 'GRBM2' in device:
-                                grbm2 = device['GRBM2']
-                                
-                                # Texture Cache (similar to Blitter)
-                                if 'Texture Cache' in grbm2:
-                                    tex_cache = grbm2['Texture Cache']
-                                    if 'value' in tex_cache:
-                                        detailed_info['engine_blitter'] = f"{tex_cache['value']:.1f}%"
-                            
                             # Parse processes (fdinfo)
                             if 'fdinfo' in device:
                                 fdinfo = device['fdinfo']
@@ -3818,14 +3871,11 @@ def api_network_interface_metrics(interface_name):
         print(f"[v0] ===== NETWORK INTERFACE METRICS REQUEST EXCEPTION =====")
         return jsonify({'error': str(e)}), 500
 
-# ... existing code ...
-
 @app.route('/api/vms', methods=['GET'])
 def api_vms():
     """Get virtual machine information"""
     return jsonify(get_proxmox_vms())
 
-# Add the new api_vm_metrics endpoint here
 @app.route('/api/vms/<int:vmid>/metrics', methods=['GET'])
 def api_vm_metrics(vmid):
     """Get historical metrics (RRD data) for a specific VM/LXC"""
