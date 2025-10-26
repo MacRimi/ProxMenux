@@ -1522,8 +1522,14 @@ export default function Hardware() {
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="text-sm font-medium line-clamp-2 break-words flex-1">{device.device}</span>
-                      <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 px-2.5 py-0.5 shrink-0">
-                        Ethernet
+                      <Badge
+                        className={
+                          device.network_subtype === "Wireless"
+                            ? "bg-purple-500/10 text-purple-500 border-purple-500/20 px-2.5 py-0.5 shrink-0"
+                            : "bg-blue-500/10 text-blue-500 border-blue-500/20 px-2.5 py-0.5 shrink-0"
+                        }
+                      >
+                        {device.network_subtype || "Ethernet"}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>

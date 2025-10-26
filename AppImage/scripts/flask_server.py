@@ -2742,12 +2742,6 @@ def get_detailed_gpu_info(gpu):
                                     gfx_pipe = grbm['Graphics Pipe']
                                     if 'value' in gfx_pipe:
                                         detailed_info['engine_render'] = f"{gfx_pipe['value']:.1f}%"
-                                
-                                # Texture Pipe (similar to Video)
-                                if 'Texture Pipe' in grbm:
-                                    tex_pipe = grbm['Texture Pipe']
-                                    if 'value' in tex_pipe:
-                                        detailed_info['engine_video'] = f"{tex_pipe['value']:.1f}%"
                             
                             # Parse GRBM2 for additional engine info
                             if 'GRBM2' in device:
@@ -3309,13 +3303,6 @@ def get_hardware_info():
         except Exception as e:
             print(f"[v0] Error getting memory info: {e}")
         
-        # </CHANGE> Commented out get_disk_hardware_info call as function doesn't exist
-        # storage_info = get_storage_info()
-        # for device in storage_info.get('disks', []):
-        #     hw_info = get_disk_hardware_info(device['name'])
-        #     device.update(hw_info)
-        # hardware_data['storage_devices'] = storage_info.get('disks', [])
-        
         # Storage Devices - simplified version without hardware info
         try:
             result = subprocess.run(['lsblk', '-J', '-o', 'NAME,SIZE,TYPE,MOUNTPOINT,MODEL'], 
@@ -3347,15 +3334,15 @@ def get_hardware_info():
                     if line:
                         parts = line.split(',')
                         if len(parts) >= 9: # Adjusted to match the query fields
-                            gpu_name = parts[0].strip()
-                            mem_total = parts[1].strip()
-                            mem_used = parts[2].strip()
-                            temp = parts[3].strip() if parts[3].strip() != 'N/A' else None
-                            power = parts[4].strip() if parts[4].strip() != 'N/A' else None
-                            gpu_util = parts[5].strip() if parts[5].strip() != 'N/A' else None
-                            mem_util = parts[6].strip() if parts[6].strip() != 'N/A' else None
-                            graphics_clock = parts[7].strip() if parts[7].strip() != 'N/A' else None
-                            memory_clock = parts[8].strip() if parts[8].strip() != 'N/A' else None
+                            gpu_name = parts[0]
+                            mem_total = parts[1]
+                            mem_used = parts[2]
+                            temp = parts[3] if parts[3] != 'N/A' else None
+                            power = parts[4] if parts[4] != 'N/A' else None
+                            gpu_util = parts[5] if parts[5] != 'N/A' else None
+                            mem_util = parts[6] if parts[6] != 'N/A' else None
+                            graphics_clock = parts[7] if parts[7] != 'N/A' else None
+                            memory_clock = parts[8] if parts[8] != 'N/A' else None
                             
                             # Try to find the corresponding PCI slot using nvidia-smi -L
                             try:
@@ -3453,6 +3440,7 @@ def get_hardware_info():
                             # Categorize and add important devices
                             device_type = 'Other'
                             include_device = False
+                            network_subtype = None
                             
                             # Graphics/Display devices
                             if any(keyword in device_class for keyword in ['VGA', 'Display', '3D']):
@@ -3466,6 +3454,11 @@ def get_hardware_info():
                             elif 'Ethernet' in device_class or 'Network' in device_class:
                                 device_type = 'Network Controller'
                                 include_device = True
+                                device_lower = device_name.lower()
+                                if any(keyword in device_lower for keyword in ['wireless', 'wifi', 'wi-fi', '802.11', 'wlan']):
+                                    network_subtype = 'Wireless'
+                                else:
+                                    network_subtype = 'Ethernet'
                             # USB controllers
                             elif 'USB' in device_class:
                                 device_type = 'USB Controller'
@@ -3490,6 +3483,8 @@ def get_hardware_info():
                                     'device': device_name,
                                     'class': device_class
                                 }
+                                if network_subtype:
+                                    pci_device['network_subtype'] = network_subtype
                                 hardware_data['pci_devices'].append(pci_device)
                         
                         current_device = {}
