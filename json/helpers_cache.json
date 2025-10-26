@@ -3626,6 +3626,18 @@
     "type": "ct"
   },
   {
+    "name": "PatchMon",
+    "slug": "patchmon",
+    "desc": "Monitor Linux patches across all your hosts with real-time visibility, security update tracking, and comprehensive package management.",
+    "script": "ct/patchmon.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/patchmon.sh",
+    "categories": [
+      9
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Paymenter",
     "slug": "paymenter",
     "desc": "Paymenter is an open source webshop solution for hosting companies. It's developed to provide an more easy way to manage your hosting company.",
