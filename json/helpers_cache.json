@@ -748,6 +748,21 @@
     "type": "addon"
   },
   {
+    "name": "ComfyUI",
+    "slug": "comfyui",
+    "desc": "ComfyUI is a node-based interface and inference engine for generative AI. Users can combine various AI models and operations through nodes to achieve highly customizable and controllable content generation.",
+    "script": "ct/comfyui.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/comfyui.sh",
+    "categories": [
+      20
+    ],
+    "notes": [
+      "Application takes long time to install. Please be patient!",
+      "Please check that you have installed the drivers for your GPU."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "CommaFeed",
     "slug": "commafeed",
     "desc": "CommaFeed is a Google Reader inspired self-hosted RSS reader.",
