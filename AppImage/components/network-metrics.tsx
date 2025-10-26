@@ -889,7 +889,7 @@ export function NetworkMetrics() {
                               timeframe={modalTimeframe}
                               interfaceName={displayInterface.name}
                               onTotalsCalculated={setInterfaceTotals}
-                              refreshInterval={15000}
+                              refreshInterval={60000}
                             />
                           </div>
                         </div>
