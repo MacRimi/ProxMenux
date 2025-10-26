@@ -1087,7 +1087,7 @@ def get_smart_data(disk_name):
 
                                                 smart_data['media_wearout_indicator'] = wear_used
                                                 smart_data['ssd_life_left'] = max(0, 100 - wear_used)
-                                                print(f"[v0] Media Wearout Indicator (ID 230): {wear_used}% used, {smart_data['ssd_life_left']}% life left")
+                                                print(f"[v0] Media Wearout Indicator (ID 230): {used}% used, {smart_data['ssd_life_left']}% life left")
                                             except Exception as e:
                                                 print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")    
                                         elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
@@ -3710,14 +3710,14 @@ def api_network():
     """Get network information"""
     return jsonify(get_network_info())
 
-# Add the new api_network_interfaces_totals endpoint here
-@app.route('/api/network/interfaces/totals', methods=['GET'])
-def api_network_interfaces_totals():
-    """Get traffic totals for all physical and bridge interfaces for a specific timeframe"""
+@app.route('/api/network/<interface_name>/metrics', methods=['GET'])
+def api_network_interface_metrics(interface_name):
+    """Get historical metrics (RRD data) for a specific network interface"""
     try:
         timeframe = request.args.get('timeframe', 'day')  # hour, day, week, month, year
         
-        print(f"[v0] ===== NETWORK INTERFACES TOTALS REQUEST =====")
+        print(f"[v0] ===== NETWORK INTERFACE METRICS REQUEST =====")
+        print(f"[v0] Interface: {interface_name}")
         print(f"[v0] Timeframe: {timeframe}")
         
         # Validate timeframe
@@ -3730,97 +3730,68 @@ def api_network_interfaces_totals():
         local_node = socket.gethostname()
         print(f"[v0] Local node: {local_node}")
         
-        # Get RRD data for the node
-        print(f"[v0] Fetching RRD data for node {local_node} with timeframe {timeframe}...")
-        rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/rrddata', 
-                                    '--timeframe', timeframe, '--output-format', 'json'],
-                                   capture_output=True, text=True, timeout=10)
+        # Determine interface type and get appropriate RRD data
+        interface_type = get_interface_type(interface_name)
+        print(f"[v0] Interface type: {interface_type}")
         
-        if rrd_result.returncode != 0:
-            print(f"[v0] ERROR: Failed to get RRD data")
-            print(f"[v0] stderr: {rrd_result.stderr}")
-            return jsonify({'error': f'Failed to get RRD data: {rrd_result.stderr}'}), 500
+        rrd_data = []
         
-        rrd_data = json.loads(rrd_result.stdout)
-        print(f"[v0] RRD data points: {len(rrd_data)}")
-        
-        # Get list of physical and bridge interfaces
-        net_if_addrs = psutil.net_if_addrs()
-        physical_interfaces = []
-        bridge_interfaces = []
-        
-        for interface_name in net_if_addrs.keys():
-            interface_type = get_interface_type(interface_name)
-            if interface_type == 'physical':
-                physical_interfaces.append(interface_name)
-            elif interface_type == 'bridge':
-                bridge_interfaces.append(interface_name)
-        
-        print(f"[v0] Physical interfaces: {physical_interfaces}")
-        print(f"[v0] Bridge interfaces: {bridge_interfaces}")
-        
-        # Calculate totals for each interface
-        interface_totals = {}
-        
-        for interface_name in physical_interfaces + bridge_interfaces:
-            # Find the netin/netout fields for this interface in RRD data
-            # RRD data has fields like 'netin', 'netout' for the main interface
-            # For specific interfaces, we need to check if there are interface-specific fields
-            
-            total_received = 0
-            total_sent = 0
-            
-            # For now, we'll use the main netin/netout fields
-            # This is a limitation of Proxmox RRD data - it doesn't store per-interface data
-            # We'll need to implement a better solution later
-            
-            # For the overall total traffic, we can use the RRD data points.
-            # For individual interface totals, it's more complex. Proxmox RRD typically
-            # stores node-wide traffic (netin, netout) and VM/LXC specific traffic (netin, netout).
-            # It doesn't directly provide historical data for specific physical/bridge interfaces
-            # in a way that's easily aggregated.
-            
-            # We will use psutil's cumulative counters and assume they are close enough
-            # for this aggregated view, or indicate the limitation.
-            
-            # Get current interface stats
-            try:
-                net_io_per_nic = psutil.net_io_counters(pernic=True)
-                if interface_name in net_io_per_nic:
-                    io_stats = net_io_per_nic[interface_name]
-                    # These are cumulative since boot, not for the timeframe
-                    # We'll use these as the "current" totals as an approximation for the aggregation
-                    total_received_gb = (io_stats.bytes_recv / (1024**3))
-                    total_sent_gb = (io_stats.bytes_sent / (1024**3))
-                    
-                    interface_totals[interface_name] = {
-                        'received': total_received_gb,
-                        'sent': total_sent_gb
-                    }
+        if interface_type == 'vm_lxc':
+            # For VM/LXC interfaces, get data from the VM/LXC RRD
+            vmid, vm_type = extract_vmid_from_interface(interface_name)
+            if vmid:
+                print(f"[v0] Fetching RRD data for {vm_type} {vmid}...")
+                rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/{vm_type}/{vmid}/rrddata', 
+                                            '--timeframe', timeframe, '--output-format', 'json'],
+                                           capture_output=True, text=True, timeout=10)
+                
+                if rrd_result.returncode == 0:
+                    all_data = json.loads(rrd_result.stdout)
+                    # Filter to only network-related fields
+                    for point in all_data:
+                        filtered_point = {'time': point.get('time')}
+                        # Add network fields if they exist
+                        for key in ['netin', 'netout', 'diskread', 'diskwrite']:
+                            if key in point:
+                                filtered_point[key] = point[key]
+                        rrd_data.append(filtered_point)
+                    print(f"[v0] RRD data points: {len(rrd_data)}")
                 else:
-                    print(f"[v0] Warning: Interface {interface_name} not found in psutil net_io_counters.")
-                    interface_totals[interface_name] = {
-                        'received': 0,
-                        'sent': 0
-                    }
-            except Exception as e:
-                print(f"[v0] Error calculating totals for {interface_name}: {e}")
-                interface_totals[interface_name] = {
-                    'received': 0,
-                    'sent': 0
-                }
+                    print(f"[v0] ERROR: Failed to get RRD data for VM/LXC")
+                    print(f"[v0] stderr: {rrd_result.stderr}")
+        else:
+            # For physical/bridge interfaces, get data from node RRD
+            print(f"[v0] Fetching RRD data for node {local_node}...")
+            rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/rrddata', 
+                                        '--timeframe', timeframe, '--output-format', 'json'],
+                                       capture_output=True, text=True, timeout=10)
+            
+            if rrd_result.returncode == 0:
+                all_data = json.loads(rrd_result.stdout)
+                # Filter to only network-related fields for this interface
+                for point in all_data:
+                    filtered_point = {'time': point.get('time')}
+                    # Add network fields if they exist
+                    for key in ['netin', 'netout']:
+                        if key in point:
+                            filtered_point[key] = point[key]
+                    rrd_data.append(filtered_point)
+                print(f"[v0] RRD data points: {len(rrd_data)}")
+            else:
+                print(f"[v0] ERROR: Failed to get RRD data for node")
+                print(f"[v0] stderr: {rrd_result.stderr}")
         
-        print(f"[v0] Interface totals calculated: {len(interface_totals)} interfaces")
-        print(f"[v0] ===== NETWORK INTERFACES TOTALS REQUEST SUCCESS =====")
-        
+        print(f"[v0] ===== NETWORK INTERFACE METRICS REQUEST SUCCESS =====")
         return jsonify({
+            'interface': interface_name,
+            'type': interface_type,
             'timeframe': timeframe,
-            'interfaces': interface_totals
+            'data': rrd_data
         })
             
     except Exception as e:
-        print(f"[v0] EXCEPTION in api_network_interfaces_totals: {e}")
-        print(f"[v0] ===== NETWORK INTERFACES TOTALS REQUEST EXCEPTION =====")
+        print(f"[v0] EXCEPTION in api_network_interface_metrics: {e}")
+        print(f"[v0] ===== NETWORK INTERFACE METRICS REQUEST EXCEPTION =====")
         return jsonify({'error': str(e)}), 500
 
 # ... existing code ...
@@ -4243,6 +4214,91 @@ def api_notifications_download():
     except Exception as e:
         print(f"Error downloading logs: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/backups', methods=['GET'])
+def api_backups():
+    """Get list of all backup files from Proxmox storage"""
+    try:
+        backups = []
+        
+        # Get list of storage locations
+        try:
+            result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'], 
+                                  capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                storages = json.loads(result.stdout)
+                
+                # For each storage, get backup files
+                for storage in storages:
+                    storage_id = storage.get('storage')
+                    storage_type = storage.get('type')
+                    
+                    # Only check storages that can contain backups
+                    if storage_type in ['dir', 'nfs', 'cifs', 'pbs']:
+                        try:
+                            # Get content of storage
+                            content_result = subprocess.run(
+                                ['pvesh', 'get', f'/nodes/localhost/storage/{storage_id}/content', '--output-format', 'json'],
+                                capture_output=True, text=True, timeout=10)
+                            
+                            if content_result.returncode == 0:
+                                contents = json.loads(content_result.stdout)
+                                
+                                for item in contents:
+                                    if item.get('content') == 'backup':
+                                        # Parse backup information
+                                        volid = item.get('volid', '')
+                                        size = item.get('size', 0)
+                                        ctime = item.get('ctime', 0)
+                                        
+                                        # Extract VMID from volid (format: storage:backup/vzdump-qemu-100-...)
+                                        vmid = None
+                                        backup_type = None
+                                        if 'vzdump-qemu-' in volid:
+                                            backup_type = 'qemu'
+                                            try:
+                                                vmid = volid.split('vzdump-qemu-')[1].split('-')[0]
+                                            except:
+                                                pass
+                                        elif 'vzdump-lxc-' in volid:
+                                            backup_type = 'lxc'
+                                            try:
+                                                vmid = volid.split('vzdump-lxc-')[1].split('-')[0]
+                                            except:
+                                                pass
+                                        
+                                        backups.append({
+                                            'volid': volid,
+                                            'storage': storage_id,
+                                            'vmid': vmid,
+                                            'type': backup_type,
+                                            'size': size,
+                                            'size_human': format_bytes(size),
+                                            'created': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M:%S'),
+                                            'timestamp': ctime
+                                        })
+                        except Exception as e:
+                            print(f"Error getting content for storage {storage_id}: {e}")
+                            continue
+        except Exception as e:
+            print(f"Error getting storage list: {e}")
+        
+        # Sort by creation time (newest first)
+        backups.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return jsonify({
+            'backups': backups,
+            'total': len(backups)
+        })
+        
+    except Exception as e:
+        print(f"Error getting backups: {e}")
+        return jsonify({
+            'error': str(e),
+            'backups': [],
+            'total': 0
+        })
 
 @app.route('/api/events', methods=['GET'])
 def api_events():
