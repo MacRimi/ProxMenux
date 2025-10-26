@@ -1734,9 +1734,9 @@ def get_proxmox_vms():
                         'diskwrite': resource.get('diskwrite', 0)
                     }
                     all_vms.append(vm_data)
-                    print(f"[v0] Found {vm_data['type']}: {vm_data['name']} (VMID: {vm_data['vmid']}, Status: {vm_data['status']})")
+
                 
-                print(f"[v0] Total VMs/LXCs on local node {local_node}: {len(all_vms)}")
+
                 return all_vms
             else:
                 print(f"[v0] pvesh command failed: {result.stderr}")
@@ -2287,17 +2287,17 @@ def get_detailed_gpu_info(gpu):
                     if 'clients' in json_obj:
                         clients_data = json_obj['clients']
                         if clients_data and len(clients_data) > 0:
-                            print(f"[v0] Found JSON with {len(clients_data)} client(s)!", flush=True)
+
                             best_json = json_obj
                             break
                 
                 # Second priority: Use most recent JSON
                 if not best_json and json_objects:
                     best_json = json_objects[-1]
-                    print(f"[v0] No clients found, using most recent JSON for current GPU state", flush=True)
+
 
                 if best_json:
-                    print(f"[v0] Parsing selected JSON object...", flush=True)
+
                     data_retrieved = False
                     
                     # Initialize engine totals
