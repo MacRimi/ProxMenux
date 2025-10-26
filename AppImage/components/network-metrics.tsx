@@ -443,17 +443,18 @@ export function NetworkMetrics() {
                       </div>
                     </div>
 
-                    <div className="col-span-2 md:col-span-1">
-                      <div className="text-muted-foreground text-xs">Traffic since last boot</div>
-                      <div className="font-medium text-foreground text-xs">
-                        <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
-                        {" / "}
-                        <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
-                      </div>
+                    <div>
+                      <div className="text-muted-foreground text-xs">Duplex</div>
+                      <div className="font-medium text-foreground text-xs capitalize">{interface_.duplex}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-muted-foreground text-xs">MTU</div>
+                      <div className="font-medium text-foreground text-xs">{interface_.mtu}</div>
                     </div>
 
                     {interface_.mac_address && (
-                      <div className="col-span-2 md:col-span-1">
+                      <div className="col-span-2 md:col-span-4">
                         <div className="text-muted-foreground text-xs">MAC</div>
                         <div className="font-medium text-foreground font-mono text-xs truncate">
                           {interface_.mac_address}
@@ -556,17 +557,18 @@ export function NetworkMetrics() {
                         </div>
                       </div>
 
-                      <div className="col-span-2 md:col-span-1">
-                        <div className="text-muted-foreground text-xs">Traffic since last boot</div>
-                        <div className="font-medium text-foreground text-xs">
-                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
-                          {" / "}
-                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
-                        </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">Duplex</div>
+                        <div className="font-medium text-foreground text-xs capitalize">{interface_.duplex}</div>
+                      </div>
+
+                      <div>
+                        <div className="text-muted-foreground text-xs">MTU</div>
+                        <div className="font-medium text-foreground text-xs">{interface_.mtu}</div>
                       </div>
 
                       {interface_.mac_address && (
-                        <div className="col-span-2 md:col-span-1">
+                        <div className="col-span-2 md:col-span-4">
                           <div className="text-muted-foreground text-xs">MAC</div>
                           <div className="font-medium text-foreground font-mono text-xs truncate">
                             {interface_.mac_address}
@@ -644,17 +646,18 @@ export function NetworkMetrics() {
                         </div>
                       </div>
 
-                      <div className="col-span-2 md:col-span-1">
-                        <div className="text-sm text-muted-foreground">Traffic since last boot</div>
-                        <div className="font-medium text-foreground text-xs">
-                          <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
-                          {" / "}
-                          <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
-                        </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Duplex</div>
+                        <div className="font-medium text-foreground text-xs capitalize">{interface_.duplex}</div>
+                      </div>
+
+                      <div>
+                        <div className="text-sm text-muted-foreground">MTU</div>
+                        <div className="font-medium text-foreground text-xs">{interface_.mtu}</div>
                       </div>
 
                       {interface_.mac_address && (
-                        <div className="col-span-2 md:col-span-1">
+                        <div className="col-span-2 md:col-span-4">
                           <div className="text-sm text-muted-foreground">MAC</div>
                           <div className="font-medium text-foreground font-mono text-xs truncate">
                             {interface_.mac_address}
