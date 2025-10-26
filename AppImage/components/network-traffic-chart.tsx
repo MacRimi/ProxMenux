@@ -15,7 +15,7 @@ interface NetworkTrafficChartProps {
   timeframe: string
   interfaceName?: string
   onTotalsCalculated?: (totals: { received: number; sent: number }) => void
-  refreshInterval?: number // En milisegundos, por defecto 60000 (60 segundos)
+  refreshInterval?: number // En milisegundos, por defecto 30000 (30 segundos)
 }
 
 const CustomNetworkTooltip = ({ active, payload, label }: any) => {
@@ -42,7 +42,7 @@ const NetworkTrafficChartComponent = ({
   timeframe,
   interfaceName,
   onTotalsCalculated,
-  refreshInterval = 60000,
+  refreshInterval = 30000,
 }: NetworkTrafficChartProps) => {
   const [data, setData] = useState<NetworkMetricsData[]>([])
   const [loading, setLoading] = useState(true)
