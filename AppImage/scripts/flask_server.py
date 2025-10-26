@@ -1087,7 +1087,7 @@ def get_smart_data(disk_name):
 
                                                 smart_data['media_wearout_indicator'] = wear_used
                                                 smart_data['ssd_life_left'] = max(0, 100 - wear_used)
-                                                print(f"[v0] Media Wearout Indicator (ID 230): {smart_data['media_wearout_indicator']}% used, {smart_data['ssd_life_left']}% life left")
+                                                print(f"[v0] Media Wearout Indicator (ID 230): {wear_used}% used, {smart_data['ssd_life_left']}% life left")
                                             except Exception as e:
                                                 print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")    
                                         elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
@@ -2806,6 +2806,26 @@ def get_detailed_gpu_info(gpu):
                                     detailed_info['utilization_memory'] = round(mem_util, 1)
                                     print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
                             
+                            # Parse GRBM (Graphics Register Bus Manager) for engine utilization
+                            if 'GRBM' in device:
+                                grbm = device['GRBM']
+                                
+                                # Graphics Pipe (similar to Render/3D)
+                                if 'Graphics Pipe' in grbm:
+                                    gfx_pipe = grbm['Graphics Pipe']
+                                    if 'value' in gfx_pipe:
+                                        detailed_info['engine_render'] = f"{gfx_pipe['value']:.1f}%"
+                            
+                            # Parse GRBM2 for additional engine info
+                            if 'GRBM2' in device:
+                                grbm2 = device['GRBM2']
+                                
+                                # Texture Cache (similar to Blitter)
+                                if 'Texture Cache' in grbm2:
+                                    tex_cache = grbm2['Texture Cache']
+                                    if 'value' in tex_cache:
+                                        detailed_info['engine_blitter'] = f"{tex_cache['value']:.1f}%"
+                            
                             # Parse processes (fdinfo)
                             if 'fdinfo' in device:
                                 fdinfo = device['fdinfo']
@@ -3871,11 +3891,14 @@ def api_network_interface_metrics(interface_name):
         print(f"[v0] ===== NETWORK INTERFACE METRICS REQUEST EXCEPTION =====")
         return jsonify({'error': str(e)}), 500
 
+# ... existing code ...
+
 @app.route('/api/vms', methods=['GET'])
 def api_vms():
     """Get virtual machine information"""
     return jsonify(get_proxmox_vms())
 
+# Add the new api_vm_metrics endpoint here
 @app.route('/api/vms/<int:vmid>/metrics', methods=['GET'])
 def api_vm_metrics(vmid):
     """Get historical metrics (RRD data) for a specific VM/LXC"""

@@ -109,12 +109,13 @@ const fetchSystemData = async (): Promise<SystemData | null> => {
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`Flask server responded with status: ${response.status}`)
     }
 
     const data = await response.json()
     return data
   } catch (error) {
+    console.error("[v0] Failed to fetch system data:", error)
     return null
   }
 }
@@ -133,12 +134,13 @@ const fetchVMData = async (): Promise<VMData[]> => {
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`Flask server responded with status: ${response.status}`)
     }
 
     const data = await response.json()
-    return data.vms || []
+    return Array.isArray(data) ? data : data.vms || []
   } catch (error) {
+    console.error("[v0] Failed to fetch VM data:", error)
     return []
   }
 }
@@ -157,12 +159,40 @@ const fetchStorageData = async (): Promise<StorageData | null> => {
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      console.log("[v0] Storage API not available (this is normal if not configured)")
+      return null
     }
 
     const data = await response.json()
     return data
   } catch (error) {
+    console.log("[v0] Storage data unavailable:", error instanceof Error ? error.message : "Unknown error")
+    return null
+  }
+}
+
+const fetchNetworkData = async (): Promise<NetworkData | null> => {
+  try {
+    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+    const apiUrl = `${baseUrl}/api/network`
+
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      console.log("[v0] Network API not available (this is normal if not configured)")
+      return null
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.log("[v0] Network data unavailable:", error instanceof Error ? error.message : "Unknown error")
     return null
   }
 }
@@ -189,30 +219,6 @@ const fetchProxmoxStorageData = async (): Promise<ProxmoxStorageData | null> => 
     return data
   } catch (error) {
     console.log("[v0] Proxmox storage data unavailable:", error instanceof Error ? error.message : "Unknown error")
-    return null
-  }
-}
-
-const fetchNetworkData = async (): Promise<NetworkData | null> => {
-  try {
-    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-    const apiUrl = `${baseUrl}/api/network`
-
-    const response = await fetch(apiUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
     return null
   }
 }

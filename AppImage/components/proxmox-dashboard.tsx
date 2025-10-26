@@ -63,8 +63,13 @@ export function ProxmoxDashboard() {
   const [lastScrollY, setLastScrollY] = useState(0)
 
   const fetchSystemData = useCallback(async () => {
+    console.log("[v0] Fetching system data from Flask server...")
+    console.log("[v0] Current window location:", window.location.href)
+
     const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
     const apiUrl = `${baseUrl}/api/system`
+
+    console.log("[v0] API URL:", apiUrl)
 
     try {
       const response = await fetch(apiUrl, {
@@ -74,12 +79,14 @@ export function ProxmoxDashboard() {
         },
         cache: "no-store",
       })
+      console.log("[v0] Response status:", response.status)
 
       if (!response.ok) {
         throw new Error(`Server responded with status: ${response.status}`)
       }
 
       const data: FlaskSystemData = await response.json()
+      console.log("[v0] System data received:", data)
 
       let status: "healthy" | "warning" | "critical" = "healthy"
       if (data.cpu_usage > 90 || data.memory_usage > 90) {
@@ -97,6 +104,13 @@ export function ProxmoxDashboard() {
       })
       setIsServerConnected(true)
     } catch (error) {
+      console.error("[v0] Failed to fetch system data from Flask server:", error)
+      console.error("[v0] Error details:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        apiUrl,
+        windowLocation: window.location.href,
+      })
+
       setIsServerConnected(false)
       setSystemStatus((prev) => ({
         ...prev,
@@ -234,7 +248,9 @@ export function ProxmoxDashboard() {
 
       <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 md:px-6 py-4 md:py-4">
+          {/* Logo and Title */}
           <div className="flex items-start justify-between gap-3">
+            {/* Logo and Title */}
             <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
               <div className="w-16 h-16 md:w-10 md:h-10 relative flex items-center justify-center bg-primary/10 flex-shrink-0">
                 <Image
@@ -245,6 +261,7 @@ export function ProxmoxDashboard() {
                   className="object-contain md:w-10 md:h-10"
                   priority
                   onError={(e) => {
+                    console.log("[v0] Logo failed to load, using fallback icon")
                     const target = e.target as HTMLImageElement
                     target.style.display = "none"
                     const fallback = target.parentElement?.querySelector(".fallback-icon")
@@ -265,6 +282,7 @@ export function ProxmoxDashboard() {
               </div>
             </div>
 
+            {/* Desktop Actions */}
             <div className="hidden lg:flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Server className="h-4 w-4 text-muted-foreground" />
@@ -294,6 +312,7 @@ export function ProxmoxDashboard() {
               <ThemeToggle />
             </div>
 
+            {/* Mobile Actions */}
             <div className="flex lg:hidden items-center gap-2">
               <Badge variant="outline" className={`${statusColor} text-xs px-2`}>
                 {statusIcon}
@@ -308,6 +327,7 @@ export function ProxmoxDashboard() {
             </div>
           </div>
 
+          {/* Mobile Server Info */}
           <div className="lg:hidden mt-2 flex items-center justify-end text-xs text-muted-foreground">
             <span className="whitespace-nowrap">Uptime: {systemStatus.uptime}</span>
           </div>
