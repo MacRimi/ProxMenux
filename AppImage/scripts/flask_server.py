@@ -266,7 +266,7 @@ def get_intel_gpu_processes_from_text():
                                     'engines': engines
                                 }
                                 processes.append(process_info)
-                                print(f"[v0] Found process from text: {name} (PID: {pid}) with {len(engines)} active engines", flush=True)
+
                         except (ValueError, IndexError) as e:
                             print(f"[v0] Error parsing process line: {e}", flush=True)
                             continue
@@ -323,7 +323,7 @@ def get_vm_lxc_names():
                         'type': 'lxc' if vm_type == 'lxc' else 'vm',
                         'status': status
                     }
-                    print(f"[v0] Found {vm_type} {vmid}: {name} ({status})")
+
         else:
             print(f"[v0] pvesh command failed: {result.stderr}")
     except FileNotFoundError:
@@ -2241,16 +2241,15 @@ def get_detailed_gpu_info(gpu):
                                     try:
                                         json_data = json.loads(buffer)
                                         json_objects.append(json_data)
-                                        print(f"[v0] Found JSON object #{len(json_objects)} ({len(buffer)} chars)", flush=True)
-                                        print(f"[v0] JSON keys: {list(json_data.keys())}", flush=True)
+
                                         
                                         if 'clients' in json_data:
                                             client_count = len(json_data['clients'])
-                                            print(f"[v0] *** FOUND CLIENTS SECTION with {client_count} client(s) ***", flush=True)
+   
                                             for client_id, client_data in json_data['clients'].items():
                                                 client_name = client_data.get('name', 'Unknown')
                                                 client_pid = client_data.get('pid', 'Unknown')
-                                                print(f"[v0]   - Client: {client_name} (PID: {client_pid})", flush=True)
+
                                         else:
                                             print(f"[v0] No 'clients' key in this JSON object", flush=True)
                                         
@@ -3890,9 +3889,7 @@ def api_network_interface_metrics(interface_name):
     try:
         timeframe = request.args.get('timeframe', 'day')  # hour, day, week, month, year
         
-        print(f"[v0] ===== NETWORK INTERFACE METRICS REQUEST =====")
-        print(f"[v0] Interface: {interface_name}")
-        print(f"[v0] Timeframe: {timeframe}")
+
         
         # Validate timeframe
         valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
@@ -3955,7 +3952,7 @@ def api_network_interface_metrics(interface_name):
                 print(f"[v0] ERROR: Failed to get RRD data for node")
                 print(f"[v0] stderr: {rrd_result.stderr}")
         
-        print(f"[v0] ===== NETWORK INTERFACE METRICS REQUEST SUCCESS =====")
+
         return jsonify({
             'interface': interface_name,
             'type': interface_type,
@@ -3964,8 +3961,7 @@ def api_network_interface_metrics(interface_name):
         })
             
     except Exception as e:
-        print(f"[v0] EXCEPTION in api_network_interface_metrics: {e}")
-        print(f"[v0] ===== NETWORK INTERFACE METRICS REQUEST EXCEPTION =====")
+
         return jsonify({'error': str(e)}), 500
 
 # ... existing code ...
@@ -3982,9 +3978,7 @@ def api_vm_metrics(vmid):
     try:
         timeframe = request.args.get('timeframe', 'week')  # hour, day, week, month, year
         
-        print(f"[v0] ===== METRICS REQUEST =====")
-        print(f"[v0] VMID: {vmid}")
-        print(f"[v0] Timeframe: {timeframe}")
+
         
         # Validate timeframe
         valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
@@ -4009,7 +4003,7 @@ def api_vm_metrics(vmid):
                                   capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
                 vm_type = 'lxc'
-                print(f"[v0] Found as LXC")
+
             else:
                 print(f"[v0] ERROR: VM/LXC {vmid} not found")
                 return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
@@ -4023,11 +4017,9 @@ def api_vm_metrics(vmid):
                                    capture_output=True, text=True, timeout=10)
         
         if rrd_result.returncode == 0:
-            print(f"[v0] RRD data fetched successfully")
-            print(f"[v0] RRD output length: {len(rrd_result.stdout)} bytes")
+
             rrd_data = json.loads(rrd_result.stdout)
-            print(f"[v0] RRD data points: {len(rrd_data)}")
-            print(f"[v0] ===== METRICS REQUEST SUCCESS =====")
+
             return jsonify({
                 'vmid': vmid,
                 'type': vm_type,
@@ -4035,14 +4027,11 @@ def api_vm_metrics(vmid):
                 'data': rrd_data
             })
         else:
-            print(f"[v0] ERROR: Failed to get RRD data")
-            print(f"[v0] stderr: {rrd_result.stderr}")
-            print(f"[v0] ===== METRICS REQUEST FAILED =====")
+
             return jsonify({'error': f'Failed to get RRD data: {rrd_result.stderr}'}), 500
             
     except Exception as e:
-        print(f"[v0] EXCEPTION in api_vm_metrics: {e}")
-        print(f"[v0] ===== METRICS REQUEST EXCEPTION =====")
+
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/node/metrics', methods=['GET'])
@@ -4051,8 +4040,7 @@ def api_node_metrics():
     try:
         timeframe = request.args.get('timeframe', 'week')  # hour, day, week, month, year
         
-        print(f"[v0] ===== NODE METRICS REQUEST =====")
-        print(f"[v0] Timeframe: {timeframe}")
+
         
         # Validate timeframe
         valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
@@ -4071,25 +4059,20 @@ def api_node_metrics():
                                    capture_output=True, text=True, timeout=10)
         
         if rrd_result.returncode == 0:
-            print(f"[v0] RRD data fetched successfully")
-            print(f"[v0] RRD output length: {len(rrd_result.stdout)} bytes")
+
             rrd_data = json.loads(rrd_result.stdout)
-            print(f"[v0] RRD data points: {len(rrd_data)}")
-            print(f"[v0] ===== NODE METRICS REQUEST SUCCESS =====")
+
             return jsonify({
                 'node': local_node,
                 'timeframe': timeframe,
                 'data': rrd_data
             })
         else:
-            print(f"[v0] ERROR: Failed to get RRD data")
-            print(f"[v0] stderr: {rrd_result.stderr}")
-            print(f"[v0] ===== NODE METRICS REQUEST FAILED =====")
+
             return jsonify({'error': f'Failed to get RRD data: {rrd_result.stderr}'}), 500
             
     except Exception as e:
-        print(f"[v0] EXCEPTION in api_node_metrics: {e}")
-        print(f"[v0] ===== NODE METRICS REQUEST EXCEPTION =====")
+
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/logs', methods=['GET'])
@@ -4613,7 +4596,7 @@ def get_task_log(upid):
             for filename in available_files:
                 if filename.startswith(upid_prefix):
                     matched_file = f"{tasks_dir}/{filename}"
-                    print(f"[v0] Found matching file by prefix: {matched_file}")
+
                     with open(matched_file, 'r', encoding='utf-8', errors='ignore') as f:
                         log_text = f.read()
                     print(f"[v0] Successfully read {len(log_text)} bytes from matched file")
