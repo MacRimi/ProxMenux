@@ -174,7 +174,7 @@ const fetchStorageData = async (): Promise<StorageData | null> => {
 const fetchNetworkData = async (): Promise<NetworkData | null> => {
   try {
     const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-    const apiUrl = `${baseUrl}/api/network`
+    const apiUrl = `${baseUrl}/api/network/summary`
 
     const response = await fetch(apiUrl, {
       method: "GET",

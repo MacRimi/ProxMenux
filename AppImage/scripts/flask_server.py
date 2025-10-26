@@ -1375,7 +1375,7 @@ def get_interface_type(interface_name):
             return 'vlan'
         
         # Check if it's a physical interface
-        if interface_name.startswith(('enp', 'eth', 'wlan', 'wlp', 'eno', 'ens')):
+        if interface_name.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
             return 'physical'
         
         # Default to skip for unknown types
@@ -3493,6 +3493,7 @@ def get_hardware_info():
         except Exception as e:
             print(f"[v0] Error getting graphics cards: {e}")
         
+        # PCI Devices
         try:
             print("[v0] Getting PCI devices with driver information...")
             # First get basic device info with lspci -vmm
@@ -3806,6 +3807,83 @@ def api_proxmox_storage():
 def api_network():
     """Get network information"""
     return jsonify(get_network_info())
+
+@app.route('/api/network/summary', methods=['GET'])
+def api_network_summary():
+    """Optimized network summary endpoint - returns basic network info without detailed analysis"""
+    try:
+        net_io = psutil.net_io_counters()
+        net_if_stats = psutil.net_if_stats()
+        net_if_addrs = psutil.net_if_addrs()
+        
+        # Count active interfaces by type
+        physical_active = 0
+        physical_total = 0
+        bridge_active = 0
+        bridge_total = 0
+        
+        physical_interfaces = []
+        bridge_interfaces = []
+        
+        for interface_name, stats in net_if_stats.items():
+            # Skip loopback and special interfaces
+            if interface_name in ['lo', 'docker0'] or interface_name.startswith(('veth', 'tap', 'fw')):
+                continue
+            
+            is_up = stats.isup
+            
+            # Classify interface type
+            if interface_name.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
+                physical_total += 1
+                if is_up:
+                    physical_active += 1
+                    # Get IP addresses
+                    addresses = []
+                    if interface_name in net_if_addrs:
+                        for addr in net_if_addrs[interface_name]:
+                            if addr.family == socket.AF_INET:
+                                addresses.append({'ip': addr.address, 'netmask': addr.netmask})
+                    
+                    physical_interfaces.append({
+                        'name': interface_name,
+                        'status': 'up' if is_up else 'down',
+                        'addresses': addresses
+                    })
+            
+            elif interface_name.startswith(('vmbr', 'br')):
+                bridge_total += 1
+                if is_up:
+                    bridge_active += 1
+                    # Get IP addresses
+                    addresses = []
+                    if interface_name in net_if_addrs:
+                        for addr in net_if_addrs[interface_name]:
+                            if addr.family == socket.AF_INET:
+                                addresses.append({'ip': addr.address, 'netmask': addr.netmask})
+                    
+                    bridge_interfaces.append({
+                        'name': interface_name,
+                        'status': 'up' if is_up else 'down',
+                        'addresses': addresses
+                    })
+        
+        return jsonify({
+            'physical_active_count': physical_active,
+            'physical_total_count': physical_total,
+            'bridge_active_count': bridge_active,
+            'bridge_total_count': bridge_total,
+            'physical_interfaces': physical_interfaces,
+            'bridge_interfaces': bridge_interfaces,
+            'traffic': {
+                'bytes_sent': net_io.bytes_sent,
+                'bytes_recv': net_io.bytes_recv,
+                'packets_sent': net_io.packets_sent,
+                'packets_recv': net_io.packets_recv
+            }
+        })
+    except Exception as e:
+        print(f"[v0] Error in api_network_summary: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/network/<interface_name>/metrics', methods=['GET'])
 def api_network_interface_metrics(interface_name):
@@ -4882,6 +4960,7 @@ def api_info():
             '/api/storage', 
             '/api/proxmox-storage',
             '/api/network',
+            '/api/network/summary', # Added network summary
             '/api/vms',
             '/api/vms/<vmid>/metrics', # Added endpoint for RRD data
             '/api/node/metrics', # Added node metrics endpoint
@@ -5210,8 +5289,8 @@ def api_vm_config_update(vmid):
                     'error': config_result.stderr
                 }), 500
         else:
-            return jsonify({'error': 'Failed to get VM details'}), 500
-    except Exception as e:
+            return jsonify({'error': 'Failed to get VM
+       except Exception as e:
         print(f"Error updating VM configuration: {e}")
         return jsonify({'error': str(e)}), 500
 
