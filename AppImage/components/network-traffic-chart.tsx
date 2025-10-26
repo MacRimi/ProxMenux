@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, memo } from "react"
+import { useState, useEffect } from "react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { Loader2 } from "lucide-react"
 
@@ -15,7 +15,6 @@ interface NetworkTrafficChartProps {
   timeframe: string
   interfaceName?: string
   onTotalsCalculated?: (totals: { received: number; sent: number }) => void
-  refreshInterval?: number // En milisegundos, por defecto 30000 (30 segundos)
 }
 
 const CustomNetworkTooltip = ({ active, payload, label }: any) => {
@@ -38,12 +37,7 @@ const CustomNetworkTooltip = ({ active, payload, label }: any) => {
   return null
 }
 
-const NetworkTrafficChartComponent = ({
-  timeframe,
-  interfaceName,
-  onTotalsCalculated,
-  refreshInterval = 30000,
-}: NetworkTrafficChartProps) => {
+export const NetworkTrafficChart = ({ timeframe, interfaceName, onTotalsCalculated }: NetworkTrafficChartProps) => {
   const [data, setData] = useState<NetworkMetricsData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -53,135 +47,117 @@ const NetworkTrafficChartComponent = ({
     netOut: true,
   })
 
-  console.log("[v0] NetworkTrafficChart refreshInterval:", refreshInterval, "interfaceName:", interfaceName)
-
-  const fetchMetrics = useCallback(async () => {
-    if (isInitialLoad) {
-      setLoading(true)
-    }
-    setError(null)
-
-    try {
-      const baseUrl =
-        typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-
-      const apiUrl = interfaceName
-        ? `${baseUrl}/api/network/${interfaceName}/metrics?timeframe=${timeframe}`
-        : `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
-
-      console.log("[v0] Fetching network metrics from:", apiUrl)
-
-      const response = await fetch(apiUrl)
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch network metrics: ${response.status}`)
-      }
-
-      const result = await response.json()
-
-      if (!result.data || !Array.isArray(result.data)) {
-        throw new Error("Invalid data format received from server")
-      }
-
-      if (result.data.length === 0) {
-        setData([])
-        setLoading(false)
-        return
-      }
-
-      const transformedData = result.data.map((item: any, index: number) => {
-        const date = new Date(item.time * 1000)
-        let timeLabel = ""
-
-        if (timeframe === "hour") {
-          timeLabel = date.toLocaleString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          })
-        } else if (timeframe === "day") {
-          timeLabel = date.toLocaleString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          })
-        } else if (timeframe === "week") {
-          timeLabel = date.toLocaleString("en-US", {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            hour12: false,
-          })
-        } else if (timeframe === "year") {
-          timeLabel = date.toLocaleString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })
-        } else {
-          timeLabel = date.toLocaleString("en-US", {
-            month: "short",
-            day: "numeric",
-          })
-        }
-
-        let intervalSeconds = 60
-        if (index > 0) {
-          intervalSeconds = item.time - result.data[index - 1].time
-        }
-
-        const netInBytes = (item.netin || 0) * intervalSeconds
-        const netOutBytes = (item.netout || 0) * intervalSeconds
-
-        return {
-          time: timeLabel,
-          timestamp: item.time,
-          netIn: Number((netInBytes / 1024 / 1024 / 1024).toFixed(4)),
-          netOut: Number((netOutBytes / 1024 / 1024 / 1024).toFixed(4)),
-        }
-      })
-
-      setData(transformedData)
-
-      const totalReceived = transformedData.reduce((sum: number, item: NetworkMetricsData) => sum + item.netIn, 0)
-      const totalSent = transformedData.reduce((sum: number, item: NetworkMetricsData) => sum + item.netOut, 0)
-
-      if (onTotalsCalculated) {
-        onTotalsCalculated({ received: totalReceived, sent: totalSent })
-      }
-
+  useEffect(() => {
+    const fetchMetrics = async () => {
       if (isInitialLoad) {
-        setIsInitialLoad(false)
+        setLoading(true)
       }
-    } catch (err: any) {
-      console.error("[v0] Error fetching network metrics:", err)
-      setError(err.message || "Error loading metrics")
-    } finally {
-      setLoading(false)
-    }
-  }, [timeframe, interfaceName, isInitialLoad, onTotalsCalculated])
+      setError(null)
 
-  useEffect(() => {
-    console.log("[v0] Initial fetch - timeframe:", timeframe, "interfaceName:", interfaceName)
-    setIsInitialLoad(true)
+      try {
+        const baseUrl =
+          typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+
+        const apiUrl = interfaceName
+          ? `${baseUrl}/api/network/${interfaceName}/metrics?timeframe=${timeframe}`
+          : `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
+
+        const response = await fetch(apiUrl)
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch network metrics: ${response.status}`)
+        }
+
+        const result = await response.json()
+
+        if (!result.data || !Array.isArray(result.data)) {
+          throw new Error("Invalid data format received from server")
+        }
+
+        if (result.data.length === 0) {
+          setData([])
+          setLoading(false)
+          return
+        }
+
+        const transformedData = result.data.map((item: any, index: number) => {
+          const date = new Date(item.time * 1000)
+          let timeLabel = ""
+
+          if (timeframe === "hour") {
+            timeLabel = date.toLocaleString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            })
+          } else if (timeframe === "day") {
+            timeLabel = date.toLocaleString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            })
+          } else if (timeframe === "week") {
+            timeLabel = date.toLocaleString("en-US", {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              hour12: false,
+            })
+          } else if (timeframe === "year") {
+            timeLabel = date.toLocaleString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          } else {
+            timeLabel = date.toLocaleString("en-US", {
+              month: "short",
+              day: "numeric",
+            })
+          }
+
+          let intervalSeconds = 60
+          if (index > 0) {
+            intervalSeconds = item.time - result.data[index - 1].time
+          }
+
+          const netInBytes = (item.netin || 0) * intervalSeconds
+          const netOutBytes = (item.netout || 0) * intervalSeconds
+
+          return {
+            time: timeLabel,
+            timestamp: item.time,
+            netIn: Number((netInBytes / 1024 / 1024 / 1024).toFixed(4)),
+            netOut: Number((netOutBytes / 1024 / 1024 / 1024).toFixed(4)),
+          }
+        })
+
+        setData(transformedData)
+
+        const totalReceived = transformedData.reduce((sum: number, item: NetworkMetricsData) => sum + item.netIn, 0)
+        const totalSent = transformedData.reduce((sum: number, item: NetworkMetricsData) => sum + item.netOut, 0)
+
+        if (onTotalsCalculated) {
+          onTotalsCalculated({ received: totalReceived, sent: totalSent })
+        }
+
+        if (isInitialLoad) {
+          setIsInitialLoad(false)
+        }
+      } catch (err: any) {
+        console.error("Error fetching network metrics:", err)
+        setError(err.message || "Error loading metrics")
+      } finally {
+        setLoading(false)
+      }
+    }
+
     fetchMetrics()
-  }, [timeframe, interfaceName, fetchMetrics])
 
-  useEffect(() => {
-    if (refreshInterval > 0) {
-      console.log("[v0] Setting up refresh interval:", refreshInterval, "ms for", interfaceName || "node")
+    const interval = setInterval(fetchMetrics, 60000)
 
-      const interval = setInterval(() => {
-        console.log("[v0] Auto-refresh triggered for:", interfaceName || "node")
-        fetchMetrics()
-      }, refreshInterval)
-
-      return () => {
-        console.log("[v0] Clearing refresh interval for:", interfaceName || "node")
-        clearInterval(interval)
-      }
-    }
-  }, [refreshInterval, fetchMetrics, interfaceName])
+    return () => clearInterval(interval)
+  }, [timeframe, interfaceName, isInitialLoad, onTotalsCalculated])
 
   const tickInterval = Math.ceil(data.length / 8)
 
@@ -292,12 +268,3 @@ const NetworkTrafficChartComponent = ({
     </ResponsiveContainer>
   )
 }
-
-// Only re-render when timeframe, interfaceName, or refreshInterval change
-export const NetworkTrafficChart = memo(NetworkTrafficChartComponent, (prevProps, nextProps) => {
-  return (
-    prevProps.timeframe === nextProps.timeframe &&
-    prevProps.interfaceName === nextProps.interfaceName &&
-    prevProps.refreshInterval === nextProps.refreshInterval
-  )
-})
