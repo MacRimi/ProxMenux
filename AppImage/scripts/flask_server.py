@@ -776,7 +776,7 @@ def get_smart_data(disk_name):
         'ssd_life_left': None,  # SSD: SSD Life Left percentage
     }
     
-    print(f"[v0] ===== Starting SMART data collection for /dev/{disk_name} =====")
+
     
     try:
         commands_to_try = [
@@ -814,70 +814,70 @@ def get_smart_data(disk_name):
                 has_output = stdout and len(stdout.strip()) > 50
                 
                 if has_output:
-                    print(f"[v0] Got output ({len(stdout)} bytes), attempting to parse...")
+
                     
                     # Try JSON parsing first (if -j flag was used)
                     if '-j' in cmd:
                         try:
-                            print(f"[v0] Attempting JSON parse...")
+
                             data = json.loads(stdout)
-                            print(f"[v0] JSON parse successful!")
+
                             
                             # Extract model
                             if 'model_name' in data:
                                 smart_data['model'] = data['model_name']
-                                print(f"[v0] Model: {smart_data['model']}")
+
                             elif 'model_family' in data:
                                 smart_data['model'] = data['model_family']
-                                print(f"[v0] Model family: {smart_data['model']}")
+
                             
                             # Extract serial
                             if 'serial_number' in data:
                                 smart_data['serial'] = data['serial_number']
-                                print(f"[v0] Serial: {smart_data['serial']}")
+
                             
                             if 'rotation_rate' in data:
                                 smart_data['rotation_rate'] = data['rotation_rate']
-                                print(f"[v0] Rotation Rate: {smart_data['rotation_rate']} RPM")
+
                             
                             # Extract SMART status
                             if 'smart_status' in data and 'passed' in data['smart_status']:
                                 smart_data['smart_status'] = 'passed' if data['smart_status']['passed'] else 'failed'
                                 smart_data['health'] = 'healthy' if data['smart_status']['passed'] else 'critical'
-                                print(f"[v0] SMART status: {smart_data['smart_status']}, health: {smart_data['health']}")
+
                             
                             # Extract temperature
                             if 'temperature' in data and 'current' in data['temperature']:
                                 smart_data['temperature'] = data['temperature']['current']
-                                print(f"[v0] Temperature: {smart_data['temperature']}°C")
+
                             
                             # Parse NVMe SMART data
                             if 'nvme_smart_health_information_log' in data:
-                                print(f"[v0] Parsing NVMe SMART data...")
+
                                 nvme_data = data['nvme_smart_health_information_log']
                                 if 'temperature' in nvme_data:
                                     smart_data['temperature'] = nvme_data['temperature']
-                                    print(f"[v0] NVMe Temperature: {smart_data['temperature']}°C")
+
                                 if 'power_on_hours' in nvme_data:
                                     smart_data['power_on_hours'] = nvme_data['power_on_hours']
-                                    print(f"[v0] NVMe Power On Hours: {smart_data['power_on_hours']}")
+
                                 if 'power_cycles' in nvme_data:
                                     smart_data['power_cycles'] = nvme_data['power_cycles']
-                                    print(f"[v0] NVMe Power Cycles: {smart_data['power_cycles']}")
+
                                 if 'percentage_used' in nvme_data:
                                     smart_data['percentage_used'] = nvme_data['percentage_used']
-                                    print(f"[v0] NVMe Percentage Used: {smart_data['percentage_used']}%")
+
                                 if 'data_units_written' in nvme_data:
                                     # data_units_written está en unidades de 512KB
                                     data_units = nvme_data['data_units_written']
                                     # Convertir a GB (data_units * 512KB / 1024 / 1024)
                                     total_gb = (data_units * 512) / (1024 * 1024)
                                     smart_data['total_lbas_written'] = round(total_gb, 2)
-                                    print(f"[v0] NVMe Total Data Written: {smart_data['total_lbas_written']} GB")
+
                             
                             # Parse ATA SMART attributes
                             if 'ata_smart_attributes' in data and 'table' in data['ata_smart_attributes']:
-                                print(f"[v0] Parsing ATA SMART attributes...")
+
                                 for attr in data['ata_smart_attributes']['table']:
                                     attr_id = attr.get('id')
                                     raw_value = attr.get('raw', {}).get('value', 0)
@@ -885,27 +885,27 @@ def get_smart_data(disk_name):
                                     
                                     if attr_id == 9:  # Power_On_Hours
                                         smart_data['power_on_hours'] = raw_value
-                                        print(f"[v0] Power On Hours (ID 9): {raw_value}")
+
                                     elif attr_id == 12:  # Power_Cycle_Count
                                         smart_data['power_cycles'] = raw_value
-                                        print(f"[v0] Power Cycles (ID 12): {raw_value}")
+
                                     elif attr_id == 194:  # Temperature_Celsius
                                         if smart_data['temperature'] == 0:
                                             smart_data['temperature'] = raw_value
-                                            print(f"[v0] Temperature (ID 194): {smart_data['temperature']}°C")
+
                                     elif attr_id == 190:  # Airflow_Temperature_Cel
                                         if smart_data['temperature'] == 0:
                                             smart_data['temperature'] = raw_value
-                                            print(f"[v0] Airflow Temperature (ID 190): {smart_data['temperature']}°C")
+
                                     elif attr_id == 5:  # Reallocated_Sector_Ct
                                         smart_data['reallocated_sectors'] = raw_value
-                                        print(f"[v0] Reallocated Sectors (ID 5): {smart_data['reallocated_sectors']}")
+
                                     elif attr_id == 197:  # Current_Pending_Sector
                                         smart_data['pending_sectors'] = raw_value
-                                        print(f"[v0] Pending Sectors (ID 197): {smart_data['pending_sectors']}")
+
                                     elif attr_id == 199:  # UDMA_CRC_Error_Count
                                         smart_data['crc_errors'] = raw_value
-                                        print(f"[v0] CRC Errors (ID 199): {smart_data['crc_errors']}")
+
                                     elif attr_id == '230': 
                                         try:
                                             wear_used = None
@@ -923,7 +923,7 @@ def get_smart_data(disk_name):
 
                                             smart_data['media_wearout_indicator'] = wear_used                   
                                             smart_data['ssd_life_left'] = max(0, 100 - wear_used)              
-                                            print(f"[v0] Media Wearout Indicator (ID 230): {wear_used}% used, {smart_data['ssd_life_left']}% life left")
+
                                         except Exception as e:
                                             print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")    
                                     elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
@@ -1180,7 +1180,7 @@ def get_smart_data(disk_name):
         import traceback
         traceback.print_exc()
     
-    print(f"[v0] ===== Final SMART data for /dev/{disk_name}: {smart_data} =====")
+
     return smart_data
 
 # START OF CHANGES FOR get_proxmox_storage
@@ -1188,7 +1188,6 @@ def get_proxmox_storage():
     """Get Proxmox storage information using pvesh (filtered by local node)"""
     try:
         local_node = socket.gethostname()
-        print(f"[v0] Getting Proxmox storage for local node: {local_node}")
         
         result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'storage', '--output-format', 'json'], 
                               capture_output=True, text=True, timeout=10)
@@ -1253,10 +1252,10 @@ def get_proxmox_storage():
                 'node': node  # Incluir información del nodo
             }
             
-            print(f"[v0] Found storage on {node}: {name} ({storage_type}) - {used_gb}/{total_gb} GB ({percent:.2f}%)")
+
             storage_list.append(storage_info)
         
-        print(f"[v0] Total storage entries on local node {local_node}: {len(storage_list)}")
+
         return {'storage': storage_list}
         
     except FileNotFoundError:
