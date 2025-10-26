@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, memo } from "react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { Loader2 } from "lucide-react"
 
@@ -38,12 +38,12 @@ const CustomNetworkTooltip = ({ active, payload, label }: any) => {
   return null
 }
 
-export function NetworkTrafficChart({
+const NetworkTrafficChartComponent = ({
   timeframe,
   interfaceName,
   onTotalsCalculated,
   refreshInterval = 60000,
-}: NetworkTrafficChartProps) {
+}: NetworkTrafficChartProps) => {
   const [data, setData] = useState<NetworkMetricsData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -55,28 +55,7 @@ export function NetworkTrafficChart({
 
   console.log("[v0] NetworkTrafficChart refreshInterval:", refreshInterval, "interfaceName:", interfaceName)
 
-  useEffect(() => {
-    setIsInitialLoad(true)
-    fetchMetrics()
-  }, [timeframe, interfaceName])
-
-  useEffect(() => {
-    if (refreshInterval > 0) {
-      console.log("[v0] Setting up interval with refreshInterval:", refreshInterval)
-
-      const interval = setInterval(() => {
-        console.log("[v0] Interval executing - fetching metrics for:", interfaceName || "node")
-        fetchMetrics()
-      }, refreshInterval)
-
-      return () => {
-        console.log("[v0] Cleaning up interval")
-        clearInterval(interval)
-      }
-    }
-  }, [timeframe, interfaceName, refreshInterval])
-
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async () => {
     if (isInitialLoad) {
       setLoading(true)
     }
@@ -180,7 +159,29 @@ export function NetworkTrafficChart({
     } finally {
       setLoading(false)
     }
-  }
+  }, [timeframe, interfaceName, isInitialLoad, onTotalsCalculated])
+
+  useEffect(() => {
+    console.log("[v0] Initial fetch - timeframe:", timeframe, "interfaceName:", interfaceName)
+    setIsInitialLoad(true)
+    fetchMetrics()
+  }, [timeframe, interfaceName, fetchMetrics])
+
+  useEffect(() => {
+    if (refreshInterval > 0) {
+      console.log("[v0] Setting up refresh interval:", refreshInterval, "ms for", interfaceName || "node")
+
+      const interval = setInterval(() => {
+        console.log("[v0] Auto-refresh triggered for:", interfaceName || "node")
+        fetchMetrics()
+      }, refreshInterval)
+
+      return () => {
+        console.log("[v0] Clearing refresh interval for:", interfaceName || "node")
+        clearInterval(interval)
+      }
+    }
+  }, [refreshInterval, fetchMetrics, interfaceName])
 
   const tickInterval = Math.ceil(data.length / 8)
 
@@ -291,3 +292,12 @@ export function NetworkTrafficChart({
     </ResponsiveContainer>
   )
 }
+
+// Only re-render when timeframe, interfaceName, or refreshInterval change
+export const NetworkTrafficChart = memo(NetworkTrafficChartComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.timeframe === nextProps.timeframe &&
+    prevProps.interfaceName === nextProps.interfaceName &&
+    prevProps.refreshInterval === nextProps.refreshInterval
+  )
+})
