@@ -34,6 +34,9 @@ interface NetworkData {
   bridge_total_count?: number
   vm_lxc_active_count?: number
   vm_lxc_total_count?: number
+  hostname?: string
+  domain?: string
+  dns_servers?: string[]
 }
 
 interface NetworkInterface {
@@ -260,6 +263,12 @@ export function NetworkMetrics() {
     }
   }
 
+  const hostname = networkData.hostname || "N/A"
+  const domain = networkData.domain || "N/A"
+  const dnsServers = networkData.dns_servers || []
+  const primaryDNS = dnsServers[0] || "N/A"
+  const secondaryDNS = dnsServers[1] || "N/A"
+
   return (
     <div className="space-y-6">
       {/* Network Overview Cards */}
@@ -308,26 +317,24 @@ export function NetworkMetrics() {
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Top Interface</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Network Configuration</CardTitle>
+            <Network className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground truncate">{topInterface.name}</div>
-            <div className="flex items-center gap-2 mt-2">
-              {topInterface.vm_type ? (
-                <Badge variant="outline" className={getVMTypeBadge(topInterface.vm_type).color}>
-                  {getVMTypeBadge(topInterface.vm_type).label}
-                </Badge>
-              ) : (
-                <Badge variant="outline" className={getInterfaceTypeBadge(topInterface.type).color}>
-                  {getInterfaceTypeBadge(topInterface.type).label}
-                </Badge>
-              )}
-              {topInterface.vm_name && topInterface.vm_name !== "N/A" && (
-                <span className="text-xs text-muted-foreground truncate">→ {topInterface.vm_name}</span>
-              )}
+            <div className="space-y-2">
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Hostname</span>
+                <span className="text-sm font-medium text-foreground truncate">{hostname}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Domain</span>
+                <span className="text-sm font-medium text-foreground truncate">{domain}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Primary DNS</span>
+                <span className="text-sm font-medium text-foreground truncate">{primaryDNS}</span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Total traffic: {formatBytes(topInterfaceTraffic)}</p>
           </CardContent>
         </Card>
 

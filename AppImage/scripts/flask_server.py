@@ -1087,7 +1087,7 @@ def get_smart_data(disk_name):
 
                                                 smart_data['media_wearout_indicator'] = wear_used
                                                 smart_data['ssd_life_left'] = max(0, 100 - wear_used)
-                                                print(f"[v0] Media Wearout Indicator (ID 230): {used}% used, {smart_data['ssd_life_left']}% life left")
+                                                print(f"[v0] Media Wearout Indicator (ID 230): {wear_used}% used, {smart_data['ssd_life_left']}% life left")
                                             except Exception as e:
                                                 print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")    
                                         elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
@@ -1411,8 +1411,37 @@ def get_network_info():
             'physical_interfaces': [],  # Added separate list for physical interfaces
             'bridge_interfaces': [],    # Added separate list for bridge interfaces
             'vm_lxc_interfaces': [],
-            'traffic': {'bytes_sent': 0, 'bytes_recv': 0, 'packets_sent': 0, 'packets_recv': 0}
+            'traffic': {'bytes_sent': 0, 'bytes_recv': 0, 'packets_sent': 0, 'packets_recv': 0},
+            'hostname': socket.gethostname(),
+            'domain': None,
+            'dns_servers': []
         }
+        
+        try:
+            with open('/etc/resolv.conf', 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('nameserver'):
+                        dns_server = line.split()[1]
+                        network_data['dns_servers'].append(dns_server)
+                    elif line.startswith('domain'):
+                        network_data['domain'] = line.split()[1]
+                    elif line.startswith('search') and not network_data['domain']:
+                        # Use first search domain if no domain is set
+                        domains = line.split()[1:]
+                        if domains:
+                            network_data['domain'] = domains[0]
+        except Exception as e:
+            print(f"[v0] Error reading DNS configuration: {e}")
+        
+        try:
+            fqdn = socket.getfqdn()
+            if '.' in fqdn and fqdn != network_data['hostname']:
+                # Extract domain from FQDN if not already set
+                if not network_data['domain']:
+                    network_data['domain'] = fqdn.split('.', 1)[1]
+        except Exception as e:
+            print(f"[v0] Error getting FQDN: {e}")
         
         vm_lxc_map = get_vm_lxc_names()
         
@@ -2694,15 +2723,15 @@ def get_detailed_gpu_info(gpu):
                                         
                                         print(f"[v0] VRAM Total: {detailed_info['memory_total']}", flush=True)
                                         data_retrieved = True
-                                
-                                # Calculate memory utilization percentage
-                                if detailed_info['memory_used'] and detailed_info['memory_total']:
-                                    mem_used = int(detailed_info['memory_used'].replace(' MB', ''))
-                                    mem_total = int(detailed_info['memory_total'].replace(' MB', ''))
-                                    if mem_total > 0:
-                                        mem_util = (mem_used / mem_total) * 100
-                                        detailed_info['utilization_memory'] = round(mem_util, 1)
-                                        print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
+                            
+                            # Calculate memory utilization percentage
+                            if detailed_info['memory_used'] and detailed_info['memory_total']:
+                                mem_used = int(detailed_info['memory_used'].replace(' MB', ''))
+                                mem_total = int(detailed_info['memory_total'].replace(' MB', ''))
+                                if mem_total > 0:
+                                    mem_util = (mem_used / mem_total) * 100
+                                    detailed_info['utilization_memory'] = round(mem_util, 1)
+                                    print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
                             
                             # Parse GRBM (Graphics Register Bus Manager) for engine utilization
                             if 'GRBM' in device:
