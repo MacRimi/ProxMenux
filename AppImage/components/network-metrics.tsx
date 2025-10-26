@@ -710,6 +710,13 @@ export function NetworkMetrics() {
 
                 const displayInterface = currentInterfaceData || selectedInterface
 
+                console.log("[v0] Selected Interface:", selectedInterface.name)
+                console.log("[v0] Selected Interface bytes_recv:", selectedInterface.bytes_recv)
+                console.log("[v0] Selected Interface bytes_sent:", selectedInterface.bytes_sent)
+                console.log("[v0] Display Interface bytes_recv:", displayInterface.bytes_recv)
+                console.log("[v0] Display Interface bytes_sent:", displayInterface.bytes_sent)
+                console.log("[v0] Modal Network Data available:", !!modalNetworkData)
+
                 return (
                   <>
                     {/* Basic Information */}
