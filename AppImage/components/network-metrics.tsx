@@ -892,6 +892,37 @@ export function NetworkMetrics() {
                               refreshInterval={60000}
                             />
                           </div>
+
+                          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                            <div>
+                              <div className="text-sm text-muted-foreground">Packets Received</div>
+                              <div className="font-medium">
+                                {displayInterface.packets_recv?.toLocaleString() || "N/A"}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Packets Sent</div>
+                              <div className="font-medium">
+                                {displayInterface.packets_sent?.toLocaleString() || "N/A"}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Errors In</div>
+                              <div className="font-medium text-red-500">{displayInterface.errors_in || 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Errors Out</div>
+                              <div className="font-medium text-red-500">{displayInterface.errors_out || 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Drops In</div>
+                              <div className="font-medium text-yellow-500">{displayInterface.drops_in || 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Drops Out</div>
+                              <div className="font-medium text-yellow-500">{displayInterface.drops_out || 0}</div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ) : displayInterface.status.toLowerCase() === "up" && displayInterface.vm_type === "vm" ? (
@@ -938,26 +969,6 @@ export function NetworkMetrics() {
                             <div className="text-sm text-muted-foreground">Drops Out</div>
                             <div className="font-medium text-yellow-500">{displayInterface.drops_out || 0}</div>
                           </div>
-                          {displayInterface.packet_loss_in !== undefined && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Packet Loss In</div>
-                              <div
-                                className={`font-medium ${displayInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
-                              >
-                                {displayInterface.packet_loss_in}%
-                              </div>
-                            </div>
-                          )}
-                          {displayInterface.packet_loss_out !== undefined && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Packet Loss Out</div>
-                              <div
-                                className={`font-medium ${displayInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
-                              >
-                                {displayInterface.packet_loss_out}%
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
                     ) : (
@@ -967,77 +978,6 @@ export function NetworkMetrics() {
                         <p className="text-sm text-muted-foreground">
                           This interface is currently down. Network traffic statistics are not available.
                         </p>
-                      </div>
-                    )}
-
-                    {/* Cumulative Statistics - Only show if interface is UP and NOT a VM interface */}
-                    {displayInterface.status.toLowerCase() === "up" && displayInterface.vm_type !== "vm" && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-4">
-                          Cumulative Statistics (Since Last Boot)
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="text-sm text-muted-foreground">Bytes Received</div>
-                            <div className="font-medium text-green-500 text-lg">
-                              {formatBytes(displayInterface.bytes_recv)}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Bytes Sent</div>
-                            <div className="font-medium text-blue-500 text-lg">
-                              {formatBytes(displayInterface.bytes_sent)}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Packets Received</div>
-                            <div className="font-medium">
-                              {displayInterface.packets_recv?.toLocaleString() || "N/A"}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Packets Sent</div>
-                            <div className="font-medium">
-                              {displayInterface.packets_sent?.toLocaleString() || "N/A"}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Errors In</div>
-                            <div className="font-medium text-red-500">{displayInterface.errors_in || 0}</div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Errors Out</div>
-                            <div className="font-medium text-red-500">{displayInterface.errors_out || 0}</div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Drops In</div>
-                            <div className="font-medium text-yellow-500">{displayInterface.drops_in || 0}</div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Drops Out</div>
-                            <div className="font-medium text-yellow-500">{displayInterface.drops_out || 0}</div>
-                          </div>
-                          {displayInterface.packet_loss_in !== undefined && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Packet Loss In</div>
-                              <div
-                                className={`font-medium ${displayInterface.packet_loss_in > 1 ? "text-red-500" : "text-green-500"}`}
-                              >
-                                {displayInterface.packet_loss_in}%
-                              </div>
-                            </div>
-                          )}
-                          {displayInterface.packet_loss_out !== undefined && (
-                            <div>
-                              <div className="text-sm text-muted-foreground">Packet Loss Out</div>
-                              <div
-                                className={`font-medium ${displayInterface.packet_loss_out > 1 ? "text-red-500" : "text-green-500"}`}
-                              >
-                                {displayInterface.packet_loss_out}%
-                              </div>
-                            </div>
-                          )}
-                        </div>
                       </div>
                     )}
 
