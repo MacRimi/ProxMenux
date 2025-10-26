@@ -473,27 +473,27 @@ export function ProxmoxDashboard() {
       <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
           <TabsContent value="overview" className="space-y-4 md:space-y-6 mt-0">
-            {activeTab === "overview" && <SystemOverview key={`overview-${componentKey}`} />}
+            <SystemOverview key={`overview-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="storage" className="space-y-4 md:space-y-6 mt-0">
-            {activeTab === "storage" && <StorageOverview key={`storage-${componentKey}`} />}
+            <StorageOverview key={`storage-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="network" className="space-y-4 md:space-y-6 mt-0">
-            {activeTab === "network" && <NetworkMetrics key={`network-${componentKey}`} />}
+            <NetworkMetrics key={`network-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="vms" className="space-y-4 md:space-y-6 mt-0">
-            {activeTab === "vms" && <VirtualMachines key={`vms-${componentKey}`} />}
+            <VirtualMachines key={`vms-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="hardware" className="space-y-4 md:space-y-6 mt-0">
-            {activeTab === "hardware" && <Hardware key={`hardware-${componentKey}`} />}
+            <Hardware key={`hardware-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="logs" className="space-y-4 md:space-y-6 mt-0">
-            {activeTab === "logs" && <SystemLogs key={`logs-${componentKey}`} />}
+            <SystemLogs key={`logs-${componentKey}`} />
           </TabsContent>
         </Tabs>
 
