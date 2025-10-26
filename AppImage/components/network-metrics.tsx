@@ -853,22 +853,6 @@ export function NetworkMetrics() {
                     {/* Network Traffic Statistics - Only show if interface is UP and NOT a VM interface */}
                     {displayInterface.status.toLowerCase() === "up" && displayInterface.vm_type !== "vm" ? (
                       <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-4">Traffic since last boot</h3>
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                          <div>
-                            <div className="text-sm text-muted-foreground">Bytes Received</div>
-                            <div className="font-medium text-green-500 text-lg">
-                              {formatBytes(displayInterface.bytes_recv)}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Bytes Sent</div>
-                            <div className="font-medium text-blue-500 text-lg">
-                              {formatBytes(displayInterface.bytes_sent)}
-                            </div>
-                          </div>
-                        </div>
-
                         <h3 className="text-sm font-semibold text-muted-foreground mb-4">
                           Network Traffic Statistics (
                           {modalTimeframe === "hour"
@@ -992,6 +976,18 @@ export function NetworkMetrics() {
                           Cumulative Statistics (Since Last Boot)
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Bytes Received</div>
+                            <div className="font-medium text-green-500 text-lg">
+                              {formatBytes(displayInterface.bytes_recv)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Bytes Sent</div>
+                            <div className="font-medium text-blue-500 text-lg">
+                              {formatBytes(displayInterface.bytes_sent)}
+                            </div>
+                          </div>
                           <div>
                             <div className="text-sm text-muted-foreground">Packets Received</div>
                             <div className="font-medium">

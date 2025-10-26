@@ -1087,10 +1087,12 @@ def get_smart_data(disk_name):
 
                                                 smart_data['media_wearout_indicator'] = wear_used
                                                 smart_data['ssd_life_left'] = max(0, 100 - wear_used)
-                                                print(f"[v0] Media Wearout Indicator (ID 230): {wear_used}% used, {smart_data['ssd_life_left']}% life left")
+                                                print(f"[v0] Media Wearout Indicator (ID 230): {used}% used, {smart_data['ssd_life_left']}% life left")
                                             except Exception as e:
                                                 print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")    
                                         elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
+                                            # Valor normalizado: 100 = nuevo, 0 = gastado
+                                            # Invertimos para mostrar desgaste: 0% = nuevo, 100% = gastado
                                             normalized_value = int(parts[3]) if len(parts) > 3 else 100
                                             smart_data['media_wearout_indicator'] = 100 - normalized_value
                                             print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
@@ -1490,27 +1492,24 @@ def get_network_info():
             
             if interface_name in net_io_per_nic:
                 io_stats = net_io_per_nic[interface_name]
-                interface_info['bytes_sent'] = io_stats.bytes_sent
-                interface_info['bytes_recv'] = io_stats.bytes_recv
-                interface_info['packets_sent'] = io_stats.packets_sent
-                interface_info['packets_recv'] = io_stats.packets_recv
+                
+                # because psutil reports from host perspective, not VM/LXC perspective
+                if interface_type == 'vm_lxc':
+                    # From VM/LXC perspective: host's sent = VM received, host's recv = VM sent
+                    interface_info['bytes_sent'] = io_stats.bytes_recv
+                    interface_info['bytes_recv'] = io_stats.bytes_sent
+                    interface_info['packets_sent'] = io_stats.packets_recv
+                    interface_info['packets_recv'] = io_stats.packets_sent
+                else:
+                    interface_info['bytes_sent'] = io_stats.bytes_sent
+                    interface_info['bytes_recv'] = io_stats.bytes_recv
+                    interface_info['packets_sent'] = io_stats.packets_sent
+                    interface_info['packets_recv'] = io_stats.packets_recv
+                
                 interface_info['errors_in'] = io_stats.errin
                 interface_info['errors_out'] = io_stats.errout
                 interface_info['drops_in'] = io_stats.dropin
                 interface_info['drops_out'] = io_stats.dropout
-                
-                total_packets_in = io_stats.packets_recv + io_stats.dropin
-                total_packets_out = io_stats.packets_sent + io_stats.dropout
-                
-                if total_packets_in > 0:
-                    interface_info['packet_loss_in'] = round((io_stats.dropin / total_packets_in) * 100, 2)
-                else:
-                    interface_info['packet_loss_in'] = 0
-                    
-                if total_packets_out > 0:
-                    interface_info['packet_loss_out'] = round((io_stats.dropout / total_packets_out) * 100, 2)
-                else:
-                    interface_info['packet_loss_out'] = 0
             
             if interface_type == 'bond':
                 bond_info = get_bond_info(interface_name)
@@ -2170,7 +2169,7 @@ def get_detailed_gpu_info(gpu):
                 # Terminate process
                 try:
                     process.terminate()
-                    _, stderr_output = process.communicate(timeout=1) 
+                    _, stderr_output = process.communicate(timeout=0.5) 
                     if stderr_output:
                         print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
                 except subprocess.TimeoutExpired:
@@ -2653,7 +2652,7 @@ def get_detailed_gpu_info(gpu):
                                     mem_clock = clocks['GFX_MCLK']
                                     if 'value' in mem_clock:
                                         detailed_info['clock_memory'] = f"{mem_clock['value']} MHz"
-                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']} MHz", flush=True)
+                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']}", flush=True)
                                         data_retrieved = True
                             
                             # Parse GPU activity (gpu_activity.GFX)
@@ -4528,7 +4527,7 @@ def api_prometheus():
             
             metrics.append(f'# HELP proxmox_disk_usage_percent Disk usage percentage')
             metrics.append(f'# TYPE proxmox_disk_usage_percent gauge')
-            metrics.append(f'proxmox_disk_usage_percent{{node="{node}",disk="{disk_name}"}} {disk.get("percent", 0)} {timestamp}')
+            metrics.append(f'proxmox_disk_usage_percent{{node="{node}",disk="{disk_name}"}} {disk.get("usage_percent", 0)} {timestamp}')
         
         # Network metrics
         network_info = get_network_info()
