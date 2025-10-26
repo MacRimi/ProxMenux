@@ -47,6 +47,7 @@ export function NetworkTrafficChart({
   const [data, setData] = useState<NetworkMetricsData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [visibleLines, setVisibleLines] = useState({
     netIn: true,
     netOut: true,
@@ -158,6 +159,10 @@ export function NetworkTrafficChart({
       if (onTotalsCalculated) {
         onTotalsCalculated({ received: totalReceived, sent: totalSent })
       }
+
+      if (isInitialLoad) {
+        setIsInitialLoad(false)
+      }
     } catch (err: any) {
       console.error("[v0] Error fetching network metrics:", err)
       setError(err.message || "Error loading metrics")
@@ -171,7 +176,7 @@ export function NetworkTrafficChart({
   const handleLegendClick = (dataKey: string) => {
     setVisibleLines((prev) => ({
       ...prev,
-      [dataKey]: !prev[dataKey as keyof typeof prev],
+      [dataKey as keyof typeof prev]: !prev[dataKey as keyof typeof prev],
     }))
   }
 
@@ -254,6 +259,8 @@ export function NetworkTrafficChart({
           fillOpacity={0.3}
           name="Received"
           hide={!visibleLines.netIn}
+          isAnimationActive={isInitialLoad}
+          animationDuration={800}
         />
         <Area
           type="monotone"
@@ -264,6 +271,8 @@ export function NetworkTrafficChart({
           fillOpacity={0.3}
           name="Sent"
           hide={!visibleLines.netOut}
+          isAnimationActive={isInitialLoad}
+          animationDuration={800}
         />
       </AreaChart>
     </ResponsiveContainer>
