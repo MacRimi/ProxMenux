@@ -21,6 +21,86 @@ const TIMEFRAME_OPTIONS = [
   { value: "year", label: "1 Year" },
 ]
 
+const CustomCPUTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
+        <p className="text-sm font-semibold text-white mb-2">{label}</p>
+        <div className="space-y-1.5">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+              <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
+              <span className="text-sm font-semibold text-white">{entry.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  return null
+}
+
+const CustomMemoryTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
+        <p className="text-sm font-semibold text-white mb-2">{label}</p>
+        <div className="space-y-1.5">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+              <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
+              <span className="text-sm font-semibold text-white">{entry.value} GB</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  return null
+}
+
+const CustomDiskTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
+        <p className="text-sm font-semibold text-white mb-2">{label}</p>
+        <div className="space-y-1.5">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+              <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
+              <span className="text-sm font-semibold text-white">{entry.value} MB</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  return null
+}
+
+const CustomNetworkTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
+        <p className="text-sm font-semibold text-white mb-2">{label}</p>
+        <div className="space-y-1.5">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+              <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
+              <span className="text-sm font-semibold text-white">{entry.value} MB</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  return null
+}
+
 export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) {
   const [timeframe, setTimeframe] = useState("week")
   const [data, setData] = useState<any[]>([])
@@ -166,13 +246,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "currentColor" }}
                 domain={[0, "dataMax"]}
               />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "6px",
-                }}
-              />
+              <Tooltip content={<CustomCPUTooltip />} />
               <Area
                 type="monotone"
                 dataKey="cpu"
@@ -210,13 +284,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 label={{ value: "GB", angle: -90, position: "insideLeft", fill: "currentColor" }}
                 domain={[0, "dataMax"]}
               />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "6px",
-                }}
-              />
+              <Tooltip content={<CustomMemoryTooltip />} />
               <Area
                 type="monotone"
                 dataKey="memoryGB"
@@ -254,13 +322,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
                 domain={[0, "dataMax"]}
               />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "6px",
-                }}
-              />
+              <Tooltip content={<CustomDiskTooltip />} />
               <Legend content={renderDiskLegend} verticalAlign="top" />
               <Area
                 type="monotone"
@@ -310,13 +372,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
                 domain={[0, "dataMax"]}
               />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "6px",
-                }}
-              />
+              <Tooltip content={<CustomNetworkTooltip />} />
               <Legend content={renderNetworkLegend} verticalAlign="top" />
               <Area
                 type="monotone"
