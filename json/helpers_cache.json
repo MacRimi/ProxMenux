@@ -1459,6 +1459,22 @@
     "type": "ct"
   },
   {
+    "name": "Garage",
+    "slug": "garage",
+    "desc": "Garage is a lightweight, self-hosted, S3-compatible object storage service built for distributed environments. It is designed to be simple, efficient, and easy to deploy across multiple nodes.",
+    "script": "ct/garage.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/garage.sh",
+    "categories": [
+      8
+    ],
+    "notes": [
+      "The Garage configuration file is located at `/etc/garage.toml`. You can edit RPC and API bindings, tokens, and data directories there.",
+      "Admin API runs by default on port `3903`, S3 API on port `3900`, Web UI on `3902`. Adjust firewall rules accordingly.",
+      "To view your generated tokens and RPC secret, check `~/garage.creds` after installation."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "gatus",
     "slug": "gatus",
     "desc": "Gatus is a developer-oriented health dashboard that gives you the ability to monitor your services using HTTP, ICMP, TCP, and even DNS queries as well as evaluate the result of said queries by using a list of conditions on values like the status code, the response time, the certificate expiration, the body and many others. The icing on top is that each of these health checks can be paired with alerting via Slack, Teams, PagerDuty, Discord, Twilio and many more.",
