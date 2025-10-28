@@ -273,8 +273,9 @@ def get_intel_gpu_processes_from_text():
                 break
         
         if not header_found:
-            print(f"[v0] No process table found in intel_gpu_top output", flush=True)
-        
+            # print(f"[v0] No process table found in intel_gpu_top output", flush=True)
+            pass
+
         return processes
     except Exception as e:
         print(f"[v0] Error getting processes from intel_gpu_top text: {e}", flush=True)
@@ -476,7 +477,7 @@ def serve_next_static(filename):
         if os.path.exists(file_path):
             return send_file(file_path)
         
-        print(f"[v0] ❌ Next.js static file not found: {file_path}")
+        # print(f"[v0] ❌ Next.js static file not found: {file_path}")
         return '', 404
     except Exception as e:
         print(f"Error serving Next.js static file {filename}: {e}")
@@ -1455,7 +1456,7 @@ def get_bridge_info(bridge_name):
                 # Check if member is a physical interface
                 elif member.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
                     bridge_info['physical_interface'] = member
-                    print(f"[v0] Bridge {bridge_name} physical interface: {member}")
+
                     
                     # Get duplex from physical interface
                     try:
@@ -1463,13 +1464,13 @@ def get_bridge_info(bridge_name):
                         if member in net_if_stats:
                             stats = net_if_stats[member]
                             bridge_info['physical_duplex'] = 'full' if stats.duplex == 2 else 'half' if stats.duplex == 1 else 'unknown'
-                            print(f"[v0] Physical interface {member} duplex: {bridge_info['physical_duplex']}")
+
                     except Exception as e:
                         print(f"[v0] Error getting duplex for {member}: {e}")
                     
                     break
             
-            print(f"[v0] Bridge {bridge_name} members: {members}")
+
     except Exception as e:
         print(f"[v0] Error reading bridge info for {bridge_name}: {e}")
     
@@ -1829,11 +1830,13 @@ def get_ipmi_power():
                         except ValueError:
                             continue
         
-        print(f"[v0] Found {len(power_supplies)} IPMI power supplies")
+
     except FileNotFoundError:
-        print("[v0] ipmitool not found")
+        # print("[v0] ipmitool not found")
+        pass
     except Exception as e:
-        print(f"[v0] Error getting IPMI power: {e}")
+        # print(f"[v0] Error getting IPMI power: {e}")
+        pass
     
     return {
         'power_supplies': power_supplies,
@@ -1871,9 +1874,11 @@ def get_ups_info():
                                     'is_remote': False
                                 }
         except FileNotFoundError:
-            print("[v0] /etc/nut/upsmon.conf not found")
+            # print("[v0] /etc/nut/upsmon.conf not found")
+             pass
         except Exception as e:
-            print(f"[v0] Error reading upsmon.conf: {e}")
+            # print(f"[v0] Error reading upsmon.conf: {e}")
+             pass
         
         # Get list of locally available UPS
         local_ups = []
@@ -1882,7 +1887,8 @@ def get_ups_info():
             if result.returncode == 0:
                 local_ups = [ups.strip() for ups in result.stdout.strip().split('\n') if ups.strip()]
         except Exception as e:
-            print(f"[v0] Error listing local UPS: {e}")
+            # print(f"[v0] Error listing local UPS: {e}")
+             pass
         
         all_ups = {}
         
@@ -2094,14 +2100,17 @@ def get_temperature_info():
                         except ValueError:
                             pass
         
-        print(f"[v0] Found {len(temperatures)} temperature sensors")
+
         if power_meter:
-            print(f"[v0] Found power meter: {power_meter['watts']}W")
+            # print(f"[v0] Found power meter: {power_meter['watts']}W")
+            pass
             
     except FileNotFoundError:
-        print("[v0] sensors command not found")
+        # print("[v0] sensors command not found")
+        pass
     except Exception as e:
-        print(f"[v0] Error getting temperature info: {e}")
+        # print(f"[v0] Error getting temperature info: {e}")
+        pass
     
     return {
         'temperatures': temperatures,
@@ -2145,42 +2154,44 @@ def get_detailed_gpu_info(gpu):
     
     # Intel GPU monitoring with intel_gpu_top
     if 'intel' in vendor:
-        print(f"[v0] Intel GPU detected, checking for intel_gpu_top...", flush=True)
-        
+        # print(f"[v0] Intel GPU detected, checking for intel_gpu_top...", flush=True)
+        pass
         intel_gpu_top_path = None
         system_paths = ['/usr/bin/intel_gpu_top', '/usr/local/bin/intel_gpu_top']
         for path in system_paths:
             if os.path.exists(path):
                 intel_gpu_top_path = path
-                print(f"[v0] Found system intel_gpu_top at: {path}", flush=True)
+                # print(f"[v0] Found system intel_gpu_top at: {path}", flush=True)
+                pass
                 break
         
         # Fallback to shutil.which if not found in system paths
         if not intel_gpu_top_path:
             intel_gpu_top_path = shutil.which('intel_gpu_top')
             if intel_gpu_top_path:
-                print(f"[v0] Using intel_gpu_top from PATH: {intel_gpu_top_path}", flush=True)
-        
+                # print(f"[v0] Using intel_gpu_top from PATH: {intel_gpu_top_path}", flush=True)
+                pass
         if intel_gpu_top_path:
-            print(f"[v0] intel_gpu_top found, executing...", flush=True)
+            # print(f"[v0] intel_gpu_top found, executing...", flush=True)
+            pass
             try:
-                print(f"[v0] Current user: {os.getenv('USER', 'unknown')}, UID: {os.getuid()}, GID: {os.getgid()}", flush=True)
-                print(f"[v0] Current working directory: {os.getcwd()}", flush=True)
-                
+                # print(f"[v0] Current user: {os.getenv('USER', 'unknown')}, UID: {os.getuid()}, GID: {os.getgid()}", flush=True)
+                # print(f"[v0] Current working directory: {os.getcwd()}", flush=True)
+                pass
                 drm_devices = ['/dev/dri/card0', '/dev/dri/renderD128']
                 for drm_dev in drm_devices:
                     if os.path.exists(drm_dev):
                         stat_info = os.stat(drm_dev)
                         readable = os.access(drm_dev, os.R_OK)
                         writable = os.access(drm_dev, os.W_OK)
-                        print(f"[v0] {drm_dev}: mode={oct(stat_info.st_mode)}, uid={stat_info.st_uid}, gid={stat_info.st_gid}, readable={readable}, writable={writable}", flush=True)
-                
+                        # print(f"[v0] {drm_dev}: mode={oct(stat_info.st_mode)}, uid={stat_info.st_uid}, gid={stat_info.st_gid}, readable={readable}, writable={writable}", flush=True)
+                        pass   
                 # Prepare environment with all necessary variables
                 env = os.environ.copy()
                 env['TERM'] = 'xterm'  # Ensure terminal type is set
                 
                 cmd = f'{intel_gpu_top_path} -J' # Use the found path
-                print(f"[v0] Executing command: {cmd}", flush=True)
+                # print(f"[v0] Executing command: {cmd}", flush=True)
                 
                 process = subprocess.Popen(
                     cmd,
@@ -2193,9 +2204,7 @@ def get_detailed_gpu_info(gpu):
                     cwd='/'  # Ejecutar desde root en lugar de dentro del AppImage
                 )
                 
-                print(f"[v0] Process started with PID: {process.pid}", flush=True)
-                
-                print(f"[v0] Waiting 1 second for intel_gpu_top to initialize and detect processes...", flush=True)
+
                 time.sleep(1)
                 
                 start_time = time.time()
@@ -2205,7 +2214,7 @@ def get_detailed_gpu_info(gpu):
                 brace_count = 0
                 in_json = False
                 
-                print(f"[v0] Reading output from intel_gpu_top...", flush=True)
+
                 
                 while time.time() - start_time < timeout:
                     if process.poll() is not None:
@@ -2689,7 +2698,7 @@ def get_detailed_gpu_info(gpu):
             try:
                 # Execute amdgpu_top with JSON output and single snapshot
                 cmd = [amdgpu_top_path, '--json', '-n', '1']
-                print(f"[v0] Executing command: {' '.join(cmd)}", flush=True)
+                # print(f"[v0] Executing command: {' '.join(cmd)}", flush=True)
                 
                 result = subprocess.run(
                     cmd,
@@ -2985,15 +2994,16 @@ def get_detailed_gpu_info(gpu):
                 import traceback
                 traceback.print_exc()
         else:
-            print(f"[v0] amdgpu_top not found in PATH", flush=True)
-            print(f"[v0] To enable AMD GPU monitoring, install amdgpu_top:", flush=True)
-            print(f"[v0]   wget -O amdgpu-top_0.11.0-1_amd64.deb https://github.com/Umio-Yasuno/amdgpu_top/releases/download/v0.11.0/amdgpu-top_0.11.0-1_amd64.deb", flush=True)
-            print(f"[v0]   apt install ./amdgpu-top_0.11.0-1_amd64.deb", flush=True)
-        
+            # print(f"[v0] amdgpu_top not found in PATH", flush=True)
+            # print(f"[v0] To enable AMD GPU monitoring, install amdgpu_top:", flush=True)
+            # print(f"[v0]   wget -O amdgpu-top_0.11.0-1_amd64.deb https://github.com/Umio-Yasuno/amdgpu_top/releases/download/v0.11.0/amdgpu-top_0.11.0-1_amd64.deb", flush=True)
+            # print(f"[v0]   apt install ./amdgpu-top_0.11.0-1_amd64.deb", flush=True)
+            pass
     else:
-        print(f"[v0] Unsupported GPU vendor: {vendor}", flush=True)
+        # print(f"[v0] Unsupported GPU vendor: {vendor}", flush=True)
 
-    print(f"[v0] ===== Exiting get_detailed_gpu_info for GPU {slot} =====", flush=True)
+        # print(f"[v0] ===== Exiting get_detailed_gpu_info for GPU {slot} =====", flush=True)
+        pass
     return detailed_info
 
 
