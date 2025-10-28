@@ -118,6 +118,11 @@ interface VMDetails extends VMData {
     name?: string
     pretty_name?: string
   }
+  hardware_info?: {
+    privileged?: boolean | null
+    gpu_passthrough?: string[]
+    devices?: string[]
+  }
 }
 
 const fetcher = async (url: string) => {
@@ -1321,6 +1326,71 @@ export function VirtualMachines() {
 
                               {showAdditionalInfo && (
                                 <div className="mt-6 pt-6 border-t border-border space-y-6">
+                                  {selectedVM?.type === "lxc" && vmDetails?.hardware_info && (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                        Container Configuration
+                                      </h4>
+                                      <div className="space-y-4">
+                                        {/* Privileged Status */}
+                                        {vmDetails.hardware_info.privileged !== null &&
+                                          vmDetails.hardware_info.privileged !== undefined && (
+                                            <div>
+                                              <div className="text-xs text-muted-foreground mb-2">Privilege Level</div>
+                                              <Badge
+                                                variant="outline"
+                                                className={
+                                                  vmDetails.hardware_info.privileged
+                                                    ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                                                    : "bg-green-500/10 text-green-500 border-green-500/20"
+                                                }
+                                              >
+                                                {vmDetails.hardware_info.privileged ? "Privileged" : "Unprivileged"}
+                                              </Badge>
+                                            </div>
+                                          )}
+
+                                        {/* GPU Passthrough */}
+                                        {vmDetails.hardware_info.gpu_passthrough &&
+                                          vmDetails.hardware_info.gpu_passthrough.length > 0 && (
+                                            <div>
+                                              <div className="text-xs text-muted-foreground mb-2">GPU Passthrough</div>
+                                              <div className="flex flex-wrap gap-2">
+                                                {vmDetails.hardware_info.gpu_passthrough.map((gpu, index) => (
+                                                  <Badge
+                                                    key={index}
+                                                    variant="outline"
+                                                    className="bg-purple-500/10 text-purple-500 border-purple-500/20"
+                                                  >
+                                                    {gpu}
+                                                  </Badge>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                        {/* Other Hardware Devices */}
+                                        {vmDetails.hardware_info.devices &&
+                                          vmDetails.hardware_info.devices.length > 0 && (
+                                            <div>
+                                              <div className="text-xs text-muted-foreground mb-2">Hardware Devices</div>
+                                              <div className="flex flex-wrap gap-2">
+                                                {vmDetails.hardware_info.devices.map((device, index) => (
+                                                  <Badge
+                                                    key={index}
+                                                    variant="outline"
+                                                    className="bg-blue-500/10 text-blue-500 border-blue-500/20"
+                                                  >
+                                                    {device}
+                                                  </Badge>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+                                      </div>
+                                    </div>
+                                  )}
+
                                   {/* Hardware Section */}
                                   <div>
                                     <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">

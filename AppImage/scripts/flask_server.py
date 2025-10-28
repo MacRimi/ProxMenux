@@ -84,6 +84,93 @@ def identify_gpu_type(name, vendor=None, bus=None, driver=None):
     return 'PCI'
 
 
+def parse_lxc_hardware_config(vmid, node):
+    """Parse LXC configuration file to detect hardware passthrough"""
+    hardware_info = {
+        'privileged': None,
+        'gpu_passthrough': [],
+        'devices': []
+    }
+    
+    try:
+        config_path = f'/etc/pve/lxc/{vmid}.conf'
+        
+        if not os.path.exists(config_path):
+            return hardware_info
+        
+        with open(config_path, 'r') as f:
+            config_content = f.read()
+        
+        # Check if privileged or unprivileged
+        if 'unprivileged: 1' in config_content:
+            hardware_info['privileged'] = False
+        elif 'unprivileged: 0' in config_content:
+            hardware_info['privileged'] = True
+        else:
+            # Check for lxc.cap.drop (empty means privileged)
+            if 'lxc.cap.drop:' in config_content and 'lxc.cap.drop: \n' in config_content:
+                hardware_info['privileged'] = True
+            elif 'lxc.cgroup2.devices.allow: a' in config_content:
+                hardware_info['privileged'] = True
+        
+        # Detect GPU passthrough
+        gpu_types = []
+        
+        # Intel iGPU detection
+        if '/dev/dri' in config_content or 'renderD128' in config_content:
+            if 'Intel' not in gpu_types:
+                gpu_types.append('Intel iGPU')
+        
+        # NVIDIA GPU detection
+        if 'nvidia' in config_content.lower():
+            if any(x in config_content for x in ['nvidia0', 'nvidiactl', 'nvidia-uvm']):
+                if 'NVIDIA GPU' not in gpu_types:
+                    gpu_types.append('NVIDIA GPU')
+        
+        # AMD GPU detection
+        if 'amdgpu' in config_content.lower() or ('dev/dri' in config_content and 'card' in config_content):
+            if 'AMD GPU' not in gpu_types:
+                gpu_types.append('AMD GPU')
+        
+        hardware_info['gpu_passthrough'] = gpu_types
+        
+        # Detect other hardware devices
+        devices = []
+        
+        # Coral TPU detection
+        if 'apex' in config_content.lower() or 'coral' in config_content.lower():
+            devices.append('Coral TPU')
+        
+        # USB devices detection
+        if 'ttyUSB' in config_content or 'ttyACM' in config_content:
+            devices.append('USB Serial Devices')
+        
+        if '/dev/bus/usb' in config_content:
+            devices.append('USB Passthrough')
+        
+        # Framebuffer detection
+        if '/dev/fb0' in config_content:
+            devices.append('Framebuffer')
+        
+        # Audio devices detection
+        if '/dev/snd' in config_content:
+            devices.append('Audio Devices')
+        
+        # Input devices detection
+        if '/dev/input' in config_content:
+            devices.append('Input Devices')
+        
+        # TTY detection
+        if 'tty7' in config_content:
+            devices.append('TTY Console')
+        
+        hardware_info['devices'] = devices
+        
+    except Exception as e:
+        pass
+    
+    return hardware_info
+
 # Helper function to format bytes into human-readable string
 def format_bytes(size_in_bytes):
     """Converts bytes to a human-readable string (KB, MB, GB, TB)."""
@@ -767,7 +854,7 @@ def get_storage_info():
             
             # print(f"[v0] Total storage used: {storage_data['used']}GB (including ZFS pools)")
             pass
-            
+        
         except Exception as e:
             # print(f"Error getting partition info: {e}")
             pass
@@ -1674,7 +1761,7 @@ def get_network_info():
                 bridge_total_count += 1
                 if stats.isup:
                     bridge_active_count += 1
-                
+            
             interface_info = {
                 'name': interface_name,
                 'type': interface_type,
@@ -2407,7 +2494,7 @@ def get_detailed_gpu_info(gpu):
                                         if 'clients' in json_data:
                                             client_count = len(json_data['clients'])
    
-                                            for client_id, client_data in json_data['clients'].items():
+                                            for client_id, client_data in json_data['clients']:
                                                 client_name = client_data.get('name', 'Unknown')
                                                 client_pid = client_data.get('pid', 'Unknown')
 
@@ -2950,22 +3037,22 @@ def get_detailed_gpu_info(gpu):
                                         # print(f"[v0] Temperature: {detailed_info['temperature']}°C", flush=True)
                                         pass
                                         data_retrieved = True
-                                
-                                # Parse power draw (GFX Power or average_socket_power)
-                                if 'GFX Power' in sensors:
-                                    gfx_power = sensors['GFX Power']
-                                    if 'value' in gfx_power:
-                                        detailed_info['power_draw'] = f"{gfx_power['value']:.2f} W"
-                                        # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
-                                        pass
-                                        data_retrieved = True
-                                elif 'average_socket_power' in sensors:
-                                    socket_power = sensors['average_socket_power']
-                                    if 'value' in socket_power:
-                                        detailed_info['power_draw'] = f"{socket_power['value']:.2f} W"
-                                        # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
-                                        pass
-                                        data_retrieved = True
+                            
+                            # Parse power draw (GFX Power or average_socket_power)
+                            if 'GFX Power' in sensors:
+                                gfx_power = sensors['GFX Power']
+                                if 'value' in gfx_power:
+                                    detailed_info['power_draw'] = f"{gfx_power['value']:.2f} W"
+                                    # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
+                                    pass
+                                    data_retrieved = True
+                            elif 'average_socket_power' in sensors:
+                                socket_power = sensors['average_socket_power']
+                                if 'value' in socket_power:
+                                    detailed_info['power_draw'] = f"{socket_power['value']:.2f} W"
+                                    # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
+                                    pass
+                                    data_retrieved = True
                             
                             # Parse clocks (GFX_SCLK for graphics, GFX_MCLK for memory)
                             if 'Clocks' in device:
@@ -2982,7 +3069,7 @@ def get_detailed_gpu_info(gpu):
                                     mem_clock = clocks['GFX_MCLK']
                                     if 'value' in mem_clock:
                                         detailed_info['clock_memory'] = f"{mem_clock['value']} MHz"
-                                        # print(f"[v0] Memory Clock: {detailed_info['clock_memory']}", flush=True)
+                                        # print(f"[v0] Memory Clock: {detailed_info['clock_memory']} MHz", flush=True)
                                         pass
                                         data_retrieved = True
                             
@@ -3219,7 +3306,6 @@ def get_detailed_gpu_info(gpu):
                             else:
                                 # print(f"[v0] No fdinfo section found in device data", flush=True)
                                 pass
-                                detailed_info['processes'] = []
                             
                             if data_retrieved:
                                 detailed_info['has_monitoring_tool'] = True
@@ -4217,7 +4303,7 @@ def api_network_interface_metrics(interface_name):
             vmid, vm_type = extract_vmid_from_interface(interface_name)
             if vmid:
 
-                rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/{vm_type}/{vmid}/rrddata', 
+                rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/{vm_type}/{vmid}/rrddata',
                                             '--timeframe', timeframe, '--output-format', 'json'],
                                            capture_output=True, text=True, timeout=10)
                 
@@ -5465,6 +5551,10 @@ def api_vm_details(vmid):
                         'vm_type': vm_type
                     }
                     
+                    if vm_type == 'lxc':
+                        hardware_info = parse_lxc_hardware_config(vmid, node)
+                        response_data['hardware_info'] = hardware_info
+                    
                     # Add OS info if available
                     if os_info:
                         response_data['os_info'] = os_info
@@ -5475,7 +5565,6 @@ def api_vm_details(vmid):
         else:
             return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
-        # print(f"Error getting VM details: {e}")
         pass
         return jsonify({'error': str(e)}), 500
 
