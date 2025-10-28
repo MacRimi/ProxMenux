@@ -175,7 +175,7 @@ def get_available_updates():
 def get_intel_gpu_processes_from_text():
     """Parse processes from intel_gpu_top text output (more reliable than JSON)"""
     try:
-        print(f"[v0] Executing intel_gpu_top (text mode) to capture processes...", flush=True)
+
         process = subprocess.Popen(
             ['intel_gpu_top'],
             stdout=subprocess.PIPE,
@@ -521,7 +521,7 @@ def serve_images(filename):
         file_path = os.path.join(image_dir, filename)
         abs_path = os.path.abspath(file_path)
         
-        print(f"[v0] Looking for image: {filename} at {abs_path}")
+
         
         if os.path.exists(abs_path):
             print(f"[v0] ✅ Serving image from: {abs_path}")
@@ -565,7 +565,7 @@ def get_storage_info():
                         disk_name = parts[0]
                         
                         if disk_name.startswith('zd'):
-                            print(f"[v0] Skipping ZFS zvol device: {disk_name}")
+
                             continue
                         
                         disk_size_bytes = int(parts[1])
@@ -575,9 +575,9 @@ def get_storage_info():
                         total_disk_size_bytes += disk_size_bytes
                         
                         # Get SMART data for this disk
-                        print(f"[v0] Getting SMART data for {disk_name}...")
+
                         smart_data = get_smart_data(disk_name)
-                        print(f"[v0] SMART data for {disk_name}: {smart_data}")
+
                         
                         disk_size_kb = disk_size_bytes / 1024
                         
@@ -638,7 +638,7 @@ def get_storage_info():
                         continue
                     
                     if partition.fstype == 'zfs':
-                        print(f"[v0] Skipping ZFS filesystem {partition.mountpoint}, will count from pool data")
+
                         continue
                     
                     partition_usage = psutil.disk_usage(partition.mountpoint)
@@ -688,7 +688,7 @@ def get_storage_info():
                                 total_used += pool_alloc_bytes
                                 total_available += pool_free_bytes
                                 
-                                print(f"[v0] ZFS Pool {pool_name}: allocated={pool_alloc_bytes / (1024**3):.2f}GB, free={pool_free_bytes / (1024**3):.2f}GB")
+
                                 
                                 def format_zfs_size(size_bytes):
                                     size_tb = size_bytes / (1024**4)
@@ -721,12 +721,12 @@ def get_storage_info():
             except FileNotFoundError:
                 print("[v0] Note: ZFS not installed")
             except Exception as e:
-                print(f"[v0] Note: ZFS not available or no pools: {e}")
+
             
             storage_data['used'] = round(total_used / (1024**3), 1)
             storage_data['available'] = round(total_available / (1024**3), 1)
             
-            print(f"[v0] Total storage used: {storage_data['used']}GB (including ZFS pools)")
+
             
         except Exception as e:
             print(f"Error getting partition info: {e}")
@@ -798,18 +798,18 @@ def get_smart_data(disk_name):
         
         process = None # Initialize process to None
         for cmd_index, cmd in enumerate(commands_to_try):
-            print(f"[v0] Attempt {cmd_index + 1}/{len(commands_to_try)}: Running command: {' '.join(cmd)}")
+
             try:
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Use communicate with a timeout to avoid hanging if the process doesn't exit
                 stdout, stderr = process.communicate(timeout=15)
                 result_code = process.returncode
                 
-                print(f"[v0] Command return code: {result_code}")
+
                 
                 if stderr:
                     stderr_preview = stderr[:200].replace('\n', ' ')
-                    print(f"[v0] stderr: {stderr_preview}")
+
                 
                 has_output = stdout and len(stdout.strip()) > 50
                 
@@ -930,38 +930,38 @@ def get_smart_data(disk_name):
                                         # Valor normalizado: 100 = nuevo, 0 = gastado
                                         # Invertimos para mostrar desgaste: 0% = nuevo, 100% = gastado
                                         smart_data['media_wearout_indicator'] = 100 - normalized_value
-                                        print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
+
                                     elif attr_id == '177':  # Wear_Leveling_Count
                                         # Valor normalizado: 100 = nuevo, 0 = gastado
                                         smart_data['wear_leveling_count'] = 100 - normalized_value
-                                        print(f"[v0] Wear Leveling Count (ID 177): {smart_data['wear_leveling_count']}% used")
+
                                     elif attr_id == '202':  # Percentage_Lifetime_Remain (algunos fabricantes)
                                         # Valor normalizado: 100 = nuevo, 0 = gastado
                                         smart_data['ssd_life_left'] = normalized_value
-                                        print(f"[v0] SSD Life Left (ID 202): {smart_data['ssd_life_left']}%")
+
                                     elif attr_id == '231':  # SSD_Life_Left (algunos fabricantes)
                                         smart_data['ssd_life_left'] = normalized_value
-                                        print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
+
                                     elif attr_id == '241':  # Total_LBAs_Written
                                         # Convertir a GB (raw_value es en sectores de 512 bytes)
                                         try:
                                             raw_int = int(raw_value.replace(',', ''))
                                             total_gb = (raw_int * 512) / (1024 * 1024 * 1024)
                                             smart_data['total_lbas_written'] = round(total_gb, 2)
-                                            print(f"[v0] Total LBAs Written (ID 241): {smart_data['total_lbas_written']} GB")
+
                                         except ValueError:
                                             pass
                             
                             # If we got good data, break out of the loop
                             if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
-                                print(f"[v0] Successfully extracted complete data from JSON (attempt {cmd_index + 1})")
+
                                 break
                                 
                         except json.JSONDecodeError as e:
                             print(f"[v0] JSON parse failed: {e}, trying text parsing...")
                     
                     if smart_data['model'] == 'Unknown' or smart_data['serial'] == 'Unknown' or smart_data['temperature'] == 0:
-                        print(f"[v0] Parsing text output (model={smart_data['model']}, serial={smart_data['serial']}, temp={smart_data['temperature']})...")
+
                         output = stdout
                         
                         # Get basic info
@@ -971,52 +971,52 @@ def get_smart_data(disk_name):
                             # Model detection
                             if (line.startswith('Device Model:') or line.startswith('Model Number:')) and smart_data['model'] == 'Unknown':
                                 smart_data['model'] = line.split(':', 1)[1].strip()
-                                print(f"[v0] Found model: {smart_data['model']}")
+
                             elif line.startswith('Model Family:') and smart_data['model'] == 'Unknown':
                                 smart_data['model'] = line.split(':', 1)[1].strip()
-                                print(f"[v0] Found model family: {smart_data['model']}")
+
                             
                             # Serial detection
                             elif line.startswith('Serial Number:') and smart_data['serial'] == 'Unknown':
                                 smart_data['serial'] = line.split(':', 1)[1].strip()
-                                print(f"[v0] Found serial: {smart_data['serial']}")
+
                             
                             elif line.startswith('Rotation Rate:') and smart_data['rotation_rate'] == 0:
                                 rate_str = line.split(':', 1)[1].strip()
                                 if 'rpm' in rate_str.lower():
                                     try:
                                         smart_data['rotation_rate'] = int(rate_str.split()[0])
-                                        print(f"[v0] Found rotation rate: {smart_data['rotation_rate']} RPM")
+
                                     except (ValueError, IndexError):
                                         pass
                                 elif 'Solid State Device' in rate_str:
                                     smart_data['rotation_rate'] = 0  # SSD
-                                    print(f"[v0] Found SSD (no rotation)")
+
                             
                             # SMART status detection
                             elif 'SMART overall-health self-assessment test result:' in line:
                                 if 'PASSED' in line:
                                     smart_data['smart_status'] = 'passed'
                                     smart_data['health'] = 'healthy'
-                                    print(f"[v0] SMART status: PASSED")
+
                                 elif 'FAILED' in line:
                                     smart_data['smart_status'] = 'failed'
                                     smart_data['health'] = 'critical'
-                                    print(f"[v0] SMART status: FAILED")
+
                             
                             # NVMe health
                             elif 'SMART Health Status:' in line:
                                 if 'OK' in line:
                                     smart_data['smart_status'] = 'passed'
                                     smart_data['health'] = 'healthy'
-                                    print(f"[v0] NVMe Health: OK")
+
                             
                             # Temperature detection (various formats)
                             elif 'Current Temperature:' in line and smart_data['temperature'] == 0:
                                 try:
                                     temp_str = line.split(':')[1].strip().split()[0]
                                     smart_data['temperature'] = int(temp_str)
-                                    print(f"[v0] Found temperature: {smart_data['temperature']}°C")
+
                                 except (ValueError, IndexError):
                                     pass
                         
@@ -1027,7 +1027,7 @@ def get_smart_data(disk_name):
                             
                             if 'ID# ATTRIBUTE_NAME' in line or 'ID#' in line and 'ATTRIBUTE_NAME' in line:
                                 in_attributes = True
-                                print(f"[v0] Found SMART attributes table")
+
                                 continue
                             
                             if in_attributes:
@@ -1047,28 +1047,28 @@ def get_smart_data(disk_name):
                                         if attr_id == '9':  # Power On Hours
                                             raw_clean = raw_value.split()[0].replace('h', '').replace(',', '')
                                             smart_data['power_on_hours'] = int(raw_clean)
-                                            print(f"[v0] Power On Hours: {smart_data['power_on_hours']}")
+
                                         elif attr_id == '12':  # Power Cycle Count
                                             raw_clean = raw_value.split()[0].replace(',', '')
                                             smart_data['power_cycles'] = int(raw_clean)
-                                            print(f"[v0] Power Cycles: {smart_data['power_cycles']}")
+
                                         elif attr_id == '194' and smart_data['temperature'] == 0:  # Temperature
                                             temp_str = raw_value.split()[0]
                                             smart_data['temperature'] = int(temp_str)
-                                            print(f"[v0] Temperature (attr 194): {smart_data['temperature']}°C")
+
                                         elif attr_id == '190' and smart_data['temperature'] == 0:  # Airflow Temperature
                                             temp_str = raw_value.split()[0]
                                             smart_data['temperature'] = int(temp_str)
-                                            print(f"[v0] Airflow Temperature (attr 190): {smart_data['temperature']}°C")
+
                                         elif attr_id == '5':  # Reallocated Sectors
                                             smart_data['reallocated_sectors'] = int(raw_value)
-                                            print(f"[v0] Reallocated Sectors: {smart_data['reallocated_sectors']}")
+
                                         elif attr_id == '197':  # Pending Sectors
                                             smart_data['pending_sectors'] = int(raw_value)
-                                            print(f"[v0] Pending Sectors: {smart_data['pending_sectors']}")
+
                                         elif attr_id == '199':  # CRC Errors
                                             smart_data['crc_errors'] = int(raw_value)
-                                            print(f"[v0] CRC Errors: {smart_data['crc_errors']}")
+
                                         elif attr_id == '230': 
                                             try:
                                                 wear_used = None
@@ -1087,7 +1087,7 @@ def get_smart_data(disk_name):
 
                                                 smart_data['media_wearout_indicator'] = wear_used
                                                 smart_data['ssd_life_left'] = max(0, 100 - wear_used)
-                                                print(f"[v0] Media Wearout Indicator (ID 230): {wear_used}% used, {smart_data['ssd_life_left']}% life left")
+
                                             except Exception as e:
                                                 print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")    
                                         elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
@@ -1095,28 +1095,28 @@ def get_smart_data(disk_name):
                                             # Invertimos para mostrar desgaste: 0% = nuevo, 100% = gastado
                                             normalized_value = int(parts[3]) if len(parts) > 3 else 100
                                             smart_data['media_wearout_indicator'] = 100 - normalized_value
-                                            print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
+
                                         elif attr_id == '177':  # Wear_Leveling_Count
                                             # Valor normalizado: 100 = nuevo, 0 = gastado
                                             normalized_value = int(parts[3]) if len(parts) > 3 else 100
                                             smart_data['wear_leveling_count'] = 100 - normalized_value
-                                            print(f"[v0] Wear Leveling Count (ID 177): {smart_data['wear_leveling_count']}% used")
+
                                         elif attr_id == '202':  # Percentage_Lifetime_Remain (algunos fabricantes)
                                             # Valor normalizado: 100 = nuevo, 0 = gastado
                                             normalized_value = int(parts[3]) if len(parts) > 3 else 100
                                             smart_data['ssd_life_left'] = normalized_value
-                                            print(f"[v0] SSD Life Left (ID 202): {smart_data['ssd_life_left']}%")
+
                                         elif attr_id == '231':  # SSD_Life_Left (algunos fabricantes)
                                             normalized_value = int(parts[3]) if len(parts) > 3 else 100
                                             smart_data['ssd_life_left'] = normalized_value
-                                            print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
+
                                         elif attr_id == '241':  # Total_LBAs_Written
                                             # Convertir a GB (raw_value es en sectores de 512 bytes)
                                             try:
                                                 raw_int = int(raw_value.replace(',', ''))
                                                 total_gb = (raw_int * 512) / (1024 * 1024 * 1024)
                                                 smart_data['total_lbas_written'] = round(total_gb, 2)
-                                                print(f"[v0] Total LBAs Written (ID 241): {smart_data['total_lbas_written']} GB")
+
                                             except ValueError:
                                                 pass
                                             
@@ -1126,20 +1126,20 @@ def get_smart_data(disk_name):
 
                         # If we got complete data, break
                         if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
-                            print(f"[v0] Successfully extracted complete data from text output (attempt {cmd_index + 1})")
+
                             break
                         elif smart_data['model'] != 'Unknown' or smart_data['serial'] != 'Unknown':
-                            print(f"[v0] Extracted partial data from text output, continuing to next attempt...")
+
                 else:
                     print(f"[v0] No usable output (return code {result_code}), trying next command...")
             
             except subprocess.TimeoutExpired:
-                print(f"[v0] Command timeout for attempt {cmd_index + 1}, trying next...")
+
                 if process and process.returncode is None:
                     process.kill()
                 continue
             except Exception as e:
-                print(f"[v0] Error in attempt {cmd_index + 1}: {type(e).__name__}: {e}")
+
                 if process and process.returncode is None:
                     process.kill()
                 continue
@@ -1148,35 +1148,35 @@ def get_smart_data(disk_name):
                 if process and process.poll() is None: 
                     try:
                         process.kill()
-                        print(f"[v0] Process killed for command: {' '.join(cmd)}")
+
                     except Exception as kill_err:
-                        print(f"[v0] Error killing process: {kill_err}")
+
 
 
         if smart_data['reallocated_sectors'] > 0 or smart_data['pending_sectors'] > 0:
             if smart_data['health'] == 'healthy':
                 smart_data['health'] = 'warning'
-            print(f"[v0] Health: WARNING (reallocated/pending sectors)")
+
         if smart_data['reallocated_sectors'] > 10 or smart_data['pending_sectors'] > 10:
             smart_data['health'] = 'critical'
-            print(f"[v0] Health: CRITICAL (high sector count)")
+
         if smart_data['smart_status'] == 'failed':
             smart_data['health'] = 'critical'
-            print(f"[v0] Health: CRITICAL (SMART failed)")
+
         
         # Temperature-based health (only if we have a valid temperature)
         if smart_data['health'] == 'healthy' and smart_data['temperature'] > 0:
             if smart_data['temperature'] >= 70:
                 smart_data['health'] = 'critical'
-                print(f"[v0] Health: CRITICAL (temperature {smart_data['temperature']}°C)")
+
             elif smart_data['temperature'] >= 60:
                 smart_data['health'] = 'warning'
                 print(f"[v0] Health: WARNING (temperature {smart_data['temperature']}°C)")
             
     except FileNotFoundError:
-        print(f"[v0] ERROR: smartctl not found - install smartmontools for disk monitoring.")
+
     except Exception as e:
-        print(f"[v0] ERROR: Unexpected exception for {disk_name}: {type(e).__name__}: {e}")
+
         import traceback
         traceback.print_exc()
     
@@ -1208,7 +1208,7 @@ def get_proxmox_storage():
             
             # Filtrar solo storage del nodo local
             if node != local_node:
-                print(f"[v0] Skipping storage {resource.get('storage')} from remote node: {node}")
+
                 continue
             
             name = resource.get('storage', 'unknown')
@@ -1220,17 +1220,17 @@ def get_proxmox_storage():
                 used = int(resource.get('disk', 0))
                 available = total - used if total > 0 else 0
             except (ValueError, TypeError):
-                print(f"[v0] Skipping storage {name} - invalid numeric data")
+
                 continue
             
             # Si total es 0, significa que hay un error de conexión o el datastore no está disponible
             if total == 0:
-                print(f"[v0] Skipping storage {name} - invalid data (total=0, likely connection error)")
+
                 continue
             
             # Si el status es "inactive", también lo omitimos
             if status.lower() != "available":
-                print(f"[v0] Skipping storage {name} - status is not available: {status}")
+
                 continue
             
             # Calcular porcentaje
@@ -1265,7 +1265,7 @@ def get_proxmox_storage():
             'storage': []
         }
     except Exception as e:
-        print(f"[v0] Error getting Proxmox storage: {type(e).__name__}: {e}")
+
         import traceback
         traceback.print_exc()
         return {
@@ -1380,7 +1380,7 @@ def get_interface_type(interface_name):
         # Default to skip for unknown types
         return 'skip'
     except Exception as e:
-        print(f"[v0] Error detecting interface type for {interface_name}: {e}")
+
         return 'skip'
 
 def get_bond_info(bond_name):
@@ -1407,9 +1407,9 @@ def get_bond_info(bond_name):
                     elif 'Currently Active Slave:' in line:
                         bond_info['active_slave'] = line.split(':', 1)[1].strip()
                 
-                print(f"[v0] Bond {bond_name} info: mode={bond_info['mode']}, slaves={bond_info['slaves']}")
+
     except Exception as e:
-        print(f"[v0] Error reading bond info for {bond_name}: {e}")
+
     
     return bond_info
 
@@ -1434,12 +1434,12 @@ def get_bridge_info(bridge_name):
                 # Check if member is a bond first
                 if member.startswith('bond'):
                     bridge_info['physical_interface'] = member
-                    print(f"[v0] Bridge {bridge_name} connected to bond: {member}")
+
                     
                     bond_info = get_bond_info(member)
                     if bond_info['slaves']:
                         bridge_info['bond_slaves'] = bond_info['slaves']
-                        print(f"[v0] Bond {member} slaves: {bond_info['slaves']}")
+
                     
                     # Get duplex from bond's active slave
                     if bond_info['active_slave']:
@@ -1448,14 +1448,14 @@ def get_bridge_info(bridge_name):
                             if bond_info['active_slave'] in net_if_stats:
                                 stats = net_if_stats[bond_info['active_slave']]
                                 bridge_info['physical_duplex'] = 'full' if stats.duplex == 2 else 'half' if stats.duplex == 1 else 'unknown'
-                                print(f"[v0] Bond {member} active slave {bond_info['active_slave']} duplex: {bridge_info['physical_duplex']}")
+
                         except Exception as e:
-                            print(f"[v0] Error getting duplex for bond slave {bond_info['active_slave']}: {e}")
+
                     break
                 # Check if member is a physical interface
                 elif member.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
                     bridge_info['physical_interface'] = member
-                    print(f"[v0] Bridge {bridge_name} physical interface: {member}")
+
                     
                     # Get duplex from physical interface
                     try:
@@ -1463,15 +1463,15 @@ def get_bridge_info(bridge_name):
                         if member in net_if_stats:
                             stats = net_if_stats[member]
                             bridge_info['physical_duplex'] = 'full' if stats.duplex == 2 else 'half' if stats.duplex == 1 else 'unknown'
-                            print(f"[v0] Physical interface {member} duplex: {bridge_info['physical_duplex']}")
+
                     except Exception as e:
-                        print(f"[v0] Error getting duplex for {member}: {e}")
+
                     
                     break
             
-            print(f"[v0] Bridge {bridge_name} members: {members}")
+
     except Exception as e:
-        print(f"[v0] Error reading bridge info for {bridge_name}: {e}")
+
     
     return bridge_info
 
@@ -1504,7 +1504,7 @@ def get_network_info():
                         if domains:
                             network_data['domain'] = domains[0]
         except Exception as e:
-            print(f"[v0] Error reading DNS configuration: {e}")
+
         
         try:
             fqdn = socket.getfqdn()
@@ -1513,7 +1513,7 @@ def get_network_info():
                 if not network_data['domain']:
                     network_data['domain'] = fqdn.split('.', 1)[1]
         except Exception as e:
-            print(f"[v0] Error getting FQDN: {e}")
+
         
         vm_lxc_map = get_vm_lxc_names()
         
@@ -1524,7 +1524,7 @@ def get_network_info():
         try:
             net_io_per_nic = psutil.net_io_counters(pernic=True)
         except Exception as e:
-            print(f"[v0] Error getting per-NIC stats: {e}")
+
             net_io_per_nic = {}
         
         physical_active_count = 0
@@ -1538,7 +1538,7 @@ def get_network_info():
             interface_type = get_interface_type(interface_name)
             
             if interface_type == 'skip':
-                print(f"[v0] Skipping interface: {interface_name} (type: {interface_type})")
+
                 continue
             
             stats = net_if_stats.get(interface_name)
@@ -1645,9 +1645,9 @@ def get_network_info():
         network_data['vm_lxc_active_count'] = vm_lxc_active_count
         network_data['vm_lxc_total_count'] = vm_lxc_total_count
         
-        print(f"[v0] Physical interfaces: {physical_active_count} active out of {physical_total_count} total")
-        print(f"[v0] Bridge interfaces: {bridge_active_count} active out of {bridge_total_count} total")
-        print(f"[v0] VM/LXC interfaces: {vm_lxc_active_count} active out of {vm_lxc_total_count} total")
+
+
+
         
         # Get network I/O statistics (global)
         net_io = psutil.net_io_counters()
@@ -1704,7 +1704,7 @@ def get_proxmox_vms():
         
         try:
             local_node = socket.gethostname()
-            print(f"[v0] Local node detected: {local_node}")
+
             
             result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
                                   capture_output=True, text=True, timeout=10)
@@ -1714,7 +1714,7 @@ def get_proxmox_vms():
                 for resource in resources:
                     node = resource.get('node', '')
                     if node != local_node:
-                        print(f"[v0] Skipping VM {resource.get('vmid')} from remote node: {node}")
+
                         continue
                     
                     vm_data = {
@@ -1739,13 +1739,13 @@ def get_proxmox_vms():
 
                 return all_vms
             else:
-                print(f"[v0] pvesh command failed: {result.stderr}")
+
                 return {
                     'error': 'pvesh command not available or failed',
                     'vms': []
                 }
         except Exception as e:
-            print(f"[v0] Error getting VM/LXC info: {e}")
+
             return {
                 'error': f'Unable to access VM information: {str(e)}',
                 'vms': []
@@ -1782,15 +1782,15 @@ def get_ipmi_fans():
                                 'speed': value,
                                 'unit': unit
                             })
-                            print(f"[v0] IPMI Fan: {name} = {value} {unit}")
+
                         except ValueError:
                             continue
         
-        print(f"[v0] Found {len(fans)} IPMI fans")
+
     except FileNotFoundError:
         print("[v0] ipmitool not found")
     except Exception as e:
-        print(f"[v0] Error getting IPMI fans: {e}")
+
     
     return fans
 
@@ -1819,7 +1819,7 @@ def get_ipmi_power():
                                     'watts': value,
                                     'unit': unit
                                 }
-                                print(f"[v0] IPMI Power Meter: {value} {unit}")
+
                             else:
                                 power_supplies.append({
                                     'name': name,
@@ -1827,15 +1827,15 @@ def get_ipmi_power():
                                     'unit': unit,
                                     'status': 'ok' if value > 0 else 'off'
                                 })
-                                print(f"[v0] IPMI PSU: {name} = {value} {unit}")
+
                         except ValueError:
                             continue
         
-        print(f"[v0] Found {len(power_supplies)} IPMI power supplies")
+
     except FileNotFoundError:
         print("[v0] ipmitool not found")
     except Exception as e:
-        print(f"[v0] Error getting IPMI power: {e}")
+
     
     return {
         'power_supplies': power_supplies,
@@ -1875,7 +1875,7 @@ def get_ups_info():
         except FileNotFoundError:
             print("[v0] /etc/nut/upsmon.conf not found")
         except Exception as e:
-            print(f"[v0] Error reading upsmon.conf: {e}")
+
         
         # Get list of locally available UPS
         local_ups = []
@@ -1884,7 +1884,7 @@ def get_ups_info():
             if result.returncode == 0:
                 local_ups = [ups.strip() for ups in result.stdout.strip().split('\n') if ups.strip()]
         except Exception as e:
-            print(f"[v0] Error listing local UPS: {e}")
+
         
         all_ups = {}
         
@@ -1976,17 +1976,17 @@ def get_ups_info():
                                 ups_data['driver'] = value
                     
                     ups_list.append(ups_data)
-                    print(f"[v0] UPS found: {ups_data.get('model', 'Unknown')} ({ups_data['connection_type']})")
+
                 else:
                     print(f"[v0] Failed to get info for UPS: {ups_spec}")
                     
             except Exception as e:
-                print(f"[v0] Error getting UPS info for {ups_spec}: {e}")
+
         
     except FileNotFoundError:
         print("[v0] upsc not found")
     except Exception as e:
-        print(f"[v0] Error in get_ups_info: {e}")
+
     
     return ups_list
 # END OF CHANGES FOR get_ups_info
@@ -2064,7 +2064,7 @@ def get_temperature_info():
                                     'watts': power_value,
                                     'adapter': current_adapter
                                 }
-                                print(f"[v0] Power meter sensor: {sensor_name} = {power_value}W")
+
                         except ValueError:
                             pass
                     
@@ -2096,14 +2096,14 @@ def get_temperature_info():
                         except ValueError:
                             pass
         
-        print(f"[v0] Found {len(temperatures)} temperature sensors")
+
         if power_meter:
-            print(f"[v0] Found power meter: {power_meter['watts']}W")
+
             
     except FileNotFoundError:
         print("[v0] sensors command not found")
     except Exception as e:
-        print(f"[v0] Error getting temperature info: {e}")
+
     
     return {
         'temperatures': temperatures,
@@ -2118,7 +2118,7 @@ def get_detailed_gpu_info(gpu):
     vendor = gpu.get('vendor', '').lower()
     slot = gpu.get('slot', '')
     
-    print(f"[v0] ===== get_detailed_gpu_info called for GPU {slot} (vendor: {vendor}) =====", flush=True)
+
     
     detailed_info = {
         'has_monitoring_tool': False,
@@ -2154,7 +2154,7 @@ def get_detailed_gpu_info(gpu):
         for path in system_paths:
             if os.path.exists(path):
                 intel_gpu_top_path = path
-                print(f"[v0] Found system intel_gpu_top at: {path}", flush=True)
+
                 break
         
         # Fallback to shutil.which if not found in system paths
@@ -3148,7 +3148,7 @@ def get_gpu_info():
                         # gpu.update(detailed_info)             # It will be called later in api_gpu_realtime
                         
                         gpus.append(gpu)
-                        print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+
 
     except Exception as e:
         print(f"[v0] Error detecting GPUs from lspci: {e}")
@@ -3192,7 +3192,7 @@ def get_gpu_info():
                                         temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
                                         if temp_match:
                                             gpu['temperature'] = float(temp_match.group(1))
-                                            print(f"[v0] GPU {gpu['name']}: Temperature = {gpu['temperature']}°C")
+
                                 
                                 # Parse fan speed
                                 elif 'RPM' in value_part:
@@ -3200,7 +3200,7 @@ def get_gpu_info():
                                     if rpm_match:
                                         gpu['fan_speed'] = int(float(rpm_match.group(1)))
                                         gpu['fan_unit'] = 'RPM'
-                                        print(f"[v0] GPU {gpu['name']}: Fan = {gpu['fan_speed']} RPM")
+
     except Exception as e:
         print(f"[v0] Error enriching GPU data from sensors: {e}")
     
@@ -3267,9 +3267,9 @@ def get_hardware_info():
                             cpu_info['l3_cache'] = value
                 
                 hardware_data['cpu'] = cpu_info
-                print(f"[v0] CPU: {cpu_info.get('model', 'Unknown')}")
+
         except Exception as e:
-            print(f"[v0] Error getting CPU info: {e}")
+
         
         # Motherboard Information
         try:
@@ -3288,9 +3288,9 @@ def get_hardware_info():
                         mb_info['serial'] = line.split(':', 1)[1].strip()
                 
                 hardware_data['motherboard'] = mb_info
-                print(f"[v0] Motherboard: {mb_info.get('manufacturer', 'Unknown')} {mb_info.get('model', 'Unknown')}")
+
         except Exception as e:
-            print(f"[v0] Error getting motherboard info: {e}")
+
         
         # BIOS Information
         try:
@@ -3307,7 +3307,7 @@ def get_hardware_info():
                         bios_info['date'] = line.split(':', 1)[1].strip()
                 
                 hardware_data['motherboard']['bios'] = bios_info
-                print(f"[v0] BIOS: {bios_info.get('vendor', 'Unknown')} {bios_info.get('version', 'Unknown')}")
+
         except Exception as e:
             print(f"[v0] Error getting BIOS info: {e}")
         
@@ -3345,13 +3345,13 @@ def get_hardware_info():
                                         size_kb = value  # Assume KB if no unit
                                     
                                     current_module['size'] = size_kb
-                                    print(f"[v0] Parsed memory size: {size_str} -> {size_kb} KB")
+
                                 else:
                                     # Handle cases where unit might be missing but value is present
                                     current_module['size'] = float(size_str) if size_str else 0
-                                    print(f"[v0] Parsed memory size (no unit): {size_str} -> {current_module['size']} KB")
+
                             except (ValueError, IndexError) as e:
-                                print(f"[v0] Error parsing memory size '{size_str}': {e}")
+
                                 current_module['size'] = 0 # Default to 0 if parsing fails
                         else:
                             current_module['size'] = 0 # Default to 0 if no size or explicitly 'No Module Installed'
@@ -3370,9 +3370,9 @@ def get_hardware_info():
                 if current_module and current_module.get('size') and current_module.get('size') != 'No Module Installed' and current_module.get('size') != 0:
                     hardware_data['memory_modules'].append(current_module)
                 
-                print(f"[v0] Memory modules: {len(hardware_data['memory_modules'])} installed")
+
         except Exception as e:
-            print(f"[v0] Error getting memory info: {e}")
+
         
         # Storage Devices - simplified version without hardware info
         try:
@@ -3391,7 +3391,7 @@ def get_hardware_info():
                             'type': device.get('type', 'disk')
                         })
                 hardware_data['storage_devices'] = storage_devices
-                print(f"[v0] Storage devices: {len(storage_devices)} found")
+
         except Exception as e:
             print(f"[v0] Error getting storage info: {e}")
         
@@ -3485,9 +3485,9 @@ def get_hardware_info():
                                     'vendor': vendor,
                                     'slot': slot
                                 })
-                                print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+
             
-            print(f"[v0] Graphics cards: {len(hardware_data['graphics_cards'])} found")
+
         except Exception as e:
             print(f"[v0] Error getting graphics cards: {e}")
         
@@ -3597,7 +3597,7 @@ def get_hardware_info():
                                         device['kernel_module'] = current_module
                                     break
             
-            print(f"[v0] Total PCI devices found: {len(hardware_data['pci_devices'])}")
+
         except Exception as e:
             print(f"[v0] Error getting PCI devices: {e}")
         
@@ -3619,7 +3619,7 @@ def get_hardware_info():
                                 'critical': entry.critical if entry.critical else 0
                             })
                     
-                    print(f"[v0] Temperature sensors: {len(hardware_data['sensors']['temperatures'])} found")
+
             
             try:
                 result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
@@ -3660,10 +3660,10 @@ def get_hardware_info():
                                         'unit': 'RPM',
                                         'adapter': current_adapter
                                     })
-                                    print(f"[v0] Fan sensor: {identified_name} ({sensor_name}) = {fan_speed} RPM")
+
                     
                     hardware_data['sensors']['fans'] = fans
-                    print(f"[v0] Found {len(fans)} fan sensor(s)")
+
             except Exception as e:
                 print(f"[v0] Error getting fan info: {e}")
         except Exception as e:
@@ -3695,7 +3695,7 @@ def get_hardware_info():
                 
                 if ups_info:
                     hardware_data['power'] = ups_info
-                    print(f"[v0] UPS found: {ups_info.get('model', 'Unknown')}")
+
         except FileNotFoundError:
             print("[v0] apcaccess not found - no UPS monitoring")
         except Exception as e:
@@ -4006,10 +4006,10 @@ def api_vm_metrics(vmid):
                 print(f"[v0] ERROR: VM/LXC {vmid} not found")
                 return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
         else:
-            print(f"[v0] Found as QEMU")
+
         
         # Get RRD data
-        print(f"[v0] Fetching RRD data for {vm_type} {vmid} with timeframe {timeframe}...")
+
         rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/{vm_type}/{vmid}/rrddata', 
                                     '--timeframe', timeframe, '--output-format', 'json'],
                                    capture_output=True, text=True, timeout=10)
@@ -4048,7 +4048,7 @@ def api_node_metrics():
         
         # Get local node name
         local_node = socket.gethostname()
-        print(f"[v0] Local node: {local_node}")
+  
         
         # Get RRD data for the node
 
@@ -4533,17 +4533,17 @@ def api_events():
 def get_task_log(upid):
     """Get complete task log from Proxmox using UPID"""
     try:
-        print(f"[v0] Getting task log for UPID: {upid}")
+
         
         # Proxmox stores files without trailing :: but API may include them
         upid_clean = upid.rstrip(':')
-        print(f"[v0] Cleaned UPID: {upid_clean}")
+
         
         # Parse UPID to extract node name and calculate index
         # UPID format: UPID:node:pid:pstart:starttime:type:id:user:
         parts = upid_clean.split(':')
         if len(parts) < 5:
-            print(f"[v0] Invalid UPID format: {upid_clean}")
+
             return jsonify({'error': 'Invalid UPID format'}), 400
         
         node = parts[1]
@@ -4552,43 +4552,43 @@ def get_task_log(upid):
         # Calculate index (last character of starttime in hex, lowercase)
         index = starttime[-1].lower()
         
-        print(f"[v0] Extracted node: {node}, starttime: {starttime}, index: {index}")
+
         
         # Try with cleaned UPID (no trailing colons)
         log_file_path = f"/var/log/pve/tasks/{index}/{upid_clean}"
-        print(f"[v0] Trying log file: {log_file_path}")
+
         
         if os.path.exists(log_file_path):
             with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 log_text = f.read()
-            print(f"[v0] Successfully read {len(log_text)} bytes from log file")
+
             return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
         
         # Try with single trailing colon
         log_file_path_single = f"/var/log/pve/tasks/{index}/{upid_clean}:"
-        print(f"[v0] Trying alternative path with single colon: {log_file_path_single}")
+
         
         if os.path.exists(log_file_path_single):
             with open(log_file_path_single, 'r', encoding='utf-8', errors='ignore') as f:
                 log_text = f.read()
-            print(f"[v0] Successfully read {len(log_text)} bytes from alternative log file")
+
             return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
         
         # Try with uppercase index
         log_file_path_upper = f"/var/log/pve/tasks/{index.upper()}/{upid_clean}"
-        print(f"[v0] Trying uppercase index path: {log_file_path_upper}")
+
         
         if os.path.exists(log_file_path_upper):
             with open(log_file_path_upper, 'r', encoding='utf-8', errors='ignore') as f:
                 log_text = f.read()
-            print(f"[v0] Successfully read {len(log_text)} bytes from uppercase index log file")
+
             return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
         
         # List available files in the directory for debugging
         tasks_dir = f"/var/log/pve/tasks/{index}"
         if os.path.exists(tasks_dir):
             available_files = os.listdir(tasks_dir)
-            print(f"[v0] Available files in {tasks_dir}: {available_files[:10]}")  # Show first 10
+
             
             upid_prefix = ':'.join(parts[:5])  # Get first 5 parts of UPID
             for filename in available_files:
@@ -4597,16 +4597,16 @@ def get_task_log(upid):
 
                     with open(matched_file, 'r', encoding='utf-8', errors='ignore') as f:
                         log_text = f.read()
-                    print(f"[v0] Successfully read {len(log_text)} bytes from matched file")
+
                     return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
         else:
-            print(f"[v0] Tasks directory does not exist: {tasks_dir}")
+
         
-        print(f"[v0] Log file not found after trying all variations")
+
         return jsonify({'error': 'Log file not found', 'tried_paths': [log_file_path, log_file_path_single, log_file_path_upper]}), 404
             
     except Exception as e:
-        print(f"[v0] Error fetching task log for UPID {upid}: {type(e).__name__}: {e}")
+
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -5002,7 +5002,7 @@ def api_hardware():
 def api_gpu_realtime(slot):
     """Get real-time GPU monitoring data for a specific GPU"""
     try:
-        print(f"[v0] /api/gpu/{slot}/realtime - Getting GPU info...")
+
         
         gpus = get_gpu_info()
         
@@ -5017,7 +5017,7 @@ def api_gpu_realtime(slot):
             print(f"[v0] GPU with slot matching '{slot}' not found")
             return jsonify({'error': 'GPU not found'}), 404
         
-        print(f"[v0] Getting detailed monitoring data for GPU at slot {gpu.get('slot')}...")
+
         detailed_info = get_detailed_gpu_info(gpu)
         gpu.update(detailed_info)
         
