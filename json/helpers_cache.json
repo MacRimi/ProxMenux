@@ -1368,9 +1368,7 @@
     "categories": [
       14
     ],
-    "notes": [
-      "Flaresolverr is pinned to Version 3.3.25 because they add an breaking python package which doesn't work with debian 12.`"
-    ],
+    "notes": [],
     "type": "ct"
   },
   {
