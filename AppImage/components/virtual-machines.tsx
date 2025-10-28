@@ -123,6 +123,7 @@ interface VMDetails extends VMData {
     gpu_passthrough?: string[]
     devices?: string[]
   }
+  lxc_ip?: string
 }
 
 const fetcher = async (url: string) => {
@@ -157,7 +158,11 @@ const formatUptime = (seconds: number) => {
   return `${days}d ${hours}h ${minutes}m`
 }
 
-const extractIPFromConfig = (config?: VMConfig): string => {
+const extractIPFromConfig = (config?: VMConfig, lxcIP?: string): string => {
+  if (lxcIP) {
+    return lxcIP
+  }
+
   if (!config) return "DHCP"
 
   // Check net0, net1, net2, etc.
@@ -282,7 +287,9 @@ export function VirtualMachines() {
             const response = await fetch(`/api/vms/${lxc.vmid}`)
             if (response.ok) {
               const details = await response.json()
-              if (details.config) {
+              if (details.lxc_ip) {
+                configs[lxc.vmid] = details.lxc_ip
+              } else if (details.config) {
                 configs[lxc.vmid] = extractIPFromConfig(details.config)
               }
             }
@@ -1243,9 +1250,9 @@ export function VirtualMachines() {
                                   <div>
                                     <div className="text-xs text-muted-foreground mb-1">IP Address</div>
                                     <div
-                                      className={`font-semibold ${extractIPFromConfig(vmDetails.config) === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
+                                      className={`font-semibold ${extractIPFromConfig(vmDetails.config, vmDetails.lxc_ip) === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
                                     >
-                                      {extractIPFromConfig(vmDetails.config)}
+                                      {extractIPFromConfig(vmDetails.config, vmDetails.lxc_ip)}
                                     </div>
                                   </div>
                                 )}

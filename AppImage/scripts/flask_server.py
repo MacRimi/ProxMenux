@@ -165,6 +165,26 @@ def parse_lxc_hardware_config(vmid, node):
     
     return hardware_info
 
+
+def get_lxc_ip_from_lxc_info(vmid):
+    """Get LXC IP address using lxc-info command (for DHCP containers)"""
+    try:
+        result = subprocess.run(
+            ['lxc-info', '-n', str(vmid), '-iH'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            ip = result.stdout.strip()
+            # Return IP only if it's valid (not empty)
+            if ip and ip != '':
+                return ip
+        return None
+    except Exception:
+        # Silently fail if lxc-info is not available or fails
+        return None
+
 # Helper function to format bytes into human-readable string
 def format_bytes(size_in_bytes):
     """Converts bytes to a human-readable string (KB, MB, GB, TB)."""
