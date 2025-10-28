@@ -5534,19 +5534,12 @@ def api_vm_details(vmid):
                         except Exception as e:
                             pass  # Silently handle errors
                     
-                    ip_address = None
-                    if vm_type == 'lxc' and resource.get('status') == 'running':
-                        ip_address = get_lxc_ip_from_lxc_info(vmid)
-                    
                     response_data = {
                         **resource,
                         'config': config,
                         'node': node,
                         'vm_type': vm_type
                     }
-                    
-                    if ip_address:
-                        response_data['ip_address'] = ip_address
                     
                     if vm_type == 'lxc':
                         hardware_info = parse_lxc_hardware_config(vmid, node)
@@ -5730,6 +5723,6 @@ if __name__ == '__main__':
     cli.show_server_banner = lambda *x: None
     
     # Print only essential information
-    #print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics")
+    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics")
     
     app.run(host='0.0.0.0', port=8008, debug=False)

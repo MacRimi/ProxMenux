@@ -945,73 +945,63 @@ export function VirtualMachines() {
                       className="sm:hidden p-4 rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 transition-colors cursor-pointer"
                       onClick={() => handleVMClick(vm)}
                     >
-                      <div className="flex items-center gap-2 mb-3">
-                        {/* Status icon */}
+                      <div className="flex items-center gap-3">
                         {vm.status === "running" ? (
                           <Play className="h-5 w-5 text-green-500 fill-current flex-shrink-0" />
                         ) : (
                           <Square className="h-5 w-5 text-red-500 fill-current flex-shrink-0" />
                         )}
 
-                        {/* Type badge */}
                         <Badge variant="outline" className={`${getTypeBadge(vm.type).color} flex-shrink-0`}>
                           {getTypeBadge(vm.type).label}
                         </Badge>
 
-                        {/* Name and ID - takes remaining space */}
+                        {/* Name and ID */}
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-foreground truncate">{vm.name}</div>
                           <div className="text-[10px] text-muted-foreground">ID: {vm.vmid}</div>
                         </div>
-                      </div>
 
-                      {/* Second row: Resource usage icons with percentages */}
-                      <div className="flex items-center justify-between gap-4 px-1">
-                        {/* CPU icon with percentage */}
-                        <div className="flex flex-col items-center gap-0.5">
-                          {vm.status === "running" && (
-                            <span className="text-[10px] font-medium text-muted-foreground">{cpuPercent}%</span>
-                          )}
-                          <Cpu
-                            className={`h-4 w-4 ${
-                              vm.status === "stopped" ? "text-gray-500" : getIconColor(Number.parseFloat(cpuPercent))
-                            }`}
-                          />
-                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          {/* CPU icon with percentage */}
+                          <div className="flex flex-col items-center gap-0.5">
+                            {vm.status === "running" && (
+                              <span className="text-[10px] font-medium text-muted-foreground">{cpuPercent}%</span>
+                            )}
+                            <Cpu
+                              className={`h-4 w-4 ${
+                                vm.status === "stopped" ? "text-gray-500" : getUsageColor(Number.parseFloat(cpuPercent))
+                              }`}
+                            />
+                          </div>
 
-                        {/* Memory icon with percentage */}
-                        <div className="flex flex-col items-center gap-0.5">
-                          {vm.status === "running" && (
-                            <span className="text-[10px] font-medium text-muted-foreground">{memPercent}%</span>
-                          )}
-                          <MemoryStick
-                            className={`h-4 w-4 ${
-                              vm.status === "stopped" ? "text-gray-500" : getIconColor(Number.parseFloat(memPercent))
-                            }`}
-                          />
-                        </div>
+                          {/* Memory icon with percentage */}
+                          <div className="flex flex-col items-center gap-0.5">
+                            {vm.status === "running" && (
+                              <span className="text-[10px] font-medium text-muted-foreground">{memPercent}%</span>
+                            )}
+                            <MemoryStick
+                              className={`h-4 w-4 ${
+                                vm.status === "stopped" ? "text-gray-500" : getUsageColor(Number.parseFloat(memPercent))
+                              }`}
+                            />
+                          </div>
 
-                        {/* Disk icon with percentage */}
-                        <div className="flex flex-col items-center gap-0.5">
-                          {vm.status === "running" && (
-                            <span className="text-[10px] font-medium text-muted-foreground">{diskPercent}%</span>
-                          )}
-                          <HardDrive
-                            className={`h-4 w-4 ${
-                              vm.status === "stopped" ? "text-gray-500" : getIconColor(Number.parseFloat(diskPercent))
-                            }`}
-                          />
-                        </div>
-
-                        {/* Network icon */}
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="text-[10px] font-medium text-transparent">--</span>
-                          <Network
-                            className={`h-4 w-4 ${vm.status === "stopped" ? "text-gray-500" : "text-muted-foreground"}`}
-                          />
+                          {/* Disk icon with percentage */}
+                          <div className="flex flex-col items-center gap-0.5">
+                            {vm.status === "running" && (
+                              <span className="text-[10px] font-medium text-muted-foreground">{diskPercent}%</span>
+                            )}
+                            <HardDrive
+                              className={`h-4 w-4 ${
+                                vm.status === "stopped"
+                                  ? "text-gray-500"
+                                  : getUsageColor(Number.parseFloat(diskPercent))
+                              }`}
+                            />
+                          </div>
                         </div>
                       </div>
-                      {/* </CHANGE> */}
                     </div>
                   </div>
                 )
