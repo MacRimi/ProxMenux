@@ -721,7 +721,7 @@ def get_storage_info():
             except FileNotFoundError:
                 print("[v0] Note: ZFS not installed")
             except Exception as e:
-
+                print(f"[v0] Note: ZFS not available or no pools: {e}")
             
             storage_data['used'] = round(total_used / (1024**3), 1)
             storage_data['available'] = round(total_available / (1024**3), 1)
@@ -1265,7 +1265,7 @@ def get_proxmox_storage():
             'storage': []
         }
     except Exception as e:
-
+        print(f"[v0] Error getting Proxmox storage: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         return {
@@ -1380,7 +1380,7 @@ def get_interface_type(interface_name):
         # Default to skip for unknown types
         return 'skip'
     except Exception as e:
-
+        print(f"[v0] Error detecting interface type for {interface_name}: {e}")
         return 'skip'
 
 def get_bond_info(bond_name):
@@ -1409,7 +1409,7 @@ def get_bond_info(bond_name):
                 
 
     except Exception as e:
-
+        print(f"[v0] Error reading bond info for {bond_name}: {e}")
     
     return bond_info
 
@@ -2958,7 +2958,7 @@ def get_detailed_gpu_info(gpu):
                                             print(f"[v0] Skipped process {process_info['name']} - no memory or engine usage", flush=True)
                                     
                                     except Exception as e:
-
+                                        print(f"[v0] Error parsing fdinfo entry for PID {pid_str}: {e}", flush=True)
                                         import traceback
                                         traceback.print_exc()
                                 
@@ -2983,7 +2983,7 @@ def get_detailed_gpu_info(gpu):
             except subprocess.TimeoutExpired:
 
             except Exception as e:
-
+                print(f"[v0] Error running amdgpu_top: {e}", flush=True)
                 import traceback
                 traceback.print_exc()
         else:
@@ -4606,7 +4606,7 @@ def get_task_log(upid):
         return jsonify({'error': 'Log file not found', 'tried_paths': [log_file_path, log_file_path_single, log_file_path_upper]}), 404
             
     except Exception as e:
-
+        print(f"[v0] Error fetching task log for UPID {upid}: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
