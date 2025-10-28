@@ -1360,7 +1360,11 @@ export function VirtualMachines() {
                                                   <Badge
                                                     key={index}
                                                     variant="outline"
-                                                    className="bg-purple-500/10 text-purple-500 border-purple-500/20"
+                                                    className={
+                                                      gpu.includes("NVIDIA")
+                                                        ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                                        : "bg-purple-500/10 text-purple-500 border-purple-500/20"
+                                                    }
                                                   >
                                                     {gpu}
                                                   </Badge>

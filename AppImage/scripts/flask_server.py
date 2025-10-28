@@ -116,21 +116,15 @@ def parse_lxc_hardware_config(vmid, node):
         # Detect GPU passthrough
         gpu_types = []
         
-        # Intel iGPU detection
         if '/dev/dri' in config_content or 'renderD128' in config_content:
-            if 'Intel' not in gpu_types:
-                gpu_types.append('Intel iGPU')
+            if 'Intel/AMD GPU' not in gpu_types:
+                gpu_types.append('Intel/AMD GPU')
         
         # NVIDIA GPU detection
         if 'nvidia' in config_content.lower():
             if any(x in config_content for x in ['nvidia0', 'nvidiactl', 'nvidia-uvm']):
                 if 'NVIDIA GPU' not in gpu_types:
                     gpu_types.append('NVIDIA GPU')
-        
-        # AMD GPU detection
-        if 'amdgpu' in config_content.lower() or ('dev/dri' in config_content and 'card' in config_content):
-            if 'AMD GPU' not in gpu_types:
-                gpu_types.append('AMD GPU')
         
         hardware_info['gpu_passthrough'] = gpu_types
         
@@ -322,9 +316,6 @@ def get_intel_gpu_processes_from_text():
                             # Parse engine utilization from the bars
                             # The bars are between the memory and name
                             # We'll estimate utilization based on bar characters
-                            bar_section = ' '.join(parts[3:-1])
-                            
-                            # Simple heuristic: count █ characters for each engine section
                             engines = {}
                             engine_names = ['Render/3D', 'Blitter', 'Video', 'VideoEnhance']
                             bar_sections = bar_section.split('||')
@@ -4355,7 +4346,6 @@ def api_network_interface_metrics(interface_name):
 
         return jsonify({'error': str(e)}), 500
 
-# ... existing code ...
 
 @app.route('/api/vms', methods=['GET'])
 def api_vms():
@@ -5565,6 +5555,7 @@ def api_vm_details(vmid):
         else:
             return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
+        # print(f"Error getting VM details: {e}")
         pass
         return jsonify({'error': str(e)}), 500
 
@@ -5732,7 +5723,6 @@ if __name__ == '__main__':
     cli.show_server_banner = lambda *x: None
     
     # Print only essential information
-    # print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics")
-    
+    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
