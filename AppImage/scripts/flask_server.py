@@ -126,7 +126,8 @@ def get_cpu_temperature():
 
                             break
     except Exception as e:
-        print(f"Warning: Error reading temperature sensors: {e}")
+        # print(f"Warning: Error reading temperature sensors: {e}")
+        pass
     return temp
 
 def get_uptime():
@@ -136,7 +137,8 @@ def get_uptime():
         uptime_seconds = time.time() - boot_time
         return str(timedelta(seconds=int(uptime_seconds)))
     except Exception as e:
-        print(f"Warning: Error getting uptime: {e}")
+        # print(f"Warning: Error getting uptime: {e}")
+        pass
         return "N/A"
 
 def get_proxmox_version():
@@ -150,9 +152,11 @@ def get_proxmox_version():
             if '/' in version_line:
                 proxmox_version = version_line.split('/')[1]
     except FileNotFoundError:
-        print("Warning: pveversion command not found - Proxmox may not be installed.")
+        # print("Warning: pveversion command not found - Proxmox may not be installed.")
+        pass
     except Exception as e:
-        print(f"Warning: Error getting Proxmox version: {e}")
+        # print(f"Warning: Error getting Proxmox version: {e}")
+        pass
     return proxmox_version
 
 def get_available_updates():
@@ -166,16 +170,19 @@ def get_available_updates():
             lines = result.stdout.strip().split('\n')
             available_updates = max(0, len(lines) - 1)
     except FileNotFoundError:
-        print("Warning: apt command not found - cannot check for updates.")
+        # print("Warning: apt command not found - cannot check for updates.")
+        pass
     except Exception as e:
-        print(f"Warning: Error checking for updates: {e}")
+        # print(f"Warning: Error checking for updates: {e}")
+        pass
     return available_updates
 
 # AGREGANDO FUNCIÓN PARA PARSEAR PROCESOS DE INTEL_GPU_TOP (SIN -J)
 def get_intel_gpu_processes_from_text():
     """Parse processes from intel_gpu_top text output (more reliable than JSON)"""
     try:
-        print(f"[v0] Executing intel_gpu_top (text mode) to capture processes...", flush=True)
+        # print(f"[v0] Executing intel_gpu_top (text mode) to capture processes...", flush=True)
+        pass
         process = subprocess.Popen(
             ['intel_gpu_top'],
             stdout=subprocess.PIPE,
@@ -268,17 +275,19 @@ def get_intel_gpu_processes_from_text():
                                 processes.append(process_info)
 
                         except (ValueError, IndexError) as e:
-                            print(f"[v0] Error parsing process line: {e}", flush=True)
+                            # print(f"[v0] Error parsing process line: {e}", flush=True)
+                            pass
                             continue
                 break
         
         if not header_found:
             # print(f"[v0] No process table found in intel_gpu_top output", flush=True)
             pass
-
+        
         return processes
     except Exception as e:
-        print(f"[v0] Error getting processes from intel_gpu_top text: {e}", flush=True)
+        # print(f"[v0] Error getting processes from intel_gpu_top text: {e}", flush=True)
+        pass
         import traceback
         traceback.print_exc()
         return []
@@ -293,7 +302,8 @@ def extract_vmid_from_interface(interface_name):
             return vmid, interface_type
         return None, None
     except Exception as e:
-        print(f"[v0] Error extracting VMID from {interface_name}: {e}")
+        # print(f"[v0] Error extracting VMID from {interface_name}: {e}")
+        pass
         return None, None
 
 def get_vm_lxc_names():
@@ -326,11 +336,14 @@ def get_vm_lxc_names():
                     }
 
         else:
-            print(f"[v0] pvesh command failed: {result.stderr}")
+            # print(f"[v0] pvesh command failed: {result.stderr}")
+            pass
     except FileNotFoundError:
-        print("[v0] pvesh command not found - Proxmox not installed")
+        # print("[v0] pvesh command not found - Proxmox not installed")
+        pass
     except Exception as e:
-        print(f"[v0] Error getting VM/LXC names: {e}")
+        # print(f"[v0] Error getting VM/LXC names: {e}")
+        pass
     
     return vm_lxc_map
 
@@ -349,15 +362,18 @@ def serve_dashboard():
                 # Fallback: assume we're in the root
                 appimage_root = os.path.dirname(base_dir)
         
-        print(f"[v0] Detected AppImage root: {appimage_root}")
+        # print(f"[v0] Detected AppImage root: {appimage_root}")
+        pass
         
         index_path = os.path.join(appimage_root, 'web', 'index.html')
         abs_path = os.path.abspath(index_path)
         
-        print(f"[v0] Looking for index.html at: {abs_path}")
+        # print(f"[v0] Looking for index.html at: {abs_path}")
+        pass
         
         if os.path.exists(abs_path):
-            print(f"[v0] ✅ Found index.html, serving from: {abs_path}")
+            # print(f"[v0] ✅ Found index.html, serving from: {abs_path}")
+            pass
             return send_file(abs_path)
         
         # If not found, show detailed error
@@ -365,11 +381,14 @@ def serve_dashboard():
 
         web_dir = os.path.join(appimage_root, 'web')
         if os.path.exists(web_dir):
-            print(f"[v0] Contents of {web_dir}:")
+            # print(f"[v0] Contents of {web_dir}:")
+            pass
             for item in os.listdir(web_dir):
-                print(f"[v0]   - {item}")
+                # print(f"[v0]   - {item}")
+                pass
         else:
-            print(f"[v0] Web directory does not exist: {web_dir}")
+            # print(f"[v0] Web directory does not exist: {web_dir}")
+            pass
         
         return f'''
         <!DOCTYPE html>
@@ -394,7 +413,8 @@ def serve_dashboard():
         ''', 500
         
     except Exception as e:
-        print(f"Error serving dashboard: {e}")
+        # print(f"Error serving dashboard: {e}")
+        pass
         return jsonify({'error': f'Dashboard not available: {str(e)}'}), 500
 
 @app.route('/manifest.json')
@@ -428,7 +448,8 @@ def serve_manifest():
             ]
         })
     except Exception as e:
-        print(f"Error serving manifest: {e}")
+        # print(f"Error serving manifest: {e}")
+        pass
         return jsonify({}), 404
 
 @app.route('/sw.js')
@@ -478,9 +499,11 @@ def serve_next_static(filename):
             return send_file(file_path)
         
         # print(f"[v0] ❌ Next.js static file not found: {file_path}")
+        pass
         return '', 404
     except Exception as e:
-        print(f"Error serving Next.js static file {filename}: {e}")
+        # print(f"Error serving Next.js static file {filename}: {e}")
+        pass
         return '', 404
 
 @app.route('/<path:filename>')
@@ -503,7 +526,8 @@ def serve_static_files(filename):
         
         return '', 404
     except Exception as e:
-        print(f"Error serving static file {filename}: {e}")
+        # print(f"Error serving static file {filename}: {e}")
+        pass
         return '', 404
 
 @app.route('/images/<path:filename>')
@@ -522,16 +546,20 @@ def serve_images(filename):
         file_path = os.path.join(image_dir, filename)
         abs_path = os.path.abspath(file_path)
         
-        print(f"[v0] Looking for image: {filename} at {abs_path}")
+        # print(f"[v0] Looking for image: {filename} at {abs_path}")
+        pass
         
         if os.path.exists(abs_path):
-            print(f"[v0] ✅ Serving image from: {abs_path}")
+            # print(f"[v0] ✅ Serving image from: {abs_path}")
+            pass
             return send_from_directory(image_dir, filename)
         
-        print(f"[v0] ❌ Image not found: {abs_path}")
+        # print(f"[v0] ❌ Image not found: {abs_path}")
+        pass
         return '', 404
     except Exception as e:
-        print(f"Error serving image {filename}: {e}")
+        # print(f"Error serving image {filename}: {e}")
+        pass
         return '', 404
 
 # Moved helper functions for system info up
@@ -566,7 +594,8 @@ def get_storage_info():
                         disk_name = parts[0]
                         
                         if disk_name.startswith('zd'):
-                            print(f"[v0] Skipping ZFS zvol device: {disk_name}")
+                            # print(f"[v0] Skipping ZFS zvol device: {disk_name}")
+                            pass
                             continue
                         
                         disk_size_bytes = int(parts[1])
@@ -576,9 +605,11 @@ def get_storage_info():
                         total_disk_size_bytes += disk_size_bytes
                         
                         # Get SMART data for this disk
-
+                        # print(f"[v0] Getting SMART data for {disk_name}...")
+                        pass
                         smart_data = get_smart_data(disk_name)
-
+                        # print(f"[v0] SMART data for {disk_name}: {smart_data}")
+                        pass
                         
                         disk_size_kb = disk_size_bytes / 1024
                         
@@ -620,7 +651,8 @@ def get_storage_info():
                             storage_data['critical_disks'] += 1
                             
         except Exception as e:
-            print(f"Error getting disk list: {e}")
+            # print(f"Error getting disk list: {e}")
+            pass
         
         storage_data['total'] = round(total_disk_size_bytes / (1024**4), 1)
         
@@ -639,7 +671,8 @@ def get_storage_info():
                         continue
                     
                     if partition.fstype == 'zfs':
-                        print(f"[v0] Skipping ZFS filesystem {partition.mountpoint}, will count from pool data")
+                        # print(f"[v0] Skipping ZFS filesystem {partition.mountpoint}, will count from pool data")
+                        pass
                         continue
                     
                     partition_usage = psutil.disk_usage(partition.mountpoint)
@@ -669,7 +702,8 @@ def get_storage_info():
                 except PermissionError:
                     continue
                 except Exception as e:
-                    print(f"Error accessing partition {partition.device}: {e}")
+                    # print(f"Error accessing partition {partition.device}: {e}")
+                    pass
                     continue
             
             try:
@@ -689,7 +723,8 @@ def get_storage_info():
                                 total_used += pool_alloc_bytes
                                 total_available += pool_free_bytes
                                 
-                                print(f"[v0] ZFS Pool {pool_name}: allocated={pool_alloc_bytes / (1024**3):.2f}GB, free={pool_free_bytes / (1024**3):.2f}GB")
+                                # print(f"[v0] ZFS Pool {pool_name}: allocated={pool_alloc_bytes / (1024**3):.2f}GB, free={pool_free_bytes / (1024**3):.2f}GB")
+                                pass
                                 
                                 def format_zfs_size(size_bytes):
                                     size_tb = size_bytes / (1024**4)
@@ -717,27 +752,33 @@ def get_storage_info():
                                                 if disk_name in status_line:
                                                     zfs_disks.add(disk_name)
                                 except Exception as e:
-                                    print(f"Error getting ZFS pool status for {pool_name}: {e}")
+                                    # print(f"Error getting ZFS pool status for {pool_name}: {e}")
+                                    pass
                                     
             except FileNotFoundError:
-                print("[v0] Note: ZFS not installed")
+                # print("[v0] Note: ZFS not installed")
+                pass
             except Exception as e:
-                print(f"[v0] Note: ZFS not available or no pools: {e}")
+                # print(f"[v0] Note: ZFS not available or no pools: {e}")
+                pass
             
             storage_data['used'] = round(total_used / (1024**3), 1)
             storage_data['available'] = round(total_available / (1024**3), 1)
             
-
+            # print(f"[v0] Total storage used: {storage_data['used']}GB (including ZFS pools)")
+            pass
             
         except Exception as e:
-            print(f"Error getting partition info: {e}")
+            # print(f"Error getting partition info: {e}")
+            pass
         
         storage_data['disks'] = list(physical_disks.values())
         
         return storage_data
         
     except Exception as e:
-        print(f"Error getting storage info: {e}")
+        # print(f"Error getting storage info: {e}")
+        pass
         return {
             'error': f'Unable to access storage information: {str(e)}',
             'total': 0,
@@ -799,18 +840,21 @@ def get_smart_data(disk_name):
         
         process = None # Initialize process to None
         for cmd_index, cmd in enumerate(commands_to_try):
-
+            # print(f"[v0] Attempt {cmd_index + 1}/{len(commands_to_try)}: Running command: {' '.join(cmd)}")
+            pass
             try:
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Use communicate with a timeout to avoid hanging if the process doesn't exit
                 stdout, stderr = process.communicate(timeout=15)
                 result_code = process.returncode
                 
-
+                # print(f"[v0] Command return code: {result_code}")
+                pass
                 
                 if stderr:
                     stderr_preview = stderr[:200].replace('\n', ' ')
-
+                    # print(f"[v0] stderr: {stderr_preview}")
+                    pass
                 
                 has_output = stdout and len(stdout.strip()) > 50
                 
@@ -926,43 +970,52 @@ def get_smart_data(disk_name):
                                             smart_data['ssd_life_left'] = max(0, 100 - wear_used)              
 
                                         except Exception as e:
-                                            print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")    
+                                            # print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")
+                                            pass
                                     elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
                                         # Valor normalizado: 100 = nuevo, 0 = gastado
                                         # Invertimos para mostrar desgaste: 0% = nuevo, 100% = gastado
                                         smart_data['media_wearout_indicator'] = 100 - normalized_value
-                                        print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
+                                        # print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
+                                        pass
                                     elif attr_id == '177':  # Wear_Leveling_Count
                                         # Valor normalizado: 100 = nuevo, 0 = gastado
                                         smart_data['wear_leveling_count'] = 100 - normalized_value
-                                        print(f"[v0] Wear Leveling Count (ID 177): {smart_data['wear_leveling_count']}% used")
+                                        # print(f"[v0] Wear Leveling Count (ID 177): {smart_data['wear_leveling_count']}% used")
+                                        pass
                                     elif attr_id == '202':  # Percentage_Lifetime_Remain (algunos fabricantes)
                                         # Valor normalizado: 100 = nuevo, 0 = gastado
                                         smart_data['ssd_life_left'] = normalized_value
-                                        print(f"[v0] SSD Life Left (ID 202): {smart_data['ssd_life_left']}%")
+                                        # print(f"[v0] SSD Life Left (ID 202): {smart_data['ssd_life_left']}%")
+                                        pass
                                     elif attr_id == '231':  # SSD_Life_Left (algunos fabricantes)
                                         smart_data['ssd_life_left'] = normalized_value
-                                        print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
+                                        # print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
+                                        pass
                                     elif attr_id == '241':  # Total_LBAs_Written
                                         # Convertir a GB (raw_value es en sectores de 512 bytes)
                                         try:
                                             raw_int = int(raw_value.replace(',', ''))
                                             total_gb = (raw_int * 512) / (1024 * 1024 * 1024)
                                             smart_data['total_lbas_written'] = round(total_gb, 2)
-                                            print(f"[v0] Total LBAs Written (ID 241): {smart_data['total_lbas_written']} GB")
+                                            # print(f"[v0] Total LBAs Written (ID 241): {smart_data['total_lbas_written']} GB")
+                                            pass
                                         except ValueError:
                                             pass
                             
                             # If we got good data, break out of the loop
                             if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
-
+                                # print(f"[v0] Successfully extracted complete data from JSON (attempt {cmd_index + 1})")
+                                pass
                                 break
                                 
                         except json.JSONDecodeError as e:
-                            print(f"[v0] JSON parse failed: {e}, trying text parsing...")
+                            # print(f"[v0] JSON parse failed: {e}, trying text parsing...")
+                            pass
                     
                     if smart_data['model'] == 'Unknown' or smart_data['serial'] == 'Unknown' or smart_data['temperature'] == 0:
-                        print(f"[v0] Parsing text output (model={smart_data['model']}, serial={smart_data['serial']}, temp={smart_data['temperature']})...")
+                        # print(f"[v0] Parsing text output (model={smart_data['model']}, serial={smart_data['serial']}, temp={smart_data['temperature']})...")
+                        pass
                         output = stdout
                         
                         # Get basic info
@@ -972,52 +1025,61 @@ def get_smart_data(disk_name):
                             # Model detection
                             if (line.startswith('Device Model:') or line.startswith('Model Number:')) and smart_data['model'] == 'Unknown':
                                 smart_data['model'] = line.split(':', 1)[1].strip()
-                                print(f"[v0] Found model: {smart_data['model']}")
+                                # print(f"[v0] Found model: {smart_data['model']}")
+                                pass
                             elif line.startswith('Model Family:') and smart_data['model'] == 'Unknown':
                                 smart_data['model'] = line.split(':', 1)[1].strip()
-                                print(f"[v0] Found model family: {smart_data['model']}")
+                                # print(f"[v0] Found model family: {smart_data['model']}")
+                                pass
                             
                             # Serial detection
                             elif line.startswith('Serial Number:') and smart_data['serial'] == 'Unknown':
                                 smart_data['serial'] = line.split(':', 1)[1].strip()
-                                print(f"[v0] Found serial: {smart_data['serial']}")
+                                # print(f"[v0] Found serial: {smart_data['serial']}")
+                                pass
                             
                             elif line.startswith('Rotation Rate:') and smart_data['rotation_rate'] == 0:
                                 rate_str = line.split(':', 1)[1].strip()
                                 if 'rpm' in rate_str.lower():
                                     try:
                                         smart_data['rotation_rate'] = int(rate_str.split()[0])
-                                        print(f"[v0] Found rotation rate: {smart_data['rotation_rate']} RPM")
+                                        # print(f"[v0] Found rotation rate: {smart_data['rotation_rate']} RPM")
+                                        pass
                                     except (ValueError, IndexError):
                                         pass
                                 elif 'Solid State Device' in rate_str:
                                     smart_data['rotation_rate'] = 0  # SSD
-                                    print(f"[v0] Found SSD (no rotation)")
+                                    # print(f"[v0] Found SSD (no rotation)")
+                                    pass
                             
                             # SMART status detection
                             elif 'SMART overall-health self-assessment test result:' in line:
                                 if 'PASSED' in line:
                                     smart_data['smart_status'] = 'passed'
                                     smart_data['health'] = 'healthy'
-                                    print(f"[v0] SMART status: PASSED")
+                                    # print(f"[v0] SMART status: PASSED")
+                                    pass
                                 elif 'FAILED' in line:
                                     smart_data['smart_status'] = 'failed'
                                     smart_data['health'] = 'critical'
-                                    print(f"[v0] SMART status: FAILED")
+                                    # print(f"[v0] SMART status: FAILED")
+                                    pass
                             
                             # NVMe health
                             elif 'SMART Health Status:' in line:
                                 if 'OK' in line:
                                     smart_data['smart_status'] = 'passed'
                                     smart_data['health'] = 'healthy'
-                                    print(f"[v0] NVMe Health: OK")
+                                    # print(f"[v0] NVMe Health: OK")
+                                    pass
                             
                             # Temperature detection (various formats)
                             elif 'Current Temperature:' in line and smart_data['temperature'] == 0:
                                 try:
                                     temp_str = line.split(':')[1].strip().split()[0]
                                     smart_data['temperature'] = int(temp_str)
-                                    print(f"[v0] Found temperature: {smart_data['temperature']}°C")
+                                    # print(f"[v0] Found temperature: {smart_data['temperature']}°C")
+                                    pass
                                 except (ValueError, IndexError):
                                     pass
                         
@@ -1028,7 +1090,8 @@ def get_smart_data(disk_name):
                             
                             if 'ID# ATTRIBUTE_NAME' in line or 'ID#' in line and 'ATTRIBUTE_NAME' in line:
                                 in_attributes = True
-                                print(f"[v0] Found SMART attributes table")
+                                # print(f"[v0] Found SMART attributes table")
+                                pass
                                 continue
                             
                             if in_attributes:
@@ -1048,28 +1111,35 @@ def get_smart_data(disk_name):
                                         if attr_id == '9':  # Power On Hours
                                             raw_clean = raw_value.split()[0].replace('h', '').replace(',', '')
                                             smart_data['power_on_hours'] = int(raw_clean)
-                                            print(f"[v0] Power On Hours: {smart_data['power_on_hours']}")
+                                            # print(f"[v0] Power On Hours: {smart_data['power_on_hours']}")
+                                            pass
                                         elif attr_id == '12':  # Power Cycle Count
                                             raw_clean = raw_value.split()[0].replace(',', '')
                                             smart_data['power_cycles'] = int(raw_clean)
-                                            print(f"[v0] Power Cycles: {smart_data['power_cycles']}")
+                                            # print(f"[v0] Power Cycles: {smart_data['power_cycles']}")
+                                            pass
                                         elif attr_id == '194' and smart_data['temperature'] == 0:  # Temperature
                                             temp_str = raw_value.split()[0]
                                             smart_data['temperature'] = int(temp_str)
-                                            print(f"[v0] Temperature (attr 194): {smart_data['temperature']}°C")
+                                            # print(f"[v0] Temperature (attr 194): {smart_data['temperature']}°C")
+                                            pass
                                         elif attr_id == '190' and smart_data['temperature'] == 0:  # Airflow Temperature
                                             temp_str = raw_value.split()[0]
                                             smart_data['temperature'] = int(temp_str)
-                                            print(f"[v0] Airflow Temperature (attr 190): {smart_data['temperature']}°C")
+                                            # print(f"[v0] Airflow Temperature (attr 190): {smart_data['temperature']}°C")
+                                            pass
                                         elif attr_id == '5':  # Reallocated Sectors
                                             smart_data['reallocated_sectors'] = int(raw_value)
-                                            print(f"[v0] Reallocated Sectors: {smart_data['reallocated_sectors']}")
+                                            # print(f"[v0] Reallocated Sectors: {smart_data['reallocated_sectors']}")
+                                            pass
                                         elif attr_id == '197':  # Pending Sectors
                                             smart_data['pending_sectors'] = int(raw_value)
-                                            print(f"[v0] Pending Sectors: {smart_data['pending_sectors']}")
+                                            # print(f"[v0] Pending Sectors: {smart_data['pending_sectors']}")
+                                            pass
                                         elif attr_id == '199':  # CRC Errors
                                             smart_data['crc_errors'] = int(raw_value)
-                                            print(f"[v0] CRC Errors: {smart_data['crc_errors']}")
+                                            # print(f"[v0] CRC Errors: {smart_data['crc_errors']}")
+                                            pass
                                         elif attr_id == '230': 
                                             try:
                                                 wear_used = None
@@ -1088,59 +1158,72 @@ def get_smart_data(disk_name):
 
                                                 smart_data['media_wearout_indicator'] = wear_used
                                                 smart_data['ssd_life_left'] = max(0, 100 - wear_used)
-                                                print(f"[v0] Media Wearout Indicator (ID 230): {wear_used}% used, {smart_data['ssd_life_left']}% life left")
+                                                # print(f"[v0] Media Wearout Indicator (ID 230): {wear_used}% used, {smart_data['ssd_life_left']}% life left")
+                                                pass
                                             except Exception as e:
-                                                print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")    
+                                                # print(f"[v0] Error parsing Media_Wearout_Indicator (ID 230): {e}")
+                                                pass
                                         elif attr_id == '233':  # Media_Wearout_Indicator (Intel/Samsung SSD)
                                             # Valor normalizado: 100 = nuevo, 0 = gastado
                                             # Invertimos para mostrar desgaste: 0% = nuevo, 100% = gastado
                                             normalized_value = int(parts[3]) if len(parts) > 3 else 100
                                             smart_data['media_wearout_indicator'] = 100 - normalized_value
-                                            print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
+                                            # print(f"[v0] Media Wearout Indicator (ID 233): {smart_data['media_wearout_indicator']}% used")
+                                            pass
                                         elif attr_id == '177':  # Wear_Leveling_Count
                                             # Valor normalizado: 100 = nuevo, 0 = gastado
                                             normalized_value = int(parts[3]) if len(parts) > 3 else 100
                                             smart_data['wear_leveling_count'] = 100 - normalized_value
-                                            print(f"[v0] Wear Leveling Count (ID 177): {smart_data['wear_leveling_count']}% used")
+                                            # print(f"[v0] Wear Leveling Count (ID 177): {smart_data['wear_leveling_count']}% used")
+                                            pass
                                         elif attr_id == '202':  # Percentage_Lifetime_Remain (algunos fabricantes)
                                             # Valor normalizado: 100 = nuevo, 0 = gastado
                                             normalized_value = int(parts[3]) if len(parts) > 3 else 100
                                             smart_data['ssd_life_left'] = normalized_value
-                                            print(f"[v0] SSD Life Left (ID 202): {smart_data['ssd_life_left']}%")
+                                            # print(f"[v0] SSD Life Left (ID 202): {smart_data['ssd_life_left']}%")
+                                            pass
                                         elif attr_id == '231':  # SSD_Life_Left (algunos fabricantes)
                                             normalized_value = int(parts[3]) if len(parts) > 3 else 100
                                             smart_data['ssd_life_left'] = normalized_value
-                                            print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
+                                            # print(f"[v0] SSD Life Left (ID 231): {smart_data['ssd_life_left']}%")
+                                            pass
                                         elif attr_id == '241':  # Total_LBAs_Written
                                             # Convertir a GB (raw_value es en sectores de 512 bytes)
                                             try:
                                                 raw_int = int(raw_value.replace(',', ''))
                                                 total_gb = (raw_int * 512) / (1024 * 1024 * 1024)
                                                 smart_data['total_lbas_written'] = round(total_gb, 2)
-                                                print(f"[v0] Total LBAs Written (ID 241): {smart_data['total_lbas_written']} GB")
+                                                # print(f"[v0] Total LBAs Written (ID 241): {smart_data['total_lbas_written']} GB")
+                                                pass
                                             except ValueError:
                                                 pass
                                             
                                     except (ValueError, IndexError) as e:
-                                        print(f"[v0] Error parsing attribute line '{line}': {e}")
+                                        # print(f"[v0] Error parsing attribute line '{line}': {e}")
+                                        pass
                                         continue
 
                         # If we got complete data, break
                         if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
-                            print(f"[v0] Successfully extracted complete data from text output (attempt {cmd_index + 1})")
+                            # print(f"[v0] Successfully extracted complete data from text output (attempt {cmd_index + 1})")
+                            pass
                             break
                         elif smart_data['model'] != 'Unknown' or smart_data['serial'] != 'Unknown':
-                            print(f"[v0] Extracted partial data from text output, continuing to next attempt...")
+                            # print(f"[v0] Extracted partial data from text output, continuing to next attempt...")
+                            pass
                 else:
-                    print(f"[v0] No usable output (return code {result_code}), trying next command...")
+                    # print(f"[v0] No usable output (return code {result_code}), trying next command...")
+                    pass
             
             except subprocess.TimeoutExpired:
-                print(f"[v0] Command timeout for attempt {cmd_index + 1}, trying next...")
+                # print(f"[v0] Command timeout for attempt {cmd_index + 1}, trying next...")
+                pass
                 if process and process.returncode is None:
                     process.kill()
                 continue
             except Exception as e:
-                print(f"[v0] Error in attempt {cmd_index + 1}: {type(e).__name__}: {e}")
+                # print(f"[v0] Error in attempt {cmd_index + 1}: {type(e).__name__}: {e}")
+                pass
                 if process and process.returncode is None:
                     process.kill()
                 continue
@@ -1149,35 +1232,44 @@ def get_smart_data(disk_name):
                 if process and process.poll() is None: 
                     try:
                         process.kill()
-                        print(f"[v0] Process killed for command: {' '.join(cmd)}")
+                        # print(f"[v0] Process killed for command: {' '.join(cmd)}")
+                        pass
                     except Exception as kill_err:
-                        print(f"[v0] Error killing process: {kill_err}")
+                        # print(f"[v0] Error killing process: {kill_err}")
+                        pass
 
 
         if smart_data['reallocated_sectors'] > 0 or smart_data['pending_sectors'] > 0:
             if smart_data['health'] == 'healthy':
                 smart_data['health'] = 'warning'
-            print(f"[v0] Health: WARNING (reallocated/pending sectors)")
+            # print(f"[v0] Health: WARNING (reallocated/pending sectors)")
+            pass
         if smart_data['reallocated_sectors'] > 10 or smart_data['pending_sectors'] > 10:
             smart_data['health'] = 'critical'
-            print(f"[v0] Health: CRITICAL (high sector count)")
+            # print(f"[v0] Health: CRITICAL (high sector count)")
+            pass
         if smart_data['smart_status'] == 'failed':
             smart_data['health'] = 'critical'
-            print(f"[v0] Health: CRITICAL (SMART failed)")
+            # print(f"[v0] Health: CRITICAL (SMART failed)")
+            pass
         
         # Temperature-based health (only if we have a valid temperature)
         if smart_data['health'] == 'healthy' and smart_data['temperature'] > 0:
             if smart_data['temperature'] >= 70:
                 smart_data['health'] = 'critical'
-                print(f"[v0] Health: CRITICAL (temperature {smart_data['temperature']}°C)")
+                # print(f"[v0] Health: CRITICAL (temperature {smart_data['temperature']}°C)")
+                pass
             elif smart_data['temperature'] >= 60:
                 smart_data['health'] = 'warning'
-                print(f"[v0] Health: WARNING (temperature {smart_data['temperature']}°C)")
+                # print(f"[v0] Health: WARNING (temperature {smart_data['temperature']}°C)")
+                pass
             
     except FileNotFoundError:
-        print(f"[v0] ERROR: smartctl not found - install smartmontools for disk monitoring.")
+        # print(f"[v0] ERROR: smartctl not found - install smartmontools for disk monitoring.")
+        pass
     except Exception as e:
-        print(f"[v0] ERROR: Unexpected exception for {disk_name}: {type(e).__name__}: {e}")
+        # print(f"[v0] ERROR: Unexpected exception for {disk_name}: {type(e).__name__}: {e}")
+        pass
         import traceback
         traceback.print_exc()
     
@@ -1194,8 +1286,10 @@ def get_proxmox_storage():
                               capture_output=True, text=True, timeout=10)
         
         if result.returncode != 0:
-            print(f"[v0] pvesh command failed with return code {result.returncode}")
-            print(f"[v0] stderr: {result.stderr}")
+            # print(f"[v0] pvesh command failed with return code {result.returncode}")
+            pass
+            # print(f"[v0] stderr: {result.stderr}")
+            pass
             return {
                 'error': 'pvesh command not available or failed',
                 'storage': []
@@ -1209,7 +1303,8 @@ def get_proxmox_storage():
             
             # Filtrar solo storage del nodo local
             if node != local_node:
-                print(f"[v0] Skipping storage {resource.get('storage')} from remote node: {node}")
+                # print(f"[v0] Skipping storage {resource.get('storage')} from remote node: {node}")
+                pass
                 continue
             
             name = resource.get('storage', 'unknown')
@@ -1221,17 +1316,20 @@ def get_proxmox_storage():
                 used = int(resource.get('disk', 0))
                 available = total - used if total > 0 else 0
             except (ValueError, TypeError):
-                print(f"[v0] Skipping storage {name} - invalid numeric data")
+                # print(f"[v0] Skipping storage {name} - invalid numeric data")
+                pass
                 continue
             
             # Si total es 0, significa que hay un error de conexión o el datastore no está disponible
             if total == 0:
-                print(f"[v0] Skipping storage {name} - invalid data (total=0, likely connection error)")
+                # print(f"[v0] Skipping storage {name} - invalid data (total=0, likely connection error)")
+                pass
                 continue
             
             # Si el status es "inactive", también lo omitimos
             if status.lower() != "available":
-                print(f"[v0] Skipping storage {name} - status is not available: {status}")
+                # print(f"[v0] Skipping storage {name} - status is not available: {status}")
+                pass
                 continue
             
             # Calcular porcentaje
@@ -1260,13 +1358,15 @@ def get_proxmox_storage():
         return {'storage': storage_list}
         
     except FileNotFoundError:
-        print("[v0] pvesh command not found - Proxmox not installed or not in PATH")
+        # print("[v0] pvesh command not found - Proxmox not installed or not in PATH")
+        pass
         return {
             'error': 'pvesh command not found - Proxmox not installed',
             'storage': []
         }
     except Exception as e:
-        print(f"[v0] Error getting Proxmox storage: {type(e).__name__}: {e}")
+        # print(f"[v0] Error getting Proxmox storage: {type(e).__name__}: {e}")
+        pass
         import traceback
         traceback.print_exc()
         return {
@@ -1381,7 +1481,8 @@ def get_interface_type(interface_name):
         # Default to skip for unknown types
         return 'skip'
     except Exception as e:
-        print(f"[v0] Error detecting interface type for {interface_name}: {e}")
+        # print(f"[v0] Error detecting interface type for {interface_name}: {e}")
+        pass
         return 'skip'
 
 def get_bond_info(bond_name):
@@ -1408,9 +1509,11 @@ def get_bond_info(bond_name):
                     elif 'Currently Active Slave:' in line:
                         bond_info['active_slave'] = line.split(':', 1)[1].strip()
                 
-                print(f"[v0] Bond {bond_name} info: mode={bond_info['mode']}, slaves={bond_info['slaves']}")
+                # print(f"[v0] Bond {bond_name} info: mode={bond_info['mode']}, slaves={bond_info['slaves']}")
+                pass
     except Exception as e:
-        print(f"[v0] Error reading bond info for {bond_name}: {e}")
+        # print(f"[v0] Error reading bond info for {bond_name}: {e}")
+        pass
     
     return bond_info
 
@@ -1435,12 +1538,14 @@ def get_bridge_info(bridge_name):
                 # Check if member is a bond first
                 if member.startswith('bond'):
                     bridge_info['physical_interface'] = member
-                    print(f"[v0] Bridge {bridge_name} connected to bond: {member}")
+                    # print(f"[v0] Bridge {bridge_name} connected to bond: {member}")
+                    pass
                     
                     bond_info = get_bond_info(member)
                     if bond_info['slaves']:
                         bridge_info['bond_slaves'] = bond_info['slaves']
-                        print(f"[v0] Bond {member} slaves: {bond_info['slaves']}")
+                        # print(f"[v0] Bond {member} slaves: {bond_info['slaves']}")
+                        pass
                     
                     # Get duplex from bond's active slave
                     if bond_info['active_slave']:
@@ -1449,14 +1554,17 @@ def get_bridge_info(bridge_name):
                             if bond_info['active_slave'] in net_if_stats:
                                 stats = net_if_stats[bond_info['active_slave']]
                                 bridge_info['physical_duplex'] = 'full' if stats.duplex == 2 else 'half' if stats.duplex == 1 else 'unknown'
-                                print(f"[v0] Bond {member} active slave {bond_info['active_slave']} duplex: {bridge_info['physical_duplex']}")
+                                # print(f"[v0] Bond {member} active slave {bond_info['active_slave']} duplex: {bridge_info['physical_duplex']}")
+                                pass
                         except Exception as e:
-                            print(f"[v0] Error getting duplex for bond slave {bond_info['active_slave']}: {e}")
+                            # print(f"[v0] Error getting duplex for bond slave {bond_info['active_slave']}: {e}")
+                            pass
                     break
                 # Check if member is a physical interface
                 elif member.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
                     bridge_info['physical_interface'] = member
-
+                    # print(f"[v0] Bridge {bridge_name} physical interface: {member}")
+                    pass
                     
                     # Get duplex from physical interface
                     try:
@@ -1464,15 +1572,19 @@ def get_bridge_info(bridge_name):
                         if member in net_if_stats:
                             stats = net_if_stats[member]
                             bridge_info['physical_duplex'] = 'full' if stats.duplex == 2 else 'half' if stats.duplex == 1 else 'unknown'
-
+                            # print(f"[v0] Physical interface {member} duplex: {bridge_info['physical_duplex']}")
+                            pass
                     except Exception as e:
-                        print(f"[v0] Error getting duplex for {member}: {e}")
+                        # print(f"[v0] Error getting duplex for {member}: {e}")
+                        pass
                     
                     break
             
-
+            # print(f"[v0] Bridge {bridge_name} members: {members}")
+            pass
     except Exception as e:
-        print(f"[v0] Error reading bridge info for {bridge_name}: {e}")
+        # print(f"[v0] Error reading bridge info for {bridge_name}: {e}")
+        pass
     
     return bridge_info
 
@@ -1505,7 +1617,8 @@ def get_network_info():
                         if domains:
                             network_data['domain'] = domains[0]
         except Exception as e:
-            print(f"[v0] Error reading DNS configuration: {e}")
+            # print(f"[v0] Error reading DNS configuration: {e}")
+            pass
         
         try:
             fqdn = socket.getfqdn()
@@ -1514,7 +1627,8 @@ def get_network_info():
                 if not network_data['domain']:
                     network_data['domain'] = fqdn.split('.', 1)[1]
         except Exception as e:
-            print(f"[v0] Error getting FQDN: {e}")
+            # print(f"[v0] Error getting FQDN: {e}")
+            pass
         
         vm_lxc_map = get_vm_lxc_names()
         
@@ -1525,7 +1639,8 @@ def get_network_info():
         try:
             net_io_per_nic = psutil.net_io_counters(pernic=True)
         except Exception as e:
-            print(f"[v0] Error getting per-NIC stats: {e}")
+            # print(f"[v0] Error getting per-NIC stats: {e}")
+            pass
             net_io_per_nic = {}
         
         physical_active_count = 0
@@ -1539,7 +1654,8 @@ def get_network_info():
             interface_type = get_interface_type(interface_name)
             
             if interface_type == 'skip':
-
+                # print(f"[v0] Skipping interface: {interface_name} (type: {interface_type})")
+                pass
                 continue
             
             stats = net_if_stats.get(interface_name)
@@ -1646,7 +1762,12 @@ def get_network_info():
         network_data['vm_lxc_active_count'] = vm_lxc_active_count
         network_data['vm_lxc_total_count'] = vm_lxc_total_count
         
-
+        # print(f"[v0] Physical interfaces: {physical_active_count} active out of {physical_total_count} total")
+        pass
+        # print(f"[v0] Bridge interfaces: {bridge_active_count} active out of {bridge_total_count} total")
+        pass
+        # print(f"[v0] VM/LXC interfaces: {vm_lxc_active_count} active out of {vm_lxc_total_count} total")
+        pass
         
         # Get network I/O statistics (global)
         net_io = psutil.net_io_counters()
@@ -1676,7 +1797,8 @@ def get_network_info():
         
         return network_data
     except Exception as e:
-        print(f"Error getting network info: {e}")
+        # print(f"Error getting network info: {e}")
+        pass
         import traceback
         traceback.print_exc()
         return {
@@ -1703,7 +1825,8 @@ def get_proxmox_vms():
         
         try:
             local_node = socket.gethostname()
-
+            # print(f"[v0] Local node detected: {local_node}")
+            pass
             
             result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
                                   capture_output=True, text=True, timeout=10)
@@ -1713,7 +1836,8 @@ def get_proxmox_vms():
                 for resource in resources:
                     node = resource.get('node', '')
                     if node != local_node:
-                        print(f"[v0] Skipping VM {resource.get('vmid')} from remote node: {node}")
+                        # print(f"[v0] Skipping VM {resource.get('vmid')} from remote node: {node}")
+                        pass
                         continue
                     
                     vm_data = {
@@ -1738,19 +1862,22 @@ def get_proxmox_vms():
 
                 return all_vms
             else:
-                print(f"[v0] pvesh command failed: {result.stderr}")
+                # print(f"[v0] pvesh command failed: {result.stderr}")
+                pass
                 return {
                     'error': 'pvesh command not available or failed',
                     'vms': []
                 }
         except Exception as e:
-            print(f"[v0] Error getting VM/LXC info: {e}")
+            # print(f"[v0] Error getting VM/LXC info: {e}")
+            pass
             return {
                 'error': f'Unable to access VM information: {str(e)}',
                 'vms': []
             }
     except Exception as e:
-        print(f"Error getting VM info: {e}")
+        # print(f"Error getting VM info: {e}")
+        pass
         return {
             'error': f'Unable to access VM information: {str(e)}',
             'vms': []
@@ -1781,15 +1908,19 @@ def get_ipmi_fans():
                                 'speed': value,
                                 'unit': unit
                             })
-
+                            # print(f"[v0] IPMI Fan: {name} = {value} {unit}")
+                            pass
                         except ValueError:
                             continue
         
-
+        # print(f"[v0] Found {len(fans)} IPMI fans")
+        pass
     except FileNotFoundError:
-        print("[v0] ipmitool not found")
+        # print("[v0] ipmitool not found")
+        pass
     except Exception as e:
-        print(f"[v0] Error getting IPMI fans: {e}")
+        # print(f"[v0] Error getting IPMI fans: {e}")
+        pass
     
     return fans
 
@@ -1818,7 +1949,8 @@ def get_ipmi_power():
                                     'watts': value,
                                     'unit': unit
                                 }
-                                print(f"[v0] IPMI Power Meter: {value} {unit}")
+                                # print(f"[v0] IPMI Power Meter: {value} {unit}")
+                                pass
                             else:
                                 power_supplies.append({
                                     'name': name,
@@ -1826,11 +1958,13 @@ def get_ipmi_power():
                                     'unit': unit,
                                     'status': 'ok' if value > 0 else 'off'
                                 })
-                                print(f"[v0] IPMI PSU: {name} = {value} {unit}")
+                                # print(f"[v0] IPMI PSU: {name} = {value} {unit}")
+                                pass
                         except ValueError:
                             continue
         
-
+        # print(f"[v0] Found {len(power_supplies)} IPMI power supplies")
+        pass
     except FileNotFoundError:
         # print("[v0] ipmitool not found")
         pass
@@ -1875,10 +2009,10 @@ def get_ups_info():
                                 }
         except FileNotFoundError:
             # print("[v0] /etc/nut/upsmon.conf not found")
-             pass
+            pass
         except Exception as e:
             # print(f"[v0] Error reading upsmon.conf: {e}")
-             pass
+            pass
         
         # Get list of locally available UPS
         local_ups = []
@@ -1888,7 +2022,7 @@ def get_ups_info():
                 local_ups = [ups.strip() for ups in result.stdout.strip().split('\n') if ups.strip()]
         except Exception as e:
             # print(f"[v0] Error listing local UPS: {e}")
-             pass
+            pass
         
         all_ups = {}
         
@@ -1980,17 +2114,22 @@ def get_ups_info():
                                 ups_data['driver'] = value
                     
                     ups_list.append(ups_data)
-                    print(f"[v0] UPS found: {ups_data.get('model', 'Unknown')} ({ups_data['connection_type']})")
+                    # print(f"[v0] UPS found: {ups_data.get('model', 'Unknown')} ({ups_data['connection_type']})")
+                    pass
                 else:
-                    print(f"[v0] Failed to get info for UPS: {ups_spec}")
+                    # print(f"[v0] Failed to get info for UPS: {ups_spec}")
+                    pass
                     
             except Exception as e:
-                print(f"[v0] Error getting UPS info for {ups_spec}: {e}")
+                # print(f"[v0] Error getting UPS info for {ups_spec}: {e}")
+                pass
         
     except FileNotFoundError:
-        print("[v0] upsc not found")
+        # print("[v0] upsc not found")
+        pass
     except Exception as e:
-        print(f"[v0] Error in get_ups_info: {e}")
+        # print(f"[v0] Error in get_ups_info: {e}")
+        pass
     
     return ups_list
 # END OF CHANGES FOR get_ups_info
@@ -2068,7 +2207,8 @@ def get_temperature_info():
                                     'watts': power_value,
                                     'adapter': current_adapter
                                 }
-                                print(f"[v0] Power meter sensor: {sensor_name} = {power_value}W")
+                                # print(f"[v0] Power meter sensor: {sensor_name} = {power_value}W")
+                                pass
                         except ValueError:
                             pass
                     
@@ -2100,7 +2240,8 @@ def get_temperature_info():
                         except ValueError:
                             pass
         
-
+        # print(f"[v0] Found {len(temperatures)} temperature sensors")
+        pass
         if power_meter:
             # print(f"[v0] Found power meter: {power_meter['watts']}W")
             pass
@@ -2125,7 +2266,8 @@ def get_detailed_gpu_info(gpu):
     vendor = gpu.get('vendor', '').lower()
     slot = gpu.get('slot', '')
     
-    print(f"[v0] ===== get_detailed_gpu_info called for GPU {slot} (vendor: {vendor}) =====", flush=True)
+    # print(f"[v0] ===== get_detailed_gpu_info called for GPU {slot} (vendor: {vendor}) =====", flush=True)
+    pass
     
     detailed_info = {
         'has_monitoring_tool': False,
@@ -2156,6 +2298,7 @@ def get_detailed_gpu_info(gpu):
     if 'intel' in vendor:
         # print(f"[v0] Intel GPU detected, checking for intel_gpu_top...", flush=True)
         pass
+        
         intel_gpu_top_path = None
         system_paths = ['/usr/bin/intel_gpu_top', '/usr/local/bin/intel_gpu_top']
         for path in system_paths:
@@ -2171,13 +2314,16 @@ def get_detailed_gpu_info(gpu):
             if intel_gpu_top_path:
                 # print(f"[v0] Using intel_gpu_top from PATH: {intel_gpu_top_path}", flush=True)
                 pass
+        
         if intel_gpu_top_path:
             # print(f"[v0] intel_gpu_top found, executing...", flush=True)
             pass
             try:
                 # print(f"[v0] Current user: {os.getenv('USER', 'unknown')}, UID: {os.getuid()}, GID: {os.getgid()}", flush=True)
+                pass
                 # print(f"[v0] Current working directory: {os.getcwd()}", flush=True)
                 pass
+                
                 drm_devices = ['/dev/dri/card0', '/dev/dri/renderD128']
                 for drm_dev in drm_devices:
                     if os.path.exists(drm_dev):
@@ -2185,13 +2331,15 @@ def get_detailed_gpu_info(gpu):
                         readable = os.access(drm_dev, os.R_OK)
                         writable = os.access(drm_dev, os.W_OK)
                         # print(f"[v0] {drm_dev}: mode={oct(stat_info.st_mode)}, uid={stat_info.st_uid}, gid={stat_info.st_gid}, readable={readable}, writable={writable}", flush=True)
-                        pass   
+                        pass
+                
                 # Prepare environment with all necessary variables
                 env = os.environ.copy()
                 env['TERM'] = 'xterm'  # Ensure terminal type is set
                 
                 cmd = f'{intel_gpu_top_path} -J' # Use the found path
                 # print(f"[v0] Executing command: {cmd}", flush=True)
+                pass
                 
                 process = subprocess.Popen(
                     cmd,
@@ -2204,7 +2352,11 @@ def get_detailed_gpu_info(gpu):
                     cwd='/'  # Ejecutar desde root en lugar de dentro del AppImage
                 )
                 
-
+                # print(f"[v0] Process started with PID: {process.pid}", flush=True)
+                pass
+                
+                # print(f"[v0] Waiting 1 second for intel_gpu_top to initialize and detect processes...", flush=True)
+                pass
                 time.sleep(1)
                 
                 start_time = time.time()
@@ -2214,11 +2366,13 @@ def get_detailed_gpu_info(gpu):
                 brace_count = 0
                 in_json = False
                 
-
+                # print(f"[v0] Reading output from intel_gpu_top...", flush=True)
+                pass
                 
                 while time.time() - start_time < timeout:
                     if process.poll() is not None:
-                        print(f"[v0] Process terminated early with code: {process.poll()}", flush=True)
+                        # print(f"[v0] Process terminated early with code: {process.poll()}", flush=True)
+                        pass
                         break
                     
                     try:
@@ -2258,10 +2412,12 @@ def get_detailed_gpu_info(gpu):
                                                 client_pid = client_data.get('pid', 'Unknown')
 
                                         else:
-                                            print(f"[v0] No 'clients' key in this JSON object", flush=True)
+                                            # print(f"[v0] No 'clients' key in this JSON object", flush=True)
+                                            pass
                                         
                                         if len(json_objects) >= 5:
-                                            print(f"[v0] Collected 5 JSON objects, stopping...", flush=True)
+                                            # print(f"[v0] Collected 5 JSON objects, stopping...", flush=True)
+                                            pass
                                             break
                                     except json.JSONDecodeError:
                                         pass
@@ -2270,7 +2426,8 @@ def get_detailed_gpu_info(gpu):
                             elif in_json:
                                 buffer += char
                     except Exception as e:
-                        print(f"[v0] Error reading line: {e}", flush=True)
+                        # print(f"[v0] Error reading line: {e}", flush=True)
+                        pass
                         break
                 
                 # Terminate process
@@ -2278,14 +2435,18 @@ def get_detailed_gpu_info(gpu):
                     process.terminate()
                     _, stderr_output = process.communicate(timeout=0.5) 
                     if stderr_output:
-                        print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
+                        # print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
+                        pass
                 except subprocess.TimeoutExpired:
                     process.kill()
-                    print("[v0] Process killed after terminate timeout.", flush=True)
+                    # print("[v0] Process killed after terminate timeout.", flush=True)
+                    pass
                 except Exception as e:
-                    print(f"[v0] Error during process termination: {e}", flush=True)
+                    # print(f"[v0] Error during process termination: {e}", flush=True)
+                    pass
 
-                print(f"[v0] Collected {len(json_objects)} JSON objects total", flush=True)
+                # print(f"[v0] Collected {len(json_objects)} JSON objects total", flush=True)
+                pass
                 
                 best_json = None
                 
@@ -2323,7 +2484,8 @@ def get_detailed_gpu_info(gpu):
                     
                     # Parse clients section (processes using GPU)
                     if 'clients' in best_json:
-                        print(f"[v0] Parsing clients section...", flush=True)
+                        # print(f"[v0] Parsing clients section...", flush=True)
+                        pass
                         clients = best_json['clients']
                         processes = []
                         
@@ -2350,16 +2512,20 @@ def get_detailed_gpu_info(gpu):
                                     client_engine_totals[engine_name] += busy_value
                             
                             processes.append(process_info)
-                            print(f"[v0] Added process: {process_info['name']} (PID: {process_info['pid']})", flush=True)
+                            # print(f"[v0] Added process: {process_info['name']} (PID: {process_info['pid']})", flush=True)
+                            pass
                         
                         detailed_info['processes'] = processes
-                        print(f"[v0] Total processes found: {len(processes)}", flush=True)
+                        # print(f"[v0] Total processes found: {len(processes)}", flush=True)
+                        pass
                     else:
-                        print(f"[v0] WARNING: No 'clients' section in selected JSON", flush=True)
+                        # print(f"[v0] WARNING: No 'clients' section in selected JSON", flush=True)
+                        pass
                     
                     # Parse global engines section
                     if 'engines' in best_json:
-                        print(f"[v0] Parsing engines section...", flush=True)
+                        # print(f"[v0] Parsing engines section...", flush=True)
+                        pass
                         engines = best_json['engines']
                         
                         for engine_name, engine_data in engines.items():
@@ -2402,60 +2568,80 @@ def get_detailed_gpu_info(gpu):
                     
                     if data_retrieved:
                         detailed_info['has_monitoring_tool'] = True
-                        print(f"[v0] Intel GPU monitoring successful", flush=True)
-                        print(f"[v0] - Utilization: {detailed_info['utilization_gpu']}", flush=True)
-                        print(f"[v0] - Engines: R={detailed_info['engine_render']}, B={detailed_info['engine_blitter']}, V={detailed_info['engine_video']}, VE={detailed_info['engine_video_enhance']}", flush=True)
-                        print(f"[v0] - Processes: {len(detailed_info['processes'])}", flush=True)
+                        # print(f"[v0] Intel GPU monitoring successful", flush=True)
+                        pass
+                        # print(f"[v0] - Utilization: {detailed_info['utilization_gpu']}", flush=True)
+                        pass
+                        # print(f"[v0] - Engines: R={detailed_info['engine_render']}, B={detailed_info['engine_blitter']}, V={detailed_info['engine_video']}, VE={detailed_info['engine_video_enhance']}", flush=True)
+                        pass
+                        # print(f"[v0] - Processes: {len(detailed_info['processes'])}", flush=True)
+                        pass
                         
                         if len(detailed_info['processes']) == 0:
-                            print(f"[v0] No processes found in JSON, trying text output...", flush=True)
+                            # print(f"[v0] No processes found in JSON, trying text output...", flush=True)
+                            pass
                             text_processes = get_intel_gpu_processes_from_text()
                             if text_processes:
                                 detailed_info['processes'] = text_processes
-                                print(f"[v0] Found {len(text_processes)} processes from text output", flush=True)
+                                # print(f"[v0] Found {len(text_processes)} processes from text output", flush=True)
+                                pass
                     else:
-                        print(f"[v0] WARNING: No data retrieved from intel_gpu_top", flush=True)
+                        # print(f"[v0] WARNING: No data retrieved from intel_gpu_top", flush=True)
+                        pass
                 else:
-                    print(f"[v0] WARNING: No valid JSON objects found", flush=True)
+                    # print(f"[v0] WARNING: No valid JSON objects found", flush=True)
+                    pass
                     # CHANGE: Evitar bloqueo al leer stderr - usar communicate() con timeout
                     try:
                         # Use communicate() with timeout instead of read() to avoid blocking
                         _, stderr_output = process.communicate(timeout=0.5)
                         if stderr_output:
-                            print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
+                            # print(f"[v0] intel_gpu_top stderr: {stderr_output}", flush=True)
+                            pass
                     except subprocess.TimeoutExpired:
                         process.kill()
-                        print(f"[v0] Process killed after timeout", flush=True)
+                        # print(f"[v0] Process killed after timeout", flush=True)
+                        pass
                     except Exception as e:
-                        print(f"[v0] Error reading stderr: {e}", flush=True)
+                        # print(f"[v0] Error reading stderr: {e}", flush=True)
+                        pass
             
             except Exception as e:
-                print(f"[v0] Error running intel_gpu_top: {e}", flush=True)
+                # print(f"[v0] Error running intel_gpu_top: {e}", flush=True)
+                pass
                 import traceback
                 traceback.print_exc()
         else:
-            print(f"[v0] intel_gpu_top not found in PATH", flush=True)
+            # print(f"[v0] intel_gpu_top not found in PATH", flush=True)
+            pass
             # Fallback to text parsing if JSON parsing fails or -J is not available
-            print("[v0] Trying intel_gpu_top text output for process parsing...", flush=True)
+            # print("[v0] Trying intel_gpu_top text output for process parsing...", flush=True)
+            pass
             detailed_info['processes'] = get_intel_gpu_processes_from_text()
             if detailed_info['processes']:
                 detailed_info['has_monitoring_tool'] = True
-                print(f"[v0] Intel GPU process monitoring (text mode) successful.", flush=True)
+                # print(f"[v0] Intel GPU process monitoring (text mode) successful.", flush=True)
+                pass
             else:
-                print(f"[v0] Intel GPU process monitoring (text mode) failed.", flush=True)
+                # print(f"[v0] Intel GPU process monitoring (text mode) failed.", flush=True)
+                pass
 
     # NVIDIA GPU monitoring with nvidia-smi
     elif 'nvidia' in vendor:
-        print(f"[v0] NVIDIA GPU detected, checking for nvidia-smi...", flush=True)
+        # print(f"[v0] NVIDIA GPU detected, checking for nvidia-smi...", flush=True)
+        pass
         if shutil.which('nvidia-smi'):
-            print(f"[v0] nvidia-smi found, executing with XML output...", flush=True)
+            # print(f"[v0] nvidia-smi found, executing with XML output...", flush=True)
+            pass
             try:
                 cmd = ['nvidia-smi', '-q', '-x']
-                print(f"[v0] Executing command: {' '.join(cmd)}", flush=True)
+                # print(f"[v0] Executing command: {' '.join(cmd)}", flush=True)
+                pass
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
                 
                 if result.returncode == 0 and result.stdout.strip():
-                    print(f"[v0] nvidia-smi XML output received, parsing...", flush=True)
+                    # print(f"[v0] nvidia-smi XML output received, parsing...", flush=True)
+                    pass
                     
                     try:
                         # Parse XML
@@ -2465,13 +2651,15 @@ def get_detailed_gpu_info(gpu):
                         gpu_elem = root.find('gpu')
                         
                         if gpu_elem is not None:
-                            print(f"[v0] Processing NVIDIA GPU XML data...", flush=True)
+                            # print(f"[v0] Processing NVIDIA GPU XML data...", flush=True)
+                            pass
                             data_retrieved = False
                             
                             driver_version_elem = gpu_elem.find('.//driver_version')
                             if driver_version_elem is not None and driver_version_elem.text:
                                 detailed_info['driver_version'] = driver_version_elem.text.strip()
-                                print(f"[v0] Driver Version: {detailed_info['driver_version']}", flush=True)
+                                # print(f"[v0] Driver Version: {detailed_info['driver_version']}", flush=True)
+                                pass
                             
                             # Parse temperature
                             temp_elem = gpu_elem.find('.//temperature/gpu_temp')
@@ -2480,7 +2668,8 @@ def get_detailed_gpu_info(gpu):
                                     # Remove ' C' suffix and convert to int
                                     temp_str = temp_elem.text.replace(' C', '').strip()
                                     detailed_info['temperature'] = int(temp_str)
-                                    print(f"[v0] Temperature: {detailed_info['temperature']}°C", flush=True)
+                                    # print(f"[v0] Temperature: {detailed_info['temperature']}°C", flush=True)
+                                    pass
                                     data_retrieved = True
                                 except ValueError:
                                     pass
@@ -2493,7 +2682,8 @@ def get_detailed_gpu_info(gpu):
                                     fan_str = fan_elem.text.replace(' %', '').strip()
                                     detailed_info['fan_speed'] = int(fan_str)
                                     detailed_info['fan_unit'] = '%'
-                                    print(f"[v0] Fan Speed: {detailed_info['fan_speed']}%", flush=True)
+                                    # print(f"[v0] Fan Speed: {detailed_info['fan_speed']}%", flush=True)
+                                    pass
                                     data_retrieved = True
                                 except ValueError:
                                     pass
@@ -2506,7 +2696,8 @@ def get_detailed_gpu_info(gpu):
                                     # Remove ' W' suffix and convert to float
                                     power_str = instant_power_elem.text.replace(' W', '').strip()
                                     detailed_info['power_draw'] = float(power_str)
-                                    print(f"[v0] Power Draw: {detailed_info['power_draw']} W", flush=True)
+                                    # print(f"[v0] Power Draw: {detailed_info['power_draw']} W", flush=True)
+                                    pass
                                     data_retrieved = True
                                 except ValueError:
                                     pass
@@ -2517,7 +2708,8 @@ def get_detailed_gpu_info(gpu):
                                 try:
                                     power_limit_str = power_limit_elem.text.replace(' W', '').strip()
                                     detailed_info['power_limit'] = float(power_limit_str)
-                                    print(f"[v0] Power Limit: {detailed_info['power_limit']} W", flush=True)
+                                    # print(f"[v0] Power Limit: {detailed_info['power_limit']} W", flush=True)
+                                    pass
                                 except ValueError:
                                     pass
                             
@@ -2527,7 +2719,8 @@ def get_detailed_gpu_info(gpu):
                                 try:
                                     util_str = gpu_util_elem.text.replace(' %', '').strip()
                                     detailed_info['utilization_gpu'] = int(util_str)
-                                    print(f"[v0] GPU Utilization: {detailed_info['utilization_gpu']}%", flush=True)
+                                    # print(f"[v0] GPU Utilization: {detailed_info['utilization_gpu']}%", flush=True)
+                                    pass
                                     data_retrieved = True
                                 except ValueError:
                                     pass
@@ -2538,7 +2731,8 @@ def get_detailed_gpu_info(gpu):
                                 try:
                                     mem_util_str = mem_util_elem.text.replace(' %', '').strip()
                                     detailed_info['utilization_memory'] = int(mem_util_str)
-                                    print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
+                                    # print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
+                                    pass
                                     data_retrieved = True
                                 except ValueError:
                                     pass
@@ -2549,7 +2743,8 @@ def get_detailed_gpu_info(gpu):
                                 try:
                                     encoder_str = encoder_util_elem.text.replace(' %', '').strip()
                                     detailed_info['engine_encoder'] = int(encoder_str)
-                                    print(f"[v0] Encoder Utilization: {detailed_info['engine_encoder']}%", flush=True)
+                                    # print(f"[v0] Encoder Utilization: {detailed_info['engine_encoder']}%", flush=True)
+                                    pass
                                 except ValueError:
                                     pass
                             
@@ -2559,7 +2754,8 @@ def get_detailed_gpu_info(gpu):
                                 try:
                                     decoder_str = decoder_util_elem.text.replace(' %', '').strip()
                                     detailed_info['engine_decoder'] = int(decoder_str)
-                                    print(f"[v0] Decoder Utilization: {detailed_info['engine_decoder']}%", flush=True)
+                                    # print(f"[v0] Decoder Utilization: {detailed_info['engine_decoder']}%", flush=True)
+                                    pass
                                 except ValueError:
                                     pass
                             
@@ -2569,7 +2765,8 @@ def get_detailed_gpu_info(gpu):
                                 try:
                                     clock_str = graphics_clock_elem.text.replace(' MHz', '').strip()
                                     detailed_info['clock_graphics'] = int(clock_str)
-                                    print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']} MHz", flush=True)
+                                    # print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']} MHz", flush=True)
+                                    pass
                                     data_retrieved = True
                                 except ValueError:
                                     pass
@@ -2579,7 +2776,8 @@ def get_detailed_gpu_info(gpu):
                                 try:
                                     mem_clock_str = mem_clock_elem.text.replace(' MHz', '').strip()
                                     detailed_info['clock_memory'] = int(mem_clock_str)
-                                    print(f"[v0] Memory Clock: {detailed_info['clock_memory']} MHz", flush=True)
+                                    # print(f"[v0] Memory Clock: {detailed_info['clock_memory']} MHz", flush=True)
+                                    pass
                                     data_retrieved = True
                                 except ValueError:
                                     pass
@@ -2590,7 +2788,8 @@ def get_detailed_gpu_info(gpu):
                                 try:
                                     mem_total_str = mem_total_elem.text.replace(' MiB', '').strip()
                                     detailed_info['memory_total'] = int(mem_total_str)
-                                    print(f"[v0] Memory Total: {detailed_info['memory_total']} MB", flush=True)
+                                    # print(f"[v0] Memory Total: {detailed_info['memory_total']} MB", flush=True)
+                                    pass
                                     data_retrieved = True
                                 except ValueError:
                                     pass
@@ -2600,7 +2799,8 @@ def get_detailed_gpu_info(gpu):
                                 try:
                                     mem_used_str = mem_used_elem.text.replace(' MiB', '').strip()
                                     detailed_info['memory_used'] = int(mem_used_str)
-                                    print(f"[v0] Memory Used: {detailed_info['memory_used']} MB", flush=True)
+                                    # print(f"[v0] Memory Used: {detailed_info['memory_used']} MB", flush=True)
+                                    pass
                                     data_retrieved = True
                                 except ValueError:
                                     pass
@@ -2610,7 +2810,8 @@ def get_detailed_gpu_info(gpu):
                                 try:
                                     mem_free_str = mem_free_elem.text.replace(' MiB', '').strip()
                                     detailed_info['memory_free'] = int(mem_free_str)
-                                    print(f"[v0] Memory Free: {detailed_info['memory_free']} MB", flush=True)
+                                    # print(f"[v0] Memory Free: {detailed_info['memory_free']} MB", flush=True)
+                                    pass
                                 except ValueError:
                                     pass
                             
@@ -2619,7 +2820,8 @@ def get_detailed_gpu_info(gpu):
                                detailed_info['memory_total'] > 0:
                                 mem_util = (detailed_info['memory_used'] / detailed_info['memory_total']) * 100
                                 detailed_info['utilization_memory'] = round(mem_util, 1)
-                                print(f"[v0] Memory Utilization (calculated): {detailed_info['utilization_memory']}%", flush=True)
+                                # print(f"[v0] Memory Utilization (calculated): {detailed_info['utilization_memory']}%", flush=True)
+                                pass
                             
                             # Parse processes
                             processes_elem = gpu_elem.find('.//processes')
@@ -2655,50 +2857,64 @@ def get_detailed_gpu_info(gpu):
                                             # The process type (C/G) is informational only
                                             
                                             processes.append(process_info)
-                                            print(f"[v0] Found process: {name} (PID: {pid}, Memory: {memory_mb} MB)", flush=True)
+                                            # print(f"[v0] Found process: {name} (PID: {pid}, Memory: {memory_mb} MB)", flush=True)
+                                            pass
                                     except (ValueError, AttributeError) as e:
-                                        print(f"[v0] Error parsing process: {e}", flush=True)
+                                        # print(f"[v0] Error parsing process: {e}", flush=True)
+                                        pass
                                         continue
                                 
                                 detailed_info['processes'] = processes
-                                print(f"[v0] Found {len(processes)} NVIDIA GPU processes", flush=True)
+                                # print(f"[v0] Found {len(processes)} NVIDIA GPU processes", flush=True)
+                                pass
                             
                             if data_retrieved:
                                 detailed_info['has_monitoring_tool'] = True
-                                print(f"[v0] NVIDIA GPU monitoring successful", flush=True)
+                                # print(f"[v0] NVIDIA GPU monitoring successful", flush=True)
+                                pass
                             else:
-                                print(f"[v0] NVIDIA GPU monitoring failed - no data retrieved", flush=True)
+                                # print(f"[v0] NVIDIA GPU monitoring failed - no data retrieved", flush=True)
+                                pass
                         else:
-                            print(f"[v0] No GPU element found in XML", flush=True)
+                            # print(f"[v0] No GPU element found in XML", flush=True)
+                            pass
                     
                     except ET.ParseError as e:
-                        print(f"[v0] Error parsing nvidia-smi XML: {e}", flush=True)
+                        # print(f"[v0] Error parsing nvidia-smi XML: {e}", flush=True)
+                        pass
                         import traceback
                         traceback.print_exc()
                 else:
-                    print(f"[v0] nvidia-smi returned error or empty output", flush=True)
+                    # print(f"[v0] nvidia-smi returned error or empty output", flush=True)
+                    pass
 
             except subprocess.TimeoutExpired:
-                print(f"[v0] nvidia-smi timed out - marking tool as unavailable", flush=True)
+                # print(f"[v0] nvidia-smi timed out - marking tool as unavailable", flush=True)
+                pass
             except Exception as e:
-                print(f"[v0] Error running nvidia-smi: {e}", flush=True)
+                # print(f"[v0] Error running nvidia-smi: {e}", flush=True)
+                pass
                 import traceback
                 traceback.print_exc()
         else:
-            print(f"[v0] nvidia-smi not found in PATH", flush=True)
+            # print(f"[v0] nvidia-smi not found in PATH", flush=True)
+            pass
 
     # AMD GPU monitoring (placeholder, requires radeontop or similar)
     elif 'amd' in vendor:
-        print(f"[v0] AMD GPU detected, checking for amdgpu_top...", flush=True)
+        # print(f"[v0] AMD GPU detected, checking for amdgpu_top...", flush=True)
+        pass
         
         amdgpu_top_path = shutil.which('amdgpu_top')
         
         if amdgpu_top_path:
-            print(f"[v0] amdgpu_top found at: {amdgpu_top_path}, executing...", flush=True)
+            # print(f"[v0] amdgpu_top found at: {amdgpu_top_path}, executing...", flush=True)
+            pass
             try:
                 # Execute amdgpu_top with JSON output and single snapshot
                 cmd = [amdgpu_top_path, '--json', '-n', '1']
                 # print(f"[v0] Executing command: {' '.join(cmd)}", flush=True)
+                pass
                 
                 result = subprocess.run(
                     cmd,
@@ -2708,16 +2924,19 @@ def get_detailed_gpu_info(gpu):
                 )
                 
                 if result.returncode == 0 and result.stdout.strip():
-                    print(f"[v0] amdgpu_top output received, parsing JSON...", flush=True)
+                    # print(f"[v0] amdgpu_top output received, parsing JSON...", flush=True)
+                    pass
                     
                     try:
                         amd_data = json.loads(result.stdout)
-                        print(f"[v0] JSON parsed successfully", flush=True)
+                        # print(f"[v0] JSON parsed successfully", flush=True)
+                        pass
                         
                         # Check if we have devices array
                         if 'devices' in amd_data and len(amd_data['devices']) > 0:
                             device = amd_data['devices'][0]  # Get first device
-                            print(f"[v0] Processing AMD GPU device data...", flush=True)
+                            # print(f"[v0] Processing AMD GPU device data...", flush=True)
+                            pass
                             
                             data_retrieved = False
                             
@@ -2728,7 +2947,8 @@ def get_detailed_gpu_info(gpu):
                                     edge_temp = sensors['Edge Temperature']
                                     if 'value' in edge_temp:
                                         detailed_info['temperature'] = int(edge_temp['value'])
-                                        print(f"[v0] Temperature: {detailed_info['temperature']}°C", flush=True)
+                                        # print(f"[v0] Temperature: {detailed_info['temperature']}°C", flush=True)
+                                        pass
                                         data_retrieved = True
                                 
                                 # Parse power draw (GFX Power or average_socket_power)
@@ -2736,13 +2956,15 @@ def get_detailed_gpu_info(gpu):
                                     gfx_power = sensors['GFX Power']
                                     if 'value' in gfx_power:
                                         detailed_info['power_draw'] = f"{gfx_power['value']:.2f} W"
-                                        print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
+                                        # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
+                                        pass
                                         data_retrieved = True
                                 elif 'average_socket_power' in sensors:
                                     socket_power = sensors['average_socket_power']
                                     if 'value' in socket_power:
                                         detailed_info['power_draw'] = f"{socket_power['value']:.2f} W"
-                                        print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
+                                        # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
+                                        pass
                                         data_retrieved = True
                             
                             # Parse clocks (GFX_SCLK for graphics, GFX_MCLK for memory)
@@ -2752,14 +2974,16 @@ def get_detailed_gpu_info(gpu):
                                     gfx_clock = clocks['GFX_SCLK']
                                     if 'value' in gfx_clock:
                                         detailed_info['clock_graphics'] = f"{gfx_clock['value']} MHz"
-                                        print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']}", flush=True)
+                                        # print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']}", flush=True)
+                                        pass
                                         data_retrieved = True
                                 
                                 if 'GFX_MCLK' in clocks:
                                     mem_clock = clocks['GFX_MCLK']
                                     if 'value' in mem_clock:
                                         detailed_info['clock_memory'] = f"{mem_clock['value']} MHz"
-                                        print(f"[v0] Memory Clock: {detailed_info['clock_memory']}", flush=True)
+                                        # print(f"[v0] Memory Clock: {detailed_info['clock_memory']}", flush=True)
+                                        pass
                                         data_retrieved = True
                             
                             # Parse GPU activity (gpu_activity.GFX)
@@ -2771,7 +2995,8 @@ def get_detailed_gpu_info(gpu):
                                         utilization = gfx_activity['value']
                                         detailed_info['utilization_gpu'] = f"{utilization:.1f}%"
                                         detailed_info['engine_render'] = f"{utilization:.1f}%"
-                                        print(f"[v0] GPU Utilization: {detailed_info['utilization_gpu']}", flush=True)
+                                        # print(f"[v0] GPU Utilization: {detailed_info['utilization_gpu']}", flush=True)
+                                        pass
                                         data_retrieved = True
                             
                             # Parse VRAM usage
@@ -2783,7 +3008,8 @@ def get_detailed_gpu_info(gpu):
                                         # Value is in MB
                                         mem_used_mb = int(total_usage['value'])
                                         detailed_info['memory_used'] = f"{mem_used_mb} MB"
-                                        print(f"[v0] VRAM Used: {detailed_info['memory_used']}", flush=True)
+                                        # print(f"[v0] VRAM Used: {detailed_info['memory_used']}", flush=True)
+                                        pass
                                         data_retrieved = True
                                 
                                 if 'Total VRAM' in vram:
@@ -2799,7 +3025,8 @@ def get_detailed_gpu_info(gpu):
                                             mem_free_mb = mem_total_mb - mem_used_mb
                                             detailed_info['memory_free'] = f"{mem_free_mb} MB"
                                         
-                                        print(f"[v0] VRAM Total: {detailed_info['memory_total']}", flush=True)
+                                        # print(f"[v0] VRAM Total: {detailed_info['memory_total']}", flush=True)
+                                        pass
                                         data_retrieved = True
                             
                             # Calculate memory utilization percentage
@@ -2809,7 +3036,8 @@ def get_detailed_gpu_info(gpu):
                                 if mem_total > 0:
                                     mem_util = (mem_used / mem_total) * 100
                                     detailed_info['utilization_memory'] = round(mem_util, 1)
-                                    print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
+                                    # print(f"[v0] Memory Utilization: {detailed_info['utilization_memory']}%", flush=True)
+                                    pass
                             
                             # Parse GRBM (Graphics Register Bus Manager) for engine utilization
                             if 'GRBM' in device:
@@ -2836,7 +3064,8 @@ def get_detailed_gpu_info(gpu):
                                 fdinfo = device['fdinfo']
                                 processes = []
                                 
-                                print(f"[v0] Parsing fdinfo with {len(fdinfo)} entries", flush=True)
+                                # print(f"[v0] Parsing fdinfo with {len(fdinfo)} entries", flush=True)
+                                pass
                                 
                                 # CHANGE: Corregir parseo de fdinfo con estructura anidada
                                 # fdinfo es un diccionario donde las claves son los PIDs (como strings)
@@ -2849,14 +3078,16 @@ def get_detailed_gpu_info(gpu):
                                             'engines': {}
                                         }
                                         
-                                        print(f"[v0] Processing fdinfo entry: PID={pid_str}, Name={process_info['name']}", flush=True)
+                                        # print(f"[v0] Processing fdinfo entry: PID={pid_str}, Name={process_info['name']}", flush=True)
+                                        pass
                                         
                                         # La estructura real es: proc_data -> usage -> usage -> datos
                                         # Acceder al segundo nivel de 'usage'
                                         usage_outer = proc_data.get('usage', {})
                                         usage_data = usage_outer.get('usage', {})
                                         
-                                        print(f"[v0]   Usage data keys: {list(usage_data.keys())}", flush=True)
+                                        # print(f"[v0]   Usage data keys: {list(usage_data.keys())}", flush=True)
+                                        pass
                                         
                                         # Parse VRAM usage for this process (está dentro de usage.usage)
                                         if 'VRAM' in usage_data:
@@ -2868,7 +3099,8 @@ def get_detailed_gpu_info(gpu):
                                                     'shared': 0,
                                                     'resident': int(vram_mb * 1024 * 1024)
                                                 }
-                                                print(f"[v0]   VRAM: {vram_mb} MB", flush=True)
+                                                # print(f"[v0]   VRAM: {vram_mb} MB", flush=True)
+                                                pass
                                         
                                         # Parse GTT (Graphics Translation Table) usage (está dentro de usage.usage)
                                         if 'GTT' in usage_data:
@@ -2881,7 +3113,8 @@ def get_detailed_gpu_info(gpu):
                                                 else:
                                                     # Add GTT to existing VRAM
                                                     process_info['memory']['total'] += int(gtt_mb * 1024 * 1024)
-                                                print(f"[v0]   GTT: {gtt_mb} MB", flush=True)
+                                                # print(f"[v0]   GTT: {gtt_mb} MB", flush=True)
+                                                pass
                                         
                                         # Parse engine utilization for this process (están dentro de usage.usage)
                                         # GFX (Graphics/Render)
@@ -2891,7 +3124,8 @@ def get_detailed_gpu_info(gpu):
                                                 val = gfx_usage['value']
                                                 if val > 0:
                                                     process_info['engines']['Render/3D'] = f"{val:.1f}%"
-                                                    print(f"[v0]     GFX: {val}%", flush=True)
+                                                    # print(f"[v0]     GFX: {val}%", flush=True)
+                                                    pass
                                         
                                         # Compute
                                         if 'Compute' in usage_data:
@@ -2900,7 +3134,8 @@ def get_detailed_gpu_info(gpu):
                                                 val = comp_usage['value']
                                                 if val > 0:
                                                     process_info['engines']['Compute'] = f"{val:.1f}%"
-                                                    print(f"[v0]     Compute: {val}%", flush=True)
+                                                    # print(f"[v0]     Compute: {val}%", flush=True)
+                                                    pass
                                         
                                         # DMA (Direct Memory Access)
                                         if 'DMA' in usage_data:
@@ -2909,7 +3144,8 @@ def get_detailed_gpu_info(gpu):
                                                 val = dma_usage['value']
                                                 if val > 0:
                                                     process_info['engines']['DMA'] = f"{val:.1f}%"
-                                                    print(f"[v0]     DMA: {val}%", flush=True)
+                                                    # print(f"[v0]     DMA: {val}%", flush=True)
+                                                    pass
                                         
                                         # Decode (Video Decode)
                                         if 'Decode' in usage_data:
@@ -2918,7 +3154,8 @@ def get_detailed_gpu_info(gpu):
                                                 val = dec_usage['value']
                                                 if val > 0:
                                                     process_info['engines']['Video'] = f"{val:.1f}%"
-                                                    print(f"[v0]     Decode: {val}%", flush=True)
+                                                    # print(f"[v0]     Decode: {val}%", flush=True)
+                                                    pass
                                         
                                         # Encode (Video Encode)
                                         if 'Encode' in usage_data:
@@ -2927,7 +3164,8 @@ def get_detailed_gpu_info(gpu):
                                                 val = enc_usage['value']
                                                 if val > 0:
                                                     process_info['engines']['VideoEncode'] = f"{val:.1f}%"
-                                                    print(f"[v0]     Encode: {val}%", flush=True)
+                                                    # print(f"[v0]     Encode: {val}%", flush=True)
+                                                    pass
                                         
                                         # Media (Media Engine)
                                         if 'Media' in usage_data:
@@ -2936,7 +3174,8 @@ def get_detailed_gpu_info(gpu):
                                                 val = media_usage['value']
                                                 if val > 0:
                                                     process_info['engines']['Media'] = f"{val:.1f}%"
-                                                    print(f"[v0]     Media: {val}%", flush=True)
+                                                    # print(f"[v0]     Media: {val}%", flush=True)
+                                                    pass
                                         
                                         # CPU (CPU usage by GPU driver)
                                         if 'CPU' in usage_data:
@@ -2945,7 +3184,8 @@ def get_detailed_gpu_info(gpu):
                                                 val = cpu_usage['value']
                                                 if val > 0:
                                                     process_info['engines']['CPU'] = f"{val:.1f}%"
-                                                    print(f"[v0]     CPU: {val}%", flush=True)
+                                                    # print(f"[v0]     CPU: {val}%", flush=True)
+                                                    pass
                                         
                                         # VCN_JPEG (JPEG Decode)
                                         if 'VCN_JPEG' in usage_data:
@@ -2954,56 +3194,74 @@ def get_detailed_gpu_info(gpu):
                                                 val = jpeg_usage['value']
                                                 if val > 0:
                                                     process_info['engines']['JPEG'] = f"{val:.1f}%"
-                                                    print(f"[v0]     VCN_JPEG: {val}%", flush=True)
+                                                    # print(f"[v0]     VCN_JPEG: {val}%", flush=True)
+                                                    pass
                                         
                                         # Add the process even if it has no active engines at this moment
                                         # (may have allocated memory but is not actively using the GPU)
                                         if process_info['memory'] or process_info['engines']:
                                             processes.append(process_info)
-                                            print(f"[v0] Added AMD GPU process: {process_info['name']} (PID: {process_info['pid']}) - Memory: {process_info['memory']}, Engines: {process_info['engines']}", flush=True)
+                                            # print(f"[v0] Added AMD GPU process: {process_info['name']} (PID: {process_info['pid']}) - Memory: {process_info['memory']}, Engines: {process_info['engines']}", flush=True)
+                                            pass
                                         else:
-                                            print(f"[v0] Skipped process {process_info['name']} - no memory or engine usage", flush=True)
+                                            # print(f"[v0] Skipped process {process_info['name']} - no memory or engine usage", flush=True)
+                                            pass
                                     
                                     except Exception as e:
-                                        print(f"[v0] Error parsing fdinfo entry for PID {pid_str}: {e}", flush=True)
+                                        # print(f"[v0] Error parsing fdinfo entry for PID {pid_str}: {e}", flush=True)
+                                        pass
                                         import traceback
                                         traceback.print_exc()
                                 
                                 detailed_info['processes'] = processes
-                                print(f"[v0] Total AMD GPU processes: {len(processes)}", flush=True)
+                                # print(f"[v0] Total AMD GPU processes: {len(processes)}", flush=True)
+                                pass
                             else:
-                                print(f"[v0] No fdinfo section found in device data", flush=True)
+                                # print(f"[v0] No fdinfo section found in device data", flush=True)
+                                pass
                                 detailed_info['processes'] = []
                             
                             if data_retrieved:
                                 detailed_info['has_monitoring_tool'] = True
-                                print(f"[v0] AMD GPU monitoring successful", flush=True)
+                                # print(f"[v0] AMD GPU monitoring successful", flush=True)
+                                pass
                             else:
-                                print(f"[v0] WARNING: No data retrieved from amdgpu_top", flush=True)
+                                # print(f"[v0] WARNING: No data retrieved from amdgpu_top", flush=True)
+                                pass
                         else:
-                            print(f"[v0] WARNING: No devices found in amdgpu_top output", flush=True)
+                            # print(f"[v0] WARNING: No devices found in amdgpu_top output", flush=True)
+                            pass
                     
                     except json.JSONDecodeError as e:
-                        print(f"[v0] Error parsing amdgpu_top JSON: {e}", flush=True)
-                        print(f"[v0] Raw output: {result.stdout[:500]}", flush=True)
+                        # print(f"[v0] Error parsing amdgpu_top JSON: {e}", flush=True)
+                        pass
+                        # print(f"[v0] Raw output: {result.stdout[:500]}", flush=True)
+                        pass
             
             except subprocess.TimeoutExpired:
-                print(f"[v0] amdgpu_top timed out", flush=True)
+                # print(f"[v0] amdgpu_top timed out", flush=True)
+                pass
             except Exception as e:
-                print(f"[v0] Error running amdgpu_top: {e}", flush=True)
+                # print(f"[v0] Error running amdgpu_top: {e}", flush=True)
+                pass
                 import traceback
                 traceback.print_exc()
         else:
             # print(f"[v0] amdgpu_top not found in PATH", flush=True)
+            pass
             # print(f"[v0] To enable AMD GPU monitoring, install amdgpu_top:", flush=True)
+            pass
             # print(f"[v0]   wget -O amdgpu-top_0.11.0-1_amd64.deb https://github.com/Umio-Yasuno/amdgpu_top/releases/download/v0.11.0/amdgpu-top_0.11.0-1_amd64.deb", flush=True)
+            pass
             # print(f"[v0]   apt install ./amdgpu-top_0.11.0-1_amd64.deb", flush=True)
             pass
+        
     else:
         # print(f"[v0] Unsupported GPU vendor: {vendor}", flush=True)
-
-        # print(f"[v0] ===== Exiting get_detailed_gpu_info for GPU {slot} =====", flush=True)
         pass
+
+    # print(f"[v0] ===== Exiting get_detailed_gpu_info for GPU {slot} =====", flush=True)
+    pass
     return detailed_info
 
 
@@ -3033,7 +3291,8 @@ def get_pci_device_info(pci_slot):
                     pci_info['kernel_module'] = line.split(':', 1)[1].strip()
                     
     except Exception as e:
-        print(f"[v0] Error getting PCI device info for {pci_slot}: {e}")
+        # print(f"[v0] Error getting PCI device info for {pci_slot}: {e}")
+        pass
     return pci_info
 
 def get_network_hardware_info(pci_slot):
@@ -3099,10 +3358,12 @@ def get_network_hardware_info(pci_slot):
                             
                             break
         except Exception as e:
-            print(f"[v0] Error getting network interface info: {e}")
+            # print(f"[v0] Error getting network interface info: {e}")
+            pass
             
     except Exception as e:
-        print(f"[v0] Error getting network hardware info: {e}")
+        # print(f"[v0] Error getting network hardware info: {e}")
+        pass
     
     return net_info
 
@@ -3156,10 +3417,12 @@ def get_gpu_info():
                         # gpu.update(detailed_info)             # It will be called later in api_gpu_realtime
                         
                         gpus.append(gpu)
-
+                        # print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+                        pass
 
     except Exception as e:
-        print(f"[v0] Error detecting GPUs from lspci: {e}")
+        # print(f"[v0] Error detecting GPUs from lspci: {e}")
+        pass
     
     try:
         result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
@@ -3200,7 +3463,8 @@ def get_gpu_info():
                                         temp_match = re.search(r'([+-]?[\d.]+)\s*°?C', value_part)
                                         if temp_match:
                                             gpu['temperature'] = float(temp_match.group(1))
-                                            print(f"[v0] GPU {gpu['name']}: Temperature = {gpu['temperature']}°C")
+                                            # print(f"[v0] GPU {gpu['name']}: Temperature = {gpu['temperature']}°C")
+                                            pass
                                 
                                 # Parse fan speed
                                 elif 'RPM' in value_part:
@@ -3208,9 +3472,11 @@ def get_gpu_info():
                                     if rpm_match:
                                         gpu['fan_speed'] = int(float(rpm_match.group(1)))
                                         gpu['fan_unit'] = 'RPM'
-                                        print(f"[v0] GPU {gpu['name']}: Fan = {gpu['fan_speed']} RPM")
+                                        # print(f"[v0] GPU {gpu['name']}: Fan = {gpu['fan_speed']} RPM")
+                                        pass
     except Exception as e:
-        print(f"[v0] Error enriching GPU data from sensors: {e}")
+        # print(f"[v0] Error enriching GPU data from sensors: {e}")
+        pass
     
     return gpus
 
@@ -3275,9 +3541,11 @@ def get_hardware_info():
                             cpu_info['l3_cache'] = value
                 
                 hardware_data['cpu'] = cpu_info
-
+                # print(f"[v0] CPU: {cpu_info.get('model', 'Unknown')}")
+                pass
         except Exception as e:
-            print(f"[v0] Error getting CPU info: {e}")
+            # print(f"[v0] Error getting CPU info: {e}")
+            pass
         
         # Motherboard Information
         try:
@@ -3296,9 +3564,11 @@ def get_hardware_info():
                         mb_info['serial'] = line.split(':', 1)[1].strip()
                 
                 hardware_data['motherboard'] = mb_info
-
+                # print(f"[v0] Motherboard: {mb_info.get('manufacturer', 'Unknown')} {mb_info.get('model', 'Unknown')}")
+                pass
         except Exception as e:
-            print(f"[v0] Error getting motherboard info: {e}")
+            # print(f"[v0] Error getting motherboard info: {e}")
+            pass
         
         # BIOS Information
         try:
@@ -3315,9 +3585,11 @@ def get_hardware_info():
                         bios_info['date'] = line.split(':', 1)[1].strip()
                 
                 hardware_data['motherboard']['bios'] = bios_info
-
+                # print(f"[v0] BIOS: {bios_info.get('vendor', 'Unknown')} {bios_info.get('version', 'Unknown')}")
+                pass
         except Exception as e:
-            print(f"[v0] Error getting BIOS info: {e}")
+            # print(f"[v0] Error getting BIOS info: {e}")
+            pass
         
         # Memory Modules
         try:
@@ -3353,13 +3625,16 @@ def get_hardware_info():
                                         size_kb = value  # Assume KB if no unit
                                     
                                     current_module['size'] = size_kb
-
+                                    # print(f"[v0] Parsed memory size: {size_str} -> {size_kb} KB")
+                                    pass
                                 else:
                                     # Handle cases where unit might be missing but value is present
                                     current_module['size'] = float(size_str) if size_str else 0
-
+                                    # print(f"[v0] Parsed memory size (no unit): {size_str} -> {current_module['size']} KB")
+                                    pass
                             except (ValueError, IndexError) as e:
-                                print(f"[v0] Error parsing memory size '{size_str}': {e}")
+                                # print(f"[v0] Error parsing memory size '{size_str}': {e}")
+                                pass
                                 current_module['size'] = 0 # Default to 0 if parsing fails
                         else:
                             current_module['size'] = 0 # Default to 0 if no size or explicitly 'No Module Installed'
@@ -3378,9 +3653,11 @@ def get_hardware_info():
                 if current_module and current_module.get('size') and current_module.get('size') != 'No Module Installed' and current_module.get('size') != 0:
                     hardware_data['memory_modules'].append(current_module)
                 
-
+                # print(f"[v0] Memory modules: {len(hardware_data['memory_modules'])} installed")
+                pass
         except Exception as e:
-            print(f"[v0] Error getting memory info: {e}")
+            # print(f"[v0] Error getting memory info: {e}")
+            pass
         
         # Storage Devices - simplified version without hardware info
         try:
@@ -3399,9 +3676,11 @@ def get_hardware_info():
                             'type': device.get('type', 'disk')
                         })
                 hardware_data['storage_devices'] = storage_devices
-
+                # print(f"[v0] Storage devices: {len(storage_devices)} found")
+                pass
         except Exception as e:
-            print(f"[v0] Error getting storage info: {e}")
+            # print(f"[v0] Error getting storage info: {e}")
+            pass
         
         # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
         try:
@@ -3493,15 +3772,19 @@ def get_hardware_info():
                                     'vendor': vendor,
                                     'slot': slot
                                 })
-
+                                # print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+                                pass
             
-
+            # print(f"[v0] Graphics cards: {len(hardware_data['graphics_cards'])} found")
+            pass
         except Exception as e:
-            print(f"[v0] Error getting graphics cards: {e}")
+            # print(f"[v0] Error getting graphics cards: {e}")
+            pass
         
         # PCI Devices
         try:
-
+            # print("[v0] Getting PCI devices with driver information...")
+            pass
             # First get basic device info with lspci -vmm
             result = subprocess.run(['lspci', '-vmm'], capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
@@ -3605,9 +3888,11 @@ def get_hardware_info():
                                         device['kernel_module'] = current_module
                                     break
             
-
+            # print(f"[v0] Total PCI devices found: {len(hardware_data['pci_devices'])}")
+            pass
         except Exception as e:
-            print(f"[v0] Error getting PCI devices: {e}")
+            # print(f"[v0] Error getting PCI devices: {e}")
+            pass
         
         # Sensors (Temperature and Fans)
         try:
@@ -3627,7 +3912,8 @@ def get_hardware_info():
                                 'critical': entry.critical if entry.critical else 0
                             })
                     
-
+                    # print(f"[v0] Temperature sensors: {len(hardware_data['sensors']['temperatures'])} found")
+                    pass
             
             try:
                 result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
@@ -3668,14 +3954,18 @@ def get_hardware_info():
                                         'unit': 'RPM',
                                         'adapter': current_adapter
                                     })
-
+                                    # print(f"[v0] Fan sensor: {identified_name} ({sensor_name}) = {fan_speed} RPM")
+                                    pass
                     
                     hardware_data['sensors']['fans'] = fans
-
+                    # print(f"[v0] Found {len(fans)} fan sensor(s)")
+                    pass
             except Exception as e:
-                print(f"[v0] Error getting fan info: {e}")
+                # print(f"[v0] Error getting fan info: {e}")
+                pass
         except Exception as e:
-            print(f"[v0] Error getting psutil sensors: {e}")
+            # print(f"[v0] Error getting psutil sensors: {e}")
+            pass
         
         # Power Supply / UPS
         try:
@@ -3703,11 +3993,14 @@ def get_hardware_info():
                 
                 if ups_info:
                     hardware_data['power'] = ups_info
-
+                    # print(f"[v0] UPS found: {ups_info.get('model', 'Unknown')}")
+                    pass
         except FileNotFoundError:
-            print("[v0] apcaccess not found - no UPS monitoring")
+            # print("[v0] apcaccess not found - no UPS monitoring")
+            pass
         except Exception as e:
-            print(f"[v0] Error getting UPS info: {e}")
+            # print(f"[v0] Error getting UPS info: {e}")
+            pass
         
         temp_info = get_temperature_info()
         hardware_data['sensors']['temperatures'] = temp_info['temperatures']
@@ -3738,7 +4031,8 @@ def get_hardware_info():
         return hardware_data
         
     except Exception as e:
-        print(f"[v0] Error in get_hardware_info: {e}")
+        # print(f"[v0] Error in get_hardware_info: {e}")
+        pass
         import traceback
         traceback.print_exc()
         return {}
@@ -3796,7 +4090,8 @@ def api_system():
             'available_updates': available_updates
         })
     except Exception as e:
-        print(f"Error getting system info: {e}")
+        # print(f"Error getting system info: {e}")
+        pass
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/storage', methods=['GET'])
@@ -3888,7 +4183,8 @@ def api_network_summary():
             }
         })
     except Exception as e:
-        print(f"[v0] Error in api_network_summary: {e}")
+        # print(f"[v0] Error in api_network_summary: {e}")
+        pass
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/network/<interface_name>/metrics', methods=['GET'])
@@ -3902,7 +4198,8 @@ def api_network_interface_metrics(interface_name):
         # Validate timeframe
         valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
         if timeframe not in valid_timeframes:
-            print(f"[v0] ERROR: Invalid timeframe: {timeframe}")
+            # print(f"[v0] ERROR: Invalid timeframe: {timeframe}")
+            pass
             return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
         
         # Get local node name
@@ -3936,7 +4233,8 @@ def api_network_interface_metrics(interface_name):
                         rrd_data.append(filtered_point)
 
                 else:
-                    print(f"[v0] ERROR: Failed to get RRD data for VM/LXC")
+                    # print(f"[v0] ERROR: Failed to get RRD data for VM/LXC")
+                    pass
         else:
             # For physical/bridge interfaces, get data from node RRD
 
@@ -3956,7 +4254,8 @@ def api_network_interface_metrics(interface_name):
                     rrd_data.append(filtered_point)
 
             else:
-                print(f"[v0] ERROR: Failed to get RRD data for node")
+                # print(f"[v0] ERROR: Failed to get RRD data for node")
+                pass
         
 
         return jsonify({
@@ -3989,7 +4288,8 @@ def api_vm_metrics(vmid):
         # Validate timeframe
         valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
         if timeframe not in valid_timeframes:
-            print(f"[v0] ERROR: Invalid timeframe: {timeframe}")
+            # print(f"[v0] ERROR: Invalid timeframe: {timeframe}")
+            pass
             return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
         
         # Get local node name
@@ -4011,13 +4311,16 @@ def api_vm_metrics(vmid):
                 vm_type = 'lxc'
 
             else:
-                print(f"[v0] ERROR: VM/LXC {vmid} not found")
+                # print(f"[v0] ERROR: VM/LXC {vmid} not found")
+                pass
                 return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
         else:
-            print(f"[v0] Found as QEMU")
+            # print(f"[v0] Found as QEMU")
+            pass
         
         # Get RRD data
-
+        # print(f"[v0] Fetching RRD data for {vm_type} {vmid} with timeframe {timeframe}...")
+        pass
         rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/{vm_type}/{vmid}/rrddata', 
                                     '--timeframe', timeframe, '--output-format', 'json'],
                                    capture_output=True, text=True, timeout=10)
@@ -4051,12 +4354,14 @@ def api_node_metrics():
         # Validate timeframe
         valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
         if timeframe not in valid_timeframes:
-            print(f"[v0] ERROR: Invalid timeframe: {timeframe}")
+            # print(f"[v0] ERROR: Invalid timeframe: {timeframe}")
+            pass
             return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
         
         # Get local node name
         local_node = socket.gethostname()
-
+        # print(f"[v0] Local node: {local_node}")
+        pass
         
         # Get RRD data for the node
 
@@ -4094,9 +4399,11 @@ def api_logs():
             try:
                 days = int(since_days)
                 cmd = ['journalctl', '--since', f'{days} days ago', '--output', 'json', '--no-pager']
-
+                # print(f"[API] Filtering logs since {days} days ago (no limit)")
+                pass
             except ValueError:
-                print(f"[API] Invalid since_days value: {since_days}")
+                # print(f"[API] Invalid since_days value: {since_days}")
+                pass
                 cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
         else:
             cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
@@ -4148,7 +4455,8 @@ def api_logs():
                 'total': 0
             })
     except Exception as e:
-        print(f"Error getting logs: {e}")
+        # print(f"Error getting logs: {e}")
+        pass
         return jsonify({
             'error': f'Unable to access system logs: {str(e)}',
             'logs': [],
@@ -4209,7 +4517,8 @@ def api_logs_download():
             return jsonify({'error': 'Failed to generate log file'}), 500
             
     except Exception as e:
-        print(f"Error downloading logs: {e}")
+        # print(f"Error downloading logs: {e}")
+        pass
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/notifications', methods=['GET'])
@@ -4265,7 +4574,8 @@ def api_notifications():
                         except (json.JSONDecodeError, ValueError):
                             continue
         except Exception as e:
-            print(f"Error reading notification logs: {e}")
+            # print(f"Error reading notification logs: {e}")
+            pass
         
         # 2. Try to read Proxmox notification configuration
         try:
@@ -4284,7 +4594,8 @@ def api_notifications():
                                 'source': 'config'
                             })
         except Exception as e:
-            print(f"Error reading notification config: {e}")
+            # print(f"Error reading notification config: {e}")
+            pass
         
         # 3. Get backup notifications from task log
         try:
@@ -4306,7 +4617,8 @@ def api_notifications():
                             'source': 'task-log'
                         })
         except Exception as e:
-            print(f"Error reading task notifications: {e}")
+            # print(f"Error reading task notifications: {e}")
+            pass
         
         # Sort by timestamp (newest first)
         notifications.sort(key=lambda x: x['timestamp'], reverse=True)
@@ -4317,7 +4629,8 @@ def api_notifications():
         })
         
     except Exception as e:
-        print(f"Error getting notifications: {e}")
+        # print(f"Error getting notifications: {e}")
+        pass
         return jsonify({
             'error': str(e),
             'notifications': [],
@@ -4375,7 +4688,8 @@ def api_notifications_download():
             return jsonify({'error': 'Failed to generate log file'}), 500
             
     except Exception as e:
-        print(f"Error downloading logs: {e}")
+        # print(f"Error downloading logs: {e}")
+        pass
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/backups', methods=['GET'])
@@ -4442,10 +4756,12 @@ def api_backups():
                                             'timestamp': ctime
                                         })
                         except Exception as e:
-                            print(f"Error getting content for storage {storage_id}: {e}")
+                            # print(f"Error getting content for storage {storage_id}: {e}")
+                            pass
                             continue
         except Exception as e:
-            print(f"Error getting storage list: {e}")
+            # print(f"Error getting storage list: {e}")
+            pass
         
         # Sort by creation time (newest first)
         backups.sort(key=lambda x: x['timestamp'], reverse=True)
@@ -4456,7 +4772,8 @@ def api_backups():
         })
         
     except Exception as e:
-        print(f"Error getting backups: {e}")
+        # print(f"Error getting backups: {e}")
+        pass
         return jsonify({
             'error': str(e),
             'backups': [],
@@ -4522,7 +4839,8 @@ def api_events():
                         'duration': duration
                     })
         except Exception as e:
-            print(f"Error getting events: {e}")
+            # print(f"Error getting events: {e}")
+            pass
         
         return jsonify({
             'events': events,
@@ -4530,7 +4848,8 @@ def api_events():
         })
         
     except Exception as e:
-        print(f"Error getting events: {e}")
+        # print(f"Error getting events: {e}")
+        pass
         return jsonify({
             'error': str(e),
             'events': [],
@@ -4541,17 +4860,20 @@ def api_events():
 def get_task_log(upid):
     """Get complete task log from Proxmox using UPID"""
     try:
-        print(f"[v0] Getting task log for UPID: {upid}")
+        # print(f"[v0] Getting task log for UPID: {upid}")
+        pass
         
         # Proxmox stores files without trailing :: but API may include them
         upid_clean = upid.rstrip(':')
-        print(f"[v0] Cleaned UPID: {upid_clean}")
+        # print(f"[v0] Cleaned UPID: {upid_clean}")
+        pass
         
         # Parse UPID to extract node name and calculate index
         # UPID format: UPID:node:pid:pstart:starttime:type:id:user:
         parts = upid_clean.split(':')
         if len(parts) < 5:
-            print(f"[v0] Invalid UPID format: {upid_clean}")
+            # print(f"[v0] Invalid UPID format: {upid_clean}")
+            pass
             return jsonify({'error': 'Invalid UPID format'}), 400
         
         node = parts[1]
@@ -4560,43 +4882,51 @@ def get_task_log(upid):
         # Calculate index (last character of starttime in hex, lowercase)
         index = starttime[-1].lower()
         
-        print(f"[v0] Extracted node: {node}, starttime: {starttime}, index: {index}")
+        # print(f"[v0] Extracted node: {node}, starttime: {starttime}, index: {index}")
+        pass
         
         # Try with cleaned UPID (no trailing colons)
         log_file_path = f"/var/log/pve/tasks/{index}/{upid_clean}"
-        print(f"[v0] Trying log file: {log_file_path}")
+        # print(f"[v0] Trying log file: {log_file_path}")
+        pass
         
         if os.path.exists(log_file_path):
             with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 log_text = f.read()
-            print(f"[v0] Successfully read {len(log_text)} bytes from log file")
+            # print(f"[v0] Successfully read {len(log_text)} bytes from log file")
+            pass
             return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
         
         # Try with single trailing colon
         log_file_path_single = f"/var/log/pve/tasks/{index}/{upid_clean}:"
-        print(f"[v0] Trying alternative path with single colon: {log_file_path_single}")
+        # print(f"[v0] Trying alternative path with single colon: {log_file_path_single}")
+        pass
         
         if os.path.exists(log_file_path_single):
             with open(log_file_path_single, 'r', encoding='utf-8', errors='ignore') as f:
                 log_text = f.read()
-            print(f"[v0] Successfully read {len(log_text)} bytes from alternative log file")
+            # print(f"[v0] Successfully read {len(log_text)} bytes from alternative log file")
+            pass
             return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
         
         # Try with uppercase index
         log_file_path_upper = f"/var/log/pve/tasks/{index.upper()}/{upid_clean}"
-        print(f"[v0] Trying uppercase index path: {log_file_path_upper}")
+        # print(f"[v0] Trying uppercase index path: {log_file_path_upper}")
+        pass
         
         if os.path.exists(log_file_path_upper):
             with open(log_file_path_upper, 'r', encoding='utf-8', errors='ignore') as f:
                 log_text = f.read()
-            print(f"[v0] Successfully read {len(log_text)} bytes from uppercase index log file")
+            # print(f"[v0] Successfully read {len(log_text)} bytes from uppercase index log file")
+            pass
             return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
         
         # List available files in the directory for debugging
         tasks_dir = f"/var/log/pve/tasks/{index}"
         if os.path.exists(tasks_dir):
             available_files = os.listdir(tasks_dir)
-            print(f"[v0] Available files in {tasks_dir}: {available_files[:10]}")  # Show first 10
+            # print(f"[v0] Available files in {tasks_dir}: {available_files[:10]}")  # Show first 10
+            pass
             
             upid_prefix = ':'.join(parts[:5])  # Get first 5 parts of UPID
             for filename in available_files:
@@ -4605,16 +4935,20 @@ def get_task_log(upid):
 
                     with open(matched_file, 'r', encoding='utf-8', errors='ignore') as f:
                         log_text = f.read()
-                    print(f"[v0] Successfully read {len(log_text)} bytes from matched file")
+                    # print(f"[v0] Successfully read {len(log_text)} bytes from matched file")
+                    pass
                     return log_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
         else:
-            print(f"[v0] Tasks directory does not exist: {tasks_dir}")
+            # print(f"[v0] Tasks directory does not exist: {tasks_dir}")
+            pass
         
-        print(f"[v0] Log file not found after trying all variations")
+        # print(f"[v0] Log file not found after trying all variations")
+        pass
         return jsonify({'error': 'Log file not found', 'tried_paths': [log_file_path, log_file_path_single, log_file_path_upper]}), 404
             
     except Exception as e:
-        print(f"[v0] Error fetching task log for UPID {upid}: {type(e).__name__}: {e}")
+        # print(f"[v0] Error fetching task log for UPID {upid}: {type(e).__name__}: {e}")
+        pass
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -4874,13 +5208,15 @@ def api_prometheus():
                     metrics.append(f'# TYPE proxmox_ups_input_voltage_volts gauge')
                     metrics.append(f'proxmox_ups_input_voltage_volts{{node="{node}",ups="{ups_name}"}} {ups["input_voltage"]} {timestamp}')
         except Exception as e:
-            print(f"[v0] Error getting hardware metrics for Prometheus: {e}")
+            # print(f"[v0] Error getting hardware metrics for Prometheus: {e}")
+            pass
         
         # Return metrics in Prometheus format
         return '\n'.join(metrics) + '\n', 200, {'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'}
         
     except Exception as e:
-        print(f"Error generating Prometheus metrics: {e}")
+        # print(f"Error generating Prometheus metrics: {e}")
+        pass
         import traceback
         traceback.print_exc()
         return f'# Error generating metrics: {str(e)}\n', 500, {'Content-Type': 'text/plain; charset=utf-8'}
@@ -4928,7 +5264,8 @@ def api_system_info():
         
         return jsonify(response)
     except Exception as e:
-        print(f"Error getting system info: {e}")
+        # print(f"Error getting system info: {e}")
+        pass
         return jsonify({
             'error': f'Unable to access system information: {str(e)}',
             'hostname': socket.gethostname(),
@@ -5001,7 +5338,8 @@ def api_hardware():
         
         return jsonify(formatted_data)
     except Exception as e:
-        print(f"[v0] Error in api_hardware: {e}")
+        # print(f"[v0] Error in api_hardware: {e}")
+        pass
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -5010,7 +5348,8 @@ def api_hardware():
 def api_gpu_realtime(slot):
     """Get real-time GPU monitoring data for a specific GPU"""
     try:
-        print(f"[v0] /api/gpu/{slot}/realtime - Getting GPU info...")
+        # print(f"[v0] /api/gpu/{slot}/realtime - Getting GPU info...")
+        pass
         
         gpus = get_gpu_info()
         
@@ -5022,10 +5361,12 @@ def api_gpu_realtime(slot):
                 break
         
         if not gpu:
-            print(f"[v0] GPU with slot matching '{slot}' not found")
+            # print(f"[v0] GPU with slot matching '{slot}' not found")
+            pass
             return jsonify({'error': 'GPU not found'}), 404
         
-        print(f"[v0] Getting detailed monitoring data for GPU at slot {gpu.get('slot')}...")
+        # print(f"[v0] Getting detailed monitoring data for GPU at slot {gpu.get('slot')}...")
+        pass
         detailed_info = get_detailed_gpu_info(gpu)
         gpu.update(detailed_info)
         
@@ -5066,7 +5407,8 @@ def api_gpu_realtime(slot):
         
         return jsonify(realtime_data)
     except Exception as e:
-        print(f"[v0] Error getting real-time GPU data: {e}")
+        # print(f"[v0] Error getting real-time GPU data: {e}")
+        pass
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -5133,7 +5475,8 @@ def api_vm_details(vmid):
         else:
             return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
-        print(f"Error getting VM details: {e}")
+        # print(f"Error getting VM details: {e}")
+        pass
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms/<int:vmid>/logs', methods=['GET'])
@@ -5181,7 +5524,8 @@ def api_vm_logs(vmid):
         else:
             return jsonify({'error': 'Failed to get VM logs'}), 500
     except Exception as e:
-        print(f"Error getting VM logs: {e}")
+        # print(f"Error getting VM logs: {e}")
+        pass
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms/<int:vmid>/control', methods=['POST'])
@@ -5232,7 +5576,8 @@ def api_vm_control(vmid):
         else:
             return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
-        print(f"Error controlling VM: {e}")
+        # print(f"Error controlling VM: {e}")
+        pass
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms/<int:vmid>/config', methods=['PUT'])
@@ -5279,7 +5624,8 @@ def api_vm_config_update(vmid):
         else:
             return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
-        print(f"Error updating VM configuration: {e}")
+        # print(f"Error updating VM configuration: {e}")
+        pass
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
@@ -5297,6 +5643,7 @@ if __name__ == '__main__':
     cli.show_server_banner = lambda *x: None
     
     # Print only essential information
-    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics")
+    # print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics")
+    
     
     app.run(host='0.0.0.0', port=8008, debug=False)
