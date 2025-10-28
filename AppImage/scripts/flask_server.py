@@ -721,7 +721,7 @@ def get_storage_info():
             except FileNotFoundError:
                 print("[v0] Note: ZFS not installed")
             except Exception as e:
-
+                print(f"[v0] Note: ZFS not available or no pools: {e}")
             
             storage_data['used'] = round(total_used / (1024**3), 1)
             storage_data['available'] = round(total_available / (1024**3), 1)
