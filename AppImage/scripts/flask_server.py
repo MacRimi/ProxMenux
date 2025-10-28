@@ -961,7 +961,7 @@ def get_smart_data(disk_name):
 
                     
                     if smart_data['model'] == 'Unknown' or smart_data['serial'] == 'Unknown' or smart_data['temperature'] == 0:
-
+                        print(f"[v0] Parsing text output (model={smart_data['model']}, serial={smart_data['serial']}, temp={smart_data['temperature']})...")
                         output = stdout
                         
                         # Get basic info
