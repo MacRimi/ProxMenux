@@ -575,9 +575,9 @@ def get_storage_info():
                         total_disk_size_bytes += disk_size_bytes
                         
                         # Get SMART data for this disk
-                        print(f"[v0] Getting SMART data for {disk_name}...")
+
                         smart_data = get_smart_data(disk_name)
-                        print(f"[v0] SMART data for {disk_name}: {smart_data}")
+
                         
                         disk_size_kb = disk_size_bytes / 1024
                         
@@ -726,7 +726,7 @@ def get_storage_info():
             storage_data['used'] = round(total_used / (1024**3), 1)
             storage_data['available'] = round(total_available / (1024**3), 1)
             
-            print(f"[v0] Total storage used: {storage_data['used']}GB (including ZFS pools)")
+
             
         except Exception as e:
             print(f"Error getting partition info: {e}")
@@ -798,18 +798,18 @@ def get_smart_data(disk_name):
         
         process = None # Initialize process to None
         for cmd_index, cmd in enumerate(commands_to_try):
-            print(f"[v0] Attempt {cmd_index + 1}/{len(commands_to_try)}: Running command: {' '.join(cmd)}")
+
             try:
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Use communicate with a timeout to avoid hanging if the process doesn't exit
                 stdout, stderr = process.communicate(timeout=15)
                 result_code = process.returncode
                 
-                print(f"[v0] Command return code: {result_code}")
+
                 
                 if stderr:
                     stderr_preview = stderr[:200].replace('\n', ' ')
-                    print(f"[v0] stderr: {stderr_preview}")
+
                 
                 has_output = stdout and len(stdout.strip()) > 50
                 
@@ -954,7 +954,7 @@ def get_smart_data(disk_name):
                             
                             # If we got good data, break out of the loop
                             if smart_data['model'] != 'Unknown' and smart_data['serial'] != 'Unknown':
-                                print(f"[v0] Successfully extracted complete data from JSON (attempt {cmd_index + 1})")
+
                                 break
                                 
                         except json.JSONDecodeError as e:
@@ -1538,7 +1538,7 @@ def get_network_info():
             interface_type = get_interface_type(interface_name)
             
             if interface_type == 'skip':
-                print(f"[v0] Skipping interface: {interface_name} (type: {interface_type})")
+
                 continue
             
             stats = net_if_stats.get(interface_name)
@@ -1645,9 +1645,7 @@ def get_network_info():
         network_data['vm_lxc_active_count'] = vm_lxc_active_count
         network_data['vm_lxc_total_count'] = vm_lxc_total_count
         
-        print(f"[v0] Physical interfaces: {physical_active_count} active out of {physical_total_count} total")
-        print(f"[v0] Bridge interfaces: {bridge_active_count} active out of {bridge_total_count} total")
-        print(f"[v0] VM/LXC interfaces: {vm_lxc_active_count} active out of {vm_lxc_total_count} total")
+
         
         # Get network I/O statistics (global)
         net_io = psutil.net_io_counters()
@@ -1704,7 +1702,7 @@ def get_proxmox_vms():
         
         try:
             local_node = socket.gethostname()
-            print(f"[v0] Local node detected: {local_node}")
+
             
             result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
                                   capture_output=True, text=True, timeout=10)
@@ -1782,11 +1780,11 @@ def get_ipmi_fans():
                                 'speed': value,
                                 'unit': unit
                             })
-                            print(f"[v0] IPMI Fan: {name} = {value} {unit}")
+
                         except ValueError:
                             continue
         
-        print(f"[v0] Found {len(fans)} IPMI fans")
+
     except FileNotFoundError:
         print("[v0] ipmitool not found")
     except Exception as e:
@@ -3148,7 +3146,7 @@ def get_gpu_info():
                         # gpu.update(detailed_info)             # It will be called later in api_gpu_realtime
                         
                         gpus.append(gpu)
-                        print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+
 
     except Exception as e:
         print(f"[v0] Error detecting GPUs from lspci: {e}")
@@ -3267,7 +3265,7 @@ def get_hardware_info():
                             cpu_info['l3_cache'] = value
                 
                 hardware_data['cpu'] = cpu_info
-                print(f"[v0] CPU: {cpu_info.get('model', 'Unknown')}")
+
         except Exception as e:
             print(f"[v0] Error getting CPU info: {e}")
         
@@ -3288,7 +3286,7 @@ def get_hardware_info():
                         mb_info['serial'] = line.split(':', 1)[1].strip()
                 
                 hardware_data['motherboard'] = mb_info
-                print(f"[v0] Motherboard: {mb_info.get('manufacturer', 'Unknown')} {mb_info.get('model', 'Unknown')}")
+
         except Exception as e:
             print(f"[v0] Error getting motherboard info: {e}")
         
@@ -3307,7 +3305,7 @@ def get_hardware_info():
                         bios_info['date'] = line.split(':', 1)[1].strip()
                 
                 hardware_data['motherboard']['bios'] = bios_info
-                print(f"[v0] BIOS: {bios_info.get('vendor', 'Unknown')} {bios_info.get('version', 'Unknown')}")
+
         except Exception as e:
             print(f"[v0] Error getting BIOS info: {e}")
         
@@ -3345,11 +3343,11 @@ def get_hardware_info():
                                         size_kb = value  # Assume KB if no unit
                                     
                                     current_module['size'] = size_kb
-                                    print(f"[v0] Parsed memory size: {size_str} -> {size_kb} KB")
+
                                 else:
                                     # Handle cases where unit might be missing but value is present
                                     current_module['size'] = float(size_str) if size_str else 0
-                                    print(f"[v0] Parsed memory size (no unit): {size_str} -> {current_module['size']} KB")
+
                             except (ValueError, IndexError) as e:
                                 print(f"[v0] Error parsing memory size '{size_str}': {e}")
                                 current_module['size'] = 0 # Default to 0 if parsing fails
@@ -3370,7 +3368,7 @@ def get_hardware_info():
                 if current_module and current_module.get('size') and current_module.get('size') != 'No Module Installed' and current_module.get('size') != 0:
                     hardware_data['memory_modules'].append(current_module)
                 
-                print(f"[v0] Memory modules: {len(hardware_data['memory_modules'])} installed")
+
         except Exception as e:
             print(f"[v0] Error getting memory info: {e}")
         
@@ -3391,7 +3389,7 @@ def get_hardware_info():
                             'type': device.get('type', 'disk')
                         })
                 hardware_data['storage_devices'] = storage_devices
-                print(f"[v0] Storage devices: {len(storage_devices)} found")
+
         except Exception as e:
             print(f"[v0] Error getting storage info: {e}")
         
@@ -3485,15 +3483,15 @@ def get_hardware_info():
                                     'vendor': vendor,
                                     'slot': slot
                                 })
-                                print(f"[v0] Found GPU: {gpu_name} ({vendor}) at slot {slot}")
+
             
-            print(f"[v0] Graphics cards: {len(hardware_data['graphics_cards'])} found")
+
         except Exception as e:
             print(f"[v0] Error getting graphics cards: {e}")
         
         # PCI Devices
         try:
-            print("[v0] Getting PCI devices with driver information...")
+
             # First get basic device info with lspci -vmm
             result = subprocess.run(['lspci', '-vmm'], capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
@@ -3597,7 +3595,7 @@ def get_hardware_info():
                                         device['kernel_module'] = current_module
                                     break
             
-            print(f"[v0] Total PCI devices found: {len(hardware_data['pci_devices'])}")
+
         except Exception as e:
             print(f"[v0] Error getting PCI devices: {e}")
         
@@ -3619,7 +3617,7 @@ def get_hardware_info():
                                 'critical': entry.critical if entry.critical else 0
                             })
                     
-                    print(f"[v0] Temperature sensors: {len(hardware_data['sensors']['temperatures'])} found")
+
             
             try:
                 result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
@@ -3660,10 +3658,10 @@ def get_hardware_info():
                                         'unit': 'RPM',
                                         'adapter': current_adapter
                                     })
-                                    print(f"[v0] Fan sensor: {identified_name} ({sensor_name}) = {fan_speed} RPM")
+
                     
                     hardware_data['sensors']['fans'] = fans
-                    print(f"[v0] Found {len(fans)} fan sensor(s)")
+
             except Exception as e:
                 print(f"[v0] Error getting fan info: {e}")
         except Exception as e:
@@ -3695,7 +3693,7 @@ def get_hardware_info():
                 
                 if ups_info:
                     hardware_data['power'] = ups_info
-                    print(f"[v0] UPS found: {ups_info.get('model', 'Unknown')}")
+
         except FileNotFoundError:
             print("[v0] apcaccess not found - no UPS monitoring")
         except Exception as e:
@@ -4009,7 +4007,7 @@ def api_vm_metrics(vmid):
             print(f"[v0] Found as QEMU")
         
         # Get RRD data
-        print(f"[v0] Fetching RRD data for {vm_type} {vmid} with timeframe {timeframe}...")
+
         rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/{vm_type}/{vmid}/rrddata', 
                                     '--timeframe', timeframe, '--output-format', 'json'],
                                    capture_output=True, text=True, timeout=10)
@@ -4048,7 +4046,7 @@ def api_node_metrics():
         
         # Get local node name
         local_node = socket.gethostname()
-        print(f"[v0] Local node: {local_node}")
+
         
         # Get RRD data for the node
 
@@ -4086,7 +4084,7 @@ def api_logs():
             try:
                 days = int(since_days)
                 cmd = ['journalctl', '--since', f'{days} days ago', '--output', 'json', '--no-pager']
-                print(f"[API] Filtering logs since {days} days ago (no limit)")
+
             except ValueError:
                 print(f"[API] Invalid since_days value: {since_days}")
                 cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
