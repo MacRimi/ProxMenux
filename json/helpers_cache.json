@@ -1020,6 +1020,18 @@
     }
   },
   {
+    "name": "Dispatcharr",
+    "slug": "dispatcharr",
+    "desc": "Dispatcharr is an open-source powerhouse for managing IPTV streams and EPG data with elegance and control. Born from necessity and built with passion, it started as a personal project by OkinawaBoss and evolved with contributions from legends like dekzter, SergeantPanda and Bucatini.",
+    "script": "ct/dispatcharr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/dispatcharr.sh",
+    "categories": [
+      14
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Docker",
     "slug": "docker-vm",
     "desc": "Docker is an open-source project for automating the deployment of applications as portable, self-sufficient containers. This Template includes Docker Engine and Docker Compose Plugin.",
