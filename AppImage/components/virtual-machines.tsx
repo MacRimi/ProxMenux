@@ -1237,7 +1237,7 @@ export function VirtualMachines() {
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                              <div className="grid grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
                                 {vmDetails.config.cores && (
                                   <div>
                                     <div className="text-xs text-muted-foreground mb-1">CPU Cores</div>
@@ -1259,7 +1259,7 @@ export function VirtualMachines() {
                               </div>
 
                               {selectedVM?.type === "lxc" && vmDetails?.lxc_ip_info && (
-                                <div className="mt-6 pt-6 border-t border-border">
+                                <div className="mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-border">
                                   <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                                     IP Addresses
                                   </h4>
