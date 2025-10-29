@@ -762,15 +762,18 @@ export function SystemLogs() {
         <CardContent className="max-w-full overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="hidden md:grid w-full grid-cols-3">
-              <TabsTrigger value="logs">
+              <TabsTrigger value="logs" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
                 <Terminal className="h-4 w-4 mr-2" />
                 Logs
               </TabsTrigger>
-              <TabsTrigger value="backups">
+              <TabsTrigger value="backups" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
                 <Database className="h-4 w-4 mr-2" />
                 Backups
               </TabsTrigger>
-              <TabsTrigger value="notifications">
+              <TabsTrigger
+                value="notifications"
+                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+              >
                 <Bell className="h-4 w-4 mr-2" />
                 Notifications
               </TabsTrigger>
@@ -791,8 +794,12 @@ export function SystemLogs() {
                   </SheetHeader>
                   <div className="mt-6 space-y-2">
                     <Button
-                      variant={activeTab === "logs" ? "secondary" : "ghost"}
-                      className="w-full justify-start gap-2"
+                      variant="ghost"
+                      className={`w-full justify-start gap-2 ${
+                        activeTab === "logs"
+                          ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                          : ""
+                      }`}
                       onClick={() => {
                         setActiveTab("logs")
                         setIsMobileMenuOpen(false)
@@ -802,8 +809,12 @@ export function SystemLogs() {
                       Logs
                     </Button>
                     <Button
-                      variant={activeTab === "backups" ? "secondary" : "ghost"}
-                      className="w-full justify-start gap-2"
+                      variant="ghost"
+                      className={`w-full justify-start gap-2 ${
+                        activeTab === "backups"
+                          ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                          : ""
+                      }`}
                       onClick={() => {
                         setActiveTab("backups")
                         setIsMobileMenuOpen(false)
@@ -813,8 +824,12 @@ export function SystemLogs() {
                       Backups
                     </Button>
                     <Button
-                      variant={activeTab === "notifications" ? "secondary" : "ghost"}
-                      className="w-full justify-start gap-2"
+                      variant="ghost"
+                      className={`w-full justify-start gap-2 ${
+                        activeTab === "notifications"
+                          ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                          : ""
+                      }`}
                       onClick={() => {
                         setActiveTab("notifications")
                         setIsMobileMenuOpen(false)
