@@ -5423,14 +5423,11 @@ def api_hardware():
             'gpus': hardware_info.get('gpus', [])
         }
         
-
-
-
-
-
-
-
-
+        # Add UPS specific fields if they exist
+        if formatted_data['ups']:
+            formatted_data['ups']['battery_charge_raw'] = formatted_data['ups'].get('battery_charge_raw')
+            formatted_data['ups']['load_percent_raw'] = formatted_data['ups'].get('load_percent_raw')
+            formatted_data['ups']['time_left_seconds'] = formatted_data['ups'].get('time_left_seconds')
         
         return jsonify(formatted_data)
     except Exception as e:
@@ -5492,14 +5489,6 @@ def api_gpu_realtime(slot):
             'engine_decoder': gpu.get('engine_decoder'),
             'driver_version': gpu.get('driver_version') # Added driver_version
         }
-        
-
-
-
-
-
-
-
         
         return jsonify(realtime_data)
     except Exception as e:
@@ -5564,6 +5553,11 @@ def api_vm_details(vmid):
                     if vm_type == 'lxc':
                         hardware_info = parse_lxc_hardware_config(vmid, node)
                         response_data['hardware_info'] = hardware_info
+                        
+                        if resource.get('status') == 'running':
+                            lxc_ip = get_lxc_ip_from_lxc_info(vmid)
+                            if lxc_ip:
+                                response_data['lxc_ip'] = lxc_ip
                     
                     # Add OS info if available
                     if os_info:
@@ -5724,8 +5718,7 @@ def api_vm_config_update(vmid):
         else:
             return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
-        # print(f"Error updating VM configuration: {e}")
-        pass
+        print(f"Error updating VM configuration: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
@@ -5743,6 +5736,6 @@ if __name__ == '__main__':
     cli.show_server_banner = lambda *x: None
     
     # Print only essential information
-    print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics")
+    # print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics")
     
     app.run(host='0.0.0.0', port=8008, debug=False)
