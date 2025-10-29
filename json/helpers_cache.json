@@ -2951,22 +2951,6 @@
     "type": "ct"
   },
   {
-    "name": "MySQL",
-    "slug": "mysql",
-    "desc": "MySQL is an open-source relational database management system (RDBMS) that uses SQL for managing and manipulating data. It is known for its scalability, reliability, and high performance, making it suitable for small to large-scale applications. Key features include support for ACID transactions, data replication for high availability, and compatibility with various programming languages like Python, PHP, and Java.",
-    "script": "ct/mysql.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/mysql.sh",
-    "categories": [
-      8
-    ],
-    "notes": [
-      "Database credentials: `cat mysql.creds`",
-      "With an option to install the MySQL 8.4 LTS release instead of MySQL 8.0",
-      "If installed, access phpMyAdmin at `http://<LXC_IP>/phpMyAdmin`, case sensitive."
-    ],
-    "type": "ct"
-  },
-  {
     "name": "n8n",
     "slug": "n8n",
     "desc": "n8n is a workflow automation tool that enables users to automate various tasks and processes by connecting various data sources, systems, and services. It provides a visual interface for building workflows, allowing users to easily define and automate complex sequences of actions, such as data processing, conditional branching, and API calls. n8n supports a wide range of integrations, making it a versatile tool for automating a variety of use cases, from simple data processing workflows to complex business processes. With its extendable architecture, n8n is designed to be easily customizable and can be adapted to meet the specific needs of different users and industries.",
