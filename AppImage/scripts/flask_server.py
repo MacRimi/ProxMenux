@@ -5445,11 +5445,7 @@ def api_hardware():
             'gpus': hardware_info.get('gpus', [])
         }
         
-        # Add UPS specific fields if they exist
-        if formatted_data['ups']:
-            formatted_data['ups']['battery_charge_raw'] = formatted_data['ups'].get('battery_charge_raw')
-            formatted_data['ups']['load_percent_raw'] = formatted_data['ups'].get('load_percent_raw')
-            formatted_data['ups']['time_left_seconds'] = formatted_data['ups'].get('time_left_seconds')
+
         
         return jsonify(formatted_data)
     except Exception as e:
