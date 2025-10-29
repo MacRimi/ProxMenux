@@ -853,8 +853,11 @@ export function VirtualMachines() {
                           {typeBadge.label}
                         </Badge>
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-foreground truncate">{vm.name}</div>
-                          <div className="text-[10px] text-muted-foreground">ID: {vm.vmid}</div>
+                          <div className="font-semibold text-foreground truncate">
+                            {vm.name}
+                            <span className="hidden lg:inline text-sm text-muted-foreground ml-2">ID: {vm.vmid}</span>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground lg:hidden">ID: {vm.vmid}</div>
                         </div>
                         {lxcIP && (
                           <span className={`text-sm ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}>
@@ -1254,6 +1257,36 @@ export function VirtualMachines() {
                                   </div>
                                 )}
                               </div>
+
+                              {selectedVM?.type === "lxc" && vmDetails?.lxc_ip_info && (
+                                <div className="mt-6 pt-6 border-t border-border">
+                                  <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                    IP Addresses
+                                  </h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {/* Real IPs (green, without "Real" label) */}
+                                    {vmDetails.lxc_ip_info.real_ips.map((ip, index) => (
+                                      <Badge
+                                        key={`real-${index}`}
+                                        variant="outline"
+                                        className="bg-green-500/10 text-green-500 border-green-500/20"
+                                      >
+                                        {ip}
+                                      </Badge>
+                                    ))}
+                                    {/* Docker bridge IPs (yellow, with "Bridge" label) */}
+                                    {vmDetails.lxc_ip_info.docker_ips.map((ip, index) => (
+                                      <Badge
+                                        key={`docker-${index}`}
+                                        variant="outline"
+                                        className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                                      >
+                                        {ip} (Bridge)
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
 
                               {showNotes && (
                                 <div className="mt-6 pt-6 border-t border-border">
@@ -1701,21 +1734,6 @@ export function VirtualMachines() {
                                           </Badge>
                                         </div>
                                       )}
-                                      {vmDetails.config.unprivileged !== undefined && (
-                                        <div>
-                                          <div className="text-xs text-muted-foreground mb-1">Unprivileged</div>
-                                          <Badge
-                                            variant="outline"
-                                            className={
-                                              vmDetails.config.unprivileged
-                                                ? "bg-green-500/10 text-green-500 border-green-500/20"
-                                                : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                                            }
-                                          >
-                                            {vmDetails.config.unprivileged ? "Yes" : "No"}
-                                          </Badge>
-                                        </div>
-                                      )}
                                       {vmDetails.config.ostype && (
                                         <div>
                                           <div className="text-xs text-muted-foreground mb-1">OS Type</div>
@@ -1735,7 +1753,7 @@ export function VirtualMachines() {
                                         </div>
                                       )}
                                       {vmDetails.config.features && (
-                                        <div className="col-span-2 lg:col-span-3">
+                                        <div className="col-span-2 lg:grid-cols-3">
                                           <div className="text-xs text-muted-foreground mb-1">Features</div>
                                           <div className="font-medium text-foreground text-sm">
                                             {vmDetails.config.features}
@@ -1779,37 +1797,6 @@ export function VirtualMachines() {
                                       </div>
                                     </div>
                                   )}
-                                </div>
-                              )}
-
-                              {/* IPs Section */}
-                              {selectedVM?.type === "lxc" && vmDetails?.lxc_ip_info && (
-                                <div>
-                                  <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                    IP Addresses
-                                  </h4>
-                                  <div className="flex flex-wrap gap-2">
-                                    {/* Real IPs (green, without "Real" label) */}
-                                    {vmDetails.lxc_ip_info.real_ips.map((ip, index) => (
-                                      <Badge
-                                        key={`real-${index}`}
-                                        variant="outline"
-                                        className="bg-green-500/10 text-green-500 border-green-500/20"
-                                      >
-                                        {ip}
-                                      </Badge>
-                                    ))}
-                                    {/* Docker bridge IPs (yellow, with "Bridge" label) */}
-                                    {vmDetails.lxc_ip_info.docker_ips.map((ip, index) => (
-                                      <Badge
-                                        key={`docker-${index}`}
-                                        variant="outline"
-                                        className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                                      >
-                                        {ip} (Bridge)
-                                      </Badge>
-                                    ))}
-                                  </div>
                                 </div>
                               )}
                             </CardContent>
