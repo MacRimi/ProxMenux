@@ -225,11 +225,11 @@ export function ProxmoxDashboard() {
           <div className="container mx-auto">
             <div className="flex items-center space-x-2 text-red-500 mb-2">
               <XCircle className="h-5 w-5" />
-              <span className="font-medium">Flask Server Connection Failed</span>
+              <span className="font-medium">ProxMenux Server Connection Failed</span>
             </div>
             <div className="text-sm text-red-500/80 space-y-1 ml-7">
-              <p>• Check that the AppImage is running correctly</p>
-              <p>• The Flask server should start automatically on port 8008</p>
+              <p>• Check that the monitor.service is running correctly.</p>
+              <p>• The ProxMenux server should start automatically on port 8008</p>
               <p>
                 • Try accessing:{" "}
                 <a
