@@ -294,10 +294,10 @@ export function VirtualMachines() {
             const response = await fetch(`/api/vms/${lxc.vmid}`)
             if (response.ok) {
               const details = await response.json()
-              if (details.lxc_ip) {
-                configs[lxc.vmid] = details.lxc_ip
+              if (details.lxc_ip_info?.primary_ip) {
+                configs[lxc.vmid] = details.lxc_ip_info.primary_ip
               } else if (details.config) {
-                configs[lxc.vmid] = extractIPFromConfig(details.config)
+                configs[lxc.vmid] = extractIPFromConfig(details.config, details.lxc_ip_info)
               }
             }
           } catch (error) {
@@ -1251,16 +1251,6 @@ export function VirtualMachines() {
                                   <div>
                                     <div className="text-xs text-muted-foreground mb-1">Swap</div>
                                     <div className="font-semibold text-foreground">{vmDetails.config.swap} MB</div>
-                                  </div>
-                                )}
-                                {selectedVM.type === "lxc" && (
-                                  <div>
-                                    <div className="text-xs text-muted-foreground mb-1">IP Address</div>
-                                    <div
-                                      className={`font-semibold ${extractIPFromConfig(vmDetails.config, vmDetails.lxc_ip_info) === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
-                                    >
-                                      {extractIPFromConfig(vmDetails.config, vmDetails.lxc_ip_info)}
-                                    </div>
                                   </div>
                                 )}
                               </div>
