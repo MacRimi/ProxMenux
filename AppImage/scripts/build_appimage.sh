@@ -372,9 +372,9 @@ dl_pkg "nut-client.deb"      "nut-client"                       || true
 dl_pkg "libupsclient.deb"    "libupsclient6" "libupsclient5" "libupsclient4" || true
 
 
-dl_pkg "nvidia-smi.deb"      "nvidia-smi" "nvidia-utils" "nvidia-utils-535" "nvidia-utils-550" || true
-dl_pkg "intel-gpu-tools.deb" "intel-gpu-tools"                  || true
-dl_pkg "radeontop.deb"       "radeontop"                        || true
+#dl_pkg "nvidia-smi.deb"      "nvidia-smi" "nvidia-utils" "nvidia-utils-535" "nvidia-utils-550" || true
+#dl_pkg "intel-gpu-tools.deb" "intel-gpu-tools"                  || true
+#dl_pkg "radeontop.deb"       "radeontop"                        || true
 
 echo "📦 Extracting .deb packages into AppDir..."
 extracted_count=0
