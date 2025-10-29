@@ -385,7 +385,12 @@ export function ProxmoxDashboard() {
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <div className="md:hidden">
                 <SheetTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between bg-card border-border">
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-between border-border ${
+                      activeTab ? "bg-blue-500/10 text-blue-500" : "bg-card"
+                    }`}
+                  >
                     <span>{getActiveTabLabel()}</span>
                     <Menu className="h-4 w-4" />
                   </Button>

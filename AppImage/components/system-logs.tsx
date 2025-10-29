@@ -782,7 +782,14 @@ export function SystemLogs() {
             <div className="md:hidden mb-4">
               <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start gap-2 bg-transparent">
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-start gap-2 ${
+                      activeTab === "logs" || activeTab === "backups" || activeTab === "notifications"
+                        ? "bg-blue-500/10 text-blue-500"
+                        : "bg-transparent"
+                    }`}
+                  >
                     <Menu className="h-4 w-4" />
                     {getSectionIcon(activeTab)}
                     <span>{getSectionLabel(activeTab)}</span>
