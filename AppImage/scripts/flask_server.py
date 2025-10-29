@@ -2527,7 +2527,7 @@ def get_detailed_gpu_info(gpu):
                                         if 'clients' in json_data:
                                             client_count = len(json_data['clients'])
    
-                                            for client_id, client_data in json_data['clients']:
+                                            for client_id, client_data in json_data['clients'].items():
                                                 client_name = client_data.get('name', 'Unknown')
                                                 client_pid = client_data.get('pid', 'Unknown')
 
@@ -2609,7 +2609,7 @@ def get_detailed_gpu_info(gpu):
                         clients = best_json['clients']
                         processes = []
                         
-                        for client_id, client_data in clients:
+                        for client_id, client_data in clients.items():
                             process_info = {
                                 'name': client_data.get('name', 'Unknown'),
                                 'pid': client_data.get('pid', 'Unknown'),
@@ -3070,22 +3070,22 @@ def get_detailed_gpu_info(gpu):
                                         # print(f"[v0] Temperature: {detailed_info['temperature']}°C", flush=True)
                                         pass
                                         data_retrieved = True
-                            
-                            # Parse power draw (GFX Power or average_socket_power)
-                            if 'GFX Power' in sensors:
-                                gfx_power = sensors['GFX Power']
-                                if 'value' in gfx_power:
-                                    detailed_info['power_draw'] = f"{gfx_power['value']:.2f} W"
-                                    # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
-                                    pass
-                                    data_retrieved = True
-                            elif 'average_socket_power' in sensors:
-                                socket_power = sensors['average_socket_power']
-                                if 'value' in socket_power:
-                                    detailed_info['power_draw'] = f"{socket_power['value']:.2f} W"
-                                    # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
-                                    pass
-                                    data_retrieved = True
+                                
+                                # Parse power draw (GFX Power or average_socket_power)
+                                if 'GFX Power' in sensors:
+                                    gfx_power = sensors['GFX Power']
+                                    if 'value' in gfx_power:
+                                        detailed_info['power_draw'] = f"{gfx_power['value']:.2f} W"
+                                        # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
+                                        pass
+                                        data_retrieved = True
+                                elif 'average_socket_power' in sensors:
+                                    socket_power = sensors['average_socket_power']
+                                    if 'value' in socket_power:
+                                        detailed_info['power_draw'] = f"{socket_power['value']:.2f} W"
+                                        # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
+                                        pass
+                                        data_retrieved = True
                             
                             # Parse clocks (GFX_SCLK for graphics, GFX_MCLK for memory)
                             if 'Clocks' in device:
@@ -3102,7 +3102,7 @@ def get_detailed_gpu_info(gpu):
                                     mem_clock = clocks['GFX_MCLK']
                                     if 'value' in mem_clock:
                                         detailed_info['clock_memory'] = f"{mem_clock['value']} MHz"
-                                        # print(f"[v0] Memory Clock: {detailed_info['clock_memory']} MHz", flush=True)
+                                        # print(f"[v0] Memory Clock: {detailed_info['clock_memory']}", flush=True)
                                         pass
                                         data_retrieved = True
                             
@@ -3339,6 +3339,7 @@ def get_detailed_gpu_info(gpu):
                             else:
                                 # print(f"[v0] No fdinfo section found in device data", flush=True)
                                 pass
+                                detailed_info['processes'] = []
                             
                             if data_retrieved:
                                 detailed_info['has_monitoring_tool'] = True
@@ -5661,7 +5662,8 @@ def api_vm_logs(vmid):
         else:
             return jsonify({'error': 'Failed to get VM logs'}), 500
     except Exception as e:
-        print(f"Error getting VM logs: {e}")
+        # print(f"Error getting VM logs: {e}")
+        pass
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms/<int:vmid>/control', methods=['POST'])
@@ -5712,7 +5714,8 @@ def api_vm_control(vmid):
         else:
             return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
-        print(f"Error controlling VM: {e}")
+        # print(f"Error controlling VM: {e}")
+        pass
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms/<int:vmid>/config', methods=['PUT'])
@@ -5759,7 +5762,8 @@ def api_vm_config_update(vmid):
         else:
             return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
-        print(f"Error updating VM configuration: {e}")
+        # print(f"Error updating VM configuration: {e}")
+        pass
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
