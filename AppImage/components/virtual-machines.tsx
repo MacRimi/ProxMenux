@@ -859,12 +859,6 @@ export function VirtualMachines() {
                         {lxcIP && (
                           <span className={`text-sm ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}>
                             IP: {lxcIP}
-                            {/* Show +X more if there are multiple IPs */}
-                            {vmDetails?.lxc_ip_info && vmDetails.lxc_ip_info.all_ips.length > 1 && (
-                              <span className="text-muted-foreground ml-1">
-                                +{vmDetails.lxc_ip_info.all_ips.length - 1} more
-                              </span>
-                            )}
                           </span>
                         )}
                         <span className="text-sm text-muted-foreground ml-auto">Uptime: {formatUptime(vm.uptime)}</span>
@@ -1805,17 +1799,17 @@ export function VirtualMachines() {
                                     IP Addresses
                                   </h4>
                                   <div className="flex flex-wrap gap-2">
-                                    {/* Real IPs (green) */}
+                                    {/* Real IPs (green, without "Real" label) */}
                                     {vmDetails.lxc_ip_info.real_ips.map((ip, index) => (
                                       <Badge
                                         key={`real-${index}`}
                                         variant="outline"
                                         className="bg-green-500/10 text-green-500 border-green-500/20"
                                       >
-                                        {ip} (Real)
+                                        {ip}
                                       </Badge>
                                     ))}
-                                    {/* Docker bridge IPs (gray/yellow) */}
+                                    {/* Docker bridge IPs (yellow, with "Bridge" label) */}
                                     {vmDetails.lxc_ip_info.docker_ips.map((ip, index) => (
                                       <Badge
                                         key={`docker-${index}`}
