@@ -1614,11 +1614,23 @@ export default function Hardware() {
                 (device) => device.type === "disk" && !device.name.startsWith("zd") && !device.name.startsWith("loop"),
               )
               .map((device, index) => {
-                const getDiskTypeBadge = (diskName: string, rotationRate: number | undefined) => {
+                const getDiskTypeBadge = (diskName: string, rotationRate: number | string | undefined) => {
                   let diskType = "HDD"
+
+                  // Check if it's NVMe
                   if (diskName.startsWith("nvme")) {
                     diskType = "NVMe"
-                  } else if (!rotationRate || rotationRate === 0) {
+                  }
+                  // Check rotation rate for SSD vs HDD
+                  else if (rotationRate !== undefined && rotationRate !== null) {
+                    // Handle both number and string formats
+                    const rateNum = typeof rotationRate === "string" ? Number.parseInt(rotationRate) : rotationRate
+                    if (rateNum === 0 || isNaN(rateNum)) {
+                      diskType = "SSD"
+                    }
+                  }
+                  // If rotation_rate is "Solid State Device" string
+                  else if (typeof rotationRate === "string" && rotationRate.includes("Solid State")) {
                     diskType = "SSD"
                   }
 
@@ -1655,9 +1667,6 @@ export default function Hardware() {
                     {device.model && (
                       <p className="text-xs text-muted-foreground line-clamp-2 break-words">{device.model}</p>
                     )}
-                    {device.driver && (
-                      <p className="mt-1 font-mono text-xs text-green-500 truncate">Driver: {device.driver}</p>
-                    )}
                   </div>
                 )
               })}
@@ -1681,10 +1690,44 @@ export default function Hardware() {
                 <span className="font-mono text-sm">{selectedDisk.name}</span>
               </div>
 
-              {selectedDisk.type && (
+              {selectedDisk.name && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-sm font-medium text-muted-foreground">Type</span>
-                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">{selectedDisk.type}</Badge>
+                  {(() => {
+                    const getDiskTypeBadge = (diskName: string, rotationRate: number | string | undefined) => {
+                      let diskType = "HDD"
+
+                      if (diskName.startsWith("nvme")) {
+                        diskType = "NVMe"
+                      } else if (rotationRate !== undefined && rotationRate !== null) {
+                        const rateNum = typeof rotationRate === "string" ? Number.parseInt(rotationRate) : rotationRate
+                        if (rateNum === 0 || isNaN(rateNum)) {
+                          diskType = "SSD"
+                        }
+                      } else if (typeof rotationRate === "string" && rotationRate.includes("Solid State")) {
+                        diskType = "SSD"
+                      }
+
+                      const badgeStyles: Record<string, { className: string; label: string }> = {
+                        NVMe: {
+                          className: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+                          label: "NVMe SSD",
+                        },
+                        SSD: {
+                          className: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+                          label: "SSD",
+                        },
+                        HDD: {
+                          className: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+                          label: "HDD",
+                        },
+                      }
+                      return badgeStyles[diskType]
+                    }
+
+                    const diskBadge = getDiskTypeBadge(selectedDisk.name, selectedDisk.rotation_rate)
+                    return <Badge className={diskBadge.className}>{diskBadge.label}</Badge>
+                  })()}
                 </div>
               )}
 
@@ -1737,10 +1780,16 @@ export default function Hardware() {
                 </div>
               )}
 
-              {selectedDisk.rotation_rate && (
+              {selectedDisk.rotation_rate !== undefined && selectedDisk.rotation_rate !== null && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-sm font-medium text-muted-foreground">Rotation Rate</span>
-                  <span className="text-sm">{selectedDisk.rotation_rate}</span>
+                  <span className="text-sm">
+                    {typeof selectedDisk.rotation_rate === "number" && selectedDisk.rotation_rate > 0
+                      ? `${selectedDisk.rotation_rate} rpm`
+                      : typeof selectedDisk.rotation_rate === "string"
+                        ? selectedDisk.rotation_rate
+                        : "Solid State Device"}
+                  </span>
                 </div>
               )}
 

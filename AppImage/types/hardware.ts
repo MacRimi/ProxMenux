@@ -30,7 +30,7 @@ export interface StorageDevice {
   serial?: string
   family?: string
   firmware?: string
-  rotation_rate?: string
+  rotation_rate?: number | string
   form_factor?: string
   sata_version?: string
 }

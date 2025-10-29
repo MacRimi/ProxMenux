@@ -936,6 +936,10 @@ def get_smart_data(disk_name):
         'wear_leveling_count': None,  # SSD: Wear Leveling Count
         'total_lbas_written': None,  # SSD/NVMe: Total LBAs Written
         'ssd_life_left': None,  # SSD: SSD Life Left percentage
+        'firmware': None, # Added firmware
+        'family': None, # Added model family
+        'sata_version': None, # Added SATA version
+        'form_factor': None # Added Form Factor
     }
     
 
@@ -3802,6 +3806,105 @@ def get_hardware_info():
             # print(f"[v0] Error getting storage info: {e}")
             pass
         
+
+        try:
+            result = subprocess.run(['lsblk', '-J', '-o', 'NAME,SIZE,TYPE,MOUNTPOINT,MODEL'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                import json
+                lsblk_data = json.loads(result.stdout)
+                storage_devices = []
+                for device in lsblk_data.get('blockdevices', []):
+                    if device.get('type') == 'disk':
+                        disk_name = device.get('name', '')
+                        
+                        # Get SMART data for this disk
+                        smart_data = get_smart_data(disk_name)
+                        
+                        # Determine interface type
+                        interface_type = None
+                        if disk_name.startswith('nvme'):
+                            interface_type = 'PCIe/NVMe'
+                        elif disk_name.startswith('sd'):
+                            interface_type = 'ATA'
+                        elif disk_name.startswith('hd'):
+                            interface_type = 'IDE'
+                        
+                        # Get driver information
+                        driver = None
+                        try:
+                            sys_block_path = f'/sys/block/{disk_name}'
+                            if os.path.exists(sys_block_path):
+                                device_path = os.path.join(sys_block_path, 'device')
+                                if os.path.exists(device_path):
+                                    driver_path = os.path.join(device_path, 'driver')
+                                    if os.path.exists(driver_path):
+                                        driver = os.path.basename(os.readlink(driver_path))
+                        except:
+                            pass
+                        
+                        # Parse SATA version from smartctl output
+                        sata_version = None
+                        try:
+                            result_smart = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
+                                                        capture_output=True, text=True, timeout=5)
+                            if result_smart.returncode == 0:
+                                for line in result_smart.stdout.split('\n'):
+                                    if 'SATA Version is:' in line:
+                                        sata_version = line.split(':', 1)[1].strip()
+                                        break
+                        except:
+                            pass
+                        
+                        # Parse form factor from smartctl output
+                        form_factor = None
+                        try:
+                            result_smart = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
+                                                        capture_output=True, text=True, timeout=5)
+                            if result_smart.returncode == 0:
+                                for line in result_smart.stdout.split('\n'):
+                                    if 'Form Factor:' in line:
+                                        form_factor = line.split(':', 1)[1].strip()
+                                        break
+                        except:
+                            pass
+                        
+                        # Build storage device with all available information
+                        storage_device = {
+                            'name': disk_name,
+                            'size': device.get('size', ''),
+                            'model': smart_data.get('model', device.get('model', 'Unknown')),
+                            'type': device.get('type', 'disk'),
+                            'serial': smart_data.get('serial', 'Unknown'),
+                            'firmware': smart_data.get('firmware'),
+                            'interface': interface_type,
+                            'driver': driver,
+                            'rotation_rate': smart_data.get('rotation_rate', 0),
+                            'form_factor': form_factor,
+                            'sata_version': sata_version,
+                        }
+                        
+                        # Add family if available (from smartctl)
+                        try:
+                            result_smart = subprocess.run(['smartctl', '-i', f'/dev/{disk_name}'], 
+                                                        capture_output=True, text=True, timeout=5)
+                            if result_smart.returncode == 0:
+                                for line in result_smart.stdout.split('\n'):
+                                    if 'Model Family:' in line:
+                                        storage_device['family'] = line.split(':', 1)[1].strip()
+                                        break
+                        except:
+                            pass
+                        
+                        storage_devices.append(storage_device)
+                
+                hardware_data['storage_devices'] = storage_devices
+                # print(f"[v0] Storage devices: {len(storage_devices)} found with full SMART data")
+                pass
+        except Exception as e:
+            # print(f"[v0] Error getting storage info: {e}")
+            pass
+
         # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
         try:
             # Try nvidia-smi first
