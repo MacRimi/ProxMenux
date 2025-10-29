@@ -167,7 +167,8 @@ def parse_lxc_hardware_config(vmid, node):
 
 
 def get_lxc_ip_from_lxc_info(vmid):
-    """Get LXC IP address using lxc-info command (for DHCP containers)"""
+    """Get LXC IP addresses using lxc-info command (for DHCP containers)
+    Returns a dict with all IPs and classification"""
     try:
         result = subprocess.run(
             ['lxc-info', '-n', str(vmid), '-iH'],
@@ -176,10 +177,29 @@ def get_lxc_ip_from_lxc_info(vmid):
             timeout=5
         )
         if result.returncode == 0:
-            ip = result.stdout.strip()
-            # Return IP only if it's valid (not empty)
-            if ip and ip != '':
-                return ip
+            ips_str = result.stdout.strip()
+            if ips_str and ips_str != '':
+                # Split multiple IPs (space-separated)
+                ips = ips_str.split()
+                
+                # Classify IPs
+                real_ips = []
+                docker_ips = []
+                
+                for ip in ips:
+                    # Docker bridge IPs typically start with 172.
+                    if ip.startswith('172.'):
+                        docker_ips.append(ip)
+                    else:
+                        # Real network IPs (192.168.x.x, 10.x.x.x, etc.)
+                        real_ips.append(ip)
+                
+                return {
+                    'all_ips': ips,
+                    'real_ips': real_ips,
+                    'docker_ips': docker_ips,
+                    'primary_ip': real_ips[0] if real_ips else (docker_ips[0] if docker_ips else ips[0])
+                }
         return None
     except Exception:
         # Silently fail if lxc-info is not available or fails
@@ -338,6 +358,8 @@ def get_intel_gpu_processes_from_text():
                             # We'll estimate utilization based on bar characters
                             engines = {}
                             engine_names = ['Render/3D', 'Blitter', 'Video', 'VideoEnhance']
+                            bar_section = " ".join(parts[3:-1]) # Extract the bar section dynamically
+
                             bar_sections = bar_section.split('||')
                             
                             for idx, engine_name in enumerate(engine_names):
@@ -2587,7 +2609,7 @@ def get_detailed_gpu_info(gpu):
                         clients = best_json['clients']
                         processes = []
                         
-                        for client_id, client_data in clients.items():
+                        for client_id, client_data in clients:
                             process_info = {
                                 'name': client_data.get('name', 'Unknown'),
                                 'pid': client_data.get('pid', 'Unknown'),
@@ -4366,7 +4388,6 @@ def api_network_interface_metrics(interface_name):
 
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/api/vms', methods=['GET'])
 def api_vms():
     """Get virtual machine information"""
@@ -5498,78 +5519,100 @@ def api_gpu_realtime(slot):
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+# CHANGE: Modificar el endpoint para incluir la información completa de IPs
 @app.route('/api/vms/<int:vmid>', methods=['GET'])
-def api_vm_details(vmid):
-    """Get detailed information for a specific VM/LXC"""
+def get_vm_config(vmid):
+    """Get detailed configuration for a specific VM/LXC"""
     try:
-        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
-                              capture_output=True, text=True, timeout=10)
+        # Get VM/LXC configuration
+        node = socket.gethostname() # Get node name
+        
+        result = subprocess.run(
+            ['pvesh', 'get', f'/nodes/{node}/qemu/{vmid}/config', '--output-format', 'json'],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        vm_type = 'qemu'
+        if result.returncode != 0:
+            # Try LXC
+            result = subprocess.run(
+                ['pvesh', 'get', f'/nodes/{node}/lxc/{vmid}/config', '--output-format', 'json'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            vm_type = 'lxc'
         
         if result.returncode == 0:
-            resources = json.loads(result.stdout)
-            for resource in resources:
-                if resource.get('vmid') == vmid:
-                    vm_type = 'lxc' if resource.get('type') == 'lxc' else 'qemu'
-                    node = resource.get('node', 'pve')
-                    
-                    # Get detailed config
-                    config_result = subprocess.run(
-                        ['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/config', '--output-format', 'json'],
-                        capture_output=True, text=True, timeout=10)
-                    
-                    config = {}
-                    if config_result.returncode == 0:
-                        config = json.loads(config_result.stdout)
-                    
-                    os_info = {}
-                    if vm_type == 'lxc' and resource.get('status') == 'running':
-                        try:
-                            os_release_result = subprocess.run(
-                                ['pct', 'exec', str(vmid), '--', 'cat', '/etc/os-release'],
-                                capture_output=True, text=True, timeout=5)
-                            
-                            if os_release_result.returncode == 0:
-                                # Parse /etc/os-release content
-                                for line in os_release_result.stdout.split('\n'):
-                                    line = line.strip()
-                                    if line.startswith('ID='):
-                                        os_info['id'] = line.split('=', 1)[1].strip('"').strip("'")
-                                    elif line.startswith('VERSION_ID='):
-                                        os_info['version_id'] = line.split('=', 1)[1].strip('"').strip("'")
-                                    elif line.startswith('NAME='):
-                                        os_info['name'] = line.split('=', 1)[1].strip('"').strip("'")
-                                    elif line.startswith('PRETTY_NAME='):
-                                        os_info['pretty_name'] = line.split('=', 1)[1].strip('"').strip("'")
-                        except Exception as e:
-                            pass  # Silently handle errors
-                    
-                    response_data = {
-                        **resource,
-                        'config': config,
-                        'node': node,
-                        'vm_type': vm_type
-                    }
-                    
-                    if vm_type == 'lxc':
-                        hardware_info = parse_lxc_hardware_config(vmid, node)
-                        response_data['hardware_info'] = hardware_info
-                        
-                        if resource.get('status') == 'running':
-                            lxc_ip = get_lxc_ip_from_lxc_info(vmid)
-                            if lxc_ip:
-                                response_data['lxc_ip'] = lxc_ip
-                    
-                    # Add OS info if available
-                    if os_info:
-                        response_data['os_info'] = os_info
-                    
-                    return jsonify(response_data)
+            config = json.loads(result.stdout)
             
-            return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
-        else:
-            return jsonify({'error': 'Failed to get VM details'}), 500
+            # Get VM/LXC status to check if it's running
+            status_result = subprocess.run(
+                ['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/status/current', '--output-format', 'json'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            status = 'stopped'
+            if status_result.returncode == 0:
+                status_data = json.loads(status_result.stdout)
+                status = status_data.get('status', 'stopped')
+            
+            response_data = {
+                'vmid': vmid,
+                'config': config,
+                'node': node,
+                'vm_type': vm_type
+            }
+            
+            # For LXC, try to get IP from lxc-info if running
+            if vm_type == 'lxc' and status == 'running':
+                lxc_ip_info = get_lxc_ip_from_lxc_info(vmid)
+                if lxc_ip_info:
+                    response_data['lxc_ip_info'] = lxc_ip_info
+            
+            # Get OS information for LXC
+            os_info = {}
+            if vm_type == 'lxc' and status == 'running':
+                try:
+                    os_release_result = subprocess.run(
+                        ['pct', 'exec', str(vmid), '--', 'cat', '/etc/os-release'],
+                        capture_output=True, text=True, timeout=5)
+                    
+                    if os_release_result.returncode == 0:
+                        for line in os_release_result.stdout.split('\n'):
+                            line = line.strip()
+                            if line.startswith('ID='):
+                                os_info['id'] = line.split('=', 1)[1].strip('"').strip("'")
+                            elif line.startswith('VERSION_ID='):
+                                os_info['version_id'] = line.split('=', 1)[1].strip('"').strip("'")
+                            elif line.startswith('NAME='):
+                                os_info['name'] = line.split('=', 1)[1].strip('"').strip("'")
+                            elif line.startswith('PRETTY_NAME='):
+                                os_info['pretty_name'] = line.split('=', 1)[1].strip('"').strip("'")
+                except Exception as e:
+                    pass # Silently handle errors
+            
+            # Get hardware information for LXC
+            hardware_info = {}
+            if vm_type == 'lxc':
+                hardware_info = parse_lxc_hardware_config(vmid, node)
+            
+            # Add OS info and hardware info to response
+            if os_info:
+                response_data['os_info'] = os_info
+            if hardware_info:
+                response_data['hardware_info'] = hardware_info
+            
+            return jsonify(response_data)
+        
+        return jsonify({'error': 'VM/LXC not found'}), 404
+        
     except Exception as e:
-        # print(f"Error getting VM details: {e}")
+        # print(f"Error getting VM config: {e}")
         pass
         return jsonify({'error': str(e)}), 500
 
@@ -5618,8 +5661,7 @@ def api_vm_logs(vmid):
         else:
             return jsonify({'error': 'Failed to get VM logs'}), 500
     except Exception as e:
-        # print(f"Error getting VM logs: {e}")
-        pass
+        print(f"Error getting VM logs: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms/<int:vmid>/control', methods=['POST'])
@@ -5670,8 +5712,7 @@ def api_vm_control(vmid):
         else:
             return jsonify({'error': 'Failed to get VM details'}), 500
     except Exception as e:
-        # print(f"Error controlling VM: {e}")
-        pass
+        print(f"Error controlling VM: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms/<int:vmid>/config', methods=['PUT'])

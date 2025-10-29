@@ -124,6 +124,12 @@ interface VMDetails extends VMData {
     devices?: string[]
   }
   lxc_ip?: string
+  lxc_ip_info?: {
+    all_ips: string[]
+    real_ips: string[]
+    docker_ips: string[]
+    primary_ip: string
+  }
 }
 
 const fetcher = async (url: string) => {
@@ -158,9 +164,10 @@ const formatUptime = (seconds: number) => {
   return `${days}d ${hours}h ${minutes}m`
 }
 
-const extractIPFromConfig = (config?: VMConfig, lxcIP?: string): string => {
-  if (lxcIP) {
-    return lxcIP
+const extractIPFromConfig = (config?: VMConfig, lxcIPInfo?: VMDetails["lxc_ip_info"]): string => {
+  // Use primary IP from lxc-info if available
+  if (lxcIPInfo?.primary_ip) {
+    return lxcIPInfo.primary_ip
   }
 
   if (!config) return "DHCP"
@@ -852,6 +859,12 @@ export function VirtualMachines() {
                         {lxcIP && (
                           <span className={`text-sm ${lxcIP === "DHCP" ? "text-yellow-500" : "text-green-500"}`}>
                             IP: {lxcIP}
+                            {/* Show +X more if there are multiple IPs */}
+                            {vmDetails?.lxc_ip_info && vmDetails.lxc_ip_info.all_ips.length > 1 && (
+                              <span className="text-muted-foreground ml-1">
+                                +{vmDetails.lxc_ip_info.all_ips.length - 1} more
+                              </span>
+                            )}
                           </span>
                         )}
                         <span className="text-sm text-muted-foreground ml-auto">Uptime: {formatUptime(vm.uptime)}</span>
@@ -1250,9 +1263,9 @@ export function VirtualMachines() {
                                   <div>
                                     <div className="text-xs text-muted-foreground mb-1">IP Address</div>
                                     <div
-                                      className={`font-semibold ${extractIPFromConfig(vmDetails.config, vmDetails.lxc_ip) === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
+                                      className={`font-semibold ${extractIPFromConfig(vmDetails.config, vmDetails.lxc_ip_info) === "DHCP" ? "text-yellow-500" : "text-green-500"}`}
                                     >
-                                      {extractIPFromConfig(vmDetails.config, vmDetails.lxc_ip)}
+                                      {extractIPFromConfig(vmDetails.config, vmDetails.lxc_ip_info)}
                                     </div>
                                   </div>
                                 )}
@@ -1782,6 +1795,37 @@ export function VirtualMachines() {
                                       </div>
                                     </div>
                                   )}
+                                </div>
+                              )}
+
+                              {/* IPs Section */}
+                              {selectedVM?.type === "lxc" && vmDetails?.lxc_ip_info && (
+                                <div>
+                                  <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                                    IP Addresses
+                                  </h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {/* Real IPs (green) */}
+                                    {vmDetails.lxc_ip_info.real_ips.map((ip, index) => (
+                                      <Badge
+                                        key={`real-${index}`}
+                                        variant="outline"
+                                        className="bg-green-500/10 text-green-500 border-green-500/20"
+                                      >
+                                        {ip} (Real)
+                                      </Badge>
+                                    ))}
+                                    {/* Docker bridge IPs (gray/yellow) */}
+                                    {vmDetails.lxc_ip_info.docker_ips.map((ip, index) => (
+                                      <Badge
+                                        key={`docker-${index}`}
+                                        variant="outline"
+                                        className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                                      >
+                                        {ip} (Bridge)
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 </div>
                               )}
                             </CardContent>
