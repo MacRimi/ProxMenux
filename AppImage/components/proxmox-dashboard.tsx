@@ -10,6 +10,7 @@ import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
+import { OnboardingCarousel } from "./onboarding-carousel"
 import {
   RefreshCw,
   AlertTriangle,
@@ -220,6 +221,8 @@ export function ProxmoxDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      <OnboardingCarousel />
+
       {!isServerConnected && (
         <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3">
           <div className="container mx-auto">
