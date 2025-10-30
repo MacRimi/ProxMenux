@@ -160,9 +160,8 @@ export function OnboardingCarousel() {
             <X className="h-4 w-4" />
           </Button>
 
-          {/* Gradient header */}
           <div
-            className={`relative h-64 bg-gradient-to-br ${slide.gradient} flex items-center justify-center overflow-hidden`}
+            className={`relative h-48 md:h-64 bg-gradient-to-br ${slide.gradient} flex items-center justify-center overflow-hidden`}
           >
             <div className="absolute inset-0 bg-black/10" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.1),transparent)]" />
@@ -170,13 +169,13 @@ export function OnboardingCarousel() {
             {/* Icon or Image */}
             <div className="relative z-10 text-white">
               {slide.image ? (
-                <div className="relative w-full h-48 flex items-center justify-center">
+                <div className="relative w-full h-36 md:h-48 flex items-center justify-center px-4">
                   <Image
                     src={slide.image || "/placeholder.svg"}
                     alt={slide.title}
                     width={600}
                     height={400}
-                    className="rounded-lg shadow-2xl object-cover max-h-48"
+                    className="rounded-lg shadow-2xl object-cover max-h-36 md:max-h-48"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement
                       target.style.display = "none"
@@ -198,43 +197,48 @@ export function OnboardingCarousel() {
             <div className="absolute bottom-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
           </div>
 
-          {/* Content */}
-          <div className="p-8 space-y-6">
-            <div className="space-y-3">
-              <h2 className="text-3xl font-bold text-foreground text-balance">{slide.title}</h2>
-              <p className="text-muted-foreground text-lg leading-relaxed text-pretty">{slide.description}</p>
+          <div className="p-4 md:p-8 space-y-4 md:space-y-6">
+            <div className="space-y-2 md:space-y-3">
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground text-balance">{slide.title}</h2>
+              <p className="text-base md:text-lg text-muted-foreground leading-relaxed text-pretty">
+                {slide.description}
+              </p>
             </div>
 
             {/* Progress dots */}
-            <div className="flex items-center justify-center gap-2 py-4">
+            <div className="flex items-center justify-center gap-2 py-2 md:py-4">
               {slides.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => handleDotClick(index)}
                   className={`transition-all duration-300 rounded-full ${
                     index === currentSlide
-                      ? "w-8 h-2 bg-blue-500"
-                      : "w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                      ? "w-8 h-2.5 bg-blue-500 shadow-lg shadow-blue-500/50"
+                      : "w-2.5 h-2.5 bg-muted-foreground/60 hover:bg-muted-foreground/80 border border-muted-foreground/40"
                   }`}
                   aria-label={`Go to slide ${index + 1}`}
                 />
               ))}
             </div>
 
-            {/* Navigation buttons */}
-            <div className="flex items-center justify-between gap-4">
-              <Button variant="ghost" onClick={handlePrev} disabled={currentSlide === 0} className="gap-2">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4">
+              <Button
+                variant="ghost"
+                onClick={handlePrev}
+                disabled={currentSlide === 0}
+                className="gap-2 w-full sm:w-auto"
+              >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
               </Button>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto">
                 {currentSlide < slides.length - 1 ? (
                   <>
-                    <Button variant="outline" onClick={handleSkip}>
+                    <Button variant="outline" onClick={handleSkip} className="flex-1 sm:flex-none bg-transparent">
                       Skip
                     </Button>
-                    <Button onClick={handleNext} className="gap-2 bg-blue-500 hover:bg-blue-600">
+                    <Button onClick={handleNext} className="gap-2 bg-blue-500 hover:bg-blue-600 flex-1 sm:flex-none">
                       Next
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -242,7 +246,7 @@ export function OnboardingCarousel() {
                 ) : (
                   <Button
                     onClick={handleComplete}
-                    className="gap-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                    className="gap-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 w-full sm:w-auto"
                   >
                     Get Started!
                     <Sparkles className="h-4 w-4" />
