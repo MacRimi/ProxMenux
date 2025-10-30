@@ -468,6 +468,18 @@
     "type": "ct"
   },
   {
+    "name": "BentoPDF",
+    "slug": "bentopdf",
+    "desc": "A privacy-first, 100% client-side PDF Toolkit. No signups/accounts, works in the browser, online or offline.",
+    "script": "ct/bentopdf.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/bentopdf.sh",
+    "categories": [
+      12
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Beszel",
     "slug": "beszel",
     "desc": "A lightweight server monitoring platform that provides Docker statistics, historical data, and alert functions\n    ",
@@ -880,7 +892,11 @@
     "notes": [
       "Primary and Worker Private Keys Must Match in the config file"
     ],
-    "type": "ct"
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin"
+    }
   },
   {
     "name": "cross-seed",
@@ -2523,6 +2539,20 @@
       "username": "admin",
       "password": "sk-1234"
     }
+  },
+  {
+    "name": "Livebook",
+    "slug": "livebook",
+    "desc": "Elixir Livebook is an interactive, web-based notebook platform for Elixir that combines code, documentation, and visualizations in a single document. Similar to Jupyter notebooks, it allows developers to write and execute Elixir code in real-time, making it ideal for data exploration, prototyping, learning, and collaborative development. Livebook features rich markdown support, built-in charting capabilities, and seamless integration with the Elixir ecosystem.",
+    "script": "ct/livebook.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/livebook.sh",
+    "categories": [
+      20
+    ],
+    "notes": [
+      "Show initial Livebook password: `cat ~/livebook.creds`"
+    ],
+    "type": "ct"
   },
   {
     "name": "lldap",
@@ -4410,6 +4440,24 @@
     ],
     "notes": [],
     "type": "ct"
+  },
+  {
+    "name": "Reitti",
+    "slug": "reitti",
+    "desc": "Reitti is a self-hosted location tracking and analysis platform that detects significant places, trip patterns, and integrates with OwnTracks, GPSLogger, and Immich. It uses PostgreSQL + PostGIS, RabbitMQ, Redis, and an optional Photon geocoder.",
+    "script": "ct/reitti.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/reitti.sh",
+    "categories": [
+      21
+    ],
+    "notes": [
+      "Photon Geocoder running at http://127.0.0.1:2322. Photon is fully setup, but without sample data. (filesize is big) -> checkout our guide: `https://github.com/community-scripts/ProxmoxVE/discussions/8737`."
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin"
+    }
   },
   {
     "name": "Resilio Sync",
