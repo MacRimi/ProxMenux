@@ -32,71 +32,71 @@ interface OnboardingSlide {
 const slides: OnboardingSlide[] = [
   {
     id: 0,
-    title: "¡Bienvenido a ProxMenux Monitor!",
+    title: "Welcome to ProxMenux Monitor!",
     description:
-      "Tu nueva herramienta de monitoreo profesional para Proxmox. Descubre todas las funcionalidades que te ayudarán a gestionar y supervisar tu infraestructura de manera eficiente.",
+      "Your new monitoring tool for Proxmox. Discover all the features that will help you manage and supervise your infrastructure efficiently.",
     icon: <Sparkles className="h-16 w-16" />,
     gradient: "from-blue-500 via-purple-500 to-pink-500",
   },
   {
     id: 1,
-    title: "Vista General del Sistema",
+    title: "System Overview",
     description:
-      "Monitorea en tiempo real el estado de tu servidor: CPU, memoria, temperatura, carga del sistema y más. Todo en un dashboard intuitivo y fácil de entender.",
+      "Monitor your server's status in real-time: CPU, memory, temperature, system load and more. Everything in an intuitive and easy-to-understand dashboard.",
     image: "/images/onboarding/imagen1.png",
     icon: <LayoutDashboard className="h-12 w-12" />,
     gradient: "from-blue-500 to-cyan-500",
   },
   {
     id: 2,
-    title: "Gestión de Almacenamiento",
+    title: "Storage Management",
     description:
-      "Visualiza el estado de todos tus discos y volúmenes. Información detallada de capacidad, uso, salud SMART, temperatura y rendimiento de cada dispositivo de almacenamiento.",
+      "Visualize the status of all your disks and volumes. Detailed information on capacity, usage, SMART health, temperature and performance of each storage device.",
     image: "/images/onboarding/imagen2.png",
     icon: <HardDrive className="h-12 w-12" />,
     gradient: "from-cyan-500 to-teal-500",
   },
   {
     id: 3,
-    title: "Métricas de Red",
+    title: "Network Metrics",
     description:
-      "Supervisa el tráfico de red en tiempo real. Estadísticas de ancho de banda, interfaces activas, velocidades de transferencia y gráficos históricos de uso.",
+      "Monitor network traffic in real-time. Bandwidth statistics, active interfaces, transfer speeds and historical usage graphs.",
     image: "/images/onboarding/imagen3.png",
     icon: <Network className="h-12 w-12" />,
     gradient: "from-teal-500 to-green-500",
   },
   {
     id: 4,
-    title: "Máquinas Virtuales y Contenedores",
+    title: "Virtual Machines & Containers",
     description:
-      "Gestiona todas tus VMs y contenedores LXC desde un solo lugar. Estado, recursos asignados, uso actual y controles rápidos para cada máquina virtual.",
+      "Manage all your VMs and LXC containers from one place. Status, allocated resources, current usage and quick controls for each virtual machine.",
     image: "/images/onboarding/imagen4.png",
     icon: <Box className="h-12 w-12" />,
     gradient: "from-green-500 to-emerald-500",
   },
   {
     id: 5,
-    title: "Información de Hardware",
+    title: "Hardware Information",
     description:
-      "Detalles completos del hardware de tu servidor: CPU, memoria RAM, GPU, discos, red, SAI y más. Especificaciones técnicas, modelos, números de serie y estado de cada componente.",
+      "Complete details of your server hardware: CPU, RAM, GPU, disks, network, UPS and more. Technical specifications, models, serial numbers and status of each component.",
     image: "/images/onboarding/imagen5.png",
     icon: <Cpu className="h-12 w-12" />,
     gradient: "from-emerald-500 to-blue-500",
   },
   {
     id: 6,
-    title: "Logs del Sistema",
+    title: "System Logs",
     description:
-      "Accede a los registros del sistema en tiempo real. Filtra por tipo de evento, busca errores específicos y mantén un seguimiento completo de la actividad de tu servidor.",
+      "Access system logs in real-time. Filter by event type, search for specific errors and keep complete track of your server activity. Download the displayed logs for further analysis.",
     image: "/images/onboarding/imagen6.png",
     icon: <FileText className="h-12 w-12" />,
     gradient: "from-blue-500 to-indigo-500",
   },
   {
     id: 7,
-    title: "¡Preparado para el Futuro!",
+    title: "Ready for the Future!",
     description:
-      "ProxMenux Monitor está en constante evolución. Próximamente: alertas personalizadas, notificaciones push, integración con Telegram/Discord, reportes automáticos y muchas más funcionalidades.",
+      "ProxMenux Monitor is prepared to receive updates and improvements that will be added gradually, improving the user experience and being able to execute ProxMenux functions from the web panel.",
     icon: <Rocket className="h-16 w-16" />,
     gradient: "from-indigo-500 via-purple-500 to-pink-500",
   },
@@ -225,17 +225,17 @@ export function OnboardingCarousel() {
             <div className="flex items-center justify-between gap-4">
               <Button variant="ghost" onClick={handlePrev} disabled={currentSlide === 0} className="gap-2">
                 <ChevronLeft className="h-4 w-4" />
-                Anterior
+                Previous
               </Button>
 
               <div className="flex gap-2">
                 {currentSlide < slides.length - 1 ? (
                   <>
                     <Button variant="outline" onClick={handleSkip}>
-                      Omitir
+                      Skip
                     </Button>
                     <Button onClick={handleNext} className="gap-2 bg-blue-500 hover:bg-blue-600">
-                      Siguiente
+                      Next
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </>
@@ -244,7 +244,7 @@ export function OnboardingCarousel() {
                     onClick={handleComplete}
                     className="gap-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
                   >
-                    ¡Comenzar!
+                    Get Started!
                     <Sparkles className="h-4 w-4" />
                   </Button>
                 )}
@@ -258,7 +258,7 @@ export function OnboardingCarousel() {
                   onClick={handleComplete}
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors underline"
                 >
-                  No mostrar de nuevo
+                  Don't show again
                 </button>
               </div>
             )}
