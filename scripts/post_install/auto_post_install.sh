@@ -625,7 +625,7 @@ install_log2ram_auto() {
     if [[ "$is_ssd" == true ]]; then
         msg_ok "$(translate "System disk is SSD or M.2. Proceeding with Log2RAM setup.")"
     else
-        cleanup
+        kill -TERM "$SPINNER_PID" 2>/dev/null
         sleep 1
         if whiptail --yesno "$(translate "Do you want to install Log2RAM anyway to reduce log write load?")" 10 70 --title "Log2RAM"; then
             msg_ok "$(translate "Proceeding with Log2RAM setup on non-SSD disk as requested by user.")"
