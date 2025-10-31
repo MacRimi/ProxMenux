@@ -19,6 +19,7 @@ LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 INSTALL_DIR="/usr/local/bin"
 MENU_SCRIPT="menu"
 VENV_PATH="/opt/googletrans-env"
+MONITOR_SERVICE="proxmenux-monitor.service"
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
@@ -33,12 +34,12 @@ detect_installation_type() {
     local has_venv=false
     local has_language=false
     
-
+    # Check if virtual environment exists
     if [ -d "$VENV_PATH" ] && [ -f "$VENV_PATH/bin/activate" ]; then
         has_venv=true
     fi
     
-
+    # Check if language is configured
     if [ -f "$CONFIG_FILE" ]; then
         local current_language=$(jq -r '.language // empty' "$CONFIG_FILE" 2>/dev/null)
         if [[ -n "$current_language" && "$current_language" != "null" && "$current_language" != "empty" ]]; then
@@ -53,6 +54,89 @@ detect_installation_type() {
     fi
 }
 
+check_monitor_status() {
+    if systemctl list-unit-files | grep -q "$MONITOR_SERVICE"; then
+        if systemctl is-active --quiet "$MONITOR_SERVICE"; then
+            echo "active"
+        else
+            echo "inactive"
+        fi
+    else
+        echo "not_installed"
+    fi
+}
+
+toggle_monitor_service() {
+    local status=$(check_monitor_status)
+    
+    if [ "$status" = "not_installed" ]; then
+        dialog --clear --backtitle "ProxMenux Configuration" \
+               --title "$(translate "ProxMenux Monitor")" \
+               --msgbox "\n\n$(translate "ProxMenux Monitor is not installed.")" 10 50
+        return
+    fi
+    
+    if [ "$status" = "active" ]; then
+        if dialog --clear --backtitle "ProxMenux Configuration" \
+                  --title "$(translate "Deactivate Monitor")" \
+                  --yesno "\n$(translate "Do you want to deactivate ProxMenux Monitor?")" 8 60; then
+            systemctl stop "$MONITOR_SERVICE" 2>/dev/null
+            systemctl disable "$MONITOR_SERVICE" 2>/dev/null
+            dialog --clear --backtitle "ProxMenux Configuration" \
+                   --title "$(translate "Monitor Deactivated")" \
+                   --msgbox "\n\n$(translate "ProxMenux Monitor has been deactivated.")" 10 50
+        fi
+    else
+        if dialog --clear --backtitle "ProxMenux Configuration" \
+                  --title "$(translate "Activate Monitor")" \
+                  --yesno "\n$(translate "Do you want to activate ProxMenux Monitor?")" 8 60; then
+            systemctl enable "$MONITOR_SERVICE" 2>/dev/null
+            systemctl start "$MONITOR_SERVICE" 2>/dev/null
+            dialog --clear --backtitle "ProxMenux Configuration" \
+                   --title "$(translate "Monitor Activated")" \
+                   --msgbox "\n\n$(translate "ProxMenux Monitor has been activated.")" 10 50
+        fi
+    fi
+}
+
+show_monitor_status() {
+    clear
+    show_proxmenux_logo
+    msg_title "$(translate "ProxMenux Monitor Service Verification")"
+    echo ""
+    
+    local status=$(check_monitor_status)
+    
+    if [ "$status" = "not_installed" ]; then
+        msg_warn "$(translate "ProxMenux Monitor is not installed")"
+        echo ""
+        msg_info2 "$(translate "To install the monitor, reinstall ProxMenux with the latest version")"
+    else
+        msg_info2 "$(translate "Service Status"): $MONITOR_SERVICE"
+        echo ""
+        
+        if [ "$status" = "active" ]; then
+            msg_ok "$(translate "Service is active and running")"
+            
+            local server_ip=$(hostname -I | awk '{print $1}')
+            if [ -n "$server_ip" ]; then
+                echo -e "${TAB}${GN}🌐 $(translate "Monitor URL")${CL}: ${BL}http://${server_ip}:8008${CL}"
+            fi
+        else
+            msg_warn "$(translate "Service is inactive")"
+        fi
+        
+        echo ""
+        msg_info2 "$(translate "Detailed service information"):"
+        echo ""
+        systemctl status "$MONITOR_SERVICE" --no-pager -l
+    fi
+    
+    echo ""
+    msg_success "$(translate "Press Enter to continue...")"
+    read -r
+}
+
 # ==========================================================
 show_config_menu() {
     local install_type
@@ -62,39 +146,68 @@ show_config_menu() {
         local menu_options=()
         local option_actions=()
         
-
-        if [ "$install_type" = "translation" ]; then
-            menu_options+=("1" "$(translate "Change Language")")
-            option_actions[1]="change_language"
+        local monitor_status=$(check_monitor_status)
+        local option_num=1
+        
+        if [ "$monitor_status" != "not_installed" ]; then
+            if [ "$monitor_status" = "active" ]; then
+                menu_options+=("$option_num" "$(translate "Deactivate ProxMenux Monitor")")
+                option_actions[$option_num]="toggle_monitor"
+            else
+                menu_options+=("$option_num" "$(translate "Activate ProxMenux Monitor")")
+                option_actions[$option_num]="toggle_monitor"
+            fi
+            ((option_num++))
             
-            menu_options+=("2" "$(translate "Show Version Information")")
-            option_actions[2]="show_version_info"
-            
-            menu_options+=("3" "$(translate "Uninstall ProxMenux")")
-            option_actions[3]="uninstall_proxmenu"
-            
-            menu_options+=("4" "$(translate "Return to Main Menu")")
-            option_actions[4]="return_main"
-        else
-
-            menu_options+=("1" "Show Version Information")
-            option_actions[1]="show_version_info"
-            
-            menu_options+=("2" "Uninstall ProxMenux")
-            option_actions[2]="uninstall_proxmenu"
-            
-            menu_options+=("3" "Return to Main Menu")
-            option_actions[3]="return_main"
+            menu_options+=("$option_num" "$(translate "Show Monitor Service Status")")
+            option_actions[$option_num]="show_monitor_status"
+            ((option_num++))
         fi
         
-
+        # Build menu based on installation type
+        if [ "$install_type" = "translation" ]; then
+            menu_options+=("$option_num" "$(translate "Change Language")")
+            option_actions[$option_num]="change_language"
+            ((option_num++))
+            
+            menu_options+=("$option_num" "$(translate "Show Version Information")")
+            option_actions[$option_num]="show_version_info"
+            ((option_num++))
+            
+            menu_options+=("$option_num" "$(translate "Uninstall ProxMenux")")
+            option_actions[$option_num]="uninstall_proxmenu"
+            ((option_num++))
+            
+            menu_options+=("$option_num" "$(translate "Return to Main Menu")")
+            option_actions[$option_num]="return_main"
+        else
+            # Normal version (English only)
+            menu_options+=("$option_num" "Show Version Information")
+            option_actions[$option_num]="show_version_info"
+            ((option_num++))
+            
+            menu_options+=("$option_num" "Uninstall ProxMenux")
+            option_actions[$option_num]="uninstall_proxmenu"
+            ((option_num++))
+            
+            menu_options+=("$option_num" "Return to Main Menu")
+            option_actions[$option_num]="return_main"
+        fi
+        
+        # Show menu
         OPTION=$(dialog --clear --backtitle "ProxMenux Configuration" \
                         --title "$(translate "Configuration Menu")" \
                         --menu "$(translate "Select an option:")" 20 70 10 \
                         "${menu_options[@]}" 3>&1 1>&2 2>&3)
         
-
+        # Execute selected action
         case "${option_actions[$OPTION]}" in
+            "toggle_monitor")
+                toggle_monitor_service
+                ;;
+            "show_monitor_status")
+                show_monitor_status
+                ;;
             "change_language")
                 change_language
                 ;;
@@ -131,7 +244,7 @@ change_language() {
         return
     fi
     
-
+    # Update language in config file
     if [ -f "$CONFIG_FILE" ]; then
         tmp=$(mktemp)
         jq --arg lang "$new_language" '.language = $lang' "$CONFIG_FILE" > "$tmp" && mv "$tmp" "$CONFIG_FILE"
@@ -143,7 +256,7 @@ change_language() {
            --title "$(translate "Language Change")" \
            --msgbox "\n\n$(translate "Language changed to") $new_language" 10 50
     
-
+    # Reload menu with new language
     TMP_FILE=$(mktemp)
     curl -s "$REPO_URL/scripts/menus/config_menu.sh" > "$TMP_FILE"
     chmod +x "$TMP_FILE"
@@ -164,7 +277,7 @@ show_version_info() {
     
     info_message+="$(translate "Current ProxMenux version:") $version\n\n"
     
-
+    # Show installation type
     info_message+="$(translate "Installation type:")\n"
     if [ "$install_type" = "translation" ]; then
         info_message+="✓ $(translate "Translation Version (Multi-language support)")\n"
@@ -203,7 +316,7 @@ show_version_info() {
     [ -f "$CONFIG_FILE" ] && info_message+="✓ config.json → $CONFIG_FILE\n" || info_message+="✗ config.json\n"
     [ -f "$LOCAL_VERSION_FILE" ] && info_message+="✓ version.txt → $LOCAL_VERSION_FILE\n" || info_message+="✗ version.txt\n"
     
-
+    # Show translation-specific files
     if [ "$install_type" = "translation" ]; then
         [ -f "$CACHE_FILE" ] && info_message+="✓ cache.json → $CACHE_FILE\n" || info_message+="✗ cache.json\n"
         
@@ -222,7 +335,7 @@ show_version_info() {
         info_message+="\n$(translate "Language:")\nEnglish (Fixed)\n"
     fi
     
-
+    # Display information in a scrollable text box
     tmpfile=$(mktemp)
     echo -e "$info_message" > "$tmpfile"
     dialog --clear --backtitle "ProxMenux Configuration" \
@@ -244,7 +357,7 @@ uninstall_proxmenu() {
     
     local deps_to_remove=""
     
-
+    # Show different dependency options based on installation type
     if [ "$install_type" = "translation" ]; then
         deps_to_remove=$(dialog --clear --backtitle "ProxMenux Configuration" \
                                --title "Remove Dependencies" \
@@ -263,12 +376,12 @@ uninstall_proxmenu() {
                                3>&1 1>&2 2>&3)
     fi
     
-
+    # Perform uninstallation with progress bar
     (
         echo "10" ; echo "Removing ProxMenu files..."
         sleep 1
         
-
+        # Remove googletrans and virtual environment if exists
         if [ -f "$VENV_PATH/bin/activate" ]; then
             echo "30" ; echo "Removing googletrans and virtual environment..."
             source "$VENV_PATH/bin/activate"
@@ -281,7 +394,7 @@ uninstall_proxmenu() {
         rm -f "$INSTALL_DIR/$MENU_SCRIPT"
         rm -rf "$BASE_DIR"
         
-
+        # Remove selected dependencies
         if [ -n "$deps_to_remove" ]; then
             echo "70" ; echo "Removing selected dependencies..."
             read -r -a DEPS_ARRAY <<< "$(echo "$deps_to_remove" | tr -d '"')"
@@ -293,7 +406,7 @@ uninstall_proxmenu() {
         fi
         
         echo "90" ; echo "Restoring system files..."
-
+        # Restore .bashrc and motd
         [ -f /root/.bashrc.bak ] && mv /root/.bashrc.bak /root/.bashrc
         if [ -f /etc/motd.bak ]; then
             mv /etc/motd.bak /etc/motd
@@ -308,7 +421,7 @@ uninstall_proxmenu() {
                --title "Uninstalling ProxMenux" \
                --gauge "Starting uninstallation..." 10 60 0
     
-
+    # Show completion message
     local final_message="ProxMenux has been uninstalled successfully.\n\n"
     if [ -n "$deps_to_remove" ]; then
         final_message+="The following dependencies were removed:\n$deps_to_remove\n\n"

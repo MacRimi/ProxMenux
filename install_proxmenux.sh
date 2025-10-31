@@ -41,10 +41,15 @@ BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
 CACHE_FILE="$BASE_DIR/cache.json"
 UTILS_FILE="$BASE_DIR/utils.sh"
-#EMERGENCY_FILE="$BASE_DIR/emergency_repair.sh"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 MENU_SCRIPT="menu"
 VENV_PATH="/opt/googletrans-env"
+
+MONITOR_APPIMAGE_URL="https://github.com/MacRimi/ProxMenux/raw/refs/heads/main/AppImage/ProxMenux-1.0.0.AppImage"
+MONITOR_SHA256_URL="https://github.com/MacRimi/ProxMenux/raw/refs/heads/main/AppImage/ProxMenux-Monitor.AppImage.sha256"
+MONITOR_INSTALL_PATH="$BASE_DIR/ProxMenux-Monitor.AppImage"
+MONITOR_SERVICE_FILE="/etc/systemd/system/proxmenux-monitor.service"
+MONITOR_PORT=8008
 
 if ! source <(curl -sSf "$UTILS_URL"); then
     echo "Error: Could not load utils.sh from $UTILS_URL"
@@ -193,7 +198,7 @@ update_config() {
     local status="$2"
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     
-    local tracked_components=("dialog" "curl" "jq" "python3" "python3-venv" "python3-pip" "virtual_environment" "pip" "googletrans")
+    local tracked_components=("dialog" "curl" "jq" "python3" "python3-venv" "python3-pip" "virtual_environment" "pip" "googletrans" "proxmenux_monitor")
     
     if [[ " ${tracked_components[@]} " =~ " ${component} " ]]; then
         mkdir -p "$(dirname "$CONFIG_FILE")"
@@ -274,7 +279,7 @@ show_installation_confirmation() {
     case "$install_type" in
         "1")
             if whiptail --title "ProxMenux - Normal Version Installation" \
-                --yesno "ProxMenux Normal Version will install:\n\n• dialog  (interactive menus) - Official Debian package\n• curl       (file downloads) - Official Debian package\n• jq        (JSON processing) - Official Debian package\n• ProxMenux core files     (/usr/local/share/proxmenux)\n\nThis is a lightweight installation with minimal dependencies.\n\nProceed with installation?" 18 70; then
+                --yesno "ProxMenux Normal Version will install:\n\n• dialog  (interactive menus) - Official Debian package\n• curl       (file downloads) - Official Debian package\n• jq        (JSON processing) - Official Debian package\n• ProxMenux core files     (/usr/local/share/proxmenux)\n• ProxMenux Monitor        (Web dashboard on port 8008)\n\nThis is a lightweight installation with minimal dependencies.\n\nProceed with installation?" 20 70; then
                 return 0
             else
                 return 1
@@ -282,7 +287,7 @@ show_installation_confirmation() {
             ;;
         "2")
             if whiptail --title "ProxMenux - Translation Version Installation" \
-                --yesno "ProxMenux Translation Version will install:\n\n• dialog (interactive menus)\n• curl (file downloads)\n• jq (JSON processing)\n• python3 + python3-venv + python3-pip\n• Google Translate library (googletrans)\n• Virtual environment (/opt/googletrans-env)\n• Translation cache system\n• ProxMenux core files\n\nThis version requires more dependencies for translation support.\n\nProceed with installation?" 18 70; then
+                --yesno "ProxMenux Translation Version will install:\n\n• dialog (interactive menus)\n• curl (file downloads)\n• jq (JSON processing)\n• python3 + python3-venv + python3-pip\n• Google Translate library (googletrans)\n• Virtual environment (/opt/googletrans-env)\n• Translation cache system\n• ProxMenux core files\n• ProxMenux Monitor        (Web dashboard on port 8008)\n\nThis version requires more dependencies for translation support.\n\nProceed with installation?" 20 70; then
                 return 0
             else
                 return 1
@@ -291,9 +296,112 @@ show_installation_confirmation() {
     esac
 }
 
+get_server_ip() {
+    local ip
+    # Try to get the primary IP address
+    ip=$(ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K\S+')
+    
+    if [ -z "$ip" ]; then
+        # Fallback: get first non-loopback IP
+        ip=$(hostname -I | awk '{print $1}')
+    fi
+    
+    if [ -z "$ip" ]; then
+        # Last resort: use localhost
+        ip="localhost"
+    fi
+    
+    echo "$ip"
+}
+
+install_proxmenux_monitor() {
+    # Check if URL is accessible
+    if ! wget --spider -q "$MONITOR_APPIMAGE_URL" 2>/dev/null; then
+        msg_warn "ProxMenux Monitor AppImage not available at: $MONITOR_APPIMAGE_URL"
+        msg_info "The monitor will be available in future releases."
+        return 1
+    fi
+    
+    # Download AppImage silently
+    if ! wget -q -O "$MONITOR_INSTALL_PATH" "$MONITOR_APPIMAGE_URL" 2>&1; then
+        msg_warn "Failed to download ProxMenux Monitor from GitHub."
+        msg_info "You can install it manually later when available."
+        return 1
+    fi
+    
+    # Download SHA256 checksum silently
+    local sha256_file="/tmp/proxmenux-monitor.sha256"
+    if ! wget -q -O "$sha256_file" "$MONITOR_SHA256_URL" 2>/dev/null; then
+        msg_warn "SHA256 checksum file not available. Skipping verification."
+        msg_info "AppImage downloaded but integrity cannot be verified."
+        rm -f "$sha256_file"
+    else
+        # Verify SHA256 silently
+        local expected_hash=$(cat "$sha256_file" | awk '{print $1}')
+        local actual_hash=$(sha256sum "$MONITOR_INSTALL_PATH" | awk '{print $1}')
+        
+        if [ "$expected_hash" != "$actual_hash" ]; then
+            msg_error "SHA256 verification failed! AppImage may be corrupted."
+            msg_info "Expected: $expected_hash"
+            msg_info "Got:      $actual_hash"
+            rm -f "$MONITOR_INSTALL_PATH" "$sha256_file"
+            return 1
+        fi
+        rm -f "$sha256_file"
+    fi
+    
+    # Make executable
+    chmod +x "$MONITOR_INSTALL_PATH"
+    
+    # Show single success message at the end
+    msg_ok "ProxMenux Monitor installed and activated successfully."
+    
+    return 0
+}
+
+create_monitor_service() {
+    msg_info "Creating ProxMenux Monitor service..."
+    
+    cat > "$MONITOR_SERVICE_FILE" << EOF
+[Unit]
+Description=ProxMenux Monitor - Web Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=$BASE_DIR
+ExecStart=$MONITOR_INSTALL_PATH
+Restart=on-failure
+RestartSec=10
+Environment="PORT=$MONITOR_PORT"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    # Reload systemd, enable and start service
+    systemctl daemon-reload
+    systemctl enable proxmenux-monitor.service > /dev/null 2>&1
+    systemctl start proxmenux-monitor.service > /dev/null 2>&1
+    
+    # Wait a moment for service to start
+    sleep 2
+    
+    # Check if service is running
+    if systemctl is-active --quiet proxmenux-monitor.service; then
+        msg_ok "ProxMenux Monitor service started successfully."
+        update_config "proxmenux_monitor" "installed"
+        return 0
+    else
+        msg_warn "ProxMenux Monitor service failed to start. Check logs with: journalctl -u proxmenux-monitor"
+        return 1
+    fi
+}
+
 ####################################################
 install_normal_version() {
-    local total_steps=3
+    local total_steps=4  # Increased from 3 to 4 for monitor installation
     local current_step=1
     
     show_progress $current_step $total_steps "Installing basic dependencies"
@@ -350,7 +458,6 @@ install_normal_version() {
     
     FILES=(
         "$UTILS_FILE $REPO_URL/scripts/utils.sh"
-      #  "$EMERGENCY_FILE $REPO_URL/scripts/emergency_repair.sh"
         "$INSTALL_DIR/$MENU_SCRIPT $REPO_URL/$MENU_SCRIPT"
         "$LOCAL_VERSION_FILE $REPO_URL/version.txt"
     )
@@ -368,12 +475,18 @@ install_normal_version() {
     done
     
     chmod +x "$INSTALL_DIR/$MENU_SCRIPT"
-   # chmod +x "$EMERGENCY_FILE"
+    
+    ((current_step++))
+    show_progress $current_step $total_steps "Installing ProxMenux Monitor"
+    
+    if install_proxmenux_monitor; then
+        create_monitor_service
+    fi
 }
 
 ####################################################
 install_translation_version() {
-    local total_steps=4
+    local total_steps=5  # Increased from 4 to 5 for monitor installation
     local current_step=1
     
     show_progress $current_step $total_steps "Language selection"
@@ -470,7 +583,6 @@ install_translation_version() {
     FILES=(
         "$CACHE_FILE $REPO_URL/json/cache.json"
         "$UTILS_FILE $REPO_URL/scripts/utils.sh"
-    #    "$EMERGENCY_FILE $REPO_URL/scripts/emergency_repair.sh"
         "$INSTALL_DIR/$MENU_SCRIPT $REPO_URL/$MENU_SCRIPT"
         "$LOCAL_VERSION_FILE $REPO_URL/version.txt"
     )
@@ -491,7 +603,13 @@ install_translation_version() {
     done
     
     chmod +x "$INSTALL_DIR/$MENU_SCRIPT"
-    #chmod +x "$EMERGENCY_FILE"
+    
+    ((current_step++))
+    show_progress $current_step $total_steps "Installing ProxMenux Monitor"
+    
+    if install_proxmenux_monitor; then
+        create_monitor_service
+    fi
 }
 
 ####################################################
@@ -518,9 +636,6 @@ show_installation_options() {
         esac
     fi
     
-
-
-
     if [[ "$pve_version" -ge 9 ]]; then
         INSTALL_TYPE=$(whiptail --backtitle "ProxMenux" --title "$menu_title" --menu "\n$menu_text" 14 70 2 \
             "1" "Normal Version      (English only)" 3>&1 1>&2 2>&3)
@@ -541,8 +656,6 @@ show_installation_options() {
             exit 1
         fi
     fi
-
- 
     
     if [ -z "$INSTALL_TYPE" ]; then
         show_proxmenux_logo
@@ -587,6 +700,13 @@ install_proxmenu() {
     esac
     
     msg_title "$(translate "ProxMenux has been installed successfully")"
+    
+    if systemctl is-active --quiet proxmenux-monitor.service; then
+        local server_ip=$(get_server_ip)
+        echo -e "${GN}🌐 $(translate "ProxMenux Monitor activated")${CL}: ${BL}http://${server_ip}:${MONITOR_PORT}${CL}"
+        echo
+    fi
+    
     echo -ne "${GN}"
     type_text "$(translate "To run ProxMenux, simply execute this command in the console or terminal:")"
     echo -e "${YWB}    menu${CL}"
