@@ -9,8 +9,9 @@
 
   ProxMenux Monitor is designed to support future updates where **actions can be triggered without using the terminal**, and managed through a **user-friendly interface** accessible across multiple formats and devices.
 
-  ![ProxMenux Monitor](https://macrimi.github.io/ProxMenux/monitor/welcome.png)
+  Access it at: **http://your-server-ip:8008**
 
+  ![ProxMenux Monitor](https://macrimi.github.io/ProxMenux/monitor/welcome.png)
 - **New Banner Removal Method**  
   A new function to disable the Proxmox subscription message with improved safety:
   - Creates a full backup before modifying any files
