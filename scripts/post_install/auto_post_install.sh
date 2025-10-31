@@ -140,8 +140,8 @@ remove_subscription_banner() {
     fi
 
     if [[ "$pve_version" -ge 9 ]]; then
-        if ! whiptail --title "Proxmox VE 9.x Subscription Banner Removal" \
-        --yesno "Do you want to remove the Proxmox subscription banner from the web interface for PVE $pve_version?" 10 70; then
+        if ! whiptail --title "Proxmox VE ${pve_version} Subscription Banner Removal" \
+        --yesno "$(translate "Do you want to remove the Proxmox subscription banner from the web interface for PVE $pve_version?")\n\n$(translate "Attention: Removing the subscription banner may cause issues in the web interface after a future update.")\n\n$(translate "If this happens, you can restore the backup from the 'Subscription Banner Removal' option in 'Uninstall optimizations'.")\n\n$(translate "Are you sure you want to continue?")" 14 75; then
             msg_warn "Banner removal cancelled by user."
             return 1
         fi
@@ -155,7 +155,6 @@ remove_subscription_banner() {
         bash <(curl -fsSL "$REPO_URL/scripts/global/remove-banner-pve8.sh")
     fi
 }
-
 
 
 

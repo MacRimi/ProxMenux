@@ -274,8 +274,9 @@ uninstall_subscription_banner() {
     msg_info "$(translate "Restoring subscription banner...")"
     
     local JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
+    local MOBILE_UI_FILE="/usr/share/pve-yew-mobile-gui/index.html.tpl"
     local PATCH_BIN="/usr/local/bin/pve-remove-nag-v3.sh"
-    local BASE_DIR="/opt/pve-nag-buster"
+    local BASE_DIR="/usr/local/share/proxmenux"
     local MIN_JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.min.js"
     local GZ_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz"
     
@@ -302,13 +303,23 @@ uninstall_subscription_banner() {
             # Verify backup integrity before restoring
             if [[ -s "$backup_file" ]] && grep -q "Ext\|function" "$backup_file" && ! grep -q $'\0' "$backup_file"; then
                 cp -a "$backup_file" "$JS_FILE"
-                msg_ok "$(translate "Restored from backup: $backup_file")"
+                msg_ok "$(translate "Restored desktop UI from backup: $backup_file")"
                 restored=true
             else
                 msg_warn "$(translate "Backup file appears corrupted, will reinstall packages")"
             fi
         else
-            msg_warn "$(translate "No backup found, will reinstall packages")"
+            msg_warn "$(translate "No desktop UI backup found, will reinstall packages")"
+        fi
+        
+        local mobile_backup
+        mobile_backup=$(ls -t "$BASE_DIR/backups"/index.html.tpl.backup.* 2>/dev/null | head -1)
+        
+        if [[ -n "$mobile_backup" && -f "$mobile_backup" && -f "$MOBILE_UI_FILE" ]]; then
+            if [[ -s "$mobile_backup" ]]; then
+                cp -a "$mobile_backup" "$MOBILE_UI_FILE"
+                msg_ok "$(translate "Restored mobile UI from backup: $mobile_backup")"
+            fi
         fi
     fi
     
@@ -342,19 +353,19 @@ uninstall_subscription_banner() {
     find /var/lib/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
     find /var/cache/nginx/ -type f -delete 2>/dev/null || true
     
+
     systemctl restart pveproxy pvedaemon pvestatd 2>/dev/null || true
     
     register_tool "subscription_banner" false
     
     if [[ "$restored" == true ]]; then
-        msg_ok "$(translate "Subscription banner restored successfully")"
+        msg_ok "$(translate "Subscription banner restored successfully (desktop and mobile)")"
         msg_ok "$(translate "Clear your browser cache and refresh to see the subscription banner again")"
     else
         msg_error "$(translate "Failed to restore subscription banner completely")"
         return 1
     fi
 }
-
 
 
 
@@ -898,7 +909,7 @@ show_uninstall_menu() {
             lvm_repair) desc="LVM PV Headers Repair";;
             repo_cleanup) desc="Repository Cleanup";;
             #apt_upgrade) desc="APT Upgrade & Repository Config";;
-            #subscription_banner) desc="Subscription Banner Removal";;
+            subscription_banner) desc="Subscription Banner Removal";;
             time_sync) desc="Time Synchronization";;
             apt_languages) desc="APT Language Skip";;
             journald) desc="Journald Optimization";;

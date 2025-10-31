@@ -35,6 +35,7 @@ download_common_functions() {
 }
 
 update_pve9() {
+    local pve_version
     local start_time=$(date +%s)
     local log_file="/var/log/proxmox-update-$(date +%Y%m%d-%H%M%S).log"
     local changes_made=false
@@ -48,7 +49,7 @@ update_pve9() {
     download_common_functions
 
 
-    msg_info2 "$(translate "Detected: Proxmox VE 9.x (Current: $OS_CODENAME, Target: $TARGET_CODENAME)")"
+    msg_info2 "$(translate "Detected: Proxmox VE ${pve_version} (Current: $OS_CODENAME, Target: $TARGET_CODENAME)")"
     echo
 
     local available_space=$(df /var/cache/apt/archives | awk 'NR==2 {print int($4/1024)}')

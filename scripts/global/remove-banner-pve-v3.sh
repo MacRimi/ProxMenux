@@ -4,6 +4,7 @@
 # ==========================================================
 # This version makes a surgical change to the checked_command function
 # by changing the condition to 'if (false)' and commenting out the banner logic.
+# Also patches the mobile UI to remove the subscription dialog.
 # ==========================================================
 
 set -euo pipefail
@@ -24,10 +25,12 @@ initialize_cache
 JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
 GZ_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz"
 MIN_JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.min.js"
+MOBILE_UI_FILE="/usr/share/pve-yew-mobile-gui/index.html.tpl"
 BACKUP_DIR="$BASE_DIR/backups"
 APT_HOOK="/etc/apt/apt.conf.d/no-nag-script"
 PATCH_BIN="/usr/local/bin/pve-remove-nag-v3.sh"
 MARK="/* PROXMENUX_NAG_PATCH_V3 */"
+MOBILE_MARK="<!-- PROXMENUX_MOBILE_NAG_PATCH -->"
 
 # Ensure tools JSON exists
 ensure_tools_json() {
@@ -84,8 +87,10 @@ set -euo pipefail
 JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
 GZ_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz"
 MIN_JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.min.js"
+MOBILE_UI_FILE="/usr/share/pve-yew-mobile-gui/index.html.tpl"
 BACKUP_DIR="/usr/local/share/proxmenux/backups"
 MARK="/* PROXMENUX_NAG_PATCH_V3 */"
+MOBILE_MARK="<!-- PROXMENUX_MOBILE_NAG_PATCH -->"
 
 verify_js_integrity() {
     local file="$1"
@@ -140,6 +145,43 @@ patch_checked_command() {
     return 0
 }
 
+patch_mobile_ui() {
+    [ -f "$MOBILE_UI_FILE" ] || return 0
+    
+    # Check if already patched
+    grep -q "$MOBILE_MARK" "$MOBILE_UI_FILE" && return 0
+    
+    # Create backup
+    mkdir -p "$BACKUP_DIR"
+    local backup="$BACKUP_DIR/$(basename "$MOBILE_UI_FILE").backup.$(date +%Y%m%d_%H%M%S)"
+    cp -a "$MOBILE_UI_FILE" "$backup"
+    
+    # Set trap to restore on error
+    trap "cp -a '$backup' '$MOBILE_UI_FILE' 2>/dev/null || true" ERR
+    
+    # Insert the script before </head> tag
+    sed -i "/<\/head>/i\\
+$MOBILE_MARK\\
+        <!-- Script to remove subscription banner from mobile UI -->\\
+        <script>\\
+    function removeNoSubDialog() {\\
+      const observer = new MutationObserver(() => {\\
+        const diag = document.querySelector('dialog[aria-label=\"No valid subscription\"]');\\
+        if (diag) {\\
+          diag.remove();\\
+        }\\
+      });\\
+      observer.observe(document.body, { childList: true, subtree: true });\\
+    }\\
+    window.addEventListener('load', () => {\\
+      setTimeout(removeNoSubDialog, 200);\\
+    });\\
+  </script>" "$MOBILE_UI_FILE"
+    
+    trap - ERR
+    return 0
+}
+
 reload_services() {
     systemctl is-active --quiet pveproxy 2>/dev/null && {
         systemctl reload pveproxy 2>/dev/null || systemctl restart pveproxy 2>/dev/null || true
@@ -154,6 +196,7 @@ reload_services() {
 
 main() {
     patch_checked_command || return 1
+    patch_mobile_ui || true
     reload_services
 }
 
@@ -174,7 +217,6 @@ EOFAPT
     
     # Verify APT hook syntax
     apt-config dump >/dev/null 2>&1 || { 
-        msg_warn "APT hook syntax issue, removing..."
         rm -f "$APT_HOOK"
     }
 }
@@ -184,25 +226,28 @@ remove_subscription_banner_v3() {
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+' | head -1 || echo "unknown")
     
-    msg_info "Detected Proxmox VE ${pve_version} - applying minimal banner patch"
+    msg_info "$(translate "Detected Proxmox VE") ${pve_version} - $(translate "applying banner patch")"
     
-    # Ask user for confirmation
-    if ! whiptail --title "Proxmox Subscription Banner (v3 - Minimal)" \
-        --yesno "This will make a minimal surgical change to proxmoxlib.js\nto disable the subscription banner.\n\nA backup will be created automatically.\n\nContinue?" 12 70; then
-        msg_warn "Banner removal cancelled by user."
-        return 1
-    fi
+
     
     # Remove old APT hooks
     for f in /etc/apt/apt.conf.d/*nag*; do 
         [[ -e "$f" ]] && rm -f "$f"
     done
     
-    # Create backup
+    # Create backup for desktop UI
     local backup_file
     backup_file=$(create_backup "$JS_FILE")
     if [ -n "$backup_file" ]; then
-        msg_info "Backup created: $backup_file"
+        msg_ok "$(translate "Desktop UI backup created"): $backup_file"
+    fi
+    
+    if [ -f "$MOBILE_UI_FILE" ]; then
+        local mobile_backup
+        mobile_backup=$(create_backup "$MOBILE_UI_FILE")
+        if [ -n "$mobile_backup" ]; then
+            msg_ok "$(translate "Mobile UI backup created"): $mobile_backup"
+        fi
     fi
     
     # Create patch script and APT hook
@@ -211,16 +256,17 @@ remove_subscription_banner_v3() {
     
     # Apply the patch
     if ! "$PATCH_BIN"; then
-        msg_error "Error applying patch. Backup preserved at: $backup_file"
+        msg_error "$(translate "Error applying patch. Backups preserved at"): $BACKUP_DIR"
         return 1
     fi
     
     # Register tool as applied
-    register_tool "subscription_banner_v3" true
+    register_tool "subscription_banner" true
     
-    msg_ok "Subscription banner removed successfully (v3 - minimal patch)"
-    msg_ok "Refresh your browser (Ctrl+Shift+R) to see changes"
-    msg_info "Backup location: $BACKUP_DIR"
+    msg_ok "$(translate "Subscription banner removed successfully")"
+    msg_ok "$(translate "Desktop and Mobile UI patched")"
+    msg_ok "$(translate "Refresh your browser (Ctrl+Shift+R) to see changes")"
+    msg_info "$(translate "Backup location"): $BACKUP_DIR"
 }
 
 # Run if executed directly
