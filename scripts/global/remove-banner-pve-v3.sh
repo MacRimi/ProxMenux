@@ -240,6 +240,7 @@ remove_subscription_banner_v3() {
     backup_file=$(create_backup "$JS_FILE")
     if [ -n "$backup_file" ]; then
         # msg_ok "$(translate "Desktop UI backup created"): $backup_file"
+        :
     fi
     
     if [ -f "$MOBILE_UI_FILE" ]; then
@@ -247,6 +248,7 @@ remove_subscription_banner_v3() {
         mobile_backup=$(create_backup "$MOBILE_UI_FILE")
         if [ -n "$mobile_backup" ]; then
         # msg_ok "$(translate "Mobile UI backup created"): $mobile_backup"
+        :
         fi
     fi
     
