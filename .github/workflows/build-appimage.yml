@@ -8,7 +8,10 @@ on:
     branches: [ main ]
     paths: [ 'AppImage/**' ]
   workflow_dispatch:  
-
+  
+permissions:
+  contents: write
+  
 jobs:
   build:
     runs-on: ubuntu-22.04
