@@ -2902,7 +2902,7 @@ remove_subscription_banner() {
 
     if [[ "$pve_version" -ge 9 ]]; then
 
-        bash <(curl -fsSL "$REPO_URL/scripts/global/remove-banner-pve9_2.sh")
+        bash <(curl -fsSL "$REPO_URL/scripts/global/remove-banner-pve-v3.sh")
     else
 
         bash <(curl -fsSL "$REPO_URL/scripts/global/remove-banner-pve8.sh")
