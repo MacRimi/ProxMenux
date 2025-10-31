@@ -53,7 +53,7 @@ initialize_cache
 OS_CODENAME="$(grep "VERSION_CODENAME=" /etc/os-release | cut -d"=" -f 2 | xargs)"
 RAM_SIZE_GB=$(( $(vmstat -s | grep -i "total memory" | xargs | cut -d" " -f 1) / 1024 / 1000))
 NECESSARY_REBOOT=0
-SCRIPT_TITLE="Customizable post-installation optimization script"
+export SCRIPT_TITLE="ProxMenux Optimization Post-Installation"
 
 # ==========================================================
 # Tool registration system
@@ -107,7 +107,7 @@ apt_upgrade() {
 
     if [[ "$pve_version" -ge 9 ]]; then
 
-        bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve.sh")
+        bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve9_2.sh")
     else
 
         bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve8.sh")
@@ -132,12 +132,14 @@ remove_subscription_banner() {
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
-    cleanup
-
+     
     if [[ -z "$pve_version" ]]; then
         msg_error "Unable to detect Proxmox version."
         return 1
     fi
+
+    kill -TERM "$SPINNER_PID" 2>/dev/null
+    sleep 1
 
     if [[ "$pve_version" -ge 9 ]]; then
         if ! whiptail --title "Proxmox VE ${pve_version} Subscription Banner Removal" \
@@ -875,9 +877,9 @@ EOF
 # ==========================================================
 
 run_complete_optimization() {
-    clear
+    
     show_proxmenux_logo
-    msg_title "$(translate "ProxMenux Optimization Post-Installation")"
+    msg_title "$(translate "$SCRIPT_TITLE")"
     
     ensure_tools_json
     

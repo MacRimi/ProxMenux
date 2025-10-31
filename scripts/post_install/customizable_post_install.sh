@@ -194,7 +194,7 @@ apt_upgrade() {
 
     if [[ "$pve_version" -ge 9 ]]; then
 
-        bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve.sh")
+        bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve9_2.sh")
     else
 
         bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve8.sh")

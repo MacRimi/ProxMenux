@@ -39,6 +39,8 @@ fi
 load_language
 initialize_cache
 
+export SCRIPT_TITLE="Proxmox system update"
+
 # ==========================================================
 
 NECESSARY_REBOOT=1
@@ -54,12 +56,12 @@ apt_upgrade() {
 
     if [[ "$pve_version" -ge 9 ]]; then
         show_proxmenux_logo
-        msg_title "$(translate "Proxmox system update")"
-        bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve.sh")
+        msg_title "$(translate "$SCRIPT_TITLE)"
+        bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve9_2.sh")
 
     else
         show_proxmenux_logo
-        msg_title "$(translate "Proxmox system update")"
+        msg_title "$(translate "$SCRIPT_TITLE)"
         bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve8.sh")
 
     fi
