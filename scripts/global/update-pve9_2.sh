@@ -152,7 +152,8 @@ EOF
         msg_ok "$(translate "Non-free firmware warnings disabled")"
     fi
 
-    update_output=$(apt-get update 2>&1)
+    #update_output=$(apt-get update 2>&1)
+    update_output=$(apt-get -o Dpkg::Progress-Fancy=1 update 2>&1)
     update_exit_code=$?
 
     if [ $update_exit_code -eq 0 ]; then
