@@ -1,3 +1,50 @@
+## 2025-09-04
+
+### New version v1.1.7
+
+### Added
+
+- **ProxMenux Monitor**  
+  Your new monitoring tool for Proxmox. Discover all the features that will help you manage and supervise your infrastructure efficiently.
+
+  ProxMenux Monitor is designed to support future updates where **actions can be triggered without using the terminal**, and managed through a **user-friendly interface** accessible across multiple formats and devices.
+
+  ![ProxMenux Monitor](https://macrimi.github.io/ProxMenux/monitor/welcome.png)
+
+- **New Banner Removal Method**  
+  A new function to disable the Proxmox subscription message with improved safety:
+  - Creates a full backup before modifying any files
+  - Shows a clear warning that breaking changes may occur with future GUI updates
+  - If the GUI fails to load, the user can revert changes via SSH from the post-install menu using the **"Uninstall Options → Restore Banner"** tool
+
+  Special thanks to **@eryonki** for providing the improved method.
+
+---
+
+### Improved
+
+- **CORAL TPU Installer Updated for PVE 9**  
+  The CORAL TPU driver installer now supports both **Proxmox VE 8 and VE 9**, ensuring compatibility with the latest kernels and udev rules.
+
+- **Log2RAM Installation & Integration**  
+  - Log2RAM installation is now idempotent and can be safely run multiple times.
+  - Automatically adjusts `journald` configuration to align with the size and behavior of Log2RAM.
+  - Ensures journaling is correctly tuned to avoid overflows or RAM exhaustion on low-memory systems.
+
+- **Network Optimization Function (LXC + NFS)**  
+  Improved to prevent “martian source” warnings in setups where **LXC containers share storage with VMs** over NFS within the same server.
+
+- **APT Upgrade Progress**  
+  When running full system upgrades via ProxMenux, a **real-time progress bar** is now displayed, giving the user clear visibility into the update process.
+
+---
+
+### Fixed
+
+- Other small improvements and fixes to optimize runtime performance and eliminate minor bugs.
+
+
+
 ## 2025-01-10
 
 ### New version v1.1.6
