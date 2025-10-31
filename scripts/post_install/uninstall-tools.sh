@@ -166,7 +166,7 @@ uninstall_subscription_banner_() {
 
 
 
-uninstall_subscription_banner() {
+uninstall_subscription_banner__() {
     msg_info "$(translate "Restoring subscription banner...")"
     
     local JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
@@ -265,6 +265,98 @@ uninstall_subscription_banner() {
         return 1
     fi
 }
+
+
+
+
+
+uninstall_subscription_banner() {
+    msg_info "$(translate "Restoring subscription banner...")"
+    
+    local JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
+    local PATCH_BIN="/usr/local/bin/pve-remove-nag-v3.sh"
+    local BASE_DIR="/opt/pve-nag-buster"
+    local MIN_JS_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.min.js"
+    local GZ_FILE="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.gz"
+    
+    local restored=false
+    
+
+    for hook in /etc/apt/apt.conf.d/*nag*; do
+        if [[ -e "$hook" ]]; then
+            rm -f "$hook"
+            msg_ok "$(translate "Removed APT hook: $hook")"
+        fi
+    done
+    
+    if [[ -f "$PATCH_BIN" ]]; then
+        rm -f "$PATCH_BIN"
+        msg_ok "$(translate "Removed patch script: $PATCH_BIN")"
+    fi
+    
+    if [[ -d "$BASE_DIR/backups" ]]; then
+        local backup_file
+        backup_file=$(ls -t "$BASE_DIR/backups"/proxmoxlib.js.backup.* 2>/dev/null | head -1)
+        
+        if [[ -n "$backup_file" && -f "$backup_file" ]]; then
+            # Verify backup integrity before restoring
+            if [[ -s "$backup_file" ]] && grep -q "Ext\|function" "$backup_file" && ! grep -q $'\0' "$backup_file"; then
+                cp -a "$backup_file" "$JS_FILE"
+                msg_ok "$(translate "Restored from backup: $backup_file")"
+                restored=true
+            else
+                msg_warn "$(translate "Backup file appears corrupted, will reinstall packages")"
+            fi
+        else
+            msg_warn "$(translate "No backup found, will reinstall packages")"
+        fi
+    fi
+    
+    if [[ "$restored" == false ]]; then
+        msg_info "$(translate "Performing complete package reinstallation...")"
+        
+        # Update package lists
+        apt-get update >/dev/null 2>&1
+        
+        # Reinstall packages with force-confnew to restore original configs
+        if apt-get --reinstall -o Dpkg::Options::="--force-confnew" install \
+            pve-manager proxmox-widget-toolkit libjs-extjs libpve-http-server-perl -y >/dev/null 2>&1; then
+            msg_ok "$(translate "Reinstalled Proxmox packages successfully")"
+            restored=true
+        else
+            msg_error "$(translate "Failed to reinstall packages")"
+        fi
+        
+        # Clean package update cache
+        rm -rf /var/lib/pve-manager/pkgupdates /var/cache/pve-manager 2>/dev/null || true
+        
+        # Second pass reinstallation to ensure everything is clean
+        apt-get update >/dev/null 2>&1
+        apt-get --reinstall install proxmox-widget-toolkit pve-manager libjs-extjs libpve-http-server-perl -y >/dev/null 2>&1 || true
+    fi
+    
+    msg_info "$(translate "Cleaning cached files...")"
+    rm -f "$MIN_JS_FILE" "$GZ_FILE" 2>/dev/null || true
+    rm -rf /var/lib/pve-manager/pkgupdates /var/cache/pve-manager 2>/dev/null || true
+    find /var/cache/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
+    find /var/lib/pve-manager/ -name "*.js*" -delete 2>/dev/null || true
+    find /var/cache/nginx/ -type f -delete 2>/dev/null || true
+    
+    systemctl restart pveproxy pvedaemon pvestatd 2>/dev/null || true
+    
+    register_tool "subscription_banner" false
+    
+    if [[ "$restored" == true ]]; then
+        msg_ok "$(translate "Subscription banner restored successfully")"
+        msg_ok "$(translate "Clear your browser cache and refresh to see the subscription banner again")"
+    else
+        msg_error "$(translate "Failed to restore subscription banner completely")"
+        return 1
+    fi
+}
+
+
+
 
 
 
