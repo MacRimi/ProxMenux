@@ -119,7 +119,7 @@ export function OnboardingCarousel() {
       setDirection("next")
       setCurrentSlide(currentSlide + 1)
     } else {
-      handleComplete()
+      setOpen(false)
     }
   }
 
@@ -134,7 +134,7 @@ export function OnboardingCarousel() {
     setOpen(false)
   }
 
-  const handleComplete = () => {
+  const handleDontShowAgain = () => {
     localStorage.setItem("proxmenux-onboarding-seen", "true")
     setOpen(false)
   }
@@ -245,7 +245,7 @@ export function OnboardingCarousel() {
                   </>
                 ) : (
                   <Button
-                    onClick={handleComplete}
+                    onClick={handleNext}
                     className="gap-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 w-full sm:w-auto"
                   >
                     Get Started!
@@ -259,7 +259,7 @@ export function OnboardingCarousel() {
             {currentSlide === slides.length - 1 && (
               <div className="text-center pt-2">
                 <button
-                  onClick={handleComplete}
+                  onClick={handleDontShowAgain}
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors underline"
                 >
                   Don't show again
