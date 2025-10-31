@@ -49,7 +49,7 @@ update_pve9() {
     download_common_functions
 
 
-    msg_info2 "$(translate "Detected: Proxmox VE ${pve_version} (Current: $OS_CODENAME, Target: $TARGET_CODENAME)")"
+    msg_info2 "$(translate "Detected: Proxmox VE $pve_version (Current: $OS_CODENAME, Target: $TARGET_CODENAME)")"
     echo
 
     local available_space=$(df /var/cache/apt/archives | awk 'NR==2 {print int($4/1024)}')
