@@ -61,7 +61,7 @@ apt_upgrade() {
 
     else
         show_proxmenux_logo
-        msg_title "$(translate "$SCRIPT_TITLE)"
+        msg_title "$(translate "Proxmox system update")"
         bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve8.sh")
 
     fi

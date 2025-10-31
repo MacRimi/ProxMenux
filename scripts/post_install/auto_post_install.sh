@@ -883,9 +883,9 @@ run_complete_optimization() {
     
     ensure_tools_json
     
-    force_apt_ipv4
     apt_upgrade
     remove_subscription_banner
+    force_apt_ipv4
     #configure_time_sync
     skip_apt_languages
     increase_system_limits
