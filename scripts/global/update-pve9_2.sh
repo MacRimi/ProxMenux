@@ -53,7 +53,7 @@ update_pve9() {
     {
         msg_info2 "$(translate "Detected: Proxmox VE $pve_version (Current: $OS_CODENAME, Target: $TARGET_CODENAME)")"
     } | tee -a "$screen_capture"
-    echo -e
+
 
     local available_space=$(df /var/cache/apt/archives | awk 'NR==2 {print int($4/1024)}')
     if [ "$available_space" -lt 1024 ]; then
