@@ -239,14 +239,14 @@ remove_subscription_banner_v3() {
     local backup_file
     backup_file=$(create_backup "$JS_FILE")
     if [ -n "$backup_file" ]; then
-        msg_ok "$(translate "Desktop UI backup created"): $backup_file"
+        # msg_ok "$(translate "Desktop UI backup created"): $backup_file"
     fi
     
     if [ -f "$MOBILE_UI_FILE" ]; then
         local mobile_backup
         mobile_backup=$(create_backup "$MOBILE_UI_FILE")
         if [ -n "$mobile_backup" ]; then
-            msg_ok "$(translate "Mobile UI backup created"): $mobile_backup"
+        # msg_ok "$(translate "Mobile UI backup created"): $mobile_backup"
         fi
     fi
     
@@ -266,7 +266,7 @@ remove_subscription_banner_v3() {
     msg_ok "$(translate "Subscription banner removed successfully")"
     msg_ok "$(translate "Desktop and Mobile UI patched")"
     msg_ok "$(translate "Refresh your browser (Ctrl+Shift+R) to see changes")"
-    msg_info "$(translate "Backup location"): $BACKUP_DIR"
+
 }
 
 # Run if executed directly
