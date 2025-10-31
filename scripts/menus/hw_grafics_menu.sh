@@ -47,7 +47,7 @@ initialize_cache
                 fi
                 ;;
             3)
-                bash <(curl -s "$REPO_URL/scripts/install_coral_pve.sh")
+                bash <(curl -s "$REPO_URL/scripts/gpu_tpu/install_coral_pve9.sh")
                 if [ $? -ne 0 ]; then
                     return
                 fi
