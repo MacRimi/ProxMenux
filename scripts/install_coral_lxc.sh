@@ -6,7 +6,7 @@
 # Author      : MacRimi
 # Revision    : @Blaspt (USB passthrough via udev rule with persistent /dev/coral)
 # Copyright   : (c) 2024 MacRimi
-# License     : MIT (https://raw.githubusercontent.com/MacRimi/ProxMenux/main/LICENSE)
+# License     : (CC BY-NC 4.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
 # Version     : 1.1
 # Last Updated: 16/05/2025
 # ==========================================================

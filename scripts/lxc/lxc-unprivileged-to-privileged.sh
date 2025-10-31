@@ -5,7 +5,7 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : MIT (https://raw.githubusercontent.com/MacRimi/ProxMenux/main/LICENSE)
+# License     : (CC BY-NC 4.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
 # Version     : 2.0
 # Last Updated: 19/08/2025
 # ==========================================================
