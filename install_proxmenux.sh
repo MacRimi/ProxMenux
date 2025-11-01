@@ -34,8 +34,8 @@
 # ==========================================================
 
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
-UTILS_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/scripts/utils.sh"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
+# UTILS_URL - No longer used in local version (now loaded from ./scripts/utils.sh)
 INSTALL_DIR="/usr/local/bin"
 BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
@@ -51,8 +51,11 @@ MONITOR_INSTALL_PATH="$BASE_DIR/ProxMenux-Monitor.AppImage"
 MONITOR_SERVICE_FILE="/etc/systemd/system/proxmenux-monitor.service"
 MONITOR_PORT=8008
 
-if ! source <(curl -sSf "$UTILS_URL"); then
-    echo "Error: Could not load utils.sh from $UTILS_URL"
+# Load utils.sh from local repository
+if [[ -f "./scripts/utils.sh" ]]; then
+    source "./scripts/utils.sh"
+else
+    echo "Error: Could not load utils.sh from local path"
     exit 1
 fi
 
@@ -315,6 +318,8 @@ get_server_ip() {
 }
 
 install_proxmenux_monitor() {
+    systemctl stop proxmenux-monitor 2>/dev/null || true
+
     # Check if URL is accessible
     if ! wget --spider -q "$MONITOR_APPIMAGE_URL" 2>/dev/null; then
         msg_warn "ProxMenux Monitor AppImage not available at: $MONITOR_APPIMAGE_URL"
@@ -323,7 +328,7 @@ install_proxmenux_monitor() {
     fi
     
     # Download AppImage silently
-    if ! wget -q -O "$MONITOR_INSTALL_PATH" "$MONITOR_APPIMAGE_URL" 2>&1; then
+    if ! wget -q -O "$MONITOR_INSTALL_PATH" "$MONITOR_APPIMAGE_URL" 2>/dev/null; then
         msg_warn "Failed to download ProxMenux Monitor from GitHub."
         msg_info "You can install it manually later when available."
         return 1
@@ -337,7 +342,7 @@ install_proxmenux_monitor() {
         rm -f "$sha256_file"
     else
         # Verify SHA256 silently
-        local expected_hash=$(cat "$sha256_file" | awk '{print $1}')
+        local expected_hash=$(cat "$sha256_file" | grep -Eo '^[a-f0-9]+' | tr -d '\n')
         local actual_hash=$(sha256sum "$MONITOR_INSTALL_PATH" | awk '{print $1}')
         
         if [ "$expected_hash" != "$actual_hash" ]; then
@@ -386,7 +391,7 @@ EOF
     systemctl start proxmenux-monitor.service > /dev/null 2>&1
     
     # Wait a moment for service to start
-    sleep 2
+    sleep 3
     
     # Check if service is running
     if systemctl is-active --quiet proxmenux-monitor.service; then
@@ -394,7 +399,10 @@ EOF
         update_config "proxmenux_monitor" "installed"
         return 0
     else
-        msg_warn "ProxMenux Monitor service failed to start. Check logs with: journalctl -u proxmenux-monitor"
+        msg_warn "ProxMenux Monitor service failed to start."
+        msg_info "Check logs with: journalctl -u proxmenux-monitor -n 20"
+        msg_info "Check status with: systemctl status proxmenux-monitor"
+        update_config "proxmenux_monitor" "failed"
         return 1
     fi
 }
@@ -404,7 +412,7 @@ install_normal_version() {
     local total_steps=4  # Increased from 3 to 4 for monitor installation
     local current_step=1
     
-    show_progress $current_step $total_steps "Installing basic dependencies"
+    show_progress $current_step $total_steps "Installing basic dependencies."
     
     if ! dpkg -l | grep -qw "jq"; then
         msg_info "Installing jq..."
@@ -454,26 +462,22 @@ install_normal_version() {
     msg_ok "Directories and configuration created."
     ((current_step++))
     
-    show_progress $current_step $total_steps "Downloading necessary files"
+    show_progress $current_step $total_steps "Copying necessary files"
     
-    FILES=(
-        "$UTILS_FILE $REPO_URL/scripts/utils.sh"
-        "$INSTALL_DIR/$MENU_SCRIPT $REPO_URL/$MENU_SCRIPT"
-        "$LOCAL_VERSION_FILE $REPO_URL/version.txt"
-    )
-    
-    for file in "${FILES[@]}"; do
-        IFS=" " read -r dest url <<< "$file"
-        msg_info "Downloading ${dest##*/}..."
-        sleep 2
-        if wget -qO "$dest" "$url"; then
-            msg_ok "${dest##*/} downloaded successfully."
-        else
-            msg_error "Failed to download ${dest##*/}. Check your Internet connection."
-            return 1
-        fi
-    done
-    
+    # Note: Previous version downloaded from GitHub, now using local files
+    ### Copy files from local scripts directory
+    cp "./scripts/utils.sh" "$UTILS_FILE"
+    cp "./menu" "$INSTALL_DIR/$MENU_SCRIPT"
+    cp "./version.txt" "$LOCAL_VERSION_FILE"
+    cp "./install_proxmenux.sh" "$BASE_DIR/install_proxmenux.sh"
+
+    mkdir -p "$BASE_DIR/scripts"
+    cp -r "./scripts/"* "$BASE_DIR/scripts/"
+    chmod -R +x "$BASE_DIR/scripts/"
+    chmod +x "$BASE_DIR/install_proxmenux.sh"
+    msg_ok "Necessary files created."
+    ###
+
     chmod +x "$INSTALL_DIR/$MENU_SCRIPT"
     
     ((current_step++))
@@ -482,6 +486,8 @@ install_normal_version() {
     if install_proxmenux_monitor; then
         create_monitor_service
     fi
+    
+    msg_ok "ProxMenux Normal Version installation completed successfully."
 }
 
 ####################################################
@@ -575,32 +581,26 @@ install_translation_version() {
     deactivate
     ((current_step++))
     
-    show_progress $current_step $total_steps "Downloading necessary files"
+    show_progress $current_step $total_steps "Copying necessary files"
     
     mkdir -p "$BASE_DIR"
     mkdir -p "$INSTALL_DIR"
     
-    FILES=(
-        "$CACHE_FILE $REPO_URL/json/cache.json"
-        "$UTILS_FILE $REPO_URL/scripts/utils.sh"
-        "$INSTALL_DIR/$MENU_SCRIPT $REPO_URL/$MENU_SCRIPT"
-        "$LOCAL_VERSION_FILE $REPO_URL/version.txt"
-    )
+    ### Copy files from local scripts directory
+    cp "./json/cache.json" "$CACHE_FILE"
+    msg_ok "Cache file copied with translations."
     
-    for file in "${FILES[@]}"; do
-        IFS=" " read -r dest url <<< "$file"
-        msg_info "Downloading ${dest##*/}..."
-        sleep 2
-        if wget -qO "$dest" "$url"; then
-            msg_ok "${dest##*/} downloaded successfully."
-            if [[ "$dest" == "$CACHE_FILE" ]]; then
-                msg_ok "Cache file updated with latest translations."
-            fi
-        else
-            msg_error "Failed to download ${dest##*/}. Check your Internet connection."
-            return 1
-        fi
-    done
+    cp "./scripts/utils.sh" "$UTILS_FILE"
+    cp "./menu" "$INSTALL_DIR/$MENU_SCRIPT"
+    cp "./version.txt" "$LOCAL_VERSION_FILE"
+    cp "./install_proxmenux.sh" "$BASE_DIR/install_proxmenux.sh"
+    
+    mkdir -p "$BASE_DIR/scripts"
+    cp -r "./scripts/"* "$BASE_DIR/scripts/"
+    chmod -R +x "$BASE_DIR/scripts/"
+    chmod +x "$BASE_DIR/install_proxmenux.sh"
+    msg_ok "Necessary files created."
+    ###
     
     chmod +x "$INSTALL_DIR/$MENU_SCRIPT"
     
@@ -610,6 +610,8 @@ install_translation_version() {
     if install_proxmenux_monitor; then
         create_monitor_service
     fi
+    
+    msg_ok "ProxMenux Translation Version installation completed successfully."
 }
 
 ####################################################
@@ -703,7 +705,7 @@ install_proxmenu() {
     
     if systemctl is-active --quiet proxmenux-monitor.service; then
         local server_ip=$(get_server_ip)
-        echo -e "${GN}🌐 $(translate "ProxMenux Monitor activated")${CL}: ${BL}http://${server_ip}:${MONITOR_PORT}${CL}"
+        echo -e "${GN}🌐  $(translate "ProxMenux Monitor activated")${CL}: ${BL}http://${server_ip}:${MONITOR_PORT}${CL}"
         echo
     fi
     
