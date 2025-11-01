@@ -348,7 +348,7 @@ remove_subscription_banner_v3() {
     fi
     
     # Register tool as applied
-    register_tool "subscription_banner_v3" true
+    register_tool "subscription_banner" true
     
     msg_ok "$(translate "Subscription banner removed successfully")"
     msg_ok "$(translate "Desktop and Mobile UI patched")"
