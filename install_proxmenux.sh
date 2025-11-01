@@ -315,6 +315,8 @@ get_server_ip() {
 }
 
 install_proxmenux_monitor() {
+    systemctl stop proxmenux-monitor 2>/dev/null || true
+    
     # Check if URL is accessible
     if ! wget --spider -q "$MONITOR_APPIMAGE_URL" 2>/dev/null; then
         msg_warn "ProxMenux Monitor AppImage not available at: $MONITOR_APPIMAGE_URL"
@@ -401,33 +403,42 @@ EOF
 
 ####################################################
 install_normal_version() {
-    local total_steps=4  # Increased from 3 to 4 for monitor installation
+    local total_steps=4
     local current_step=1
     
     show_progress $current_step $total_steps "Installing basic dependencies"
     
-    if ! dpkg -l | grep -qw "jq"; then
-        msg_info "Installing jq..."
+    if ! command -v jq > /dev/null 2>&1; then
+        # Try installing from APT (silently)
         apt-get update > /dev/null 2>&1
-        if apt-get install -y jq > /dev/null 2>&1; then
-            msg_ok "jq installed successfully."
+        
+        if apt-get install -y jq > /dev/null 2>&1 && command -v jq > /dev/null 2>&1; then
             update_config "jq" "installed"
         else
-            msg_error "Failed to install jq. Please install it manually."
-            update_config "jq" "failed"
-            return 1
+            # Fallback: Download jq binary from GitHub
+            local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
+            if wget -q -O /usr/local/bin/jq "$jq_url" 2>/dev/null && chmod +x /usr/local/bin/jq; then
+                if command -v jq > /dev/null 2>&1; then
+                    update_config "jq" "installed_from_github"
+                else
+                    msg_error "Failed to install jq. Please install it manually."
+                    update_config "jq" "failed"
+                    return 1
+                fi
+            else
+                msg_error "Failed to install jq from both APT and GitHub. Please install it manually."
+                update_config "jq" "failed"
+                return 1
+            fi
         fi
     else
-        msg_ok "jq is already installed."
         update_config "jq" "already_installed"
     fi
     
     BASIC_DEPS=("dialog" "curl")
     for pkg in "${BASIC_DEPS[@]}"; do
         if ! dpkg -l | grep -qw "$pkg"; then
-            msg_info "Installing $pkg..."
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
-                msg_ok "$pkg installed successfully."
                 update_config "$pkg" "installed"
             else
                 msg_error "Failed to install $pkg. Please install it manually."
@@ -435,10 +446,11 @@ install_normal_version() {
                 return 1
             fi
         else
-            msg_ok "$pkg is already installed."
             update_config "$pkg" "already_installed"
         fi
     done
+    
+    msg_ok "jq, dialog and curl installed successfully."
     
     ((current_step++))
     
@@ -464,7 +476,6 @@ install_normal_version() {
     
     for file in "${FILES[@]}"; do
         IFS=" " read -r dest url <<< "$file"
-        msg_info "Downloading ${dest##*/}..."
         sleep 2
         if wget -qO "$dest" "$url"; then
             msg_ok "${dest##*/} downloaded successfully."
@@ -486,7 +497,7 @@ install_normal_version() {
 
 ####################################################
 install_translation_version() {
-    local total_steps=5  # Increased from 4 to 5 for monitor installation
+    local total_steps=5
     local current_step=1
     
     show_progress $current_step $total_steps "Language selection"
@@ -495,28 +506,37 @@ install_translation_version() {
     
     show_progress $current_step $total_steps "Installing system dependencies"
     
-    if ! dpkg -l | grep -qw "jq"; then
-        msg_info "Installing jq..."
+    if ! command -v jq > /dev/null 2>&1; then
+        # Try installing from APT (silently)
         apt-get update > /dev/null 2>&1
-        if apt-get install -y jq > /dev/null 2>&1; then
-            msg_ok "jq installed successfully."
+        
+        if apt-get install -y jq > /dev/null 2>&1 && command -v jq > /dev/null 2>&1; then
             update_config "jq" "installed"
         else
-            msg_error "Failed to install jq. Please install it manually."
-            update_config "jq" "failed"
-            return 1
+            # Fallback: Download jq binary from GitHub
+            local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
+            if wget -q -O /usr/local/bin/jq "$jq_url" 2>/dev/null && chmod +x /usr/local/bin/jq; then
+                if command -v jq > /dev/null 2>&1; then
+                    update_config "jq" "installed_from_github"
+                else
+                    msg_error "Failed to install jq. Please install it manually."
+                    update_config "jq" "failed"
+                    return 1
+                fi
+            else
+                msg_error "Failed to install jq from both APT and GitHub. Please install it manually."
+                update_config "jq" "failed"
+                return 1
+            fi
         fi
     else
-        msg_ok "jq is already installed."
         update_config "jq" "already_installed"
     fi
     
     DEPS=("dialog" "curl" "python3" "python3-venv" "python3-pip")
     for pkg in "${DEPS[@]}"; do
         if ! dpkg -l | grep -qw "$pkg"; then
-            msg_info "Installing $pkg..."
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
-                msg_ok "$pkg installed successfully."
                 update_config "$pkg" "installed"
             else
                 msg_error "Failed to install $pkg. Please install it manually."
@@ -524,36 +544,32 @@ install_translation_version() {
                 return 1
             fi
         else
-            msg_ok "$pkg is already installed."
             update_config "$pkg" "already_installed"
         fi
     done
+    
+    msg_ok "jq, dialog, curl, python3, python3-venv and python3-pip installed successfully."
     
     ((current_step++))
     
     show_progress $current_step $total_steps "Setting up translation environment"
     
     if [ ! -d "$VENV_PATH" ] || [ ! -f "$VENV_PATH/bin/activate" ]; then
-        msg_info "Creating the virtual environment..."
         python3 -m venv --system-site-packages "$VENV_PATH" > /dev/null 2>&1
         if [ ! -f "$VENV_PATH/bin/activate" ]; then
             msg_error "Failed to create virtual environment. Please check your Python installation."
             update_config "virtual_environment" "failed"
             return 1
         else
-            msg_ok "Virtual environment created successfully."
             update_config "virtual_environment" "created"
         fi
     else
-        msg_ok "Virtual environment already exists."
         update_config "virtual_environment" "already_exists"
     fi
     
     source "$VENV_PATH/bin/activate"
     
-    msg_info "Upgrading pip..."
     if pip install --upgrade pip > /dev/null 2>&1; then
-        msg_ok "Pip upgraded successfully."
         update_config "pip" "upgraded"
     else
         msg_error "Failed to upgrade pip."
@@ -561,9 +577,7 @@ install_translation_version() {
         return 1
     fi
     
-    msg_info "Installing googletrans..."
     if pip install --break-system-packages --no-cache-dir googletrans==4.0.0-rc1 > /dev/null 2>&1; then
-        msg_ok "Googletrans installed successfully."
         update_config "googletrans" "installed"
     else
         msg_error "Failed to install googletrans. Please check your internet connection."
@@ -589,10 +603,8 @@ install_translation_version() {
     
     for file in "${FILES[@]}"; do
         IFS=" " read -r dest url <<< "$file"
-        msg_info "Downloading ${dest##*/}..."
         sleep 2
         if wget -qO "$dest" "$url"; then
-            msg_ok "${dest##*/} downloaded successfully."
             if [[ "$dest" == "$CACHE_FILE" ]]; then
                 msg_ok "Cache file updated with latest translations."
             fi
@@ -679,7 +691,7 @@ show_installation_options() {
     fi
 }
 
-install_proxmenu() {
+install_proxmenux() {
     show_installation_options
     
     case "$INSTALL_TYPE" in
@@ -719,4 +731,4 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 cleanup_corrupted_files
-install_proxmenu
+install_proxmenux
