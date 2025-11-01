@@ -100,16 +100,8 @@ verify_js_integrity() {
 patch_checked_command() {
     [ -f "$JS_FILE" ] || return 0
     
-    # Check if already patched - look for our marker
-    if grep -q "$MARK" "$JS_FILE"; then
-        # Verify the patch is actually applied by checking if function is simplified
-        if grep -A 2 "checked_command: function" "$JS_FILE" | grep -q "orig_cmd();"; then
-            return 0
-        else
-            # Marker exists but patch not applied - remove marker and try again
-            sed -i "/$MARK/d" "$JS_FILE"
-        fi
-    fi
+    # Check if already patched
+    grep -q "$MARK" "$JS_FILE" && return 0
     
     # Create backup
     mkdir -p "$BACKUP_DIR"
@@ -119,105 +111,27 @@ patch_checked_command() {
     # Set trap to restore on error
     trap "cp -a '$backup' '$JS_FILE' 2>/dev/null || true" ERR
     
-    # Use Python to replace the entire checked_command function using brace counting
-    python3 <<'PYTHON_END'
-import sys
-
-js_file = "/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
-
-try:
-    with open(js_file, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-    
-    # Find the line with checked_command
-    start_line = -1
-    for i, line in enumerate(lines):
-        if 'checked_command: function' in line or 'checked_command:function' in line:
-            start_line = i
-            break
-    
-    if start_line == -1:
-        print("checked_command function not found", file=sys.stderr)
-        sys.exit(1)
-    
-    # Count braces to find the end of the function
-    brace_count = 0
-    end_line = -1
-    started_counting = False
-    
-    for i in range(start_line, len(lines)):
-        line = lines[i]
-        
-        # Count opening and closing braces
-        for char in line:
-            if char == '{':
-                brace_count += 1
-                started_counting = True
-            elif char == '}':
-                brace_count -= 1
-        
-        # When we reach 0 and we've started counting, we found the end
-        if started_counting and brace_count == 0:
-            # Check if this line ends with "}," which is the function closure
-            if '},' in line or '},\n' in line:
-                end_line = i
-                break
-    
-    if end_line == -1:
-        print("Could not find end of checked_command function", file=sys.stderr)
-        sys.exit(1)
-    
-    # Get the indentation of the original function
-    indent = len(lines[start_line]) - len(lines[start_line].lstrip())
-    indent_str = ' ' * indent
-    
-    # Create the replacement function (simple version that just calls orig_cmd)
-    replacement = [
-        f"{indent_str}checked_command: function (orig_cmd) {{\n",
-        f"{indent_str}    orig_cmd();\n",
-        f"{indent_str}}},\n"
-    ]
-    
-    # Replace the function
-    new_lines = lines[:start_line] + replacement + lines[end_line+1:]
-    
-    # Write the modified content
-    with open(js_file, 'w', encoding='utf-8') as f:
-        f.writelines(new_lines)
-    
-    #print(f"Successfully replaced lines {start_line+1} to {end_line+1}")
-    sys.exit(0)
-
-except Exception as e:
-    print(f"Python patch error: {e}", file=sys.stderr)
-    import traceback
-    traceback.print_exc(file=sys.stderr)
-    sys.exit(1)
-PYTHON_END
-    
-    local python_result=$?
-    
-    if [ $python_result -ne 0 ]; then
-        # Python failed, restore backup
-        cp -a "$backup" "$JS_FILE"
-        trap - ERR
-        return 1
-    fi
-    
-    # Verify the patch was applied
-    if ! grep -A 2 "checked_command: function" "$JS_FILE" | grep -q "orig_cmd();"; then
-        cp -a "$backup" "$JS_FILE"
-        trap - ERR
-        return 1
-    fi
-    
     # Add patch marker at the beginning
     sed -i "1s|^|$MARK\n|" "$JS_FILE"
+    
+    # Surgical patch: Change the condition in checked_command function
+    # This changes the if condition to 'if (false)' making the banner never show
+    if grep -q "res\.data\.status\.toLowerCase() !== 'active'" "$JS_FILE"; then
+        # Pattern for newer versions (8.4.5+)
+        sed -i "/checked_command: function/,/},$/s/res === null || res === undefined || !res || res\.data\.status\.toLowerCase() !== 'active'/false/g" "$JS_FILE"
+    elif grep -q "res\.data\.status !== 'Active'" "$JS_FILE"; then
+        # Pattern for older versions
+        sed -i "/checked_command: function/,/},$/s/res === null || res === undefined || !res || res\.data\.status !== 'Active'/false/g" "$JS_FILE"
+    fi
+    
+    # Also handle the NoMoreNagging pattern if present
+    if grep -q "res\.data\.status\.toLowerCase() !== 'NoMoreNagging'" "$JS_FILE"; then
+        sed -i "/checked_command: function/,/},$/s/res === null || res === undefined || !res || res\.data\.status\.toLowerCase() !== 'NoMoreNagging'/false/g" "$JS_FILE"
+    fi
     
     # Verify integrity after patch
     if ! verify_js_integrity "$JS_FILE"; then
         cp -a "$backup" "$JS_FILE"
-        trap - ERR
         return 1
     fi
     
@@ -303,7 +217,6 @@ EOFAPT
     
     # Verify APT hook syntax
     apt-config dump >/dev/null 2>&1 || { 
-        msg_warn "APT hook syntax issue, removing..."
         rm -f "$APT_HOOK"
     }
 }
@@ -313,7 +226,7 @@ remove_subscription_banner_v3() {
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+' | head -1 || echo "unknown")
     
-    msg_info "$(translate "Detected Proxmox VE") ${pve_version} - $(translate "applying minimal banner patch")"
+    msg_info "$(translate "Detected Proxmox VE") ${pve_version} - $(translate "applying banner patch")"
     
 
     
@@ -326,14 +239,16 @@ remove_subscription_banner_v3() {
     local backup_file
     backup_file=$(create_backup "$JS_FILE")
     if [ -n "$backup_file" ]; then
-        msg_ok "$(translate "Desktop UI backup created")"
+        # msg_ok "$(translate "Desktop UI backup created"): $backup_file"
+        :
     fi
     
     if [ -f "$MOBILE_UI_FILE" ]; then
         local mobile_backup
         mobile_backup=$(create_backup "$MOBILE_UI_FILE")
         if [ -n "$mobile_backup" ]; then
-            msg_ok "$(translate "Mobile UI backup created")"
+        # msg_ok "$(translate "Mobile UI backup created"): $mobile_backup"
+        :
         fi
     fi
     
@@ -348,7 +263,7 @@ remove_subscription_banner_v3() {
     fi
     
     # Register tool as applied
-    register_tool "subscription_banner_v3" true
+    register_tool "subscription_banner" true
     
     msg_ok "$(translate "Subscription banner removed successfully")"
     msg_ok "$(translate "Desktop and Mobile UI patched")"
