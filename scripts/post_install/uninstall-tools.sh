@@ -354,13 +354,13 @@ uninstall_subscription_banner() {
     find /var/cache/nginx/ -type f -delete 2>/dev/null || true
     
 
-    systemctl restart pveproxy pvedaemon pvestatd 2>/dev/null || true
+    #systemctl restart pveproxy pvedaemon pvestatd 2>/dev/null || true
     
     register_tool "subscription_banner" false
     
     if [[ "$restored" == true ]]; then
         msg_ok "$(translate "Subscription banner restored successfully (desktop and mobile)")"
-        msg_ok "$(translate "Clear your browser cache and refresh to see the subscription banner again")"
+        msg_ok "$(translate "Refresh your browser to see changes (server restart may be required)")"
     else
         msg_error "$(translate "Failed to restore subscription banner completely")"
         return 1
