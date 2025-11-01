@@ -152,48 +152,23 @@ EOF
         msg_ok "$(translate "Non-free firmware warnings disabled")"
     fi
 
-    # UPDATE: no progress bar here (dpkg is not involved); capture output to parse errors
-    update_output=$(apt-get update 2>&1)
+    #update_output=$(apt-get update 2>&1)
+    update_output=$(apt-get -o Dpkg::Progress-Fancy=1 update 2>&1)
     update_exit_code=$?
 
     if [ $update_exit_code -eq 0 ]; then
         msg_ok "$(translate "Package lists updated successfully")" | tee -a "$screen_capture"
     else
-        # Handle common apt errors
-        if echo "$update_output" | grep -Eq "NO_PUBKEY|GPG error"; then
-
-
-            # Extract first missing key (NO_PUBKEY ABCDEF... pattern)
-            key=$(echo "$update_output" | sed -n 's/.*NO_PUBKEY \([0-9A-F]\{8,40\}\).*/\1/p' | head -1)
-
-            if [ -n "$key" ]; then
-                mkdir -p /etc/apt/keyrings
-
-                if command -v gpg >/dev/null 2>&1; then
-                    # Modern approach: receive -> export -> dearmor into /etc/apt/keyrings/<KEY>.gpg
-                    if gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key" \
-                    && gpg --batch --export "$key" | gpg --dearmor -o "/etc/apt/keyrings/${key}.gpg"; then
-                        msg_ok "$(translate "Imported missing GPG key: $key")"
-                    else
-                        msg_warn "$(translate "Keyrings method failed; trying apt-key fallback")"
-                        apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$key" >/dev/null 2>&1 || true
-                    fi
-                else
-                    # Fallback for minimal systems without gpg installed
-                    msg_warn "$(translate "gpg not found; trying apt-key fallback")"
-                    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$key" >/dev/null 2>&1 || true
-                fi
-            fi
-
-            # Retry update after importing the key
+        if echo "$update_output" | grep -q "NO_PUBKEY\|GPG error"; then
+            msg_info "$(translate "Fixing GPG key issues...")"
+            apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $(echo "$update_output" | grep "NO_PUBKEY" | sed 's/.*NO_PUBKEY //' | head -1) 2>/dev/null
             if apt-get update > "$log_file" 2>&1; then
                 msg_ok "$(translate "Package lists updated after GPG fix")" | tee -a "$screen_capture"
             else
                 msg_error "$(translate "Failed to update package lists. Check log: $log_file")"
                 return 1
             fi
-
-        elif echo "$update_output" | grep -Eq "404|Failed to fetch"; then
+        elif echo "$update_output" | grep -q "404\|Failed to fetch"; then
             msg_warn "$(translate "Some repositories are not available, continuing with available ones...")"
         else
             msg_error "$(translate "Failed to update package lists. Check log: $log_file")"
@@ -202,11 +177,10 @@ EOF
         fi
     fi
 
-
     if apt policy 2>/dev/null | grep -q "${TARGET_CODENAME}.*pve-no-subscription"; then
-        msg_ok "$(translate "Proxmox VE $pve_version repositories verified")" | tee -a "$screen_capture"
+        msg_ok "$(translate "Proxmox VE 9.x repositories verified")" | tee -a "$screen_capture"
     else
-        msg_warn "$(translate "Proxmox VE $pve_version repositories verification inconclusive, continuing...")"
+        msg_warn "$(translate "Proxmox VE 9.x repositories verification inconclusive, continuing...")"
     fi
 
     local current_pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
@@ -320,7 +294,7 @@ EOF
     echo -e "${TAB}${GN}📦 $(translate "Packages upgraded")${CL}: ${BL}$upgradable${CL}"
     echo -e "${TAB}${GN}🖥️  $(translate "Proxmox VE")${CL}: ${BL}$available_pve_version (Debian $OS_CODENAME)${CL}"
 
-    msg_ok "$(translate "Proxmox VE configuration completed.")"
+    msg_ok "$(translate "Proxmox VE 9.x configuration completed.")"
     
     rm -f "$screen_capture"
 }
