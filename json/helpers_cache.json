@@ -3626,6 +3626,22 @@
     "type": "ct"
   },
   {
+    "name": "Pangolin",
+    "slug": "pangolin",
+    "desc": "Pangolin securely routes traffic over WireGuard tunnels to any private network. It works like a reverse proxy that spans multiple networks \u2014 no public IPs, DNS setup, or certificates required.",
+    "script": "ct/pangolin.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/pangolin.sh",
+    "categories": [
+      21
+    ],
+    "notes": [
+      "Type `journalctl -u pangolin | grep -oP 'Token:\\s*\\K\\w+'` into LXC console to get admin token which you will use to create admin account.",
+      "LXC has 4GB of RAM set initially for the build stage. After installation finishes, you can decrease the RAM allocated to 1024MB or 512MB even.",
+      "Make sure you edit `/opt/pangolin/config/config.yml` and change it to match your needs"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "PaperlessAI",
     "slug": "paperless-ai",
     "desc": "An automated document analyzer for Paperless-ngx using OpenAI API, Ollama and all OpenAI API compatible Services to automatically analyze and tag your documents.It features: Automode, Manual Mode, Ollama and OpenAI, a Chat function to query your documents with AI, a modern and intuitive Webinterface.",
