@@ -31,7 +31,7 @@
 
 
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
 CACHE_FILE="$BASE_DIR/cache.json"
@@ -44,7 +44,10 @@ if [[ -f "$UTILS_FILE" ]]; then
 fi
 
 # =========================================================
-
+# For now, update is not available in the local version.
+# Take in mind that in future versions, updates must be 
+# a warning to update the .deb package
+# =========================================================
 check_updates() {
     local INSTALL_SCRIPT="$BASE_DIR/install_proxmenux.sh"
 
@@ -80,13 +83,13 @@ check_updates() {
 }
 
 
-
 main_menu() {
-    exec bash <(curl -fsSL "$REPO_URL/scripts/menus/main_menu.sh")
+    exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
 }
 
 
 load_language
 initialize_cache
-check_updates
+# Check updates doesn't make sense in offline mode
+# check_updates     
 main_menu
