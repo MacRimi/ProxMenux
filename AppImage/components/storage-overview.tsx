@@ -211,6 +211,12 @@ export function StorageOverview() {
     if (diskName.startsWith("nvme")) {
       return "NVMe"
     }
+    // rotation_rate = -1 means HDD but RPM is unknown (detected via kernel rotational flag)
+    // rotation_rate = 0 or undefined means SSD
+    // rotation_rate > 0 means HDD with known RPM
+    if (rotationRate === -1) {
+      return "HDD"
+    }
     if (!rotationRate || rotationRate === 0) {
       return "SSD"
     }
