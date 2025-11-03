@@ -10,7 +10,7 @@
 # ==========================================================
 
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
 CACHE_FILE="$BASE_DIR/cache.json"
@@ -218,7 +218,7 @@ show_config_menu() {
                 uninstall_proxmenu
                 ;;
             "return_main"|"")
-                exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
+                exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
                 ;;
         esac
     done
@@ -257,11 +257,7 @@ change_language() {
            --msgbox "\n\n$(translate "Language changed to") $new_language" 10 50
     
     # Reload menu with new language
-    TMP_FILE=$(mktemp)
-    curl -s "$REPO_URL/scripts/menus/config_menu.sh" > "$TMP_FILE"
-    chmod +x "$TMP_FILE"
-    trap 'rm -f "$TMP_FILE"' EXIT
-    exec bash "$TMP_FILE"
+    exec bash "$LOCAL_SCRIPTS/menus/config_menu.sh"
 }
 
 # ==========================================================
