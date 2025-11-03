@@ -1788,15 +1788,13 @@ export default function Hardware() {
               {selectedDisk.rotation_rate !== undefined && selectedDisk.rotation_rate !== null && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-sm font-medium text-muted-foreground">Rotation Rate</span>
-                  <div className="text-sm">
-                    {typeof selectedDisk.rotation_rate === "number" && selectedDisk.rotation_rate === -1
-                      ? "N/A"
-                      : typeof selectedDisk.rotation_rate === "number" && selectedDisk.rotation_rate > 0
-                        ? `${selectedDisk.rotation_rate} rpm`
-                        : typeof selectedDisk.rotation_rate === "string"
-                          ? selectedDisk.rotation_rate
-                          : "Solid State Device"}
-                  </div>
+                  <span className="text-sm">
+                    {typeof selectedDisk.rotation_rate === "number" && selectedDisk.rotation_rate > 0
+                      ? `${selectedDisk.rotation_rate} rpm`
+                      : typeof selectedDisk.rotation_rate === "string"
+                        ? selectedDisk.rotation_rate
+                        : "Solid State Device"}
+                  </span>
                 </div>
               )}
 
