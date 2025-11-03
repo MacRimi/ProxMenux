@@ -12,7 +12,7 @@
 
 
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -36,19 +36,19 @@ while true; do
 
     case $OPTION in
         1)  
-            bash <(curl -s "$REPO_URL/scripts/storage/disk-passthrough.sh")
+            bash "$LOCAL_SCRIPTS/storage/disk-passthrough.sh"
             ;;
         2)
-            bash <(curl -s "$REPO_URL/scripts/storage/disk-passthrough_ct.sh")
+            bash "$LOCAL_SCRIPTS/storage/disk-passthrough_ct.sh"
             ;;
         3)
-            bash <(curl -s "$REPO_URL/scripts/storage/import-disk-image.sh")
+            bash "$LOCAL_SCRIPTS/storage/import-disk-image.sh"
             ;;
         4)
-            exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
+            exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
             ;;
         *)
-            exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
+            exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
             ;;
     esac
 done
