@@ -28,7 +28,7 @@
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 
 [[ -f "$UTILS_FILE" ]] && source "$UTILS_FILE"
 load_language
@@ -62,7 +62,7 @@ function select_nas_iso() {
 
   case "$NAS_TYPE" in
     1)
-      bash <(curl -s "$REPO_URL/scripts/vm/synology.sh")
+      bash "$LOCAL_SCRIPTS/vm/synology.sh"
       msg_success "$(translate "Press Enter to return to menu...")"
       read -r
       return 1
@@ -103,7 +103,7 @@ function select_nas_iso() {
       HN="Rockstor"
       ;;
     7)
-      bash <(curl -s "$REPO_URL/scripts/vm/zimaos.sh")
+      bash "$LOCAL_SCRIPTS/vm/zimaos.sh"
       msg_success "$(translate "Press Enter to return to menu...")"
       read -r
       return 1
