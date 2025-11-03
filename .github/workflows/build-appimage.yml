@@ -1,12 +1,7 @@
 name: Build ProxMenux Monitor AppImage
 
 on:
-  push:
-    branches: [ main ]
-    paths: [ 'AppImage/**' ]
-  pull_request:
-    branches: [ main ]
-    paths: [ 'AppImage/**' ]
+
   workflow_dispatch:  
   
 permissions:
