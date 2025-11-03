@@ -16,7 +16,7 @@
 # Special thanks to @Andres_Eduardo_Rojas_Moya for contributing the persistent
 # network naming function and for the original idea.
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -1082,7 +1082,7 @@ show_menu() {
         
 
         if [ $exit_status -ne 0 ] || [ "$script_selection" = "0" ]; then
-            exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
+            exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
         fi
         
 
