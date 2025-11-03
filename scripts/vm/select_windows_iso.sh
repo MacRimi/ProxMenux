@@ -24,8 +24,8 @@
 # consistent and maintainable way, using ProxMenux standards.
 # ==========================================================
 
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
-UUP_REPO="$REPO_URL/scripts/vm"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
+UUP_REPO="$LOCAL_SCRIPTS/vm"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -79,7 +79,7 @@ function select_windows_iso() {
 
     case "$CHOICE" in
       1)
-        if source <(curl -fsSL "$UUP_REPO/uupdump_creator.sh"); then
+        if source "$UUP_REPO/uupdump_creator.sh"; then
           run_uupdump_creator || return 1
           detect_latest_iso_created || return 1
           EXIT_FLAG="yes"
