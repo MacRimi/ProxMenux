@@ -36,7 +36,7 @@
 
 
 # Configuration
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -107,16 +107,11 @@ apt_upgrade() {
 
     if [[ "$pve_version" -ge 9 ]]; then
 
-        bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve9_2.sh")
+        bash "$LOCAL_SCRIPTS/global/update-pve9_2.sh"
     else
 
-        bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve8.sh")
+        bash "$LOCAL_SCRIPTS/global/update-pve8.sh"
     fi
-
-
-
-
-
 }
 
 # ==========================================================
@@ -147,14 +142,14 @@ remove_subscription_banner() {
             msg_warn "Banner removal cancelled by user."
             return 1
         fi
-        bash <(curl -fsSL "$REPO_URL/scripts/global/remove-banner-pve-v3.sh")
+        bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"
     else
         if ! whiptail --title "Proxmox VE 8.x Subscription Banner Removal" \
         --yesno "Do you want to remove the Proxmox subscription banner from the web interface for PVE $pve_version?" 10 70; then
             msg_warn "Banner removal cancelled by user."
             return 1
         fi
-        bash <(curl -fsSL "$REPO_URL/scripts/global/remove-banner-pve8.sh")
+        bash "$LOCAL_SCRIPTS/global/remove-banner-pve8.sh"
     fi
 }
 
