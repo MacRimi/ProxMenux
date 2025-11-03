@@ -75,8 +75,10 @@ export function NetworkTrafficChart({
     setError(null)
 
     try {
-      const baseUrl =
-        typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+      const { protocol, hostname, port } = window.location
+      const isStandardPort = port === "" || port === "80" || port === "443"
+
+      const baseUrl = isStandardPort ? "" : `${protocol}//${hostname}:8008`
 
       const apiUrl = interfaceName
         ? `${baseUrl}/api/network/${interfaceName}/metrics?timeframe=${timeframe}`

@@ -188,7 +188,12 @@ export default function Hardware() {
 
     const fetchRealtimeData = async () => {
       try {
-        const apiUrl = `http://${window.location.hostname}:8008/api/gpu/${fullSlot}/realtime`
+        const { protocol, hostname, port } = window.location
+        const isStandardPort = port === "" || port === "80" || port === "443"
+
+        const apiUrl = isStandardPort
+          ? `/api/gpu/${fullSlot}/realtime`
+          : `${protocol}//${hostname}:8008/api/gpu/${fullSlot}/realtime`
 
         const response = await fetch(apiUrl, {
           method: "GET",
