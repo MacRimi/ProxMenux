@@ -1388,22 +1388,22 @@ def get_smart_data(disk_name):
                 # print(f"[v0] Health: WARNING (temperature {smart_data['temperature']}°C)")
                 pass
 
-    # CHANGE: Use -1 to indicate HDD with unknown RPM instead of inventing 7200 RPM
-    # Fallback: Check kernel's rotational flag if smartctl didn't provide rotation_rate
-    # This fixes detection for older disks that don't report RPM via smartctl
-    if smart_data['rotation_rate'] == 0:
-        try:
-            rotational_path = f"/sys/block/{disk_name}/queue/rotational"
-            if os.path.exists(rotational_path):
-                with open(rotational_path, 'r') as f:
-                    rotational = int(f.read().strip())
-                    if rotational == 1:
-                        # Disk is rotational (HDD), use -1 to indicate "HDD but RPM unknown"
-                        smart_data['rotation_rate'] = -1
-                    # If rotational == 0, it's an SSD, keep rotation_rate as 0
-        except Exception as e:
-            pass  # If we can't read the file, leave rotation_rate as is
-
+        # CHANGE: Use -1 to indicate HDD with unknown RPM instead of inventing 7200 RPM
+        # Fallback: Check kernel's rotational flag if smartctl didn't provide rotation_rate
+        # This fixes detection for older disks that don't report RPM via smartctl
+        if smart_data['rotation_rate'] == 0:
+            try:
+                rotational_path = f"/sys/block/{disk_name}/queue/rotational"
+                if os.path.exists(rotational_path):
+                    with open(rotational_path, 'r') as f:
+                        rotational = int(f.read().strip())
+                        if rotational == 1:
+                            # Disk is rotational (HDD), use -1 to indicate "HDD but RPM unknown"
+                            smart_data['rotation_rate'] = -1
+                        # If rotational == 0, it's an SSD, keep rotation_rate as 0
+            except Exception as e:
+                pass  # If we can't read the file, leave rotation_rate as is
+            
     except FileNotFoundError:
         # print(f"[v0] ERROR: smartctl not found - install smartmontools for disk monitoring.")
         pass
