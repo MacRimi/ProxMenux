@@ -20,8 +20,8 @@
 # ==========================================================
 
 
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
-RETURN_SCRIPT="$REPO_URL/scripts/menus/menu_post_install.sh"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
+RETURN_SCRIPT="$LOCAL_SCRIPTS/menus/menu_post_install.sh"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 TOOLS_JSON="$BASE_DIR/installed_tools.json"
