@@ -4,7 +4,7 @@
 # ==========================================================
 
 # Configuration
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -29,7 +29,7 @@ register_tool() {
 }
 
 download_common_functions() {
-    if ! source <(curl -s "$REPO_URL/scripts/global/common-functions.sh"); then
+    if ! source "$LOCAL_SCRIPTS/global/common-functions.sh"; then
         return 1
     fi
 }
