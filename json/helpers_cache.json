@@ -1143,6 +1143,18 @@
     "type": "ct"
   },
   {
+    "name": "Donetick",
+    "slug": "donetick",
+    "desc": "Donetick an open-source, user-friendly app for managing tasks and chores, featuring customizable options to help you and others stay organized",
+    "script": "ct/donetick.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/donetick.sh",
+    "categories": [
+      19
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Dotnet ASP Web API",
     "slug": "dotnetaspwebapi",
     "desc": "Automatically setup a ASP.NET server up, as well as a FTP server so you can publish to this container from Visual Studio.",
@@ -2783,18 +2795,6 @@
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/meshcentral.sh",
     "categories": [
       4
-    ],
-    "notes": [],
-    "type": "ct"
-  },
-  {
-    "name": "MeTube",
-    "slug": "metube",
-    "desc": "MeTube allows you to download videos from YouTube and dozens of other sites.",
-    "script": "ct/metube.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/metube.sh",
-    "categories": [
-      11
     ],
     "notes": [],
     "type": "ct"
