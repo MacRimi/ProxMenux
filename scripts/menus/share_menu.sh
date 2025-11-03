@@ -10,7 +10,7 @@
 # ==========================================================
 
 # Configuration
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -43,7 +43,7 @@ while true; do
             "h"         "$(translate "Help & Info (commands)")" \
             "0"         "$(translate "Return to Main Menu")" \
             2>&1 >/dev/tty
-    ) || { exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh"); }
+    ) || { exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"; }
 
     case "$OPTION" in
 
@@ -52,37 +52,37 @@ while true; do
             ;;
 
         1)
-            bash <(curl -s "$REPO_URL/scripts/share/nfs_host.sh")
+            bash "$LOCAL_SCRIPTS/share/nfs_host.sh"
             ;;
         2)
-            bash <(curl -s "$REPO_URL/scripts/share/samba_host.sh")
+            bash "$LOCAL_SCRIPTS/share/samba_host.sh"
             ;;
         3)
-            bash <(curl -s "$REPO_URL/scripts/share/local-shared-manager.sh")
+            bash "$LOCAL_SCRIPTS/share/local-shared-manager.sh"
             ;;    
         4)
-            bash <(curl -s "$REPO_URL/scripts/share/lxc-mount-manager_minimal.sh")
+            bash "$LOCAL_SCRIPTS/share/lxc-mount-manager_minimal.sh"
             ;;
         5)
-            bash <(curl -s "$REPO_URL/scripts/share/nfs_client.sh")
+            bash "$LOCAL_SCRIPTS/share/nfs_client.sh"
             ;;    
         6) 
-            bash <(curl -s "$REPO_URL/scripts/share/samba_client.sh")
+            bash "$LOCAL_SCRIPTS/share/samba_client.sh"
             ;;
         7)
-            bash <(curl -s "$REPO_URL/scripts/share/nfs_lxc_server.sh")
+            bash "$LOCAL_SCRIPTS/share/nfs_lxc_server.sh"
             ;;
         8)
-            bash <(curl -s "$REPO_URL/scripts/share/samba_lxc_server.sh")
+            bash "$LOCAL_SCRIPTS/share/samba_lxc_server.sh"
             ;;
         h)
-            bash <(curl -s "$REPO_URL/scripts/share/commands_share.sh")
+            bash "$LOCAL_SCRIPTS/share/commands_share.sh"
             ;;
         0)
-            exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
+            exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
             ;;
         *)
-            exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
+            exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
             ;;
     esac
 done

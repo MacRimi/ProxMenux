@@ -12,7 +12,7 @@
 
 
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -39,38 +39,37 @@ while true; do
     case $OPTION in
         1)
             msg_info2 "$(translate "Running script: Add Disk Passthrough to a VM")..."
-            bash <(curl -s "$REPO_URL/scripts/storage/disk-passthrough.sh")
+            bash "$LOCAL_SCRIPTS/storage/disk-passthrough.sh"
             ;;
         2)
             msg_info2 "$(translate "Running script: Add Disk Passthrough to a CT")..."
-            bash <(curl -s "$REPO_URL/scripts/storage/disk-passthrough_ct.sh")
+            bash "$LOCAL_SCRIPTS/storage/disk-passthrough_ct.sh"
             ;;
         3)
             msg_info2 "$(translate "Running script: Import Disk Image to a VM")..."
-            bash <(curl -s "$REPO_URL/scripts/storage/import-disk-image.sh")
+            bash "$LOCAL_SCRIPTS/storage/import-disk-image.sh"
             ;;
         4)
             msg_info2 "$(translate "Running script: Mount point to CT")..."
-            bash <(curl -s "$REPO_URL/scripts/storage/mount-point-to-ct.sh")
+            bash "$LOCAL_SCRIPTS/storage/mount-point-to-ct.sh"
             ;;
         5)
             msg_info2 "$(translate "Running script: Mount disk on HOST")..."
-            bash <(curl -s "$REPO_URL/scripts/storage/mount-disk-on-host.sh")
+            bash "$LOCAL_SCRIPTS/storage/mount-disk-on-host.sh"
             ;;
         6)
             msg_info2 "$(translate "Running script: Unmount disk from HOST")..."
-            bash <(curl -s "$REPO_URL/scripts/storage/unmount-disk-from-host.sh")
+            bash "$LOCAL_SCRIPTS/storage/unmount-disk-from-host.sh"
             ;;
         7)
             msg_info2 "$(translate "Running script: Format disk")..."
-            bash <(curl -s "$REPO_URL/scripts/storage/format-disk.sh")
+            bash "$LOCAL_SCRIPTS/storage/format-disk.sh"
             ;;
         8)
-            exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
+            exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
             ;;
         *)
-            exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
+            exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
             ;;
     esac
 done
-

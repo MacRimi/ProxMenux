@@ -11,7 +11,7 @@
 # ==========================================================
 
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -62,21 +62,19 @@ show_menu() {
         OPTION=$(<"$TEMP_FILE")
 
         case $OPTION in
-            1) exec bash <(curl -s "$REPO_URL/scripts/menus/menu_post_install.sh") ;;
-            2) bash <(curl -s "$REPO_URL/scripts/help_info_menu.sh") ;;
-            3) exec bash <(curl -s "$REPO_URL/scripts/menus/hw_grafics_menu.sh") ;;
-            4) exec bash <(curl -s "$REPO_URL/scripts/menus/create_vm_menu.sh") ;;
-            5) exec bash <(curl -s "$REPO_URL/scripts/menus/storage_menu.sh") ;;
-            6) exec bash <(curl -s "$REPO_URL/scripts/menus/menu_Helper_Scripts.sh") ;;
-            7) exec bash <(curl -s "$REPO_URL/scripts/menus/network_menu.sh") ;;
-            8) exec bash <(curl -s "$REPO_URL/scripts/menus/utilities_menu.sh") ;;
-            9) exec bash <(curl -s "$REPO_URL/scripts/menus/config_menu.sh") ;;
+            1) exec bash "$LOCAL_SCRIPTS/menus/menu_post_install.sh" ;;
+            2) bash "$LOCAL_SCRIPTS/help_info_menu.sh" ;;
+            3) exec bash "$LOCAL_SCRIPTS/menus/hw_grafics_menu.sh" ;;
+            4) exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh" ;;
+            5) exec bash "$LOCAL_SCRIPTS/menus/storage_menu.sh" ;;
+            6) exec bash "$LOCAL_SCRIPTS/menus/menu_Helper_Scripts.sh" ;;
+            7) exec bash "$LOCAL_SCRIPTS/menus/network_menu.sh" ;;
+            8) exec bash "$LOCAL_SCRIPTS/menus/utilities_menu.sh" ;;
+            9) exec bash "$LOCAL_SCRIPTS/menus/config_menu.sh" ;;
             0) clear; msg_ok "$(translate "Thank you for using ProxMenux. Goodbye!")"; rm -f "$TEMP_FILE"; exit 0 ;;
             *) msg_warn "$(translate "Invalid option")"; sleep 2 ;;
         esac
     done
 }
-
-
 
 show_menu

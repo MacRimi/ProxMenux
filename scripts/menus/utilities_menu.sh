@@ -12,7 +12,7 @@
 
 
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -36,13 +36,13 @@ initialize_cache
 
         case $OPTION in
             1)
-                bash <(curl -s "$REPO_URL/scripts/utilities/uup_dump_iso_creator.sh")
+                bash "$LOCAL_SCRIPTS/utilities/uup_dump_iso_creator.sh"
                 if [ $? -ne 0 ]; then
                     return
                 fi
                 ;;
             2)
-                bash <(curl -s "$REPO_URL/scripts/utilities/system_utils.sh")
+                bash "$LOCAL_SCRIPTS/utilities/system_utils.sh"
                 if [ $? -ne 0 ]; then
                     return
                 fi
@@ -64,19 +64,20 @@ initialize_cache
 
                 dialog_result=$?
                 if [[ $dialog_result -eq 0 ]]; then
-                    bash <(curl -s "$REPO_URL/scripts/utilities/proxmox_update.sh")
+                    bash "$LOCAL_SCRIPTS/utilities/proxmox_update.sh"
                     if [ $? -ne 0 ]; then
                         return
                     fi
                 fi
                 ;;
             4)
-                bash <(curl -s "$REPO_URL/scripts/utilities/upgrade_pve8_to_pve9.sh")
+                bash "$LOCAL_SCRIPTS/utilities/upgrade_pve8_to_pve9.sh"
                 if [ $? -ne 0 ]; then
                     return
                 fi
                 ;;    
-            5) exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh") ;;
-            *) exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh") ;;
+            5) exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh" ;;
+            *) exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh" ;;
         esac
     done
+    

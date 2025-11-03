@@ -12,7 +12,7 @@
 
 
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -35,24 +35,24 @@ initialize_cache
 
         case $OPTION in
             1)
-                bash <(curl -s "$REPO_URL/scripts/configure_igpu_lxc.sh")
+                bash "$LOCAL_SCRIPTS/configure_igpu_lxc.sh"
                 if [ $? -ne 0 ]; then
                     return
                 fi
                 ;;
             2)
-                bash <(curl -s "$REPO_URL/scripts/install_coral_lxc.sh")
+                bash "$LOCAL_SCRIPTS/install_coral_lxc.sh"
                 if [ $? -ne 0 ]; then
                     return
                 fi
                 ;;
             3)
-                bash <(curl -s "$REPO_URL/scripts/gpu_tpu/install_coral_pve9.sh")
+                bash "$LOCAL_SCRIPTS/gpu_tpu/install_coral_pve9.sh"
                 if [ $? -ne 0 ]; then
                     return
                 fi
                 ;;
-            4) exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh") ;;
-            *) exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh") ;;
+            4) exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh" ;;
+            *) exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh" ;;
         esac
     done

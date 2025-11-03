@@ -31,12 +31,12 @@
 # - Translation support: Multi-language compatible through ProxMenux framework
 # - Rollback compatibility: All optimizations can be reversed using the uninstall script
 #
-# This script is based on the post-install script cutotomizable
+# This script is based on the post-install script customizable
 # ==========================================================
 
 
 # Configuration
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -99,7 +99,7 @@ lvm_repair_check() {
     done
     
     msg_ok "$(translate "LVM PV headers check completed")"
-
+    register_tool "lvm_repair" true
 }
 
 # ==========================================================
@@ -257,7 +257,7 @@ apt_upgrade() {
     if [ "$total_packages" -eq 0 ]; then
         total_packages=1  
     fi
-    msg_ok "$(translate "Packages upgrade successfull")"
+    msg_ok "$(translate "Packages upgrade successful")"
     tput civis  
     tput sc     
 
@@ -748,8 +748,9 @@ install_log2ram_auto() {
         return 1
     fi
 
-    # Detect RAM
-    RAM_SIZE_GB=$(free -g | awk '/^Mem:/{print $2}')
+    # Detect RAM (in MB first for better accuracy)
+    RAM_SIZE_MB=$(free -m | awk '/^Mem:/{print $2}')
+    RAM_SIZE_GB=$((RAM_SIZE_MB / 1024))
     [[ -z "$RAM_SIZE_GB" || "$RAM_SIZE_GB" -eq 0 ]] && RAM_SIZE_GB=4
 
     if (( RAM_SIZE_GB <= 8 )); then
@@ -773,7 +774,13 @@ install_log2ram_auto() {
     cat << 'EOF' > /usr/local/bin/log2ram-check.sh
 #!/bin/bash
 CONF_FILE="/etc/log2ram.conf"
-LIMIT_KB=$(grep '^SIZE=' "$CONF_FILE" | cut -d'=' -f2 | tr -d 'M')000
+SIZE_VALUE=$(grep '^SIZE=' "$CONF_FILE" | cut -d'=' -f2)
+# Convert to KB: handle M (megabytes) and G (gigabytes)
+if [[ "$SIZE_VALUE" == *"G" ]]; then
+    LIMIT_KB=$(($(echo "$SIZE_VALUE" | tr -d 'G') * 1024 * 1024))
+else
+    LIMIT_KB=$(($(echo "$SIZE_VALUE" | tr -d 'M') * 1024))
+fi
 USED_KB=$(df /var/log --output=used | tail -1)
 THRESHOLD=$(( LIMIT_KB * 90 / 100 ))
 if (( USED_KB > THRESHOLD )); then
