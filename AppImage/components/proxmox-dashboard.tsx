@@ -294,39 +294,45 @@ export function ProxmoxDashboard() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      console.log("[v0] Checking authentication status...")
+      console.log("[v0] ===== AUTH CHECK START =====")
+      console.log("[v0] Current URL:", window.location.href)
+      console.log("[v0] Window origin:", window.location.origin)
+
       try {
         const token = localStorage.getItem("proxmenux-auth-token")
         const hasDeclined = localStorage.getItem("proxmenux-auth-declined") === "true"
+
+        console.log("[v0] Token in localStorage:", token ? "EXISTS" : "NOT FOUND")
+        console.log("[v0] Has declined flag:", hasDeclined)
 
         const headers: HeadersInit = { "Content-Type": "application/json" }
 
         if (token) {
           headers["Authorization"] = `Bearer ${token}`
-          console.log("[v0] Found token in localStorage")
-        } else {
-          console.log("[v0] No token found in localStorage")
         }
 
         const apiUrl = getApiUrl("/api/auth/status")
-        console.log("[v0] Calling auth status API:", apiUrl)
+        console.log("[v0] Auth status API URL:", apiUrl)
 
         const response = await fetch(apiUrl, {
           headers,
         })
 
         const data = await response.json()
-        console.log("[v0] Auth status response:", data)
+        console.log("[v0] Auth status response data:", JSON.stringify(data, null, 2))
 
         setAuthRequired(data.auth_enabled)
         setIsAuthenticated(data.authenticated)
 
         // If auth is not configured and user hasn't declined, show the modal
         const shouldShowModal = !data.auth_configured && !hasDeclined
+        console.log("[v0] Auth configured:", data.auth_configured)
+        console.log("[v0] Should show modal:", shouldShowModal)
+
         setAuthDeclined(!shouldShowModal)
         setAuthChecked(true)
 
-        console.log("[v0] Auth state:", {
+        console.log("[v0] Final auth state:", {
           authRequired: data.auth_enabled,
           isAuthenticated: data.authenticated,
           authConfigured: data.auth_configured,
@@ -334,12 +340,14 @@ export function ProxmoxDashboard() {
           shouldShowModal: shouldShowModal,
           authDeclined: !shouldShowModal,
         })
+        console.log("[v0] ===== AUTH CHECK END =====")
 
         if (data.authenticated && token) {
           setupTokenRefresh()
         }
       } catch (error) {
         console.error("[v0] Failed to check auth status:", error)
+        console.log("[v0] ===== AUTH CHECK FAILED =====")
         setAuthDeclined(false)
         setAuthChecked(true)
       }
