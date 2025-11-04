@@ -70,7 +70,7 @@ export function ProxmoxDashboard() {
   const [authChecked, setAuthChecked] = useState(false)
   const [authRequired, setAuthRequired] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [authSetupComplete, setAuthSetupComplete] = useState(false)
+  const [authDeclined, setAuthDeclined] = useState(false)
 
   const fetchSystemData = useCallback(async () => {
     console.log("[v0] Fetching system data from Flask server...")
@@ -278,7 +278,7 @@ export function ProxmoxDashboard() {
   }
 
   const handleAuthSetupComplete = () => {
-    setAuthSetupComplete(true)
+    setAuthDeclined(true)
     setIsAuthenticated(true)
   }
 
@@ -292,6 +292,8 @@ export function ProxmoxDashboard() {
       console.log("[v0] Checking authentication status...")
       try {
         const token = localStorage.getItem("proxmenux-auth-token")
+        const hasDeclined = localStorage.getItem("proxmenux-auth-declined") === "true"
+
         const headers: HeadersInit = { "Content-Type": "application/json" }
 
         if (token) {
@@ -311,17 +313,15 @@ export function ProxmoxDashboard() {
         const data = await response.json()
         console.log("[v0] Auth status response:", data)
 
-        const authConfigured = data.auth_enabled || data.authenticated
-
         setAuthRequired(data.auth_enabled)
         setIsAuthenticated(data.authenticated)
-        setAuthSetupComplete(authConfigured)
+        setAuthDeclined(hasDeclined || !data.auth_enabled)
         setAuthChecked(true)
 
         console.log("[v0] Auth state:", {
           authRequired: data.auth_enabled,
           isAuthenticated: data.authenticated,
-          authSetupComplete: authConfigured,
+          authDeclined: hasDeclined || !data.auth_enabled,
         })
 
         if (data.authenticated && token) {
@@ -329,7 +329,7 @@ export function ProxmoxDashboard() {
         }
       } catch (error) {
         console.error("[v0] Failed to check auth status:", error)
-        setAuthSetupComplete(false)
+        setAuthDeclined(false)
         setAuthChecked(true)
       }
     }
@@ -356,7 +356,7 @@ export function ProxmoxDashboard() {
     <div className="min-h-screen bg-background">
       <OnboardingCarousel />
 
-      {!authSetupComplete && <AuthSetup onComplete={handleAuthSetupComplete} />}
+      {!authDeclined && !authRequired && <AuthSetup onComplete={handleAuthSetupComplete} />}
 
       {!isServerConnected && (
         <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3">

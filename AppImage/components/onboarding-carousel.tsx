@@ -176,6 +176,13 @@ export function OnboardingCarousel() {
     setOpen(false)
   }
 
+  const handleClose = () => {
+    if (dontShowAgain) {
+      localStorage.setItem("proxmenux-onboarding-seen", "true")
+    }
+    setOpen(false)
+  }
+
   const handleDotClick = (index: number) => {
     setDirection(index > currentSlide ? "next" : "prev")
     setCurrentSlide(index)
@@ -184,7 +191,7 @@ export function OnboardingCarousel() {
   const slide = slides[currentSlide]
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden border-0 bg-transparent">
         <div className="relative bg-card rounded-lg overflow-hidden shadow-2xl">
           {/* Close button */}
@@ -192,7 +199,7 @@ export function OnboardingCarousel() {
             variant="ghost"
             size="icon"
             className="absolute top-4 right-4 z-50 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background"
-            onClick={handleSkip}
+            onClick={handleClose}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -234,23 +241,23 @@ export function OnboardingCarousel() {
             <div className="absolute bottom-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
           </div>
 
-          <div className="p-4 md:p-8 space-y-4 md:space-y-6">
+          <div className="p-4 md:p-8 space-y-3 md:space-y-6 max-h-[60vh] md:max-h-none overflow-y-auto">
             <div className="space-y-2 md:space-y-3">
-              <h2 className="text-2xl md:text-3xl font-bold text-foreground text-balance">{slide.title}</h2>
-              <p className="text-base md:text-lg text-muted-foreground leading-relaxed text-pretty">
+              <h2 className="text-xl md:text-3xl font-bold text-foreground text-balance">{slide.title}</h2>
+              <p className="text-sm md:text-lg text-muted-foreground leading-relaxed text-pretty">
                 {slide.description}
               </p>
             </div>
 
             {slide.features && (
-              <div className="space-y-3 py-2">
+              <div className="space-y-2 md:space-y-3 py-2">
                 {slide.features.map((feature, index) => (
                   <div
                     key={index}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border/50"
+                    className="flex items-start gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-muted/50 border border-border/50"
                   >
-                    <div className="text-blue-500 mt-0.5">{feature.icon}</div>
-                    <p className="text-sm text-foreground leading-relaxed">{feature.text}</p>
+                    <div className="text-blue-500 mt-0.5 flex-shrink-0">{feature.icon}</div>
+                    <p className="text-xs md:text-sm text-foreground leading-relaxed">{feature.text}</p>
                   </div>
                 ))}
               </div>
@@ -272,12 +279,12 @@ export function OnboardingCarousel() {
               ))}
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-4">
               <Button
                 variant="ghost"
                 onClick={handlePrev}
                 disabled={currentSlide === 0}
-                className="gap-2 w-full sm:w-auto"
+                className="gap-2 w-full sm:w-auto text-sm"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
@@ -286,10 +293,17 @@ export function OnboardingCarousel() {
               <div className="flex gap-2 w-full sm:w-auto">
                 {currentSlide < slides.length - 1 ? (
                   <>
-                    <Button variant="outline" onClick={handleSkip} className="flex-1 sm:flex-none bg-transparent">
+                    <Button
+                      variant="outline"
+                      onClick={handleSkip}
+                      className="flex-1 sm:flex-none bg-transparent text-sm"
+                    >
                       Skip
                     </Button>
-                    <Button onClick={handleNext} className="gap-2 bg-blue-500 hover:bg-blue-600 flex-1 sm:flex-none">
+                    <Button
+                      onClick={handleNext}
+                      className="gap-2 bg-blue-500 hover:bg-blue-600 flex-1 sm:flex-none text-sm"
+                    >
                       Next
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -297,7 +311,7 @@ export function OnboardingCarousel() {
                 ) : (
                   <Button
                     onClick={handleNext}
-                    className="gap-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 w-full sm:w-auto"
+                    className="gap-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 w-full sm:w-auto text-sm"
                   >
                     Get Started!
                     <Sparkles className="h-4 w-4" />
@@ -306,7 +320,7 @@ export function OnboardingCarousel() {
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-2 pt-2">
+            <div className="flex items-center justify-center gap-2 pt-2 pb-1">
               <Checkbox
                 id="dont-show-again"
                 checked={dontShowAgain}
@@ -314,7 +328,7 @@ export function OnboardingCarousel() {
               />
               <label
                 htmlFor="dont-show-again"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                className="text-xs md:text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
               >
                 Don't show this again
               </label>
