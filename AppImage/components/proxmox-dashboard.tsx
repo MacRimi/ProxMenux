@@ -315,12 +315,17 @@ export function ProxmoxDashboard() {
 
         if (token) {
           headers["Authorization"] = `Bearer ${token}`
+          console.log("[v0] Token found in localStorage")
+        } else {
+          console.log("[v0] No token in localStorage")
         }
 
         const apiUrl = getApiUrl("/api/auth/status")
         console.log("[v0] Auth status API URL:", apiUrl)
 
         const response = await fetch(apiUrl, { headers })
+        console.log("[v0] Auth status response status:", response.status)
+        console.log("[v0] Auth status response ok:", response.ok)
 
         if (!response.ok) {
           throw new Error(`Auth status check failed with status: ${response.status}`)
@@ -329,22 +334,39 @@ export function ProxmoxDashboard() {
         const data = await response.json()
         console.log("[v0] Auth status response data:", JSON.stringify(data, null, 2))
 
+        console.log("[v0] Setting authRequired to:", data.auth_enabled)
+        console.log("[v0] Setting isAuthenticated to:", data.authenticated)
+        console.log("[v0] auth_configured value:", data.auth_configured)
+
         setAuthRequired(data.auth_enabled)
         setIsAuthenticated(data.authenticated)
 
         // auth_configured will be true if user either set up auth OR declined it
         const shouldShowModal = !data.auth_configured
+        console.log("[v0] Should show modal:", shouldShowModal)
+        console.log("[v0] Setting authDeclined to:", data.auth_configured)
+
         setAuthDeclined(data.auth_configured) // If configured (either way), don't show modal
         setAuthChecked(true)
 
         if (data.authenticated && token) {
           setupTokenRefresh()
         }
+
+        console.log("[v0] ===== AUTH CHECK SUCCESS =====")
       } catch (error) {
+        console.error("[v0] ===== AUTH CHECK FAILED =====")
         console.error("[v0] Failed to check auth status:", error)
+        console.error("[v0] Error message:", error instanceof Error ? error.message : "Unknown error")
+
+        console.log("[v0] Setting authDeclined to false (show modal on error)")
+        console.log("[v0] Setting authRequired to false (don't require login on error)")
+
         setAuthDeclined(false) // Show modal when API fails
         setAuthRequired(false) // Don't require login on error
         setAuthChecked(true)
+
+        console.log("[v0] ===== AUTH CHECK ERROR HANDLED =====")
       }
     }
 

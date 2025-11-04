@@ -22,11 +22,25 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem("proxmenux-onboarding-seen")
+    const checkOnboardingStatus = async () => {
+      try {
+        const response = await fetch(getApiUrl("/api/auth/status"))
+        const data = await response.json()
 
-    if (hasSeenOnboarding) {
-      setTimeout(() => setOpen(true), 500)
+        console.log("[v0] Auth status for modal check:", data)
+
+        // Show modal if auth is not configured and not declined
+        if (!data.auth_configured) {
+          setTimeout(() => setOpen(true), 500)
+        }
+      } catch (error) {
+        console.error("[v0] Failed to check auth status:", error)
+        // Fail-safe: show modal if we can't check status
+        setTimeout(() => setOpen(true), 500)
+      }
     }
+
+    checkOnboardingStatus()
   }, [])
 
   const handleSkipAuth = async () => {
