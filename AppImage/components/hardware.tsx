@@ -1810,25 +1810,21 @@ export default function Hardware() {
                 </div>
               )}
 
-              {(selectedDisk.pcie_gen ||
-                selectedDisk.pcie_width ||
-                selectedDisk.sata_version ||
-                selectedDisk.sas_version ||
-                selectedDisk.link_speed) && (
-                <>
-                  <div className="pt-2">
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
-                      Interface Information
-                    </h3>
-                  </div>
+              <div className="pt-2">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+                  Interface Information
+                </h3>
+              </div>
 
-                  {/* NVMe PCIe Information */}
-                  {selectedDisk.name.startsWith("nvme") && (selectedDisk.pcie_gen || selectedDisk.pcie_width) && (
+              {/* NVMe PCIe Information */}
+              {selectedDisk.name.startsWith("nvme") && (
+                <>
+                  {selectedDisk.pcie_gen || selectedDisk.pcie_width ? (
                     <>
                       <div className="flex justify-between border-b border-border/50 pb-2">
                         <span className="text-sm font-medium text-muted-foreground">Current Link Speed</span>
                         <span className="text-sm font-medium text-blue-500">
-                          {selectedDisk.pcie_gen} {selectedDisk.pcie_width}
+                          {selectedDisk.pcie_gen || "PCIe"} {selectedDisk.pcie_width || ""}
                         </span>
                       </div>
                       {selectedDisk.pcie_max_gen && selectedDisk.pcie_max_width && (
@@ -1869,42 +1865,48 @@ export default function Hardware() {
                           </div>
                         )}
                     </>
-                  )}
-
-                  {/* SATA Information */}
-                  {selectedDisk.sata_version && (
+                  ) : (
                     <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm font-medium text-muted-foreground">SATA Version</span>
-                      <span className="text-sm font-medium text-blue-500">{selectedDisk.sata_version}</span>
+                      <span className="text-sm font-medium text-muted-foreground">PCIe Link Speed</span>
+                      <span className="text-sm text-muted-foreground italic">Detecting...</span>
                     </div>
                   )}
-
-                  {/* SAS Information */}
-                  {selectedDisk.sas_version && (
-                    <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm font-medium text-muted-foreground">SAS Version</span>
-                      <span className="text-sm font-medium text-blue-500">{selectedDisk.sas_version}</span>
-                    </div>
-                  )}
-                  {selectedDisk.sas_speed && (
-                    <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-sm font-medium text-muted-foreground">SAS Speed</span>
-                      <span className="text-sm font-medium text-blue-500">{selectedDisk.sas_speed}</span>
-                    </div>
-                  )}
-
-                  {/* Generic Link Speed */}
-                  {selectedDisk.link_speed &&
-                    !selectedDisk.pcie_gen &&
-                    !selectedDisk.sata_version &&
-                    !selectedDisk.sas_version && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm font-medium text-muted-foreground">Link Speed</span>
-                        <span className="text-sm font-medium text-blue-500">{selectedDisk.link_speed}</span>
-                      </div>
-                    )}
                 </>
               )}
+
+              {/* SATA Information */}
+              {!selectedDisk.name.startsWith("nvme") && selectedDisk.sata_version && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">SATA Version</span>
+                  <span className="text-sm font-medium text-blue-500">{selectedDisk.sata_version}</span>
+                </div>
+              )}
+
+              {/* SAS Information */}
+              {!selectedDisk.name.startsWith("nvme") && selectedDisk.sas_version && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">SAS Version</span>
+                  <span className="text-sm font-medium text-blue-500">{selectedDisk.sas_version}</span>
+                </div>
+              )}
+              {!selectedDisk.name.startsWith("nvme") && selectedDisk.sas_speed && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">SAS Speed</span>
+                  <span className="text-sm font-medium text-blue-500">{selectedDisk.sas_speed}</span>
+                </div>
+              )}
+
+              {/* Generic Link Speed - only show if no specific interface info */}
+              {!selectedDisk.name.startsWith("nvme") &&
+                selectedDisk.link_speed &&
+                !selectedDisk.pcie_gen &&
+                !selectedDisk.sata_version &&
+                !selectedDisk.sas_version && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Link Speed</span>
+                    <span className="text-sm font-medium text-blue-500">{selectedDisk.link_speed}</span>
+                  </div>
+                )}
 
               {selectedDisk.model && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
