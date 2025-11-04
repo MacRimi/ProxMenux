@@ -47,13 +47,13 @@ def hash_password(password: str) -> str:
 def load_auth_config():
     """Load authentication configuration from file"""
     if not AUTH_CONFIG_FILE.exists():
-        return {"auth_enabled": False}
+        return {} # Return empty dict if file doesn't exist
     
     try:
         with open(AUTH_CONFIG_FILE, 'r') as f:
             return json.load(f)
-    except:
-        return {"auth_enabled": False}
+    except (json.JSONDecodeError, FileNotFoundError): # Handle potential errors
+        return {} # Return empty dict on error
 
 def save_auth_config(config):
     """Save authentication configuration to file"""
@@ -97,7 +97,8 @@ def auth_status():
     """Check if authentication is enabled and if current session is valid"""
     try:
         auth_config = load_auth_config()
-        is_enabled = auth_config.get("auth_enabled", False)
+        is_configured = auth_config is not None and len(auth_config) > 0
+        is_enabled = auth_config.get("auth_enabled", False) if is_configured else False
         
         # Check if user has valid token
         is_authenticated = False
@@ -114,6 +115,7 @@ def auth_status():
         
         return jsonify({
             "auth_enabled": is_enabled,
+            "auth_configured": is_configured,  # New field to indicate if auth has been set up
             "authenticated": is_authenticated or not is_enabled
         })
     except Exception as e:
@@ -188,7 +190,7 @@ def auth_login():
         # Load auth config
         auth_config = load_auth_config()
         
-        if not auth_config.get("auth_enabled", False):
+        if not auth_config or not auth_config.get("auth_enabled", False):
             return jsonify({"error": "Authentication is not enabled"}), 400
         
         # Verify credentials
@@ -668,18 +670,18 @@ def get_intel_gpu_processes_from_text():
                                 processes.append(process_info)
 
                         except (ValueError, IndexError) as e:
-                            # print(f"[v0] Error parsing process line: {e}", flush=True)
+                            # print(f"[v0] Error parsing process line: {e}")
                             pass
                             continue
                 break
         
         if not header_found:
-            # print(f"[v0] No process table found in intel_gpu_top output", flush=True)
+            # print(f"[v0] No process table found in intel_gpu_top output")
             pass
         
         return processes
     except Exception as e:
-        # print(f"[v0] Error getting processes from intel_gpu_top text: {e}", flush=True)
+        # print(f"[v0] Error getting processes from intel_gpu_top text: {e}")
         pass
         import traceback
         traceback.print_exc()
@@ -1397,8 +1399,8 @@ def get_smart_data(disk_name):
     try:
         commands_to_try = [
             ['smartctl', '-a', '-j', f'/dev/{disk_name}'],  # JSON output (preferred)
-            ['smartctl', '-a', '-j', '-d', 'ata', f'/dev/{disk_name}'],  # JSON with ATA device type
-            ['smartctl', '-a', '-j', '-d', 'sat', f'/dev/{disk_name}'],  # JSON with SAT device type
+            ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # JSON with ATA device type
+            ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],  # JSON with SAT device type
             ['smartctl', '-a', f'/dev/{disk_name}'],  # Text output (fallback)
             ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # Text with ATA device type
             ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],  # Text with SAT device type
@@ -3080,7 +3082,7 @@ def get_detailed_gpu_info(gpu):
                         clients = best_json['clients']
                         processes = []
                         
-                        for client_id, client_data in clients.items():
+                        for client_id, client_data in clients:
                             process_info = {
                                 'name': client_data.get('name', 'Unknown'),
                                 'pid': client_data.get('pid', 'Unknown'),

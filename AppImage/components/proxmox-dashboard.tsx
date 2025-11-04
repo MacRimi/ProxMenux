@@ -287,6 +287,11 @@ export function ProxmoxDashboard() {
     setupTokenRefresh()
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem("proxmenux-auth-token")
+    setIsAuthenticated(false)
+  }
+
   useEffect(() => {
     const checkAuth = async () => {
       console.log("[v0] Checking authentication status...")
@@ -443,6 +448,17 @@ export function ProxmoxDashboard() {
               </Button>
 
               <ThemeToggle />
+
+              {authRequired && isAuthenticated && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="border-border/50 bg-transparent hover:bg-secondary"
+                >
+                  Logout
+                </Button>
+              )}
             </div>
 
             {/* Mobile Actions */}
@@ -457,6 +473,12 @@ export function ProxmoxDashboard() {
               </Button>
 
               <ThemeToggle />
+
+              {authRequired && isAuthenticated && (
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="h-8 px-2 text-xs">
+                  Logout
+                </Button>
+              )}
             </div>
           </div>
 

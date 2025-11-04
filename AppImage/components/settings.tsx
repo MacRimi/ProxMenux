@@ -184,6 +184,11 @@ export function Settings() {
     }
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem("proxmenux-auth-token")
+    window.location.reload()
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -316,6 +321,10 @@ export function Settings() {
 
           {authEnabled && (
             <div className="space-y-3">
+              <Button onClick={handleLogout} variant="outline" className="w-full bg-transparent">
+                Logout
+              </Button>
+
               {!showChangePassword && (
                 <Button onClick={() => setShowChangePassword(true)} variant="outline" className="w-full">
                   <Lock className="h-4 w-4 mr-2" />
