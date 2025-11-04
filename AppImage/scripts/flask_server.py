@@ -1190,6 +1190,149 @@ def get_disk_hardware_info(disk_name):
     """Placeholder for disk hardware info - to be populated by lsblk later."""
     return {}
 
+def get_pcie_link_speed(disk_name):
+    """Get PCIe link speed information for NVMe drives"""
+    pcie_info = {
+        'pcie_gen': None,
+        'pcie_width': None,
+        'pcie_max_gen': None,
+        'pcie_max_width': None
+    }
+    
+    try:
+        # For NVMe drives, get PCIe information from sysfs
+        if disk_name.startswith('nvme'):
+            # Extract controller number (nvme0, nvme1, etc.)
+            controller = disk_name.rstrip('n0123456789p')
+            
+            # Path to PCIe device in sysfs
+            sys_path = f'/sys/class/nvme/{controller}/device'
+            
+            if os.path.exists(sys_path):
+                # Get current link speed
+                try:
+                    with open(f'{sys_path}/current_link_speed', 'r') as f:
+                        speed_str = f.read().strip()
+                        # Format: "8.0 GT/s PCIe" or "16 GT/s"
+                        if 'GT/s' in speed_str:
+                            gt_s = float(speed_str.split()[0])
+                            # Convert GT/s to PCIe generation
+                            # PCIe 1.0 = 2.5 GT/s, 2.0 = 5 GT/s, 3.0 = 8 GT/s, 4.0 = 16 GT/s, 5.0 = 32 GT/s
+                            if gt_s <= 2.5:
+                                pcie_info['pcie_gen'] = '1.0'
+                            elif gt_s <= 5.0:
+                                pcie_info['pcie_gen'] = '2.0'
+                            elif gt_s <= 8.0:
+                                pcie_info['pcie_gen'] = '3.0'
+                            elif gt_s <= 16.0:
+                                pcie_info['pcie_gen'] = '4.0'
+                            else:
+                                pcie_info['pcie_gen'] = '5.0'
+                except:
+                    pass
+                
+                # Get current link width
+                try:
+                    with open(f'{sys_path}/current_link_width', 'r') as f:
+                        width = f.read().strip()
+                        pcie_info['pcie_width'] = f'x{width}'
+                except:
+                    pass
+                
+                # Get maximum link speed
+                try:
+                    with open(f'{sys_path}/max_link_speed', 'r') as f:
+                        speed_str = f.read().strip()
+                        if 'GT/s' in speed_str:
+                            gt_s = float(speed_str.split()[0])
+                            if gt_s <= 2.5:
+                                pcie_info['pcie_max_gen'] = '1.0'
+                            elif gt_s <= 5.0:
+                                pcie_info['pcie_max_gen'] = '2.0'
+                            elif gt_s <= 8.0:
+                                pcie_info['pcie_max_gen'] = '3.0'
+                            elif gt_s <= 16.0:
+                                pcie_info['pcie_max_gen'] = '4.0'
+                            else:
+                                pcie_info['pcie_max_gen'] = '5.0'
+                except:
+                    pass
+                
+                # Get maximum link width
+                try:
+                    with open(f'{sys_path}/max_link_width', 'r') as f:
+                        width = f.read().strip()
+                        pcie_info['pcie_max_width'] = f'x{width}'
+                except:
+                    pass
+                
+                # Alternative method using lspci if sysfs doesn't work
+                if not pcie_info['pcie_gen']:
+                    try:
+                        # Get PCI address for this NVMe device
+                        pci_address = os.path.basename(os.readlink(f'{sys_path}'))
+                        
+                        # Use lspci to get detailed PCIe information
+                        result = subprocess.run(['lspci', '-vvv', '-s', pci_address], 
+                                              capture_output=True, text=True, timeout=5)
+                        if result.returncode == 0:
+                            for line in result.stdout.split('\n'):
+                                # Look for "LnkSta:" line which shows current link status
+                                if 'LnkSta:' in line:
+                                    # Example: "LnkSta: Speed 8GT/s, Width x4"
+                                    if 'Speed' in line:
+                                        speed_match = re.search(r'Speed\s+([\d.]+)GT/s', line)
+                                        if speed_match:
+                                            gt_s = float(speed_match.group(1))
+                                            if gt_s <= 2.5:
+                                                pcie_info['pcie_gen'] = '1.0'
+                                            elif gt_s <= 5.0:
+                                                pcie_info['pcie_gen'] = '2.0'
+                                            elif gt_s <= 8.0:
+                                                pcie_info['pcie_gen'] = '3.0'
+                                            elif gt_s <= 16.0:
+                                                pcie_info['pcie_gen'] = '4.0'
+                                            else:
+                                                pcie_info['pcie_gen'] = '5.0'
+                                    
+                                    if 'Width' in line:
+                                        width_match = re.search(r'Width\s+x(\d+)', line)
+                                        if width_match:
+                                            pcie_info['pcie_width'] = f'x{width_match.group(1)}'
+                                
+                                # Look for "LnkCap:" line which shows maximum capabilities
+                                elif 'LnkCap:' in line:
+                                    if 'Speed' in line:
+                                        speed_match = re.search(r'Speed\s+([\d.]+)GT/s', line)
+                                        if speed_match:
+                                            gt_s = float(speed_match.group(1))
+                                            if gt_s <= 2.5:
+                                                pcie_info['pcie_max_gen'] = '1.0'
+                                            elif gt_s <= 5.0:
+                                                pcie_info['pcie_max_gen'] = '2.0'
+                                            elif gt_s <= 8.0:
+                                                pcie_info['pcie_max_gen'] = '3.0'
+                                            elif gt_s <= 16.0:
+                                                pcie_info['pcie_max_gen'] = '4.0'
+                                            else:
+                                                pcie_info['pcie_max_gen'] = '5.0'
+                                    
+                                    if 'Width' in line:
+                                        width_match = re.search(r'Width\s+x(\d+)', line)
+                                        if width_match:
+                                            pcie_info['pcie_max_width'] = f'x{width_match.group(1)}'
+                    except Exception as e:
+                        # print(f"[v0] Error getting PCIe info via lspci for {disk_name}: {e}")
+                        pass
+    
+    except Exception as e:
+        # print(f"[v0] Error getting PCIe link speed for {disk_name}: {e}")
+        pass
+    
+    return pcie_info
+
+# END OF ADDED FUNCTION
+
 def get_smart_data(disk_name):
     """Get SMART data for a specific disk - Enhanced with multiple device type attempts"""
     smart_data = {
@@ -2821,7 +2964,7 @@ def get_detailed_gpu_info(gpu):
                                         if 'clients' in json_data:
                                             client_count = len(json_data['clients'])
    
-                                            for client_id, client_data in json_data['clients'].items():
+                                            for client_id, client_data in json_data['clients']:
                                                 client_name = client_data.get('name', 'Unknown')
                                                 client_pid = client_data.get('pid', 'Unknown')
 
@@ -4159,6 +4302,10 @@ def get_hardware_info():
                         except:
                             pass
                         
+                        pcie_info = {}
+                        if disk_name.startswith('nvme'):
+                            pcie_info = get_pcie_link_speed(disk_name)
+                        
                         # Build storage device with all available information
                         storage_device = {
                             'name': disk_name,
@@ -4173,6 +4320,9 @@ def get_hardware_info():
                             'form_factor': form_factor,
                             'sata_version': sata_version,
                         }
+                        
+                        if pcie_info:
+                            storage_device.update(pcie_info)
                         
                         # Add family if available (from smartctl)
                         try:
