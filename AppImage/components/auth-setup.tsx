@@ -22,12 +22,9 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Check if onboarding is complete and auth setup is needed
     const hasSeenOnboarding = localStorage.getItem("proxmenux-onboarding-seen")
-    const authSetupComplete = localStorage.getItem("proxmenux-auth-setup-complete")
 
-    if (hasSeenOnboarding && !authSetupComplete) {
-      // Small delay to show after onboarding closes
+    if (hasSeenOnboarding) {
       setTimeout(() => setOpen(true), 500)
     }
   }, [])
@@ -37,19 +34,25 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
     setError("")
 
     try {
-      const response = await fetch(getApiUrl("/api/auth/setup"), {
+      console.log("[v0] Skipping authentication setup...")
+      const response = await fetch(getApiUrl("/api/auth/skip"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enable_auth: false }),
       })
 
-      if (!response.ok) throw new Error("Failed to save preference")
+      const data = await response.json()
+      console.log("[v0] Auth skip response:", data)
 
-      localStorage.setItem("proxmenux-auth-setup-complete", "true")
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to skip authentication")
+      }
+
+      console.log("[v0] Authentication skipped successfully")
       setOpen(false)
       onComplete()
     } catch (err) {
-      setError("Failed to save preference. Please try again.")
+      console.error("[v0] Auth skip error:", err)
+      setError(err instanceof Error ? err.message : "Failed to save preference")
     } finally {
       setLoading(false)
     }
@@ -76,29 +79,32 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
     setLoading(true)
 
     try {
+      console.log("[v0] Setting up authentication...")
       const response = await fetch(getApiUrl("/api/auth/setup"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username,
           password,
-          enable_auth: true,
         }),
       })
 
       const data = await response.json()
+      console.log("[v0] Auth setup response:", data)
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to setup authentication")
       }
 
-      // Save token
-      localStorage.setItem("proxmenux-auth-token", data.token)
-      localStorage.setItem("proxmenux-auth-setup-complete", "true")
+      if (data.token) {
+        localStorage.setItem("proxmenux-auth-token", data.token)
+        console.log("[v0] Authentication setup successful")
+      }
 
       setOpen(false)
       onComplete()
     } catch (err) {
+      console.error("[v0] Auth setup error:", err)
       setError(err instanceof Error ? err.message : "Failed to setup authentication")
     } finally {
       setLoading(false)

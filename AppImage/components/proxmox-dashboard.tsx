@@ -13,6 +13,7 @@ import { SystemLogs } from "./system-logs"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { AuthSetup } from "./auth-setup"
 import { Login } from "./login"
+import { Settings } from "./settings"
 import { getApiUrl } from "../lib/api-config"
 import {
   RefreshCw,
@@ -27,6 +28,7 @@ import {
   Box,
   Cpu,
   FileText,
+  SettingsIcon,
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
@@ -220,6 +222,8 @@ export function ProxmoxDashboard() {
         return "Hardware"
       case "logs":
         return "System Logs"
+      case "settings":
+        return "Settings"
       default:
         return "Navigation Menu"
     }
@@ -285,31 +289,47 @@ export function ProxmoxDashboard() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      console.log("[v0] Checking authentication status...")
       try {
         const token = localStorage.getItem("proxmenux-auth-token")
         const headers: HeadersInit = { "Content-Type": "application/json" }
 
         if (token) {
           headers["Authorization"] = `Bearer ${token}`
+          console.log("[v0] Found token in localStorage")
+        } else {
+          console.log("[v0] No token found in localStorage")
         }
 
-        const response = await fetch(getApiUrl("/api/auth/status"), {
+        const apiUrl = getApiUrl("/api/auth/status")
+        console.log("[v0] Calling auth status API:", apiUrl)
+
+        const response = await fetch(apiUrl, {
           headers,
         })
 
         const data = await response.json()
+        console.log("[v0] Auth status response:", data)
+
+        const authConfigured = data.auth_enabled || data.authenticated
 
         setAuthRequired(data.auth_enabled)
         setIsAuthenticated(data.authenticated)
-        setAuthSetupComplete(localStorage.getItem("proxmenux-auth-setup-complete") === "true")
+        setAuthSetupComplete(authConfigured)
         setAuthChecked(true)
 
-        // Setup token refresh if authenticated
+        console.log("[v0] Auth state:", {
+          authRequired: data.auth_enabled,
+          isAuthenticated: data.authenticated,
+          authSetupComplete: authConfigured,
+        })
+
         if (data.authenticated && token) {
           setupTokenRefresh()
         }
       } catch (error) {
         console.error("[v0] Failed to check auth status:", error)
+        setAuthSetupComplete(false)
         setAuthChecked(true)
       }
     }
@@ -456,7 +476,7 @@ export function ProxmoxDashboard() {
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
-            <TabsList className="hidden md:grid w-full grid-cols-6 bg-card border border-border">
+            <TabsList className="hidden md:grid w-full grid-cols-7 bg-card border border-border">
               <TabsTrigger
                 value="overview"
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
@@ -492,6 +512,12 @@ export function ProxmoxDashboard() {
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
               >
                 System Logs
+              </TabsTrigger>
+              <TabsTrigger
+                value="settings"
+                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+              >
+                Settings
               </TabsTrigger>
             </TabsList>
 
@@ -601,6 +627,21 @@ export function ProxmoxDashboard() {
                     <FileText className="h-5 w-5" />
                     <span>System Logs</span>
                   </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setActiveTab("settings")
+                      setMobileMenuOpen(false)
+                    }}
+                    className={`w-full justify-start gap-3 ${
+                      activeTab === "settings"
+                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                        : ""
+                    }`}
+                  >
+                    <SettingsIcon className="h-5 w-5" />
+                    <span>Settings</span>
+                  </Button>
                 </div>
               </SheetContent>
             </Sheet>
@@ -632,6 +673,10 @@ export function ProxmoxDashboard() {
 
           <TabsContent value="logs" className="space-y-4 md:space-y-6 mt-0">
             <SystemLogs key={`logs-${componentKey}`} />
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-4 md:space-y-6 mt-0">
+            <Settings key={`settings-${componentKey}`} />
           </TabsContent>
         </Tabs>
 
