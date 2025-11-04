@@ -320,13 +320,19 @@ export function ProxmoxDashboard() {
 
         setAuthRequired(data.auth_enabled)
         setIsAuthenticated(data.authenticated)
-        setAuthDeclined(hasDeclined || !data.auth_enabled)
+
+        // If auth is not configured and user hasn't declined, show the modal
+        const shouldShowModal = !data.auth_configured && !hasDeclined
+        setAuthDeclined(!shouldShowModal)
         setAuthChecked(true)
 
         console.log("[v0] Auth state:", {
           authRequired: data.auth_enabled,
           isAuthenticated: data.authenticated,
-          authDeclined: hasDeclined || !data.auth_enabled,
+          authConfigured: data.auth_configured,
+          hasDeclined: hasDeclined,
+          shouldShowModal: shouldShowModal,
+          authDeclined: !shouldShowModal,
         })
 
         if (data.authenticated && token) {
