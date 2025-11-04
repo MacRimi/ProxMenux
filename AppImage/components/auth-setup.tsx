@@ -48,6 +48,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
       }
 
       console.log("[v0] Authentication skipped successfully")
+      localStorage.setItem("proxmenux-auth-declined", "true")
       setOpen(false)
       onComplete()
     } catch (err) {
@@ -98,6 +99,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
 
       if (data.token) {
         localStorage.setItem("proxmenux-auth-token", data.token)
+        localStorage.removeItem("proxmenux-auth-declined")
         console.log("[v0] Authentication setup successful")
       }
 
