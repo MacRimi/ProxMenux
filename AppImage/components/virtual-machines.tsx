@@ -25,6 +25,7 @@ import {
 } from "lucide-react"
 import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
+import { formatStorage } from "@/lib/utils" // Import formatStorage utility
 
 interface VMData {
   vmid: number
@@ -194,18 +195,18 @@ const extractIPFromConfig = (config?: VMConfig, lxcIPInfo?: VMDetails["lxc_ip_in
   return "DHCP"
 }
 
-const formatStorage = (sizeInGB: number): string => {
-  if (sizeInGB < 1) {
-    // Less than 1 GB, show in MB
-    return `${(sizeInGB * 1024).toFixed(1)} MB`
-  } else if (sizeInGB < 1024) {
-    // Less than 1024 GB, show in GB
-    return `${sizeInGB.toFixed(1)} GB`
-  } else {
-    // 1024 GB or more, show in TB
-    return `${(sizeInGB / 1024).toFixed(1)} TB`
-  }
-}
+// const formatStorage = (sizeInGB: number): string => {
+//   if (sizeInGB < 1) {
+//     // Less than 1 GB, show in MB
+//     return `${(sizeInGB * 1024).toFixed(1)} MB`
+//   } else if (sizeInGB < 1024) {
+//     // Less than 1024 GB, show in GB
+//     return `${sizeInGB.toFixed(1)} GB`
+//   } else {
+//     // 1024 GB or more, show in TB
+//     return `${(sizeInGB / 1024).toFixed(1)} TB`
+//   }
+// }
 
 const getUsageColor = (percent: number): string => {
   if (percent >= 95) return "text-red-500"

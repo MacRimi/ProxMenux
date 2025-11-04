@@ -64,9 +64,12 @@ const formatMemory = (memoryKB: number | string): string => {
     return `${tb.toFixed(1)} TB`
   }
 
-  // Convert to GB if >= 1024 MB
   if (mb >= 1024) {
     const gb = mb / 1024
+    // If GB value is greater than 999, convert to TB
+    if (gb > 999) {
+      return `${(gb / 1024).toFixed(2)} TB`
+    }
     return `${gb.toFixed(1)} GB`
   }
 
@@ -1658,6 +1661,62 @@ export default function Hardware() {
 
                 const diskBadge = getDiskTypeBadge(device.name, device.rotation_rate)
 
+                const getLinkSpeedInfo = (device: StorageDevice) => {
+                  // NVMe PCIe information
+                  if (device.name.startsWith("nvme") && (device.pcie_gen || device.pcie_width)) {
+                    const current = `${device.pcie_gen || ""} ${device.pcie_width || ""}`.trim()
+                    const max =
+                      device.pcie_max_gen && device.pcie_max_width
+                        ? `${device.pcie_max_gen} ${device.pcie_max_width}`.trim()
+                        : null
+
+                    // Check if running at lower speed than maximum
+                    const isLowerSpeed = max && current !== max
+
+                    return {
+                      text: current || null,
+                      maxText: max,
+                      isWarning: isLowerSpeed,
+                      color: isLowerSpeed ? "text-orange-500" : "text-blue-500",
+                    }
+                  }
+
+                  // SATA information
+                  if (device.sata_version) {
+                    return {
+                      text: device.sata_version,
+                      maxText: null,
+                      isWarning: false,
+                      color: "text-blue-500",
+                    }
+                  }
+
+                  // SAS information
+                  if (device.sas_version || device.sas_speed) {
+                    const text = [device.sas_version, device.sas_speed].filter(Boolean).join(" ")
+                    return {
+                      text: text || null,
+                      maxText: null,
+                      isWarning: false,
+                      color: "text-blue-500",
+                    }
+                  }
+
+                  // Generic link speed
+                  if (device.link_speed) {
+                    return {
+                      text: device.link_speed,
+                      maxText: null,
+                      isWarning: false,
+                      color: "text-blue-500",
+                    }
+                  }
+
+                  return null
+                }
+
+                const linkSpeed = getLinkSpeedInfo(device)
+
                 return (
                   <div
                     key={index}
@@ -1671,6 +1730,14 @@ export default function Hardware() {
                     {device.size && <p className="text-sm font-medium">{formatMemory(parseLsblkSize(device.size))}</p>}
                     {device.model && (
                       <p className="text-xs text-muted-foreground line-clamp-2 break-words">{device.model}</p>
+                    )}
+                    {linkSpeed && (
+                      <div className="mt-1 flex items-center gap-1">
+                        <span className={`text-xs font-medium ${linkSpeed.color}`}>{linkSpeed.text}</span>
+                        {linkSpeed.isWarning && linkSpeed.maxText && (
+                          <span className="text-xs text-muted-foreground">(max: {linkSpeed.maxText})</span>
+                        )}
+                      </div>
                     )}
                   </div>
                 )
@@ -1743,6 +1810,102 @@ export default function Hardware() {
                 </div>
               )}
 
+              {(selectedDisk.pcie_gen ||
+                selectedDisk.pcie_width ||
+                selectedDisk.sata_version ||
+                selectedDisk.sas_version ||
+                selectedDisk.link_speed) && (
+                <>
+                  <div className="pt-2">
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+                      Interface Information
+                    </h3>
+                  </div>
+
+                  {/* NVMe PCIe Information */}
+                  {selectedDisk.name.startsWith("nvme") && (selectedDisk.pcie_gen || selectedDisk.pcie_width) && (
+                    <>
+                      <div className="flex justify-between border-b border-border/50 pb-2">
+                        <span className="text-sm font-medium text-muted-foreground">Current Link Speed</span>
+                        <span className="text-sm font-medium text-blue-500">
+                          {selectedDisk.pcie_gen} {selectedDisk.pcie_width}
+                        </span>
+                      </div>
+                      {selectedDisk.pcie_max_gen && selectedDisk.pcie_max_width && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm font-medium text-muted-foreground">Maximum Link Speed</span>
+                          <span className="text-sm font-medium">
+                            {selectedDisk.pcie_max_gen} {selectedDisk.pcie_max_width}
+                          </span>
+                        </div>
+                      )}
+                      {/* Warning if running at lower speed */}
+                      {selectedDisk.pcie_max_gen &&
+                        selectedDisk.pcie_max_width &&
+                        `${selectedDisk.pcie_gen} ${selectedDisk.pcie_width}` !==
+                          `${selectedDisk.pcie_max_gen} ${selectedDisk.pcie_max_width}` && (
+                          <div className="rounded-lg bg-orange-500/10 p-3 border border-orange-500/20">
+                            <div className="flex gap-2">
+                              <svg
+                                className="h-5 w-5 text-orange-500 flex-shrink-0"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              <div>
+                                <h4 className="text-sm font-semibold text-orange-500 mb-1">Performance Notice</h4>
+                                <p className="text-xs text-muted-foreground">
+                                  This drive is running at {selectedDisk.pcie_gen} {selectedDisk.pcie_width} but
+                                  supports up to {selectedDisk.pcie_max_gen} {selectedDisk.pcie_max_width}. Check if the
+                                  slot supports the maximum speed or if the drive is properly seated.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                    </>
+                  )}
+
+                  {/* SATA Information */}
+                  {selectedDisk.sata_version && (
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm font-medium text-muted-foreground">SATA Version</span>
+                      <span className="text-sm font-medium text-blue-500">{selectedDisk.sata_version}</span>
+                    </div>
+                  )}
+
+                  {/* SAS Information */}
+                  {selectedDisk.sas_version && (
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm font-medium text-muted-foreground">SAS Version</span>
+                      <span className="text-sm font-medium text-blue-500">{selectedDisk.sas_version}</span>
+                    </div>
+                  )}
+                  {selectedDisk.sas_speed && (
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm font-medium text-muted-foreground">SAS Speed</span>
+                      <span className="text-sm font-medium text-blue-500">{selectedDisk.sas_speed}</span>
+                    </div>
+                  )}
+
+                  {/* Generic Link Speed */}
+                  {selectedDisk.link_speed &&
+                    !selectedDisk.pcie_gen &&
+                    !selectedDisk.sata_version &&
+                    !selectedDisk.sas_version && (
+                      <div className="flex justify-between border-b border-border/50 pb-2">
+                        <span className="text-sm font-medium text-muted-foreground">Link Speed</span>
+                        <span className="text-sm font-medium text-blue-500">{selectedDisk.link_speed}</span>
+                      </div>
+                    )}
+                </>
+              )}
+
               {selectedDisk.model && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-sm font-medium text-muted-foreground">Model</span>
@@ -1804,13 +1967,6 @@ export default function Hardware() {
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-sm font-medium text-muted-foreground">Form Factor</span>
                   <span className="text-sm">{selectedDisk.form_factor}</span>
-                </div>
-              )}
-
-              {selectedDisk.sata_version && (
-                <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">SATA Version</span>
-                  <span className="text-sm">{selectedDisk.sata_version}</span>
                 </div>
               )}
             </div>

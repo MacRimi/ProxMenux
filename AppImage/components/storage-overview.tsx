@@ -76,12 +76,11 @@ const formatStorage = (sizeInGB: number): string => {
   if (sizeInGB < 1) {
     // Less than 1 GB, show in MB
     return `${(sizeInGB * 1024).toFixed(1)} MB`
-  } else if (sizeInGB < 1024) {
-    // Less than 1024 GB, show in GB
-    return `${sizeInGB.toFixed(1)} GB`
+  } else if (sizeInGB > 999) {
+    return `${(sizeInGB / 1024).toFixed(2)} TB`
   } else {
-    // 1024 GB or more, show in TB
-    return `${(sizeInGB / 1024).toFixed(1)} TB`
+    // Between 1 and 999 GB, show in GB
+    return `${sizeInGB.toFixed(2)} GB`
   }
 }
 
@@ -598,7 +597,7 @@ export function StorageOverview() {
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground">Total</p>
-                          <p className="font-medium">{storage.total.toLocaleString()} GB</p>
+                          <p className="font-medium">{formatStorage(storage.total)}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Used</p>
@@ -611,12 +610,12 @@ export function StorageOverview() {
                                   : "text-blue-400"
                             }`}
                           >
-                            {storage.used.toLocaleString()} GB
+                            {formatStorage(storage.used)}
                           </p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Available</p>
-                          <p className="font-medium text-green-400">{storage.available.toLocaleString()} GB</p>
+                          <p className="font-medium text-green-400">{formatStorage(storage.available)}</p>
                         </div>
                       </div>
                     </div>

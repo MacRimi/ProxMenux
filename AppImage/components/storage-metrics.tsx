@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
 import { HardDrive, Database, Archive, AlertTriangle, CheckCircle, Activity, AlertCircle } from "lucide-react"
+import { formatStorage } from "@/lib/utils"
 
 interface StorageData {
   total: number
@@ -116,10 +117,10 @@ export function StorageMetrics() {
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground">{storageData.total.toFixed(1)} GB</div>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">{formatStorage(storageData.total)}</div>
             <Progress value={usagePercent} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2">
-              {storageData.used.toFixed(1)} GB used • {storageData.available.toFixed(1)} GB available
+              {formatStorage(storageData.used)} used • {formatStorage(storageData.available)} available
             </p>
           </CardContent>
         </Card>
@@ -130,7 +131,7 @@ export function StorageMetrics() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground">{storageData.used.toFixed(1)} GB</div>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">{formatStorage(storageData.used)}</div>
             <Progress value={usagePercent} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2">{usagePercent.toFixed(1)}% of total space</p>
           </CardContent>
@@ -144,7 +145,7 @@ export function StorageMetrics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground">{storageData.available.toFixed(1)} GB</div>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">{formatStorage(storageData.available)}</div>
             <div className="flex items-center mt-2">
               <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                 {((storageData.available / storageData.total) * 100).toFixed(1)}% Free
@@ -201,7 +202,7 @@ export function StorageMetrics() {
                 <div className="flex items-center space-x-6">
                   <div className="text-right">
                     <div className="text-sm font-medium text-foreground">
-                      {disk.used.toFixed(1)} GB / {disk.total.toFixed(1)} GB
+                      {formatStorage(disk.used)} / {formatStorage(disk.total)}
                     </div>
                     <Progress value={disk.usage_percent} className="w-24 mt-1" />
                   </div>

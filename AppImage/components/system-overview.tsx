@@ -388,12 +388,11 @@ export function SystemOverview() {
     if (sizeInGB < 1) {
       // Less than 1 GB, show in MB
       return `${(sizeInGB * 1024).toFixed(1)} MB`
-    } else if (sizeInGB < 1024) {
-      // Less than 1024 GB, show in GB
-      return `${sizeInGB.toFixed(1)} GB`
-    } else {
-      // 1024 GB or more, show in TB
+    } else if (sizeInGB > 999) {
       return `${(sizeInGB / 1024).toFixed(2)} TB`
+    } else {
+      // Between 1 and 999 GB, show in GB
+      return `${sizeInGB.toFixed(2)} GB`
     }
   }
 

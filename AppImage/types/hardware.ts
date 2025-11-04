@@ -33,6 +33,13 @@ export interface StorageDevice {
   rotation_rate?: number | string
   form_factor?: string
   sata_version?: string
+  pcie_gen?: string // e.g., "PCIe 4.0"
+  pcie_width?: string // e.g., "x4"
+  pcie_max_gen?: string // Maximum supported PCIe generation
+  pcie_max_width?: string // Maximum supported PCIe lanes
+  sas_version?: string // e.g., "SAS-3"
+  sas_speed?: string // e.g., "12Gb/s"
+  link_speed?: string // Generic link speed info
 }
 
 export interface PCIDevice {
