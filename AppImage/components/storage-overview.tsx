@@ -107,6 +107,24 @@ export function StorageOverview() {
       console.log("[v0] Storage data received:", data)
       console.log("[v0] Proxmox storage data received:", proxmoxData)
 
+      if (proxmoxData && proxmoxData.storage) {
+        const activeStorages = proxmoxData.storage.filter(
+          (s: any) => s && s.total > 0 && s.used >= 0 && s.status?.toLowerCase() === "active",
+        )
+        console.log("[v0] Active storage volumes:", activeStorages.length)
+        console.log(
+          "[v0] Total used across all volumes (GB):",
+          activeStorages.reduce((sum: number, s: any) => sum + s.used, 0),
+        )
+
+        // Check for potential cluster node duplication
+        const storageNames = activeStorages.map((s: any) => s.name)
+        const uniqueNames = new Set(storageNames)
+        if (storageNames.length !== uniqueNames.size) {
+          console.warn("[v0] WARNING: Duplicate storage names detected - possible cluster node issue")
+        }
+      }
+
       setStorageData(data)
       setProxmoxStorage(proxmoxData)
     } catch (error) {
@@ -402,15 +420,22 @@ export function StorageOverview() {
   const diskHealthBreakdown = getDiskHealthBreakdown()
   const diskTypesBreakdown = getDiskTypesBreakdown()
 
+  // Only sum storage that belongs to the current node or filter appropriately
   const totalProxmoxUsed =
     proxmoxStorage && proxmoxStorage.storage
       ? proxmoxStorage.storage
           .filter(
-            (storage) => storage && storage.total > 0 && storage.status && storage.status.toLowerCase() === "active",
+            (storage) =>
+              storage &&
+              storage.total > 0 &&
+              storage.used >= 0 && // Added check for valid used value
+              storage.status &&
+              storage.status.toLowerCase() === "active",
           )
           .reduce((sum, storage) => sum + storage.used, 0)
       : 0
 
+  // Convert storageData.total from TB to GB before calculating percentage
   const usagePercent =
     storageData && storageData.total > 0 ? ((totalProxmoxUsed / (storageData.total * 1024)) * 100).toFixed(2) : "0.00"
 
@@ -520,7 +545,14 @@ export function StorageOverview() {
           <CardContent>
             <div className="space-y-4">
               {proxmoxStorage.storage
-                .filter((storage) => storage && storage.name && storage.total > 0)
+                .filter(
+                  (storage) =>
+                    storage &&
+                    storage.name &&
+                    storage.total > 0 &&
+                    storage.used >= 0 && // Ensure used is not negative
+                    storage.available >= 0, // Ensure available is not negative
+                )
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((storage) => (
                   <div key={storage.name} className="border rounded-lg p-4">
