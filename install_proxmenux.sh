@@ -54,9 +54,6 @@ MONITOR_PORT=8008
 # Load utils.sh from local repository
 if [[ -f "./scripts/utils.sh" ]]; then
     source "./scripts/utils.sh"
-else
-    echo "Error: Could not load utils.sh from local path"
-    exit 1
 fi
 
 cleanup_corrupted_files() {
