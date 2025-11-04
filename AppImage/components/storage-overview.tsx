@@ -6,6 +6,7 @@ import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Ther
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { getApiUrl } from "../lib/api-config"
 
 interface DiskInfo {
   name: string
@@ -93,12 +94,9 @@ export function StorageOverview() {
 
   const fetchStorageData = async () => {
     try {
-      const baseUrl =
-        typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-
       const [storageResponse, proxmoxResponse] = await Promise.all([
-        fetch(`${baseUrl}/api/storage`),
-        fetch(`${baseUrl}/api/proxmox-storage`),
+        fetch(getApiUrl("/api/storage")),
+        fetch(getApiUrl("/api/proxmox-storage")),
       ])
 
       const data = await storageResponse.json()
