@@ -12,6 +12,7 @@ import psutil
 import subprocess
 import json
 import os
+import sys
 import time
 import socket
 from datetime import datetime, timedelta
@@ -37,8 +38,7 @@ CORS(app)  # Enable CORS for Next.js frontend
 
 app.register_blueprint(auth_bp)
 
-# app = Flask(__name__)
-# CORS(app)  # Enable CORS for Next.js frontend
+
 
 def identify_gpu_type(name, vendor=None, bus=None, driver=None):
     """
@@ -2204,7 +2204,7 @@ def get_proxmox_vms():
             # print(f"[v0] Error getting VM/LXC info: {e}")
             pass
             return {
-                'error': f'Unable to access VM information: {str(e)}',
+                'error': 'Unable to access VM information: {str(e)}',
                 'vms': []
             }
     except Exception as e:
@@ -3282,22 +3282,22 @@ def get_detailed_gpu_info(gpu):
                                         # print(f"[v0] Temperature: {detailed_info['temperature']}°C", flush=True)
                                         pass
                                         data_retrieved = True
-                                
-                                # Parse power draw (GFX Power or average_socket_power)
-                                if 'GFX Power' in sensors:
-                                    gfx_power = sensors['GFX Power']
-                                    if 'value' in gfx_power:
-                                        detailed_info['power_draw'] = f"{gfx_power['value']:.2f} W"
-                                        # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
-                                        pass
-                                        data_retrieved = True
-                                elif 'average_socket_power' in sensors:
-                                    socket_power = sensors['average_socket_power']
-                                    if 'value' in socket_power:
-                                        detailed_info['power_draw'] = f"{socket_power['value']:.2f} W"
-                                        # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
-                                        pass
-                                        data_retrieved = True
+                            
+                            # Parse power draw (GFX Power or average_socket_power)
+                            if 'GFX Power' in sensors:
+                                gfx_power = sensors['GFX Power']
+                                if 'value' in gfx_power:
+                                    detailed_info['power_draw'] = f"{gfx_power['value']:.2f} W"
+                                    # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
+                                    pass
+                                    data_retrieved = True
+                            elif 'average_socket_power' in sensors:
+                                socket_power = sensors['average_socket_power']
+                                if 'value' in socket_power:
+                                    detailed_info['power_draw'] = f"{socket_power['value']:.2f} W"
+                                    # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
+                                    pass
+                                    data_retrieved = True
                             
                             # Parse clocks (GFX_SCLK for graphics, GFX_MCLK for memory)
                             if 'Clocks' in device:
@@ -3306,7 +3306,7 @@ def get_detailed_gpu_info(gpu):
                                     gfx_clock = clocks['GFX_SCLK']
                                     if 'value' in gfx_clock:
                                         detailed_info['clock_graphics'] = f"{gfx_clock['value']} MHz"
-                                        # print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']}", flush=True)
+                                        # print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']} MHz", flush=True)
                                         pass
                                         data_retrieved = True
                                 
@@ -4119,7 +4119,7 @@ def get_hardware_info():
             # print(f"[v0] Error getting storage info: {e}")
             pass
 
-        # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
+        # Graphics Cards
         try:
             # Try nvidia-smi first
             result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.used,temperature.gpu,power.draw,utilization.gpu,utilization.memory,clocks.graphics,clocks.memory', '--format=csv,noheader,nounits'], 
@@ -5668,7 +5668,7 @@ def api_system_info():
         except:
             pass
         
-        # Try to get node info from Proxmox API
+         # Try to get node info from Proxmox API
         try:
             result = subprocess.run(['pvesh', 'get', '/nodes', '--output-format', 'json'], 
                                   capture_output=True, text=True, timeout=5)
