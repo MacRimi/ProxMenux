@@ -11,6 +11,7 @@ import { VirtualMachines } from "./virtual-machines"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { OnboardingCarousel } from "./onboarding-carousel"
+import { getApiUrl } from "../lib/api-config"
 import {
   RefreshCw,
   AlertTriangle,
@@ -67,8 +68,7 @@ export function ProxmoxDashboard() {
     console.log("[v0] Fetching system data from Flask server...")
     console.log("[v0] Current window location:", window.location.href)
 
-    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-    const apiUrl = `${baseUrl}/api/system`
+    const apiUrl = getApiUrl("/api/system")
 
     console.log("[v0] API URL:", apiUrl)
 
@@ -235,13 +235,8 @@ export function ProxmoxDashboard() {
               <p>• The ProxMenux server should start automatically on port 8008</p>
               <p>
                 • Try accessing:{" "}
-                <a
-                  href={`http://${typeof window !== "undefined" ? window.location.host : "localhost:8008"}/api/health`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  http://{typeof window !== "undefined" ? window.location.host : "localhost:8008"}/api/health
+                <a href={getApiUrl("/api/health")} target="_blank" rel="noopener noreferrer" className="underline">
+                  {getApiUrl("/api/health")}
                 </a>
               </p>
             </div>

@@ -86,8 +86,11 @@ export function NodeMetricsCharts() {
     setError(null)
 
     try {
-      const baseUrl =
-        typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
+      const { protocol, hostname, port } = window.location
+      const isStandardPort = port === "" || port === "80" || port === "443"
+
+      const baseUrl = isStandardPort ? "" : `${protocol}//${hostname}:8008`
+
       const apiUrl = `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
 
       console.log("[v0] Fetching node metrics from:", apiUrl)

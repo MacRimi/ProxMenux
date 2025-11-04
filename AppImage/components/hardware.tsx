@@ -188,7 +188,12 @@ export default function Hardware() {
 
     const fetchRealtimeData = async () => {
       try {
-        const apiUrl = `http://${window.location.hostname}:8008/api/gpu/${fullSlot}/realtime`
+        const { protocol, hostname, port } = window.location
+        const isStandardPort = port === "" || port === "80" || port === "443"
+
+        const apiUrl = isStandardPort
+          ? `/api/gpu/${fullSlot}/realtime`
+          : `${protocol}//${hostname}:8008/api/gpu/${fullSlot}/realtime`
 
         const response = await fetch(apiUrl, {
           method: "GET",
@@ -1783,13 +1788,15 @@ export default function Hardware() {
               {selectedDisk.rotation_rate !== undefined && selectedDisk.rotation_rate !== null && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-sm font-medium text-muted-foreground">Rotation Rate</span>
-                  <span className="text-sm">
-                    {typeof selectedDisk.rotation_rate === "number" && selectedDisk.rotation_rate > 0
-                      ? `${selectedDisk.rotation_rate} rpm`
-                      : typeof selectedDisk.rotation_rate === "string"
-                        ? selectedDisk.rotation_rate
-                        : "Solid State Device"}
-                  </span>
+                  <div className="text-sm">
+                    {typeof selectedDisk.rotation_rate === "number" && selectedDisk.rotation_rate === -1
+                      ? "N/A"
+                      : typeof selectedDisk.rotation_rate === "number" && selectedDisk.rotation_rate > 0
+                        ? `${selectedDisk.rotation_rate} rpm`
+                        : typeof selectedDisk.rotation_rate === "string"
+                          ? selectedDisk.rotation_rate
+                          : "Solid State Device"}
+                  </div>
                 </div>
               )}
 

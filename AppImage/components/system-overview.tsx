@@ -8,6 +8,7 @@ import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Net
 import { NodeMetricsCharts } from "./node-metrics-charts"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { getApiUrl } from "../lib/api-config"
 
 interface SystemData {
   cpu_usage: number
@@ -97,8 +98,7 @@ interface ProxmoxStorageData {
 
 const fetchSystemData = async (): Promise<SystemData | null> => {
   try {
-    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-    const apiUrl = `${baseUrl}/api/system`
+    const apiUrl = getApiUrl("/api/system")
 
     const response = await fetch(apiUrl, {
       method: "GET",
@@ -122,8 +122,7 @@ const fetchSystemData = async (): Promise<SystemData | null> => {
 
 const fetchVMData = async (): Promise<VMData[]> => {
   try {
-    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-    const apiUrl = `${baseUrl}/api/vms`
+    const apiUrl = getApiUrl("/api/vms")
 
     const response = await fetch(apiUrl, {
       method: "GET",
@@ -147,8 +146,7 @@ const fetchVMData = async (): Promise<VMData[]> => {
 
 const fetchStorageData = async (): Promise<StorageData | null> => {
   try {
-    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-    const apiUrl = `${baseUrl}/api/storage/summary`
+    const apiUrl = getApiUrl("/api/storage/summary")
 
     const response = await fetch(apiUrl, {
       method: "GET",
@@ -173,8 +171,7 @@ const fetchStorageData = async (): Promise<StorageData | null> => {
 
 const fetchNetworkData = async (): Promise<NetworkData | null> => {
   try {
-    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-    const apiUrl = `${baseUrl}/api/network/summary`
+    const apiUrl = getApiUrl("/api/network/summary")
 
     const response = await fetch(apiUrl, {
       method: "GET",
@@ -199,8 +196,7 @@ const fetchNetworkData = async (): Promise<NetworkData | null> => {
 
 const fetchProxmoxStorageData = async (): Promise<ProxmoxStorageData | null> => {
   try {
-    const baseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-    const apiUrl = `${baseUrl}/api/proxmox-storage`
+    const apiUrl = getApiUrl("/api/proxmox-storage")
 
     const response = await fetch(apiUrl, {
       method: "GET",

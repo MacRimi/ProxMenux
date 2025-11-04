@@ -2671,7 +2671,7 @@ enable_vfio_iommu() {
     msg_info "$(translate "Checking conflicting drivers blacklist...")"
     touch "$blacklist_file"
     
-    local blacklist_drivers=("nouveau" "lbm-nouveau" "amdgpu" "radeon" "nvidia" "nvidiafb")
+    local blacklist_drivers=("nouveau" "lbm-nouveau" "radeon" "nvidia" "nvidiafb")
     for driver in "${blacklist_drivers[@]}"; do
         if ! grep -q "^blacklist $driver" "$blacklist_file"; then
             echo "blacklist $driver" >> "$blacklist_file"

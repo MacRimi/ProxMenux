@@ -125,7 +125,14 @@ export function SystemLogs() {
 
   const getApiUrl = (endpoint: string) => {
     if (typeof window !== "undefined") {
-      return `${window.location.protocol}//${window.location.hostname}:8008${endpoint}`
+      const { protocol, hostname, port } = window.location
+      const isStandardPort = port === "" || port === "80" || port === "443"
+
+      if (isStandardPort) {
+        return endpoint
+      } else {
+        return `${protocol}//${hostname}:8008${endpoint}`
+      }
     }
     return `http://localhost:8008${endpoint}`
   }

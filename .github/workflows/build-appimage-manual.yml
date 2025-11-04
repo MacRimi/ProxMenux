@@ -1,14 +1,12 @@
 name: Build ProxMenux Monitor AppImage
 
 on:
-  push:
-    branches: [ main ]
-    paths: [ 'AppImage/**' ]
-  pull_request:
-    branches: [ main ]
-    paths: [ 'AppImage/**' ]
-  workflow_dispatch:  
 
+  workflow_dispatch:  
+  
+permissions:
+  contents: write
+  
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -54,3 +52,30 @@ jobs:
         name: ProxMenux-${{ steps.version.outputs.VERSION }}-AppImage
         path: AppImage/dist/*.AppImage
         retention-days: 30
+
+    - name: Generate SHA256 checksum
+      run: |
+        cd AppImage/dist
+        sha256sum *.AppImage > ProxMenux-Monitor.AppImage.sha256
+        echo "Generated SHA256:"
+        cat ProxMenux-Monitor.AppImage.sha256
+
+    - name: Upload AppImage and checksum to /AppImage folder in main
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+        git fetch origin main
+        git checkout main
+
+        rm -f AppImage/*.AppImage AppImage/*.sha256 || true
+
+        # Copy new files
+        cp AppImage/dist/*.AppImage AppImage/
+        cp AppImage/dist/ProxMenux-Monitor.AppImage.sha256 AppImage/
+
+        git add AppImage/*.AppImage AppImage/*.sha256
+        git commit -m "Update AppImage build ($(date +'%Y-%m-%d %H:%M:%S'))" || echo "No changes to commit"
+        git push origin main
