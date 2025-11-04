@@ -29,6 +29,8 @@ import jwt
 from functools import wraps
 from pathlib import Path
 
+from flask_health_routes import health_bp
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask_auth_routes import auth_bp
@@ -37,6 +39,7 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
 
 app.register_blueprint(auth_bp)
+app.register_blueprint(health_bp)
 
 
 

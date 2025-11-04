@@ -10,13 +10,12 @@ import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
-import { OnboardingCarousel } from "./onboarding-carousel"
 import { AuthSetup } from "./auth-setup"
 import { Login } from "./login"
 import { Settings } from "./settings"
 import { getApiUrl, getApiBaseUrl } from "../lib/api-config"
+import { HealthStatusModal } from "./health-status-modal"
 import {
-  RefreshCw,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -30,7 +29,6 @@ import {
   FileText,
   SettingsIcon,
 } from "lucide-react"
-import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet"
 
@@ -82,6 +80,7 @@ export function ProxmoxDashboard() {
   const [authRequired, setAuthRequired] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authDeclined, setAuthDeclined] = useState(false)
+  const [showHealthModal, setShowHealthModal] = useState(false)
 
   const fetchSystemData = useCallback(async () => {
     console.log("[v0] Fetching system data from Flask server...")
@@ -390,7 +389,46 @@ export function ProxmoxDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <OnboardingCarousel />
+      <HealthStatusModal open={showHealthModal} onOpenChange={setShowHealthModal} getApiUrl={getApiUrl} />
+
+      <header
+        className="border-b bg-card cursor-pointer hover:bg-muted/50 transition-colors"
+        onClick={() => setShowHealthModal(true)}
+      >
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Server className="h-6 w-6 text-primary" />
+                <h1 className="text-2xl font-bold">ProxMenuX</h1>
+              </div>
+              <Badge
+                variant={
+                  systemStatus.status === "healthy"
+                    ? "default"
+                    : systemStatus.status === "warning"
+                      ? "secondary"
+                      : "destructive"
+                }
+                className="cursor-pointer"
+              >
+                {systemStatus.status === "healthy" && "Healthy"}
+                {systemStatus.status === "warning" && "Warning"}
+                {systemStatus.status === "critical" && "Critical"}
+                {systemStatus.serverName === "Loading..." && "Loading..."}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-4">
+              <ThemeToggle />
+              {isAuthenticated && (
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                  Logout
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
 
       {!authDeclined && !authRequired && <AuthSetup onComplete={handleAuthSetupComplete} />}
 
@@ -414,111 +452,6 @@ export function ProxmoxDashboard() {
           </div>
         </div>
       )}
-
-      <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4 md:px-6 py-4 md:py-4">
-          {/* Logo and Title */}
-          <div className="flex items-start justify-between gap-3">
-            {/* Logo and Title */}
-            <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
-              <div className="w-16 h-16 md:w-10 md:h-10 relative flex items-center justify-center bg-primary/10 flex-shrink-0">
-                <Image
-                  src="/images/proxmenux-logo.png"
-                  alt="ProxMenux Logo"
-                  width={64}
-                  height={64}
-                  className="object-contain md:w-10 md:h-10"
-                  priority
-                  onError={(e) => {
-                    console.log("[v0] Logo failed to load, using fallback icon")
-                    const target = e.target as HTMLImageElement
-                    target.style.display = "none"
-                    const fallback = target.parentElement?.querySelector(".fallback-icon")
-                    if (fallback) {
-                      fallback.classList.remove("hidden")
-                    }
-                  }}
-                />
-                <Server className="h-8 w-8 md:h-6 md:w-6 text-primary absolute fallback-icon hidden" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">ProxMenux Monitor</h1>
-                <p className="text-xs md:text-sm text-muted-foreground">Proxmox System Dashboard</p>
-                <div className="lg:hidden flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                  <Server className="h-3 w-3" />
-                  <span className="truncate">Node: {systemStatus.serverName}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Desktop Actions */}
-            <div className="hidden lg:flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Server className="h-4 w-4 text-muted-foreground" />
-                <div className="text-sm">
-                  <div className="font-medium text-foreground">Node: {systemStatus.serverName}</div>
-                </div>
-              </div>
-
-              <Badge variant="outline" className={statusColor}>
-                {statusIcon}
-                <span className="ml-1 capitalize">{systemStatus.status}</span>
-              </Badge>
-
-              <div className="text-sm text-muted-foreground whitespace-nowrap">Uptime: {systemStatus.uptime}</div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={refreshData}
-                disabled={isRefreshing}
-                className="border-border/50 bg-transparent hover:bg-secondary"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-
-              <ThemeToggle />
-
-              {authRequired && isAuthenticated && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="border-border/50 bg-transparent hover:bg-secondary"
-                >
-                  Logout
-                </Button>
-              )}
-            </div>
-
-            {/* Mobile Actions */}
-            <div className="flex lg:hidden items-center gap-2">
-              <Badge variant="outline" className={`${statusColor} text-xs px-2`}>
-                {statusIcon}
-                <span className="ml-1 capitalize hidden sm:inline">{systemStatus.status}</span>
-              </Badge>
-
-              <Button variant="ghost" size="sm" onClick={refreshData} disabled={isRefreshing} className="h-8 w-8 p-0">
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-              </Button>
-
-              <ThemeToggle />
-
-              {authRequired && isAuthenticated && (
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="h-8 px-2 text-xs">
-                  Logout
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile Server Info */}
-          <div className="lg:hidden mt-2 flex items-center justify-end text-xs text-muted-foreground">
-            <span className="whitespace-nowrap">Uptime: {systemStatus.uptime}</span>
-          </div>
-        </div>
-      </header>
 
       <div
         className={`sticky z-40 bg-background
