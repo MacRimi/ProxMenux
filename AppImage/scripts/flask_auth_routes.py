@@ -13,6 +13,13 @@ def auth_status():
     """Get current authentication status"""
     try:
         status = auth_manager.get_auth_status()
+        
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if token:
+            username = auth_manager.verify_token(token)
+            if username:
+                status['authenticated'] = True
+        
         return jsonify(status)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

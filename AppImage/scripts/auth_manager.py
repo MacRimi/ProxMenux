@@ -137,18 +137,20 @@ def get_auth_status():
     Get current authentication status
     Returns dict with:
     {
-        "enabled": bool,
-        "configured": bool,
+        "auth_enabled": bool,
+        "auth_configured": bool,
         "declined": bool,
-        "username": str or None
+        "username": str or None,
+        "authenticated": bool
     }
     """
     config = load_auth_config()
     return {
-        "enabled": config.get("enabled", False),
-        "configured": config.get("configured", False),
+        "auth_enabled": config.get("enabled", False),
+        "auth_configured": config.get("configured", False),  # Frontend expects this field name
         "declined": config.get("declined", False),
-        "username": config.get("username") if config.get("enabled") else None
+        "username": config.get("username") if config.get("enabled") else None,
+        "authenticated": False  # Will be set to True by the route handler if token is valid
     }
 
 
