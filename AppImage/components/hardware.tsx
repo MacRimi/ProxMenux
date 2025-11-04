@@ -1686,7 +1686,6 @@ export default function Hardware() {
                         ? `${device.pcie_max_gen} ${device.pcie_max_width}`.trim()
                         : null
 
-                    // Check if running at lower speed than maximum
                     const isLowerSpeed = max && current !== max
 
                     return {
@@ -1750,8 +1749,8 @@ export default function Hardware() {
                     {linkSpeed && (
                       <div className="mt-1 flex items-center gap-1">
                         <span className={`text-xs font-medium ${linkSpeed.color}`}>{linkSpeed.text}</span>
-                        {linkSpeed.isWarning && linkSpeed.maxText && (
-                          <span className="text-xs text-muted-foreground">(max: {linkSpeed.maxText})</span>
+                        {linkSpeed.maxText && linkSpeed.isWarning && (
+                          <span className="text-xs font-medium text-blue-500">(max: {linkSpeed.maxText})</span>
                         )}
                       </div>
                     )}
@@ -1837,47 +1836,27 @@ export default function Hardware() {
                     <>
                       <div className="flex justify-between border-b border-border/50 pb-2">
                         <span className="text-sm font-medium text-muted-foreground">Current Link Speed</span>
-                        <span className="text-sm font-medium text-blue-500">
+                        <span
+                          className={`text-sm font-medium ${
+                            selectedDisk.pcie_max_gen &&
+                            selectedDisk.pcie_max_width &&
+                            `${selectedDisk.pcie_gen} ${selectedDisk.pcie_width}` !==
+                              `${selectedDisk.pcie_max_gen} ${selectedDisk.pcie_max_width}`
+                              ? "text-orange-500"
+                              : "text-blue-500"
+                          }`}
+                        >
                           {selectedDisk.pcie_gen || "PCIe"} {selectedDisk.pcie_width || ""}
                         </span>
                       </div>
                       {selectedDisk.pcie_max_gen && selectedDisk.pcie_max_width && (
                         <div className="flex justify-between border-b border-border/50 pb-2">
                           <span className="text-sm font-medium text-muted-foreground">Maximum Link Speed</span>
-                          <span className="text-sm font-medium">
+                          <span className="text-sm font-medium text-blue-500">
                             {selectedDisk.pcie_max_gen} {selectedDisk.pcie_max_width}
                           </span>
                         </div>
                       )}
-                      {/* Warning if running at lower speed */}
-                      {selectedDisk.pcie_max_gen &&
-                        selectedDisk.pcie_max_width &&
-                        `${selectedDisk.pcie_gen} ${selectedDisk.pcie_width}` !==
-                          `${selectedDisk.pcie_max_gen} ${selectedDisk.pcie_max_width}` && (
-                          <div className="rounded-lg bg-orange-500/10 p-3 border border-orange-500/20">
-                            <div className="flex gap-2">
-                              <svg
-                                className="h-5 w-5 text-orange-500 flex-shrink-0"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                              <div>
-                                <h4 className="text-sm font-semibold text-orange-500 mb-1">Performance Notice</h4>
-                                <p className="text-xs text-muted-foreground">
-                                  This drive is running at {selectedDisk.pcie_gen} {selectedDisk.pcie_width} but
-                                  supports up to {selectedDisk.pcie_max_gen} {selectedDisk.pcie_max_width}. Check if the
-                                  slot supports the maximum speed or if the drive is properly seated.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
                     </>
                   ) : (
                     <div className="flex justify-between border-b border-border/50 pb-2">
