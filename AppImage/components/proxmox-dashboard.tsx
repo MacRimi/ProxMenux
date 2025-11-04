@@ -321,13 +321,18 @@ export function ProxmoxDashboard() {
         console.log("[v0] Auth status API URL:", apiUrl)
 
         const response = await fetch(apiUrl, { headers })
+
+        if (!response.ok) {
+          throw new Error(`Auth status check failed with status: ${response.status}`)
+        }
+
         const data = await response.json()
         console.log("[v0] Auth status response data:", JSON.stringify(data, null, 2))
 
         setAuthRequired(data.auth_enabled)
         setIsAuthenticated(data.authenticated)
 
-        // auth_configured will be true if user either set up auth OR skipped it
+        // auth_configured will be true if user either set up auth OR declined it
         const shouldShowModal = !data.auth_configured
         setAuthDeclined(data.auth_configured) // If configured (either way), don't show modal
         setAuthChecked(true)
@@ -337,7 +342,8 @@ export function ProxmoxDashboard() {
         }
       } catch (error) {
         console.error("[v0] Failed to check auth status:", error)
-        setAuthDeclined(false)
+        setAuthDeclined(false) // Show modal when API fails
+        setAuthRequired(false) // Don't require login on error
         setAuthChecked(true)
       }
     }
