@@ -28,6 +28,9 @@ import jwt
 from functools import wraps
 from pathlib import Path
 
+app = Flask(__name__)
+CORS(app)  # Enable CORS for Next.js frontend
+
 # Authentication configuration
 AUTH_CONFIG_DIR = Path.home() / ".config" / "proxmenux-monitor"
 AUTH_CONFIG_FILE = AUTH_CONFIG_DIR / "auth.json"
@@ -293,8 +296,8 @@ def auth_change_password():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for Next.js frontend
+# app = Flask(__name__)
+# CORS(app)  # Enable CORS for Next.js frontend
 
 def identify_gpu_type(name, vendor=None, bus=None, driver=None):
     """
