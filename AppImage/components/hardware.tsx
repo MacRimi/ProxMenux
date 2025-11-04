@@ -171,6 +171,22 @@ export default function Hardware() {
     refreshInterval: 5000,
   })
 
+  useEffect(() => {
+    if (hardwareData?.storage_devices) {
+      console.log("[v0] Storage devices data from backend:", hardwareData.storage_devices)
+      hardwareData.storage_devices.forEach((device) => {
+        if (device.name.startsWith("nvme")) {
+          console.log(`[v0] NVMe device ${device.name}:`, {
+            pcie_gen: device.pcie_gen,
+            pcie_width: device.pcie_width,
+            pcie_max_gen: device.pcie_max_gen,
+            pcie_max_width: device.pcie_max_width,
+          })
+        }
+      })
+    }
+  }, [hardwareData])
+
   const [selectedGPU, setSelectedGPU] = useState<GPU | null>(null)
   const [realtimeGPUData, setRealtimeGPUData] = useState<any>(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
@@ -1762,46 +1778,44 @@ export default function Hardware() {
                 <span className="font-mono text-sm">{selectedDisk.name}</span>
               </div>
 
-              {selectedDisk.name && (
-                <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Type</span>
-                  {(() => {
-                    const getDiskTypeBadge = (diskName: string, rotationRate: number | string | undefined) => {
-                      let diskType = "HDD"
+              <div className="flex justify-between border-b border-border/50 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">Type</span>
+                {(() => {
+                  const getDiskTypeBadge = (diskName: string, rotationRate: number | string | undefined) => {
+                    let diskType = "HDD"
 
-                      if (diskName.startsWith("nvme")) {
-                        diskType = "NVMe"
-                      } else if (rotationRate !== undefined && rotationRate !== null) {
-                        const rateNum = typeof rotationRate === "string" ? Number.parseInt(rotationRate) : rotationRate
-                        if (rateNum === 0 || isNaN(rateNum)) {
-                          diskType = "SSD"
-                        }
-                      } else if (typeof rotationRate === "string" && rotationRate.includes("Solid State")) {
+                    if (diskName.startsWith("nvme")) {
+                      diskType = "NVMe"
+                    } else if (rotationRate !== undefined && rotationRate !== null) {
+                      const rateNum = typeof rotationRate === "string" ? Number.parseInt(rotationRate) : rotationRate
+                      if (rateNum === 0 || isNaN(rateNum)) {
                         diskType = "SSD"
                       }
-
-                      const badgeStyles: Record<string, { className: string; label: string }> = {
-                        NVMe: {
-                          className: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-                          label: "NVMe SSD",
-                        },
-                        SSD: {
-                          className: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
-                          label: "SSD",
-                        },
-                        HDD: {
-                          className: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-                          label: "HDD",
-                        },
-                      }
-                      return badgeStyles[diskType]
+                    } else if (typeof rotationRate === "string" && rotationRate.includes("Solid State")) {
+                      diskType = "SSD"
                     }
 
-                    const diskBadge = getDiskTypeBadge(selectedDisk.name, selectedDisk.rotation_rate)
-                    return <Badge className={diskBadge.className}>{diskBadge.label}</Badge>
-                  })()}
-                </div>
-              )}
+                    const badgeStyles: Record<string, { className: string; label: string }> = {
+                      NVMe: {
+                        className: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+                        label: "NVMe SSD",
+                      },
+                      SSD: {
+                        className: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+                        label: "SSD",
+                      },
+                      HDD: {
+                        className: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+                        label: "HDD",
+                      },
+                    }
+                    return badgeStyles[diskType]
+                  }
+
+                  const diskBadge = getDiskTypeBadge(selectedDisk.name, selectedDisk.rotation_rate)
+                  return <Badge className={diskBadge.className}>{diskBadge.label}</Badge>
+                })()}
+              </div>
 
               {selectedDisk.size && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
