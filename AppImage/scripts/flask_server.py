@@ -28,13 +28,14 @@ import jwt
 from functools import wraps
 from pathlib import Path
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from flask_auth_routes import auth_bp
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
 
 app.register_blueprint(auth_bp)
-
 
 # app = Flask(__name__)
 # CORS(app)  # Enable CORS for Next.js frontend
@@ -2203,7 +2204,7 @@ def get_proxmox_vms():
             # print(f"[v0] Error getting VM/LXC info: {e}")
             pass
             return {
-                'error': 'Unable to access VM information: {str(e)}',
+                'error': f'Unable to access VM information: {str(e)}',
                 'vms': []
             }
     except Exception as e:
@@ -3305,7 +3306,7 @@ def get_detailed_gpu_info(gpu):
                                     gfx_clock = clocks['GFX_SCLK']
                                     if 'value' in gfx_clock:
                                         detailed_info['clock_graphics'] = f"{gfx_clock['value']} MHz"
-                                        # print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']} MHz", flush=True)
+                                        # print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']}", flush=True)
                                         pass
                                         data_retrieved = True
                                 
@@ -4118,7 +4119,7 @@ def get_hardware_info():
             # print(f"[v0] Error getting storage info: {e}")
             pass
 
-        # Graphics Cards
+        # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
         try:
             # Try nvidia-smi first
             result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.used,temperature.gpu,power.draw,utilization.gpu,utilization.memory,clocks.graphics,clocks.memory', '--format=csv,noheader,nounits'], 
