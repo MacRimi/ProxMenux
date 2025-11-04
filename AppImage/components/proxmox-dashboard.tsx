@@ -556,7 +556,7 @@ export function ProxmoxDashboard() {
         </footer>
       </div>
 
-      <HealthStatusModal open={showHealthModal} onOpenChange={setShowHealthModal} />
+      <HealthStatusModal open={showHealthModal} onOpenChange={setShowHealthModal} getApiUrl={getApiUrl} />
     </div>
   )
 }
