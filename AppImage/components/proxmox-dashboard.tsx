@@ -14,7 +14,7 @@ import { OnboardingCarousel } from "./onboarding-carousel"
 import { AuthSetup } from "./auth-setup"
 import { Login } from "./login"
 import { Settings } from "./settings"
-import { getApiUrl } from "../lib/api-config"
+import { getApiUrl, getApiBaseUrl } from "../lib/api-config"
 import {
   RefreshCw,
   AlertTriangle,
@@ -52,7 +52,18 @@ interface FlaskSystemData {
   load_average: number[]
 }
 
+console.log("[v0] ========================================")
+console.log("[v0] ProxmoxDashboard component file loaded!")
+console.log("[v0] Timestamp:", new Date().toISOString())
+console.log("[v0] ========================================")
+
 export function ProxmoxDashboard() {
+  console.log("[v0] ========================================")
+  console.log("[v0] ProxmoxDashboard component MOUNTING")
+  console.log("[v0] Window location:", typeof window !== "undefined" ? window.location.href : "SSR")
+  console.log("[v0] API Base URL:", typeof window !== "undefined" ? getApiBaseUrl() : "SSR")
+  console.log("[v0] ========================================")
+
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     status: "healthy",
     uptime: "Loading...",
