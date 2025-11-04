@@ -11,6 +11,8 @@ import { VirtualMachines } from "./virtual-machines"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { OnboardingCarousel } from "./onboarding-carousel"
+import { AuthSetup } from "./auth-setup"
+import { Login } from "./login"
 import { getApiUrl } from "../lib/api-config"
 import {
   RefreshCw,
@@ -63,6 +65,10 @@ export function ProxmoxDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
   const [showNavigation, setShowNavigation] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
+  const [authChecked, setAuthChecked] = useState(false)
+  const [authRequired, setAuthRequired] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authSetupComplete, setAuthSetupComplete] = useState(false)
 
   const fetchSystemData = useCallback(async () => {
     console.log("[v0] Fetching system data from Flask server...")
@@ -219,9 +225,118 @@ export function ProxmoxDashboard() {
     }
   }
 
+  const setupTokenRefresh = () => {
+    let refreshTimeout: ReturnType<typeof setTimeout>
+
+    const refreshToken = async () => {
+      const token = localStorage.getItem("proxmenux-auth-token")
+      if (!token) return
+
+      try {
+        const response = await fetch(getApiUrl("/api/auth/refresh"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          localStorage.setItem("proxmenux-auth-token", data.token)
+          console.log("[v0] Token refreshed successfully")
+        }
+      } catch (error) {
+        console.error("[v0] Failed to refresh token:", error)
+      }
+    }
+
+    const resetRefreshTimer = () => {
+      clearTimeout(refreshTimeout)
+      // Refresh token every 25 minutes (before 30 min expiry)
+      refreshTimeout = setTimeout(refreshToken, 25 * 60 * 1000)
+    }
+
+    // Refresh on user activity
+    const events = ["mousedown", "keydown", "scroll", "touchstart"]
+    events.forEach((event) => {
+      window.addEventListener(event, resetRefreshTimer, { passive: true })
+    })
+
+    resetRefreshTimer()
+
+    return () => {
+      clearTimeout(refreshTimeout)
+      events.forEach((event) => {
+        window.removeEventListener(event, resetRefreshTimer)
+      })
+    }
+  }
+
+  const handleAuthSetupComplete = () => {
+    setAuthSetupComplete(true)
+    setIsAuthenticated(true)
+  }
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true)
+    setupTokenRefresh()
+  }
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem("proxmenux-auth-token")
+        const headers: HeadersInit = { "Content-Type": "application/json" }
+
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`
+        }
+
+        const response = await fetch(getApiUrl("/api/auth/status"), {
+          headers,
+        })
+
+        const data = await response.json()
+
+        setAuthRequired(data.auth_enabled)
+        setIsAuthenticated(data.authenticated)
+        setAuthSetupComplete(localStorage.getItem("proxmenux-auth-setup-complete") === "true")
+        setAuthChecked(true)
+
+        // Setup token refresh if authenticated
+        if (data.authenticated && token) {
+          setupTokenRefresh()
+        }
+      } catch (error) {
+        console.error("[v0] Failed to check auth status:", error)
+        setAuthChecked(true)
+      }
+    }
+
+    checkAuth()
+  }, [])
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (authRequired && !isAuthenticated) {
+    return <Login onLogin={handleLoginSuccess} />
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <OnboardingCarousel />
+
+      {!authSetupComplete && <AuthSetup onComplete={handleAuthSetupComplete} />}
 
       {!isServerConnected && (
         <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3">

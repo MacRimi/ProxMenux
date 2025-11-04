@@ -22,6 +22,72 @@ import xml.etree.ElementTree as ET  # Added for XML parsing
 import math # Imported math for format_bytes function
 import urllib.parse # Added for URL encoding
 import platform # Added for platform.release()
+import hashlib
+import secrets
+import jwt
+from functools import wraps
+from pathlib import Path
+
+# Authentication configuration
+AUTH_CONFIG_DIR = Path.home() / ".config" / "proxmenux-monitor"
+AUTH_CONFIG_FILE = AUTH_CONFIG_DIR / "auth.json"
+JWT_SECRET = secrets.token_hex(32)  # Generate a random secret for JWT
+SESSION_TIMEOUT = 30 * 60  # 30 minutes in seconds
+
+# Ensure config directory exists
+AUTH_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+
+def hash_password(password: str) -> str:
+    """Hash a password using SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def load_auth_config():
+    """Load authentication configuration from file"""
+    if not AUTH_CONFIG_FILE.exists():
+        return {"auth_enabled": False}
+    
+    try:
+        with open(AUTH_CONFIG_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return {"auth_enabled": False}
+
+def save_auth_config(config):
+    """Save authentication configuration to file"""
+    with open(AUTH_CONFIG_FILE, 'w') as f:
+        json.dump(config, f, indent=2)
+
+def require_auth(f):
+    """Decorator to require authentication for endpoints"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_config = load_auth_config()
+        
+        # If auth is not enabled, allow access
+        if not auth_config.get("auth_enabled", False):
+            return f(*args, **kwargs)
+        
+        # Check for Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"error": "Authentication required"}), 401
+        
+        token = auth_header.split(' ')[1]
+        
+        try:
+            # Verify JWT token
+            payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+            
+            # Check if token is expired
+            if time.time() > payload.get('exp', 0):
+                return jsonify({"error": "Token expired"}), 401
+            
+            return f(*args, **kwargs)
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid token"}), 401
+    
+    return decorated_function
+
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
