@@ -28,275 +28,13 @@ import jwt
 from functools import wraps
 from pathlib import Path
 
+from flask_auth_routes import auth_bp
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
 
-# Authentication configuration
-AUTH_CONFIG_DIR = Path.home() / ".config" / "proxmenux-monitor"
-AUTH_CONFIG_FILE = AUTH_CONFIG_DIR / "auth.json"
-JWT_SECRET = secrets.token_hex(32)  # Generate a random secret for JWT
-SESSION_TIMEOUT = 30 * 60  # 30 minutes in seconds
+app.register_blueprint(auth_bp)
 
-# Ensure config directory exists
-AUTH_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-
-def hash_password(password: str) -> str:
-    """Hash a password using SHA-256"""
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def load_auth_config():
-    """Load authentication configuration from file"""
-    if not AUTH_CONFIG_FILE.exists():
-        return {} # Return empty dict if file doesn't exist
-    
-    try:
-        with open(AUTH_CONFIG_FILE, 'r') as f:
-            return json.load(f)
-    except (json.JSONDecodeError, FileNotFoundError): # Handle potential errors
-        return {} # Return empty dict on error
-
-def save_auth_config(config):
-    """Save authentication configuration to file"""
-    with open(AUTH_CONFIG_FILE, 'w') as f:
-        json.dump(config, f, indent=2)
-
-def require_auth(f):
-    """Decorator to require authentication for endpoints"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        auth_config = load_auth_config()
-        
-        # If auth is not enabled, allow access
-        if not auth_config.get("auth_enabled", False):
-            return f(*args, **kwargs)
-        
-        # Check for Authorization header
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({"error": "Authentication required"}), 401
-        
-        token = auth_header.split(' ')[1]
-        
-        try:
-            # Verify JWT token
-            payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-            
-            # Check if token is expired
-            if time.time() > payload.get('exp', 0):
-                return jsonify({"error": "Token expired"}), 401
-            
-            return f(*args, **kwargs)
-        except jwt.InvalidTokenError:
-            return jsonify({"error": "Invalid token"}), 401
-    
-    return decorated_function
-
-# Authentication endpoints
-@app.route('/api/auth/status', methods=['GET'])
-def auth_status():
-    """Check if authentication is enabled and if current session is valid"""
-    try:
-        auth_config = load_auth_config()
-        is_configured = auth_config is not None and len(auth_config) > 0
-        is_enabled = auth_config.get("auth_enabled", False) if is_configured else False
-        
-        # Check if user has valid token
-        is_authenticated = False
-        if is_enabled:
-            auth_header = request.headers.get('Authorization')
-            if auth_header and auth_header.startswith('Bearer '):
-                token = auth_header.split(' ')[1]
-                try:
-                    payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-                    if time.time() <= payload.get('exp', 0):
-                        is_authenticated = True
-                except:
-                    pass
-        
-        return jsonify({
-            "auth_enabled": is_enabled,
-            "auth_configured": is_configured,  # New field to indicate if auth has been set up
-            "authenticated": is_authenticated or not is_enabled
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/auth/setup', methods=['POST'])
-def auth_setup():
-    """Setup authentication for the first time"""
-    try:
-        data = request.get_json()
-        username = data.get('username', '').strip()
-        password = data.get('password', '').strip()
-        
-        if not username or not password:
-            return jsonify({"error": "Username and password are required"}), 400
-        
-        if len(password) < 6:
-            return jsonify({"error": "Password must be at least 6 characters"}), 400
-        
-        # Hash password and save config
-        password_hash = hash_password(password)
-        
-        auth_config = {
-            "auth_enabled": True,
-            "username": username,
-            "password_hash": password_hash,
-            "created_at": datetime.now().isoformat()
-        }
-        
-        save_auth_config(auth_config)
-        
-        # Generate JWT token
-        token = jwt.encode({
-            'username': username,
-            'exp': time.time() + SESSION_TIMEOUT
-        }, JWT_SECRET, algorithm='HS256')
-        
-        return jsonify({
-            "success": True,
-            "token": token
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/auth/skip', methods=['POST'])
-def auth_skip():
-    """Skip authentication setup"""
-    try:
-        auth_config = {
-            "auth_enabled": False,
-            "skipped": True,
-            "skipped_at": datetime.now().isoformat()
-        }
-        
-        save_auth_config(auth_config)
-        
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/auth/login', methods=['POST'])
-def auth_login():
-    """Login with username and password"""
-    try:
-        data = request.get_json()
-        username = data.get('username', '').strip()
-        password = data.get('password', '').strip()
-        
-        if not username or not password:
-            return jsonify({"error": "Username and password are required"}), 400
-        
-        # Load auth config
-        auth_config = load_auth_config()
-        
-        if not auth_config or not auth_config.get("auth_enabled", False):
-            return jsonify({"error": "Authentication is not enabled"}), 400
-        
-        # Verify credentials
-        stored_username = auth_config.get("username", "")
-        stored_password_hash = auth_config.get("password_hash", "")
-        
-        if username != stored_username or hash_password(password) != stored_password_hash:
-            return jsonify({"error": "Invalid username or password"}), 401
-        
-        # Generate JWT token
-        token = jwt.encode({
-            'username': username,
-            'exp': time.time() + SESSION_TIMEOUT
-        }, JWT_SECRET, algorithm='HS256')
-        
-        return jsonify({
-            "success": True,
-            "token": token
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/auth/refresh', methods=['POST'])
-def auth_refresh():
-    """Refresh JWT token"""
-    try:
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({"error": "No token provided"}), 401
-        
-        token = auth_header.split(' ')[1]
-        
-        try:
-            # Verify current token
-            payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-            username = payload.get('username')
-            
-            # Generate new token
-            new_token = jwt.encode({
-                'username': username,
-                'exp': time.time() + SESSION_TIMEOUT
-            }, JWT_SECRET, algorithm='HS256')
-            
-            return jsonify({
-                "success": True,
-                "token": new_token
-            })
-        except jwt.InvalidTokenError:
-            return jsonify({"error": "Invalid token"}), 401
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/auth/logout', methods=['POST'])
-@require_auth
-def auth_logout():
-    """Logout (client should delete token)"""
-    return jsonify({"success": True})
-
-@app.route('/api/auth/disable', methods=['POST'])
-@require_auth
-def auth_disable():
-    """Disable authentication"""
-    try:
-        auth_config = {
-            "auth_enabled": False,
-            "disabled_at": datetime.now().isoformat()
-        }
-        
-        save_auth_config(auth_config)
-        
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/auth/change-password', methods=['POST'])
-@require_auth
-def auth_change_password():
-    """Change password"""
-    try:
-        data = request.get_json()
-        current_password = data.get('current_password', '').strip()
-        new_password = data.get('new_password', '').strip()
-        
-        if not current_password or not new_password:
-            return jsonify({"error": "Current and new password are required"}), 400
-        
-        if len(new_password) < 6:
-            return jsonify({"error": "New password must be at least 6 characters"}), 400
-        
-        # Load auth config
-        auth_config = load_auth_config()
-        
-        # Verify current password
-        stored_password_hash = auth_config.get("password_hash", "")
-        if hash_password(current_password) != stored_password_hash:
-            return jsonify({"error": "Current password is incorrect"}), 401
-        
-        # Update password
-        auth_config["password_hash"] = hash_password(new_password)
-        auth_config["updated_at"] = datetime.now().isoformat()
-        
-        save_auth_config(auth_config)
-        
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 # app = Flask(__name__)
 # CORS(app)  # Enable CORS for Next.js frontend
@@ -2465,7 +2203,7 @@ def get_proxmox_vms():
             # print(f"[v0] Error getting VM/LXC info: {e}")
             pass
             return {
-                'error': f'Unable to access VM information: {str(e)}',
+                'error': 'Unable to access VM information: {str(e)}',
                 'vms': []
             }
     except Exception as e:
@@ -3567,7 +3305,7 @@ def get_detailed_gpu_info(gpu):
                                     gfx_clock = clocks['GFX_SCLK']
                                     if 'value' in gfx_clock:
                                         detailed_info['clock_graphics'] = f"{gfx_clock['value']} MHz"
-                                        # print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']}", flush=True)
+                                        # print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']} MHz", flush=True)
                                         pass
                                         data_retrieved = True
                                 
@@ -4380,7 +4118,7 @@ def get_hardware_info():
             # print(f"[v0] Error getting storage info: {e}")
             pass
 
-        # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
+        # Graphics Cards
         try:
             # Try nvidia-smi first
             result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.used,temperature.gpu,power.draw,utilization.gpu,utilization.memory,clocks.graphics,clocks.memory', '--format=csv,noheader,nounits'], 

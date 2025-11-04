@@ -311,11 +311,6 @@ export function ProxmoxDashboard() {
 
       try {
         const token = localStorage.getItem("proxmenux-auth-token")
-        const hasDeclined = localStorage.getItem("proxmenux-auth-declined") === "true"
-
-        console.log("[v0] Token in localStorage:", token ? "EXISTS" : "NOT FOUND")
-        console.log("[v0] Has declined flag:", hasDeclined)
-
         const headers: HeadersInit = { "Content-Type": "application/json" }
 
         if (token) {
@@ -325,40 +320,23 @@ export function ProxmoxDashboard() {
         const apiUrl = getApiUrl("/api/auth/status")
         console.log("[v0] Auth status API URL:", apiUrl)
 
-        const response = await fetch(apiUrl, {
-          headers,
-        })
-
+        const response = await fetch(apiUrl, { headers })
         const data = await response.json()
         console.log("[v0] Auth status response data:", JSON.stringify(data, null, 2))
 
         setAuthRequired(data.auth_enabled)
         setIsAuthenticated(data.authenticated)
 
-        // If auth is not configured and user hasn't declined, show the modal
-        const shouldShowModal = !data.auth_configured && !hasDeclined
-        console.log("[v0] Auth configured:", data.auth_configured)
-        console.log("[v0] Should show modal:", shouldShowModal)
-
-        setAuthDeclined(!shouldShowModal)
+        // auth_configured will be true if user either set up auth OR skipped it
+        const shouldShowModal = !data.auth_configured
+        setAuthDeclined(data.auth_configured) // If configured (either way), don't show modal
         setAuthChecked(true)
-
-        console.log("[v0] Final auth state:", {
-          authRequired: data.auth_enabled,
-          isAuthenticated: data.authenticated,
-          authConfigured: data.auth_configured,
-          hasDeclined: hasDeclined,
-          shouldShowModal: shouldShowModal,
-          authDeclined: !shouldShowModal,
-        })
-        console.log("[v0] ===== AUTH CHECK END =====")
 
         if (data.authenticated && token) {
           setupTokenRefresh()
         }
       } catch (error) {
         console.error("[v0] Failed to check auth status:", error)
-        console.log("[v0] ===== AUTH CHECK FAILED =====")
         setAuthDeclined(false)
         setAuthChecked(true)
       }
