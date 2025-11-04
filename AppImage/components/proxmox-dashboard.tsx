@@ -10,12 +10,10 @@ import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
-import { AuthSetup } from "./auth-setup"
-import { Login } from "./login"
-import { Settings } from "./settings"
-import { getApiUrl, getApiBaseUrl } from "../lib/api-config"
-import { HealthStatusModal } from "./health-status-modal"
+import { OnboardingCarousel } from "./onboarding-carousel"
+import { getApiUrl } from "../lib/api-config"
 import {
+  RefreshCw,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -27,8 +25,8 @@ import {
   Box,
   Cpu,
   FileText,
-  SettingsIcon,
 } from "lucide-react"
+import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet"
 
@@ -50,18 +48,7 @@ interface FlaskSystemData {
   load_average: number[]
 }
 
-console.log("[v0] ========================================")
-console.log("[v0] ProxmoxDashboard component file loaded!")
-console.log("[v0] Timestamp:", new Date().toISOString())
-console.log("[v0] ========================================")
-
 export function ProxmoxDashboard() {
-  console.log("[v0] ========================================")
-  console.log("[v0] ProxmoxDashboard component MOUNTING")
-  console.log("[v0] Window location:", typeof window !== "undefined" ? window.location.href : "SSR")
-  console.log("[v0] API Base URL:", typeof window !== "undefined" ? getApiBaseUrl() : "SSR")
-  console.log("[v0] ========================================")
-
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     status: "healthy",
     uptime: "Loading...",
@@ -76,11 +63,6 @@ export function ProxmoxDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
   const [showNavigation, setShowNavigation] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
-  const [authChecked, setAuthChecked] = useState(false)
-  const [authRequired, setAuthRequired] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [authDeclined, setAuthDeclined] = useState(false)
-  const [showHealthModal, setShowHealthModal] = useState(false)
 
   const fetchSystemData = useCallback(async () => {
     console.log("[v0] Fetching system data from Flask server...")
@@ -232,205 +214,14 @@ export function ProxmoxDashboard() {
         return "Hardware"
       case "logs":
         return "System Logs"
-      case "settings":
-        return "Settings"
       default:
         return "Navigation Menu"
     }
   }
 
-  const setupTokenRefresh = () => {
-    let refreshTimeout: ReturnType<typeof setTimeout>
-
-    const refreshToken = async () => {
-      const token = localStorage.getItem("proxmenux-auth-token")
-      if (!token) return
-
-      try {
-        const response = await fetch(getApiUrl("/api/auth/refresh"), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          localStorage.setItem("proxmenux-auth-token", data.token)
-          console.log("[v0] Token refreshed successfully")
-        }
-      } catch (error) {
-        console.error("[v0] Failed to refresh token:", error)
-      }
-    }
-
-    const resetRefreshTimer = () => {
-      clearTimeout(refreshTimeout)
-      // Refresh token every 25 minutes (before 30 min expiry)
-      refreshTimeout = setTimeout(refreshToken, 25 * 60 * 1000)
-    }
-
-    // Refresh on user activity
-    const events = ["mousedown", "keydown", "scroll", "touchstart"]
-    events.forEach((event) => {
-      window.addEventListener(event, resetRefreshTimer, { passive: true })
-    })
-
-    resetRefreshTimer()
-
-    return () => {
-      clearTimeout(refreshTimeout)
-      events.forEach((event) => {
-        window.removeEventListener(event, resetRefreshTimer)
-      })
-    }
-  }
-
-  const handleAuthSetupComplete = () => {
-    setAuthDeclined(true)
-    setIsAuthenticated(true)
-  }
-
-  const handleLoginSuccess = () => {
-    setIsAuthenticated(true)
-    setupTokenRefresh()
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem("proxmenux-auth-token")
-    setIsAuthenticated(false)
-  }
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      console.log("[v0] ===== AUTH CHECK START =====")
-      console.log("[v0] Current URL:", window.location.href)
-      console.log("[v0] Window origin:", window.location.origin)
-
-      try {
-        const token = localStorage.getItem("proxmenux-auth-token")
-        const headers: HeadersInit = { "Content-Type": "application/json" }
-
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`
-          console.log("[v0] Token found in localStorage")
-        } else {
-          console.log("[v0] No token in localStorage")
-        }
-
-        const apiUrl = getApiUrl("/api/auth/status")
-        console.log("[v0] Auth status API URL:", apiUrl)
-
-        const response = await fetch(apiUrl, { headers })
-        console.log("[v0] Auth status response status:", response.status)
-        console.log("[v0] Auth status response ok:", response.ok)
-
-        if (!response.ok) {
-          throw new Error(`Auth status check failed with status: ${response.status}`)
-        }
-
-        const data = await response.json()
-        console.log("[v0] Auth status response data:", JSON.stringify(data, null, 2))
-
-        console.log("[v0] Setting authRequired to:", data.auth_enabled)
-        console.log("[v0] Setting isAuthenticated to:", data.authenticated)
-        console.log("[v0] auth_configured value:", data.auth_configured)
-
-        setAuthRequired(data.auth_enabled)
-        setIsAuthenticated(data.authenticated)
-
-        // auth_configured will be true if user either set up auth OR declined it
-        const shouldShowModal = !data.auth_configured
-        console.log("[v0] Should show modal:", shouldShowModal)
-        console.log("[v0] Setting authDeclined to:", data.auth_configured)
-
-        setAuthDeclined(data.auth_configured) // If configured (either way), don't show modal
-        setAuthChecked(true)
-
-        if (data.authenticated && token) {
-          setupTokenRefresh()
-        }
-
-        console.log("[v0] ===== AUTH CHECK SUCCESS =====")
-      } catch (error) {
-        console.error("[v0] ===== AUTH CHECK FAILED =====")
-        console.error("[v0] Failed to check auth status:", error)
-        console.error("[v0] Error message:", error instanceof Error ? error.message : "Unknown error")
-
-        console.log("[v0] Setting authDeclined to false (show modal on error)")
-        console.log("[v0] Setting authRequired to false (don't require login on error)")
-
-        setAuthDeclined(false) // Show modal when API fails
-        setAuthRequired(false) // Don't require login on error
-        setAuthChecked(true)
-
-        console.log("[v0] ===== AUTH CHECK ERROR HANDLED =====")
-      }
-    }
-
-    checkAuth()
-  }, [])
-
-  if (!authChecked) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (authRequired && !isAuthenticated) {
-    return <Login onLogin={handleLoginSuccess} />
-  }
-
   return (
     <div className="min-h-screen bg-background">
-      <HealthStatusModal open={showHealthModal} onOpenChange={setShowHealthModal} getApiUrl={getApiUrl} />
-
-      <header
-        className="border-b bg-card cursor-pointer hover:bg-muted/50 transition-colors"
-        onClick={() => setShowHealthModal(true)}
-      >
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Server className="h-6 w-6 text-primary" />
-                <h1 className="text-2xl font-bold">ProxMenuX</h1>
-              </div>
-              <Badge
-                variant={
-                  systemStatus.status === "healthy"
-                    ? "default"
-                    : systemStatus.status === "warning"
-                      ? "secondary"
-                      : "destructive"
-                }
-                className="cursor-pointer"
-              >
-                {systemStatus.status === "healthy" && "Healthy"}
-                {systemStatus.status === "warning" && "Warning"}
-                {systemStatus.status === "critical" && "Critical"}
-                {systemStatus.serverName === "Loading..." && "Loading..."}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-4">
-              <ThemeToggle />
-              {isAuthenticated && (
-                <Button variant="outline" size="sm" onClick={handleLogout}>
-                  Logout
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {!authDeclined && !authRequired && <AuthSetup onComplete={handleAuthSetupComplete} />}
+      <OnboardingCarousel />
 
       {!isServerConnected && (
         <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3">
@@ -453,6 +244,94 @@ export function ProxmoxDashboard() {
         </div>
       )}
 
+      <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
+        <div className="container mx-auto px-4 md:px-6 py-4 md:py-4">
+          {/* Logo and Title */}
+          <div className="flex items-start justify-between gap-3">
+            {/* Logo and Title */}
+            <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
+              <div className="w-16 h-16 md:w-10 md:h-10 relative flex items-center justify-center bg-primary/10 flex-shrink-0">
+                <Image
+                  src="/images/proxmenux-logo.png"
+                  alt="ProxMenux Logo"
+                  width={64}
+                  height={64}
+                  className="object-contain md:w-10 md:h-10"
+                  priority
+                  onError={(e) => {
+                    console.log("[v0] Logo failed to load, using fallback icon")
+                    const target = e.target as HTMLImageElement
+                    target.style.display = "none"
+                    const fallback = target.parentElement?.querySelector(".fallback-icon")
+                    if (fallback) {
+                      fallback.classList.remove("hidden")
+                    }
+                  }}
+                />
+                <Server className="h-8 w-8 md:h-6 md:w-6 text-primary absolute fallback-icon hidden" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">ProxMenux Monitor</h1>
+                <p className="text-xs md:text-sm text-muted-foreground">Proxmox System Dashboard</p>
+                <div className="lg:hidden flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                  <Server className="h-3 w-3" />
+                  <span className="truncate">Node: {systemStatus.serverName}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Actions */}
+            <div className="hidden lg:flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Server className="h-4 w-4 text-muted-foreground" />
+                <div className="text-sm">
+                  <div className="font-medium text-foreground">Node: {systemStatus.serverName}</div>
+                </div>
+              </div>
+
+              <Badge variant="outline" className={statusColor}>
+                {statusIcon}
+                <span className="ml-1 capitalize">{systemStatus.status}</span>
+              </Badge>
+
+              <div className="text-sm text-muted-foreground whitespace-nowrap">Uptime: {systemStatus.uptime}</div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refreshData}
+                disabled={isRefreshing}
+                className="border-border/50 bg-transparent hover:bg-secondary"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+
+              <ThemeToggle />
+            </div>
+
+            {/* Mobile Actions */}
+            <div className="flex lg:hidden items-center gap-2">
+              <Badge variant="outline" className={`${statusColor} text-xs px-2`}>
+                {statusIcon}
+                <span className="ml-1 capitalize hidden sm:inline">{systemStatus.status}</span>
+              </Badge>
+
+              <Button variant="ghost" size="sm" onClick={refreshData} disabled={isRefreshing} className="h-8 w-8 p-0">
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              </Button>
+
+              <ThemeToggle />
+            </div>
+          </div>
+
+          {/* Mobile Server Info */}
+          <div className="lg:hidden mt-2 flex items-center justify-end text-xs text-muted-foreground">
+            <span className="whitespace-nowrap">Uptime: {systemStatus.uptime}</span>
+          </div>
+        </div>
+      </header>
+
       <div
         className={`sticky z-40 bg-background
           top-[120px] md:top-[76px]
@@ -462,7 +341,7 @@ export function ProxmoxDashboard() {
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
-            <TabsList className="hidden md:grid w-full grid-cols-7 bg-card border border-border">
+            <TabsList className="hidden md:grid w-full grid-cols-6 bg-card border border-border">
               <TabsTrigger
                 value="overview"
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
@@ -498,12 +377,6 @@ export function ProxmoxDashboard() {
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
               >
                 System Logs
-              </TabsTrigger>
-              <TabsTrigger
-                value="settings"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-              >
-                Settings
               </TabsTrigger>
             </TabsList>
 
@@ -613,21 +486,6 @@ export function ProxmoxDashboard() {
                     <FileText className="h-5 w-5" />
                     <span>System Logs</span>
                   </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setActiveTab("settings")
-                      setMobileMenuOpen(false)
-                    }}
-                    className={`w-full justify-start gap-3 ${
-                      activeTab === "settings"
-                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                        : ""
-                    }`}
-                  >
-                    <SettingsIcon className="h-5 w-5" />
-                    <span>Settings</span>
-                  </Button>
                 </div>
               </SheetContent>
             </Sheet>
@@ -660,14 +518,10 @@ export function ProxmoxDashboard() {
           <TabsContent value="logs" className="space-y-4 md:space-y-6 mt-0">
             <SystemLogs key={`logs-${componentKey}`} />
           </TabsContent>
-
-          <TabsContent value="settings" className="space-y-4 md:space-y-6 mt-0">
-            <Settings key={`settings-${componentKey}`} />
-          </TabsContent>
         </Tabs>
 
         <footer className="mt-8 md:mt-12 pt-4 md:pt-6 border-t border-border text-center text-xs md:text-sm text-muted-foreground">
-          <p className="font-medium mb-2">ProxMenux Monitor v1.0.1</p>
+          <p className="font-medium mb-2">ProxMenux Monitor v1.0.0</p>
           <p>
             <a
               href="https://ko-fi.com/macrimi"
