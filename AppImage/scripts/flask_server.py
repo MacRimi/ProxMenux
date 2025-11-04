@@ -1202,8 +1202,14 @@ def get_pcie_link_speed(disk_name):
     try:
         # For NVMe drives, get PCIe information from sysfs
         if disk_name.startswith('nvme'):
-            controller = disk_name.split('n')[0]  # nvme0n1 -> nvme0
+            # Extract controller name properly using regex
+            import re
+            match = re.match(r'(nvme\d+)n\d+', disk_name)
+            if not match:
+                print(f"[v0] Could not extract controller from {disk_name}")
+                return pcie_info
             
+            controller = match.group(1)  # nvme0n1 -> nvme0
             print(f"[v0] Getting PCIe info for {disk_name}, controller: {controller}")
             
             # Path to PCIe device in sysfs
@@ -1282,6 +1288,74 @@ def get_pcie_link_speed(disk_name):
                 print(f"[v0] sys_path does not exist: {sys_path}")
                 alt_sys_path = f'/sys/block/{disk_name}/device/device'
                 print(f"[v0] Trying alternative path: {alt_sys_path}, exists: {os.path.exists(alt_sys_path)}")
+                
+                if os.path.exists(alt_sys_path):
+                    try:
+                        # Get PCI address from the alternative path
+                        pci_address = os.path.basename(os.readlink(alt_sys_path))
+                        print(f"[v0] PCI address from alt path for {disk_name}: {pci_address}")
+                        
+                        # Use lspci to get detailed PCIe information
+                        result = subprocess.run(['lspci', '-vvv', '-s', pci_address], 
+                                              capture_output=True, text=True, timeout=5)
+                        if result.returncode == 0:
+                            print(f"[v0] lspci output for {pci_address} (from alt path):")
+                            for line in result.stdout.split('\n'):
+                                # Look for "LnkSta:" line which shows current link status
+                                if 'LnkSta:' in line:
+                                    print(f"[v0] Found LnkSta: {line}")
+                                    if 'Speed' in line:
+                                        speed_match = re.search(r'Speed\s+([\d.]+)GT/s', line)
+                                        if speed_match:
+                                            gt_s = float(speed_match.group(1))
+                                            if gt_s <= 2.5:
+                                                pcie_info['pcie_gen'] = '1.0'
+                                            elif gt_s <= 5.0:
+                                                pcie_info['pcie_gen'] = '2.0'
+                                            elif gt_s <= 8.0:
+                                                pcie_info['pcie_gen'] = '3.0'
+                                            elif gt_s <= 16.0:
+                                                pcie_info['pcie_gen'] = '4.0'
+                                            else:
+                                                pcie_info['pcie_gen'] = '5.0'
+                                            print(f"[v0] Current PCIe gen: {pcie_info['pcie_gen']}")
+                                    
+                                    if 'Width' in line:
+                                        width_match = re.search(r'Width\s+x(\d+)', line)
+                                        if width_match:
+                                            pcie_info['pcie_width'] = f'x{width_match.group(1)}'
+                                            print(f"[v0] Current PCIe width: {pcie_info['pcie_width']}")
+                                
+                                # Look for "LnkCap:" line which shows maximum capabilities
+                                elif 'LnkCap:' in line:
+                                    print(f"[v0] Found LnkCap: {line}")
+                                    if 'Speed' in line:
+                                        speed_match = re.search(r'Speed\s+([\d.]+)GT/s', line)
+                                        if speed_match:
+                                            gt_s = float(speed_match.group(1))
+                                            if gt_s <= 2.5:
+                                                pcie_info['pcie_max_gen'] = '1.0'
+                                            elif gt_s <= 5.0:
+                                                pcie_info['pcie_max_gen'] = '2.0'
+                                            elif gt_s <= 8.0:
+                                                pcie_info['pcie_max_gen'] = '3.0'
+                                            elif gt_s <= 16.0:
+                                                pcie_info['pcie_max_gen'] = '4.0'
+                                            else:
+                                                pcie_info['pcie_max_gen'] = '5.0'
+                                            print(f"[v0] Max PCIe gen: {pcie_info['pcie_max_gen']}")
+                                    
+                                    if 'Width' in line:
+                                        width_match = re.search(r'Width\s+x(\d+)', line)
+                                        if width_match:
+                                            pcie_info['pcie_max_width'] = f'x{width_match.group(1)}'
+                                            print(f"[v0] Max PCIe width: {pcie_info['pcie_max_width']}")
+                        else:
+                            print(f"[v0] lspci failed with return code: {result.returncode}")
+                    except Exception as e:
+                        print(f"[v0] Error getting PCIe info from alt path: {e}")
+                        import traceback
+                        traceback.print_exc()
     
     except Exception as e:
         print(f"[v0] Error in get_pcie_link_speed for {disk_name}: {e}")
@@ -1291,7 +1365,7 @@ def get_pcie_link_speed(disk_name):
     print(f"[v0] Final PCIe info for {disk_name}: {pcie_info}")
     return pcie_info
 
-# END OF CHANGES FOR get_pcie_link_speed
+# get_pcie_link_speed function definition ends here
 
 def get_smart_data(disk_name):
     """Get SMART data for a specific disk - Enhanced with multiple device type attempts"""
@@ -3736,7 +3810,6 @@ def get_detailed_gpu_info(gpu):
                             else:
                                 # print(f"[v0] No fdinfo section found in device data", flush=True)
                                 pass
-                                detailed_info['processes'] = []
                             
                             if data_retrieved:
                                 detailed_info['has_monitoring_tool'] = True
