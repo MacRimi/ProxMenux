@@ -87,16 +87,19 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     }
   }
 
-  const groupedChecks = healthData?.checks.reduce(
-    (acc, check) => {
-      if (!acc[check.category]) {
-        acc[check.category] = []
-      }
-      acc[check.category].push(check)
-      return acc
-    },
-    {} as Record<string, HealthCheck[]>,
-  )
+  const groupedChecks =
+    healthData?.checks && Array.isArray(healthData.checks)
+      ? healthData.checks.reduce(
+          (acc, check) => {
+            if (!acc[check.category]) {
+              acc[check.category] = []
+            }
+            acc[check.category].push(check)
+            return acc
+          },
+          {} as Record<string, HealthCheck[]>,
+        )
+      : {}
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
