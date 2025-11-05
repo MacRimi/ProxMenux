@@ -3111,8 +3111,7 @@
       21
     ],
     "notes": [
-      "Since there are hundreds of Certbot instances, it's necessary to install the specific Certbot of your preference. Running `/app/scripts/install-certbot-plugins` within the nginxproxymanager LXC shell will install many additional plugins.",
-      "WARNING: Installation sources scripts outside of Community Scripts repo. Please check the source before installing."
+      "You can install the specific one certbot you prefer, or you can Running /app/scripts/install-certbot-plugins within the Nginx Proxy Manager (NPM) LXC shell will install many common plugins. Important: This script does not install all Certbot plugins, as some require additional, external system dependencies (like specific packages for certain DNS providers). These external dependencies must be manually installed within the LXC container before you can successfully install and use the corresponding Certbot plugin. Consult the plugin's documentation for required packages."
     ],
     "type": "ct",
     "default_credentials": {
@@ -3475,7 +3474,8 @@
       20
     ],
     "notes": [
-      "Script contains optional installation of Ollama."
+      "Script contains optional installation of Ollama.",
+      "Initial run of the application/container can take some time, depending on your host speed, as the application is installed/updated at runtime. Please be patient!"
     ],
     "type": "ct"
   },
