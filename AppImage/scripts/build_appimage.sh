@@ -78,6 +78,10 @@ cd "$SCRIPT_DIR"
 # Copy Flask server
 echo "📋 Copying Flask server..."
 cp "$SCRIPT_DIR/flask_server.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/flask_auth_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_auth_routes.py not found"
+cp "$SCRIPT_DIR/auth_manager.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  auth_manager.py not found"
+cp "$SCRIPT_DIR/health_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  health_monitor.py not found"
+cp "$SCRIPT_DIR/flask_health_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_health_routes.py not found"
 
 echo "📋 Adding translation support..."
 cat > "$APP_DIR/usr/bin/translate_cli.py" << 'PYEOF'
@@ -279,6 +283,7 @@ pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" \
     flask-cors \
     psutil \
     requests \
+    PyJWT \
     googletrans==4.0.0-rc1 \
     httpx==0.13.3 \
     httpcore==0.9.1 \
@@ -321,10 +326,6 @@ echo "🔧 Installing hardware monitoring tools..."
 mkdir -p "$WORK_DIR/debs"
 cd "$WORK_DIR/debs"
 
-
-# ==============================================================
-
-
 echo "📥 Downloading hardware monitoring tools (dynamic via APT)..."
 
 dl_pkg() {
@@ -361,20 +362,11 @@ dl_pkg() {
   return 1
 }
 
-mkdir -p "$WORK_DIR/debs"
-cd "$WORK_DIR/debs"
-
-
 dl_pkg "ipmitool.deb"        "ipmitool"                         || true
 dl_pkg "libfreeipmi17.deb"   "libfreeipmi17"                    || true
 dl_pkg "lm-sensors.deb"      "lm-sensors"                       || true
 dl_pkg "nut-client.deb"      "nut-client"                       || true
 dl_pkg "libupsclient.deb"    "libupsclient6" "libupsclient5" "libupsclient4" || true
-
-
-# dl_pkg "nvidia-smi.deb"      "nvidia-smi" "nvidia-utils" "nvidia-utils-535" "nvidia-utils-550" || true
-# dl_pkg "intel-gpu-tools.deb" "intel-gpu-tools"                  || true
-# dl_pkg "radeontop.deb"       "radeontop"                        || true
 
 echo "📦 Extracting .deb packages into AppDir..."
 extracted_count=0
@@ -395,7 +387,6 @@ else
   echo "✅ Extracted $extracted_count package(s)"
 fi
 
-
 if [ -d "$APP_DIR/bin" ]; then
   echo "📋 Normalizing /bin -> /usr/bin"
   mkdir -p "$APP_DIR/usr/bin"
@@ -403,23 +394,19 @@ if [ -d "$APP_DIR/bin" ]; then
   rm -rf "$APP_DIR/bin"
 fi
 
-
 echo "🔍 Sanity check (ldd + presence of libfreeipmi)"
 export LD_LIBRARY_PATH="$APP_DIR/lib:$APP_DIR/lib/x86_64-linux-gnu:$APP_DIR/usr/lib:$APP_DIR/usr/lib/x86_64-linux-gnu"
-
 
 if ! find "$APP_DIR/usr/lib" "$APP_DIR/lib" -maxdepth 3 -name 'libfreeipmi.so.17*' | grep -q .; then
   echo "❌ libfreeipmi.so.17 not found inside AppDir (ipmitool will fail)"
   exit 1
 fi
 
-
 if [ -x "$APP_DIR/usr/bin/ipmitool" ] && ldd "$APP_DIR/usr/bin/ipmitool" | grep -q 'not found'; then
   echo "❌ ipmitool has unresolved libs:"
   ldd "$APP_DIR/usr/bin/ipmitool" | grep 'not found' || true
   exit 1
 fi
-
 
 if [ -x "$APP_DIR/usr/bin/upsc" ] && ldd "$APP_DIR/usr/bin/upsc" | grep -q 'not found'; then
   echo "⚠️ upsc has unresolved libs, trying to auto-fix..."
@@ -462,12 +449,6 @@ echo "✅ Sanity check OK (ipmitool/upsc ready; libfreeipmi present)"
 [ -x "$APP_DIR/usr/bin/nvidia-smi" ]      && echo "  • nvidia-smi: OK"         || echo "  • nvidia-smi: missing"
 [ -x "$APP_DIR/usr/bin/intel_gpu_top" ]   && echo "  • intel-gpu-tools: OK"    || echo "  • intel-gpu-tools: missing"
 [ -x "$APP_DIR/usr/bin/radeontop" ]       && echo "  • radeontop: OK"          || echo "  • radeontop: missing"
-
-
-
-# ==============================================================
-
-
 
 # Build AppImage
 echo "🔨 Building unified AppImage v${VERSION}..."

@@ -64,9 +64,12 @@ const formatMemory = (memoryKB: number | string): string => {
     return `${tb.toFixed(1)} TB`
   }
 
-  // Convert to GB if >= 1024 MB
   if (mb >= 1024) {
     const gb = mb / 1024
+    // If GB value is greater than 999, convert to TB
+    if (gb > 999) {
+      return `${(gb / 1024).toFixed(2)} TB`
+    }
     return `${gb.toFixed(1)} GB`
   }
 
@@ -167,6 +170,22 @@ export default function Hardware() {
   } = useSWR<HardwareData>("/api/hardware", fetcher, {
     refreshInterval: 5000,
   })
+
+  useEffect(() => {
+    if (hardwareData?.storage_devices) {
+      console.log("[v0] Storage devices data from backend:", hardwareData.storage_devices)
+      hardwareData.storage_devices.forEach((device) => {
+        if (device.name.startsWith("nvme")) {
+          console.log(`[v0] NVMe device ${device.name}:`, {
+            pcie_gen: device.pcie_gen,
+            pcie_width: device.pcie_width,
+            pcie_max_gen: device.pcie_max_gen,
+            pcie_max_width: device.pcie_max_width,
+          })
+        }
+      })
+    }
+  }, [hardwareData])
 
   const [selectedGPU, setSelectedGPU] = useState<GPU | null>(null)
   const [realtimeGPUData, setRealtimeGPUData] = useState<any>(null)
@@ -1658,6 +1677,61 @@ export default function Hardware() {
 
                 const diskBadge = getDiskTypeBadge(device.name, device.rotation_rate)
 
+                const getLinkSpeedInfo = (device: StorageDevice) => {
+                  // NVMe PCIe information
+                  if (device.name.startsWith("nvme") && (device.pcie_gen || device.pcie_width)) {
+                    const current = `${device.pcie_gen || ""} ${device.pcie_width || ""}`.trim()
+                    const max =
+                      device.pcie_max_gen && device.pcie_max_width
+                        ? `${device.pcie_max_gen} ${device.pcie_max_width}`.trim()
+                        : null
+
+                    const isLowerSpeed = max && current !== max
+
+                    return {
+                      text: current || null,
+                      maxText: max,
+                      isWarning: isLowerSpeed,
+                      color: isLowerSpeed ? "text-orange-500" : "text-blue-500",
+                    }
+                  }
+
+                  // SATA information
+                  if (device.sata_version) {
+                    return {
+                      text: device.sata_version,
+                      maxText: null,
+                      isWarning: false,
+                      color: "text-blue-500",
+                    }
+                  }
+
+                  // SAS information
+                  if (device.sas_version || device.sas_speed) {
+                    const text = [device.sas_version, device.sas_speed].filter(Boolean).join(" ")
+                    return {
+                      text: text || null,
+                      maxText: null,
+                      isWarning: false,
+                      color: "text-blue-500",
+                    }
+                  }
+
+                  // Generic link speed
+                  if (device.link_speed) {
+                    return {
+                      text: device.link_speed,
+                      maxText: null,
+                      isWarning: false,
+                      color: "text-blue-500",
+                    }
+                  }
+
+                  return null
+                }
+
+                const linkSpeed = getLinkSpeedInfo(device)
+
                 return (
                   <div
                     key={index}
@@ -1671,6 +1745,14 @@ export default function Hardware() {
                     {device.size && <p className="text-sm font-medium">{formatMemory(parseLsblkSize(device.size))}</p>}
                     {device.model && (
                       <p className="text-xs text-muted-foreground line-clamp-2 break-words">{device.model}</p>
+                    )}
+                    {linkSpeed && (
+                      <div className="mt-1 flex items-center gap-1">
+                        <span className={`text-xs font-medium ${linkSpeed.color}`}>{linkSpeed.text}</span>
+                        {linkSpeed.maxText && linkSpeed.isWarning && (
+                          <span className="text-xs font-medium text-blue-500">(max: {linkSpeed.maxText})</span>
+                        )}
+                      </div>
                     )}
                   </div>
                 )
@@ -1695,46 +1777,44 @@ export default function Hardware() {
                 <span className="font-mono text-sm">{selectedDisk.name}</span>
               </div>
 
-              {selectedDisk.name && (
-                <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Type</span>
-                  {(() => {
-                    const getDiskTypeBadge = (diskName: string, rotationRate: number | string | undefined) => {
-                      let diskType = "HDD"
+              <div className="flex justify-between border-b border-border/50 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">Type</span>
+                {(() => {
+                  const getDiskTypeBadge = (diskName: string, rotationRate: number | string | undefined) => {
+                    let diskType = "HDD"
 
-                      if (diskName.startsWith("nvme")) {
-                        diskType = "NVMe"
-                      } else if (rotationRate !== undefined && rotationRate !== null) {
-                        const rateNum = typeof rotationRate === "string" ? Number.parseInt(rotationRate) : rotationRate
-                        if (rateNum === 0 || isNaN(rateNum)) {
-                          diskType = "SSD"
-                        }
-                      } else if (typeof rotationRate === "string" && rotationRate.includes("Solid State")) {
+                    if (diskName.startsWith("nvme")) {
+                      diskType = "NVMe"
+                    } else if (rotationRate !== undefined && rotationRate !== null) {
+                      const rateNum = typeof rotationRate === "string" ? Number.parseInt(rotationRate) : rotationRate
+                      if (rateNum === 0 || isNaN(rateNum)) {
                         diskType = "SSD"
                       }
-
-                      const badgeStyles: Record<string, { className: string; label: string }> = {
-                        NVMe: {
-                          className: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-                          label: "NVMe SSD",
-                        },
-                        SSD: {
-                          className: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
-                          label: "SSD",
-                        },
-                        HDD: {
-                          className: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-                          label: "HDD",
-                        },
-                      }
-                      return badgeStyles[diskType]
+                    } else if (typeof rotationRate === "string" && rotationRate.includes("Solid State")) {
+                      diskType = "SSD"
                     }
 
-                    const diskBadge = getDiskTypeBadge(selectedDisk.name, selectedDisk.rotation_rate)
-                    return <Badge className={diskBadge.className}>{diskBadge.label}</Badge>
-                  })()}
-                </div>
-              )}
+                    const badgeStyles: Record<string, { className: string; label: string }> = {
+                      NVMe: {
+                        className: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+                        label: "NVMe SSD",
+                      },
+                      SSD: {
+                        className: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+                        label: "SSD",
+                      },
+                      HDD: {
+                        className: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+                        label: "HDD",
+                      },
+                    }
+                    return badgeStyles[diskType]
+                  }
+
+                  const diskBadge = getDiskTypeBadge(selectedDisk.name, selectedDisk.rotation_rate)
+                  return <Badge className={diskBadge.className}>{diskBadge.label}</Badge>
+                })()}
+              </div>
 
               {selectedDisk.size && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
@@ -1742,6 +1822,84 @@ export default function Hardware() {
                   <span className="text-sm font-medium">{formatMemory(parseLsblkSize(selectedDisk.size))}</span>
                 </div>
               )}
+
+              <div className="pt-2">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+                  Interface Information
+                </h3>
+              </div>
+
+              {/* NVMe PCIe Information */}
+              {selectedDisk.name.startsWith("nvme") && (
+                <>
+                  {selectedDisk.pcie_gen || selectedDisk.pcie_width ? (
+                    <>
+                      <div className="flex justify-between border-b border-border/50 pb-2">
+                        <span className="text-sm font-medium text-muted-foreground">Current Link Speed</span>
+                        <span
+                          className={`text-sm font-medium ${
+                            selectedDisk.pcie_max_gen &&
+                            selectedDisk.pcie_max_width &&
+                            `${selectedDisk.pcie_gen} ${selectedDisk.pcie_width}` !==
+                              `${selectedDisk.pcie_max_gen} ${selectedDisk.pcie_max_width}`
+                              ? "text-orange-500"
+                              : "text-blue-500"
+                          }`}
+                        >
+                          {selectedDisk.pcie_gen || "PCIe"} {selectedDisk.pcie_width || ""}
+                        </span>
+                      </div>
+                      {selectedDisk.pcie_max_gen && selectedDisk.pcie_max_width && (
+                        <div className="flex justify-between border-b border-border/50 pb-2">
+                          <span className="text-sm font-medium text-muted-foreground">Maximum Link Speed</span>
+                          <span className="text-sm font-medium text-blue-500">
+                            {selectedDisk.pcie_max_gen} {selectedDisk.pcie_max_width}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex justify-between border-b border-border/50 pb-2">
+                      <span className="text-sm font-medium text-muted-foreground">PCIe Link Speed</span>
+                      <span className="text-sm text-muted-foreground italic">Detecting...</span>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* SATA Information */}
+              {!selectedDisk.name.startsWith("nvme") && selectedDisk.sata_version && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">SATA Version</span>
+                  <span className="text-sm font-medium text-blue-500">{selectedDisk.sata_version}</span>
+                </div>
+              )}
+
+              {/* SAS Information */}
+              {!selectedDisk.name.startsWith("nvme") && selectedDisk.sas_version && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">SAS Version</span>
+                  <span className="text-sm font-medium text-blue-500">{selectedDisk.sas_version}</span>
+                </div>
+              )}
+              {!selectedDisk.name.startsWith("nvme") && selectedDisk.sas_speed && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">SAS Speed</span>
+                  <span className="text-sm font-medium text-blue-500">{selectedDisk.sas_speed}</span>
+                </div>
+              )}
+
+              {/* Generic Link Speed - only show if no specific interface info */}
+              {!selectedDisk.name.startsWith("nvme") &&
+                selectedDisk.link_speed &&
+                !selectedDisk.pcie_gen &&
+                !selectedDisk.sata_version &&
+                !selectedDisk.sas_version && (
+                  <div className="flex justify-between border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Link Speed</span>
+                    <span className="text-sm font-medium text-blue-500">{selectedDisk.link_speed}</span>
+                  </div>
+                )}
 
               {selectedDisk.model && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
@@ -1804,13 +1962,6 @@ export default function Hardware() {
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-sm font-medium text-muted-foreground">Form Factor</span>
                   <span className="text-sm">{selectedDisk.form_factor}</span>
-                </div>
-              )}
-
-              {selectedDisk.sata_version && (
-                <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">SATA Version</span>
-                  <span className="text-sm">{selectedDisk.sata_version}</span>
                 </div>
               )}
             </div>

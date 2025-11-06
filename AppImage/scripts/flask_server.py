@@ -12,6 +12,7 @@ import psutil
 import subprocess
 import json
 import os
+import sys
 import time
 import socket
 from datetime import datetime, timedelta
@@ -22,9 +23,25 @@ import xml.etree.ElementTree as ET  # Added for XML parsing
 import math # Imported math for format_bytes function
 import urllib.parse # Added for URL encoding
 import platform # Added for platform.release()
+import hashlib
+import secrets
+import jwt
+from functools import wraps
+from pathlib import Path
+
+from flask_health_routes import health_bp
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from flask_auth_routes import auth_bp
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(health_bp)
+
+
 
 def identify_gpu_type(name, vendor=None, bus=None, driver=None):
     """
@@ -395,18 +412,18 @@ def get_intel_gpu_processes_from_text():
                                 processes.append(process_info)
 
                         except (ValueError, IndexError) as e:
-                            # print(f"[v0] Error parsing process line: {e}", flush=True)
+                            # print(f"[v0] Error parsing process line: {e}")
                             pass
                             continue
                 break
         
         if not header_found:
-            # print(f"[v0] No process table found in intel_gpu_top output", flush=True)
+            # print(f"[v0] No process table found in intel_gpu_top output")
             pass
         
         return processes
     except Exception as e:
-        # print(f"[v0] Error getting processes from intel_gpu_top text: {e}", flush=True)
+        # print(f"[v0] Error getting processes from intel_gpu_top text: {e}")
         pass
         import traceback
         traceback.print_exc()
@@ -917,6 +934,183 @@ def get_disk_hardware_info(disk_name):
     """Placeholder for disk hardware info - to be populated by lsblk later."""
     return {}
 
+def get_pcie_link_speed(disk_name):
+    """Get PCIe link speed information for NVMe drives"""
+    pcie_info = {
+        'pcie_gen': None,
+        'pcie_width': None,
+        'pcie_max_gen': None,
+        'pcie_max_width': None
+    }
+    
+    try:
+        # For NVMe drives, get PCIe information from sysfs
+        if disk_name.startswith('nvme'):
+            # Extract controller name properly using regex
+            import re
+            match = re.match(r'(nvme\d+)n\d+', disk_name)
+            if not match:
+                print(f"[v0] Could not extract controller from {disk_name}")
+                return pcie_info
+            
+            controller = match.group(1)  # nvme0n1 -> nvme0
+            print(f"[v0] Getting PCIe info for {disk_name}, controller: {controller}")
+            
+            # Path to PCIe device in sysfs
+            sys_path = f'/sys/class/nvme/{controller}/device'
+            
+            print(f"[v0] Checking sys_path: {sys_path}, exists: {os.path.exists(sys_path)}")
+            
+            if os.path.exists(sys_path):
+                try:
+                    pci_address = os.path.basename(os.readlink(sys_path))
+                    print(f"[v0] PCI address for {disk_name}: {pci_address}")
+                    
+                    # Use lspci to get detailed PCIe information
+                    result = subprocess.run(['lspci', '-vvv', '-s', pci_address], 
+                                          capture_output=True, text=True, timeout=5)
+                    if result.returncode == 0:
+                        print(f"[v0] lspci output for {pci_address}:")
+                        for line in result.stdout.split('\n'):
+                            # Look for "LnkSta:" line which shows current link status
+                            if 'LnkSta:' in line:
+                                print(f"[v0] Found LnkSta: {line}")
+                                # Example: "LnkSta: Speed 8GT/s, Width x4"
+                                if 'Speed' in line:
+                                    speed_match = re.search(r'Speed\s+([\d.]+)GT/s', line)
+                                    if speed_match:
+                                        gt_s = float(speed_match.group(1))
+                                        if gt_s <= 2.5:
+                                            pcie_info['pcie_gen'] = '1.0'
+                                        elif gt_s <= 5.0:
+                                            pcie_info['pcie_gen'] = '2.0'
+                                        elif gt_s <= 8.0:
+                                            pcie_info['pcie_gen'] = '3.0'
+                                        elif gt_s <= 16.0:
+                                            pcie_info['pcie_gen'] = '4.0'
+                                        else:
+                                            pcie_info['pcie_gen'] = '5.0'
+                                        print(f"[v0] Current PCIe gen: {pcie_info['pcie_gen']}")
+                                
+                                if 'Width' in line:
+                                    width_match = re.search(r'Width\s+x(\d+)', line)
+                                    if width_match:
+                                        pcie_info['pcie_width'] = f'x{width_match.group(1)}'
+                                        print(f"[v0] Current PCIe width: {pcie_info['pcie_width']}")
+                            
+                            # Look for "LnkCap:" line which shows maximum capabilities
+                            elif 'LnkCap:' in line:
+                                print(f"[v0] Found LnkCap: {line}")
+                                if 'Speed' in line:
+                                    speed_match = re.search(r'Speed\s+([\d.]+)GT/s', line)
+                                    if speed_match:
+                                        gt_s = float(speed_match.group(1))
+                                        if gt_s <= 2.5:
+                                            pcie_info['pcie_max_gen'] = '1.0'
+                                        elif gt_s <= 5.0:
+                                            pcie_info['pcie_max_gen'] = '2.0'
+                                        elif gt_s <= 8.0:
+                                            pcie_info['pcie_max_gen'] = '3.0'
+                                        elif gt_s <= 16.0:
+                                            pcie_info['pcie_max_gen'] = '4.0'
+                                        else:
+                                            pcie_info['pcie_max_gen'] = '5.0'
+                                        print(f"[v0] Max PCIe gen: {pcie_info['pcie_max_gen']}")
+                                
+                                if 'Width' in line:
+                                    width_match = re.search(r'Width\s+x(\d+)', line)
+                                    if width_match:
+                                        pcie_info['pcie_max_width'] = f'x{width_match.group(1)}'
+                                        print(f"[v0] Max PCIe width: {pcie_info['pcie_max_width']}")
+                    else:
+                        print(f"[v0] lspci failed with return code: {result.returncode}")
+                except Exception as e:
+                    print(f"[v0] Error getting PCIe info via lspci: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"[v0] sys_path does not exist: {sys_path}")
+                alt_sys_path = f'/sys/block/{disk_name}/device/device'
+                print(f"[v0] Trying alternative path: {alt_sys_path}, exists: {os.path.exists(alt_sys_path)}")
+                
+                if os.path.exists(alt_sys_path):
+                    try:
+                        # Get PCI address from the alternative path
+                        pci_address = os.path.basename(os.readlink(alt_sys_path))
+                        print(f"[v0] PCI address from alt path for {disk_name}: {pci_address}")
+                        
+                        # Use lspci to get detailed PCIe information
+                        result = subprocess.run(['lspci', '-vvv', '-s', pci_address], 
+                                              capture_output=True, text=True, timeout=5)
+                        if result.returncode == 0:
+                            print(f"[v0] lspci output for {pci_address} (from alt path):")
+                            for line in result.stdout.split('\n'):
+                                # Look for "LnkSta:" line which shows current link status
+                                if 'LnkSta:' in line:
+                                    print(f"[v0] Found LnkSta: {line}")
+                                    if 'Speed' in line:
+                                        speed_match = re.search(r'Speed\s+([\d.]+)GT/s', line)
+                                        if speed_match:
+                                            gt_s = float(speed_match.group(1))
+                                            if gt_s <= 2.5:
+                                                pcie_info['pcie_gen'] = '1.0'
+                                            elif gt_s <= 5.0:
+                                                pcie_info['pcie_gen'] = '2.0'
+                                            elif gt_s <= 8.0:
+                                                pcie_info['pcie_gen'] = '3.0'
+                                            elif gt_s <= 16.0:
+                                                pcie_info['pcie_gen'] = '4.0'
+                                            else:
+                                                pcie_info['pcie_gen'] = '5.0'
+                                            print(f"[v0] Current PCIe gen: {pcie_info['pcie_gen']}")
+                                    
+                                    if 'Width' in line:
+                                        width_match = re.search(r'Width\s+x(\d+)', line)
+                                        if width_match:
+                                            pcie_info['pcie_width'] = f'x{width_match.group(1)}'
+                                            print(f"[v0] Current PCIe width: {pcie_info['pcie_width']}")
+                                
+                                # Look for "LnkCap:" line which shows maximum capabilities
+                                elif 'LnkCap:' in line:
+                                    print(f"[v0] Found LnkCap: {line}")
+                                    if 'Speed' in line:
+                                        speed_match = re.search(r'Speed\s+([\d.]+)GT/s', line)
+                                        if speed_match:
+                                            gt_s = float(speed_match.group(1))
+                                            if gt_s <= 2.5:
+                                                pcie_info['pcie_max_gen'] = '1.0'
+                                            elif gt_s <= 5.0:
+                                                pcie_info['pcie_max_gen'] = '2.0'
+                                            elif gt_s <= 8.0:
+                                                pcie_info['pcie_max_gen'] = '3.0'
+                                            elif gt_s <= 16.0:
+                                                pcie_info['pcie_max_gen'] = '4.0'
+                                            else:
+                                                pcie_info['pcie_max_gen'] = '5.0'
+                                            print(f"[v0] Max PCIe gen: {pcie_info['pcie_max_gen']}")
+                                    
+                                    if 'Width' in line:
+                                        width_match = re.search(r'Width\s+x(\d+)', line)
+                                        if width_match:
+                                            pcie_info['pcie_max_width'] = f'x{width_match.group(1)}'
+                                            print(f"[v0] Max PCIe width: {pcie_info['pcie_max_width']}")
+                        else:
+                            print(f"[v0] lspci failed with return code: {result.returncode}")
+                    except Exception as e:
+                        print(f"[v0] Error getting PCIe info from alt path: {e}")
+                        import traceback
+                        traceback.print_exc()
+    
+    except Exception as e:
+        print(f"[v0] Error in get_pcie_link_speed for {disk_name}: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    print(f"[v0] Final PCIe info for {disk_name}: {pcie_info}")
+    return pcie_info
+
+# get_pcie_link_speed function definition ends here
+
 def get_smart_data(disk_name):
     """Get SMART data for a specific disk - Enhanced with multiple device type attempts"""
     smart_data = {
@@ -947,8 +1141,8 @@ def get_smart_data(disk_name):
     try:
         commands_to_try = [
             ['smartctl', '-a', '-j', f'/dev/{disk_name}'],  # JSON output (preferred)
-            ['smartctl', '-a', '-j', '-d', 'ata', f'/dev/{disk_name}'],  # JSON with ATA device type
-            ['smartctl', '-a', '-j', '-d', 'sat', f'/dev/{disk_name}'],  # JSON with SAT device type
+            ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # JSON with ATA device type
+            ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],  # JSON with SAT device type
             ['smartctl', '-a', f'/dev/{disk_name}'],  # Text output (fallback)
             ['smartctl', '-a', '-d', 'ata', f'/dev/{disk_name}'],  # Text with ATA device type
             ['smartctl', '-a', '-d', 'sat', f'/dev/{disk_name}'],  # Text with SAT device type
@@ -2013,7 +2207,7 @@ def get_proxmox_vms():
             # print(f"[v0] Error getting VM/LXC info: {e}")
             pass
             return {
-                'error': f'Unable to access VM information: {str(e)}',
+                'error': 'Unable to access VM information: {str(e)}',
                 'vms': []
             }
     except Exception as e:
@@ -2548,7 +2742,7 @@ def get_detailed_gpu_info(gpu):
                                         if 'clients' in json_data:
                                             client_count = len(json_data['clients'])
    
-                                            for client_id, client_data in json_data['clients'].items():
+                                            for client_id, client_data in json_data['clients']:
                                                 client_name = client_data.get('name', 'Unknown')
                                                 client_pid = client_data.get('pid', 'Unknown')
 
@@ -2630,7 +2824,7 @@ def get_detailed_gpu_info(gpu):
                         clients = best_json['clients']
                         processes = []
                         
-                        for client_id, client_data in clients.items():
+                        for client_id, client_data in clients:
                             process_info = {
                                 'name': client_data.get('name', 'Unknown'),
                                 'pid': client_data.get('pid', 'Unknown'),
@@ -3091,22 +3285,22 @@ def get_detailed_gpu_info(gpu):
                                         # print(f"[v0] Temperature: {detailed_info['temperature']}°C", flush=True)
                                         pass
                                         data_retrieved = True
-                                
-                                # Parse power draw (GFX Power or average_socket_power)
-                                if 'GFX Power' in sensors:
-                                    gfx_power = sensors['GFX Power']
-                                    if 'value' in gfx_power:
-                                        detailed_info['power_draw'] = f"{gfx_power['value']:.2f} W"
-                                        # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
-                                        pass
-                                        data_retrieved = True
-                                elif 'average_socket_power' in sensors:
-                                    socket_power = sensors['average_socket_power']
-                                    if 'value' in socket_power:
-                                        detailed_info['power_draw'] = f"{socket_power['value']:.2f} W"
-                                        # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
-                                        pass
-                                        data_retrieved = True
+                            
+                            # Parse power draw (GFX Power or average_socket_power)
+                            if 'GFX Power' in sensors:
+                                gfx_power = sensors['GFX Power']
+                                if 'value' in gfx_power:
+                                    detailed_info['power_draw'] = f"{gfx_power['value']:.2f} W"
+                                    # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
+                                    pass
+                                    data_retrieved = True
+                            elif 'average_socket_power' in sensors:
+                                socket_power = sensors['average_socket_power']
+                                if 'value' in socket_power:
+                                    detailed_info['power_draw'] = f"{socket_power['value']:.2f} W"
+                                    # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
+                                    pass
+                                    data_retrieved = True
                             
                             # Parse clocks (GFX_SCLK for graphics, GFX_MCLK for memory)
                             if 'Clocks' in device:
@@ -3115,7 +3309,7 @@ def get_detailed_gpu_info(gpu):
                                     gfx_clock = clocks['GFX_SCLK']
                                     if 'value' in gfx_clock:
                                         detailed_info['clock_graphics'] = f"{gfx_clock['value']} MHz"
-                                        # print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']}", flush=True)
+                                        # print(f"[v0] Graphics Clock: {detailed_info['clock_graphics']} MHz", flush=True)
                                         pass
                                         data_retrieved = True
                                 
@@ -3123,7 +3317,7 @@ def get_detailed_gpu_info(gpu):
                                     mem_clock = clocks['GFX_MCLK']
                                     if 'value' in mem_clock:
                                         detailed_info['clock_memory'] = f"{mem_clock['value']} MHz"
-                                        # print(f"[v0] Memory Clock: {detailed_info['clock_memory']}", flush=True)
+                                        # print(f"[v0] Memory Clock: {detailed_info['clock_memory']} MHz", flush=True)
                                         pass
                                         data_retrieved = True
                             
@@ -3360,7 +3554,6 @@ def get_detailed_gpu_info(gpu):
                             else:
                                 # print(f"[v0] No fdinfo section found in device data", flush=True)
                                 pass
-                                detailed_info['processes'] = []
                             
                             if data_retrieved:
                                 detailed_info['has_monitoring_tool'] = True
@@ -3886,6 +4079,10 @@ def get_hardware_info():
                         except:
                             pass
                         
+                        pcie_info = {}
+                        if disk_name.startswith('nvme'):
+                            pcie_info = get_pcie_link_speed(disk_name)
+                        
                         # Build storage device with all available information
                         storage_device = {
                             'name': disk_name,
@@ -3900,6 +4097,9 @@ def get_hardware_info():
                             'form_factor': form_factor,
                             'sata_version': sata_version,
                         }
+                        
+                        if pcie_info:
+                            storage_device.update(pcie_info)
                         
                         # Add family if available (from smartctl)
                         try:
@@ -3922,7 +4122,7 @@ def get_hardware_info():
             # print(f"[v0] Error getting storage info: {e}")
             pass
 
-        # Graphics Cards (from lspci - will be duplicated by new PCI device listing, but kept for now)
+        # Graphics Cards
         try:
             # Try nvidia-smi first
             result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.used,temperature.gpu,power.draw,utilization.gpu,utilization.memory,clocks.graphics,clocks.memory', '--format=csv,noheader,nounits'], 
@@ -4467,7 +4667,7 @@ def api_network_interface_metrics(interface_name):
                     for point in all_data:
                         filtered_point = {'time': point.get('time')}
                         # Add network fields if they exist
-                        for key in ['netin', 'netout', 'diskread', 'diskwrite']:
+                        for key in ['netin', 'netout']:
                             if key in point:
                                 filtered_point[key] = point[key]
                         rrd_data.append(filtered_point)
@@ -5379,10 +5579,6 @@ def api_prometheus():
                         mem_used_bytes = mem_used * 1024 * 1024  # Convert MiB to bytes
                         mem_total_bytes = mem_total * 1024 * 1024
                         
-                        metrics.append(f'# HELP proxmox_gpu_memory_used_bytes GPU memory used in bytes')
-                        metrics.append(f'# TYPE proxmox_gpu_memory_used_bytes gauge')
-                        metrics.append(f'proxmox_gpu_memory_used_bytes{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {mem_used_bytes} {timestamp}')
-                        
                         metrics.append(f'# HELP proxmox_gpu_memory_total_bytes GPU memory total in bytes')
                         metrics.append(f'# TYPE proxmox_gpu_memory_total_bytes gauge')
                         metrics.append(f'proxmox_gpu_memory_total_bytes{{node="{node}",gpu="{gpu_name}",vendor="{gpu_vendor}",slot="{gpu_slot}"}} {mem_total_bytes} {timestamp}')
@@ -5475,7 +5671,7 @@ def api_system_info():
         except:
             pass
         
-        # Try to get node info from Proxmox API
+         # Try to get node info from Proxmox API
         try:
             result = subprocess.run(['pvesh', 'get', '/nodes', '--output-format', 'json'], 
                                   capture_output=True, text=True, timeout=5)

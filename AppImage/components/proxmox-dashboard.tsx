@@ -11,6 +11,7 @@ import { VirtualMachines } from "./virtual-machines"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { OnboardingCarousel } from "./onboarding-carousel"
+import { HealthStatusModal } from "./health-status-modal"
 import { getApiUrl } from "../lib/api-config"
 import {
   RefreshCw,
@@ -63,6 +64,7 @@ export function ProxmoxDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
   const [showNavigation, setShowNavigation] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
+  const [showHealthModal, setShowHealthModal] = useState(false)
 
   const fetchSystemData = useCallback(async () => {
     console.log("[v0] Fetching system data from Flask server...")
@@ -244,7 +246,10 @@ export function ProxmoxDashboard() {
         </div>
       )}
 
-      <header className="border-b border-border bg-card sticky top-0 z-50 shadow-sm">
+      <header
+        className="border-b border-border bg-card sticky top-0 z-50 shadow-sm cursor-pointer hover:bg-accent/5 transition-colors"
+        onClick={() => setShowHealthModal(true)}
+      >
         <div className="container mx-auto px-4 md:px-6 py-4 md:py-4">
           {/* Logo and Title */}
           <div className="flex items-start justify-between gap-3">
@@ -299,7 +304,10 @@ export function ProxmoxDashboard() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={refreshData}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  refreshData()
+                }}
                 disabled={isRefreshing}
                 className="border-border/50 bg-transparent hover:bg-secondary"
               >
@@ -307,7 +315,9 @@ export function ProxmoxDashboard() {
                 Refresh
               </Button>
 
-              <ThemeToggle />
+              <div onClick={(e) => e.stopPropagation()}>
+                <ThemeToggle />
+              </div>
             </div>
 
             {/* Mobile Actions */}
@@ -317,11 +327,22 @@ export function ProxmoxDashboard() {
                 <span className="ml-1 capitalize hidden sm:inline">{systemStatus.status}</span>
               </Badge>
 
-              <Button variant="ghost" size="sm" onClick={refreshData} disabled={isRefreshing} className="h-8 w-8 p-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  refreshData()
+                }}
+                disabled={isRefreshing}
+                className="h-8 w-8 p-0"
+              >
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               </Button>
 
-              <ThemeToggle />
+              <div onClick={(e) => e.stopPropagation()}>
+                <ThemeToggle />
+              </div>
             </div>
           </div>
 
@@ -534,6 +555,8 @@ export function ProxmoxDashboard() {
           </p>
         </footer>
       </div>
+
+      <HealthStatusModal open={showHealthModal} onOpenChange={setShowHealthModal} getApiUrl={getApiUrl} />
     </div>
   )
 }

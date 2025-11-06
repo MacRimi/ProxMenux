@@ -6,6 +6,7 @@ import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Ther
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { getApiUrl } from "../lib/api-config"
 
 interface DiskInfo {
   name: string
@@ -75,12 +76,11 @@ const formatStorage = (sizeInGB: number): string => {
   if (sizeInGB < 1) {
     // Less than 1 GB, show in MB
     return `${(sizeInGB * 1024).toFixed(1)} MB`
-  } else if (sizeInGB < 1024) {
-    // Less than 1024 GB, show in GB
-    return `${sizeInGB.toFixed(1)} GB`
+  } else if (sizeInGB > 999) {
+    return `${(sizeInGB / 1024).toFixed(2)} TB`
   } else {
-    // 1024 GB or more, show in TB
-    return `${(sizeInGB / 1024).toFixed(1)} TB`
+    // Between 1 and 999 GB, show in GB
+    return `${sizeInGB.toFixed(2)} GB`
   }
 }
 
@@ -93,12 +93,9 @@ export function StorageOverview() {
 
   const fetchStorageData = async () => {
     try {
-      const baseUrl =
-        typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:8008` : ""
-
       const [storageResponse, proxmoxResponse] = await Promise.all([
-        fetch(`${baseUrl}/api/storage`),
-        fetch(`${baseUrl}/api/proxmox-storage`),
+        fetch(getApiUrl("/api/storage")),
+        fetch(getApiUrl("/api/proxmox-storage")),
       ])
 
       const data = await storageResponse.json()
@@ -106,6 +103,24 @@ export function StorageOverview() {
 
       console.log("[v0] Storage data received:", data)
       console.log("[v0] Proxmox storage data received:", proxmoxData)
+
+      if (proxmoxData && proxmoxData.storage) {
+        const activeStorages = proxmoxData.storage.filter(
+          (s: any) => s && s.total > 0 && s.used >= 0 && s.status?.toLowerCase() === "active",
+        )
+        console.log("[v0] Active storage volumes:", activeStorages.length)
+        console.log(
+          "[v0] Total used across all volumes (GB):",
+          activeStorages.reduce((sum: number, s: any) => sum + s.used, 0),
+        )
+
+        // Check for potential cluster node duplication
+        const storageNames = activeStorages.map((s: any) => s.name)
+        const uniqueNames = new Set(storageNames)
+        if (storageNames.length !== uniqueNames.size) {
+          console.warn("[v0] WARNING: Duplicate storage names detected - possible cluster node issue")
+        }
+      }
 
       setStorageData(data)
       setProxmoxStorage(proxmoxData)
@@ -402,15 +417,22 @@ export function StorageOverview() {
   const diskHealthBreakdown = getDiskHealthBreakdown()
   const diskTypesBreakdown = getDiskTypesBreakdown()
 
+  // Only sum storage that belongs to the current node or filter appropriately
   const totalProxmoxUsed =
     proxmoxStorage && proxmoxStorage.storage
       ? proxmoxStorage.storage
           .filter(
-            (storage) => storage && storage.total > 0 && storage.status && storage.status.toLowerCase() === "active",
+            (storage) =>
+              storage &&
+              storage.total > 0 &&
+              storage.used >= 0 && // Added check for valid used value
+              storage.status &&
+              storage.status.toLowerCase() === "active",
           )
           .reduce((sum, storage) => sum + storage.used, 0)
       : 0
 
+  // Convert storageData.total from TB to GB before calculating percentage
   const usagePercent =
     storageData && storageData.total > 0 ? ((totalProxmoxUsed / (storageData.total * 1024)) * 100).toFixed(2) : "0.00"
 
@@ -520,7 +542,14 @@ export function StorageOverview() {
           <CardContent>
             <div className="space-y-4">
               {proxmoxStorage.storage
-                .filter((storage) => storage && storage.name && storage.total > 0)
+                .filter(
+                  (storage) =>
+                    storage &&
+                    storage.name &&
+                    storage.total > 0 &&
+                    storage.used >= 0 && // Ensure used is not negative
+                    storage.available >= 0, // Ensure available is not negative
+                )
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((storage) => (
                   <div key={storage.name} className="border rounded-lg p-4">
@@ -568,7 +597,7 @@ export function StorageOverview() {
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground">Total</p>
-                          <p className="font-medium">{storage.total.toLocaleString()} GB</p>
+                          <p className="font-medium">{formatStorage(storage.total)}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Used</p>
@@ -581,12 +610,12 @@ export function StorageOverview() {
                                   : "text-blue-400"
                             }`}
                           >
-                            {storage.used.toLocaleString()} GB
+                            {formatStorage(storage.used)}
                           </p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Available</p>
-                          <p className="font-medium text-green-400">{storage.available.toLocaleString()} GB</p>
+                          <p className="font-medium text-green-400">{formatStorage(storage.available)}</p>
                         </div>
                       </div>
                     </div>
