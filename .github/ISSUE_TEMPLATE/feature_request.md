@@ -1,19 +1,19 @@
 ---
 name: Feature Request
-about: Sugiere una nueva funcionalidad o mejora
-title: "[FEATURE] Describe la propuesta"
+about: Suggest a new feature or improvement
+title: "[FEATURE] Describe your proposal"
 labels: enhancement
 assignees: 'MacRimi'
 ---
 
-## Descripción
-Explica la funcionalidad que propones.
+## Description
+Explain the feature you are proposing.
 
-## Motivación
-¿Por qué es importante esta mejora? ¿Qué problema resuelve?
+## Motivation
+Why is this improvement important? What problem does it solve?
 
-## Alternativas consideradas
-¿Hay otras soluciones que hayas pensado?
+## Alternatives Considered
+Are there other solutions you have thought about?
 
-## Información adicional
-Agrega cualquier detalle extra que ayude a entender la propuesta.
+## Additional Information
+Add any extra details that help understand your proposal.
