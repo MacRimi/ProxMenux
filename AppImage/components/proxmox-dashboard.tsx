@@ -30,7 +30,6 @@ import {
   Cpu,
   FileText,
   SettingsIcon,
-  LogOut,
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
@@ -288,10 +287,9 @@ export function ProxmoxDashboard() {
         className="border-b border-border bg-card sticky top-0 z-50 shadow-sm cursor-pointer hover:bg-accent/5 transition-colors"
         onClick={() => setShowHealthModal(true)}
       >
-        <div className="container mx-auto px-4 md:px-6 py-4 md:py-4">
-          <div className="flex items-start justify-between gap-3">
-            {/* Logo and Title */}
-            <div className="flex items-center space-x-3 flex-shrink-0">
+        <div className="container mx-auto px-4 md:px-6 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center space-x-3">
               <div className="w-12 h-12 relative flex items-center justify-center bg-primary/10">
                 <Image
                   src="/images/proxmenux-logo.png"
@@ -313,95 +311,62 @@ export function ProxmoxDashboard() {
                 <Server className="h-6 w-6 text-primary absolute fallback-icon hidden" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-foreground whitespace-nowrap">ProxMenux Monitor</h1>
+                <h1 className="text-xl font-semibold text-foreground">ProxMenux Monitor</h1>
                 <p className="text-sm text-muted-foreground hidden md:block">Proxmox System Dashboard</p>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Server className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Node: {systemStatus.serverName}</span>
+                </div>
               </div>
             </div>
 
-            {/* Desktop Actions */}
-            <div className="hidden lg:flex items-center space-x-4 flex-shrink-0">
-              <div className="flex items-center space-x-2">
-                <Server className="h-4 w-4 text-muted-foreground" />
-                <div className="text-sm">
-                  <div className="font-medium text-foreground">Node: {systemStatus.serverName}</div>
-                </div>
-              </div>
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <div className="hidden md:flex items-center space-x-4">
+                <Badge variant="outline" className={statusColor}>
+                  {statusIcon}
+                  <span className="ml-1 capitalize">{systemStatus.status}</span>
+                </Badge>
 
-              <Badge variant="outline" className={statusColor}>
-                {statusIcon}
-                <span className="ml-1 capitalize">{systemStatus.status}</span>
-              </Badge>
-
-              <div className="text-sm text-muted-foreground whitespace-nowrap">Uptime: {systemStatus.uptime}</div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  refreshData()
-                }}
-                disabled={isRefreshing}
-                className="border-border/50 bg-transparent hover:bg-secondary"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-
-              {isAuthenticated && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleLogout}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    refreshData()
+                  }}
+                  disabled={isRefreshing}
                   className="border-border/50 bg-transparent hover:bg-secondary"
-                  title="Logout"
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
                 </Button>
-              )}
-
-              <div onClick={(e) => e.stopPropagation()}>
-                <ThemeToggle />
-              </div>
-            </div>
-
-            {/* Mobile Actions */}
-            <div className="flex lg:hidden items-center gap-2 flex-shrink-0 ml-auto">
-              <div className="flex flex-col items-end text-xs">
-                <span className="text-muted-foreground truncate max-w-[120px]">{systemStatus.serverName}</span>
-                <span className="text-muted-foreground whitespace-nowrap">Uptime: {systemStatus.uptime}</span>
               </div>
 
-              <Badge variant="outline" className={`${statusColor} px-2`}>
-                {statusIcon}
-              </Badge>
+              <div className="flex md:hidden items-center space-x-2">
+                <Badge variant="outline" className={statusColor}>
+                  {statusIcon}
+                </Badge>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  refreshData()
-                }}
-                disabled={isRefreshing}
-                className="h-9 w-9 p-0"
-                title="Refresh"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-              </Button>
-
-              {isAuthenticated && (
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="h-9 w-9 p-0" title="Logout">
-                  <LogOut className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    refreshData()
+                  }}
+                  disabled={isRefreshing}
+                  className="h-9 w-9 p-0"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
                 </Button>
-              )}
+              </div>
 
               <div onClick={(e) => e.stopPropagation()}>
                 <ThemeToggle />
               </div>
             </div>
           </div>
+
+          <div className="mt-2 text-right text-sm text-muted-foreground">Uptime: {systemStatus.uptime}</div>
         </div>
       </header>
 
