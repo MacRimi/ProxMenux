@@ -24,13 +24,13 @@ except ImportError:
 
 try:
     import pyotp
-    import qrcode
+    import segno
     import io
     import base64
     TOTP_AVAILABLE = True
 except ImportError:
     TOTP_AVAILABLE = False
-    print("Warning: pyotp/qrcode not available. 2FA features will be disabled.")
+    print("Warning: pyotp/segno not available. 2FA features will be disabled.")
 
 # Configuration
 CONFIG_DIR = Path.home() / ".config" / "proxmenux-monitor"
@@ -303,7 +303,7 @@ def generate_totp_secret():
 def generate_totp_qr(username, secret):
     """
     Generate a QR code for TOTP setup
-    Returns base64 encoded PNG image
+    Returns base64 encoded SVG image
     """
     if not TOTP_AVAILABLE:
         return None
@@ -316,20 +316,16 @@ def generate_totp_qr(username, secret):
             issuer_name="ProxMenux Monitor"
         )
         
-        # Generate QR code
-        qr = qrcode.QRCode(version=1, box_size=10, border=5)
-        qr.add_data(uri)
-        qr.make(fit=True)
+        qr = segno.make(uri)
         
-        img = qr.make_image(fill_color="black", back_color="white")
+        # Convert to SVG string
+        buffer = io.StringIO()
+        qr.save(buffer, kind='svg', scale=4, border=2)
+        svg_content = buffer.getvalue()
         
-        # Convert to base64
-        buffer = io.BytesIO()
-        img.save(buffer, format='PNG')
-        buffer.seek(0)
-        img_base64 = base64.b64encode(buffer.getvalue()).decode()
-        
-        return f"data:image/png;base64,{img_base64}"
+        # Return as data URL
+        svg_base64 = base64.b64encode(svg_content.encode()).decode()
+        return f"data:image/svg+xml;base64,{svg_base64}"
     except Exception as e:
         print(f"Error generating QR code: {e}")
         return None
@@ -356,7 +352,7 @@ def setup_totp(username):
     Returns (success: bool, secret: str, qr_code: str, backup_codes: list, message: str)
     """
     if not TOTP_AVAILABLE:
-        return False, None, None, None, "2FA is not available (pyotp/qrcode not installed)"
+        return False, None, None, None, "2FA is not available (pyotp/segno not installed)"
     
     config = load_auth_config()
     
