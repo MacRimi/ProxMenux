@@ -12,6 +12,7 @@ import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
+import { Settings } from "./settings"
 import { getApiUrl } from "../lib/api-config"
 import {
   RefreshCw,
@@ -26,7 +27,7 @@ import {
   Box,
   Cpu,
   FileText,
-  Settings,
+  SettingsIcon,
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
@@ -532,7 +533,7 @@ export function ProxmoxDashboard() {
                         : ""
                     }`}
                   >
-                    <Settings className="h-5 w-5" />
+                    <SettingsIcon className="h-5 w-5" />
                     <span>Settings</span>
                   </Button>
                 </div>
@@ -569,70 +570,7 @@ export function ProxmoxDashboard() {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4 md:space-y-6 mt-0">
-            <div className="grid gap-4 md:gap-6">
-              <div className="rounded-lg border border-border bg-card p-6">
-                <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
-                  <Settings className="h-6 w-6" />
-                  Settings
-                </h2>
-                <p className="text-muted-foreground mb-6">
-                  Configure your ProxMenux Monitor preferences and system settings.
-                </p>
-
-                <div className="space-y-6">
-                  <div className="border-t border-border pt-4">
-                    <h3 className="text-lg font-medium mb-2">Appearance</h3>
-                    <div className="flex items-center justify-between py-3">
-                      <div>
-                        <p className="font-medium">Theme</p>
-                        <p className="text-sm text-muted-foreground">Choose your preferred color scheme</p>
-                      </div>
-                      <ThemeToggle />
-                    </div>
-                  </div>
-
-                  <div className="border-t border-border pt-4">
-                    <h3 className="text-lg font-medium mb-2">System Information</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between py-2">
-                        <span className="text-muted-foreground">Version:</span>
-                        <span className="font-medium">ProxMenux Monitor v1.0.0</span>
-                      </div>
-                      <div className="flex justify-between py-2">
-                        <span className="text-muted-foreground">Server:</span>
-                        <span className="font-medium">{systemStatus.serverName}</span>
-                      </div>
-                      <div className="flex justify-between py-2">
-                        <span className="text-muted-foreground">Node ID:</span>
-                        <span className="font-medium">{systemStatus.nodeId}</span>
-                      </div>
-                      <div className="flex justify-between py-2">
-                        <span className="text-muted-foreground">Status:</span>
-                        <Badge variant="outline" className={statusColor}>
-                          {statusIcon}
-                          <span className="ml-1 capitalize">{systemStatus.status}</span>
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-border pt-4">
-                    <h3 className="text-lg font-medium mb-2">About</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      ProxMenux Monitor is a comprehensive dashboard for monitoring and managing Proxmox VE systems.
-                    </p>
-                    <a
-                      href="https://ko-fi.com/macrimi"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center text-sm text-blue-500 hover:text-blue-600 hover:underline transition-colors"
-                    >
-                      Support and contribute to the project →
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Settings />
           </TabsContent>
         </Tabs>
 
