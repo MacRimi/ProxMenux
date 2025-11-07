@@ -10,9 +10,9 @@ import { NetworkMetrics } from "./network-metrics"
 import { VirtualMachines } from "./virtual-machines"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
+import { Settings } from "./settings"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
-import { Settings } from "./settings"
 import { getApiUrl } from "../lib/api-config"
 import {
   RefreshCw,
@@ -129,12 +129,8 @@ export function ProxmoxDashboard() {
   }, [])
 
   useEffect(() => {
-    // Only fetch if we actually need the data (always for header)
     fetchSystemData()
-
-    // Poll every 30 seconds for header info (less frequent since it's just for display)
-    const interval = setInterval(fetchSystemData, 30000)
-
+    const interval = setInterval(fetchSystemData, 10000)
     return () => clearInterval(interval)
   }, [fetchSystemData])
 
@@ -546,7 +542,7 @@ export function ProxmoxDashboard() {
       <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
           <TabsContent value="overview" className="space-y-4 md:space-y-6 mt-0">
-            <SystemOverview key={`overview-${componentKey}`} isActive={activeTab === "overview"} />
+            <SystemOverview key={`overview-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="storage" className="space-y-4 md:space-y-6 mt-0">
@@ -554,7 +550,7 @@ export function ProxmoxDashboard() {
           </TabsContent>
 
           <TabsContent value="network" className="space-y-4 md:space-y-6 mt-0">
-            <NetworkMetrics key={`network-${componentKey}`} isActive={activeTab === "network"} />
+            <NetworkMetrics key={`network-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="vms" className="space-y-4 md:space-y-6 mt-0">

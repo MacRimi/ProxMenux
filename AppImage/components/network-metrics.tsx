@@ -73,10 +73,6 @@ interface NetworkInterface {
   vm_status?: string
 }
 
-interface NetworkMetricsProps {
-  isActive?: boolean
-}
-
 const getInterfaceTypeBadge = (type: string) => {
   switch (type) {
     case "physical":
@@ -147,16 +143,15 @@ const fetcher = async (url: string): Promise<NetworkData> => {
   return response.json()
 }
 
-export function NetworkMetrics({ isActive = true }: NetworkMetricsProps) {
+export function NetworkMetrics() {
   const {
     data: networkData,
     error,
     isLoading,
   } = useSWR<NetworkData>("/api/network", fetcher, {
-    refreshInterval: isActive ? 60000 : 0, // Refresh every 60 seconds only if active, otherwise pause
+    refreshInterval: 60000, // Refresh every 60 seconds
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
-    isPaused: () => !isActive,
   })
 
   const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null)
@@ -171,15 +166,10 @@ export function NetworkMetrics({ isActive = true }: NetworkMetricsProps) {
     revalidateOnReconnect: true,
   })
 
-  const { data: interfaceHistoricalData } = useSWR<any>(
-    isActive ? `/api/node/metrics?timeframe=${timeframe}` : null,
-    fetcher,
-    {
-      refreshInterval: isActive ? 30000 : 0,
-      revalidateOnFocus: false,
-      isPaused: () => !isActive,
-    },
-  )
+  const { data: interfaceHistoricalData } = useSWR<any>(`/api/node/metrics?timeframe=${timeframe}`, fetcher, {
+    refreshInterval: 30000,
+    revalidateOnFocus: false,
+  })
 
   if (isLoading) {
     return (

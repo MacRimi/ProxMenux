@@ -350,7 +350,7 @@ export function VirtualMachines() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.JSON.stringify({ action }),
+        body: JSON.stringify({ action }),
       })
 
       if (response.ok) {
@@ -451,7 +451,7 @@ export function VirtualMachines() {
     "/api/system",
     fetcher,
     {
-      refreshInterval: 60000, // Changed from 30s to 60s
+      refreshInterval: 30000,
       revalidateOnFocus: false,
     },
   )
