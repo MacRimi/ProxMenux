@@ -27,6 +27,7 @@ import {
   Box,
   Cpu,
   FileText,
+  SettingsIcon,
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
@@ -54,7 +55,7 @@ export function ProxmoxDashboard() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     status: "healthy",
     uptime: "Loading...",
-    lastUpdate: new Date().toLocaleTimeString(),
+    lastUpdate: new Date().toLocaleTimeString("en-US", { hour12: false }),
     serverName: "Loading...",
     nodeId: "Loading...",
   })
@@ -99,12 +100,15 @@ export function ProxmoxDashboard() {
         status = "warning"
       }
 
+      const uptimeValue =
+        data.uptime && typeof data.uptime === "string" && data.uptime.trim() !== "" ? data.uptime : "N/A"
+
       setSystemStatus({
         status,
-        uptime: data.uptime,
-        lastUpdate: new Date().toLocaleTimeString(),
-        serverName: data.hostname,
-        nodeId: data.node_id,
+        uptime: uptimeValue,
+        lastUpdate: new Date().toLocaleTimeString("en-US", { hour12: false }),
+        serverName: data.hostname || "Unknown",
+        nodeId: data.node_id || "Unknown",
       })
       setIsServerConnected(true)
     } catch (error) {
@@ -122,16 +126,27 @@ export function ProxmoxDashboard() {
         serverName: "Server Offline",
         nodeId: "Server Offline",
         uptime: "N/A",
-        lastUpdate: new Date().toLocaleTimeString(),
+        lastUpdate: new Date().toLocaleTimeString("en-US", { hour12: false }),
       }))
     }
   }, [])
 
   useEffect(() => {
+    // Siempre fetch inicial
     fetchSystemData()
-    const interval = setInterval(fetchSystemData, 10000)
-    return () => clearInterval(interval)
-  }, [fetchSystemData])
+
+    // Solo hacer polling si estamos en overview
+    let interval: ReturnType<typeof setInterval> | null = null
+    if (activeTab === "overview") {
+      interval = setInterval(fetchSystemData, 10000)
+    } else {
+      interval = setInterval(fetchSystemData, 60000)
+    }
+
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [fetchSystemData, activeTab])
 
   useEffect(() => {
     if (
@@ -217,6 +232,8 @@ export function ProxmoxDashboard() {
         return "Hardware"
       case "logs":
         return "System Logs"
+      case "settings":
+        return "Settings"
       default:
         return "Navigation Menu"
     }
@@ -300,7 +317,9 @@ export function ProxmoxDashboard() {
                 <span className="ml-1 capitalize">{systemStatus.status}</span>
               </Badge>
 
-              <div className="text-sm text-muted-foreground whitespace-nowrap">Uptime: {systemStatus.uptime}</div>
+              <div className="text-sm text-muted-foreground whitespace-nowrap">
+                Uptime: {systemStatus.uptime || "N/A"}
+              </div>
 
               <Button
                 variant="outline"
@@ -349,7 +368,7 @@ export function ProxmoxDashboard() {
 
           {/* Mobile Server Info */}
           <div className="lg:hidden mt-2 flex items-center justify-end text-xs text-muted-foreground">
-            <span className="whitespace-nowrap">Uptime: {systemStatus.uptime}</span>
+            <span className="whitespace-nowrap">Uptime: {systemStatus.uptime || "N/A"}</span>
           </div>
         </div>
       </header>
@@ -363,7 +382,7 @@ export function ProxmoxDashboard() {
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
-            <TabsList className="hidden md:grid w-full grid-cols-6 bg-card border border-border">
+            <TabsList className="hidden md:grid w-full grid-cols-7 bg-card border border-border">
               <TabsTrigger
                 value="overview"
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
@@ -399,6 +418,12 @@ export function ProxmoxDashboard() {
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
               >
                 System Logs
+              </TabsTrigger>
+              <TabsTrigger
+                value="settings"
+                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+              >
+                Settings
               </TabsTrigger>
             </TabsList>
 
@@ -508,6 +533,21 @@ export function ProxmoxDashboard() {
                     <FileText className="h-5 w-5" />
                     <span>System Logs</span>
                   </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setActiveTab("settings")
+                      setMobileMenuOpen(false)
+                    }}
+                    className={`w-full justify-start gap-3 ${
+                      activeTab === "settings"
+                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                        : ""
+                    }`}
+                  >
+                    <SettingsIcon className="h-5 w-5" />
+                    <span>Settings</span>
+                  </Button>
                 </div>
               </SheetContent>
             </Sheet>
@@ -539,6 +579,10 @@ export function ProxmoxDashboard() {
 
           <TabsContent value="logs" className="space-y-4 md:space-y-6 mt-0">
             <SystemLogs key={`logs-${componentKey}`} />
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-4 md:space-y-6 mt-0">
+            <Settings />
           </TabsContent>
         </Tabs>
 
