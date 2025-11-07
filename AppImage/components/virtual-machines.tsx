@@ -1042,7 +1042,11 @@ export function VirtualMachines() {
           setEditedNotes("")
         }}
       >
-        <DialogContent className="max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent
+          className="max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden"
+          aria-describedby="vm-dialog-description"
+          key={selectedVM?.vmid || "no-vm"}
+        >
           {currentView === "main" ? (
             <>
               <DialogHeader className="pb-4 border-b border-border px-6 pt-6">
@@ -1096,13 +1100,16 @@ export function VirtualMachines() {
                     )}
                   </div>
                 </DialogTitle>
+                <p id="vm-dialog-description" className="sr-only">
+                  Virtual machine details and controls for {selectedVM?.name}
+                </p>
               </DialogHeader>
 
               <div className="flex-1 overflow-y-auto px-6 py-4">
                 <div className="space-y-6">
                   {selectedVM && (
                     <>
-                      <div>
+                      <div key={`metrics-${selectedVM.vmid}`}>
                         <Card
                           className="cursor-pointer rounded-lg border border-black/10 dark:border-white/10 sm:border-border max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-card sm:hover:bg-black/5 sm:dark:hover:bg-white/5 transition-colors group"
                           onClick={handleMetricsClick}
@@ -1193,7 +1200,7 @@ export function VirtualMachines() {
                         <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
                       ) : vmDetails?.config ? (
                         <>
-                          <Card className="border border-border bg-card/50">
+                          <Card className="border border-border bg-card/50" key={`config-${selectedVM.vmid}`}>
                             <CardContent className="p-4">
                               <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -1541,7 +1548,7 @@ export function VirtualMachines() {
                                     </h4>
                                     <div className="space-y-3">
                                       {vmDetails.config.rootfs && (
-                                        <div>
+                                        <div key="rootfs">
                                           <div className="text-xs text-muted-foreground mb-1">Root Filesystem</div>
                                           <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
                                             {vmDetails.config.rootfs}
@@ -1549,7 +1556,7 @@ export function VirtualMachines() {
                                         </div>
                                       )}
                                       {vmDetails.config.scsihw && (
-                                        <div>
+                                        <div key="scsihw">
                                           <div className="text-xs text-muted-foreground mb-1">SCSI Controller</div>
                                           <div className="font-medium text-foreground">{vmDetails.config.scsihw}</div>
                                         </div>
@@ -1557,7 +1564,7 @@ export function VirtualMachines() {
                                       {Object.keys(vmDetails.config)
                                         .filter((key) => key.match(/^(scsi|sata|ide|virtio)\d+$/))
                                         .map((diskKey) => (
-                                          <div key={diskKey}>
+                                          <div key={`disk-${selectedVM.vmid}-${diskKey}`}>
                                             <div className="text-xs text-muted-foreground mb-1">
                                               {diskKey.toUpperCase().replace(/(\d+)/, " $1")}
                                             </div>
@@ -1567,7 +1574,7 @@ export function VirtualMachines() {
                                           </div>
                                         ))}
                                       {vmDetails.config.efidisk0 && (
-                                        <div>
+                                        <div key="efidisk0">
                                           <div className="text-xs text-muted-foreground mb-1">EFI Disk</div>
                                           <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
                                             {vmDetails.config.efidisk0}
@@ -1575,18 +1582,17 @@ export function VirtualMachines() {
                                         </div>
                                       )}
                                       {vmDetails.config.tpmstate0 && (
-                                        <div>
+                                        <div key="tpmstate0">
                                           <div className="text-xs text-muted-foreground mb-1">TPM State</div>
                                           <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
                                             {vmDetails.config.tpmstate0}
                                           </div>
                                         </div>
                                       )}
-                                      {/* Mount points for LXC */}
                                       {Object.keys(vmDetails.config)
                                         .filter((key) => key.match(/^mp\d+$/))
                                         .map((mpKey) => (
-                                          <div key={mpKey}>
+                                          <div key={`mp-${selectedVM.vmid}-${mpKey}`}>
                                             <div className="text-xs text-muted-foreground mb-1">
                                               Mount Point {mpKey.replace("mp", "")}
                                             </div>
@@ -1607,7 +1613,7 @@ export function VirtualMachines() {
                                       {Object.keys(vmDetails.config)
                                         .filter((key) => key.match(/^net\d+$/))
                                         .map((netKey) => (
-                                          <div key={netKey}>
+                                          <div key={`net-${selectedVM.vmid}-${netKey}`}>
                                             <div className="text-xs text-muted-foreground mb-1">
                                               Network Interface {netKey.replace("net", "")}
                                             </div>
@@ -1655,7 +1661,7 @@ export function VirtualMachines() {
                                         {Object.keys(vmDetails.config)
                                           .filter((key) => key.match(/^hostpci\d+$/))
                                           .map((pciKey) => (
-                                            <div key={pciKey}>
+                                            <div key={`pci-${selectedVM.vmid}-${pciKey}`}>
                                               <div className="text-xs text-muted-foreground mb-1">
                                                 {pciKey.toUpperCase().replace(/(\d+)/, " $1")}
                                               </div>
@@ -1678,7 +1684,7 @@ export function VirtualMachines() {
                                         {Object.keys(vmDetails.config)
                                           .filter((key) => key.match(/^usb\d+$/))
                                           .map((usbKey) => (
-                                            <div key={usbKey}>
+                                            <div key={`usb-${selectedVM.vmid}-${usbKey}`}>
                                               <div className="text-xs text-muted-foreground mb-1">
                                                 {usbKey.toUpperCase().replace(/(\d+)/, " $1")}
                                               </div>
@@ -1701,7 +1707,7 @@ export function VirtualMachines() {
                                         {Object.keys(vmDetails.config)
                                           .filter((key) => key.match(/^serial\d+$/))
                                           .map((serialKey) => (
-                                            <div key={serialKey}>
+                                            <div key={`serial-${selectedVM.vmid}-${serialKey}`}>
                                               <div className="text-xs text-muted-foreground mb-1">
                                                 {serialKey.toUpperCase().replace(/(\d+)/, " $1")}
                                               </div>
