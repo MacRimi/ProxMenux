@@ -2,10 +2,11 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
+import { Checkbox } from "./ui/checkbox"
 import { Lock, User, AlertCircle, Server } from "lucide-react"
 import { getApiUrl } from "../lib/api-config"
 import Image from "next/image"
@@ -17,15 +18,49 @@ interface LoginProps {
 export function Login({ onLogin }: LoginProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const savedUsername = localStorage.getItem("proxmenux-saved-username")
+    const savedPassword = localStorage.getItem("proxmenux-saved-password")
+
+    if (savedUsername && savedPassword) {
+      setUsername(savedUsername)
+      setPassword(savedPassword)
+      setRememberMe(true)
+
+      // Auto-login si hay credenciales guardadas
+      handleAutoLogin(savedUsername, savedPassword)
+    }
+  }, [])
+
+  const handleAutoLogin = async (user: string, pass: string) => {
+    try {
+      const response = await fetch(getApiUrl("/api/auth/login"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: user, password: pass, remember_me: true }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.token) {
+        localStorage.setItem("proxmenux-auth-token", data.token)
+        onLogin()
+      }
+    } catch (err) {
+      console.log("Auto-login failed, showing login form")
+    }
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
     if (!username || !password) {
-      setError("Please enter username and password")
+      setError("Por favor, introduce usuario y contraseña")
       return
     }
 
@@ -35,20 +70,30 @@ export function Login({ onLogin }: LoginProps) {
       const response = await fetch(getApiUrl("/api/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, remember_me: rememberMe }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Login failed")
+        throw new Error(data.error || "Fallo en el login")
       }
 
       // Save token
       localStorage.setItem("proxmenux-auth-token", data.token)
+
+      if (rememberMe) {
+        localStorage.setItem("proxmenux-saved-username", username)
+        localStorage.setItem("proxmenux-saved-password", password)
+      } else {
+        // Limpiar credenciales guardadas si no se marcó recordar
+        localStorage.removeItem("proxmenux-saved-username")
+        localStorage.removeItem("proxmenux-saved-password")
+      }
+
       onLogin()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed")
+      setError(err instanceof Error ? err.message : "Fallo en el login")
     } finally {
       setLoading(false)
     }
@@ -126,6 +171,18 @@ export function Login({ onLogin }: LoginProps) {
                   autoComplete="current-password"
                 />
               </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember-me"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                disabled={loading}
+              />
+              <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer select-none">
+                Remember me
+              </Label>
             </div>
 
             <Button type="submit" className="w-full bg-blue-500 hover:bg-blue-600" disabled={loading}>

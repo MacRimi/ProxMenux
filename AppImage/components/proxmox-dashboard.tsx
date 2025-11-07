@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
@@ -28,6 +30,7 @@ import {
   Cpu,
   FileText,
   SettingsIcon,
+  LogOut,
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
@@ -74,6 +77,7 @@ export function ProxmoxDashboard() {
   const [showNavigation, setShowNavigation] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
   const [showHealthModal, setShowHealthModal] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   const fetchSystemData = useCallback(async () => {
     const apiUrl = getApiUrl("/api/system-info")
@@ -183,6 +187,18 @@ export function ProxmoxDashboard() {
     await new Promise((resolve) => setTimeout(resolve, 500))
     setIsRefreshing(false)
   }
+
+  const handleLogout = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    localStorage.removeItem("proxmenux-auth-token")
+    localStorage.removeItem("proxmenux-saved-username")
+    localStorage.removeItem("proxmenux-saved-password")
+    window.location.reload()
+  }
+
+  useEffect(() => {
+    setIsAuthenticated(!!localStorage.getItem("proxmenux-auth-token"))
+  }, [])
 
   const statusIcon = useMemo(() => {
     switch (systemStatus.status) {
@@ -323,6 +339,19 @@ export function ProxmoxDashboard() {
                 Refresh
               </Button>
 
+              {isAuthenticated && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="border-border/50 bg-transparent hover:bg-secondary"
+                  title="Logout"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
+              )}
+
               <div onClick={(e) => e.stopPropagation()}>
                 <ThemeToggle />
               </div>
@@ -347,6 +376,12 @@ export function ProxmoxDashboard() {
               >
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               </Button>
+
+              {isAuthenticated && (
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="h-8 w-8 p-0" title="Logout">
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              )}
 
               <div onClick={(e) => e.stopPropagation()}>
                 <ThemeToggle />

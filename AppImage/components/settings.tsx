@@ -98,7 +98,7 @@ export function Settings() {
   const handleDisableAuth = async () => {
     if (
       !confirm(
-        "Are you sure you want to disable authentication? This will remove password protection from your dashboard.",
+        "¿Estás seguro de que quieres deshabilitar la autenticación? Esto eliminará la protección por contraseña de tu dashboard y tendrás que configurarla de nuevo si quieres reactivarla.",
       )
     ) {
       return
@@ -109,19 +109,35 @@ export function Settings() {
     setSuccess("")
 
     try {
-      const response = await fetch(getApiUrl("/api/auth/setup"), {
+      const response = await fetch(getApiUrl("/api/auth/disable"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enable_auth: false }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("proxmenux-auth-token")}`,
+        },
       })
 
-      if (!response.ok) throw new Error("Failed to disable authentication")
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to disable authentication")
+      }
 
       localStorage.removeItem("proxmenux-auth-token")
-      setSuccess("Authentication disabled successfully!")
-      setAuthEnabled(false)
+      localStorage.removeItem("proxmenux-saved-username")
+      localStorage.removeItem("proxmenux-saved-password")
+      localStorage.removeItem("proxmenux-auth-setup-complete")
+
+      setSuccess("¡Autenticación deshabilitada correctamente! La página se recargará...")
+
+      // Recargar la página después de 1.5 segundos
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
     } catch (err) {
-      setError("Failed to disable authentication. Please try again.")
+      setError(
+        err instanceof Error ? err.message : "No se pudo deshabilitar la autenticación. Por favor, inténtalo de nuevo.",
+      )
     } finally {
       setLoading(false)
     }
