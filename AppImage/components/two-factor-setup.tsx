@@ -6,7 +6,6 @@ import { Input } from "./ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { AlertCircle, CheckCircle, Copy, Shield, Check } from "lucide-react"
 import { getApiUrl } from "../lib/api-config"
-import Image from "next/image"
 
 interface TwoFactorSetupProps {
   open: boolean
@@ -167,7 +166,7 @@ export function TwoFactorSetup({ open, onClose, onSuccess }: TwoFactorSetupProps
               </p>
               {qrCode && (
                 <div className="flex justify-center p-4 bg-white rounded-lg">
-                  <Image src={qrCode || "/placeholder.svg"} alt="QR Code" width={200} height={200} />
+                  <img src={qrCode || "/placeholder.svg"} alt="QR Code" width={200} height={200} className="rounded" />
                 </div>
               )}
             </div>
