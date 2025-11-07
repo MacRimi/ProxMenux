@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
 import { Wifi, Activity, Network, Router, AlertCircle, Zap } from "lucide-react"
 import useSWR from "swr"
 import { NetworkTrafficChart } from "./network-traffic-chart"
@@ -688,6 +688,9 @@ export function NetworkMetrics() {
               <Router className="h-5 w-5" />
               {selectedInterface?.name} - Interface Details
             </DialogTitle>
+            <DialogDescription>
+              View detailed information and network traffic statistics for this interface
+            </DialogDescription>
             {selectedInterface?.status.toLowerCase() === "up" && selectedInterface?.vm_type !== "vm" && (
               <div className="flex justify-end pt-2">
                 <Select value={modalTimeframe} onValueChange={(value: any) => setModalTimeframe(value)}>

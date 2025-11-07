@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
 import {
   Server,
   Play,
@@ -1044,7 +1044,6 @@ export function VirtualMachines() {
       >
         <DialogContent
           className="max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden"
-          aria-describedby="vm-dialog-description"
           key={selectedVM?.vmid || "no-vm"}
         >
           {currentView === "main" ? (
@@ -1100,9 +1099,10 @@ export function VirtualMachines() {
                     )}
                   </div>
                 </DialogTitle>
-                <p id="vm-dialog-description" className="sr-only">
-                  Virtual machine details and controls for {selectedVM?.name}
-                </p>
+                <DialogDescription>
+                  View and manage configuration, resources, and status for this virtual machine
+                </DialogDescription>
+                {/* </CHANGE> */}
               </DialogHeader>
 
               <div className="flex-1 overflow-y-auto px-6 py-4">
