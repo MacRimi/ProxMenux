@@ -264,7 +264,7 @@ export function VirtualMachines() {
     isLoading,
     mutate,
   } = useSWR<VMData[]>("/api/vms", fetcher, {
-    refreshInterval: 30000,
+    refreshInterval: 23000,
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
   })
@@ -451,7 +451,7 @@ export function VirtualMachines() {
     "/api/system",
     fetcher,
     {
-      refreshInterval: 30000,
+      refreshInterval: 23000,
       revalidateOnFocus: false,
     },
   )
@@ -1102,7 +1102,6 @@ export function VirtualMachines() {
                 <DialogDescription>
                   View and manage configuration, resources, and status for this virtual machine
                 </DialogDescription>
-                {/* </CHANGE> */}
               </DialogHeader>
 
               <div className="flex-1 overflow-y-auto px-6 py-4">

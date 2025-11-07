@@ -123,12 +123,11 @@ export function ProxmoxDashboard() {
     // Siempre fetch inicial
     fetchSystemData()
 
-    // Solo hacer polling si estamos en overview
     let interval: ReturnType<typeof setInterval> | null = null
     if (activeTab === "overview") {
-      interval = setInterval(fetchSystemData, 10000)
+      interval = setInterval(fetchSystemData, 9000) // Cambiado de 10000 a 9000ms
     } else {
-      interval = setInterval(fetchSystemData, 60000)
+      interval = setInterval(fetchSystemData, 61000) // Cambiado de 60000 a 61000ms
     }
 
     return () => {

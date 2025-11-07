@@ -197,7 +197,7 @@ export function TwoFactorSetup({ open, onClose, onSuccess }: TwoFactorSetupProps
                 placeholder="000000"
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                className="text-center text-lg tracking-widest font-mono"
+                className="text-center text-lg tracking-widest font-mono text-base"
                 maxLength={6}
                 disabled={loading}
               />

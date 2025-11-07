@@ -180,7 +180,7 @@ export default function Hardware() {
     error: dynamicError,
     isLoading: dynamicLoading,
   } = useSWR<HardwareData>("/api/hardware", fetcher, {
-    refreshInterval: 5000, // 5 second refresh for dynamic data
+    refreshInterval: 7000,
   })
 
   // Merge static and dynamic data, preferring static for CPU/memory/PCI/disks

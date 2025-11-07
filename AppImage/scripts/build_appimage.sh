@@ -284,6 +284,8 @@ pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" \
     psutil \
     requests \
     PyJWT \
+    pyotp \
+    qrcode[pil] \
     googletrans==4.0.0-rc1 \
     httpx==0.13.3 \
     httpcore==0.9.1 \

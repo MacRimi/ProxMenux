@@ -149,7 +149,7 @@ export function NetworkMetrics() {
     error,
     isLoading,
   } = useSWR<NetworkData>("/api/network", fetcher, {
-    refreshInterval: 60000, // Refresh every 60 seconds
+    refreshInterval: 53000,
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
   })
@@ -161,13 +161,13 @@ export function NetworkMetrics() {
   const [interfaceTotals, setInterfaceTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
 
   const { data: modalNetworkData } = useSWR<NetworkData>(selectedInterface ? "/api/network" : null, fetcher, {
-    refreshInterval: 15000, // Refresh every 15 seconds when modal is open
+    refreshInterval: 17000,
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
   })
 
   const { data: interfaceHistoricalData } = useSWR<any>(`/api/node/metrics?timeframe=${timeframe}`, fetcher, {
-    refreshInterval: 30000,
+    refreshInterval: 29000,
     revalidateOnFocus: false,
   })
 
