@@ -7,9 +7,11 @@ import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut } from "lucide-react"
 import { getApiUrl } from "../lib/api-config"
+import { TwoFactorSetup } from "./two-factor-setup"
 
 export function Settings() {
   const [authEnabled, setAuthEnabled] = useState(false)
+  const [totpEnabled, setTotpEnabled] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -26,6 +28,10 @@ export function Settings() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmNewPassword, setConfirmNewPassword] = useState("")
 
+  const [show2FASetup, setShow2FASetup] = useState(false)
+  const [show2FADisable, setShow2FADisable] = useState(false)
+  const [disable2FAPassword, setDisable2FAPassword] = useState("")
+
   useEffect(() => {
     checkAuthStatus()
   }, [])
@@ -35,6 +41,7 @@ export function Settings() {
       const response = await fetch(getApiUrl("/api/auth/status"))
       const data = await response.json()
       setAuthEnabled(data.auth_enabled || false)
+      setTotpEnabled(data.totp_enabled || false) // Get 2FA status
     } catch (err) {
       console.error("Failed to check auth status:", err)
     }
@@ -191,6 +198,46 @@ export function Settings() {
       setConfirmNewPassword("")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to change password")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDisable2FA = async () => {
+    setError("")
+    setSuccess("")
+
+    if (!disable2FAPassword) {
+      setError("Please enter your password")
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const token = localStorage.getItem("proxmenux-auth-token")
+      const response = await fetch(getApiUrl("/api/auth/totp/disable"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password: disable2FAPassword }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to disable 2FA")
+      }
+
+      setSuccess("2FA disabled successfully!")
+      setTotpEnabled(false)
+      setShow2FADisable(false)
+      setDisable2FAPassword("")
+      checkAuthStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to disable 2FA")
     } finally {
       setLoading(false)
     }
@@ -418,6 +465,74 @@ export function Settings() {
                 </div>
               )}
 
+              {!totpEnabled && (
+                <Button
+                  onClick={() => setShow2FASetup(true)}
+                  variant="outline"
+                  className="w-full bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Habilitar Autenticación de Dos Factores
+                </Button>
+              )}
+
+              {totpEnabled && (
+                <div className="space-y-3">
+                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <p className="text-sm text-green-500 font-medium">2FA está activado</p>
+                  </div>
+
+                  {!show2FADisable && (
+                    <Button onClick={() => setShow2FADisable(true)} variant="outline" className="w-full">
+                      <Shield className="h-4 w-4 mr-2" />
+                      Desactivar 2FA
+                    </Button>
+                  )}
+
+                  {show2FADisable && (
+                    <div className="space-y-4 border border-border rounded-lg p-4">
+                      <h3 className="font-semibold">Desactivar Autenticación de Dos Factores</h3>
+                      <p className="text-sm text-muted-foreground">Introduce tu contraseña para confirmar</p>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="disable-2fa-password">Contraseña</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="disable-2fa-password"
+                            type="password"
+                            placeholder="Introduce tu contraseña"
+                            value={disable2FAPassword}
+                            onChange={(e) => setDisable2FAPassword(e.target.value)}
+                            className="pl-10"
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button onClick={handleDisable2FA} variant="destructive" className="flex-1" disabled={loading}>
+                          {loading ? "Desactivando..." : "Desactivar 2FA"}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShow2FADisable(false)
+                            setDisable2FAPassword("")
+                            setError("")
+                          }}
+                          variant="outline"
+                          className="flex-1"
+                          disabled={loading}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <Button onClick={handleDisableAuth} variant="destructive" className="w-full" disabled={loading}>
                 Disable Authentication
               </Button>
@@ -443,6 +558,15 @@ export function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      <TwoFactorSetup
+        open={show2FASetup}
+        onClose={() => setShow2FASetup(false)}
+        onSuccess={() => {
+          setSuccess("2FA habilitado correctamente!")
+          checkAuthStatus()
+        }}
+      />
     </div>
   )
 }

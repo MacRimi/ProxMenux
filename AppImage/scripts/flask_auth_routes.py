@@ -64,11 +64,14 @@ def auth_login():
         data = request.json
         username = data.get('username')
         password = data.get('password')
+        totp_token = data.get('totp_token')  # Optional 2FA token
         
-        success, token, message = auth_manager.authenticate(username, password)
+        success, token, requires_totp, message = auth_manager.authenticate(username, password, totp_token)
         
         if success:
             return jsonify({"success": True, "token": token, "message": message})
+        elif requires_totp:
+            return jsonify({"success": False, "requires_totp": True, "message": message}), 200
         else:
             return jsonify({"success": False, "message": message}), 401
     except Exception as e:
@@ -130,6 +133,84 @@ def auth_skip():
     """Skip authentication setup (same as decline)"""
     try:
         success, message = auth_manager.decline_auth()
+        
+        if success:
+            return jsonify({"success": True, "message": message})
+        else:
+            return jsonify({"success": False, "message": message}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/auth/totp/setup', methods=['POST'])
+def totp_setup():
+    """Initialize TOTP setup for a user"""
+    try:
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        username = auth_manager.verify_token(token)
+        
+        if not username:
+            return jsonify({"success": False, "message": "Unauthorized"}), 401
+        
+        success, secret, qr_code, backup_codes, message = auth_manager.setup_totp(username)
+        
+        if success:
+            return jsonify({
+                "success": True,
+                "secret": secret,
+                "qr_code": qr_code,
+                "backup_codes": backup_codes,
+                "message": message
+            })
+        else:
+            return jsonify({"success": False, "message": message}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/auth/totp/enable', methods=['POST'])
+def totp_enable():
+    """Enable TOTP after verification"""
+    try:
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        username = auth_manager.verify_token(token)
+        
+        if not username:
+            return jsonify({"success": False, "message": "Unauthorized"}), 401
+        
+        data = request.json
+        verification_token = data.get('token')
+        
+        if not verification_token:
+            return jsonify({"success": False, "message": "Verification token required"}), 400
+        
+        success, message = auth_manager.enable_totp(username, verification_token)
+        
+        if success:
+            return jsonify({"success": True, "message": message})
+        else:
+            return jsonify({"success": False, "message": message}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/auth/totp/disable', methods=['POST'])
+def totp_disable():
+    """Disable TOTP (requires password confirmation)"""
+    try:
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        username = auth_manager.verify_token(token)
+        
+        if not username:
+            return jsonify({"success": False, "message": "Unauthorized"}), 401
+        
+        data = request.json
+        password = data.get('password')
+        
+        if not password:
+            return jsonify({"success": False, "message": "Password required"}), 400
+        
+        success, message = auth_manager.disable_totp(username, password)
         
         if success:
             return jsonify({"success": True, "message": message})

@@ -5,11 +5,13 @@ Handles all authentication-related operations including:
 - Password hashing and verification
 - JWT token generation and validation
 - Auth status checking
+- Two-Factor Authentication (2FA/TOTP)
 """
 
 import os
 import json
 import hashlib
+import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -19,6 +21,16 @@ try:
 except ImportError:
     JWT_AVAILABLE = False
     print("Warning: PyJWT not available. Authentication features will be limited.")
+
+try:
+    import pyotp
+    import qrcode
+    import io
+    import base64
+    TOTP_AVAILABLE = True
+except ImportError:
+    TOTP_AVAILABLE = False
+    print("Warning: pyotp/qrcode not available. 2FA features will be disabled.")
 
 # Configuration
 CONFIG_DIR = Path.home() / ".config" / "proxmenux-monitor"
@@ -41,8 +53,11 @@ def load_auth_config():
         "enabled": bool,
         "username": str,
         "password_hash": str,
-        "declined": bool,  # True if user explicitly declined auth
-        "configured": bool  # True if auth has been set up (enabled or declined)
+        "declined": bool,
+        "configured": bool,
+        "totp_enabled": bool,  # 2FA enabled flag
+        "totp_secret": str,    # TOTP secret key
+        "backup_codes": list   # List of backup codes
     }
     """
     if not AUTH_CONFIG_FILE.exists():
@@ -51,7 +66,10 @@ def load_auth_config():
             "username": None,
             "password_hash": None,
             "declined": False,
-            "configured": False
+            "configured": False,
+            "totp_enabled": False,
+            "totp_secret": None,
+            "backup_codes": []
         }
     
     try:
@@ -60,6 +78,9 @@ def load_auth_config():
             # Ensure all required fields exist
             config.setdefault("declined", False)
             config.setdefault("configured", config.get("enabled", False) or config.get("declined", False))
+            config.setdefault("totp_enabled", False)
+            config.setdefault("totp_secret", None)
+            config.setdefault("backup_codes", [])
             return config
     except Exception as e:
         print(f"Error loading auth config: {e}")
@@ -68,7 +89,10 @@ def load_auth_config():
             "username": None,
             "password_hash": None,
             "declined": False,
-            "configured": False
+            "configured": False,
+            "totp_enabled": False,
+            "totp_secret": None,
+            "backup_codes": []
         }
 
 
@@ -141,16 +165,18 @@ def get_auth_status():
         "auth_configured": bool,
         "declined": bool,
         "username": str or None,
-        "authenticated": bool
+        "authenticated": bool,
+        "totp_enabled": bool  # 2FA status
     }
     """
     config = load_auth_config()
     return {
         "auth_enabled": config.get("enabled", False),
-        "auth_configured": config.get("configured", False),  # Frontend expects this field name
+        "auth_configured": config.get("configured", False),
         "declined": config.get("declined", False),
         "username": config.get("username") if config.get("enabled") else None,
-        "authenticated": False  # Will be set to True by the route handler if token is valid
+        "authenticated": False,
+        "totp_enabled": config.get("totp_enabled", False)  # Include 2FA status
     }
 
 
@@ -170,7 +196,10 @@ def setup_auth(username, password):
         "username": username,
         "password_hash": hash_password(password),
         "declined": False,
-        "configured": True
+        "configured": True,
+        "totp_enabled": False,
+        "totp_secret": None,
+        "backup_codes": []
     }
     
     if save_auth_config(config):
@@ -190,6 +219,9 @@ def decline_auth():
     config["configured"] = True
     config["username"] = None
     config["password_hash"] = None
+    config["totp_enabled"] = False
+    config["totp_secret"] = None
+    config["backup_codes"] = []
     
     if save_auth_config(config):
         return True, "Authentication declined"
@@ -208,6 +240,9 @@ def disable_auth():
     config["password_hash"] = None
     config["declined"] = False
     config["configured"] = False
+    config["totp_enabled"] = False
+    config["totp_secret"] = None
+    config["backup_codes"] = []
     
     if save_auth_config(config):
         return True, "Authentication disabled"
@@ -258,24 +293,215 @@ def change_password(old_password, new_password):
         return False, "Failed to save new password"
 
 
-def authenticate(username, password):
+def generate_totp_secret():
+    """Generate a new TOTP secret key"""
+    if not TOTP_AVAILABLE:
+        return None
+    return pyotp.random_base32()
+
+
+def generate_totp_qr(username, secret):
     """
-    Authenticate a user with username and password
-    Returns (success: bool, token: str or None, message: str)
+    Generate a QR code for TOTP setup
+    Returns base64 encoded PNG image
+    """
+    if not TOTP_AVAILABLE:
+        return None
+    
+    try:
+        # Create TOTP URI
+        totp = pyotp.TOTP(secret)
+        uri = totp.provisioning_uri(
+            name=username,
+            issuer_name="ProxMenux Monitor"
+        )
+        
+        # Generate QR code
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(uri)
+        qr.make(fit=True)
+        
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convert to base64
+        buffer = io.BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
+        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        return f"data:image/png;base64,{img_base64}"
+    except Exception as e:
+        print(f"Error generating QR code: {e}")
+        return None
+
+
+def generate_backup_codes(count=8):
+    """Generate backup codes for 2FA recovery"""
+    codes = []
+    for _ in range(count):
+        # Generate 8-character alphanumeric code
+        code = ''.join(secrets.choice('ABCDEFGHJKLMNPQRSTUVWXYZ23456789') for _ in range(8))
+        # Format as XXXX-XXXX for readability
+        formatted = f"{code[:4]}-{code[4:]}"
+        codes.append({
+            "code": hashlib.sha256(formatted.encode()).hexdigest(),
+            "used": False
+        })
+    return codes
+
+
+def setup_totp(username):
+    """
+    Set up TOTP for a user
+    Returns (success: bool, secret: str, qr_code: str, backup_codes: list, message: str)
+    """
+    if not TOTP_AVAILABLE:
+        return False, None, None, None, "2FA is not available (pyotp/qrcode not installed)"
+    
+    config = load_auth_config()
+    
+    if not config.get("enabled"):
+        return False, None, None, None, "Authentication must be enabled first"
+    
+    if config.get("username") != username:
+        return False, None, None, None, "Invalid username"
+    
+    # Generate new secret and backup codes
+    secret = generate_totp_secret()
+    qr_code = generate_totp_qr(username, secret)
+    backup_codes_plain = []
+    backup_codes_hashed = generate_backup_codes()
+    
+    # Generate plain text backup codes for display (only returned once)
+    for i in range(8):
+        code = ''.join(secrets.choice('ABCDEFGHJKLMNPQRSTUVWXYZ23456789') for _ in range(8))
+        formatted = f"{code[:4]}-{code[4:]}"
+        backup_codes_plain.append(formatted)
+        backup_codes_hashed[i]["code"] = hashlib.sha256(formatted.encode()).hexdigest()
+    
+    # Store secret and hashed backup codes (not enabled yet until verified)
+    config["totp_secret"] = secret
+    config["backup_codes"] = backup_codes_hashed
+    
+    if save_auth_config(config):
+        return True, secret, qr_code, backup_codes_plain, "2FA setup initiated"
+    else:
+        return False, None, None, None, "Failed to save 2FA configuration"
+
+
+def verify_totp(username, token, use_backup=False):
+    """
+    Verify a TOTP token or backup code
+    Returns (success: bool, message: str)
+    """
+    if not TOTP_AVAILABLE and not use_backup:
+        return False, "2FA is not available"
+    
+    config = load_auth_config()
+    
+    if not config.get("totp_enabled"):
+        return False, "2FA is not enabled"
+    
+    if config.get("username") != username:
+        return False, "Invalid username"
+    
+    # Check backup code
+    if use_backup:
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        for backup_code in config.get("backup_codes", []):
+            if backup_code["code"] == token_hash and not backup_code["used"]:
+                backup_code["used"] = True
+                save_auth_config(config)
+                return True, "Backup code accepted"
+        return False, "Invalid or already used backup code"
+    
+    # Check TOTP token
+    totp = pyotp.TOTP(config.get("totp_secret"))
+    if totp.verify(token, valid_window=1):  # Allow 1 time step tolerance
+        return True, "2FA verification successful"
+    else:
+        return False, "Invalid 2FA code"
+
+
+def enable_totp(username, verification_token):
+    """
+    Enable TOTP after successful verification
+    Returns (success: bool, message: str)
+    """
+    if not TOTP_AVAILABLE:
+        return False, "2FA is not available"
+    
+    config = load_auth_config()
+    
+    if not config.get("totp_secret"):
+        return False, "2FA has not been set up. Please set up 2FA first."
+    
+    if config.get("username") != username:
+        return False, "Invalid username"
+    
+    # Verify the token before enabling
+    totp = pyotp.TOTP(config.get("totp_secret"))
+    if not totp.verify(verification_token, valid_window=1):
+        return False, "Invalid verification code. Please try again."
+    
+    config["totp_enabled"] = True
+    
+    if save_auth_config(config):
+        return True, "2FA enabled successfully"
+    else:
+        return False, "Failed to enable 2FA"
+
+
+def disable_totp(username, password):
+    """
+    Disable TOTP (requires password confirmation)
+    Returns (success: bool, message: str)
+    """
+    config = load_auth_config()
+    
+    if config.get("username") != username:
+        return False, "Invalid username"
+    
+    if not verify_password(password, config.get("password_hash", "")):
+        return False, "Invalid password"
+    
+    config["totp_enabled"] = False
+    config["totp_secret"] = None
+    config["backup_codes"] = []
+    
+    if save_auth_config(config):
+        return True, "2FA disabled successfully"
+    else:
+        return False, "Failed to disable 2FA"
+
+
+def authenticate(username, password, totp_token=None):
+    """
+    Authenticate a user with username, password, and optional TOTP
+    Returns (success: bool, token: str or None, requires_totp: bool, message: str)
     """
     config = load_auth_config()
     
     if not config.get("enabled"):
-        return False, None, "Authentication is not enabled"
+        return False, None, False, "Authentication is not enabled"
     
     if username != config.get("username"):
-        return False, None, "Invalid username or password"
+        return False, None, False, "Invalid username or password"
     
     if not verify_password(password, config.get("password_hash", "")):
-        return False, None, "Invalid username or password"
+        return False, None, False, "Invalid username or password"
+    
+    if config.get("totp_enabled"):
+        if not totp_token:
+            return False, None, True, "2FA code required"
+        
+        # Verify TOTP token or backup code
+        success, message = verify_totp(username, totp_token, use_backup=len(totp_token) == 9)  # Backup codes are formatted XXXX-XXXX
+        if not success:
+            return False, None, True, message
     
     token = generate_token(username)
     if token:
-        return True, token, "Authentication successful"
+        return True, token, False, "Authentication successful"
     else:
-        return False, None, "Failed to generate authentication token"
+        return False, None, False, "Failed to generate authentication token"
