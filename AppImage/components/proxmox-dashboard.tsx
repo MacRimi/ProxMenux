@@ -56,9 +56,13 @@ interface FlaskSystemData {
 
 interface FlaskSystemInfo {
   hostname: string
-  node_id: string
-  uptime: string
-  health_status: "healthy" | "warning" | "critical"
+  uptime_seconds: number
+  uptime_formatted: string
+  health: {
+    status: string
+    summary: string
+  }
+  timestamp: string
 }
 
 export function ProxmoxDashboard() {
@@ -98,14 +102,26 @@ export function ProxmoxDashboard() {
       const data: FlaskSystemInfo = await response.json()
 
       const uptimeValue =
-        data.uptime && typeof data.uptime === "string" && data.uptime.trim() !== "" ? data.uptime : "N/A"
+        data.uptime_formatted && typeof data.uptime_formatted === "string" && data.uptime_formatted.trim() !== ""
+          ? data.uptime_formatted
+          : "N/A"
+
+      const healthStatus = data.health?.status || "healthy"
+      const mappedStatus =
+        healthStatus === "OK"
+          ? "healthy"
+          : healthStatus === "WARNING"
+            ? "warning"
+            : healthStatus === "CRITICAL"
+              ? "critical"
+              : "healthy"
 
       setSystemStatus({
-        status: data.health_status || "healthy",
+        status: mappedStatus as "healthy" | "warning" | "critical",
         uptime: uptimeValue,
         lastUpdate: new Date().toLocaleTimeString("en-US", { hour12: false }),
         serverName: data.hostname || "Unknown",
-        nodeId: data.node_id || "Unknown",
+        nodeId: data.hostname || "Unknown",
       })
       setIsServerConnected(true)
     } catch (error) {
@@ -193,7 +209,7 @@ export function ProxmoxDashboard() {
     localStorage.removeItem("proxmenux-auth-token")
     localStorage.removeItem("proxmenux-saved-username")
     localStorage.removeItem("proxmenux-saved-password")
-    window.location.reload()
+    window.location.href = "/"
   }
 
   useEffect(() => {
@@ -273,17 +289,16 @@ export function ProxmoxDashboard() {
         onClick={() => setShowHealthModal(true)}
       >
         <div className="container mx-auto px-4 md:px-6 py-4 md:py-4">
-          {/* Logo and Title */}
           <div className="flex items-start justify-between gap-3">
             {/* Logo and Title */}
-            <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
-              <div className="w-16 h-16 md:w-10 md:h-10 relative flex items-center justify-center bg-primary/10 flex-shrink-0">
+            <div className="flex items-center space-x-3 flex-shrink-0">
+              <div className="w-12 h-12 relative flex items-center justify-center bg-primary/10">
                 <Image
                   src="/images/proxmenux-logo.png"
                   alt="ProxMenux Logo"
-                  width={64}
-                  height={64}
-                  className="object-contain md:w-10 md:h-10"
+                  width={48}
+                  height={48}
+                  className="object-contain"
                   priority
                   onError={(e) => {
                     console.log("[v0] Logo failed to load, using fallback icon")
@@ -295,20 +310,16 @@ export function ProxmoxDashboard() {
                     }
                   }}
                 />
-                <Server className="h-8 w-8 md:h-6 md:w-6 text-primary absolute fallback-icon hidden" />
+                <Server className="h-6 w-6 text-primary absolute fallback-icon hidden" />
               </div>
-              <div className="min-w-0">
-                <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">ProxMenux Monitor</h1>
-                <p className="text-xs md:text-sm text-muted-foreground">Proxmox System Dashboard</p>
-                <div className="lg:hidden flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                  <Server className="h-3 w-3" />
-                  <span className="truncate">Node: {systemStatus.serverName}</span>
-                </div>
+              <div>
+                <h1 className="text-xl font-semibold text-foreground whitespace-nowrap">ProxMenux Monitor</h1>
+                <p className="text-sm text-muted-foreground hidden md:block">Proxmox System Dashboard</p>
               </div>
             </div>
 
             {/* Desktop Actions */}
-            <div className="hidden lg:flex items-center space-x-4">
+            <div className="hidden lg:flex items-center space-x-4 flex-shrink-0">
               <div className="flex items-center space-x-2">
                 <Server className="h-4 w-4 text-muted-foreground" />
                 <div className="text-sm">
@@ -321,9 +332,7 @@ export function ProxmoxDashboard() {
                 <span className="ml-1 capitalize">{systemStatus.status}</span>
               </Badge>
 
-              <div className="text-sm text-muted-foreground whitespace-nowrap">
-                Uptime: {systemStatus.uptime || "N/A"}
-              </div>
+              <div className="text-sm text-muted-foreground whitespace-nowrap">Uptime: {systemStatus.uptime}</div>
 
               <Button
                 variant="outline"
@@ -358,10 +367,14 @@ export function ProxmoxDashboard() {
             </div>
 
             {/* Mobile Actions */}
-            <div className="flex lg:hidden items-center gap-2">
-              <Badge variant="outline" className={`${statusColor} text-xs px-2`}>
+            <div className="flex lg:hidden items-center gap-2 flex-shrink-0 ml-auto">
+              <div className="flex flex-col items-end text-xs">
+                <span className="text-muted-foreground truncate max-w-[120px]">{systemStatus.serverName}</span>
+                <span className="text-muted-foreground whitespace-nowrap">Uptime: {systemStatus.uptime}</span>
+              </div>
+
+              <Badge variant="outline" className={`${statusColor} px-2`}>
                 {statusIcon}
-                <span className="ml-1 capitalize hidden sm:inline">{systemStatus.status}</span>
               </Badge>
 
               <Button
@@ -372,13 +385,14 @@ export function ProxmoxDashboard() {
                   refreshData()
                 }}
                 disabled={isRefreshing}
-                className="h-8 w-8 p-0"
+                className="h-9 w-9 p-0"
+                title="Refresh"
               >
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               </Button>
 
               {isAuthenticated && (
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="h-8 w-8 p-0" title="Logout">
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="h-9 w-9 p-0" title="Logout">
                   <LogOut className="h-4 w-4" />
                 </Button>
               )}
@@ -387,11 +401,6 @@ export function ProxmoxDashboard() {
                 <ThemeToggle />
               </div>
             </div>
-          </div>
-
-          {/* Mobile Server Info */}
-          <div className="lg:hidden mt-2 flex items-center justify-end text-xs text-muted-foreground">
-            <span className="whitespace-nowrap">Uptime: {systemStatus.uptime || "N/A"}</span>
           </div>
         </div>
       </header>
