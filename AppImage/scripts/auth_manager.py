@@ -26,7 +26,6 @@ AUTH_CONFIG_FILE = CONFIG_DIR / "auth.json"
 JWT_SECRET = "proxmenux-monitor-secret-key-change-in-production"
 JWT_ALGORITHM = "HS256"
 TOKEN_EXPIRATION_HOURS = 24
-TOKEN_EXPIRATION_DAYS_REMEMBER = 30  # Token más largo para "recordar contraseña"
 
 
 def ensure_config_dir():
@@ -95,18 +94,15 @@ def verify_password(password, password_hash):
     return hash_password(password) == password_hash
 
 
-def generate_token(username, remember_me=False):  # Añadido parámetro remember_me
+def generate_token(username):
     """Generate a JWT token for the given username"""
     if not JWT_AVAILABLE:
         return None
     
-    expiration_delta = timedelta(days=TOKEN_EXPIRATION_DAYS_REMEMBER) if remember_me else timedelta(hours=TOKEN_EXPIRATION_HOURS)
-    
     payload = {
         'username': username,
-        'exp': datetime.utcnow() + expiration_delta,
-        'iat': datetime.utcnow(),
-        'remember_me': remember_me  # Guardar preferencia en el token
+        'exp': datetime.utcnow() + timedelta(hours=TOKEN_EXPIRATION_HOURS),
+        'iat': datetime.utcnow()
     }
     
     try:
@@ -151,7 +147,7 @@ def get_auth_status():
     config = load_auth_config()
     return {
         "auth_enabled": config.get("enabled", False),
-        "auth_configured": config.get("configured", False),
+        "auth_configured": config.get("configured", False),  # Frontend expects this field name
         "declined": config.get("declined", False),
         "username": config.get("username") if config.get("enabled") else None,
         "authenticated": False  # Will be set to True by the route handler if token is valid
@@ -206,16 +202,15 @@ def disable_auth():
     Disable authentication (different from decline - can be re-enabled)
     Returns (success: bool, message: str)
     """
-    config = {
-        "enabled": False,
-        "username": None,
-        "password_hash": None,
-        "declined": False,
-        "configured": False
-    }
+    config = load_auth_config()
+    config["enabled"] = False
+    config["username"] = None
+    config["password_hash"] = None
+    config["declined"] = False
+    config["configured"] = False
     
     if save_auth_config(config):
-        return True, "Authentication disabled successfully"
+        return True, "Authentication disabled"
     else:
         return False, "Failed to save configuration"
 
@@ -239,7 +234,7 @@ def enable_auth():
         return False, "Failed to save configuration"
 
 
-def change_password(current_password, new_password):  # Corregido nombre del parámetro
+def change_password(old_password, new_password):
     """
     Change the authentication password
     Returns (success: bool, message: str)
@@ -249,7 +244,7 @@ def change_password(current_password, new_password):  # Corregido nombre del par
     if not config.get("enabled"):
         return False, "Authentication is not enabled"
     
-    if not verify_password(current_password, config.get("password_hash", "")):
+    if not verify_password(old_password, config.get("password_hash", "")):
         return False, "Current password is incorrect"
     
     if len(new_password) < 6:
@@ -263,7 +258,7 @@ def change_password(current_password, new_password):  # Corregido nombre del par
         return False, "Failed to save new password"
 
 
-def authenticate(username, password, remember_me=False):  # Añadido parámetro remember_me
+def authenticate(username, password):
     """
     Authenticate a user with username and password
     Returns (success: bool, token: str or None, message: str)
@@ -279,7 +274,7 @@ def authenticate(username, password, remember_me=False):  # Añadido parámetro 
     if not verify_password(password, config.get("password_hash", "")):
         return False, None, "Invalid username or password"
     
-    token = generate_token(username, remember_me)
+    token = generate_token(username)
     if token:
         return True, token, "Authentication successful"
     else:

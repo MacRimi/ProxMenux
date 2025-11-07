@@ -5,7 +5,7 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
-import { Shield, Lock, User, AlertCircle, CheckCircle, Info } from "lucide-react"
+import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut } from "lucide-react"
 import { getApiUrl } from "../lib/api-config"
 
 export function Settings() {
@@ -98,7 +98,7 @@ export function Settings() {
   const handleDisableAuth = async () => {
     if (
       !confirm(
-        "¿Estás seguro de que quieres deshabilitar la autenticación? Esto eliminará la protección por contraseña de tu dashboard y tendrás que configurarla de nuevo si quieres reactivarla.",
+        "Are you sure you want to disable authentication? This will remove password protection from your dashboard.",
       )
     ) {
       return
@@ -109,35 +109,31 @@ export function Settings() {
     setSuccess("")
 
     try {
+      const token = localStorage.getItem("proxmenux-auth-token")
       const response = await fetch(getApiUrl("/api/auth/disable"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("proxmenux-auth-token")}`,
+          Authorization: `Bearer ${token}`,
         },
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to disable authentication")
+        throw new Error(data.message || "Failed to disable authentication")
       }
 
       localStorage.removeItem("proxmenux-auth-token")
-      localStorage.removeItem("proxmenux-saved-username")
-      localStorage.removeItem("proxmenux-saved-password")
       localStorage.removeItem("proxmenux-auth-setup-complete")
 
-      setSuccess("¡Autenticación deshabilitada correctamente! La página se recargará...")
+      setSuccess("Authentication disabled successfully! Reloading...")
 
-      // Recargar la página después de 1.5 segundos
       setTimeout(() => {
         window.location.reload()
-      }, 1500)
+      }, 1000)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "No se pudo deshabilitar la autenticación. Por favor, inténtalo de nuevo.",
-      )
+      setError(err instanceof Error ? err.message : "Failed to disable authentication. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -202,6 +198,7 @@ export function Settings() {
 
   const handleLogout = () => {
     localStorage.removeItem("proxmenux-auth-token")
+    localStorage.removeItem("proxmenux-auth-setup-complete")
     window.location.reload()
   }
 
@@ -338,6 +335,7 @@ export function Settings() {
           {authEnabled && (
             <div className="space-y-3">
               <Button onClick={handleLogout} variant="outline" className="w-full bg-transparent">
+                <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
 

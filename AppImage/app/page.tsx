@@ -7,7 +7,17 @@ import { AuthSetup } from "../components/auth-setup"
 import { getApiUrl } from "../lib/api-config"
 
 export default function Home() {
-  const [authState, setAuthState] = useState<"loading" | "setup" | "login" | "authenticated">("loading")
+  const [authStatus, setAuthStatus] = useState<{
+    loading: boolean
+    authEnabled: boolean
+    authConfigured: boolean
+    authenticated: boolean
+  }>({
+    loading: true,
+    authEnabled: false,
+    authConfigured: false,
+    authenticated: false,
+  })
 
   useEffect(() => {
     checkAuthStatus()
@@ -15,80 +25,61 @@ export default function Home() {
 
   const checkAuthStatus = async () => {
     try {
+      const token = localStorage.getItem("proxmenux-auth-token")
       const response = await fetch(getApiUrl("/api/auth/status"), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
-
       const data = await response.json()
 
-      if (!data.auth_enabled) {
-        // Auth no está habilitada, permitir acceso directo
-        setAuthState("authenticated")
-        return
-      }
+      console.log("[v0] Auth status:", data)
 
-      // Auth está habilitada, verificar si hay token válido
-      const token = localStorage.getItem("proxmenux-auth-token")
+      const authenticated = data.auth_enabled ? data.authenticated : true
 
-      if (!token) {
-        setAuthState("login")
-        return
-      }
-
-      // Verificar que el token sea válido
-      const verifyResponse = await fetch(getApiUrl("/api/auth/verify"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+      setAuthStatus({
+        loading: false,
+        authEnabled: data.auth_enabled,
+        authConfigured: data.auth_configured,
+        authenticated,
       })
-
-      if (verifyResponse.ok) {
-        setAuthState("authenticated")
-      } else {
-        // Token inválido, limpiar y pedir login
-        localStorage.removeItem("proxmenux-auth-token")
-        localStorage.removeItem("proxmenux-saved-username")
-        localStorage.removeItem("proxmenux-saved-password")
-        setAuthState("login")
-      }
     } catch (error) {
-      console.error("Error checking auth status:", error)
-      // En caso de error, mostrar setup
-      setAuthState("setup")
+      console.error("[v0] Failed to check auth status:", error)
+      setAuthStatus({
+        loading: false,
+        authEnabled: false,
+        authConfigured: false,
+        authenticated: true,
+      })
     }
   }
 
-  const handleSetupComplete = () => {
-    setAuthState("login")
+  const handleAuthComplete = () => {
+    checkAuthStatus()
   }
 
   const handleLoginSuccess = () => {
-    setAuthState("authenticated")
+    checkAuthStatus()
   }
 
-  if (authState === "loading") {
+  if (authStatus.loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     )
   }
 
-  if (authState === "setup") {
-    return <AuthSetup onComplete={handleSetupComplete} />
-  }
-
-  if (authState === "login") {
+  if (authStatus.authEnabled && !authStatus.authenticated) {
     return <Login onLogin={handleLoginSuccess} />
   }
 
-  return <ProxmoxDashboard />
+  // Show dashboard in all other cases
+  return (
+    <>
+      {!authStatus.authConfigured && <AuthSetup onComplete={handleAuthComplete} />}
+      <ProxmoxDashboard />
+    </>
+  )
 }
