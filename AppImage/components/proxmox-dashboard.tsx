@@ -13,9 +13,6 @@ import { SystemLogs } from "./system-logs"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
 import { getApiUrl } from "../lib/api-config"
-import { usePollingConfig, INTERVAL_OPTIONS } from "@/lib/polling-config"
-import { Label } from "./ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import {
   RefreshCw,
   AlertTriangle,
@@ -69,7 +66,6 @@ export function ProxmoxDashboard() {
   const [showNavigation, setShowNavigation] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
   const [showHealthModal, setShowHealthModal] = useState(false)
-  const { intervals, updateInterval } = usePollingConfig()
 
   const fetchSystemData = useCallback(async () => {
     console.log("[v0] Fetching system data from Flask server...")
@@ -618,116 +614,6 @@ export function ProxmoxDashboard() {
                         </Badge>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="border-t border-border pt-4">
-                    <h3 className="text-lg font-medium mb-2">Polling Intervals</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Configure how frequently each section updates its data. Lower values provide more real-time data
-                      but increase server load.
-                    </p>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between py-2">
-                        <div>
-                          <Label htmlFor="storage-interval" className="font-medium">
-                            Storage
-                          </Label>
-                          <p className="text-sm text-muted-foreground">Update frequency for storage metrics</p>
-                        </div>
-                        <Select
-                          value={intervals.storage.toString()}
-                          onValueChange={(value) => updateInterval("storage", Number.parseInt(value))}
-                        >
-                          <SelectTrigger id="storage-interval" className="w-[180px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {INTERVAL_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value.toString()}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex items-center justify-between py-2">
-                        <div>
-                          <Label htmlFor="network-interval" className="font-medium">
-                            Network
-                          </Label>
-                          <p className="text-sm text-muted-foreground">Update frequency for network metrics</p>
-                        </div>
-                        <Select
-                          value={intervals.network.toString()}
-                          onValueChange={(value) => updateInterval("network", Number.parseInt(value))}
-                        >
-                          <SelectTrigger id="network-interval" className="w-[180px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {INTERVAL_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value.toString()}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex items-center justify-between py-2">
-                        <div>
-                          <Label htmlFor="vms-interval" className="font-medium">
-                            VMs & LXCs
-                          </Label>
-                          <p className="text-sm text-muted-foreground">Update frequency for VM/LXC data</p>
-                        </div>
-                        <Select
-                          value={intervals.vms.toString()}
-                          onValueChange={(value) => updateInterval("vms", Number.parseInt(value))}
-                        >
-                          <SelectTrigger id="vms-interval" className="w-[180px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {INTERVAL_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value.toString()}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex items-center justify-between py-2">
-                        <div>
-                          <Label htmlFor="hardware-interval" className="font-medium">
-                            Hardware
-                          </Label>
-                          <p className="text-sm text-muted-foreground">Update frequency for temperature sensors only</p>
-                        </div>
-                        <Select
-                          value={intervals.hardware.toString()}
-                          onValueChange={(value) => updateInterval("hardware", Number.parseInt(value))}
-                        >
-                          <SelectTrigger id="hardware-interval" className="w-[180px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {INTERVAL_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value.toString()}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <p className="mt-4 text-xs text-muted-foreground bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                      <strong>Note:</strong> Hardware static information (System Info, Memory Modules, PCI Devices,
-                      Network/Storage Summaries) is loaded only once when entering the Hardware page and does not
-                      refresh automatically.
-                    </p>
                   </div>
 
                   <div className="border-t border-border pt-4">
