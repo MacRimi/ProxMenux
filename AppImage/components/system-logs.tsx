@@ -428,6 +428,11 @@ export function SystemLogs() {
     }
   }
 
+  const safeToLowerCase = (value: any): string => {
+    if (value === null || value === undefined) return ""
+    return String(value).toLowerCase()
+  }
+
   const logsOnly: CombinedLogEntry[] = logs
     .map((log) => ({ ...log, isEvent: false, sortTimestamp: new Date(log.timestamp).getTime() }))
     .sort((a, b) => b.sortTimestamp - a.sortTimestamp)
@@ -445,22 +450,26 @@ export function SystemLogs() {
     }))
     .sort((a, b) => b.sortTimestamp - a.sortTimestamp)
 
-  // Filter logs only
   const filteredLogsOnly = logsOnly.filter((log) => {
+    const message = log.message || ""
+    const service = log.service || ""
+    const searchTermLower = safeToLowerCase(searchTerm)
+
     const matchesSearch =
-      log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.service.toLowerCase().includes(searchTerm.toLowerCase())
+      safeToLowerCase(message).includes(searchTermLower) || safeToLowerCase(service).includes(searchTermLower)
     const matchesLevel = levelFilter === "all" || log.level === levelFilter
     const matchesService = serviceFilter === "all" || log.service === serviceFilter
 
     return matchesSearch && matchesLevel && matchesService
   })
 
-  // Filter events only
   const filteredEventsOnly = eventsOnly.filter((event) => {
+    const message = event.message || ""
+    const service = event.service || ""
+    const searchTermLower = safeToLowerCase(searchTerm)
+
     const matchesSearch =
-      event.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.service.toLowerCase().includes(searchTerm.toLowerCase())
+      safeToLowerCase(message).includes(searchTermLower) || safeToLowerCase(service).includes(searchTermLower)
     const matchesLevel = levelFilter === "all" || event.level === levelFilter
     const matchesService = serviceFilter === "all" || event.service === serviceFilter
 
@@ -484,11 +493,13 @@ export function SystemLogs() {
     })),
   ].sort((a, b) => b.sortTimestamp - a.sortTimestamp) // Sort by timestamp descending
 
-  // Filter combined logs
   const filteredCombinedLogs = combinedLogs.filter((log) => {
+    const message = log.message || ""
+    const service = log.service || ""
+    const searchTermLower = safeToLowerCase(searchTerm)
+
     const matchesSearch =
-      log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.service.toLowerCase().includes(searchTerm.toLowerCase())
+      safeToLowerCase(message).includes(searchTermLower) || safeToLowerCase(service).includes(searchTermLower)
     const matchesLevel = levelFilter === "all" || log.level === levelFilter
     const matchesService = serviceFilter === "all" || log.service === serviceFilter
 
@@ -555,7 +566,9 @@ export function SystemLogs() {
   }
 
   const getNotificationTypeColor = (type: string) => {
-    switch (type.toLowerCase()) {
+    if (!type) return "bg-gray-500/10 text-gray-500 border-gray-500/20"
+
+    switch (safeToLowerCase(type)) {
       case "error":
         return "bg-red-500/10 text-red-500 border-red-500/20"
       case "warning":
@@ -571,7 +584,9 @@ export function SystemLogs() {
 
   // ADDED: New function for notification source colors
   const getNotificationSourceColor = (source: string) => {
-    switch (source.toLowerCase()) {
+    if (!source) return "bg-gray-500/10 text-gray-500 border-gray-500/20"
+
+    switch (safeToLowerCase(source)) {
       case "task-log":
         return "bg-purple-500/10 text-purple-500 border-purple-500/20"
       case "journal":
