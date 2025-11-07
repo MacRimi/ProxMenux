@@ -78,6 +78,12 @@ export function NodeMetricsCharts() {
   useEffect(() => {
     console.log("[v0] NodeMetricsCharts component mounted")
     fetchMetrics()
+
+    const interval = setInterval(() => {
+      fetchMetrics()
+    }, 60000) // 60 seconds instead of 30 to reduce server load
+
+    return () => clearInterval(interval)
   }, [timeframe])
 
   const fetchMetrics = async () => {

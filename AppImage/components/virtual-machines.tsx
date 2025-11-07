@@ -350,7 +350,7 @@ export function VirtualMachines() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ action }),
+        body: JSON.JSON.stringify({ action }),
       })
 
       if (response.ok) {
@@ -451,7 +451,7 @@ export function VirtualMachines() {
     "/api/system",
     fetcher,
     {
-      refreshInterval: 30000,
+      refreshInterval: 60000, // Changed from 30s to 60s
       revalidateOnFocus: false,
     },
   )
@@ -1275,7 +1275,7 @@ export function VirtualMachines() {
                                     {/* Real IPs (green, without "Real" label) */}
                                     {vmDetails.lxc_ip_info.real_ips.map((ip, index) => (
                                       <Badge
-                                        key={`real-${index}`}
+                                        key={`ip-real-${selectedVM.vmid}-${ip}-${index}`}
                                         variant="outline"
                                         className="bg-green-500/10 text-green-500 border-green-500/20"
                                       >
@@ -1285,7 +1285,7 @@ export function VirtualMachines() {
                                     {/* Docker bridge IPs (yellow, with "Bridge" label) */}
                                     {vmDetails.lxc_ip_info.docker_ips.map((ip, index) => (
                                       <Badge
-                                        key={`docker-${index}`}
+                                        key={`ip-docker-${selectedVM.vmid}-${ip}-${index}`}
                                         variant="outline"
                                         className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
                                       >
@@ -1403,7 +1403,7 @@ export function VirtualMachines() {
                                               <div className="flex flex-wrap gap-2">
                                                 {vmDetails.hardware_info.gpu_passthrough.map((gpu, index) => (
                                                   <Badge
-                                                    key={index}
+                                                    key={`gpu-${selectedVM.vmid}-${index}-${gpu.substring(0, 20)}`}
                                                     variant="outline"
                                                     className={
                                                       gpu.includes("NVIDIA")
@@ -1426,7 +1426,7 @@ export function VirtualMachines() {
                                               <div className="flex flex-wrap gap-2">
                                                 {vmDetails.hardware_info.devices.map((device, index) => (
                                                   <Badge
-                                                    key={index}
+                                                    key={`device-${selectedVM.vmid}-${index}-${device.substring(0, 20)}`}
                                                     variant="outline"
                                                     className="bg-blue-500/10 text-blue-500 border-blue-500/20"
                                                   >

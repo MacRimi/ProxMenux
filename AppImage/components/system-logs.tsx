@@ -27,7 +27,7 @@ import {
   Menu,
   Terminal,
 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 
 interface Log {
   timestamp: string
@@ -433,22 +433,35 @@ export function SystemLogs() {
     return String(value).toLowerCase()
   }
 
-  const logsOnly: CombinedLogEntry[] = logs
-    .map((log) => ({ ...log, isEvent: false, sortTimestamp: new Date(log.timestamp).getTime() }))
-    .sort((a, b) => b.sortTimestamp - a.sortTimestamp)
+  const memoizedLogs = useMemo(() => logs, [logs])
+  const memoizedEvents = useMemo(() => events, [events])
+  const memoizedBackups = useMemo(() => backups, [backups])
+  const memoizedNotifications = useMemo(() => notifications, [notifications])
 
-  const eventsOnly: CombinedLogEntry[] = events
-    .map((event) => ({
-      timestamp: event.starttime,
-      level: event.level,
-      service: event.type,
-      message: `${event.type}${event.vmid ? ` (VM/CT ${event.vmid})` : ""} - ${event.status}`,
-      source: `Node: ${event.node} • User: ${event.user}`,
-      isEvent: true,
-      eventData: event,
-      sortTimestamp: new Date(event.starttime).getTime(),
-    }))
-    .sort((a, b) => b.sortTimestamp - a.sortTimestamp)
+  const logsOnly: CombinedLogEntry[] = useMemo(
+    () =>
+      memoizedLogs
+        .map((log) => ({ ...log, isEvent: false, sortTimestamp: new Date(log.timestamp).getTime() }))
+        .sort((a, b) => b.sortTimestamp - a.sortTimestamp),
+    [memoizedLogs],
+  )
+
+  const eventsOnly: CombinedLogEntry[] = useMemo(
+    () =>
+      memoizedEvents
+        .map((event) => ({
+          timestamp: event.starttime,
+          level: event.level,
+          service: event.type,
+          message: `${event.type}${event.vmid ? ` (VM/CT ${event.vmid})` : ""} - ${event.status}`,
+          source: `Node: ${event.node} • User: ${event.user}`,
+          isEvent: true,
+          eventData: event,
+          sortTimestamp: new Date(event.starttime).getTime(),
+        }))
+        .sort((a, b) => b.sortTimestamp - a.sortTimestamp),
+    [memoizedEvents],
+  )
 
   const filteredLogsOnly = logsOnly.filter((log) => {
     const message = log.message || ""
@@ -479,32 +492,40 @@ export function SystemLogs() {
   const displayedLogsOnly = filteredLogsOnly.slice(0, displayedLogsCount)
   const displayedEventsOnly = filteredEventsOnly.slice(0, displayedLogsCount)
 
-  const combinedLogs: CombinedLogEntry[] = [
-    ...logs.map((log) => ({ ...log, isEvent: false, sortTimestamp: new Date(log.timestamp).getTime() })),
-    ...events.map((event) => ({
-      timestamp: event.starttime,
-      level: event.level,
-      service: event.type,
-      message: `${event.type}${event.vmid ? ` (VM/CT ${event.vmid})` : ""} - ${event.status}`,
-      source: `Node: ${event.node} • User: ${event.user}`,
-      isEvent: true,
-      eventData: event,
-      sortTimestamp: new Date(event.starttime).getTime(),
-    })),
-  ].sort((a, b) => b.sortTimestamp - a.sortTimestamp) // Sort by timestamp descending
+  const combinedLogs: CombinedLogEntry[] = useMemo(
+    () =>
+      [
+        ...memoizedLogs.map((log) => ({ ...log, isEvent: false, sortTimestamp: new Date(log.timestamp).getTime() })),
+        ...memoizedEvents.map((event) => ({
+          timestamp: event.starttime,
+          level: event.level,
+          service: event.type,
+          message: `${event.type}${event.vmid ? ` (VM/CT ${event.vmid})` : ""} - ${event.status}`,
+          source: `Node: ${event.node} • User: ${event.user}`,
+          isEvent: true,
+          eventData: event,
+          sortTimestamp: new Date(event.starttime).getTime(),
+        })),
+      ].sort((a, b) => b.sortTimestamp - a.sortTimestamp),
+    [memoizedLogs, memoizedEvents],
+  )
 
-  const filteredCombinedLogs = combinedLogs.filter((log) => {
-    const message = log.message || ""
-    const service = log.service || ""
-    const searchTermLower = safeToLowerCase(searchTerm)
+  const filteredCombinedLogs = useMemo(
+    () =>
+      combinedLogs.filter((log) => {
+        const message = log.message || ""
+        const service = log.service || ""
+        const searchTermLower = safeToLowerCase(searchTerm)
 
-    const matchesSearch =
-      safeToLowerCase(message).includes(searchTermLower) || safeToLowerCase(service).includes(searchTermLower)
-    const matchesLevel = levelFilter === "all" || log.level === levelFilter
-    const matchesService = serviceFilter === "all" || log.service === serviceFilter
+        const matchesSearch =
+          safeToLowerCase(message).includes(searchTermLower) || safeToLowerCase(service).includes(searchTermLower)
+        const matchesLevel = levelFilter === "all" || log.level === levelFilter
+        const matchesService = serviceFilter === "all" || log.service === serviceFilter
 
-    return matchesSearch && matchesLevel && matchesService
-  })
+        return matchesSearch && matchesLevel && matchesService
+      }),
+    [combinedLogs, searchTerm, levelFilter, serviceFilter],
+  )
 
   // CHANGE: Re-assigning displayedLogs to use the filteredCombinedLogs
   const displayedLogs = filteredCombinedLogs.slice(0, displayedLogsCount)
@@ -605,7 +626,7 @@ export function SystemLogs() {
     info: logs.filter((log) => ["info", "notice", "debug"].includes(log.level)).length,
   }
 
-  const uniqueServices = [...new Set(logs.map((log) => log.service))]
+  const uniqueServices = useMemo(() => [...new Set(memoizedLogs.map((log) => log.service))], [memoizedLogs])
 
   const getBackupType = (volid: string): "vm" | "lxc" => {
     if (volid.includes("/vm/") || volid.includes("vzdump-qemu")) {
@@ -930,9 +951,11 @@ export function SystemLogs() {
                     <SelectValue placeholder="Filter by service" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Services</SelectItem>
-                    {uniqueServices.slice(0, 20).map((service) => (
-                      <SelectItem key={service} value={service}>
+                    <SelectItem key="service-all" value="all">
+                      All Services
+                    </SelectItem>
+                    {uniqueServices.slice(0, 20).map((service, idx) => (
+                      <SelectItem key={`service-${service}-${idx}`} value={service}>
                         {service}
                       </SelectItem>
                     ))}
@@ -947,51 +970,59 @@ export function SystemLogs() {
 
               <ScrollArea className="h-[600px] w-full rounded-md border border-border overflow-x-hidden">
                 <div className="space-y-2 p-4 w-full box-border">
-                  {displayedLogs.map((log, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden box-border"
-                      onClick={() => {
-                        if (log.eventData) {
-                          setSelectedEvent(log.eventData)
-                          setIsEventModalOpen(true)
-                        } else {
-                          setSelectedLog(log as SystemLog)
-                          setIsLogModalOpen(true)
-                        }
-                      }}
-                    >
-                      <div className="flex-shrink-0 flex gap-2 flex-wrap">
-                        <Badge variant="outline" className={getLevelColor(log.level)}>
-                          {getLevelIcon(log.level)}
-                          {log.level.toUpperCase()}
-                        </Badge>
-                        {log.eventData && (
-                          <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
-                            <Activity className="h-3 w-3 mr-1" />
-                            EVENT
-                          </Badge>
-                        )}
-                      </div>
+                  {displayedLogs.map((log, index) => {
+                    // Generate a more stable unique key
+                    const timestampMs = new Date(log.timestamp).getTime()
+                    const uniqueKey = log.eventData
+                      ? `event-${log.eventData.upid.replace(/:/g, "-")}-${timestampMs}`
+                      : `log-${timestampMs}-${log.service?.substring(0, 10) || "unknown"}-${log.pid || "nopid"}-${index}`
 
-                      <div className="flex-1 min-w-0 overflow-hidden box-border">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
-                          <div className="text-sm font-medium text-foreground truncate min-w-0">{log.service}</div>
-                          <div className="text-xs text-muted-foreground font-mono truncate sm:ml-2 sm:flex-shrink-0">
-                            {log.timestamp}
+                    return (
+                      <div
+                        key={uniqueKey}
+                        className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden box-border"
+                        onClick={() => {
+                          if (log.eventData) {
+                            setSelectedEvent(log.eventData)
+                            setIsEventModalOpen(true)
+                          } else {
+                            setSelectedLog(log as SystemLog)
+                            setIsLogModalOpen(true)
+                          }
+                        }}
+                      >
+                        <div className="flex-shrink-0 flex gap-2 flex-wrap">
+                          <Badge variant="outline" className={getLevelColor(log.level)}>
+                            {getLevelIcon(log.level)}
+                            {log.level.toUpperCase()}
+                          </Badge>
+                          {log.eventData && (
+                            <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
+                              <Activity className="h-3 w-3 mr-1" />
+                              EVENT
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0 overflow-hidden box-border">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
+                            <div className="text-sm font-medium text-foreground truncate min-w-0">{log.service}</div>
+                            <div className="text-xs text-muted-foreground font-mono truncate sm:ml-2 sm:flex-shrink-0">
+                              {log.timestamp}
+                            </div>
+                          </div>
+                          <div className="text-sm text-foreground mb-1 line-clamp-2 break-all overflow-hidden">
+                            {log.message}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate break-all overflow-hidden">
+                            {log.source}
+                            {log.pid && ` • PID: ${log.pid}`}
+                            {log.hostname && ` • Host: ${log.hostname}`}
                           </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-all overflow-hidden">
-                          {log.message}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate break-all overflow-hidden">
-                          {log.source}
-                          {log.pid && ` • PID: ${log.pid}`}
-                          {log.hostname && ` • Host: ${log.hostname}`}
-                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
 
                   {displayedLogs.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
@@ -1052,44 +1083,48 @@ export function SystemLogs() {
 
               <ScrollArea className="h-[500px] w-full rounded-md border border-border">
                 <div className="space-y-2 p-4">
-                  {backups.map((backup, index) => (
-                    <div
-                      key={index}
-                      className="flex items-start space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
-                      onClick={() => {
-                        setSelectedBackup(backup)
-                        setIsBackupModalOpen(true)
-                      }}
-                    >
-                      <div className="flex-shrink-0">
-                        <HardDrive className="h-5 w-5 text-blue-500" />
-                      </div>
+                  {memoizedBackups.map((backup, index) => {
+                    const uniqueKey = `backup-${backup.volid.replace(/[/:]/g, "-")}-${backup.timestamp || index}`
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="outline" className={getBackupTypeColor(backup.volid)}>
-                              {getBackupTypeLabel(backup.volid)}
-                            </Badge>
-                            <Badge variant="outline" className={getBackupStorageColor(backup.volid)}>
-                              {getBackupStorageLabel(backup.volid)}
+                    return (
+                      <div
+                        key={uniqueKey}
+                        className="flex items-start space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setSelectedBackup(backup)
+                          setIsBackupModalOpen(true)
+                        }}
+                      >
+                        <div className="flex-shrink-0">
+                          <HardDrive className="h-5 w-5 text-blue-500" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="outline" className={getBackupTypeColor(backup.volid)}>
+                                {getBackupTypeLabel(backup.volid)}
+                              </Badge>
+                              <Badge variant="outline" className={getBackupStorageColor(backup.volid)}>
+                                {getBackupStorageLabel(backup.volid)}
+                              </Badge>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className="bg-green-500/10 text-green-500 border-green-500/20 whitespace-nowrap"
+                            >
+                              {backup.size_human}
                             </Badge>
                           </div>
-                          <Badge
-                            variant="outline"
-                            className="bg-green-500/10 text-green-500 border-green-500/20 whitespace-nowrap"
-                          >
-                            {backup.size_human}
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-muted-foreground mb-1 truncate">Storage: {backup.storage}</div>
-                        <div className="text-xs text-muted-foreground flex items-center">
-                          <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
-                          <span className="truncate">{backup.created}</span>
+                          <div className="text-xs text-muted-foreground mb-1 truncate">Storage: {backup.storage}</div>
+                          <div className="text-xs text-muted-foreground flex items-center">
+                            <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+                            <span className="truncate">{backup.created}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
 
                   {backups.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
@@ -1105,42 +1140,47 @@ export function SystemLogs() {
             <TabsContent value="notifications" className="space-y-4">
               <ScrollArea className="h-[600px] w-full rounded-md border border-border">
                 <div className="space-y-2 p-4">
-                  {notifications.map((notification, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden w-full"
-                      onClick={() => {
-                        setSelectedNotification(notification)
-                        setIsNotificationModalOpen(true)
-                      }}
-                    >
-                      <div className="flex-shrink-0 flex gap-2 flex-wrap">
-                        <Badge variant="outline" className={getNotificationTypeColor(notification.type)}>
-                          {notification.type.toUpperCase()}
-                        </Badge>
-                        <Badge variant="outline" className={getNotificationSourceColor(notification.source)}>
-                          {notification.source === "task-log" && <Activity className="h-3 w-3 mr-1" />}
-                          {notification.source === "journal" && <FileText className="h-3 w-3 mr-1" />}
-                          {notification.source.toUpperCase()}
-                        </Badge>
-                      </div>
+                  {memoizedNotifications.map((notification, index) => {
+                    const timestampMs = new Date(notification.timestamp).getTime()
+                    const uniqueKey = `notification-${timestampMs}-${notification.service?.substring(0, 10) || "unknown"}-${notification.source?.substring(0, 10) || "unknown"}-${index}`
 
-                      <div className="flex-1 min-w-0 overflow-hidden">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
-                          <div className="text-sm font-medium text-foreground truncate">{notification.service}</div>
-                          <div className="text-xs text-muted-foreground font-mono truncate">
-                            {notification.timestamp}
+                    return (
+                      <div
+                        key={uniqueKey}
+                        className="flex flex-col md:flex-row md:items-start space-y-2 md:space-y-0 md:space-x-4 p-3 rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 transition-colors cursor-pointer overflow-hidden w-full"
+                        onClick={() => {
+                          setSelectedNotification(notification)
+                          setIsNotificationModalOpen(true)
+                        }}
+                      >
+                        <div className="flex-shrink-0 flex gap-2 flex-wrap">
+                          <Badge variant="outline" className={getNotificationTypeColor(notification.type)}>
+                            {notification.type.toUpperCase()}
+                          </Badge>
+                          <Badge variant="outline" className={getNotificationSourceColor(notification.source)}>
+                            {notification.source === "task-log" && <Activity className="h-3 w-3 mr-1" />}
+                            {notification.source === "journal" && <FileText className="h-3 w-3 mr-1" />}
+                            {notification.source.toUpperCase()}
+                          </Badge>
+                        </div>
+
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
+                            <div className="text-sm font-medium text-foreground truncate">{notification.service}</div>
+                            <div className="text-xs text-muted-foreground font-mono truncate">
+                              {notification.timestamp}
+                            </div>
+                          </div>
+                          <div className="text-sm text-foreground mb-1 line-clamp-2 break-all overflow-hidden">
+                            {notification.message}
+                          </div>
+                          <div className="text-xs text-muted-foreground break-words overflow-hidden">
+                            Service: {notification.service} • Source: {notification.source}
                           </div>
                         </div>
-                        <div className="text-sm text-foreground mb-1 line-clamp-2 break-all overflow-hidden">
-                          {notification.message}
-                        </div>
-                        <div className="text-xs text-muted-foreground break-words overflow-hidden">
-                          Service: {notification.service} • Source: {notification.source}
-                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
 
                   {notifications.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">

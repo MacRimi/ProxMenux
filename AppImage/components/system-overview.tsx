@@ -96,6 +96,10 @@ interface ProxmoxStorageData {
   }>
 }
 
+interface SystemOverviewProps {
+  isActive?: boolean
+}
+
 const fetchSystemData = async (): Promise<SystemData | null> => {
   try {
     const apiUrl = getApiUrl("/api/system")
@@ -219,7 +223,7 @@ const fetchProxmoxStorageData = async (): Promise<ProxmoxStorageData | null> => 
   }
 }
 
-export function SystemOverview() {
+export function SystemOverview({ isActive = true }: SystemOverviewProps) {
   const [systemData, setSystemData] = useState<SystemData | null>(null)
   const [vmData, setVmData] = useState<VMData[]>([])
   const [storageData, setStorageData] = useState<StorageData | null>(null)
@@ -231,6 +235,10 @@ export function SystemOverview() {
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
 
   useEffect(() => {
+    if (!isActive) {
+      return
+    }
+
     const fetchData = async () => {
       try {
         setLoading(true)
@@ -253,6 +261,7 @@ export function SystemOverview() {
       }
     }
 
+    // Initial fetch
     fetchData()
 
     const systemInterval = setInterval(() => {
@@ -261,10 +270,11 @@ export function SystemOverview() {
       })
     }, 10000)
 
+    // Clean up interval when component unmounts or becomes inactive
     return () => {
       clearInterval(systemInterval)
     }
-  }, [])
+  }, [isActive]) // Add isActive as dependency
 
   useEffect(() => {
     const fetchVMs = async () => {
@@ -721,7 +731,11 @@ export function SystemOverview() {
                 </div>
 
                 <div className="pt-3 border-t border-border">
-                  <NetworkTrafficChart timeframe={networkTimeframe} onTotalsCalculated={setNetworkTotals} />
+                  <NetworkTrafficChart
+                    timeframe={networkTimeframe}
+                    onTotalsCalculated={setNetworkTotals}
+                    isActive={isActive}
+                  />
                 </div>
               </div>
             ) : (

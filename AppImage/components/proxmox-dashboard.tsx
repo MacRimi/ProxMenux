@@ -13,6 +13,9 @@ import { SystemLogs } from "./system-logs"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
 import { getApiUrl } from "../lib/api-config"
+import { usePollingConfig, INTERVAL_OPTIONS } from "@/lib/polling-config"
+import { Label } from "./ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import {
   RefreshCw,
   AlertTriangle,
@@ -26,6 +29,7 @@ import {
   Box,
   Cpu,
   FileText,
+  Settings,
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
@@ -65,6 +69,7 @@ export function ProxmoxDashboard() {
   const [showNavigation, setShowNavigation] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
   const [showHealthModal, setShowHealthModal] = useState(false)
+  const { intervals, updateInterval } = usePollingConfig()
 
   const fetchSystemData = useCallback(async () => {
     console.log("[v0] Fetching system data from Flask server...")
@@ -127,8 +132,12 @@ export function ProxmoxDashboard() {
   }, [])
 
   useEffect(() => {
+    // Only fetch if we actually need the data (always for header)
     fetchSystemData()
-    const interval = setInterval(fetchSystemData, 10000)
+
+    // Poll every 30 seconds for header info (less frequent since it's just for display)
+    const interval = setInterval(fetchSystemData, 30000)
+
     return () => clearInterval(interval)
   }, [fetchSystemData])
 
@@ -216,6 +225,8 @@ export function ProxmoxDashboard() {
         return "Hardware"
       case "logs":
         return "System Logs"
+      case "settings":
+        return "Settings"
       default:
         return "Navigation Menu"
     }
@@ -362,7 +373,7 @@ export function ProxmoxDashboard() {
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
-            <TabsList className="hidden md:grid w-full grid-cols-6 bg-card border border-border">
+            <TabsList className="hidden md:grid w-full grid-cols-7 bg-card border border-border">
               <TabsTrigger
                 value="overview"
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
@@ -398,6 +409,12 @@ export function ProxmoxDashboard() {
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
               >
                 System Logs
+              </TabsTrigger>
+              <TabsTrigger
+                value="settings"
+                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+              >
+                Settings
               </TabsTrigger>
             </TabsList>
 
@@ -507,6 +524,21 @@ export function ProxmoxDashboard() {
                     <FileText className="h-5 w-5" />
                     <span>System Logs</span>
                   </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setActiveTab("settings")
+                      setMobileMenuOpen(false)
+                    }}
+                    className={`w-full justify-start gap-3 ${
+                      activeTab === "settings"
+                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                        : ""
+                    }`}
+                  >
+                    <Settings className="h-5 w-5" />
+                    <span>Settings</span>
+                  </Button>
                 </div>
               </SheetContent>
             </Sheet>
@@ -517,7 +549,7 @@ export function ProxmoxDashboard() {
       <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
           <TabsContent value="overview" className="space-y-4 md:space-y-6 mt-0">
-            <SystemOverview key={`overview-${componentKey}`} />
+            <SystemOverview key={`overview-${componentKey}`} isActive={activeTab === "overview"} />
           </TabsContent>
 
           <TabsContent value="storage" className="space-y-4 md:space-y-6 mt-0">
@@ -525,7 +557,7 @@ export function ProxmoxDashboard() {
           </TabsContent>
 
           <TabsContent value="network" className="space-y-4 md:space-y-6 mt-0">
-            <NetworkMetrics key={`network-${componentKey}`} />
+            <NetworkMetrics key={`network-${componentKey}`} isActive={activeTab === "network"} />
           </TabsContent>
 
           <TabsContent value="vms" className="space-y-4 md:space-y-6 mt-0">
@@ -538,6 +570,183 @@ export function ProxmoxDashboard() {
 
           <TabsContent value="logs" className="space-y-4 md:space-y-6 mt-0">
             <SystemLogs key={`logs-${componentKey}`} />
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-4 md:space-y-6 mt-0">
+            <div className="grid gap-4 md:gap-6">
+              <div className="rounded-lg border border-border bg-card p-6">
+                <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+                  <Settings className="h-6 w-6" />
+                  Settings
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  Configure your ProxMenux Monitor preferences and system settings.
+                </p>
+
+                <div className="space-y-6">
+                  <div className="border-t border-border pt-4">
+                    <h3 className="text-lg font-medium mb-2">Appearance</h3>
+                    <div className="flex items-center justify-between py-3">
+                      <div>
+                        <p className="font-medium">Theme</p>
+                        <p className="text-sm text-muted-foreground">Choose your preferred color scheme</p>
+                      </div>
+                      <ThemeToggle />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border pt-4">
+                    <h3 className="text-lg font-medium mb-2">System Information</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between py-2">
+                        <span className="text-muted-foreground">Version:</span>
+                        <span className="font-medium">ProxMenux Monitor v1.0.0</span>
+                      </div>
+                      <div className="flex justify-between py-2">
+                        <span className="text-muted-foreground">Server:</span>
+                        <span className="font-medium">{systemStatus.serverName}</span>
+                      </div>
+                      <div className="flex justify-between py-2">
+                        <span className="text-muted-foreground">Node ID:</span>
+                        <span className="font-medium">{systemStatus.nodeId}</span>
+                      </div>
+                      <div className="flex justify-between py-2">
+                        <span className="text-muted-foreground">Status:</span>
+                        <Badge variant="outline" className={statusColor}>
+                          {statusIcon}
+                          <span className="ml-1 capitalize">{systemStatus.status}</span>
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border pt-4">
+                    <h3 className="text-lg font-medium mb-2">Polling Intervals</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Configure how frequently each section updates its data. Lower values provide more real-time data
+                      but increase server load.
+                    </p>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between py-2">
+                        <div>
+                          <Label htmlFor="storage-interval" className="font-medium">
+                            Storage
+                          </Label>
+                          <p className="text-sm text-muted-foreground">Update frequency for storage metrics</p>
+                        </div>
+                        <Select
+                          value={intervals.storage.toString()}
+                          onValueChange={(value) => updateInterval("storage", Number.parseInt(value))}
+                        >
+                          <SelectTrigger id="storage-interval" className="w-[180px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {INTERVAL_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value.toString()}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2">
+                        <div>
+                          <Label htmlFor="network-interval" className="font-medium">
+                            Network
+                          </Label>
+                          <p className="text-sm text-muted-foreground">Update frequency for network metrics</p>
+                        </div>
+                        <Select
+                          value={intervals.network.toString()}
+                          onValueChange={(value) => updateInterval("network", Number.parseInt(value))}
+                        >
+                          <SelectTrigger id="network-interval" className="w-[180px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {INTERVAL_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value.toString()}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2">
+                        <div>
+                          <Label htmlFor="vms-interval" className="font-medium">
+                            VMs & LXCs
+                          </Label>
+                          <p className="text-sm text-muted-foreground">Update frequency for VM/LXC data</p>
+                        </div>
+                        <Select
+                          value={intervals.vms.toString()}
+                          onValueChange={(value) => updateInterval("vms", Number.parseInt(value))}
+                        >
+                          <SelectTrigger id="vms-interval" className="w-[180px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {INTERVAL_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value.toString()}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2">
+                        <div>
+                          <Label htmlFor="hardware-interval" className="font-medium">
+                            Hardware
+                          </Label>
+                          <p className="text-sm text-muted-foreground">Update frequency for temperature sensors only</p>
+                        </div>
+                        <Select
+                          value={intervals.hardware.toString()}
+                          onValueChange={(value) => updateInterval("hardware", Number.parseInt(value))}
+                        >
+                          <SelectTrigger id="hardware-interval" className="w-[180px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {INTERVAL_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value.toString()}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-xs text-muted-foreground bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                      <strong>Note:</strong> Hardware static information (System Info, Memory Modules, PCI Devices,
+                      Network/Storage Summaries) is loaded only once when entering the Hardware page and does not
+                      refresh automatically.
+                    </p>
+                  </div>
+
+                  <div className="border-t border-border pt-4">
+                    <h3 className="text-lg font-medium mb-2">About</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      ProxMenux Monitor is a comprehensive dashboard for monitoring and managing Proxmox VE systems.
+                    </p>
+                    <a
+                      href="https://ko-fi.com/macrimi"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center text-sm text-blue-500 hover:text-blue-600 hover:underline transition-colors"
+                    >
+                      Support and contribute to the project →
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
 

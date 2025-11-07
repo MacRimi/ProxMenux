@@ -21,6 +21,7 @@ import {
 import useSWR from "swr"
 import { useState, useEffect } from "react"
 import { type HardwareData, type GPU, type PCIDevice, type StorageDevice, fetcher } from "../types/hardware"
+import { usePollingConfig } from "@/lib/polling-config"
 
 const parseLsblkSize = (sizeStr: string | undefined): number => {
   if (!sizeStr) return 0
@@ -163,13 +164,37 @@ const groupAndSortTemperatures = (temperatures: any[]) => {
 }
 
 export default function Hardware() {
+  const { intervals } = usePollingConfig()
+
+  // Static data (loaded once on mount): system info, memory, PCI, network/storage summaries
   const {
-    data: hardwareData,
-    error,
-    isLoading,
+    data: staticHardwareData,
+    error: staticError,
+    isLoading: staticLoading,
   } = useSWR<HardwareData>("/api/hardware", fetcher, {
-    refreshInterval: 5000,
+    refreshInterval: 0, // Never refresh automatically - only load once
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
   })
+
+  // Dynamic data (temperatures only) - polls at configured interval
+  const { data: temperatureData, error: tempError } = useSWR<{ temperatures: any[] }>(
+    "/api/hardware/temperatures",
+    fetcher,
+    {
+      refreshInterval: intervals.hardware,
+    },
+  )
+
+  const hardwareData = staticHardwareData
+    ? {
+        ...staticHardwareData,
+        temperatures: temperatureData?.temperatures || staticHardwareData.temperatures || [],
+      }
+    : null
+
+  const error = staticError || tempError
+  const isLoading = staticLoading
 
   useEffect(() => {
     if (hardwareData?.storage_devices) {
