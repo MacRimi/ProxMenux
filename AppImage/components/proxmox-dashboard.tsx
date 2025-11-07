@@ -51,6 +51,13 @@ interface FlaskSystemData {
   load_average: number[]
 }
 
+interface FlaskSystemInfo {
+  hostname: string
+  node_id: string
+  uptime: string
+  health_status: "healthy" | "warning" | "critical"
+}
+
 export function ProxmoxDashboard() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     status: "healthy",
@@ -69,12 +76,7 @@ export function ProxmoxDashboard() {
   const [showHealthModal, setShowHealthModal] = useState(false)
 
   const fetchSystemData = useCallback(async () => {
-    console.log("[v0] Fetching system data from Flask server...")
-    console.log("[v0] Current window location:", window.location.href)
-
-    const apiUrl = getApiUrl("/api/system")
-
-    console.log("[v0] API URL:", apiUrl)
+    const apiUrl = getApiUrl("/api/system-info")
 
     try {
       const response = await fetch(apiUrl, {
@@ -84,27 +86,18 @@ export function ProxmoxDashboard() {
         },
         cache: "no-store",
       })
-      console.log("[v0] Response status:", response.status)
 
       if (!response.ok) {
         throw new Error(`Server responded with status: ${response.status}`)
       }
 
-      const data: FlaskSystemData = await response.json()
-      console.log("[v0] System data received:", data)
-
-      let status: "healthy" | "warning" | "critical" = "healthy"
-      if (data.cpu_usage > 90 || data.memory_usage > 90) {
-        status = "critical"
-      } else if (data.cpu_usage > 75 || data.memory_usage > 75) {
-        status = "warning"
-      }
+      const data: FlaskSystemInfo = await response.json()
 
       const uptimeValue =
         data.uptime && typeof data.uptime === "string" && data.uptime.trim() !== "" ? data.uptime : "N/A"
 
       setSystemStatus({
-        status,
+        status: data.health_status || "healthy",
         uptime: uptimeValue,
         lastUpdate: new Date().toLocaleTimeString("en-US", { hour12: false }),
         serverName: data.hostname || "Unknown",
@@ -113,11 +106,6 @@ export function ProxmoxDashboard() {
       setIsServerConnected(true)
     } catch (error) {
       console.error("[v0] Failed to fetch system data from Flask server:", error)
-      console.error("[v0] Error details:", {
-        message: error instanceof Error ? error.message : "Unknown error",
-        apiUrl,
-        windowLocation: window.location.href,
-      })
 
       setIsServerConnected(false)
       setSystemStatus((prev) => ({

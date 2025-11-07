@@ -5655,57 +5655,6 @@ def api_prometheus():
         traceback.print_exc()
         return f'# Error generating metrics: {str(e)}\n', 500, {'Content-Type': 'text/plain; charset=utf-8'}
 
-@app.route('/api/system-info', methods=['GET'])
-def api_system_info():
-    """Get system and node information for dashboard header"""
-    try:
-        hostname = socket.gethostname()
-        node_id = f"pve-{hostname}"
-        pve_version = None
-        
-        # Try to get Proxmox version
-        try:
-            result = subprocess.run(['pveversion'], capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                pve_version = result.stdout.strip().split('\n')[0]
-        except:
-            pass
-        
-         # Try to get node info from Proxmox API
-        try:
-            result = subprocess.run(['pvesh', 'get', '/nodes', '--output-format', 'json'], 
-                                  capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                nodes = json.loads(result.stdout)
-                if nodes and len(nodes) > 0:
-                    node_info = nodes[0]
-                    node_id = node_info.get('node', node_id)
-                    hostname = node_info.get('node', hostname)
-        except:
-            pass
-        
-        response = {
-            'hostname': hostname,
-            'node_id': node_id,
-            'status': 'online',
-            'timestamp': datetime.now().isoformat()
-        }
-        
-        if pve_version:
-            response['pve_version'] = pve_version
-        else:
-            response['error'] = 'Proxmox version not available - pveversion command not found'
-        
-        return jsonify(response)
-    except Exception as e:
-        # print(f"Error getting system info: {e}")
-        pass
-        return jsonify({
-            'error': f'Unable to access system information: {str(e)}',
-            'hostname': socket.gethostname(),
-            'status': 'error',
-            'timestamp': datetime.now().isoformat()
-        })
 
 @app.route('/api/info', methods=['GET'])
 def api_info():

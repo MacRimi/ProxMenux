@@ -24,3 +24,16 @@ def get_health_details():
         return jsonify(details)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@health_bp.route('/api/system-info', methods=['GET'])
+def get_system_info():
+    """
+    Get lightweight system info for header display.
+    Returns: hostname, uptime, and cached health status.
+    This is optimized for minimal server impact.
+    """
+    try:
+        info = health_monitor.get_system_info()
+        return jsonify(info)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
