@@ -2,4 +2,4 @@ blank_issues_enabled: false
 contact_links:
   - name: Soporte General
     url: https://github.com/MacRimi/ProxMenux/discussions
-    about: Si tu solicitud no es un bug ni un feature, usa las discusiones.
+    about: If your request is neither a bug nor a feature, please use Discussions.
