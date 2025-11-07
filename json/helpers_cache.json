@@ -2029,6 +2029,18 @@
     "type": "ct"
   },
   {
+    "name": "Infisical",
+    "slug": "infisical",
+    "desc": "Secrets, certificates, and access management on autopilot. All-in-one platform to securely manage application secrets, certificates, SSH keys, and configurations across your team and infrastructure.",
+    "script": "ct/infisical.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/infisical.sh",
+    "categories": [
+      6
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "InfluxDB",
     "slug": "influxdb",
     "desc": "InfluxDB is designed to handle high write and query loads, and is optimized for storing and analyzing time-stamped data, such as metrics, events, and logs. InfluxDB supports SQL-like query language and has a built-in HTTP API for data ingestion and retrieval. It's commonly used for IoT and industrial applications where time-series data is involved.\r\n\r\nTelegraf is a server agent that collects, processes, and aggregates metrics and events data from different sources, such as systems, databases, and APIs, and outputs the data to various outputs, such as InfluxDB, Prometheus, Elasticsearch, and many others.",
