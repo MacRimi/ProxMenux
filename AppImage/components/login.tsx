@@ -95,7 +95,9 @@ export function Login({ onLogin }: LoginProps) {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="login-username">Username</Label>
+              <Label htmlFor="login-username" className="text-sm">
+                Username
+              </Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -104,7 +106,7 @@ export function Login({ onLogin }: LoginProps) {
                   placeholder="Enter your username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 text-base"
                   disabled={loading}
                   autoComplete="username"
                 />
@@ -112,7 +114,9 @@ export function Login({ onLogin }: LoginProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="login-password">Password</Label>
+              <Label htmlFor="login-password" className="text-sm">
+                Password
+              </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -121,7 +125,7 @@ export function Login({ onLogin }: LoginProps) {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 text-base"
                   disabled={loading}
                   autoComplete="current-password"
                 />
