@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { ThemeProvider } from "../components/theme-provider"
+import { PollingConfigProvider } from "../lib/polling-config"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -37,7 +38,7 @@ export default function RootLayout({
       <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased bg-background text-foreground`}>
         <Suspense fallback={<div>Loading...</div>}>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-            {children}
+            <PollingConfigProvider>{children}</PollingConfigProvider>
           </ThemeProvider>
         </Suspense>
       </body>

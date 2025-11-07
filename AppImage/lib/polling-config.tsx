@@ -31,6 +31,8 @@ export function PollingConfigProvider({ children }: { children: ReactNode }) {
 
   // Load from localStorage on mount
   useEffect(() => {
+    if (typeof window === "undefined") return
+
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       try {
@@ -45,7 +47,9 @@ export function PollingConfigProvider({ children }: { children: ReactNode }) {
   const updateInterval = (key: keyof PollingIntervals, value: number) => {
     setIntervals((prev) => {
       const newIntervals = { ...prev, [key]: value }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newIntervals))
+      if (typeof window !== "undefined") {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newIntervals))
+      }
       return newIntervals
     })
   }
@@ -56,6 +60,13 @@ export function PollingConfigProvider({ children }: { children: ReactNode }) {
 export function usePollingConfig() {
   const context = useContext(PollingConfigContext)
   if (!context) {
+    // During SSR or when provider is not available, return defaults
+    if (typeof window === "undefined") {
+      return {
+        intervals: DEFAULT_INTERVALS,
+        updateInterval: () => {},
+      }
+    }
     throw new Error("usePollingConfig must be used within PollingConfigProvider")
   }
   return context
