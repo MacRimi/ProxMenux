@@ -189,16 +189,14 @@ export function Login({ onLogin }: LoginProps) {
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
                   <Shield className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-blue-500">Autenticación de Dos Factores</p>
-                    <p className="text-xs text-blue-500 mt-1">
-                      Introduce el código de 6 dígitos de tu aplicación de autenticación
-                    </p>
+                    <p className="text-sm font-medium text-blue-500">Two-Factor Authentication</p>
+                    <p className="text-xs text-blue-500 mt-1">Enter the 6-digit code from your authentication app</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="totp-code" className="text-sm">
-                    Código de Autenticación
+                    Authentication Code
                   </Label>
                   <Input
                     id="totp-code"
@@ -213,7 +211,7 @@ export function Login({ onLogin }: LoginProps) {
                     autoFocus
                   />
                   <p className="text-xs text-muted-foreground text-center">
-                    También puedes usar un código de respaldo (formato: XXXX-XXXX)
+                    You can also use a backup code (format: XXXX-XXXX)
                   </p>
                 </div>
 
@@ -228,7 +226,7 @@ export function Login({ onLogin }: LoginProps) {
                   }}
                   className="w-full"
                 >
-                  Volver al inicio de sesión
+                  Back to login
                 </Button>
               </div>
             )}

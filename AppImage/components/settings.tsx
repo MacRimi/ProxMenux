@@ -472,7 +472,7 @@ export function Settings() {
                   className="w-full bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20"
                 >
                   <Shield className="h-4 w-4 mr-2" />
-                  Habilitar Autenticación de Dos Factores
+                  Enable Two-Factor Authentication
                 </Button>
               )}
 
@@ -480,29 +480,29 @@ export function Settings() {
                 <div className="space-y-3">
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500" />
-                    <p className="text-sm text-green-500 font-medium">2FA está activado</p>
+                    <p className="text-sm text-green-500 font-medium">2FA is enabled</p>
                   </div>
 
                   {!show2FADisable && (
                     <Button onClick={() => setShow2FADisable(true)} variant="outline" className="w-full">
                       <Shield className="h-4 w-4 mr-2" />
-                      Desactivar 2FA
+                      Disable 2FA
                     </Button>
                   )}
 
                   {show2FADisable && (
                     <div className="space-y-4 border border-border rounded-lg p-4">
-                      <h3 className="font-semibold">Desactivar Autenticación de Dos Factores</h3>
-                      <p className="text-sm text-muted-foreground">Introduce tu contraseña para confirmar</p>
+                      <h3 className="font-semibold">Disable Two-Factor Authentication</h3>
+                      <p className="text-sm text-muted-foreground">Enter your password to confirm</p>
 
                       <div className="space-y-2">
-                        <Label htmlFor="disable-2fa-password">Contraseña</Label>
+                        <Label htmlFor="disable-2fa-password">Password</Label>
                         <div className="relative">
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input
                             id="disable-2fa-password"
                             type="password"
-                            placeholder="Introduce tu contraseña"
+                            placeholder="Enter your password"
                             value={disable2FAPassword}
                             onChange={(e) => setDisable2FAPassword(e.target.value)}
                             className="pl-10"
@@ -513,7 +513,7 @@ export function Settings() {
 
                       <div className="flex gap-2">
                         <Button onClick={handleDisable2FA} variant="destructive" className="flex-1" disabled={loading}>
-                          {loading ? "Desactivando..." : "Desactivar 2FA"}
+                          {loading ? "Disabling..." : "Disable 2FA"}
                         </Button>
                         <Button
                           onClick={() => {
@@ -525,7 +525,7 @@ export function Settings() {
                           className="flex-1"
                           disabled={loading}
                         >
-                          Cancelar
+                          Cancel
                         </Button>
                       </div>
                     </div>
@@ -563,7 +563,7 @@ export function Settings() {
         open={show2FASetup}
         onClose={() => setShow2FASetup(false)}
         onSuccess={() => {
-          setSuccess("2FA habilitado correctamente!")
+          setSuccess("2FA enabled successfully!")
           checkAuthStatus()
         }}
       />

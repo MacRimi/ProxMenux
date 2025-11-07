@@ -121,9 +121,9 @@ export function TwoFactorSetup({ open, onClose, onSuccess }: TwoFactorSetupProps
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-blue-500" />
-            Configurar Autenticación de Dos Factores
+            Setup Two-Factor Authentication
           </DialogTitle>
-          <DialogDescription>Añade una capa extra de seguridad a tu cuenta</DialogDescription>
+          <DialogDescription>Add an extra layer of security to your account</DialogDescription>
         </DialogHeader>
 
         {error && (
@@ -137,22 +137,22 @@ export function TwoFactorSetup({ open, onClose, onSuccess }: TwoFactorSetupProps
           <div className="space-y-4">
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
               <p className="text-sm text-blue-500">
-                La autenticación de dos factores (2FA) añade una capa extra de seguridad requiriendo un código de tu
-                aplicación de autenticación además de tu contraseña.
+                Two-factor authentication (2FA) adds an extra layer of security by requiring a code from your
+                authentication app in addition to your password.
               </p>
             </div>
 
             <div className="space-y-2">
-              <h4 className="font-medium">Necesitarás:</h4>
+              <h4 className="font-medium">You will need:</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                <li>Una aplicación de autenticación (Google Authenticator, Authy, etc.)</li>
-                <li>Escanear un código QR o introducir una clave manualmente</li>
-                <li>Guardar códigos de respaldo de forma segura</li>
+                <li>An authentication app (Google Authenticator, Authy, etc.)</li>
+                <li>Scan a QR code or enter a key manually</li>
+                <li>Store backup codes securely</li>
               </ul>
             </div>
 
             <Button onClick={handleSetupStart} className="w-full bg-blue-500 hover:bg-blue-600" disabled={loading}>
-              {loading ? "Iniciando..." : "Comenzar Configuración"}
+              {loading ? "Starting..." : "Start Setup"}
             </Button>
           </div>
         )}
@@ -160,10 +160,8 @@ export function TwoFactorSetup({ open, onClose, onSuccess }: TwoFactorSetupProps
         {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <h4 className="font-medium">1. Escanea el código QR</h4>
-              <p className="text-sm text-muted-foreground">
-                Abre tu aplicación de autenticación y escanea este código QR
-              </p>
+              <h4 className="font-medium">1. Scan the QR code</h4>
+              <p className="text-sm text-muted-foreground">Open your authentication app and scan this QR code</p>
               {qrCode && (
                 <div className="flex justify-center p-4 bg-white rounded-lg">
                   <img src={qrCode || "/placeholder.svg"} alt="QR Code" width={200} height={200} className="rounded" />
@@ -172,14 +170,14 @@ export function TwoFactorSetup({ open, onClose, onSuccess }: TwoFactorSetupProps
             </div>
 
             <div className="space-y-2">
-              <h4 className="font-medium">O introduce la clave manualmente:</h4>
+              <h4 className="font-medium">Or enter the key manually:</h4>
               <div className="flex gap-2">
                 <Input value={secret} readOnly className="font-mono text-sm" />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => copyToClipboard(secret, "secret")}
-                  title="Copiar clave"
+                  title="Copy key"
                 >
                   {copiedSecret ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                 </Button>
@@ -187,10 +185,8 @@ export function TwoFactorSetup({ open, onClose, onSuccess }: TwoFactorSetupProps
             </div>
 
             <div className="space-y-2">
-              <h4 className="font-medium">2. Introduce el código de verificación</h4>
-              <p className="text-sm text-muted-foreground">
-                Introduce el código de 6 dígitos que aparece en tu aplicación
-              </p>
+              <h4 className="font-medium">2. Enter the verification code</h4>
+              <p className="text-sm text-muted-foreground">Enter the 6-digit code that appears in your app</p>
               <Input
                 type="text"
                 placeholder="000000"
@@ -204,10 +200,10 @@ export function TwoFactorSetup({ open, onClose, onSuccess }: TwoFactorSetupProps
 
             <div className="flex gap-2">
               <Button onClick={handleVerify} className="flex-1 bg-blue-500 hover:bg-blue-600" disabled={loading}>
-                {loading ? "Verificando..." : "Verificar y Activar"}
+                {loading ? "Verifying..." : "Verify and Enable"}
               </Button>
               <Button onClick={handleClose} variant="outline" className="flex-1 bg-transparent" disabled={loading}>
-                Cancelar
+                Cancel
               </Button>
             </div>
           </div>
@@ -218,30 +214,30 @@ export function TwoFactorSetup({ open, onClose, onSuccess }: TwoFactorSetupProps
             <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex items-start gap-2">
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-green-500">2FA Activado Correctamente</p>
+                <p className="font-medium text-green-500">2FA Enabled Successfully</p>
                 <p className="text-sm text-green-500 mt-1">
-                  Tu cuenta ahora está protegida con autenticación de dos factores
+                  Your account is now protected with two-factor authentication
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <h4 className="font-medium text-orange-500">Importante: Guarda tus códigos de respaldo</h4>
+              <h4 className="font-medium text-orange-500">Important: Save your backup codes</h4>
               <p className="text-sm text-muted-foreground">
-                Estos códigos te permitirán acceder a tu cuenta si pierdes acceso a tu aplicación de autenticación.
-                Guárdalos en un lugar seguro.
+                These codes will allow you to access your account if you lose access to your authentication app. Store
+                them in a safe place.
               </p>
 
               <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium">Códigos de Respaldo</span>
+                  <span className="text-sm font-medium">Backup Codes</span>
                   <Button variant="outline" size="sm" onClick={() => copyToClipboard(backupCodes.join("\n"), "codes")}>
                     {copiedCodes ? (
                       <Check className="h-4 w-4 text-green-500 mr-2" />
                     ) : (
                       <Copy className="h-4 w-4 mr-2" />
                     )}
-                    Copiar Todos
+                    Copy All
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -255,7 +251,7 @@ export function TwoFactorSetup({ open, onClose, onSuccess }: TwoFactorSetupProps
             </div>
 
             <Button onClick={handleFinish} className="w-full bg-blue-500 hover:bg-blue-600">
-              Finalizar
+              Finish
             </Button>
           </div>
         )}

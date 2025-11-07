@@ -319,12 +319,13 @@ def generate_totp_qr(username, secret):
         qr = segno.make(uri)
         
         # Convert to SVG string
-        buffer = io.StringIO()
+        buffer = io.BytesIO()
         qr.save(buffer, kind='svg', scale=4, border=2)
-        svg_content = buffer.getvalue()
+        svg_bytes = buffer.getvalue()
+        svg_content = svg_bytes.decode('utf-8')
         
         # Return as data URL
-        svg_base64 = base64.b64encode(svg_content.encode()).decode()
+        svg_base64 = base64.b64encode(svg_content.encode()).decode('utf-8')
         return f"data:image/svg+xml;base64,{svg_base64}"
     except Exception as e:
         print(f"Error generating QR code: {e}")
