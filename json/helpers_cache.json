@@ -298,6 +298,20 @@
     "type": "ct"
   },
   {
+    "name": "Aria2",
+    "slug": "aria2",
+    "desc": "Aria2 is a lightweight multi-protocol & multi-source, cross platform download utility operated in command-line. It supports HTTP/HTTPS, FTP, SFTP, BitTorrent and Metalink.",
+    "script": "ct/aria2.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/aria2.sh",
+    "categories": [
+      11
+    ],
+    "notes": [
+      "Within the LXC console, run `cat rpc.secret` to display the rpc-secret. Copy this token and paste it into the Aria2 RPC Secret Token box within the AriaNG Settings. Then, click the reload AriaNG button."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Asterisk",
     "slug": "asterisk",
     "desc": "Asterisk is an open-source framework for building communications applications, most commonly used as a phone system (PBX). Developed by Digium (now part of Sangoma), it turns a standard computer into a powerful telephony server.",
