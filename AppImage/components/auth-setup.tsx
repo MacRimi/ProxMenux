@@ -129,15 +129,15 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         {step === "choice" ? (
-          <div className="space-y-6">
+          <div className="space-y-6 py-2">
             <div className="text-center space-y-2">
               <div className="mx-auto w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center">
                 <Shield className="h-8 w-8 text-blue-500" />
               </div>
               <h2 className="text-2xl font-bold">Protect Your Dashboard?</h2>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Add an extra layer of security to protect your Proxmox data when accessing from non-private networks.
               </p>
             </div>
@@ -161,13 +161,13 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
             <p className="text-xs text-center text-muted-foreground">You can always enable this later in Settings</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 py-2">
             <div className="text-center space-y-2">
               <div className="mx-auto w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center">
                 <Lock className="h-8 w-8 text-blue-500" />
               </div>
               <h2 className="text-2xl font-bold">Setup Authentication</h2>
-              <p className="text-muted-foreground">Create a username and password to protect your dashboard</p>
+              <p className="text-muted-foreground text-sm">Create a username and password to protect your dashboard</p>
             </div>
 
             {error && (
@@ -179,7 +179,9 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username" className="text-sm">
+                  Username
+                </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -188,14 +190,17 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                     placeholder="Enter username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 text-base"
                     disabled={loading}
+                    autoComplete="username"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-sm">
+                  Password
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -204,14 +209,17 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                     placeholder="Enter password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 text-base"
                     disabled={loading}
+                    autoComplete="new-password"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Label htmlFor="confirm-password" className="text-sm">
+                  Confirm Password
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -220,8 +228,9 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                     placeholder="Confirm password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 text-base"
                     disabled={loading}
+                    autoComplete="new-password"
                   />
                 </div>
               </div>

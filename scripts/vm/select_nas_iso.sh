@@ -89,9 +89,9 @@ function select_nas_iso() {
       HN="OpenMediaVault"
       ;;
     5)
-      ISO_NAME="XigmaNAS-13.3.0.5"
-      ISO_URL="https://sourceforge.net/projects/xigmanas/files/XigmaNAS-13.3.0.5/13.3.0.5.10153/XigmaNAS-x64-LiveCD-13.3.0.5.10153.iso/download"
-      ISO_FILE="XigmaNAS-x64-LiveCD-13.3.0.5.10153.iso"
+      ISO_NAME="XigmaNAS-14.3.0.5"
+      ISO_URL="https://sourceforge.net/projects/xigmanas/files/XigmaNAS-14.3.0.5/14.3.0.5.10566/XigmaNAS-x64-LiveCD-14.3.0.5.10566.iso/download"
+      ISO_FILE="XigmaNAS-x64-LiveCD-14.3.0.5.10566.iso"
       ISO_PATH="$ISO_DIR/$ISO_FILE"
       HN="XigmaNAS"
       ;;

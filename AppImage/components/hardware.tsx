@@ -163,13 +163,48 @@ const groupAndSortTemperatures = (temperatures: any[]) => {
 }
 
 export default function Hardware() {
+  // Static data - load once without refresh
   const {
-    data: hardwareData,
-    error,
-    isLoading,
+    data: staticHardwareData,
+    error: staticError,
+    isLoading: staticLoading,
   } = useSWR<HardwareData>("/api/hardware", fetcher, {
-    refreshInterval: 5000,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    refreshInterval: 0, // No auto-refresh for static data
   })
+
+  // Dynamic data - refresh every 5 seconds for temperatures, fans, power, ups
+  const {
+    data: dynamicHardwareData,
+    error: dynamicError,
+    isLoading: dynamicLoading,
+  } = useSWR<HardwareData>("/api/hardware", fetcher, {
+    refreshInterval: 7000,
+  })
+
+  // Merge static and dynamic data, preferring static for CPU/memory/PCI/disks
+  const hardwareData = staticHardwareData
+    ? {
+        ...dynamicHardwareData,
+        // Keep static data from initial load
+        cpu: staticHardwareData.cpu,
+        motherboard: staticHardwareData.motherboard,
+        memory_modules: staticHardwareData.memory_modules,
+        pci_devices: staticHardwareData.pci_devices,
+        storage_devices: staticHardwareData.storage_devices,
+        gpus: staticHardwareData.gpus,
+        // Use dynamic data for these
+        temperatures: dynamicHardwareData?.temperatures,
+        fans: dynamicHardwareData?.fans,
+        power_meter: dynamicHardwareData?.power_meter,
+        power_supplies: dynamicHardwareData?.power_supplies,
+        ups: dynamicHardwareData?.ups,
+      }
+    : undefined
+
+  const error = staticError || dynamicError
+  const isLoading = staticLoading
 
   useEffect(() => {
     if (hardwareData?.storage_devices) {

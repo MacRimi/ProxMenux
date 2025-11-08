@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
 import {
   Server,
   Play,
@@ -264,7 +264,7 @@ export function VirtualMachines() {
     isLoading,
     mutate,
   } = useSWR<VMData[]>("/api/vms", fetcher, {
-    refreshInterval: 30000,
+    refreshInterval: 23000,
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
   })
@@ -451,7 +451,7 @@ export function VirtualMachines() {
     "/api/system",
     fetcher,
     {
-      refreshInterval: 30000,
+      refreshInterval: 23000,
       revalidateOnFocus: false,
     },
   )
@@ -1042,7 +1042,10 @@ export function VirtualMachines() {
           setEditedNotes("")
         }}
       >
-        <DialogContent className="max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent
+          className="max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden"
+          key={selectedVM?.vmid || "no-vm"}
+        >
           {currentView === "main" ? (
             <>
               <DialogHeader className="pb-4 border-b border-border px-6 pt-6">
@@ -1096,13 +1099,16 @@ export function VirtualMachines() {
                     )}
                   </div>
                 </DialogTitle>
+                <DialogDescription>
+                  View and manage configuration, resources, and status for this virtual machine
+                </DialogDescription>
               </DialogHeader>
 
               <div className="flex-1 overflow-y-auto px-6 py-4">
                 <div className="space-y-6">
                   {selectedVM && (
                     <>
-                      <div>
+                      <div key={`metrics-${selectedVM.vmid}`}>
                         <Card
                           className="cursor-pointer rounded-lg border border-black/10 dark:border-white/10 sm:border-border max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-card sm:hover:bg-black/5 sm:dark:hover:bg-white/5 transition-colors group"
                           onClick={handleMetricsClick}
@@ -1193,7 +1199,7 @@ export function VirtualMachines() {
                         <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
                       ) : vmDetails?.config ? (
                         <>
-                          <Card className="border border-border bg-card/50">
+                          <Card className="border border-border bg-card/50" key={`config-${selectedVM.vmid}`}>
                             <CardContent className="p-4">
                               <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -1259,26 +1265,25 @@ export function VirtualMachines() {
                                 )}
                               </div>
 
+                              {/* IP Addresses with proper keys */}
                               {selectedVM?.type === "lxc" && vmDetails?.lxc_ip_info && (
                                 <div className="mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-border">
                                   <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
                                     IP Addresses
                                   </h4>
                                   <div className="flex flex-wrap gap-2">
-                                    {/* Real IPs (green, without "Real" label) */}
                                     {vmDetails.lxc_ip_info.real_ips.map((ip, index) => (
                                       <Badge
-                                        key={`real-${index}`}
+                                        key={`real-ip-${selectedVM.vmid}-${ip.replace(/[.:/]/g, "-")}-${index}`}
                                         variant="outline"
                                         className="bg-green-500/10 text-green-500 border-green-500/20"
                                       >
                                         {ip}
                                       </Badge>
                                     ))}
-                                    {/* Docker bridge IPs (yellow, with "Bridge" label) */}
                                     {vmDetails.lxc_ip_info.docker_ips.map((ip, index) => (
                                       <Badge
-                                        key={`docker-${index}`}
+                                        key={`docker-ip-${selectedVM.vmid}-${ip.replace(/[.:/]/g, "-")}-${index}`}
                                         variant="outline"
                                         className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
                                       >
@@ -1388,7 +1393,7 @@ export function VirtualMachines() {
                                             </div>
                                           )}
 
-                                        {/* GPU Passthrough */}
+                                        {/* GPU Passthrough with proper keys */}
                                         {vmDetails.hardware_info.gpu_passthrough &&
                                           vmDetails.hardware_info.gpu_passthrough.length > 0 && (
                                             <div>
@@ -1396,7 +1401,7 @@ export function VirtualMachines() {
                                               <div className="flex flex-wrap gap-2">
                                                 {vmDetails.hardware_info.gpu_passthrough.map((gpu, index) => (
                                                   <Badge
-                                                    key={index}
+                                                    key={`gpu-${selectedVM.vmid}-${index}-${gpu.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 30)}`}
                                                     variant="outline"
                                                     className={
                                                       gpu.includes("NVIDIA")
@@ -1411,7 +1416,7 @@ export function VirtualMachines() {
                                             </div>
                                           )}
 
-                                        {/* Other Hardware Devices */}
+                                        {/* Hardware Devices with proper keys */}
                                         {vmDetails.hardware_info.devices &&
                                           vmDetails.hardware_info.devices.length > 0 && (
                                             <div>
@@ -1419,7 +1424,7 @@ export function VirtualMachines() {
                                               <div className="flex flex-wrap gap-2">
                                                 {vmDetails.hardware_info.devices.map((device, index) => (
                                                   <Badge
-                                                    key={index}
+                                                    key={`device-${selectedVM.vmid}-${index}-${device.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 30)}`}
                                                     variant="outline"
                                                     className="bg-blue-500/10 text-blue-500 border-blue-500/20"
                                                   >
@@ -1541,7 +1546,7 @@ export function VirtualMachines() {
                                     </h4>
                                     <div className="space-y-3">
                                       {vmDetails.config.rootfs && (
-                                        <div>
+                                        <div key="rootfs">
                                           <div className="text-xs text-muted-foreground mb-1">Root Filesystem</div>
                                           <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
                                             {vmDetails.config.rootfs}
@@ -1549,15 +1554,16 @@ export function VirtualMachines() {
                                         </div>
                                       )}
                                       {vmDetails.config.scsihw && (
-                                        <div>
+                                        <div key="scsihw">
                                           <div className="text-xs text-muted-foreground mb-1">SCSI Controller</div>
                                           <div className="font-medium text-foreground">{vmDetails.config.scsihw}</div>
                                         </div>
                                       )}
+                                      {/* Disk Storage with proper keys */}
                                       {Object.keys(vmDetails.config)
                                         .filter((key) => key.match(/^(scsi|sata|ide|virtio)\d+$/))
                                         .map((diskKey) => (
-                                          <div key={diskKey}>
+                                          <div key={`disk-${selectedVM.vmid}-${diskKey}`}>
                                             <div className="text-xs text-muted-foreground mb-1">
                                               {diskKey.toUpperCase().replace(/(\d+)/, " $1")}
                                             </div>
@@ -1567,7 +1573,7 @@ export function VirtualMachines() {
                                           </div>
                                         ))}
                                       {vmDetails.config.efidisk0 && (
-                                        <div>
+                                        <div key="efidisk0">
                                           <div className="text-xs text-muted-foreground mb-1">EFI Disk</div>
                                           <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
                                             {vmDetails.config.efidisk0}
@@ -1575,18 +1581,18 @@ export function VirtualMachines() {
                                         </div>
                                       )}
                                       {vmDetails.config.tpmstate0 && (
-                                        <div>
+                                        <div key="tpmstate0">
                                           <div className="text-xs text-muted-foreground mb-1">TPM State</div>
                                           <div className="font-medium text-foreground text-sm break-all font-mono bg-muted/50 p-2 rounded">
                                             {vmDetails.config.tpmstate0}
                                           </div>
                                         </div>
                                       )}
-                                      {/* Mount points for LXC */}
+                                      {/* Mount Points with proper keys */}
                                       {Object.keys(vmDetails.config)
                                         .filter((key) => key.match(/^mp\d+$/))
                                         .map((mpKey) => (
-                                          <div key={mpKey}>
+                                          <div key={`mp-${selectedVM.vmid}-${mpKey}`}>
                                             <div className="text-xs text-muted-foreground mb-1">
                                               Mount Point {mpKey.replace("mp", "")}
                                             </div>
@@ -1604,10 +1610,11 @@ export function VirtualMachines() {
                                       Network
                                     </h4>
                                     <div className="space-y-3">
+                                      {/* Network Interfaces with proper keys */}
                                       {Object.keys(vmDetails.config)
                                         .filter((key) => key.match(/^net\d+$/))
                                         .map((netKey) => (
-                                          <div key={netKey}>
+                                          <div key={`net-${selectedVM.vmid}-${netKey}`}>
                                             <div className="text-xs text-muted-foreground mb-1">
                                               Network Interface {netKey.replace("net", "")}
                                             </div>
@@ -1645,7 +1652,7 @@ export function VirtualMachines() {
                                     </div>
                                   </div>
 
-                                  {/* PCI Devices Section */}
+                                  {/* PCI Devices with proper keys */}
                                   {Object.keys(vmDetails.config).some((key) => key.match(/^hostpci\d+$/)) && (
                                     <div>
                                       <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
@@ -1655,7 +1662,7 @@ export function VirtualMachines() {
                                         {Object.keys(vmDetails.config)
                                           .filter((key) => key.match(/^hostpci\d+$/))
                                           .map((pciKey) => (
-                                            <div key={pciKey}>
+                                            <div key={`pci-${selectedVM.vmid}-${pciKey}`}>
                                               <div className="text-xs text-muted-foreground mb-1">
                                                 {pciKey.toUpperCase().replace(/(\d+)/, " $1")}
                                               </div>
@@ -1668,7 +1675,7 @@ export function VirtualMachines() {
                                     </div>
                                   )}
 
-                                  {/* USB Devices Section */}
+                                  {/* USB Devices with proper keys */}
                                   {Object.keys(vmDetails.config).some((key) => key.match(/^usb\d+$/)) && (
                                     <div>
                                       <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
@@ -1678,7 +1685,7 @@ export function VirtualMachines() {
                                         {Object.keys(vmDetails.config)
                                           .filter((key) => key.match(/^usb\d+$/))
                                           .map((usbKey) => (
-                                            <div key={usbKey}>
+                                            <div key={`usb-${selectedVM.vmid}-${usbKey}`}>
                                               <div className="text-xs text-muted-foreground mb-1">
                                                 {usbKey.toUpperCase().replace(/(\d+)/, " $1")}
                                               </div>
@@ -1691,7 +1698,7 @@ export function VirtualMachines() {
                                     </div>
                                   )}
 
-                                  {/* Serial Devices Section */}
+                                  {/* Serial Ports with proper keys */}
                                   {Object.keys(vmDetails.config).some((key) => key.match(/^serial\d+$/)) && (
                                     <div>
                                       <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
@@ -1701,7 +1708,7 @@ export function VirtualMachines() {
                                         {Object.keys(vmDetails.config)
                                           .filter((key) => key.match(/^serial\d+$/))
                                           .map((serialKey) => (
-                                            <div key={serialKey}>
+                                            <div key={`serial-${selectedVM.vmid}-${serialKey}`}>
                                               <div className="text-xs text-muted-foreground mb-1">
                                                 {serialKey.toUpperCase().replace(/(\d+)/, " $1")}
                                               </div>
@@ -1710,91 +1717,6 @@ export function VirtualMachines() {
                                               </div>
                                             </div>
                                           ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Options Section */}
-                                  <div>
-                                    <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                      Options
-                                    </h4>
-                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                                      {vmDetails.config.onboot !== undefined && (
-                                        <div>
-                                          <div className="text-xs text-muted-foreground mb-1">Start on Boot</div>
-                                          <Badge
-                                            variant="outline"
-                                            className={
-                                              vmDetails.config.onboot
-                                                ? "bg-green-500/10 text-green-500 border-green-500/20"
-                                                : "bg-red-500/10 text-red-500 border-red-500/20"
-                                            }
-                                          >
-                                            {vmDetails.config.onboot ? "Yes" : "No"}
-                                          </Badge>
-                                        </div>
-                                      )}
-                                      {vmDetails.config.ostype && (
-                                        <div>
-                                          <div className="text-xs text-muted-foreground mb-1">OS Type</div>
-                                          <div className="font-medium text-foreground">{vmDetails.config.ostype}</div>
-                                        </div>
-                                      )}
-                                      {vmDetails.config.arch && (
-                                        <div>
-                                          <div className="text-xs text-muted-foreground mb-1">Architecture</div>
-                                          <div className="font-medium text-foreground">{vmDetails.config.arch}</div>
-                                        </div>
-                                      )}
-                                      {vmDetails.config.boot && (
-                                        <div>
-                                          <div className="text-xs text-muted-foreground mb-1">Boot Order</div>
-                                          <div className="font-medium text-foreground">{vmDetails.config.boot}</div>
-                                        </div>
-                                      )}
-                                      {vmDetails.config.features && (
-                                        <div className="col-span-2 lg:grid-cols-3">
-                                          <div className="text-xs text-muted-foreground mb-1">Features</div>
-                                          <div className="font-medium text-foreground text-sm">
-                                            {vmDetails.config.features}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Advanced Section */}
-                                  {(vmDetails.config.vmgenid || vmDetails.config.smbios1 || vmDetails.config.meta) && (
-                                    <div>
-                                      <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                                        Advanced
-                                      </h4>
-                                      <div className="space-y-3">
-                                        {vmDetails.config.vmgenid && (
-                                          <div>
-                                            <div className="text-xs text-muted-foreground mb-1">VM Generation ID</div>
-                                            <div className="font-medium text-muted-foreground text-sm font-mono">
-                                              {vmDetails.config.vmgenid}
-                                            </div>
-                                          </div>
-                                        )}
-                                        {vmDetails.config.smbios1 && (
-                                          <div>
-                                            <div className="text-xs text-muted-foreground mb-1">SMBIOS</div>
-                                            <div className="font-medium text-muted-foreground text-sm font-mono break-all">
-                                              {vmDetails.config.smbios1}
-                                            </div>
-                                          </div>
-                                        )}
-                                        {vmDetails.config.meta && (
-                                          <div>
-                                            <div className="text-xs text-muted-foreground mb-1">Metadata</div>
-                                            <div className="font-medium text-muted-foreground text-sm font-mono">
-                                              {vmDetails.config.meta}
-                                            </div>
-                                          </div>
-                                        )}
                                       </div>
                                     </div>
                                   )}

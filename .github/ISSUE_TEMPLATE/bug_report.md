@@ -1,29 +1,29 @@
 ---
 name: Bug Report
-about: Reporta un problema en el proyecto
-title: "[BUG] Describe el problema"
+about: Report a problem in the project
+title: "[BUG] Describe the issue"
 labels: bug
 assignees: 'MacRimi'
 ---
 
-## Descripción
-Describe el error de forma clara y concisa.
+## Description
+Describe the bug clearly and concisely.
 
-## Pasos para reproducir
+## Steps to Reproduce
 1. ...
 2. ...
 3. ...
 
-## Comportamiento esperado
-¿Qué debería ocurrir?
+## Expected Behavior
+What should happen?
 
-## Capturas de pantalla (Obligatorio)
-Agrega imágenes para ayudar a entender el problema.
+## Screenshots (Required)
+Add images to help illustrate the issue.
 
-## Entorno
-- Sistema operativo:
-- Versión del software:
-- Otros detalles relevantes:
+## Environment
+- Operating system:
+- Software version:
+- Other relevant details:
 
-## Información adicional
-Agrega cualquier otro contexto sobre el problema aquí.
+## Additional Information
+Add any other context about the problem here.

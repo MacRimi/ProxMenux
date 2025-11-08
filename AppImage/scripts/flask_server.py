@@ -950,31 +950,37 @@ def get_pcie_link_speed(disk_name):
             import re
             match = re.match(r'(nvme\d+)n\d+', disk_name)
             if not match:
-                print(f"[v0] Could not extract controller from {disk_name}")
+                # print(f"[v0] Could not extract controller from {disk_name}")
+                pass
                 return pcie_info
             
             controller = match.group(1)  # nvme0n1 -> nvme0
-            print(f"[v0] Getting PCIe info for {disk_name}, controller: {controller}")
+            # print(f"[v0] Getting PCIe info for {disk_name}, controller: {controller}")
+            pass
             
             # Path to PCIe device in sysfs
             sys_path = f'/sys/class/nvme/{controller}/device'
             
-            print(f"[v0] Checking sys_path: {sys_path}, exists: {os.path.exists(sys_path)}")
+            # print(f"[v0] Checking sys_path: {sys_path}, exists: {os.path.exists(sys_path)}")
+            pass
             
             if os.path.exists(sys_path):
                 try:
                     pci_address = os.path.basename(os.readlink(sys_path))
-                    print(f"[v0] PCI address for {disk_name}: {pci_address}")
+                    # print(f"[v0] PCI address for {disk_name}: {pci_address}")
+                    pass
                     
                     # Use lspci to get detailed PCIe information
                     result = subprocess.run(['lspci', '-vvv', '-s', pci_address], 
                                           capture_output=True, text=True, timeout=5)
                     if result.returncode == 0:
-                        print(f"[v0] lspci output for {pci_address}:")
+                        # print(f"[v0] lspci output for {pci_address}:")
+                        pass
                         for line in result.stdout.split('\n'):
                             # Look for "LnkSta:" line which shows current link status
                             if 'LnkSta:' in line:
-                                print(f"[v0] Found LnkSta: {line}")
+                                # print(f"[v0] Found LnkSta: {line}")
+                                pass
                                 # Example: "LnkSta: Speed 8GT/s, Width x4"
                                 if 'Speed' in line:
                                     speed_match = re.search(r'Speed\s+([\d.]+)GT/s', line)
@@ -990,17 +996,20 @@ def get_pcie_link_speed(disk_name):
                                             pcie_info['pcie_gen'] = '4.0'
                                         else:
                                             pcie_info['pcie_gen'] = '5.0'
-                                        print(f"[v0] Current PCIe gen: {pcie_info['pcie_gen']}")
+                                        # print(f"[v0] Current PCIe gen: {pcie_info['pcie_gen']}")
+                                        pass
                                 
                                 if 'Width' in line:
                                     width_match = re.search(r'Width\s+x(\d+)', line)
                                     if width_match:
                                         pcie_info['pcie_width'] = f'x{width_match.group(1)}'
-                                        print(f"[v0] Current PCIe width: {pcie_info['pcie_width']}")
+                                        # print(f"[v0] Current PCIe width: {pcie_info['pcie_width']}")
+                                        pass
                             
                             # Look for "LnkCap:" line which shows maximum capabilities
                             elif 'LnkCap:' in line:
-                                print(f"[v0] Found LnkCap: {line}")
+                                # print(f"[v0] Found LnkCap: {line}")
+                                pass
                                 if 'Speed' in line:
                                     speed_match = re.search(r'Speed\s+([\d.]+)GT/s', line)
                                     if speed_match:
@@ -1015,39 +1024,48 @@ def get_pcie_link_speed(disk_name):
                                             pcie_info['pcie_max_gen'] = '4.0'
                                         else:
                                             pcie_info['pcie_max_gen'] = '5.0'
-                                        print(f"[v0] Max PCIe gen: {pcie_info['pcie_max_gen']}")
+                                        # print(f"[v0] Max PCIe gen: {pcie_info['pcie_max_gen']}")
+                                        pass
                                 
                                 if 'Width' in line:
                                     width_match = re.search(r'Width\s+x(\d+)', line)
                                     if width_match:
                                         pcie_info['pcie_max_width'] = f'x{width_match.group(1)}'
-                                        print(f"[v0] Max PCIe width: {pcie_info['pcie_max_width']}")
+                                        # print(f"[v0] Max PCIe width: {pcie_info['pcie_max_width']}")
+                                        pass
                     else:
-                        print(f"[v0] lspci failed with return code: {result.returncode}")
+                        # print(f"[v0] lspci failed with return code: {result.returncode}")
+                        pass
                 except Exception as e:
-                    print(f"[v0] Error getting PCIe info via lspci: {e}")
+                    # print(f"[v0] Error getting PCIe info via lspci: {e}")
+                    pass
                     import traceback
                     traceback.print_exc()
             else:
-                print(f"[v0] sys_path does not exist: {sys_path}")
+                # print(f"[v0] sys_path does not exist: {sys_path}")
+                pass
                 alt_sys_path = f'/sys/block/{disk_name}/device/device'
-                print(f"[v0] Trying alternative path: {alt_sys_path}, exists: {os.path.exists(alt_sys_path)}")
+                # print(f"[v0] Trying alternative path: {alt_sys_path}, exists: {os.path.exists(alt_sys_path)}")
+                pass
                 
                 if os.path.exists(alt_sys_path):
                     try:
                         # Get PCI address from the alternative path
                         pci_address = os.path.basename(os.readlink(alt_sys_path))
-                        print(f"[v0] PCI address from alt path for {disk_name}: {pci_address}")
+                        # print(f"[v0] PCI address from alt path for {disk_name}: {pci_address}")
+                        pass
                         
                         # Use lspci to get detailed PCIe information
                         result = subprocess.run(['lspci', '-vvv', '-s', pci_address], 
                                               capture_output=True, text=True, timeout=5)
                         if result.returncode == 0:
-                            print(f"[v0] lspci output for {pci_address} (from alt path):")
+                            # print(f"[v0] lspci output for {pci_address} (from alt path):")
+                            pass
                             for line in result.stdout.split('\n'):
                                 # Look for "LnkSta:" line which shows current link status
                                 if 'LnkSta:' in line:
-                                    print(f"[v0] Found LnkSta: {line}")
+                                    # print(f"[v0] Found LnkSta: {line}")
+                                    pass
                                     if 'Speed' in line:
                                         speed_match = re.search(r'Speed\s+([\d.]+)GT/s', line)
                                         if speed_match:
@@ -1062,17 +1080,20 @@ def get_pcie_link_speed(disk_name):
                                                 pcie_info['pcie_gen'] = '4.0'
                                             else:
                                                 pcie_info['pcie_gen'] = '5.0'
-                                            print(f"[v0] Current PCIe gen: {pcie_info['pcie_gen']}")
+                                            # print(f"[v0] Current PCIe gen: {pcie_info['pcie_gen']}")
+                                            pass
                                     
                                     if 'Width' in line:
                                         width_match = re.search(r'Width\s+x(\d+)', line)
                                         if width_match:
                                             pcie_info['pcie_width'] = f'x{width_match.group(1)}'
-                                            print(f"[v0] Current PCIe width: {pcie_info['pcie_width']}")
+                                            # print(f"[v0] Current PCIe width: {pcie_info['pcie_width']}")
+                                            pass
                                 
                                 # Look for "LnkCap:" line which shows maximum capabilities
                                 elif 'LnkCap:' in line:
-                                    print(f"[v0] Found LnkCap: {line}")
+                                    # print(f"[v0] Found LnkCap: {line}")
+                                    pass
                                     if 'Speed' in line:
                                         speed_match = re.search(r'Speed\s+([\d.]+)GT/s', line)
                                         if speed_match:
@@ -1087,26 +1108,32 @@ def get_pcie_link_speed(disk_name):
                                                 pcie_info['pcie_max_gen'] = '4.0'
                                             else:
                                                 pcie_info['pcie_max_gen'] = '5.0'
-                                            print(f"[v0] Max PCIe gen: {pcie_info['pcie_max_gen']}")
+                                            # print(f"[v0] Max PCIe gen: {pcie_info['pcie_max_gen']}")
+                                            pass
                                     
                                     if 'Width' in line:
                                         width_match = re.search(r'Width\s+x(\d+)', line)
                                         if width_match:
                                             pcie_info['pcie_max_width'] = f'x{width_match.group(1)}'
-                                            print(f"[v0] Max PCIe width: {pcie_info['pcie_max_width']}")
+                                            # print(f"[v0] Max PCIe width: {pcie_info['pcie_max_width']}")
+                                            pass
                         else:
-                            print(f"[v0] lspci failed with return code: {result.returncode}")
+                            # print(f"[v0] lspci failed with return code: {result.returncode}")
+                            pass
                     except Exception as e:
-                        print(f"[v0] Error getting PCIe info from alt path: {e}")
+                        # print(f"[v0] Error getting PCIe info from alt path: {e}")
+                        pass
                         import traceback
                         traceback.print_exc()
     
     except Exception as e:
-        print(f"[v0] Error in get_pcie_link_speed for {disk_name}: {e}")
+        # print(f"[v0] Error in get_pcie_link_speed for {disk_name}: {e}")
+        pass
         import traceback
         traceback.print_exc()
     
-    print(f"[v0] Final PCIe info for {disk_name}: {pcie_info}")
+    # print(f"[v0] Final PCIe info for {disk_name}: {pcie_info}")
+    pass
     return pcie_info
 
 # get_pcie_link_speed function definition ends here
@@ -5397,7 +5424,7 @@ def api_health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'version': '1.0.0'
+        'version': '1.0.1'
     })
 
 @app.route('/api/prometheus', methods=['GET'])
@@ -5655,57 +5682,6 @@ def api_prometheus():
         traceback.print_exc()
         return f'# Error generating metrics: {str(e)}\n', 500, {'Content-Type': 'text/plain; charset=utf-8'}
 
-@app.route('/api/system-info', methods=['GET'])
-def api_system_info():
-    """Get system and node information for dashboard header"""
-    try:
-        hostname = socket.gethostname()
-        node_id = f"pve-{hostname}"
-        pve_version = None
-        
-        # Try to get Proxmox version
-        try:
-            result = subprocess.run(['pveversion'], capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                pve_version = result.stdout.strip().split('\n')[0]
-        except:
-            pass
-        
-         # Try to get node info from Proxmox API
-        try:
-            result = subprocess.run(['pvesh', 'get', '/nodes', '--output-format', 'json'], 
-                                  capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                nodes = json.loads(result.stdout)
-                if nodes and len(nodes) > 0:
-                    node_info = nodes[0]
-                    node_id = node_info.get('node', node_id)
-                    hostname = node_info.get('node', hostname)
-        except:
-            pass
-        
-        response = {
-            'hostname': hostname,
-            'node_id': node_id,
-            'status': 'online',
-            'timestamp': datetime.now().isoformat()
-        }
-        
-        if pve_version:
-            response['pve_version'] = pve_version
-        else:
-            response['error'] = 'Proxmox version not available - pveversion command not found'
-        
-        return jsonify(response)
-    except Exception as e:
-        # print(f"Error getting system info: {e}")
-        pass
-        return jsonify({
-            'error': f'Unable to access system information: {str(e)}',
-            'hostname': socket.gethostname(),
-            'status': 'error',
-            'timestamp': datetime.now().isoformat()
-        })
 
 @app.route('/api/info', methods=['GET'])
 def api_info():

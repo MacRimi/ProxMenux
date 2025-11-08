@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
 import { Wifi, Activity, Network, Router, AlertCircle, Zap } from "lucide-react"
 import useSWR from "swr"
 import { NetworkTrafficChart } from "./network-traffic-chart"
@@ -149,7 +149,7 @@ export function NetworkMetrics() {
     error,
     isLoading,
   } = useSWR<NetworkData>("/api/network", fetcher, {
-    refreshInterval: 60000, // Refresh every 60 seconds
+    refreshInterval: 53000,
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
   })
@@ -161,13 +161,13 @@ export function NetworkMetrics() {
   const [interfaceTotals, setInterfaceTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
 
   const { data: modalNetworkData } = useSWR<NetworkData>(selectedInterface ? "/api/network" : null, fetcher, {
-    refreshInterval: 15000, // Refresh every 15 seconds when modal is open
+    refreshInterval: 17000,
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
   })
 
   const { data: interfaceHistoricalData } = useSWR<any>(`/api/node/metrics?timeframe=${timeframe}`, fetcher, {
-    refreshInterval: 30000,
+    refreshInterval: 29000,
     revalidateOnFocus: false,
   })
 
@@ -688,6 +688,9 @@ export function NetworkMetrics() {
               <Router className="h-5 w-5" />
               {selectedInterface?.name} - Interface Details
             </DialogTitle>
+            <DialogDescription>
+              View detailed information and network traffic statistics for this interface
+            </DialogDescription>
             {selectedInterface?.status.toLowerCase() === "up" && selectedInterface?.vm_type !== "vm" && (
               <div className="flex justify-end pt-2">
                 <Select value={modalTimeframe} onValueChange={(value: any) => setModalTimeframe(value)}>

@@ -259,7 +259,7 @@ export function SystemOverview() {
       fetchSystemData().then((data) => {
         if (data) setSystemData(data)
       })
-    }, 10000)
+    }, 9000) // Cambiado de 10000 a 9000ms
 
     return () => {
       clearInterval(systemInterval)
@@ -273,7 +273,7 @@ export function SystemOverview() {
     }
 
     fetchVMs()
-    const vmInterval = setInterval(fetchVMs, 60000)
+    const vmInterval = setInterval(fetchVMs, 59000) // Cambiado de 60000 a 59000ms
 
     return () => {
       clearInterval(vmInterval)
@@ -290,7 +290,7 @@ export function SystemOverview() {
     }
 
     fetchStorage()
-    const storageInterval = setInterval(fetchStorage, 60000)
+    const storageInterval = setInterval(fetchStorage, 59000) // Cambiado de 60000 a 59000ms
 
     return () => {
       clearInterval(storageInterval)
@@ -304,7 +304,7 @@ export function SystemOverview() {
     }
 
     fetchNetwork()
-    const networkInterval = setInterval(fetchNetwork, 60000)
+    const networkInterval = setInterval(fetchNetwork, 59000) // Cambiado de 60000 a 59000ms
 
     return () => {
       clearInterval(networkInterval)
