@@ -65,6 +65,7 @@ interface ProxmoxStorage {
   used: number
   available: number
   percent: number
+  node: string // Added node property for detailed debug logging
 }
 
 interface ProxmoxStorageData {
@@ -105,6 +106,15 @@ export function StorageOverview() {
       console.log("[v0] Proxmox storage data received:", proxmoxData)
 
       if (proxmoxData && proxmoxData.storage) {
+        console.log("[v0] === STORAGE DEBUG INFO ===")
+        console.log("[v0] Total storage entries:", proxmoxData.storage.length)
+
+        proxmoxData.storage.forEach((s: any) => {
+          console.log(
+            `[v0] Storage: ${s.name} | Node: ${s.node} | Type: ${s.type} | Used: ${s.used}GB | Total: ${s.total}GB`,
+          )
+        })
+
         const activeStorages = proxmoxData.storage.filter(
           (s: any) => s && s.total > 0 && s.used >= 0 && s.status?.toLowerCase() === "active",
         )
@@ -119,6 +129,7 @@ export function StorageOverview() {
         const uniqueNames = new Set(storageNames)
         if (storageNames.length !== uniqueNames.size) {
           console.warn("[v0] WARNING: Duplicate storage names detected - possible cluster node issue")
+          console.warn("[v0] Storage names:", storageNames)
         }
       }
 
@@ -417,24 +428,12 @@ export function StorageOverview() {
   const diskHealthBreakdown = getDiskHealthBreakdown()
   const diskTypesBreakdown = getDiskTypesBreakdown()
 
-  // Only sum storage that belongs to the current node or filter appropriately
-  const totalProxmoxUsed =
-    proxmoxStorage && proxmoxStorage.storage
-      ? proxmoxStorage.storage
-          .filter(
-            (storage) =>
-              storage &&
-              storage.total > 0 &&
-              storage.used >= 0 && // Added check for valid used value
-              storage.status &&
-              storage.status.toLowerCase() === "active",
-          )
-          .reduce((sum, storage) => sum + storage.used, 0)
-      : 0
+  // Using storageData.used from the backend in place of summing proxmox storages (avoids duplication in clusters)
+  const totalNodeUsed = storageData ? storageData.used : 0 // Already comes in GB from the backend
+  const totalNodeCapacity = storageData ? storageData.total * 1024 : 0 // Convert TB to GB
 
-  // Convert storageData.total from TB to GB before calculating percentage
   const usagePercent =
-    storageData && storageData.total > 0 ? ((totalProxmoxUsed / (storageData.total * 1024)) * 100).toFixed(2) : "0.00"
+    storageData && storageData.total > 0 ? ((totalNodeUsed / totalNodeCapacity) * 100).toFixed(2) : "0.00"
 
   if (loading) {
     return (
@@ -473,7 +472,8 @@ export function StorageOverview() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold">{formatStorage(totalProxmoxUsed)}</div>
+            {/* Using totalNodeUsed that comes from the backend filtered by node */}
+            <div className="text-xl lg:text-2xl font-bold">{formatStorage(totalNodeUsed)}</div>
             <p className="text-xs text-muted-foreground mt-1">{usagePercent}% used</p>
           </CardContent>
         </Card>
