@@ -401,7 +401,7 @@ export function NodeMetricsCharts() {
               Memory Usage
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-0 md:px-6">
+          <CardContent className="px-0 pr-2 md:px-6">
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={data} margin={{ bottom: 60, left: 0, right: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
