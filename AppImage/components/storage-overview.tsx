@@ -102,37 +102,6 @@ export function StorageOverview() {
       const data = await storageResponse.json()
       const proxmoxData = await proxmoxResponse.json()
 
-      console.log("[v0] Storage data received:", data)
-      console.log("[v0] Proxmox storage data received:", proxmoxData)
-
-      if (proxmoxData && proxmoxData.storage) {
-        console.log("[v0] === STORAGE DEBUG INFO ===")
-        console.log("[v0] Total storage entries:", proxmoxData.storage.length)
-
-        proxmoxData.storage.forEach((s: any) => {
-          console.log(
-            `[v0] Storage: ${s.name} | Node: ${s.node} | Type: ${s.type} | Used: ${s.used}GB | Total: ${s.total}GB`,
-          )
-        })
-
-        const activeStorages = proxmoxData.storage.filter(
-          (s: any) => s && s.total > 0 && s.used >= 0 && s.status?.toLowerCase() === "active",
-        )
-        console.log("[v0] Active storage volumes:", activeStorages.length)
-        console.log(
-          "[v0] Total used across all volumes (GB):",
-          activeStorages.reduce((sum: number, s: any) => sum + s.used, 0),
-        )
-
-        // Check for potential cluster node duplication
-        const storageNames = activeStorages.map((s: any) => s.name)
-        const uniqueNames = new Set(storageNames)
-        if (storageNames.length !== uniqueNames.size) {
-          console.warn("[v0] WARNING: Duplicate storage names detected - possible cluster node issue")
-          console.warn("[v0] Storage names:", storageNames)
-        }
-      }
-
       setStorageData(data)
       setProxmoxStorage(proxmoxData)
     } catch (error) {
