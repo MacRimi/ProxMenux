@@ -256,6 +256,13 @@ export function SystemOverview() {
       setStorageData(storageResult[0])
       setProxmoxStorageData(storageResult[1])
       setNetworkData(networkResult)
+
+      setTimeout(async () => {
+        const refreshedSystemData = await fetchSystemData()
+        if (refreshedSystemData) {
+          setSystemData(refreshedSystemData)
+        }
+      }, 2000)
     }
 
     fetchAllData()
@@ -498,9 +505,11 @@ export function SystemOverview() {
         </Card>
 
         <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active VM & LXC</CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center">
+              <Server className="h-5 w-5 mr-2" />
+              Active VM & LXC
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {loadingStates.vms ? (
