@@ -237,7 +237,7 @@ export function SystemOverview() {
 
   useEffect(() => {
     const fetchAllData = async () => {
-      const [systemResult, vmResult, storageResult, proxmoxStorageResult, networkResult] = await Promise.all([
+      const [systemResult, vmResult, storageResults, networkResult] = await Promise.all([
         fetchSystemData().finally(() => setLoadingStates((prev) => ({ ...prev, system: false }))),
         fetchVMData().finally(() => setLoadingStates((prev) => ({ ...prev, vms: false }))),
         Promise.all([fetchStorageData(), fetchProxmoxStorageData()]).finally(() =>
@@ -253,8 +253,8 @@ export function SystemOverview() {
 
       setSystemData(systemResult)
       setVmData(vmResult)
-      setStorageData(storageResult[0])
-      setProxmoxStorageData(storageResult[1])
+      setStorageData(storageResults[0])
+      setProxmoxStorageData(storageResults[1])
       setNetworkData(networkResult)
 
       setTimeout(async () => {
