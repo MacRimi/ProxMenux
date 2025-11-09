@@ -33,8 +33,8 @@ def get_system_info():
     """
     try:
         info = health_monitor.get_system_info()
+        
         if 'health' in info:
-            # Convert 'OK' to 'healthy', 'WARNING' to 'warning', 'CRITICAL' to 'critical'
             status_map = {
                 'OK': 'healthy',
                 'WARNING': 'warning',

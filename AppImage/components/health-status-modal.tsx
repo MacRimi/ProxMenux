@@ -114,11 +114,11 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     const statusUpper = status?.toUpperCase()
     switch (statusUpper) {
       case "OK":
-        return <Badge className="bg-green-500 text-white">Healthy</Badge>
+        return <Badge className="bg-green-500 text-white hover:bg-green-500">OK</Badge>
       case "WARNING":
-        return <Badge className="bg-yellow-500 text-white">Warning</Badge>
+        return <Badge className="bg-yellow-500 text-white hover:bg-yellow-500">Warning</Badge>
       case "CRITICAL":
-        return <Badge className="bg-red-500 text-white">Critical</Badge>
+        return <Badge className="bg-red-500 text-white hover:bg-red-500">Critical</Badge>
       default:
         return <Badge>Unknown</Badge>
     }
@@ -159,7 +159,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
             </div>
             {healthData && getStatusBadge(healthData.overall)}
           </DialogTitle>
-          <DialogDescription>Comprehensive health checks for all system components</DialogDescription>
+          <DialogDescription>Detailed health checks for all system components</DialogDescription>
         </DialogHeader>
 
         {loading && (
@@ -197,9 +197,9 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
               </div>
             </div>
 
-            {healthData.summary && (
-              <div className="text-sm text-muted-foreground p-3 rounded-lg bg-muted/20 border">
-                {healthData.summary}
+            {healthData.summary && healthData.summary !== "All systems operational" && (
+              <div className="text-sm p-3 rounded-lg bg-muted/20 border">
+                <span className="font-medium text-foreground">{healthData.summary}</span>
               </div>
             )}
 
@@ -234,11 +234,11 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                           variant="outline"
                           className={`shrink-0 text-xs ${
                             status === "OK"
-                              ? "border-green-500 text-green-500"
+                              ? "border-green-500 text-green-500 bg-green-500/5"
                               : status === "WARNING"
-                                ? "border-yellow-500 text-yellow-500"
+                                ? "border-yellow-500 text-yellow-500 bg-yellow-500/5"
                                 : status === "CRITICAL"
-                                  ? "border-red-500 text-red-500"
+                                  ? "border-red-500 text-red-500 bg-red-500/5"
                                   : ""
                           }`}
                         >

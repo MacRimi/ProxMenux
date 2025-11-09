@@ -432,7 +432,10 @@ class HealthMonitor:
             return None
     
     def _check_memory_comprehensive(self) -> Dict[str, Any]:
-        """Check memory including RAM and swap with sustained thresholds"""
+        """
+        Check memory including RAM and swap with realistic thresholds.
+        Only alerts on truly problematic memory situations.
+        """
         try:
             memory = psutil.virtual_memory()
             swap = psutil.swap_memory()
@@ -457,7 +460,7 @@ class HealthMonitor:
             
             mem_critical = sum(
                 1 for entry in self.state_history[state_key]
-                if entry['mem_percent'] >= self.MEMORY_CRITICAL and
+                if entry['mem_percent'] >= 90 and
                 current_time - entry['time'] <= self.MEMORY_DURATION
             )
             
@@ -469,28 +472,20 @@ class HealthMonitor:
             
             swap_critical = sum(
                 1 for entry in self.state_history[state_key]
-                if entry['swap_vs_ram'] > self.SWAP_CRITICAL_PERCENT and
+                if entry['swap_vs_ram'] > 20 and
                 current_time - entry['time'] <= self.SWAP_CRITICAL_DURATION
             )
             
-            swap_warning = sum(
-                1 for entry in self.state_history[state_key]
-                if entry['swap_percent'] > 0 and
-                current_time - entry['time'] <= self.SWAP_WARNING_DURATION
-            )
             
             if mem_critical >= 2:
                 status = 'CRITICAL'
-                reason = f'RAM >{self.MEMORY_CRITICAL}% for {self.MEMORY_DURATION}s'
+                reason = f'RAM >90% for {self.MEMORY_DURATION}s'
             elif swap_critical >= 2:
                 status = 'CRITICAL'
-                reason = f'Swap >{self.SWAP_CRITICAL_PERCENT}% of RAM for {self.SWAP_CRITICAL_DURATION}s'
+                reason = f'Swap >20% of RAM ({swap_vs_ram:.1f}%)'
             elif mem_warning >= 2:
                 status = 'WARNING'
                 reason = f'RAM >{self.MEMORY_WARNING}% for {self.MEMORY_DURATION}s'
-            elif swap_warning >= 2:
-                status = 'WARNING'
-                reason = f'Swap active for >{self.SWAP_WARNING_DURATION}s'
             else:
                 status = 'OK'
                 reason = None
@@ -513,63 +508,73 @@ class HealthMonitor:
     
     def _check_storage_optimized(self) -> Dict[str, Any]:
         """
-        Optimized storage check - always returns status.
-        Checks critical mounts, LVM, and Proxmox storages.
+        Optimized storage check - monitors Proxmox storages from pvesm status.
+        Checks for inactive storages and disk health from SMART/events.
         """
         issues = []
         storage_details = {}
         
-        # Check critical filesystems
-        critical_mounts = ['/', '/var/lib/vz']
+        try:
+            result = subprocess.run(
+                ['pvesm', 'status'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode == 0:
+                lines = result.stdout.strip().split('\n')[1:]  # Skip header
+                for line in lines:
+                    parts = line.split()
+                    if len(parts) >= 4:
+                        storage_name = parts[0]
+                        storage_type = parts[1]
+                        enabled = parts[2]
+                        active = parts[3]
+                        
+                        if enabled == '1' and active == '0':
+                            issues.append(f'{storage_name}: Inactive')
+                            storage_details[storage_name] = {
+                                'status': 'CRITICAL',
+                                'reason': 'Storage inactive',
+                                'type': storage_type
+                            }
+        except Exception as e:
+            # If pvesm not available, skip silently
+            pass
+        
+        # Check disk health from Proxmox task log or system logs
+        disk_health_issues = self._check_disk_health_from_events()
+        if disk_health_issues:
+            for disk, issue in disk_health_issues.items():
+                issues.append(f'{disk}: {issue["reason"]}')
+                storage_details[disk] = issue
+        
+        critical_mounts = ['/']
         
         for mount_point in critical_mounts:
-            is_mounted = False
             try:
                 result = subprocess.run(
                     ['mountpoint', '-q', mount_point],
                     capture_output=True,
                     timeout=2
                 )
-                is_mounted = (result.returncode == 0)
-            except:
-                pass
-            
-            if not is_mounted:
-                # Only report as error if it's supposed to exist
-                if mount_point == '/':
+                
+                if result.returncode != 0:
                     issues.append(f'{mount_point}: Not mounted')
                     storage_details[mount_point] = {
                         'status': 'CRITICAL',
                         'reason': 'Not mounted'
                     }
-                # For /var/lib/vz, it might not be a separate mount, check if dir exists
-                elif mount_point == '/var/lib/vz':
-                    if os.path.exists(mount_point):
-                        # It exists as directory, check usage
-                        fs_status = self._check_filesystem(mount_point)
-                        if fs_status['status'] != 'OK':
-                            issues.append(f"{mount_point}: {fs_status['reason']}")
-                            storage_details[mount_point] = fs_status
-                    # If doesn't exist, skip silently (might use different storage)
-                continue
-            
-            fs_status = self._check_filesystem(mount_point)
-            if fs_status['status'] != 'OK':
-                issues.append(f"{mount_point}: {fs_status['reason']}")
-                storage_details[mount_point] = fs_status
-        
-        # Check LVM
-        lvm_status = self._check_lvm()
-        if lvm_status and lvm_status.get('status') != 'OK':
-            issues.append(lvm_status.get('reason', 'LVM issue'))
-            storage_details['lvm'] = lvm_status
-        
-        # Check Proxmox storages (PBS, NFS, etc)
-        pve_storages = self._check_proxmox_storages()
-        for storage_name, storage_data in pve_storages.items():
-            if storage_data.get('status') != 'OK':
-                issues.append(f"{storage_name}: {storage_data.get('reason', 'Storage issue')}")
-                storage_details[storage_name] = storage_data
+                    continue
+                
+                # Check filesystem usage
+                fs_status = self._check_filesystem(mount_point)
+                if fs_status['status'] != 'OK':
+                    issues.append(f"{mount_point}: {fs_status['reason']}")
+                    storage_details[mount_point] = fs_status
+            except Exception:
+                pass
         
         if not issues:
             return {'status': 'OK'}
@@ -873,7 +878,6 @@ class HealthMonitor:
             issues = []
             vm_details = {}
             
-            # Check logs for VM/CT errors
             result = subprocess.run(
                 ['journalctl', '--since', '10 minutes ago', '--no-pager', '-u', 'pve*', '-p', 'warning'],
                 capture_output=True,
@@ -885,22 +889,20 @@ class HealthMonitor:
                 for line in result.stdout.split('\n'):
                     line_lower = line.lower()
                     
-                    # Pattern 1: "VM 106 qmp command failed"
-                    vm_qmp_match = re.search(r'vm\s+(\d+)\s+qmp\s+command', line_lower)
+                    vm_qmp_match = re.search(r'vm\s+(\d+)\s+qmp\s+command.*(?:failed|unable|timeout)', line_lower)
                     if vm_qmp_match:
                         vmid = vm_qmp_match.group(1)
                         key = f'vm_{vmid}'
                         if key not in vm_details:
-                            issues.append(f'VM {vmid}: QMP command error')
+                            issues.append(f'VM {vmid}: Communication issue')
                             vm_details[key] = {
                                 'status': 'WARNING',
-                                'reason': 'QMP command failed',
+                                'reason': 'QMP command timeout',
                                 'id': vmid,
                                 'type': 'VM'
                             }
                         continue
                     
-                    # Pattern 2: "CT 103 error" or "Container 103"
                     ct_match = re.search(r'(?:ct|container)\s+(\d+)', line_lower)
                     if ct_match and ('error' in line_lower or 'fail' in line_lower):
                         ctid = ct_match.group(1)
@@ -915,9 +917,7 @@ class HealthMonitor:
                             }
                         continue
                     
-                    # Pattern 3: Generic VM/CT start failures
-                    if 'failed to start' in line_lower or 'error starting' in line_lower or \
-                       'start error' in line_lower or 'cannot start' in line_lower:
+                    if any(keyword in line_lower for keyword in ['failed to start', 'cannot start', 'activation failed', 'start error']):
                         # Extract VM/CT ID
                         id_match = re.search(r'\b(\d{3,4})\b', line)
                         if id_match:
@@ -1185,6 +1185,50 @@ class HealthMonitor:
             
         except Exception:
             return None
+    
+    def _check_disk_health_from_events(self) -> Dict[str, Any]:
+        """
+        Check for disk health warnings from Proxmox task log and system logs.
+        Returns dict of disk issues found.
+        """
+        disk_issues = {}
+        
+        try:
+            result = subprocess.run(
+                ['journalctl', '--since', '1 hour ago', '--no-pager', '-p', 'warning'],
+                capture_output=True,
+                text=True,
+                timeout=3
+            )
+            
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    line_lower = line.lower()
+                    
+                    # Check for SMART warnings
+                    if 'smart' in line_lower and ('warning' in line_lower or 'error' in line_lower or 'fail' in line_lower):
+                        # Extract disk name
+                        disk_match = re.search(r'/dev/(sd[a-z]|nvme\d+n\d+)', line)
+                        if disk_match:
+                            disk_name = disk_match.group(1)
+                            disk_issues[f'/dev/{disk_name}'] = {
+                                'status': 'WARNING',
+                                'reason': 'SMART warning detected'
+                            }
+                    
+                    # Check for disk errors
+                    if any(keyword in line_lower for keyword in ['disk error', 'ata error', 'medium error']):
+                        disk_match = re.search(r'/dev/(sd[a-z]|nvme\d+n\d+)', line)
+                        if disk_match:
+                            disk_name = disk_match.group(1)
+                            disk_issues[f'/dev/{disk_name}'] = {
+                                'status': 'CRITICAL',
+                                'reason': 'Disk error detected'
+                            }
+        except Exception:
+            pass
+        
+        return disk_issues
 
 
 # Global instance

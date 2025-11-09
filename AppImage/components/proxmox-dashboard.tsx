@@ -98,7 +98,7 @@ export function ProxmoxDashboard() {
       const uptimeValue =
         data.uptime && typeof data.uptime === "string" && data.uptime.trim() !== "" ? data.uptime : "N/A"
 
-      const healthStatus = data.health?.status?.toLowerCase() || "healthy"
+      const healthStatus = data.health?.status || "healthy"
 
       setSystemStatus({
         status: healthStatus as "healthy" | "warning" | "critical",
