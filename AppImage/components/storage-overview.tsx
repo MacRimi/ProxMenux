@@ -397,12 +397,33 @@ export function StorageOverview() {
   const diskHealthBreakdown = getDiskHealthBreakdown()
   const diskTypesBreakdown = getDiskTypesBreakdown()
 
-  // Using storageData.used from the backend in place of summing proxmox storages (avoids duplication in clusters)
-  const totalNodeUsed = storageData ? storageData.used : 0 // Already comes in GB from the backend
-  const totalNodeCapacity = storageData ? storageData.total * 1024 : 0 // Convert TB to GB
+  const totalProxmoxUsed =
+    proxmoxStorage?.storage
+      .filter(
+        (storage) =>
+          storage &&
+          storage.name &&
+          storage.status === "active" &&
+          storage.total > 0 &&
+          storage.used >= 0 &&
+          storage.available >= 0,
+      )
+      .reduce((sum, storage) => sum + storage.used, 0) || 0
 
-  const usagePercent =
-    storageData && storageData.total > 0 ? ((totalNodeUsed / totalNodeCapacity) * 100).toFixed(2) : "0.00"
+  const totalProxmoxCapacity =
+    proxmoxStorage?.storage
+      .filter(
+        (storage) =>
+          storage &&
+          storage.name &&
+          storage.status === "active" &&
+          storage.total > 0 &&
+          storage.used >= 0 &&
+          storage.available >= 0,
+      )
+      .reduce((sum, storage) => sum + storage.total, 0) || 0
+
+  const usagePercent = totalProxmoxCapacity > 0 ? ((totalProxmoxUsed / totalProxmoxCapacity) * 100).toFixed(2) : "0.00"
 
   if (loading) {
     return (
@@ -441,8 +462,7 @@ export function StorageOverview() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {/* Using totalNodeUsed that comes from the backend filtered by node */}
-            <div className="text-xl lg:text-2xl font-bold">{formatStorage(totalNodeUsed)}</div>
+            <div className="text-xl lg:text-2xl font-bold">{formatStorage(totalProxmoxUsed)}</div>
             <p className="text-xs text-muted-foreground mt-1">{usagePercent}% used</p>
           </CardContent>
         </Card>
