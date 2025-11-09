@@ -67,12 +67,31 @@ class HealthMonitor:
     UPDATES_WARNING = 10
     UPDATES_CRITICAL = 30
     
-    # Critical keywords for immediate escalation
+    # Known benign errors from Proxmox that should not trigger alerts
+    BENIGN_ERROR_PATTERNS = [
+        r'got inotify poll request in wrong process',
+        r'auth key pair too old, rotating',
+        r'proxy detected vanished client connection',
+        r'worker \d+ finished',
+        r'connection timed out',
+        r'disconnect peer',
+    ]
+    
     CRITICAL_LOG_KEYWORDS = [
-        'I/O error', 'EXT4-fs error', 'XFS', 'LVM activation failed',
-        'md/raid: device failed', 'Out of memory', 'kernel panic',
-        'filesystem read-only', 'cannot mount', 'failed to start',
-        'task hung', 'oom_kill'
+        'out of memory', 'oom_kill', 'kernel panic',
+        'filesystem read-only', 'cannot mount',
+        'raid.*failed', 'md.*device failed',
+        'ext4-fs error', 'xfs.*corruption',
+        'lvm activation failed',
+        'hardware error', 'mce:',
+        'segfault', 'general protection fault'
+    ]
+    
+    WARNING_LOG_KEYWORDS = [
+        'i/o error', 'ata error', 'scsi error',
+        'task hung', 'blocked for more than',
+        'failed to start', 'service.*failed',
+        'disk.*offline', 'disk.*removed'
     ]
     
     # PVE Critical Services
@@ -215,6 +234,7 @@ class HealthMonitor:
         
         critical_issues = []
         warning_issues = []
+        info_issues = []  # Added info_issues to track INFO separately
         
         # Priority 1: Services PVE
         services_status = self._check_pve_services()
@@ -290,22 +310,26 @@ class HealthMonitor:
             details['updates'] = updates_status
             if updates_status.get('status') == 'WARNING':
                 warning_issues.append(updates_status.get('reason', 'Updates pending'))
-            elif updates_status.get('status') == 'INFO': # Treat INFO as a warning for overall summary
-                warning_issues.append(updates_status.get('reason', 'Informational update status'))
+            elif updates_status.get('status') == 'INFO':
+                info_issues.append(updates_status.get('reason', 'Informational update'))
         
         # Priority 10: Security
         security_status = self._check_security()
         details['security'] = security_status
         if security_status.get('status') == 'WARNING':
             warning_issues.append(security_status.get('reason', 'Security issue'))
+        elif security_status.get('status') == 'INFO':
+            info_issues.append(security_status.get('reason', 'Security info'))
         
-        # Determine overall status
         if critical_issues:
             overall = 'CRITICAL'
             summary = '; '.join(critical_issues[:3])
         elif warning_issues:
             overall = 'WARNING'
             summary = '; '.join(warning_issues[:3])
+        elif info_issues:
+            overall = 'OK'  # INFO is still healthy overall
+            summary = '; '.join(info_issues[:3])
         else:
             overall = 'OK'
             summary = 'All systems operational'
@@ -607,11 +631,26 @@ class HealthMonitor:
                     }
                     continue
                 
-                # Check filesystem usage
-                fs_status = self._check_filesystem(mount_point)
-                if fs_status['status'] != 'OK':
-                    issues.append(f"{mount_point}: {fs_status['reason']}")
-                    storage_details[mount_point] = fs_status
+                # Check if read-only
+                with open('/proc/mounts', 'r') as f:
+                    for line in f:
+                        parts = line.split()
+                        if len(parts) >= 4 and parts[1] == mount_point:
+                            options = parts[3].split(',')
+                            if 'ro' in options:
+                                issues.append(f'{mount_point}: Mounted read-only')
+                                storage_details[mount_point] = {
+                                    'status': 'CRITICAL',
+                                    'reason': 'Mounted read-only'
+                                }
+                                break # Found it, no need to check further for this mountpoint
+                
+                # Check filesystem usage only if not already flagged as critical
+                if mount_point not in storage_details or storage_details[mount_point].get('status') == 'OK':
+                    fs_status = self._check_filesystem(mount_point)
+                    if fs_status['status'] != 'OK':
+                        issues.append(f"{mount_point}: {fs_status['reason']}")
+                        storage_details[mount_point] = fs_status
             except Exception:
                 pass
         
@@ -630,30 +669,6 @@ class HealthMonitor:
     def _check_filesystem(self, mount_point: str) -> Dict[str, Any]:
         """Check individual filesystem for space and mount status"""
         try:
-            result = subprocess.run(
-                ['mountpoint', '-q', mount_point],
-                capture_output=True,
-                timeout=2
-            )
-            
-            if result.returncode != 0:
-                return {
-                    'status': 'CRITICAL',
-                    'reason': 'Not mounted'
-                }
-            
-            # Check if read-only
-            with open('/proc/mounts', 'r') as f:
-                for line in f:
-                    parts = line.split()
-                    if len(parts) >= 4 and parts[1] == mount_point:
-                        options = parts[3].split(',')
-                        if 'ro' in options:
-                            return {
-                                'status': 'CRITICAL',
-                                'reason': 'Mounted read-only'
-                            }
-            
             usage = psutil.disk_usage(mount_point)
             percent = usage.percent
             
@@ -1165,19 +1180,57 @@ class HealthMonitor:
                 'reason': f'Service check failed: {str(e)}'
             }
     
-    # Modified to use persistence
+    def _is_benign_error(self, line: str) -> bool:
+        """Check if log line matches benign error patterns"""
+        line_lower = line.lower()
+        for pattern in self.BENIGN_ERROR_PATTERNS:
+            if re.search(pattern, line_lower):
+                return True
+        return False
+    
+    def _classify_log_severity(self, line: str) -> Optional[str]:
+        """
+        Classify log line severity intelligently.
+        Returns: 'CRITICAL', 'WARNING', or None (benign)
+        """
+        line_lower = line.lower()
+        
+        # Check if benign first
+        if self._is_benign_error(line):
+            return None
+        
+        # Check critical keywords
+        for keyword in self.CRITICAL_LOG_KEYWORDS:
+            if re.search(keyword, line_lower):
+                return 'CRITICAL'
+        
+        # Check warning keywords
+        for keyword in self.WARNING_LOG_KEYWORDS:
+            if re.search(keyword, line_lower):
+                return 'WARNING'
+        
+        # Generic error/warning classification
+        if 'critical' in line_lower or 'fatal' in line_lower:
+            return 'CRITICAL'
+        elif 'error' in line_lower:
+            return 'WARNING'
+        elif 'warning' in line_lower or 'warn' in line_lower:
+            return None  # Generic warnings are benign
+        
+        return None
+
     def _check_logs_with_persistence(self) -> Dict[str, Any]:
         """
-        Check logs with persistent error tracking.
-        Critical log errors persist for 24h unless acknowledged.
-        Groups similar errors to avoid false high counts.
+        Check logs with intelligent classification and persistent tracking.
+        - Whitelists benign Proxmox warnings
+        - Only counts truly unique error types
+        - Persists critical errors for 24h
         """
         cache_key = 'logs_analysis'
         current_time = time.time()
         
         if cache_key in self.last_check_times:
             if current_time - self.last_check_times[cache_key] < self.LOG_CHECK_INTERVAL:
-                # Return persistent errors if any
                 persistent_errors = health_persistence.get_active_errors('logs')
                 if persistent_errors:
                     return {
@@ -1188,7 +1241,7 @@ class HealthMonitor:
         
         try:
             result = subprocess.run(
-                ['journalctl', '--since', '5 minutes ago', '--no-pager', '-p', 'warning'],
+                ['journalctl', '--since', '10 minutes ago', '--no-pager', '-p', 'warning'],
                 capture_output=True,
                 text=True,
                 timeout=3
@@ -1197,68 +1250,54 @@ class HealthMonitor:
             if result.returncode == 0:
                 lines = result.stdout.strip().split('\n')
                 
-                error_patterns = {}  # pattern -> count
-                critical_keywords_found = set()
+                critical_errors = {}  # pattern -> first line
+                warning_errors = {}   # pattern -> first line
                 
                 for line in lines:
                     if not line.strip():
                         continue
                     
-                    line_lower = line.lower()
+                    # Classify severity
+                    severity = self._classify_log_severity(line)
                     
-                    # Check for critical keywords first
-                    critical_found = False
-                    for keyword in self.CRITICAL_LOG_KEYWORDS:
-                        if keyword.lower() in line_lower:
-                            critical_keywords_found.add(keyword)
-                            critical_found = True
+                    if severity is None:
+                        continue  # Benign, skip
+                    
+                    # Normalize to pattern for grouping
+                    pattern = re.sub(r'\d{4}-\d{2}-\d{2}', '', line)  # Remove dates
+                    pattern = re.sub(r'\d{2}:\d{2}:\d{2}', '', pattern)  # Remove times
+                    pattern = re.sub(r'pid[:\s]+\d+', 'pid:XXX', pattern.lower())  # Normalize PIDs
+                    pattern = re.sub(r'\b\d{3,6}\b', 'ID', pattern)  # Normalize IDs
+                    pattern = re.sub(r'/dev/\S+', '/dev/XXX', pattern)  # Normalize devices
+                    pattern = re.sub(r'0x[0-9a-f]+', '0xXXX', pattern)  # Normalize hex addresses
+                    pattern = pattern[:150]  # Keep first 150 chars as pattern
+                    
+                    if severity == 'CRITICAL':
+                        if pattern not in critical_errors:
+                            critical_errors[pattern] = line
                             
-                            # Record persistent error for critical keywords
-                            error_key = f'log_critical_{keyword.replace(" ", "_").replace("/", "_")}'
+                            # Record persistent error
+                            error_key = f'log_critical_{abs(hash(pattern)) % 10000}'
                             health_persistence.record_error(
                                 error_key=error_key,
                                 category='logs',
                                 severity='CRITICAL',
-                                reason=f'Critical log: {keyword}',
-                                details={'keyword': keyword}
+                                reason=line[:100],
+                                details={'pattern': pattern}
                             )
-                            break
-                    
-                    if critical_found:
-                        continue
-                    
-                    # Remove timestamps, PIDs, and specific IDs to group similar errors
-                    pattern = re.sub(r'\d{4}-\d{2}-\d{2}', '', line_lower)  # Remove dates
-                    pattern = re.sub(r'\d{2}:\d{2}:\d{2}', '', pattern)  # Remove times
-                    pattern = re.sub(r'pid[:\s]+\d+', 'pid:XXX', pattern)  # Normalize PIDs
-                    pattern = re.sub(r'\b\d{3,6}\b', 'ID', pattern)  # Normalize IDs
-                    pattern = re.sub(r'/dev/\S+', '/dev/XXX', pattern)  # Normalize devices
-                    pattern = pattern[:100]  # Keep first 100 chars as pattern
-                    
-                    # Classify error level
-                    if 'error' in line_lower or 'critical' in line_lower or 'fatal' in line_lower:
-                        error_patterns[f'error:{pattern}'] = error_patterns.get(f'error:{pattern}', 0) + 1
-                    elif 'warning' in line_lower or 'warn' in line_lower:
-                        error_patterns[f'warning:{pattern}'] = error_patterns.get(f'warning:{pattern}', 0) + 1
+                    elif severity == 'WARNING':
+                        if pattern not in warning_errors:
+                            warning_errors[pattern] = line
                 
-                unique_errors = sum(1 for k in error_patterns.keys() if k.startswith('error:'))
-                unique_warnings = sum(1 for k in error_patterns.keys() if k.startswith('warning:'))
+                unique_critical = len(critical_errors)
+                unique_warnings = len(warning_errors)
                 
-                if critical_keywords_found:
+                if unique_critical > 0:
                     status = 'CRITICAL'
-                    reason = f'Critical errors: {", ".join(list(critical_keywords_found)[:3])}'
-                elif unique_errors >= self.LOG_ERRORS_CRITICAL:
-                    status = 'CRITICAL'
-                    reason = f'{unique_errors} unique errors in 5 minutes'
-                elif unique_warnings >= self.LOG_WARNINGS_CRITICAL:
+                    reason = f'{unique_critical} critical error type(s) detected'
+                elif unique_warnings >= 10:
                     status = 'WARNING'
-                    reason = f'{unique_warnings} unique warnings in 5 minutes'
-                elif unique_errors >= self.LOG_ERRORS_WARNING:
-                    status = 'WARNING'
-                    reason = f'{unique_errors} unique errors in 5 minutes'
-                elif unique_warnings >= self.LOG_WARNINGS_WARNING:
-                    status = 'WARNING'
-                    reason = f'{unique_warnings} unique warnings in 5 minutes'
+                    reason = f'{unique_warnings} warning type(s) detected'
                 else:
                     status = 'OK'
                     reason = None
