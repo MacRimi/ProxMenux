@@ -55,7 +55,9 @@ interface FlaskSystemInfo {
   hostname: string
   node_id: string
   uptime: string
-  health_status: "healthy" | "warning" | "critical"
+  health: {
+    status: "healthy" | "warning" | "critical"
+  }
 }
 
 export function ProxmoxDashboard() {
@@ -96,8 +98,10 @@ export function ProxmoxDashboard() {
       const uptimeValue =
         data.uptime && typeof data.uptime === "string" && data.uptime.trim() !== "" ? data.uptime : "N/A"
 
+      const healthStatus = data.health?.status?.toLowerCase() || "healthy"
+
       setSystemStatus({
-        status: data.health_status || "healthy",
+        status: healthStatus as "healthy" | "warning" | "critical",
         uptime: uptimeValue,
         lastUpdate: new Date().toLocaleTimeString("en-US", { hour12: false }),
         serverName: data.hostname || "Unknown",

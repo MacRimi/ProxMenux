@@ -29,11 +29,21 @@ def get_health_details():
 def get_system_info():
     """
     Get lightweight system info for header display.
-    Returns: hostname, uptime, and cached health status.
-    This is optimized for minimal server impact.
+    Returns: hostname, uptime, and health status with proper structure.
     """
     try:
         info = health_monitor.get_system_info()
+        if 'health' in info:
+            # Convert 'OK' to 'healthy', 'WARNING' to 'warning', 'CRITICAL' to 'critical'
+            status_map = {
+                'OK': 'healthy',
+                'WARNING': 'warning',
+                'CRITICAL': 'critical',
+                'UNKNOWN': 'warning'
+            }
+            current_status = info['health'].get('status', 'OK').upper()
+            info['health']['status'] = status_map.get(current_status, 'healthy')
+        
         return jsonify(info)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
