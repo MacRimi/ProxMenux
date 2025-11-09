@@ -90,14 +90,25 @@ class HealthPersistence:
         now = datetime.now().isoformat()
         details_json = json.dumps(details) if details else None
         
-        # Check if error exists
-        cursor.execute('SELECT id, first_seen, notification_sent FROM errors WHERE error_key = ?', 
-                      (error_key,))
+        cursor.execute('''
+            SELECT id, first_seen, notification_sent, acknowledged, resolved_at 
+            FROM errors WHERE error_key = ?
+        ''', (error_key,))
         existing = cursor.fetchone()
         
         event_info = {'type': 'updated', 'needs_notification': False}
         
         if existing:
+            error_id, first_seen, notif_sent, acknowledged, resolved_at = existing
+            
+            # If acknowledged within last 24 hours, do not re-add unless resolved and re-occurred
+            if acknowledged and not resolved_at:
+                first_seen_dt = datetime.fromisoformat(first_seen)
+                if (datetime.now() - first_seen_dt).total_seconds() < 86400:  # 24 hours
+                    # Skip re-adding recently acknowledged errors
+                    conn.close()
+                    return {'type': 'skipped', 'needs_notification': False}
+            
             # Update existing error
             cursor.execute('''
                 UPDATE errors 
@@ -151,15 +162,20 @@ class HealthPersistence:
         conn.close()
     
     def acknowledge_error(self, error_key: str):
-        """Manually acknowledge an error (won't notify again)"""
+        """
+        Manually acknowledge an error (won't notify again or re-appear for 24h).
+        Also marks as resolved so it disappears from active errors.
+        """
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         
+        now = datetime.now().isoformat()
+        
         cursor.execute('''
             UPDATE errors 
-            SET acknowledged = 1
+            SET acknowledged = 1, resolved_at = ?
             WHERE error_key = ?
-        ''', (error_key,))
+        ''', (now, error_key))
         
         self._record_event(cursor, 'acknowledged', error_key, {})
         
