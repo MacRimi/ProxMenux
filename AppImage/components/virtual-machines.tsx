@@ -276,7 +276,6 @@ export function VirtualMachines() {
   const [controlLoading, setControlLoading] = useState(false)
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [vmConfigs, setVmConfigs] = useState<Record<number, string>>({})
-  const [loadingLXCIPs, setLoadingLXCIPs] = useState(false)
   const [currentView, setCurrentView] = useState<"main" | "metrics">("main")
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
@@ -293,7 +292,6 @@ export function VirtualMachines() {
 
       if (lxcs.length === 0) return
 
-      setLoadingLXCIPs(true)
       const configs: Record<number, string> = {}
 
       const batchSize = 5
@@ -326,10 +324,8 @@ export function VirtualMachines() {
           }),
         )
 
-        setVmConfigs({ ...configs })
+        setVmConfigs((prev) => ({ ...prev, ...configs }))
       }
-
-      setLoadingLXCIPs(false)
     }
 
     fetchLXCIPs()
@@ -500,12 +496,10 @@ export function VirtualMachines() {
     return "text-green-500"
   }
 
-  if (isLoading || loadingLXCIPs) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="text-center py-8 text-muted-foreground">
-          {isLoading ? "Loading virtual machines..." : "Loading container IPs..."}
-        </div>
+        <div className="text-center py-8 text-muted-foreground">Loading virtual machines...</div>
       </div>
     )
   }
