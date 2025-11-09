@@ -1314,7 +1314,7 @@ class HealthMonitor:
                 
                 cascading_errors = {
                     pattern: count for pattern, count in recent_patterns.items()
-                    if count >= 5 and self._classify_log_severity(pattern) in ['WARNING', 'CRITICAL']
+                    if count >= 10 and self._classify_log_severity(pattern) in ['WARNING', 'CRITICAL']
                 }
                 
                 spike_errors = {}
@@ -1333,7 +1333,7 @@ class HealthMonitor:
                     reason = f'{unique_critical} critical error(s): cascade detected'
                 elif cascade_count > 0:
                     status = 'WARNING'
-                    reason = f'Error cascade detected: {cascade_count} pattern(s) repeating ≥5 times in 3min'
+                    reason = f'Error cascade detected: {cascade_count} pattern(s) repeating ≥10 times in 3min'
                 elif spike_count > 0:
                     status = 'WARNING'
                     reason = f'Error spike detected: {spike_count} pattern(s) increased 3x'
