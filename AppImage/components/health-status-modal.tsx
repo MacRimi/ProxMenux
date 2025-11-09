@@ -180,9 +180,18 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     e.stopPropagation() // Prevent navigation
 
     try {
-      await fetch(getApiUrl(`/api/health/acknowledge/${errorKey}`), {
+      const response = await fetch(getApiUrl("/api/health/acknowledge"), {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ error_key: errorKey }),
       })
+
+      if (!response.ok) {
+        throw new Error("Failed to acknowledge error")
+      }
+
       // Refresh health data
       await fetchHealthDetails()
     } catch (err) {
@@ -194,11 +203,13 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Activity className="h-6 w-6" />
-            System Health Status
-          </DialogTitle>
-          <div className="mt-4">{healthData && getStatusBadge(healthData.overall)}</div>
+          <div className="flex items-center justify-between gap-3">
+            <DialogTitle className="flex items-center gap-2 flex-1">
+              <Activity className="h-6 w-6" />
+              System Health Status
+              {healthData && <div className="ml-2">{getStatusBadge(healthData.overall)}</div>}
+            </DialogTitle>
+          </div>
           <DialogDescription>Detailed health checks for all system components</DialogDescription>
         </DialogHeader>
 
@@ -294,9 +305,9 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                               return (
                                 <div
                                   key={detailKey}
-                                  className="flex items-start justify-between gap-2 text-xs pl-3 border-l-2 border-muted"
+                                  className="flex items-start justify-between gap-2 text-xs pl-3 border-l-2 border-muted py-1"
                                 >
-                                  <div>
+                                  <div className="flex-1">
                                     <span className="font-medium">{detailKey}:</span>
                                     {detailValue.reason && (
                                       <span className="ml-1 text-muted-foreground">{detailValue.reason}</span>
@@ -305,11 +316,12 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                                   {status !== "OK" && (
                                     <Button
                                       size="sm"
-                                      variant="ghost"
-                                      className="h-5 px-1 hover:bg-red-500/10"
+                                      variant="outline"
+                                      className="h-6 px-2 shrink-0 hover:bg-red-500/10 hover:border-red-500/50 bg-transparent"
                                       onClick={(e) => handleAcknowledge(detailKey, e)}
                                     >
-                                      <X className="h-3 w-3" />
+                                      <X className="h-3 w-3 mr-1" />
+                                      <span className="text-xs">Dismiss</span>
                                     </Button>
                                   )}
                                 </div>
