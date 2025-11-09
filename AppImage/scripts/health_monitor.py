@@ -1170,6 +1170,7 @@ class HealthMonitor:
         """
         Check logs with persistent error tracking.
         Critical log errors persist for 24h unless acknowledged.
+        Groups similar errors to avoid false high counts.
         """
         cache_key = 'logs_analysis'
         current_time = time.time()
@@ -1196,20 +1197,24 @@ class HealthMonitor:
             if result.returncode == 0:
                 lines = result.stdout.strip().split('\n')
                 
-                errors_5m = 0
-                warnings_5m = 0
-                critical_keywords_found = []
+                error_patterns = {}  # pattern -> count
+                critical_keywords_found = set()
                 
                 for line in lines:
+                    if not line.strip():
+                        continue
+                    
                     line_lower = line.lower()
                     
+                    # Check for critical keywords first
+                    critical_found = False
                     for keyword in self.CRITICAL_LOG_KEYWORDS:
                         if keyword.lower() in line_lower:
-                            critical_keywords_found.append(keyword)
-                            errors_5m += 1
+                            critical_keywords_found.add(keyword)
+                            critical_found = True
                             
                             # Record persistent error for critical keywords
-                            error_key = f'log_critical_{keyword.replace(" ", "_")}'
+                            error_key = f'log_critical_{keyword.replace(" ", "_").replace("/", "_")}'
                             health_persistence.record_error(
                                 error_key=error_key,
                                 category='logs',
@@ -1218,27 +1223,42 @@ class HealthMonitor:
                                 details={'keyword': keyword}
                             )
                             break
-                    else:
-                        if 'error' in line_lower or 'critical' in line_lower or 'fatal' in line_lower:
-                            errors_5m += 1
-                        elif 'warning' in line_lower or 'warn' in line_lower:
-                            warnings_5m += 1
+                    
+                    if critical_found:
+                        continue
+                    
+                    # Remove timestamps, PIDs, and specific IDs to group similar errors
+                    pattern = re.sub(r'\d{4}-\d{2}-\d{2}', '', line_lower)  # Remove dates
+                    pattern = re.sub(r'\d{2}:\d{2}:\d{2}', '', pattern)  # Remove times
+                    pattern = re.sub(r'pid[:\s]+\d+', 'pid:XXX', pattern)  # Normalize PIDs
+                    pattern = re.sub(r'\b\d{3,6}\b', 'ID', pattern)  # Normalize IDs
+                    pattern = re.sub(r'/dev/\S+', '/dev/XXX', pattern)  # Normalize devices
+                    pattern = pattern[:100]  # Keep first 100 chars as pattern
+                    
+                    # Classify error level
+                    if 'error' in line_lower or 'critical' in line_lower or 'fatal' in line_lower:
+                        error_patterns[f'error:{pattern}'] = error_patterns.get(f'error:{pattern}', 0) + 1
+                    elif 'warning' in line_lower or 'warn' in line_lower:
+                        error_patterns[f'warning:{pattern}'] = error_patterns.get(f'warning:{pattern}', 0) + 1
+                
+                unique_errors = sum(1 for k in error_patterns.keys() if k.startswith('error:'))
+                unique_warnings = sum(1 for k in error_patterns.keys() if k.startswith('warning:'))
                 
                 if critical_keywords_found:
                     status = 'CRITICAL'
-                    reason = f'Critical errors: {", ".join(set(critical_keywords_found[:3]))}'
-                elif errors_5m >= self.LOG_ERRORS_CRITICAL:
+                    reason = f'Critical errors: {", ".join(list(critical_keywords_found)[:3])}'
+                elif unique_errors >= self.LOG_ERRORS_CRITICAL:
                     status = 'CRITICAL'
-                    reason = f'{errors_5m} errors in 5 minutes'
-                elif warnings_5m >= self.LOG_WARNINGS_CRITICAL:
+                    reason = f'{unique_errors} unique errors in 5 minutes'
+                elif unique_warnings >= self.LOG_WARNINGS_CRITICAL:
                     status = 'WARNING'
-                    reason = f'{warnings_5m} warnings in 5 minutes'
-                elif errors_5m >= self.LOG_ERRORS_WARNING:
+                    reason = f'{unique_warnings} unique warnings in 5 minutes'
+                elif unique_errors >= self.LOG_ERRORS_WARNING:
                     status = 'WARNING'
-                    reason = f'{errors_5m} errors in 5 minutes'
-                elif warnings_5m >= self.LOG_WARNINGS_WARNING:
+                    reason = f'{unique_errors} unique errors in 5 minutes'
+                elif unique_warnings >= self.LOG_WARNINGS_WARNING:
                     status = 'WARNING'
-                    reason = f'{warnings_5m} warnings in 5 minutes'
+                    reason = f'{unique_warnings} unique warnings in 5 minutes'
                 else:
                     status = 'OK'
                     reason = None

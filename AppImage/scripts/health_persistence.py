@@ -101,18 +101,23 @@ class HealthPersistence:
         if existing:
             error_id, first_seen, notif_sent, acknowledged, resolved_at = existing
             
-            # If acknowledged within last 24 hours, do not re-add unless resolved and re-occurred
-            if acknowledged and not resolved_at:
-                first_seen_dt = datetime.fromisoformat(first_seen)
-                if (datetime.now() - first_seen_dt).total_seconds() < 86400:  # 24 hours
-                    # Skip re-adding recently acknowledged errors
-                    conn.close()
-                    return {'type': 'skipped', 'needs_notification': False}
+            if acknowledged == 1 and resolved_at is not None:
+                # Check if acknowledged recently (within 24h)
+                try:
+                    resolved_dt = datetime.fromisoformat(resolved_at)
+                    hours_since_ack = (datetime.now() - resolved_dt).total_seconds() / 3600
+                    
+                    if hours_since_ack < 24:
+                        # Skip re-adding recently acknowledged errors
+                        conn.close()
+                        return {'type': 'skipped_acknowledged', 'needs_notification': False}
+                except Exception:
+                    pass
             
-            # Update existing error
+            # Update existing error (only if not acknowledged or >24h passed)
             cursor.execute('''
                 UPDATE errors 
-                SET last_seen = ?, severity = ?, reason = ?, details = ?, resolved_at = NULL
+                SET last_seen = ?, severity = ?, reason = ?, details = ?, resolved_at = NULL, acknowledged = 0
                 WHERE error_key = ?
             ''', (now, severity, reason, details_json, error_key))
             
@@ -123,6 +128,25 @@ class HealthPersistence:
                 event_info['type'] = 'escalated'
                 event_info['needs_notification'] = True
         else:
+            cursor.execute('''
+                SELECT resolved_at, acknowledged FROM errors 
+                WHERE error_key = ? AND acknowledged = 1
+                ORDER BY resolved_at DESC LIMIT 1
+            ''', (error_key,))
+            recent_ack = cursor.fetchone()
+            
+            if recent_ack and recent_ack[0]:
+                try:
+                    resolved_dt = datetime.fromisoformat(recent_ack[0])
+                    hours_since_ack = (datetime.now() - resolved_dt).total_seconds() / 3600
+                    
+                    if hours_since_ack < 24:
+                        # Don't re-add recently acknowledged errors
+                        conn.close()
+                        return {'type': 'skipped_acknowledged', 'needs_notification': False}
+                except Exception:
+                    pass
+            
             # Insert new error
             cursor.execute('''
                 INSERT INTO errors 
