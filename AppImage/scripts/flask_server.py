@@ -2858,7 +2858,7 @@ def get_detailed_gpu_info(gpu):
                         clients = best_json['clients']
                         processes = []
                         
-                        for client_id, client_data in clients:
+                        for client_id, client_data in clients.items():
                             process_info = {
                                 'name': client_data.get('name', 'Unknown'),
                                 'pid': client_data.get('pid', 'Unknown'),
