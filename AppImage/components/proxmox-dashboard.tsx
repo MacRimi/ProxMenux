@@ -98,10 +98,19 @@ export function ProxmoxDashboard() {
       const uptimeValue =
         data.uptime && typeof data.uptime === "string" && data.uptime.trim() !== "" ? data.uptime : "N/A"
 
-      const healthStatus = data.health?.status || "healthy"
+      const backendStatus = data.health?.status?.toUpperCase() || "OK"
+      let healthStatus: "healthy" | "warning" | "critical"
+
+      if (backendStatus === "CRITICAL") {
+        healthStatus = "critical"
+      } else if (backendStatus === "WARNING") {
+        healthStatus = "warning"
+      } else {
+        healthStatus = "healthy"
+      }
 
       setSystemStatus({
-        status: healthStatus as "healthy" | "warning" | "critical",
+        status: healthStatus,
         uptime: uptimeValue,
         lastUpdate: new Date().toLocaleTimeString("en-US", { hour12: false }),
         serverName: data.hostname || "Unknown",
@@ -127,17 +136,33 @@ export function ProxmoxDashboard() {
     // Siempre fetch inicial
     fetchSystemData()
 
+    // En overview: cada 30 segundos para actualización frecuente del estado de salud
+    // En otras tabs: cada 60 segundos para reducir carga
     let interval: ReturnType<typeof setInterval> | null = null
     if (activeTab === "overview") {
-      interval = setInterval(fetchSystemData, 9000) // Cambiado de 10000 a 9000ms
+      interval = setInterval(fetchSystemData, 30000) // 30 segundos
     } else {
-      interval = setInterval(fetchSystemData, 61000) // Cambiado de 60000 a 61000ms
+      interval = setInterval(fetchSystemData, 60000) // 60 segundos
     }
 
     return () => {
       if (interval) clearInterval(interval)
     }
   }, [fetchSystemData, activeTab])
+
+  useEffect(() => {
+    const handleChangeTab = (event: CustomEvent) => {
+      const { tab } = event.detail
+      if (tab) {
+        setActiveTab(tab)
+      }
+    }
+
+    window.addEventListener("changeTab", handleChangeTab as EventListener)
+    return () => {
+      window.removeEventListener("changeTab", handleChangeTab as EventListener)
+    }
+  }, [])
 
   useEffect(() => {
     if (

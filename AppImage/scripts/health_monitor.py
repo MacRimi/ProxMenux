@@ -17,10 +17,12 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 import re
 
+from health_persistence import health_persistence
+
 class HealthMonitor:
     """
     Monitors system health across multiple components with minimal impact.
-    Implements hysteresis, intelligent caching, and progressive escalation.
+    Implements hysteresis, intelligent caching, progressive escalation, and persistent error tracking.
     Always returns all 10 health categories.
     """
     
@@ -28,8 +30,8 @@ class HealthMonitor:
     CPU_WARNING = 85
     CPU_CRITICAL = 95
     CPU_RECOVERY = 75
-    CPU_WARNING_DURATION = 60
-    CPU_CRITICAL_DURATION = 120
+    CPU_WARNING_DURATION = 300  # 5 minutes sustained
+    CPU_CRITICAL_DURATION = 300  # 5 minutes sustained
     CPU_RECOVERY_DURATION = 120
     
     # Memory Thresholds
@@ -85,6 +87,11 @@ class HealthMonitor:
         self.io_error_history = defaultdict(list)
         self.failed_vm_history = set()  # Track VMs that failed to start
         
+        try:
+            health_persistence.cleanup_old_errors()
+        except Exception as e:
+            print(f"[HealthMonitor] Cleanup warning: {e}")
+    
     def get_system_info(self) -> Dict[str, Any]:
         """
         Get lightweight system info for header display.
@@ -188,7 +195,11 @@ class HealthMonitor:
         """
         Get comprehensive health status with all checks.
         Returns JSON structure with ALL 10 categories always present.
+        Now includes persistent error tracking.
         """
+        active_errors = health_persistence.get_active_errors()
+        persistent_issues = {err['error_key']: err for err in active_errors}
+        
         details = {
             'cpu': {'status': 'OK'},
             'memory': {'status': 'OK'},
@@ -231,8 +242,8 @@ class HealthMonitor:
             elif disks_status.get('status') == 'WARNING':
                 warning_issues.append(disks_status.get('reason', 'Disk issue'))
         
-        # Priority 4: VMs/CTs - now detects qmp errors from logs
-        vms_status = self._check_vms_cts_optimized()
+        # Priority 4: VMs/CTs - now with persistence
+        vms_status = self._check_vms_cts_with_persistence()
         if vms_status:
             details['vms'] = vms_status
             if vms_status.get('status') == 'CRITICAL':
@@ -265,8 +276,8 @@ class HealthMonitor:
         elif memory_status.get('status') == 'WARNING':
             warning_issues.append(memory_status.get('reason', 'Memory high'))
         
-        # Priority 8: Logs
-        logs_status = self._check_logs_lightweight()
+        # Priority 8: Logs - now with persistence
+        logs_status = self._check_logs_with_persistence()
         details['logs'] = logs_status
         if logs_status.get('status') == 'CRITICAL':
             critical_issues.append(logs_status.get('reason', 'Critical log errors'))
@@ -305,7 +316,7 @@ class HealthMonitor:
         }
     
     def _check_cpu_with_hysteresis(self) -> Dict[str, Any]:
-        """Check CPU with hysteresis to avoid flapping alerts"""
+        """Check CPU with hysteresis to avoid flapping alerts - requires 5min sustained high usage"""
         try:
             cpu_percent = psutil.cpu_percent(interval=1)
             current_time = time.time()
@@ -318,33 +329,33 @@ class HealthMonitor:
             
             self.state_history[state_key] = [
                 entry for entry in self.state_history[state_key]
-                if current_time - entry['time'] < 300
+                if current_time - entry['time'] < 360
             ]
             
-            critical_duration = sum(
-                1 for entry in self.state_history[state_key]
+            critical_samples = [
+                entry for entry in self.state_history[state_key]
                 if entry['value'] >= self.CPU_CRITICAL and
                 current_time - entry['time'] <= self.CPU_CRITICAL_DURATION
-            )
+            ]
             
-            warning_duration = sum(
-                1 for entry in self.state_history[state_key]
+            warning_samples = [
+                entry for entry in self.state_history[state_key]
                 if entry['value'] >= self.CPU_WARNING and
                 current_time - entry['time'] <= self.CPU_WARNING_DURATION
-            )
+            ]
             
-            recovery_duration = sum(
-                1 for entry in self.state_history[state_key]
+            recovery_samples = [
+                entry for entry in self.state_history[state_key]
                 if entry['value'] < self.CPU_RECOVERY and
                 current_time - entry['time'] <= self.CPU_RECOVERY_DURATION
-            )
+            ]
             
-            if critical_duration >= 2:
+            if len(critical_samples) >= 3:
                 status = 'CRITICAL'
-                reason = f'CPU >{self.CPU_CRITICAL}% for {self.CPU_CRITICAL_DURATION}s'
-            elif warning_duration >= 2 and recovery_duration < 2:
+                reason = f'CPU >{self.CPU_CRITICAL}% sustained for {self.CPU_CRITICAL_DURATION}s'
+            elif len(warning_samples) >= 3 and len(recovery_samples) < 2:
                 status = 'WARNING'
-                reason = f'CPU >{self.CPU_WARNING}% for {self.CPU_WARNING_DURATION}s'
+                reason = f'CPU >{self.CPU_WARNING}% sustained for {self.CPU_WARNING_DURATION}s'
             else:
                 status = 'OK'
                 reason = None
@@ -871,15 +882,15 @@ class HealthMonitor:
     
     def _check_vms_cts_optimized(self) -> Dict[str, Any]:
         """
-        Optimized VM/CT check - detects qmp failures and other VM errors.
-        Now parses logs for VM/CT specific errors like qmp command failures.
+        Optimized VM/CT check - detects qmp failures and startup errors from logs.
+        Improved detection of container and VM errors from journalctl.
         """
         try:
             issues = []
             vm_details = {}
             
             result = subprocess.run(
-                ['journalctl', '--since', '10 minutes ago', '--no-pager', '-u', 'pve*', '-p', 'warning'],
+                ['journalctl', '--since', '10 minutes ago', '--no-pager', '-p', 'warning'],
                 capture_output=True,
                 text=True,
                 timeout=3
@@ -903,22 +914,56 @@ class HealthMonitor:
                             }
                         continue
                     
-                    ct_match = re.search(r'(?:ct|container)\s+(\d+)', line_lower)
-                    if ct_match and ('error' in line_lower or 'fail' in line_lower):
-                        ctid = ct_match.group(1)
+                    ct_error_match = re.search(r'(?:ct|container|lxc)\s+(\d+)', line_lower)
+                    if ct_error_match and ('error' in line_lower or 'fail' in line_lower or 'device' in line_lower):
+                        ctid = ct_error_match.group(1)
                         key = f'ct_{ctid}'
                         if key not in vm_details:
-                            issues.append(f'CT {ctid}: Error detected')
+                            if 'device' in line_lower and 'does not exist' in line_lower:
+                                device_match = re.search(r'device\s+([/\w\d]+)\s+does not exist', line_lower)
+                                if device_match:
+                                    reason = f'Device {device_match.group(1)} missing'
+                                else:
+                                    reason = 'Device error'
+                            elif 'failed to start' in line_lower:
+                                reason = 'Failed to start'
+                            else:
+                                reason = 'Container error'
+                            
+                            issues.append(f'CT {ctid}: {reason}')
+                            vm_details[key] = {
+                                'status': 'WARNING' if 'device' in reason.lower() else 'CRITICAL',
+                                'reason': reason,
+                                'id': ctid,
+                                'type': 'CT'
+                            }
+                        continue
+                    
+                    vzstart_match = re.search(r'vzstart:(\d+):', line)
+                    if vzstart_match and ('error' in line_lower or 'fail' in line_lower or 'does not exist' in line_lower):
+                        ctid = vzstart_match.group(1)
+                        key = f'ct_{ctid}'
+                        if key not in vm_details:
+                            # Extraer mensaje de error
+                            if 'device' in line_lower and 'does not exist' in line_lower:
+                                device_match = re.search(r'device\s+([/\w\d]+)\s+does not exist', line_lower)
+                                if device_match:
+                                    reason = f'Device {device_match.group(1)} missing'
+                                else:
+                                    reason = 'Device error'
+                            else:
+                                reason = 'Startup error'
+                            
+                            issues.append(f'CT {ctid}: {reason}')
                             vm_details[key] = {
                                 'status': 'WARNING',
-                                'reason': 'Container error',
+                                'reason': reason,
                                 'id': ctid,
                                 'type': 'CT'
                             }
                         continue
                     
                     if any(keyword in line_lower for keyword in ['failed to start', 'cannot start', 'activation failed', 'start error']):
-                        # Extract VM/CT ID
                         id_match = re.search(r'\b(\d{3,4})\b', line)
                         if id_match:
                             vmid = id_match.group(1)
@@ -931,6 +976,118 @@ class HealthMonitor:
                                     'id': vmid,
                                     'type': 'VM/CT'
                                 }
+            
+            if not issues:
+                return {'status': 'OK'}
+            
+            has_critical = any(d.get('status') == 'CRITICAL' for d in vm_details.values())
+            
+            return {
+                'status': 'CRITICAL' if has_critical else 'WARNING',
+                'reason': '; '.join(issues[:3]),
+                'details': vm_details
+            }
+            
+        except Exception:
+            return {'status': 'OK'}
+    
+    # Modified to use persistence
+    def _check_vms_cts_with_persistence(self) -> Dict[str, Any]:
+        """
+        Check VMs/CTs with persistent error tracking.
+        Errors persist until VM starts or 48h elapsed.
+        """
+        try:
+            issues = []
+            vm_details = {}
+            
+            # Get persistent errors first
+            persistent_errors = health_persistence.get_active_errors('vms')
+            
+            # Check if any persistent VMs/CTs have started
+            for error in persistent_errors:
+                error_key = error['error_key']
+                if error_key.startswith('vm_') or error_key.startswith('ct_'):
+                    vm_id = error_key.split('_')[1]
+                    if health_persistence.check_vm_running(vm_id):
+                        continue  # Error auto-resolved
+                
+                # Still active
+                vm_details[error_key] = {
+                    'status': error['severity'],
+                    'reason': error['reason'],
+                    'id': error.get('details', {}).get('id', 'unknown'),
+                    'type': error.get('details', {}).get('type', 'VM/CT'),
+                    'first_seen': error['first_seen']
+                }
+                issues.append(f"{error.get('details', {}).get('type', 'VM')} {error.get('details', {}).get('id', '')}: {error['reason']}")
+            
+            # Check for new errors in logs
+            result = subprocess.run(
+                ['journalctl', '--since', '10 minutes ago', '--no-pager', '-p', 'warning'],
+                capture_output=True,
+                text=True,
+                timeout=3
+            )
+            
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    line_lower = line.lower()
+                    
+                    # VM QMP errors
+                    vm_qmp_match = re.search(r'vm\s+(\d+)\s+qmp\s+command.*(?:failed|unable|timeout)', line_lower)
+                    if vm_qmp_match:
+                        vmid = vm_qmp_match.group(1)
+                        error_key = f'vm_{vmid}'
+                        if error_key not in vm_details:
+                            # Record persistent error
+                            health_persistence.record_error(
+                                error_key=error_key,
+                                category='vms',
+                                severity='WARNING',
+                                reason='QMP command timeout',
+                                details={'id': vmid, 'type': 'VM'}
+                            )
+                            issues.append(f'VM {vmid}: Communication issue')
+                            vm_details[error_key] = {
+                                'status': 'WARNING',
+                                'reason': 'QMP command timeout',
+                                'id': vmid,
+                                'type': 'VM'
+                            }
+                        continue
+                    
+                    # Container errors
+                    vzstart_match = re.search(r'vzstart:(\d+):', line)
+                    if vzstart_match and ('error' in line_lower or 'fail' in line_lower or 'does not exist' in line_lower):
+                        ctid = vzstart_match.group(1)
+                        error_key = f'ct_{ctid}'
+                        
+                        if error_key not in vm_details:
+                            if 'device' in line_lower and 'does not exist' in line_lower:
+                                device_match = re.search(r'device\s+([/\w\d]+)\s+does not exist', line_lower)
+                                if device_match:
+                                    reason = f'Device {device_match.group(1)} missing'
+                                else:
+                                    reason = 'Device error'
+                            else:
+                                reason = 'Startup error'
+                            
+                            # Record persistent error
+                            health_persistence.record_error(
+                                error_key=error_key,
+                                category='vms',
+                                severity='WARNING',
+                                reason=reason,
+                                details={'id': ctid, 'type': 'CT'}
+                            )
+                            issues.append(f'CT {ctid}: {reason}')
+                            vm_details[error_key] = {
+                                'status': 'WARNING',
+                                'reason': reason,
+                                'id': ctid,
+                                'type': 'CT'
+                            }
             
             if not issues:
                 return {'status': 'OK'}
@@ -980,13 +1137,24 @@ class HealthMonitor:
                 'reason': f'Service check failed: {str(e)}'
             }
     
-    def _check_logs_lightweight(self) -> Dict[str, Any]:
-        """Lightweight log analysis (cached, checked every 5 minutes)"""
+    # Modified to use persistence
+    def _check_logs_with_persistence(self) -> Dict[str, Any]:
+        """
+        Check logs with persistent error tracking.
+        Critical log errors persist for 24h unless acknowledged.
+        """
         cache_key = 'logs_analysis'
         current_time = time.time()
         
         if cache_key in self.last_check_times:
             if current_time - self.last_check_times[cache_key] < self.LOG_CHECK_INTERVAL:
+                # Return persistent errors if any
+                persistent_errors = health_persistence.get_active_errors('logs')
+                if persistent_errors:
+                    return {
+                        'status': 'WARNING',
+                        'reason': f'{len(persistent_errors)} persistent log issues'
+                    }
                 return self.cached_results.get(cache_key, {'status': 'OK'})
         
         try:
@@ -1011,6 +1179,16 @@ class HealthMonitor:
                         if keyword.lower() in line_lower:
                             critical_keywords_found.append(keyword)
                             errors_5m += 1
+                            
+                            # Record persistent error for critical keywords
+                            error_key = f'log_critical_{keyword.replace(" ", "_")}'
+                            health_persistence.record_error(
+                                error_key=error_key,
+                                category='logs',
+                                severity='CRITICAL',
+                                reason=f'Critical log: {keyword}',
+                                details={'keyword': keyword}
+                            )
                             break
                     else:
                         if 'error' in line_lower or 'critical' in line_lower or 'fatal' in line_lower:

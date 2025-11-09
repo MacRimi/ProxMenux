@@ -1,8 +1,11 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Loader2,
   CheckCircle2,
@@ -19,6 +22,7 @@ import {
   FileText,
   RefreshCw,
   Shield,
+  X,
 } from "lucide-react"
 
 interface CategoryCheck {
@@ -148,17 +152,53 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
 
   const stats = getHealthStats()
 
+  const handleCategoryClick = (categoryKey: string, status: string) => {
+    if (status === "OK") return // No navegar si está OK
+
+    onOpenChange(false) // Cerrar el modal
+
+    // Mapear categorías a tabs
+    const categoryToTab: Record<string, string> = {
+      storage: "storage",
+      disks: "storage",
+      network: "network",
+      vms: "vms",
+      logs: "logs",
+      hardware: "hardware",
+      services: "hardware",
+    }
+
+    const targetTab = categoryToTab[categoryKey]
+    if (targetTab) {
+      // Disparar evento para cambiar tab
+      const event = new CustomEvent("changeTab", { detail: { tab: targetTab } })
+      window.dispatchEvent(event)
+    }
+  }
+
+  const handleAcknowledge = async (errorKey: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent navigation
+
+    try {
+      await fetch(getApiUrl(`/api/health/acknowledge/${errorKey}`), {
+        method: "POST",
+      })
+      // Refresh health data
+      await fetchHealthDetails()
+    } catch (err) {
+      console.error("[v0] Error acknowledging:", err)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Activity className="h-6 w-6" />
-              System Health Status
-            </div>
-            {healthData && getStatusBadge(healthData.overall)}
+          <DialogTitle className="flex items-center gap-2">
+            <Activity className="h-6 w-6" />
+            System Health Status
           </DialogTitle>
+          <div className="mt-4">{healthData && getStatusBadge(healthData.overall)}</div>
           <DialogDescription>Detailed health checks for all system components</DialogDescription>
         </DialogHeader>
 
@@ -213,13 +253,14 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                 return (
                   <div
                     key={key}
+                    onClick={() => handleCategoryClick(key, status)}
                     className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
                       status === "OK"
                         ? "bg-green-500/5 border-green-500/20 hover:bg-green-500/10"
                         : status === "WARNING"
-                          ? "bg-yellow-500/5 border-yellow-500/20 hover:bg-yellow-500/10"
+                          ? "bg-yellow-500/5 border-yellow-500/20 hover:bg-yellow-500/10 cursor-pointer"
                           : status === "CRITICAL"
-                            ? "bg-red-500/5 border-red-500/20 hover:bg-red-500/10"
+                            ? "bg-red-500/5 border-red-500/20 hover:bg-red-500/10 cursor-pointer"
                             : "bg-muted/30 hover:bg-muted/50"
                     }`}
                   >
@@ -251,10 +292,25 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                           {Object.entries(details).map(([detailKey, detailValue]: [string, any]) => {
                             if (typeof detailValue === "object" && detailValue !== null) {
                               return (
-                                <div key={detailKey} className="text-xs pl-3 border-l-2 border-muted">
-                                  <span className="font-medium">{detailKey}:</span>
-                                  {detailValue.reason && (
-                                    <span className="ml-1 text-muted-foreground">{detailValue.reason}</span>
+                                <div
+                                  key={detailKey}
+                                  className="flex items-start justify-between gap-2 text-xs pl-3 border-l-2 border-muted"
+                                >
+                                  <div>
+                                    <span className="font-medium">{detailKey}:</span>
+                                    {detailValue.reason && (
+                                      <span className="ml-1 text-muted-foreground">{detailValue.reason}</span>
+                                    )}
+                                  </div>
+                                  {status !== "OK" && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-5 px-1 hover:bg-red-500/10"
+                                      onClick={(e) => handleAcknowledge(detailKey, e)}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
                                   )}
                                 </div>
                               )
