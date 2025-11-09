@@ -323,15 +323,15 @@ export function NodeMetricsCharts() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* CPU Usage + Load Average Chart */}
         <Card className="bg-card border-border">
-          <CardHeader>
+          <CardHeader className="px-4 md:px-6">
             <CardTitle className="text-foreground flex items-center">
               <TrendingUp className="h-5 w-5 mr-2" />
               CPU Usage & Load Average
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 md:px-6">
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={data} margin={{ bottom: 60, left: isMobile ? 10 : 30, right: isMobile ? 10 : 10 }}>
+              <AreaChart data={data} margin={{ bottom: 60, left: 0, right: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
                 <XAxis
                   dataKey="time"
@@ -395,15 +395,15 @@ export function NodeMetricsCharts() {
 
         {/* Memory Usage Chart */}
         <Card className="bg-card border-border">
-          <CardHeader>
+          <CardHeader className="px-4 md:px-6">
             <CardTitle className="text-foreground flex items-center">
               <MemoryStick className="h-5 w-5 mr-2" />
               Memory Usage
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 md:px-6">
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={data} margin={{ bottom: 60, left: isMobile ? 10 : 30, right: 10 }}>
+              <AreaChart data={data} margin={{ bottom: 60, left: 0, right: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
                 <XAxis
                   dataKey="time"
