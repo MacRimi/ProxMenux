@@ -3309,6 +3309,9 @@ def get_detailed_gpu_info(gpu):
                             
                             data_retrieved = False
                             
+                            # CHANGE: Initialize sensors variable to None to avoid UnboundLocalError
+                            sensors = None
+                            
                             # Parse temperature (Edge Temperature from sensors)
                             if 'sensors' in device:
                                 sensors = device['sensors']
@@ -3320,15 +3323,16 @@ def get_detailed_gpu_info(gpu):
                                         pass
                                         data_retrieved = True
                             
+                            # CHANGE: Added check to ensure sensors is not None before accessing
                             # Parse power draw (GFX Power or average_socket_power)
-                            if 'GFX Power' in sensors:
+                            if sensors and 'GFX Power' in sensors:
                                 gfx_power = sensors['GFX Power']
                                 if 'value' in gfx_power:
                                     detailed_info['power_draw'] = f"{gfx_power['value']:.2f} W"
                                     # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
                                     pass
                                     data_retrieved = True
-                            elif 'average_socket_power' in sensors:
+                            elif sensors and 'average_socket_power' in sensors:
                                 socket_power = sensors['average_socket_power']
                                 if 'value' in socket_power:
                                     detailed_info['power_draw'] = f"{socket_power['value']:.2f} W"
