@@ -562,6 +562,41 @@ export function SystemOverview() {
           <CardContent>
             {storageData ? (
               <div className="space-y-4">
+                {(() => {
+                  // Calculate total storage across all volumes
+                  const totalCapacity = (vmLxcStorageTotal || 0) + (localStorage?.total || 0)
+
+                  const totalUsed = (vmLxcStorageUsed || 0) + (localStorage?.used || 0)
+
+                  const totalAvailable = (vmLxcStorageAvailable || 0) + (localStorage?.available || 0)
+
+                  const totalPercent = totalCapacity > 0 ? (totalUsed / totalCapacity) * 100 : 0
+
+                  return totalCapacity > 0 ? (
+                    <div className="space-y-2 pb-4 border-b-2 border-border">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-foreground">Total Node Capacity:</span>
+                        <span className="text-lg font-bold text-foreground">{formatStorage(totalCapacity)}</span>
+                      </div>
+                      <Progress
+                        value={totalPercent}
+                        className="mt-2 h-3 [&>div]:bg-gradient-to-r [&>div]:from-blue-500 [&>div]:to-purple-500"
+                      />
+                      <div className="flex justify-between items-center mt-1">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground">
+                            Used: <span className="font-semibold text-foreground">{formatStorage(totalUsed)}</span>
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Free: <span className="font-semibold text-green-500">{formatStorage(totalAvailable)}</span>
+                          </span>
+                        </div>
+                        <span className="text-xs font-semibold text-muted-foreground">{totalPercent.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  ) : null
+                })()}
+
                 <div className="space-y-2 pb-3 border-b border-border">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Total Capacity:</span>
