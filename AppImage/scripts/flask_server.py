@@ -1836,8 +1836,15 @@ def get_interface_type(interface_name):
         if '.' in interface_name:
             return 'vlan'
         
-        # Check if it's a physical interface
-        if interface_name.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
+        # Check if interface has a real device symlink in /sys/class/net
+        # This catches all physical interfaces including USB, regardless of naming
+        sys_path = f'/sys/class/net/{interface_name}/device'
+        if os.path.exists(sys_path):
+            # It's a physical interface (PCI, USB, etc.)
+            return 'physical'
+        
+        # This handles cases where /sys might not be available
+        if interface_name.startswith(('enp', 'eth', 'eno', 'ens', 'enx', 'wlan', 'wlp', 'wlo', 'usb')):
             return 'physical'
         
         # Default to skip for unknown types
@@ -4910,7 +4917,7 @@ def api_logs():
                             'pid': log_entry.get('_PID', ''),
                             'hostname': log_entry.get('_HOSTNAME', '')
                         })
-                    except (json.JSONDecodeError, ValueError) as e:
+                    except (json.JSONDecodeError, ValueError):
                         continue
             return jsonify({'logs': logs, 'total': len(logs)})
         else:
