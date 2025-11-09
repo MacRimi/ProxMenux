@@ -91,6 +91,25 @@ class HealthPersistence:
         details_json = json.dumps(details) if details else None
         
         cursor.execute('''
+            SELECT acknowledged, resolved_at 
+            FROM errors 
+            WHERE error_key = ? AND acknowledged = 1
+        ''', (error_key,))
+        ack_check = cursor.fetchone()
+        
+        if ack_check and ack_check[1]:  # Has resolved_at timestamp
+            try:
+                resolved_dt = datetime.fromisoformat(ack_check[1])
+                hours_since_ack = (datetime.now() - resolved_dt).total_seconds() / 3600
+                
+                if hours_since_ack < 24:
+                    # Skip re-adding recently acknowledged errors (within 24h)
+                    conn.close()
+                    return {'type': 'skipped_acknowledged', 'needs_notification': False}
+            except Exception:
+                pass
+        
+        cursor.execute('''
             SELECT id, first_seen, notification_sent, acknowledged, resolved_at 
             FROM errors WHERE error_key = ?
         ''', (error_key,))
@@ -101,52 +120,26 @@ class HealthPersistence:
         if existing:
             error_id, first_seen, notif_sent, acknowledged, resolved_at = existing
             
-            if acknowledged == 1 and resolved_at is not None:
-                # Check if acknowledged recently (within 24h)
-                try:
-                    resolved_dt = datetime.fromisoformat(resolved_at)
-                    hours_since_ack = (datetime.now() - resolved_dt).total_seconds() / 3600
-                    
-                    if hours_since_ack < 24:
-                        # Skip re-adding recently acknowledged errors
-                        conn.close()
-                        return {'type': 'skipped_acknowledged', 'needs_notification': False}
-                except Exception:
-                    pass
+            if acknowledged == 1:
+                conn.close()
+                return {'type': 'skipped_acknowledged', 'needs_notification': False}
             
-            # Update existing error (only if not acknowledged or >24h passed)
+            # Update existing error (only if NOT acknowledged)
             cursor.execute('''
                 UPDATE errors 
-                SET last_seen = ?, severity = ?, reason = ?, details = ?, resolved_at = NULL, acknowledged = 0
-                WHERE error_key = ?
+                SET last_seen = ?, severity = ?, reason = ?, details = ?
+                WHERE error_key = ? AND acknowledged = 0
             ''', (now, severity, reason, details_json, error_key))
             
             # Check if severity escalated
             cursor.execute('SELECT severity FROM errors WHERE error_key = ?', (error_key,))
-            old_severity = cursor.fetchone()[0]
-            if old_severity == 'WARNING' and severity == 'CRITICAL':
-                event_info['type'] = 'escalated'
-                event_info['needs_notification'] = True
+            old_severity_row = cursor.fetchone()
+            if old_severity_row:
+                old_severity = old_severity_row[0]
+                if old_severity == 'WARNING' and severity == 'CRITICAL':
+                    event_info['type'] = 'escalated'
+                    event_info['needs_notification'] = True
         else:
-            cursor.execute('''
-                SELECT resolved_at, acknowledged FROM errors 
-                WHERE error_key = ? AND acknowledged = 1
-                ORDER BY resolved_at DESC LIMIT 1
-            ''', (error_key,))
-            recent_ack = cursor.fetchone()
-            
-            if recent_ack and recent_ack[0]:
-                try:
-                    resolved_dt = datetime.fromisoformat(recent_ack[0])
-                    hours_since_ack = (datetime.now() - resolved_dt).total_seconds() / 3600
-                    
-                    if hours_since_ack < 24:
-                        # Don't re-add recently acknowledged errors
-                        conn.close()
-                        return {'type': 'skipped_acknowledged', 'needs_notification': False}
-                except Exception:
-                    pass
-            
             # Insert new error
             cursor.execute('''
                 INSERT INTO errors 

@@ -298,11 +298,12 @@ class HealthMonitor:
         
         # Priority 8: Logs - now with persistence
         logs_status = self._check_logs_with_persistence()
-        details['logs'] = logs_status
-        if logs_status.get('status') == 'CRITICAL':
-            critical_issues.append(logs_status.get('reason', 'Critical log errors'))
-        elif logs_status.get('status') == 'WARNING':
-            warning_issues.append(logs_status.get('reason', 'Log warnings'))
+        if logs_status:
+            details['logs'] = logs_status
+            if logs_status.get('status') == 'CRITICAL':
+                critical_issues.append(logs_status.get('reason', 'Critical log errors'))
+            elif logs_status.get('status') == 'WARNING':
+                warning_issues.append(logs_status.get('reason', 'Log warnings'))
         
         # Priority 9: Updates
         updates_status = self._check_updates()
@@ -1221,14 +1222,19 @@ class HealthMonitor:
 
     def _check_logs_with_persistence(self) -> Dict[str, Any]:
         """
-        Check logs with intelligent classification and persistent tracking.
-        - Whitelists benign Proxmox warnings
-        - Only counts truly unique error types
-        - Persists critical errors for 24h
+        Intelligent log checking with cascade detection.
+        Only alerts when there's a real problem (error cascade), not normal background warnings.
+        
+        Logic:
+        - Looks at last 3 minutes (not 10) for immediate issues
+        - Detects cascades: ≥5 errors of same type in 3 min = problem
+        - Compares to previous period to detect spikes
+        - Whitelists known benign Proxmox warnings
         """
         cache_key = 'logs_analysis'
         current_time = time.time()
         
+        # Cache for 5 minutes
         if cache_key in self.last_check_times:
             if current_time - self.last_check_times[cache_key] < self.LOG_CHECK_INTERVAL:
                 persistent_errors = health_persistence.get_active_errors('logs')
@@ -1240,37 +1246,44 @@ class HealthMonitor:
                 return self.cached_results.get(cache_key, {'status': 'OK'})
         
         try:
-            result = subprocess.run(
-                ['journalctl', '--since', '10 minutes ago', '--no-pager', '-p', 'warning'],
+            result_recent = subprocess.run(
+                ['journalctl', '--since', '3 minutes ago', '--no-pager', '-p', 'warning'],
                 capture_output=True,
                 text=True,
                 timeout=3
             )
             
-            if result.returncode == 0:
-                lines = result.stdout.strip().split('\n')
+            result_previous = subprocess.run(
+                ['journalctl', '--since', '6 minutes ago', '--until', '3 minutes ago', '--no-pager', '-p', 'warning'],
+                capture_output=True,
+                text=True,
+                timeout=3
+            )
+            
+            if result_recent.returncode == 0:
+                recent_lines = result_recent.stdout.strip().split('\n')
+                previous_lines = result_previous.stdout.strip().split('\n') if result_previous.returncode == 0 else []
                 
-                critical_errors = {}  # pattern -> first line
-                warning_errors = {}   # pattern -> first line
+                recent_patterns = defaultdict(int)
+                previous_patterns = defaultdict(int)
+                critical_errors = {}
                 
-                for line in lines:
+                for line in recent_lines:
                     if not line.strip():
+                        continue
+                    
+                    # Skip benign errors
+                    if self._is_benign_error(line):
                         continue
                     
                     # Classify severity
                     severity = self._classify_log_severity(line)
                     
                     if severity is None:
-                        continue  # Benign, skip
+                        continue
                     
-                    # Normalize to pattern for grouping
-                    pattern = re.sub(r'\d{4}-\d{2}-\d{2}', '', line)  # Remove dates
-                    pattern = re.sub(r'\d{2}:\d{2}:\d{2}', '', pattern)  # Remove times
-                    pattern = re.sub(r'pid[:\s]+\d+', 'pid:XXX', pattern.lower())  # Normalize PIDs
-                    pattern = re.sub(r'\b\d{3,6}\b', 'ID', pattern)  # Normalize IDs
-                    pattern = re.sub(r'/dev/\S+', '/dev/XXX', pattern)  # Normalize devices
-                    pattern = re.sub(r'0x[0-9a-f]+', '0xXXX', pattern)  # Normalize hex addresses
-                    pattern = pattern[:150]  # Keep first 150 chars as pattern
+                    # Normalize to pattern
+                    pattern = self._normalize_log_pattern(line)
                     
                     if severity == 'CRITICAL':
                         if pattern not in critical_errors:
@@ -1285,20 +1298,47 @@ class HealthMonitor:
                                 reason=line[:100],
                                 details={'pattern': pattern}
                             )
-                    elif severity == 'WARNING':
-                        if pattern not in warning_errors:
-                            warning_errors[pattern] = line
+                    
+                    recent_patterns[pattern] += 1
+                
+                for line in previous_lines:
+                    if not line.strip() or self._is_benign_error(line):
+                        continue
+                    
+                    severity = self._classify_log_severity(line)
+                    if severity is None:
+                        continue
+                    
+                    pattern = self._normalize_log_pattern(line)
+                    previous_patterns[pattern] += 1
+                
+                cascading_errors = {
+                    pattern: count for pattern, count in recent_patterns.items()
+                    if count >= 5 and self._classify_log_severity(pattern) in ['WARNING', 'CRITICAL']
+                }
+                
+                spike_errors = {}
+                for pattern, recent_count in recent_patterns.items():
+                    prev_count = previous_patterns.get(pattern, 0)
+                    # Spike if: ≥3 errors now AND ≥3x increase
+                    if recent_count >= 3 and recent_count >= prev_count * 3:
+                        spike_errors[pattern] = recent_count
                 
                 unique_critical = len(critical_errors)
-                unique_warnings = len(warning_errors)
+                cascade_count = len(cascading_errors)
+                spike_count = len(spike_errors)
                 
                 if unique_critical > 0:
                     status = 'CRITICAL'
-                    reason = f'{unique_critical} critical error type(s) detected'
-                elif unique_warnings >= 10:
+                    reason = f'{unique_critical} critical error(s): cascade detected'
+                elif cascade_count > 0:
                     status = 'WARNING'
-                    reason = f'{unique_warnings} warning type(s) detected'
+                    reason = f'Error cascade detected: {cascade_count} pattern(s) repeating ≥5 times in 3min'
+                elif spike_count > 0:
+                    status = 'WARNING'
+                    reason = f'Error spike detected: {spike_count} pattern(s) increased 3x'
                 else:
+                    # Normal background warnings, no alert
                     status = 'OK'
                     reason = None
                 
@@ -1317,6 +1357,21 @@ class HealthMonitor:
             
         except Exception:
             return {'status': 'OK'}
+    
+    def _normalize_log_pattern(self, line: str) -> str:
+        """
+        Normalize log line to a pattern for grouping similar errors.
+        Removes timestamps, PIDs, IDs, paths, and other variables.
+        """
+        pattern = re.sub(r'\d{4}-\d{2}-\d{2}', '', line)  # Remove dates
+        pattern = re.sub(r'\d{2}:\d{2}:\d{2}', '', pattern)  # Remove times
+        pattern = re.sub(r'pid[:\s]+\d+', 'pid:XXX', pattern.lower())  # Normalize PIDs
+        pattern = re.sub(r'\b\d{3,6}\b', 'ID', pattern)  # Normalize IDs
+        pattern = re.sub(r'/dev/\S+', '/dev/XXX', pattern)  # Normalize devices
+        pattern = re.sub(r'/\S+/\S+', '/PATH/', pattern)  # Normalize paths
+        pattern = re.sub(r'0x[0-9a-f]+', '0xXXX', pattern)  # Normalize hex
+        pattern = re.sub(r'\s+', ' ', pattern).strip()  # Normalize whitespace
+        return pattern[:150]  # Keep first 150 chars
     
     def _check_updates(self) -> Optional[Dict[str, Any]]:
         """
