@@ -130,7 +130,7 @@ class HealthMonitor:
             return {
                 'hostname': hostname,
                 'uptime_seconds': int(uptime_seconds),
-                'uptime_formatted': self._format_uptime(uptime_seconds),
+                'uptime': self._format_uptime(uptime_seconds),
                 'health': health_status,
                 'timestamp': datetime.now().isoformat()
             }
@@ -138,7 +138,7 @@ class HealthMonitor:
             return {
                 'hostname': 'unknown',
                 'uptime_seconds': 0,
-                'uptime_formatted': 'Unknown',
+                'uptime': 'Unknown',
                 'health': {'status': 'UNKNOWN', 'summary': f'Error: {str(e)}'},
                 'timestamp': datetime.now().isoformat()
             }
