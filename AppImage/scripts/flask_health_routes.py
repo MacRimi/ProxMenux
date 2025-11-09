@@ -49,10 +49,15 @@ def get_system_info():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@health_bp.route('/api/health/acknowledge/<error_key>', methods=['POST'])
-def acknowledge_error(error_key):
+@health_bp.route('/api/health/acknowledge', methods=['POST'])
+def acknowledge_error():
     """Acknowledge an error manually (user dismissed it)"""
     try:
+        data = request.get_json()
+        if not data or 'error_key' not in data:
+            return jsonify({'error': 'error_key is required'}), 400
+        
+        error_key = data['error_key']
         health_persistence.acknowledge_error(error_key)
         return jsonify({'success': True, 'message': 'Error acknowledged'})
     except Exception as e:

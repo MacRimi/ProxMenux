@@ -179,6 +179,8 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
   const handleAcknowledge = async (errorKey: string, e: React.MouseEvent) => {
     e.stopPropagation() // Prevent navigation
 
+    console.log("[v0] Dismissing error:", errorKey)
+
     try {
       const response = await fetch(getApiUrl("/api/health/acknowledge"), {
         method: "POST",
@@ -189,13 +191,19 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       })
 
       if (!response.ok) {
-        throw new Error("Failed to acknowledge error")
+        const errorData = await response.json()
+        console.error("[v0] Acknowledge failed:", errorData)
+        throw new Error(errorData.error || "Failed to acknowledge error")
       }
+
+      const result = await response.json()
+      console.log("[v0] Acknowledge success:", result)
 
       // Refresh health data
       await fetchHealthDetails()
     } catch (err) {
       console.error("[v0] Error acknowledging:", err)
+      alert("Failed to dismiss error. Please try again.")
     }
   }
 
