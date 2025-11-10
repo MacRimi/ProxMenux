@@ -134,7 +134,7 @@ export function SystemLogs() {
         return `${protocol}//${hostname}:8008${endpoint}`
       }
     }
-    return `http://localhost:8008${endpoint}`
+    return `${protocol}//${hostname}:8008${endpoint}`
   }
 
   useEffect(() => {
