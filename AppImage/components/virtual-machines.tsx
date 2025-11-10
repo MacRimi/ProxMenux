@@ -139,7 +139,7 @@ const fetcher = async (url: string) => {
     headers: {
       "Content-Type": "application/json",
     },
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(60000),
   })
 
   if (!response.ok) {
@@ -283,15 +283,22 @@ export function VirtualMachines() {
   const [editedNotes, setEditedNotes] = useState("")
   const [savingNotes, setSavingNotes] = useState(false)
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null)
+  const [ipsLoaded, setIpsLoaded] = useState(false)
+  const [loadingIPs, setLoadingIPs] = useState(false)
 
   useEffect(() => {
     const fetchLXCIPs = async () => {
-      if (!vmData) return
+      // Only fetch if data exists, not already loaded, and not currently loading
+      if (!vmData || ipsLoaded || loadingIPs) return
 
       const lxcs = vmData.filter((vm) => vm.type === "lxc")
 
-      if (lxcs.length === 0) return
+      if (lxcs.length === 0) {
+        setIpsLoaded(true)
+        return
+      }
 
+      setLoadingIPs(true)
       const configs: Record<number, string> = {}
 
       const batchSize = 5
@@ -320,16 +327,20 @@ export function VirtualMachines() {
               }
             } catch (error) {
               console.log(`[v0] Could not fetch IP for LXC ${lxc.vmid}`)
+              configs[lxc.vmid] = "N/A"
             }
           }),
         )
 
         setVmConfigs((prev) => ({ ...prev, ...configs }))
       }
+
+      setLoadingIPs(false)
+      setIpsLoaded(true)
     }
 
     fetchLXCIPs()
-  }, [vmData])
+  }, [vmData, ipsLoaded, loadingIPs])
 
   const handleVMClick = async (vm: VMData) => {
     setSelectedVM(vm)
@@ -469,7 +480,7 @@ export function VirtualMachines() {
     "/api/system",
     fetcher,
     {
-      refreshInterval: 23000,
+      refreshInterval: 37000,
       revalidateOnFocus: false,
     },
   )
