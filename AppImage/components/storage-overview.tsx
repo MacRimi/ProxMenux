@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer } from "lucide-react"
+import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer, Archive } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -397,7 +397,10 @@ export function StorageOverview() {
   const diskHealthBreakdown = getDiskHealthBreakdown()
   const diskTypesBreakdown = getDiskTypesBreakdown()
 
-  const totalProxmoxUsed =
+  const localStorageTypes = ["dir", "lvmthin", "lvm", "zfspool", "btrfs"]
+  const remoteStorageTypes = ["pbs", "nfs", "cifs", "smb", "glusterfs", "iscsi", "iscsidirect", "rbd", "cephfs"]
+
+  const totalLocalUsed =
     proxmoxStorage?.storage
       .filter(
         (storage) =>
@@ -406,11 +409,12 @@ export function StorageOverview() {
           storage.status === "active" &&
           storage.total > 0 &&
           storage.used >= 0 &&
-          storage.available >= 0,
+          storage.available >= 0 &&
+          localStorageTypes.includes(storage.type.toLowerCase()),
       )
       .reduce((sum, storage) => sum + storage.used, 0) || 0
 
-  const totalProxmoxCapacity =
+  const totalLocalCapacity =
     proxmoxStorage?.storage
       .filter(
         (storage) =>
@@ -419,11 +423,52 @@ export function StorageOverview() {
           storage.status === "active" &&
           storage.total > 0 &&
           storage.used >= 0 &&
-          storage.available >= 0,
+          storage.available >= 0 &&
+          localStorageTypes.includes(storage.type.toLowerCase()),
       )
       .reduce((sum, storage) => sum + storage.total, 0) || 0
 
-  const usagePercent = totalProxmoxCapacity > 0 ? ((totalProxmoxUsed / totalProxmoxCapacity) * 100).toFixed(2) : "0.00"
+  const localUsagePercent = totalLocalCapacity > 0 ? ((totalLocalUsed / totalLocalCapacity) * 100).toFixed(2) : "0.00"
+
+  const totalRemoteUsed =
+    proxmoxStorage?.storage
+      .filter(
+        (storage) =>
+          storage &&
+          storage.name &&
+          storage.status === "active" &&
+          storage.total > 0 &&
+          storage.used >= 0 &&
+          storage.available >= 0 &&
+          remoteStorageTypes.includes(storage.type.toLowerCase()),
+      )
+      .reduce((sum, storage) => sum + storage.used, 0) || 0
+
+  const totalRemoteCapacity =
+    proxmoxStorage?.storage
+      .filter(
+        (storage) =>
+          storage &&
+          storage.name &&
+          storage.status === "active" &&
+          storage.total > 0 &&
+          storage.used >= 0 &&
+          storage.available >= 0 &&
+          remoteStorageTypes.includes(storage.type.toLowerCase()),
+      )
+      .reduce((sum, storage) => sum + storage.total, 0) || 0
+
+  const remoteUsagePercent =
+    totalRemoteCapacity > 0 ? ((totalRemoteUsed / totalRemoteCapacity) * 100).toFixed(2) : "0.00"
+
+  const remoteStorageCount =
+    proxmoxStorage?.storage.filter(
+      (storage) =>
+        storage &&
+        storage.name &&
+        storage.status === "active" &&
+        remoteStorageTypes.includes(storage.type.toLowerCase()),
+    ).length || 0
 
   if (loading) {
     return (
@@ -458,64 +503,73 @@ export function StorageOverview() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Used Storage</CardTitle>
+            <CardTitle className="text-sm font-medium">Local Storage</CardTitle>
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold">{formatStorage(totalProxmoxUsed)}</div>
-            <p className="text-xs text-muted-foreground mt-1">{usagePercent}% used</p>
-          </CardContent>
-        </Card>
-
-        {/* Disk Health */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Disk Health</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl lg:text-2xl font-bold">{storageData.disk_count} disks</div>
-            <p className="text-xs mt-1">
-              <span className="text-green-500">{diskHealthBreakdown.normal} normal</span>
-              {diskHealthBreakdown.warning > 0 && (
-                <>
-                  {", "}
-                  <span className="text-yellow-500">{diskHealthBreakdown.warning} warning</span>
-                </>
-              )}
-              {diskHealthBreakdown.critical > 0 && (
-                <>
-                  {", "}
-                  <span className="text-red-500">{diskHealthBreakdown.critical} critical</span>
-                </>
-              )}
+            <div className="text-xl lg:text-2xl font-bold">{formatStorage(totalLocalUsed)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {localUsagePercent}% of {formatStorage(totalLocalCapacity)}
             </p>
           </CardContent>
         </Card>
 
-        {/* Disk Types */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Disk Types</CardTitle>
+            <CardTitle className="text-sm font-medium">Remote Storage</CardTitle>
+            <Archive className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl lg:text-2xl font-bold">
+              {remoteStorageCount > 0 ? formatStorage(totalRemoteUsed) : "None"}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {remoteStorageCount > 0
+                ? `${remoteUsagePercent}% of ${formatStorage(totalRemoteCapacity)}`
+                : "No remote storage"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Physical Disks</CardTitle>
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-xl lg:text-2xl font-bold">{storageData.disk_count} disks</div>
-            <p className="text-xs mt-1">
-              {diskTypesBreakdown.nvme > 0 && <span className="text-purple-500">{diskTypesBreakdown.nvme} NVMe</span>}
-              {diskTypesBreakdown.ssd > 0 && (
-                <>
-                  {diskTypesBreakdown.nvme > 0 && ", "}
-                  <span className="text-cyan-500">{diskTypesBreakdown.ssd} SSD</span>
-                </>
-              )}
-              {diskTypesBreakdown.hdd > 0 && (
-                <>
-                  {(diskTypesBreakdown.nvme > 0 || diskTypesBreakdown.ssd > 0) && ", "}
-                  <span className="text-blue-500">{diskTypesBreakdown.hdd} HDD</span>
-                </>
-              )}
-            </p>
+            <div className="space-y-1 mt-1">
+              <p className="text-xs">
+                {diskTypesBreakdown.nvme > 0 && <span className="text-purple-500">{diskTypesBreakdown.nvme} NVMe</span>}
+                {diskTypesBreakdown.ssd > 0 && (
+                  <>
+                    {diskTypesBreakdown.nvme > 0 && ", "}
+                    <span className="text-cyan-500">{diskTypesBreakdown.ssd} SSD</span>
+                  </>
+                )}
+                {diskTypesBreakdown.hdd > 0 && (
+                  <>
+                    {(diskTypesBreakdown.nvme > 0 || diskTypesBreakdown.ssd > 0) && ", "}
+                    <span className="text-blue-500">{diskTypesBreakdown.hdd} HDD</span>
+                  </>
+                )}
+              </p>
+              <p className="text-xs">
+                <span className="text-green-500">{diskHealthBreakdown.normal} normal</span>
+                {diskHealthBreakdown.warning > 0 && (
+                  <>
+                    {", "}
+                    <span className="text-yellow-500">{diskHealthBreakdown.warning} warning</span>
+                  </>
+                )}
+                {diskHealthBreakdown.critical > 0 && (
+                  <>
+                    {", "}
+                    <span className="text-red-500">{diskHealthBreakdown.critical} critical</span>
+                  </>
+                )}
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -533,11 +587,7 @@ export function StorageOverview() {
               {proxmoxStorage.storage
                 .filter(
                   (storage) =>
-                    storage &&
-                    storage.name &&
-                    storage.total > 0 &&
-                    storage.used >= 0 && // Ensure used is not negative
-                    storage.available >= 0, // Ensure available is not negative
+                    storage && storage.name && storage.total > 0 && storage.used >= 0 && storage.available >= 0,
                 )
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((storage) => (
