@@ -514,9 +514,7 @@ export function StorageOverview() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-xl lg:text-2xl font-bold ${getUsageColor(Number.parseFloat(localUsagePercent))}`}>
-              {formatStorage(totalLocalUsed)}
-            </div>
+            <div className="text-xl lg:text-2xl font-bold">{formatStorage(totalLocalUsed)}</div>
             <p className="text-xs mt-1">
               <span className={getUsageColor(Number.parseFloat(localUsagePercent))}>{localUsagePercent}%</span>
               <span className="text-muted-foreground"> of </span>
@@ -531,9 +529,7 @@ export function StorageOverview() {
             <Archive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div
-              className={`text-xl lg:text-2xl font-bold ${remoteStorageCount > 0 ? getUsageColor(Number.parseFloat(remoteUsagePercent)) : ""}`}
-            >
+            <div className="text-xl lg:text-2xl font-bold">
               {remoteStorageCount > 0 ? formatStorage(totalRemoteUsed) : "None"}
             </div>
             <p className="text-xs mt-1">
