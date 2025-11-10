@@ -394,6 +394,13 @@ export function StorageOverview() {
     return "[&>div]:bg-red-500"
   }
 
+  const getUsageColor = (percent: number): string => {
+    if (percent < 70) return "text-blue-500"
+    if (percent < 85) return "text-yellow-500"
+    if (percent < 95) return "text-orange-500"
+    return "text-red-500"
+  }
+
   const diskHealthBreakdown = getDiskHealthBreakdown()
   const diskTypesBreakdown = getDiskTypesBreakdown()
 
@@ -503,30 +510,42 @@ export function StorageOverview() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Local Storage</CardTitle>
+            <CardTitle className="text-sm font-medium">Local Used</CardTitle>
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold">{formatStorage(totalLocalUsed)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {localUsagePercent}% of {formatStorage(totalLocalCapacity)}
+            <div className={`text-xl lg:text-2xl font-bold ${getUsageColor(Number.parseFloat(localUsagePercent))}`}>
+              {formatStorage(totalLocalUsed)}
+            </div>
+            <p className="text-xs mt-1">
+              <span className={getUsageColor(Number.parseFloat(localUsagePercent))}>{localUsagePercent}%</span>
+              <span className="text-muted-foreground"> of </span>
+              <span className="text-green-500">{formatStorage(totalLocalCapacity)}</span>
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Remote Storage</CardTitle>
+            <CardTitle className="text-sm font-medium">Remote Used</CardTitle>
             <Archive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold">
+            <div
+              className={`text-xl lg:text-2xl font-bold ${remoteStorageCount > 0 ? getUsageColor(Number.parseFloat(remoteUsagePercent)) : ""}`}
+            >
               {remoteStorageCount > 0 ? formatStorage(totalRemoteUsed) : "None"}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {remoteStorageCount > 0
-                ? `${remoteUsagePercent}% of ${formatStorage(totalRemoteCapacity)}`
-                : "No remote storage"}
+            <p className="text-xs mt-1">
+              {remoteStorageCount > 0 ? (
+                <>
+                  <span className={getUsageColor(Number.parseFloat(remoteUsagePercent))}>{remoteUsagePercent}%</span>
+                  <span className="text-muted-foreground"> of </span>
+                  <span className="text-green-500">{formatStorage(totalRemoteCapacity)}</span>
+                </>
+              ) : (
+                <span className="text-muted-foreground">No remote storage</span>
+              )}
             </p>
           </CardContent>
         </Card>
