@@ -34,12 +34,14 @@ from flask_health_routes import health_bp
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask_auth_routes import auth_bp
+from flask_proxmenux_routes import proxmenux_bp
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(health_bp)
+app.register_blueprint(proxmenux_bp)
 
 
 
@@ -1836,8 +1838,15 @@ def get_interface_type(interface_name):
         if '.' in interface_name:
             return 'vlan'
         
-        # Check if it's a physical interface
-        if interface_name.startswith(('enp', 'eth', 'eno', 'ens', 'wlan', 'wlp')):
+        # Check if interface has a real device symlink in /sys/class/net
+        # This catches all physical interfaces including USB, regardless of naming
+        sys_path = f'/sys/class/net/{interface_name}/device'
+        if os.path.exists(sys_path):
+            # It's a physical interface (PCI, USB, etc.)
+            return 'physical'
+        
+        # This handles cases where /sys might not be available
+        if interface_name.startswith(('enp', 'eth', 'eno', 'ens', 'enx', 'wlan', 'wlp', 'wlo', 'usb')):
             return 'physical'
         
         # Default to skip for unknown types
@@ -2851,7 +2860,7 @@ def get_detailed_gpu_info(gpu):
                         clients = best_json['clients']
                         processes = []
                         
-                        for client_id, client_data in clients:
+                        for client_id, client_data in clients.items():
                             process_info = {
                                 'name': client_data.get('name', 'Unknown'),
                                 'pid': client_data.get('pid', 'Unknown'),
@@ -3302,6 +3311,9 @@ def get_detailed_gpu_info(gpu):
                             
                             data_retrieved = False
                             
+                            # CHANGE: Initialize sensors variable to None to avoid UnboundLocalError
+                            sensors = None
+                            
                             # Parse temperature (Edge Temperature from sensors)
                             if 'sensors' in device:
                                 sensors = device['sensors']
@@ -3313,15 +3325,16 @@ def get_detailed_gpu_info(gpu):
                                         pass
                                         data_retrieved = True
                             
+                            # CHANGE: Added check to ensure sensors is not None before accessing
                             # Parse power draw (GFX Power or average_socket_power)
-                            if 'GFX Power' in sensors:
+                            if sensors and 'GFX Power' in sensors:
                                 gfx_power = sensors['GFX Power']
                                 if 'value' in gfx_power:
                                     detailed_info['power_draw'] = f"{gfx_power['value']:.2f} W"
                                     # print(f"[v0] Power Draw: {detailed_info['power_draw']}", flush=True)
                                     pass
                                     data_retrieved = True
-                            elif 'average_socket_power' in sensors:
+                            elif sensors and 'average_socket_power' in sensors:
                                 socket_power = sensors['average_socket_power']
                                 if 'value' in socket_power:
                                     detailed_info['power_draw'] = f"{socket_power['value']:.2f} W"
@@ -4910,7 +4923,7 @@ def api_logs():
                             'pid': log_entry.get('_PID', ''),
                             'hostname': log_entry.get('_HOSTNAME', '')
                         })
-                    except (json.JSONDecodeError, ValueError) as e:
+                    except (json.JSONDecodeError, ValueError):
                         continue
             return jsonify({'logs': logs, 'total': len(logs)})
         else:

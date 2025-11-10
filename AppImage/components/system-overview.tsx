@@ -225,100 +225,87 @@ export function SystemOverview() {
   const [storageData, setStorageData] = useState<StorageData | null>(null)
   const [proxmoxStorageData, setProxmoxStorageData] = useState<ProxmoxStorageData | null>(null)
   const [networkData, setNetworkData] = useState<NetworkData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loadingStates, setLoadingStates] = useState({
+    system: true,
+    vms: true,
+    storage: true,
+    network: true,
+  })
   const [error, setError] = useState<string | null>(null)
   const [networkTimeframe, setNetworkTimeframe] = useState("day")
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
+    const fetchAllData = async () => {
+      const [systemResult, vmResult, storageResults, networkResult] = await Promise.all([
+        fetchSystemData().finally(() => setLoadingStates((prev) => ({ ...prev, system: false }))),
+        fetchVMData().finally(() => setLoadingStates((prev) => ({ ...prev, vms: false }))),
+        Promise.all([fetchStorageData(), fetchProxmoxStorageData()]).finally(() =>
+          setLoadingStates((prev) => ({ ...prev, storage: false })),
+        ),
+        fetchNetworkData().finally(() => setLoadingStates((prev) => ({ ...prev, network: false }))),
+      ])
 
-        const systemResult = await fetchSystemData()
-
-        if (!systemResult) {
-          setError("Flask server not available. Please ensure the server is running.")
-          setLoading(false)
-          return
-        }
-
-        setSystemData(systemResult)
-      } catch (err) {
-        console.error("[v0] Error fetching system data:", err)
-        setError("Failed to connect to Flask server. Please check your connection.")
-      } finally {
-        setLoading(false)
+      if (!systemResult) {
+        setError("Flask server not available. Please ensure the server is running.")
+        return
       }
+
+      setSystemData(systemResult)
+      setVmData(vmResult)
+      setStorageData(storageResults[0])
+      setProxmoxStorageData(storageResults[1])
+      setNetworkData(networkResult)
+
+      setTimeout(async () => {
+        const refreshedSystemData = await fetchSystemData()
+        if (refreshedSystemData) {
+          setSystemData(refreshedSystemData)
+        }
+      }, 2000)
     }
 
-    fetchData()
+    fetchAllData()
 
-    const systemInterval = setInterval(() => {
-      fetchSystemData().then((data) => {
-        if (data) setSystemData(data)
-      })
-    }, 9000) // Cambiado de 10000 a 9000ms
+    const systemInterval = setInterval(async () => {
+      const data = await fetchSystemData()
+      if (data) setSystemData(data)
+    }, 9000)
+
+    const vmInterval = setInterval(async () => {
+      const data = await fetchVMData()
+      setVmData(data)
+    }, 59000)
+
+    const storageInterval = setInterval(async () => {
+      const [storage, proxmoxStorage] = await Promise.all([fetchStorageData(), fetchProxmoxStorageData()])
+      if (storage) setStorageData(storage)
+      if (proxmoxStorage) setProxmoxStorageData(proxmoxStorage)
+    }, 59000)
+
+    const networkInterval = setInterval(async () => {
+      const data = await fetchNetworkData()
+      if (data) setNetworkData(data)
+    }, 59000)
 
     return () => {
       clearInterval(systemInterval)
-    }
-  }, [])
-
-  useEffect(() => {
-    const fetchVMs = async () => {
-      const vmResult = await fetchVMData()
-      setVmData(vmResult)
-    }
-
-    fetchVMs()
-    const vmInterval = setInterval(fetchVMs, 59000) // Cambiado de 60000 a 59000ms
-
-    return () => {
       clearInterval(vmInterval)
-    }
-  }, [])
-
-  useEffect(() => {
-    const fetchStorage = async () => {
-      const storageResult = await fetchStorageData()
-      setStorageData(storageResult)
-
-      const proxmoxStorageResult = await fetchProxmoxStorageData()
-      setProxmoxStorageData(proxmoxStorageResult)
-    }
-
-    fetchStorage()
-    const storageInterval = setInterval(fetchStorage, 59000) // Cambiado de 60000 a 59000ms
-
-    return () => {
       clearInterval(storageInterval)
-    }
-  }, [])
-
-  useEffect(() => {
-    const fetchNetwork = async () => {
-      const networkResult = await fetchNetworkData()
-      setNetworkData(networkResult)
-    }
-
-    fetchNetwork()
-    const networkInterval = setInterval(fetchNetwork, 59000) // Cambiado de 60000 a 59000ms
-
-    return () => {
       clearInterval(networkInterval)
     }
   }, [])
 
-  if (loading) {
+  const isInitialLoading = loadingStates.system && !systemData
+
+  if (isInitialLoading) {
     return (
       <div className="space-y-6">
         <div className="text-center py-8">
           <div className="text-lg font-medium text-foreground mb-2">Connecting to ProxMenux Monitor...</div>
           <div className="text-sm text-muted-foreground">Fetching real-time system data</div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
           {[...Array(4)].map((_, i) => (
             <Card key={i} className="bg-card border-border animate-pulse">
               <CardContent className="p-6">
@@ -386,12 +373,10 @@ export function SystemOverview() {
 
   const formatStorage = (sizeInGB: number): string => {
     if (sizeInGB < 1) {
-      // Less than 1 GB, show in MB
       return `${(sizeInGB * 1024).toFixed(1)} MB`
     } else if (sizeInGB > 999) {
       return `${(sizeInGB / 1024).toFixed(2)} TB`
     } else {
-      // Between 1 and 999 GB, show in GB
       return `${sizeInGB.toFixed(2)} GB`
     }
   }
@@ -402,13 +387,10 @@ export function SystemOverview() {
 
   const vmLxcStorages = proxmoxStorageData?.storage.filter(
     (s) =>
-      // Include only local storage types that can host VMs/LXCs
       (s.type === "lvm" || s.type === "lvmthin" || s.type === "zfspool" || s.type === "btrfs" || s.type === "dir") &&
-      // Exclude network storage
       s.type !== "nfs" &&
       s.type !== "cifs" &&
       s.type !== "iscsi" &&
-      // Exclude the "local" storage (used for ISOs/templates)
       s.name !== "local",
   )
 
@@ -474,7 +456,6 @@ export function SystemOverview() {
 
   return (
     <div className="space-y-6">
-      {/* Key Metrics Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -524,34 +505,44 @@ export function SystemOverview() {
         </Card>
 
         <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active VM & LXC</CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center">
+              <Server className="h-5 w-5 mr-2" />
+              Active VM & LXC
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground">{vmStats.running}</div>
-            <div className="mt-2 flex flex-wrap gap-1">
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                {vmStats.running} Running
-              </Badge>
-              {vmStats.stopped > 0 && (
-                <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">
-                  {vmStats.stopped} Stopped
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Total: {vmStats.vms} VMs, {vmStats.lxc} LXC
-            </p>
+            {loadingStates.vms ? (
+              <div className="space-y-2 animate-pulse">
+                <div className="h-8 bg-muted rounded w-12"></div>
+                <div className="h-5 bg-muted rounded w-24"></div>
+                <div className="h-4 bg-muted rounded w-32"></div>
+              </div>
+            ) : (
+              <>
+                <div className="text-xl lg:text-2xl font-bold text-foreground">{vmStats.running}</div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                    {vmStats.running} Running
+                  </Badge>
+                  {vmStats.stopped > 0 && (
+                    <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">
+                      {vmStats.stopped} Stopped
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Total: {vmStats.vms} VMs, {vmStats.lxc} LXC
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Node Metrics Charts */}
       <NodeMetricsCharts />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Storage Summary */}
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
@@ -560,8 +551,45 @@ export function SystemOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {storageData ? (
+            {loadingStates.storage ? (
+              <div className="space-y-4 animate-pulse">
+                <div className="h-6 bg-muted rounded w-full"></div>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-4 bg-muted rounded w-2/3"></div>
+              </div>
+            ) : storageData ? (
               <div className="space-y-4">
+                {(() => {
+                  const totalCapacity = (vmLxcStorageTotal || 0) + (localStorage?.total || 0)
+                  const totalUsed = (vmLxcStorageUsed || 0) + (localStorage?.used || 0)
+                  const totalAvailable = (vmLxcStorageAvailable || 0) + (localStorage?.available || 0)
+                  const totalPercent = totalCapacity > 0 ? (totalUsed / totalCapacity) * 100 : 0
+
+                  return totalCapacity > 0 ? (
+                    <div className="space-y-2 pb-4 border-b-2 border-border">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-foreground">Total Node Capacity:</span>
+                        <span className="text-lg font-bold text-foreground">{formatStorage(totalCapacity)}</span>
+                      </div>
+                      <Progress
+                        value={totalPercent}
+                        className="mt-2 h-3 [&>div]:bg-gradient-to-r [&>div]:from-blue-500 [&>div]:to-purple-500"
+                      />
+                      <div className="flex justify-between items-center mt-1">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground">
+                            Used: <span className="font-semibold text-foreground">{formatStorage(totalUsed)}</span>
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Free: <span className="font-semibold text-green-500">{formatStorage(totalAvailable)}</span>
+                          </span>
+                        </div>
+                        <span className="text-xs font-semibold text-muted-foreground">{totalPercent.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  ) : null
+                })()}
+
                 <div className="space-y-2 pb-3 border-b border-border">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Total Capacity:</span>
@@ -637,7 +665,6 @@ export function SystemOverview() {
           </CardContent>
         </Card>
 
-        {/* Network Summary */}
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center justify-between">
@@ -660,7 +687,13 @@ export function SystemOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {networkData ? (
+            {loadingStates.network ? (
+              <div className="space-y-4 animate-pulse">
+                <div className="h-6 bg-muted rounded w-full"></div>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-4 bg-muted rounded w-2/3"></div>
+              </div>
+            ) : networkData ? (
               <div className="space-y-4">
                 <div className="flex justify-between items-center pb-3 border-b border-border">
                   <span className="text-sm text-muted-foreground">Active Interfaces:</span>
@@ -731,7 +764,6 @@ export function SystemOverview() {
         </Card>
       </div>
 
-      {/* System Information */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-card border-border">
           <CardHeader>
@@ -764,7 +796,6 @@ export function SystemOverview() {
           </CardContent>
         </Card>
 
-        {/* System Health & Alerts */}
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">

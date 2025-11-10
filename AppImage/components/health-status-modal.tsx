@@ -1,14 +1,34 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, CheckCircle2, AlertTriangle, XCircle, Activity } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  Loader2,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Activity,
+  Cpu,
+  MemoryStick,
+  HardDrive,
+  Disc,
+  Network,
+  Box,
+  Settings,
+  FileText,
+  RefreshCw,
+  Shield,
+  X,
+} from "lucide-react"
 
-interface HealthDetail {
+interface CategoryCheck {
   status: string
   reason?: string
+  details?: any
   [key: string]: any
 }
 
@@ -16,7 +36,16 @@ interface HealthDetails {
   overall: string
   summary: string
   details: {
-    [category: string]: HealthDetail | { [key: string]: HealthDetail }
+    cpu: CategoryCheck
+    memory: CategoryCheck
+    storage: CategoryCheck
+    disks: CategoryCheck
+    network: CategoryCheck
+    vms: CategoryCheck
+    services: CategoryCheck
+    logs: CategoryCheck
+    updates: CategoryCheck
+    security: CategoryCheck
   }
   timestamp: string
 }
@@ -26,6 +55,19 @@ interface HealthStatusModalProps {
   onOpenChange: (open: boolean) => void
   getApiUrl: (path: string) => string
 }
+
+const CATEGORIES = [
+  { key: "cpu", label: "CPU Usage & Temperature", Icon: Cpu },
+  { key: "memory", label: "Memory & Swap", Icon: MemoryStick },
+  { key: "storage", label: "Storage Mounts & Space", Icon: HardDrive },
+  { key: "disks", label: "Disk I/O & Errors", Icon: Disc },
+  { key: "network", label: "Network Interfaces", Icon: Network },
+  { key: "vms", label: "VMs & Containers", Icon: Box },
+  { key: "services", label: "PVE Services", Icon: Settings },
+  { key: "logs", label: "System Logs", Icon: FileText },
+  { key: "updates", label: "System Updates", Icon: RefreshCw },
+  { key: "security", label: "Security & Certificates", Icon: Shield },
+]
 
 export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatusModalProps) {
   const [loading, setLoading] = useState(true)
@@ -58,74 +100,6 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     }
   }
 
-  const getHealthStats = () => {
-    if (!healthData?.details) {
-      return { total: 0, healthy: 0, warnings: 0, critical: 0 }
-    }
-
-    let healthy = 0
-    let warnings = 0
-    let critical = 0
-    let total = 0
-
-    const countStatus = (detail: any) => {
-      if (detail && typeof detail === "object" && detail.status) {
-        total++
-        const status = detail.status.toUpperCase()
-        if (status === "OK") healthy++
-        else if (status === "WARNING") warnings++
-        else if (status === "CRITICAL") critical++
-      }
-    }
-
-    Object.values(healthData.details).forEach((categoryData) => {
-      if (categoryData && typeof categoryData === "object") {
-        if ("status" in categoryData) {
-          countStatus(categoryData)
-        } else {
-          Object.values(categoryData).forEach(countStatus)
-        }
-      }
-    })
-
-    return { total, healthy, warnings, critical }
-  }
-
-  const getGroupedChecks = () => {
-    if (!healthData?.details) return {}
-
-    const grouped: { [key: string]: Array<{ name: string; status: string; reason?: string; details?: any }> } = {}
-
-    Object.entries(healthData.details).forEach(([category, categoryData]) => {
-      if (!categoryData || typeof categoryData !== "object") return
-
-      const categoryName = category.charAt(0).toUpperCase() + category.slice(1)
-      grouped[categoryName] = []
-
-      if ("status" in categoryData) {
-        grouped[categoryName].push({
-          name: categoryName,
-          status: categoryData.status,
-          reason: categoryData.reason,
-          details: categoryData,
-        })
-      } else {
-        Object.entries(categoryData).forEach(([subKey, subData]: [string, any]) => {
-          if (subData && typeof subData === "object" && "status" in subData) {
-            grouped[categoryName].push({
-              name: subKey,
-              status: subData.status,
-              reason: subData.reason,
-              details: subData,
-            })
-          }
-        })
-      }
-    })
-
-    return grouped
-  }
-
   const getStatusIcon = (status: string) => {
     const statusUpper = status?.toUpperCase()
     switch (statusUpper) {
@@ -144,27 +118,106 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     const statusUpper = status?.toUpperCase()
     switch (statusUpper) {
       case "OK":
-        return <Badge className="bg-green-500">Healthy</Badge>
+        return <Badge className="bg-green-500 text-white hover:bg-green-500">OK</Badge>
       case "WARNING":
-        return <Badge className="bg-yellow-500">Warning</Badge>
+        return <Badge className="bg-yellow-500 text-white hover:bg-yellow-500">Warning</Badge>
       case "CRITICAL":
-        return <Badge className="bg-red-500">Critical</Badge>
+        return <Badge className="bg-red-500 text-white hover:bg-red-500">Critical</Badge>
       default:
         return <Badge>Unknown</Badge>
     }
   }
 
+  const getHealthStats = () => {
+    if (!healthData?.details) {
+      return { total: 0, healthy: 0, warnings: 0, critical: 0 }
+    }
+
+    let healthy = 0
+    let warnings = 0
+    let critical = 0
+
+    CATEGORIES.forEach(({ key }) => {
+      const categoryData = healthData.details[key as keyof typeof healthData.details]
+      if (categoryData) {
+        const status = categoryData.status?.toUpperCase()
+        if (status === "OK") healthy++
+        else if (status === "WARNING") warnings++
+        else if (status === "CRITICAL") critical++
+      }
+    })
+
+    return { total: CATEGORIES.length, healthy, warnings, critical }
+  }
+
   const stats = getHealthStats()
-  const groupedChecks = getGroupedChecks()
+
+  const handleCategoryClick = (categoryKey: string, status: string) => {
+    if (status === "OK") return // No navegar si está OK
+
+    onOpenChange(false) // Cerrar el modal
+
+    // Mapear categorías a tabs
+    const categoryToTab: Record<string, string> = {
+      storage: "storage",
+      disks: "storage",
+      network: "network",
+      vms: "vms",
+      logs: "logs",
+      hardware: "hardware",
+      services: "hardware",
+    }
+
+    const targetTab = categoryToTab[categoryKey]
+    if (targetTab) {
+      // Disparar evento para cambiar tab
+      const event = new CustomEvent("changeTab", { detail: { tab: targetTab } })
+      window.dispatchEvent(event)
+    }
+  }
+
+  const handleAcknowledge = async (errorKey: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent navigation
+
+    console.log("[v0] Dismissing error:", errorKey)
+
+    try {
+      const response = await fetch(getApiUrl("/api/health/acknowledge"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ error_key: errorKey }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("[v0] Acknowledge failed:", errorData)
+        throw new Error(errorData.error || "Failed to acknowledge error")
+      }
+
+      const result = await response.json()
+      console.log("[v0] Acknowledge success:", result)
+
+      // Refresh health data
+      await fetchHealthDetails()
+    } catch (err) {
+      console.error("[v0] Error acknowledging:", err)
+      alert("Failed to dismiss error. Please try again.")
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Activity className="h-6 w-6" />
-            System Health Status
-          </DialogTitle>
+          <div className="flex items-center justify-between gap-3">
+            <DialogTitle className="flex items-center gap-2 flex-1">
+              <Activity className="h-6 w-6" />
+              System Health Status
+              {healthData && <div className="ml-2">{getStatusBadge(healthData.overall)}</div>}
+            </DialogTitle>
+          </div>
           <DialogDescription>Detailed health checks for all system components</DialogDescription>
         </DialogHeader>
 
@@ -182,82 +235,118 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
         )}
 
         {healthData && !loading && (
-          <div className="space-y-6">
-            {/* Overall Status Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Overall Status</span>
-                  {getStatusBadge(healthData.overall)}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {healthData.summary && <p className="text-sm text-muted-foreground mb-4">{healthData.summary}</p>}
-                <div className="grid grid-cols-4 gap-4 text-center">
-                  <div>
-                    <div className="text-2xl font-bold">{stats.total}</div>
-                    <div className="text-sm text-muted-foreground">Total Checks</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-500">{stats.healthy}</div>
-                    <div className="text-sm text-muted-foreground">Healthy</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-yellow-500">{stats.warnings}</div>
-                    <div className="text-sm text-muted-foreground">Warnings</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-red-500">{stats.critical}</div>
-                    <div className="text-sm text-muted-foreground">Critical</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="space-y-4">
+            {/* Overall Stats Summary */}
+            <div className="grid grid-cols-4 gap-3 p-4 rounded-lg bg-muted/30 border">
+              <div className="text-center">
+                <div className="text-2xl font-bold">{stats.total}</div>
+                <div className="text-xs text-muted-foreground">Total Checks</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-500">{stats.healthy}</div>
+                <div className="text-xs text-muted-foreground">Healthy</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-500">{stats.warnings}</div>
+                <div className="text-xs text-muted-foreground">Warnings</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-500">{stats.critical}</div>
+                <div className="text-xs text-muted-foreground">Critical</div>
+              </div>
+            </div>
 
-            {/* Grouped Health Checks */}
-            {Object.entries(groupedChecks).map(([category, checks]) => (
-              <Card key={category}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{category}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {checks.map((check, index) => (
-                      <div
-                        key={`${category}-${index}`}
-                        className="flex items-start gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="mt-0.5">{getStatusIcon(check.status)}</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-medium">{check.name}</p>
-                            <Badge variant="outline" className="shrink-0">
-                              {check.status}
-                            </Badge>
-                          </div>
-                          {check.reason && <p className="text-sm text-muted-foreground mt-1">{check.reason}</p>}
-                          {check.details && (
-                            <div className="text-xs text-muted-foreground mt-2 space-y-0.5">
-                              {Object.entries(check.details).map(([key, value]) => {
-                                if (key === "status" || key === "reason" || typeof value === "object") return null
-                                return (
-                                  <div key={key} className="font-mono">
-                                    {key}: {String(value)}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
+            {healthData.summary && healthData.summary !== "All systems operational" && (
+              <div className="text-sm p-3 rounded-lg bg-muted/20 border">
+                <span className="font-medium text-foreground">{healthData.summary}</span>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {CATEGORIES.map(({ key, label, Icon }) => {
+                const categoryData = healthData.details[key as keyof typeof healthData.details]
+                const status = categoryData?.status || "UNKNOWN"
+                const reason = categoryData?.reason
+                const details = categoryData?.details
+
+                return (
+                  <div
+                    key={key}
+                    onClick={() => handleCategoryClick(key, status)}
+                    className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+                      status === "OK"
+                        ? "bg-green-500/5 border-green-500/20 hover:bg-green-500/10"
+                        : status === "WARNING"
+                          ? "bg-yellow-500/5 border-yellow-500/20 hover:bg-yellow-500/10 cursor-pointer"
+                          : status === "CRITICAL"
+                            ? "bg-red-500/5 border-red-500/20 hover:bg-red-500/10 cursor-pointer"
+                            : "bg-muted/30 hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="mt-0.5 flex-shrink-0 flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      {getStatusIcon(status)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <p className="font-medium text-sm">{label}</p>
+                        <Badge
+                          variant="outline"
+                          className={`shrink-0 text-xs ${
+                            status === "OK"
+                              ? "border-green-500 text-green-500 bg-green-500/5"
+                              : status === "WARNING"
+                                ? "border-yellow-500 text-yellow-500 bg-yellow-500/5"
+                                : status === "CRITICAL"
+                                  ? "border-red-500 text-red-500 bg-red-500/5"
+                                  : ""
+                          }`}
+                        >
+                          {status}
+                        </Badge>
                       </div>
-                    ))}
+                      {reason && <p className="text-xs text-muted-foreground mt-1">{reason}</p>}
+                      {details && typeof details === "object" && (
+                        <div className="mt-2 space-y-1">
+                          {Object.entries(details).map(([detailKey, detailValue]: [string, any]) => {
+                            if (typeof detailValue === "object" && detailValue !== null) {
+                              return (
+                                <div
+                                  key={detailKey}
+                                  className="flex items-start justify-between gap-2 text-xs pl-3 border-l-2 border-muted py-1"
+                                >
+                                  <div className="flex-1">
+                                    <span className="font-medium">{detailKey}:</span>
+                                    {detailValue.reason && (
+                                      <span className="ml-1 text-muted-foreground">{detailValue.reason}</span>
+                                    )}
+                                  </div>
+                                  {status !== "OK" && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-6 px-2 shrink-0 hover:bg-red-500/10 hover:border-red-500/50 bg-transparent"
+                                      onClick={(e) => handleAcknowledge(detailKey, e)}
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      <span className="text-xs">Dismiss</span>
+                                    </Button>
+                                  )}
+                                </div>
+                              )
+                            }
+                            return null
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                )
+              })}
+            </div>
 
             {healthData.timestamp && (
-              <div className="text-xs text-muted-foreground text-center">
+              <div className="text-xs text-muted-foreground text-center pt-2">
                 Last updated: {new Date(healthData.timestamp).toLocaleString()}
               </div>
             )}

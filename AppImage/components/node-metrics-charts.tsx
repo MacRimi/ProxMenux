@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { Loader2, TrendingUp, MemoryStick } from "lucide-react"
+import { useIsMobile } from "../hooks/use-mobile"
 
 const TIMEFRAME_OPTIONS = [
   { value: "hour", label: "1 Hour" },
@@ -69,6 +70,7 @@ export function NodeMetricsCharts() {
   const [data, setData] = useState<NodeMetricsData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const isMobile = useIsMobile()
 
   const [visibleLines, setVisibleLines] = useState({
     cpu: { cpu: true, load: true },
@@ -321,15 +323,15 @@ export function NodeMetricsCharts() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* CPU Usage + Load Average Chart */}
         <Card className="bg-card border-border">
-          <CardHeader>
+          <CardHeader className="px-4 md:px-6">
             <CardTitle className="text-foreground flex items-center">
               <TrendingUp className="h-5 w-5 mr-2" />
               CPU Usage & Load Average
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 md:px-6">
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={data} margin={{ bottom: 60, left: 30, right: 10 }}>
+              <AreaChart data={data} margin={{ bottom: 60, left: 0, right: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
                 <XAxis
                   dataKey="time"
@@ -346,7 +348,9 @@ export function NodeMetricsCharts() {
                   stroke="currentColor"
                   className="text-foreground"
                   tick={{ fill: "currentColor", fontSize: 12 }}
-                  label={{ value: "CPU %", angle: -90, position: "insideLeft", fill: "currentColor" }}
+                  label={
+                    isMobile ? undefined : { value: "CPU %", angle: -90, position: "insideLeft", fill: "currentColor" }
+                  }
                   domain={[0, "dataMax"]}
                 />
                 <YAxis
@@ -355,7 +359,9 @@ export function NodeMetricsCharts() {
                   stroke="currentColor"
                   className="text-foreground"
                   tick={{ fill: "currentColor", fontSize: 12 }}
-                  label={{ value: "Load", angle: 90, position: "insideRight", fill: "currentColor" }}
+                  label={
+                    isMobile ? undefined : { value: "Load", angle: 90, position: "insideRight", fill: "currentColor" }
+                  }
                   domain={[0, "dataMax"]}
                 />
                 <Tooltip content={<CustomCpuTooltip />} />
@@ -389,15 +395,15 @@ export function NodeMetricsCharts() {
 
         {/* Memory Usage Chart */}
         <Card className="bg-card border-border">
-          <CardHeader>
+          <CardHeader className="px-4 md:px-6">
             <CardTitle className="text-foreground flex items-center">
               <MemoryStick className="h-5 w-5 mr-2" />
               Memory Usage
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 pr-2 md:px-6">
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={data} margin={{ bottom: 60, left: 30, right: 10 }}>
+              <AreaChart data={data} margin={{ bottom: 60, left: 0, right: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
                 <XAxis
                   dataKey="time"
@@ -413,7 +419,9 @@ export function NodeMetricsCharts() {
                   stroke="currentColor"
                   className="text-foreground"
                   tick={{ fill: "currentColor", fontSize: 12 }}
-                  label={{ value: "GB", angle: -90, position: "insideLeft", fill: "currentColor" }}
+                  label={
+                    isMobile ? undefined : { value: "GB", angle: -90, position: "insideLeft", fill: "currentColor" }
+                  }
                   domain={[0, "dataMax"]}
                 />
                 <Tooltip content={<CustomMemoryTooltip />} />

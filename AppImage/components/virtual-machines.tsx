@@ -139,7 +139,7 @@ const fetcher = async (url: string) => {
     headers: {
       "Content-Type": "application/json",
     },
-    signal: AbortSignal.timeout(5000),
+    signal: AbortSignal.timeout(30000),
   })
 
   if (!response.ok) {
@@ -267,6 +267,8 @@ export function VirtualMachines() {
     refreshInterval: 23000,
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
+    dedupingInterval: 10000,
+    errorRetryCount: 2,
   })
 
   const [selectedVM, setSelectedVM] = useState<VMData | null>(null)
@@ -287,27 +289,43 @@ export function VirtualMachines() {
       if (!vmData) return
 
       const lxcs = vmData.filter((vm) => vm.type === "lxc")
+
+      if (lxcs.length === 0) return
+
       const configs: Record<number, string> = {}
 
-      await Promise.all(
-        lxcs.map(async (lxc) => {
-          try {
-            const response = await fetch(`/api/vms/${lxc.vmid}`)
-            if (response.ok) {
-              const details = await response.json()
-              if (details.lxc_ip_info?.primary_ip) {
-                configs[lxc.vmid] = details.lxc_ip_info.primary_ip
-              } else if (details.config) {
-                configs[lxc.vmid] = extractIPFromConfig(details.config, details.lxc_ip_info)
-              }
-            }
-          } catch (error) {
-            console.error(`Error fetching config for LXC ${lxc.vmid}:`, error)
-          }
-        }),
-      )
+      const batchSize = 5
+      for (let i = 0; i < lxcs.length; i += batchSize) {
+        const batch = lxcs.slice(i, i + batchSize)
 
-      setVmConfigs(configs)
+        await Promise.all(
+          batch.map(async (lxc) => {
+            try {
+              const controller = new AbortController()
+              const timeoutId = setTimeout(() => controller.abort(), 10000)
+
+              const response = await fetch(`/api/vms/${lxc.vmid}`, {
+                signal: controller.signal,
+              })
+
+              clearTimeout(timeoutId)
+
+              if (response.ok) {
+                const details = await response.json()
+                if (details.lxc_ip_info?.primary_ip) {
+                  configs[lxc.vmid] = details.lxc_ip_info.primary_ip
+                } else if (details.config) {
+                  configs[lxc.vmid] = extractIPFromConfig(details.config, details.lxc_ip_info)
+                }
+              }
+            } catch (error) {
+              console.log(`[v0] Could not fetch IP for LXC ${lxc.vmid}`)
+            }
+          }),
+        )
+
+        setVmConfigs((prev) => ({ ...prev, ...configs }))
+      }
     }
 
     fetchLXCIPs()

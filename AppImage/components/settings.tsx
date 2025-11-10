@@ -5,9 +5,15 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
-import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut } from "lucide-react"
+import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Wrench, Package } from "lucide-react"
 import { getApiUrl } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
+
+interface ProxMenuxTool {
+  key: string
+  name: string
+  enabled: boolean
+}
 
 export function Settings() {
   const [authEnabled, setAuthEnabled] = useState(false)
@@ -32,8 +38,12 @@ export function Settings() {
   const [show2FADisable, setShow2FADisable] = useState(false)
   const [disable2FAPassword, setDisable2FAPassword] = useState("")
 
+  const [proxmenuxTools, setProxmenuxTools] = useState<ProxMenuxTool[]>([])
+  const [loadingTools, setLoadingTools] = useState(true)
+
   useEffect(() => {
     checkAuthStatus()
+    loadProxmenuxTools()
   }, [])
 
   const checkAuthStatus = async () => {
@@ -44,6 +54,21 @@ export function Settings() {
       setTotpEnabled(data.totp_enabled || false) // Get 2FA status
     } catch (err) {
       console.error("Failed to check auth status:", err)
+    }
+  }
+
+  const loadProxmenuxTools = async () => {
+    try {
+      const response = await fetch(getApiUrl("/api/proxmenux/installed-tools"))
+      const data = await response.json()
+
+      if (data.success) {
+        setProxmenuxTools(data.installed_tools || [])
+      }
+    } catch (err) {
+      console.error("Failed to load ProxMenux tools:", err)
+    } finally {
+      setLoadingTools(false)
     }
   }
 
@@ -541,21 +566,45 @@ export function Settings() {
         </CardContent>
       </Card>
 
-      {/* About Section */}
+      {/* ProxMenux Optimizations */}
       <Card>
         <CardHeader>
-          <CardTitle>About</CardTitle>
-          <CardDescription>ProxMenux Monitor information</CardDescription>
+          <div className="flex items-center gap-2">
+            <Wrench className="h-5 w-5 text-orange-500" />
+            <CardTitle>ProxMenux Optimizations</CardTitle>
+          </div>
+          <CardDescription>System optimizations and utilities installed via ProxMenux</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Version</span>
-            <span className="font-medium">1.0.1</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Build</span>
-            <span className="font-medium">Debian Package</span>
-          </div>
+        <CardContent>
+          {loadingTools ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin h-8 w-8 border-4 border-orange-500 border-t-transparent rounded-full" />
+            </div>
+          ) : proxmenuxTools.length === 0 ? (
+            <div className="text-center py-8">
+              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+              <p className="text-muted-foreground">No ProxMenux optimizations installed yet</p>
+              <p className="text-sm text-muted-foreground mt-1">Run ProxMenux to configure system optimizations</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
+                <span className="text-sm font-medium text-muted-foreground">Installed Tools</span>
+                <span className="text-sm font-semibold text-orange-500">{proxmenuxTools.length} active</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {proxmenuxTools.map((tool) => (
+                  <div
+                    key={tool.key}
+                    className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border hover:bg-muted transition-colors"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                    <span className="text-sm font-medium">{tool.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
