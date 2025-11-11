@@ -9,7 +9,7 @@
  * Can be changed to 8009 for beta testing
  * This can also be set via NEXT_PUBLIC_API_PORT environment variable
  */
-export const API_PORT = process.env.NEXT_PUBLIC_API_PORT || "8008"
+export const API_PORT = process.env.NEXT_PUBLIC_API_PORT || "8009"
 
 /**
  * Gets the base URL for API calls
