@@ -6,6 +6,8 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Wrench, Package } from "lucide-react"
+import { Sparkles, ChevronDown, ChevronUp } from "lucide-react"
+import { APP_VERSION, CHANGELOG } from "./release-notes-modal"
 import { getApiUrl } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
 
@@ -40,6 +42,9 @@ export function Settings() {
 
   const [proxmenuxTools, setProxmenuxTools] = useState<ProxMenuxTool[]>([])
   const [loadingTools, setLoadingTools] = useState(true)
+  const [expandedVersions, setExpandedVersions] = useState<Record<string, boolean>>({
+    [APP_VERSION]: true, // Current version expanded by default
+  })
 
   useEffect(() => {
     checkAuthStatus()
@@ -272,6 +277,13 @@ export function Settings() {
     localStorage.removeItem("proxmenux-auth-token")
     localStorage.removeItem("proxmenux-auth-setup-complete")
     window.location.reload()
+  }
+
+  const toggleVersion = (version: string) => {
+    setExpandedVersions((prev) => ({
+      ...prev,
+      [version]: !prev[version],
+    }))
   }
 
   return (
@@ -563,6 +575,116 @@ export function Settings() {
               </Button>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Release Notes */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-blue-500" />
+            <CardTitle>Release Notes</CardTitle>
+          </div>
+          <CardDescription>View changes and improvements in ProxMenux Monitor</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <Package className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="font-medium">Current Version</p>
+                <p className="text-sm text-muted-foreground">ProxMenux Monitor v{APP_VERSION}</p>
+              </div>
+            </div>
+            <div className="px-3 py-1 rounded-full text-sm font-medium bg-blue-500 text-white">Latest</div>
+          </div>
+
+          <div className="space-y-3">
+            {Object.entries(CHANGELOG).map(([version, details]) => {
+              const isExpanded = expandedVersions[version]
+              const isCurrent = version === APP_VERSION
+
+              return (
+                <div key={version} className="border border-border rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => toggleVersion(version)}
+                    className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      {isCurrent && <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />}
+                      <div className="text-left">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">Version {version}</span>
+                          {isCurrent && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500">
+                              Current
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-sm text-muted-foreground">{details.date}</span>
+                      </div>
+                    </div>
+                    {isExpanded ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
+                      {details.changes.added && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-500">
+                              Added
+                            </div>
+                          </div>
+                          <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">
+                            {details.changes.added.map((item, idx) => (
+                              <li key={idx}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {details.changes.changed && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-500">
+                              Changed
+                            </div>
+                          </div>
+                          <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">
+                            {details.changes.changed.map((item, idx) => (
+                              <li key={idx}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {details.changes.fixed && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="px-2 py-0.5 rounded text-xs font-medium bg-orange-500/10 text-orange-500">
+                              Fixed
+                            </div>
+                          </div>
+                          <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">
+                            {details.changes.fixed.map((item, idx) => (
+                              <li key={idx}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </CardContent>
       </Card>
 

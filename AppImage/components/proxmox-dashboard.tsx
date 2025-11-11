@@ -13,6 +13,7 @@ import { SystemLogs } from "./system-logs"
 import { Settings } from "./settings"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
+import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
 import { getApiUrl } from "../lib/api-config"
 import {
   RefreshCw,
@@ -76,6 +77,7 @@ export function ProxmoxDashboard() {
   const [showNavigation, setShowNavigation] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
   const [showHealthModal, setShowHealthModal] = useState(false)
+  const { showReleaseNotes, setShowReleaseNotes } = useVersionCheck()
 
   const fetchSystemData = useCallback(async () => {
     const apiUrl = getApiUrl("/api/system-info")
@@ -283,6 +285,7 @@ export function ProxmoxDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <OnboardingCarousel />
+      <ReleaseNotesModal open={showReleaseNotes} onOpenChange={setShowReleaseNotes} />
 
       {!isServerConnected && (
         <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3">
