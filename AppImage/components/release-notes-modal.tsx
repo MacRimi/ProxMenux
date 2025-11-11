@@ -109,8 +109,8 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden border-0 bg-transparent">
-        <div className="relative bg-card rounded-lg overflow-hidden shadow-2xl h-full flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 border-0 bg-transparent">
+        <div className="relative bg-card rounded-lg shadow-2xl h-full flex flex-col max-h-[85vh]">
           <Button
             variant="ghost"
             size="icon"
@@ -132,7 +132,7 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
             <div className="absolute bottom-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4 md:space-y-6">
+          <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4 md:space-y-6 min-h-0">
             <div className="space-y-2">
               <h2 className="text-xl md:text-2xl font-bold text-foreground text-balance">
                 What's New in Version {APP_VERSION}
