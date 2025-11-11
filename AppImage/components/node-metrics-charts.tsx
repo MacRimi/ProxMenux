@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { Loader2, TrendingUp, MemoryStick } from "lucide-react"
 import { useIsMobile } from "../hooks/use-mobile"
+import { API_PORT } from "@/lib/api-config"
 
 const TIMEFRAME_OPTIONS = [
   { value: "hour", label: "1 Hour" },
@@ -91,7 +92,7 @@ export function NodeMetricsCharts() {
       const { protocol, hostname, port } = window.location
       const isStandardPort = port === "" || port === "80" || port === "443"
 
-      const baseUrl = isStandardPort ? "" : `${protocol}//${hostname}:8008`
+      const baseUrl = isStandardPort ? "" : `${protocol}//${hostname}:${API_PORT}`
 
       const apiUrl = `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
 

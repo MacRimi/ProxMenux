@@ -9,6 +9,7 @@ import { ScrollArea } from "./ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet"
+import { API_PORT } from "@/lib/api-config"
 import {
   FileText,
   Search,
@@ -131,10 +132,10 @@ export function SystemLogs() {
       if (isStandardPort) {
         return endpoint
       } else {
-        return `${protocol}//${hostname}:8008${endpoint}`
+        return `${protocol}//${hostname}:${API_PORT}${endpoint}`
       }
     }
-    return `${protocol}//${hostname}:8008${endpoint}`
+    return `${protocol}//${hostname}:${API_PORT}${endpoint}`
   }
 
   useEffect(() => {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { Loader2 } from "lucide-react"
+import { API_PORT } from "@/lib/api-config"
 
 interface NetworkMetricsData {
   time: string
@@ -78,7 +79,7 @@ export function NetworkTrafficChart({
       const { protocol, hostname, port } = window.location
       const isStandardPort = port === "" || port === "80" || port === "443"
 
-      const baseUrl = isStandardPort ? "" : `${protocol}//${hostname}:8008`
+      const baseUrl = isStandardPort ? "" : `${protocol}//${hostname}:${API_PORT}`
 
       const apiUrl = interfaceName
         ? `${baseUrl}/api/network/${interfaceName}/metrics?timeframe=${timeframe}`

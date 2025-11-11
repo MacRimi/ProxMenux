@@ -21,6 +21,7 @@ import {
 import useSWR from "swr"
 import { useState, useEffect } from "react"
 import { type HardwareData, type GPU, type PCIDevice, type StorageDevice, fetcher } from "../types/hardware"
+import { API_PORT } from "@/lib/api-config"
 
 const parseLsblkSize = (sizeStr: string | undefined): number => {
   if (!sizeStr) return 0
@@ -247,7 +248,7 @@ export default function Hardware() {
 
         const apiUrl = isStandardPort
           ? `/api/gpu/${fullSlot}/realtime`
-          : `${protocol}//${hostname}:8008/api/gpu/${fullSlot}/realtime`
+          : `${protocol}//${hostname}:${API_PORT}/api/gpu/${fullSlot}/realtime`
 
         const response = await fetch(apiUrl, {
           method: "GET",
