@@ -92,6 +92,11 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       const data = await response.json()
       console.log("[v0] Health data received:", data)
       setHealthData(data)
+
+      const event = new CustomEvent("healthStatusUpdated", {
+        detail: { status: data.overall },
+      })
+      window.dispatchEvent(event)
     } catch (err) {
       console.error("[v0] Error fetching health data:", err)
       setError(err instanceof Error ? err.message : "Unknown error")
@@ -275,7 +280,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                     onClick={() => handleCategoryClick(key, status)}
                     className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
                       status === "OK"
-                        ? "bg-green-500/5 border-green-500/20 hover:bg-green-500/10"
+                        ? "bg-card border-border hover:bg-muted/30"
                         : status === "WARNING"
                           ? "bg-yellow-500/5 border-yellow-500/20 hover:bg-yellow-500/10 cursor-pointer"
                           : status === "CRITICAL"
@@ -284,7 +289,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                     }`}
                   >
                     <div className="mt-0.5 flex-shrink-0 flex items-center gap-2">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      <Icon className="h-4 w-4 text-blue-500" />
                       {getStatusIcon(status)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -294,7 +299,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                           variant="outline"
                           className={`shrink-0 text-xs ${
                             status === "OK"
-                              ? "border-green-500 text-green-500 bg-green-500/5"
+                              ? "border-green-500 text-green-500 bg-transparent"
                               : status === "WARNING"
                                 ? "border-yellow-500 text-yellow-500 bg-yellow-500/5"
                                 : status === "CRITICAL"
@@ -321,7 +326,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                                       <span className="ml-1 text-muted-foreground">{detailValue.reason}</span>
                                     )}
                                   </div>
-                                  {status !== "OK" && (
+                                  {(status === "WARNING" || status === "CRITICAL") && (
                                     <Button
                                       size="sm"
                                       variant="outline"

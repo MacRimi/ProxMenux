@@ -165,6 +165,31 @@ export function ProxmoxDashboard() {
   }, [])
 
   useEffect(() => {
+    const handleHealthStatusUpdate = (event: CustomEvent) => {
+      const { status } = event.detail
+      let healthStatus: "healthy" | "warning" | "critical"
+
+      if (status === "CRITICAL") {
+        healthStatus = "critical"
+      } else if (status === "WARNING") {
+        healthStatus = "warning"
+      } else {
+        healthStatus = "healthy"
+      }
+
+      setSystemStatus((prev) => ({
+        ...prev,
+        status: healthStatus,
+      }))
+    }
+
+    window.addEventListener("healthStatusUpdated", handleHealthStatusUpdate as EventListener)
+    return () => {
+      window.removeEventListener("healthStatusUpdated", handleHealthStatusUpdate as EventListener)
+    }
+  }, [])
+
+  useEffect(() => {
     if (
       systemStatus.serverName &&
       systemStatus.serverName !== "Loading..." &&
