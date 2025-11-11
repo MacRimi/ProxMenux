@@ -124,7 +124,6 @@ interface VMDetails extends VMData {
     gpu_passthrough?: string[]
     devices?: string[]
   }
-  lxc_ip?: string
   lxc_ip_info?: {
     all_ips: string[]
     real_ips: string[]
@@ -1079,6 +1078,7 @@ export function VirtualMachines() {
             <>
               <DialogHeader className="pb-4 border-b border-border px-6 pt-6">
                 <DialogTitle className="flex flex-col gap-3">
+                  {/* Desktop layout: Uptime now appears after status badge */}
                   <div className="hidden sm:flex items-center gap-3 flex-wrap">
                     <div className="flex items-center gap-2">
                       <Server className="h-5 w-5 flex-shrink-0" />
@@ -1095,15 +1095,16 @@ export function VirtualMachines() {
                           <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
                             {selectedVM.status.toUpperCase()}
                           </Badge>
+                          {selectedVM.status === "running" && (
+                            <span className="text-sm text-muted-foreground">
+                              Uptime: {formatUptime(selectedVM.uptime)}
+                            </span>
+                          )}
                         </div>
-                        {selectedVM.status === "running" && (
-                          <span className="text-sm text-muted-foreground ml-auto">
-                            Uptime: {formatUptime(selectedVM.uptime)}
-                          </span>
-                        )}
                       </>
                     )}
                   </div>
+                  {/* Mobile layout unchanged */}
                   <div className="sm:hidden flex flex-col gap-2">
                     <div className="flex items-center gap-2">
                       <Server className="h-5 w-5 flex-shrink-0" />
