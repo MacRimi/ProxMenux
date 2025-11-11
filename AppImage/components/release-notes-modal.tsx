@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent } from "./ui/dialog"
-import { X, Sparkles, Link2, Shield, Gauge, HardDrive, Network } from "lucide-react"
+import { X, Sparkles, Link2, Shield, Zap, HardDrive, Gauge, Wrench, Settings } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
 const APP_VERSION = "1.0.1" // Sync with AppImage/package.json
@@ -68,19 +68,27 @@ const CURRENT_VERSION_FEATURES = [
   },
   {
     icon: <Shield className="h-5 w-5" />,
-    text: "Authentication System - Secure your dashboard with password protection",
+    text: "Two-Factor Authentication (2FA) - Enhanced security with TOTP support for login protection",
   },
   {
-    icon: <Gauge className="h-5 w-5" />,
-    text: "PCIe Link Speed Detection - View NVMe drive connection speeds and detect performance issues",
+    icon: <Zap className="h-5 w-5" />,
+    text: "Performance Improvements - Optimized loading times and reduced CPU usage by 85%",
   },
   {
     icon: <HardDrive className="h-5 w-5" />,
-    text: "Enhanced Storage Display - Better formatting for disk sizes (auto-converts GB to TB when needed)",
+    text: "Storage Enhancements - Improved disk space consumption display with local and remote storage separation",
   },
   {
-    icon: <Network className="h-5 w-5" />,
-    text: "SATA/SAS Information - View detailed interface information for all storage devices",
+    icon: <Gauge className="h-5 w-5" />,
+    text: "PCIe Link Speed Detection - View NVMe drive connection speeds and identify performance bottlenecks",
+  },
+  {
+    icon: <Wrench className="h-5 w-5" />,
+    text: "Hardware Page Improvements - Enhanced hardware information display with detailed PCIe and interface data",
+  },
+  {
+    icon: <Settings className="h-5 w-5" />,
+    text: "New Settings Page - Centralized configuration for authentication, optimizations, and system preferences",
   },
 ]
 
