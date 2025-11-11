@@ -72,7 +72,7 @@ const CURRENT_VERSION_FEATURES = [
   },
   {
     icon: <Zap className="h-5 w-5" />,
-    text: "Performance Improvements - Optimized loading times and reduced CPU usage by 85%",
+    text: "Performance Improvements - Optimized loading times and reduced CPU usage across the application",
   },
   {
     icon: <HardDrive className="h-5 w-5" />,
