@@ -285,7 +285,7 @@ export function ProxmoxDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <OnboardingCarousel />
-      <ReleaseNotesModal open={showReleaseNotes} onOpenChange={setShowReleaseNotes} />
+      <ReleaseNotesModal open={showReleaseNotes} onClose={() => setShowReleaseNotes(false)} />
 
       {!isServerConnected && (
         <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3">

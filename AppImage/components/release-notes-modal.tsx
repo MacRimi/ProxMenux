@@ -1,143 +1,188 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
-import { ScrollArea } from "./ui/scroll-area"
-import { Badge } from "./ui/badge"
-import { Sparkles } from "lucide-react"
+import { Dialog, DialogContent } from "./ui/dialog"
+import { X, Sparkles, Link2, Shield, Gauge, HardDrive, Network } from "lucide-react"
+import { Checkbox } from "./ui/checkbox"
 
-const APP_VERSION = "1.0.1" // Sync with package.json
+const APP_VERSION = "1.0.1" // Sync with AppImage/package.json
 
-const CHANGELOG = {
+interface ReleaseNote {
+  date: string
+  changes: {
+    added?: string[]
+    changed?: string[]
+    fixed?: string[]
+  }
+}
+
+export const CHANGELOG: Record<string, ReleaseNote> = {
   "1.0.1": {
-    date: "2025-02-11",
+    date: "November 11, 2025",
     changes: {
       added: [
-        "Automatic support for reverse proxies",
-        "New api-config.ts utility for automatic proxy configuration detection",
-        "Complete proxy configuration documentation",
-        "Configuration examples for Nginx, Caddy, Apache, Traefik, and Nginx Proxy Manager",
+        "Proxy Support - Access ProxMenux through reverse proxies with full functionality",
+        "Authentication System - Secure your dashboard with password protection",
+        "PCIe Link Speed Detection - View NVMe drive connection speeds and detect performance issues",
+        "Enhanced Storage Display - Better formatting for disk sizes (auto-converts GB to TB when needed)",
+        "SATA/SAS Information - View detailed interface information for all storage devices",
+        "Two-Factor Authentication (2FA) - Enhanced security with TOTP support",
+        "Health Monitoring System - Comprehensive system health checks with dismissible warnings",
+        "Release Notes Modal - Automatic notification of new features and improvements",
       ],
       changed: [
-        "Refactored API call system to use relative URLs when a proxy is detected",
-        "All components now use the new getApiUrl() utility for URL construction",
-        "Improved Flask server connection detection",
+        "Optimized VM & LXC page - Reduced CPU usage by 85% through intelligent caching",
+        "Storage metrics now separate local and remote storage for clarity",
+        "Update warnings now appear only after 365 days instead of 30 days",
+        "API intervals staggered to distribute server load (23s and 37s)",
       ],
       fixed: [
-        "Issue where charts and metrics wouldn't load when accessed through a reverse proxy",
-        "Hardcoded URLs to port 8008 causing connection errors behind proxies",
+        "Fixed dark mode text contrast issues in various components",
+        "Corrected storage calculation discrepancies between Overview and Storage pages",
+        "Resolved JSON stringify error in VM control actions",
+        "Improved IP address fetching for LXC containers",
       ],
     },
   },
   "1.0.0": {
-    date: "2025-02-01",
+    date: "October 15, 2025",
     changes: {
       added: [
-        "Complete monitoring dashboard for Proxmox",
-        "Real-time metrics for CPU, memory, network, and storage",
-        "VM and LXC container management",
-        "Detailed hardware information",
-        "System logs viewer",
-        "Light/dark theme support",
-        "Responsive design",
+        "Initial release of ProxMenux Monitor",
+        "Real-time system monitoring dashboard",
+        "Storage management with SMART health monitoring",
+        "Network metrics and bandwidth tracking",
+        "VM & LXC container management",
+        "Hardware information display",
+        "System logs viewer with filtering",
       ],
     },
   },
 }
 
+const CURRENT_VERSION_FEATURES = [
+  {
+    icon: <Link2 className="h-5 w-5" />,
+    text: "Proxy Support - Access ProxMenux through reverse proxies with full functionality",
+  },
+  {
+    icon: <Shield className="h-5 w-5" />,
+    text: "Authentication System - Secure your dashboard with password protection",
+  },
+  {
+    icon: <Gauge className="h-5 w-5" />,
+    text: "PCIe Link Speed Detection - View NVMe drive connection speeds and detect performance issues",
+  },
+  {
+    icon: <HardDrive className="h-5 w-5" />,
+    text: "Enhanced Storage Display - Better formatting for disk sizes (auto-converts GB to TB when needed)",
+  },
+  {
+    icon: <Network className="h-5 w-5" />,
+    text: "SATA/SAS Information - View detailed interface information for all storage devices",
+  },
+]
+
 interface ReleaseNotesModalProps {
   open: boolean
-  onOpenChange: (open: boolean) => void
+  onClose: () => void
 }
 
-export function ReleaseNotesModal({ open, onOpenChange }: ReleaseNotesModalProps) {
-  const currentVersion = CHANGELOG[APP_VERSION as keyof typeof CHANGELOG]
+export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
+  const [dontShowAgain, setDontShowAgain] = useState(false)
 
-  const handleDontShowAgain = () => {
-    localStorage.setItem("proxmenux-last-seen-version", APP_VERSION)
-    onOpenChange(false)
+  const handleClose = () => {
+    if (dontShowAgain) {
+      localStorage.setItem("proxmenux-last-seen-version", APP_VERSION)
+    }
+    onClose()
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-blue-500" />
-            <DialogTitle>What's New in v{APP_VERSION}</DialogTitle>
-          </div>
-        </DialogHeader>
-
-        <ScrollArea className="max-h-[60vh] pr-4">
-          {currentVersion && (
-            <div className="space-y-4">
-              <div className="text-sm text-muted-foreground">Released on {currentVersion.date}</div>
-
-              {currentVersion.changes.added && (
-                <div>
-                  <Badge variant="default" className="mb-2">
-                    Added
-                  </Badge>
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    {currentVersion.changes.added.map((item, idx) => (
-                      <li key={idx}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {currentVersion.changes.changed && (
-                <div>
-                  <Badge variant="secondary" className="mb-2">
-                    Changed
-                  </Badge>
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    {currentVersion.changes.changed.map((item, idx) => (
-                      <li key={idx}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {currentVersion.changes.fixed && (
-                <div>
-                  <Badge variant="outline" className="mb-2">
-                    Fixed
-                  </Badge>
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    {currentVersion.changes.fixed.map((item, idx) => (
-                      <li key={idx}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-        </ScrollArea>
-
-        <div className="flex justify-between items-center pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-3xl p-0 gap-0 overflow-hidden border-0 bg-transparent">
+        <div className="relative bg-card rounded-lg overflow-hidden shadow-2xl">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 z-50 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background"
+            onClick={handleClose}
+          >
+            <X className="h-4 w-4" />
           </Button>
-          <Button onClick={handleDontShowAgain}>Don't show again for this version</Button>
+
+          <div className="relative h-48 md:h-56 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 bg-black/10" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.1),transparent)]" />
+
+            <div className="relative z-10 text-white animate-pulse">
+              <Sparkles className="h-16 w-16" />
+            </div>
+
+            <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full blur-2xl" />
+            <div className="absolute bottom-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
+          </div>
+
+          <div className="p-6 md:p-8 space-y-4 md:space-y-6 max-h-[60vh] md:max-h-none overflow-y-auto">
+            <div className="space-y-2">
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground text-balance">
+                What's New in Version {APP_VERSION}
+              </h2>
+              <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
+                We've added exciting new features and improvements to make ProxMenux Monitor even better!
+              </p>
+            </div>
+
+            <div className="space-y-2 md:space-y-3">
+              {CURRENT_VERSION_FEATURES.map((feature, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-2 md:gap-3 p-3 md:p-4 rounded-lg bg-muted/50 border border-border/50 hover:bg-muted/70 transition-colors"
+                >
+                  <div className="text-orange-500 mt-0.5 flex-shrink-0">{feature.icon}</div>
+                  <p className="text-xs md:text-sm text-foreground leading-relaxed">{feature.text}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-3 pt-4">
+              <Button
+                onClick={handleClose}
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Got it!
+              </Button>
+
+              <div className="flex items-center justify-center gap-2">
+                <Checkbox
+                  id="dont-show-version-again"
+                  checked={dontShowAgain}
+                  onCheckedChange={(checked) => setDontShowAgain(checked as boolean)}
+                />
+                <label
+                  htmlFor="dont-show-version-again"
+                  className="text-xs md:text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
+                >
+                  Don't show again for this version
+                </label>
+              </div>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
   )
 }
 
-// Hook to detect version changes
 export function useVersionCheck() {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
 
   useEffect(() => {
     const lastSeenVersion = localStorage.getItem("proxmenux-last-seen-version")
 
-    // Show release notes if:
-    // 1. User has never seen any version
-    // 2. Current version is different from last seen
-    if (!lastSeenVersion || lastSeenVersion !== APP_VERSION) {
+    if (lastSeenVersion !== APP_VERSION) {
       setShowReleaseNotes(true)
     }
   }, [])
@@ -145,5 +190,4 @@ export function useVersionCheck() {
   return { showReleaseNotes, setShowReleaseNotes }
 }
 
-// Export version and changelog for Settings page
-export { APP_VERSION, CHANGELOG }
+export { APP_VERSION }
