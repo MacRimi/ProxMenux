@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 import {
   Server,
   Play,
@@ -1128,9 +1128,6 @@ export function VirtualMachines() {
                     )}
                   </div>
                 </DialogTitle>
-                <DialogDescription>
-                  View and manage configuration, resources, and status for this virtual machine
-                </DialogDescription>
               </DialogHeader>
 
               <div className="flex-1 overflow-y-auto px-6 py-4">
