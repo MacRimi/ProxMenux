@@ -109,8 +109,8 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl p-0 gap-0 overflow-hidden border-0 bg-transparent">
-        <div className="relative bg-card rounded-lg overflow-hidden shadow-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden border-0 bg-transparent">
+        <div className="relative bg-card rounded-lg overflow-hidden shadow-2xl h-full flex flex-col">
           <Button
             variant="ghost"
             size="icon"
@@ -120,41 +120,43 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
             <X className="h-4 w-4" />
           </Button>
 
-          <div className="relative h-48 md:h-56 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center overflow-hidden">
+          <div className="relative h-32 md:h-40 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center overflow-hidden flex-shrink-0">
             <div className="absolute inset-0 bg-black/10" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.1),transparent)]" />
 
             <div className="relative z-10 text-white animate-pulse">
-              <Sparkles className="h-16 w-16" />
+              <Sparkles className="h-12 w-12 md:h-14 md:w-14" />
             </div>
 
             <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full blur-2xl" />
             <div className="absolute bottom-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
           </div>
 
-          <div className="p-6 md:p-8 space-y-4 md:space-y-6 max-h-[60vh] md:max-h-none overflow-y-auto">
+          <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4 md:space-y-6">
             <div className="space-y-2">
-              <h2 className="text-2xl md:text-3xl font-bold text-foreground text-balance">
+              <h2 className="text-xl md:text-2xl font-bold text-foreground text-balance">
                 What's New in Version {APP_VERSION}
               </h2>
-              <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 We've added exciting new features and improvements to make ProxMenux Monitor even better!
               </p>
             </div>
 
-            <div className="space-y-2 md:space-y-3">
+            <div className="space-y-2">
               {CURRENT_VERSION_FEATURES.map((feature, index) => (
                 <div
                   key={index}
-                  className="flex items-start gap-2 md:gap-3 p-3 md:p-4 rounded-lg bg-muted/50 border border-border/50 hover:bg-muted/70 transition-colors"
+                  className="flex items-start gap-2 md:gap-3 p-3 rounded-lg bg-muted/50 border border-border/50 hover:bg-muted/70 transition-colors"
                 >
                   <div className="text-orange-500 mt-0.5 flex-shrink-0">{feature.icon}</div>
                   <p className="text-xs md:text-sm text-foreground leading-relaxed">{feature.text}</p>
                 </div>
               ))}
             </div>
+          </div>
 
-            <div className="flex flex-col gap-3 pt-4">
+          <div className="flex-shrink-0 p-6 md:p-8 pt-4 border-t border-border/50 bg-card">
+            <div className="flex flex-col gap-3">
               <Button
                 onClick={handleClose}
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
