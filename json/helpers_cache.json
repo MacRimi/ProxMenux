@@ -954,18 +954,6 @@
     "type": "ct"
   },
   {
-    "name": "Dashy",
-    "slug": "dashy",
-    "desc": "Dashy is a solution that helps you organize your self-hosted services by centralizing access to them through a single interface.",
-    "script": "ct/dashy.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/dashy.sh",
-    "categories": [
-      10
-    ],
-    "notes": [],
-    "type": "ct"
-  },
-  {
     "name": "Debian 13",
     "slug": "debian-13-vm",
     "desc": "Debian 13 (Trixie) Linux is a distribution that emphasizes free software. It supports many hardware platforms",
