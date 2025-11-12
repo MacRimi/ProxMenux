@@ -479,7 +479,7 @@ install_normal_version() {
     ((current_step++))
 
     show_progress $current_step $total_steps "Cloning ProxMenux repository..."
-    if ! git clone --depth 1 "$REPO_URL" "$TEMP_DIR" 2>&1; then
+    if ! git clone --depth 1 "$REPO_URL" "$TEMP_DIR" 2>/dev/null; then
         msg_error "Failed to clone repository from $REPO_URL"
         exit 1
     fi
