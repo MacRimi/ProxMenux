@@ -76,9 +76,7 @@ cleanup_corrupted_files() {
 # Cleanup function
 cleanup() {
     if [ -d "$TEMP_DIR" ]; then
-        echo -e "${YELLOW}Cleaning up temporary files...${NC}"
         rm -rf "$TEMP_DIR"
-        echo -e "${GREEN}Cleanup completed.${NC}"
     fi
 }
 
