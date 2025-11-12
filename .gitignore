@@ -51,3 +51,5 @@ Thumbs.db
 !guides/
 !web/
 
+# GitHub authentication
+.github/auth.sh
