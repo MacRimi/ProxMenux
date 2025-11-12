@@ -1132,6 +1132,18 @@
     "type": "ct"
   },
   {
+    "name": "Domain Monitor",
+    "slug": "domain-monitor",
+    "desc": "A self-hosted PHP domain expiration monitoring tool that tracks domain expiry dates, RDAP/WHOIS data, and SSL certificate validity. Supports alerts, multi-user setup, and cron automation. Built for developers, hosting providers, and IT admins who want full control without third-party services.",
+    "script": "ct/domain-monitor.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/domain-monitor.sh",
+    "categories": [
+      9
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Donetick",
     "slug": "donetick",
     "desc": "Donetick an open-source, user-friendly app for managing tasks and chores, featuring customizable options to help you and others stay organized",
