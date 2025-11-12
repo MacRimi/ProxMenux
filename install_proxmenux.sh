@@ -55,7 +55,7 @@ MONITOR_PORT=8008
 REPO_URL="https://github.com/c78-contrib/ProxMenuxOffline.git"
 TEMP_DIR="/tmp/proxmenux-install-$$"
 
-# Load utils.sh from local repository
+# Load utils.sh dependency
 if [[ -f "$UTILS_URL" ]]; then
     source "$UTILS_URL"
 else
