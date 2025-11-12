@@ -40,6 +40,7 @@ BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
 CACHE_FILE="$BASE_DIR/cache.json"
 UTILS_FILE="$BASE_DIR/utils.sh"
+UTILS_URL="https://github.com/MacRimi/ProxMenux/raw/refs/heads/main/scripts/utils.sh"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 MENU_SCRIPT="menu"
 VENV_PATH="/opt/googletrans-env"
@@ -53,6 +54,15 @@ MONITOR_PORT=8008
 # Offline installer envs
 REPO_URL="https://github.com/c78-contrib/ProxMenuxOffline.git"
 TEMP_DIR="/tmp/proxmenux-install-$$"
+
+# Load utils.sh from local repository
+if [[ -f "$UTILS_URL" ]]; then
+    source "$UTILS_URL"
+else
+    msg_error "Failed to load utils dependencies. Please report this issue."
+    exit 1
+fi
+
 
 cleanup_corrupted_files() {
     if [ -f "$CONFIG_FILE" ] && ! jq empty "$CONFIG_FILE" >/dev/null 2>&1; then
@@ -480,14 +490,6 @@ install_normal_version() {
 
     # Change to temporary directory
     cd "$TEMP_DIR"
-
-    # Load utils.sh from local repository
-    if [[ -f "./scripts/utils.sh" ]]; then
-        source "./scripts/utils.sh"
-    else
-        msg_error "Failed to load utils.sh from local repository. Please report this issue."
-        exit 1
-    fi
 
     # --------------------------------------------------------------------------------------
 
