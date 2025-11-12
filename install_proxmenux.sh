@@ -56,10 +56,8 @@ REPO_URL="https://github.com/c78-contrib/ProxMenuxOffline.git"
 TEMP_DIR="/tmp/proxmenux-install-$$"
 
 # Load utils.sh dependency
-if [[ -f "$UTILS_URL" ]]; then
-    source "$UTILS_URL"
-else
-    msg_error "Failed to load utils dependencies. Please report this issue."
+if ! source <(curl -sSf "$UTILS_URL"); then
+    echo "Error: Could not load utils.sh from $UTILS_URL"
     exit 1
 fi
 
