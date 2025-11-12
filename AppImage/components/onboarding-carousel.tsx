@@ -17,10 +17,6 @@ import {
   Cpu,
   FileText,
   Rocket,
-  Zap,
-  Shield,
-  Link2,
-  Gauge,
 } from "lucide-react"
 import Image from "next/image"
 import { Checkbox } from "./ui/checkbox"
@@ -32,7 +28,6 @@ interface OnboardingSlide {
   image?: string
   icon: React.ReactNode
   gradient: string
-  features?: { icon: React.ReactNode; text: string }[]
 }
 
 const slides: OnboardingSlide[] = [
@@ -46,35 +41,6 @@ const slides: OnboardingSlide[] = [
   },
   {
     id: 1,
-    title: "What's New in This Version",
-    description: "We've added exciting new features and improvements to make ProxMenux Monitor even better!",
-    icon: <Zap className="h-16 w-16" />,
-    gradient: "from-amber-500 via-orange-500 to-red-500",
-    features: [
-      {
-        icon: <Link2 className="h-5 w-5" />,
-        text: "Proxy Support - Access ProxMenux through reverse proxies with full functionality",
-      },
-      {
-        icon: <Shield className="h-5 w-5" />,
-        text: "Authentication System - Secure your dashboard with password protection",
-      },
-      {
-        icon: <Gauge className="h-5 w-5" />,
-        text: "PCIe Link Speed Detection - View NVMe drive connection speeds and detect performance issues",
-      },
-      {
-        icon: <HardDrive className="h-5 w-5" />,
-        text: "Enhanced Storage Display - Better formatting for disk sizes (auto-converts GB to TB when needed)",
-      },
-      {
-        icon: <Network className="h-5 w-5" />,
-        text: "SATA/SAS Information - View detailed interface information for all storage devices",
-      },
-    ],
-  },
-  {
-    id: 2,
     title: "System Overview",
     description:
       "Monitor your server's status in real-time: CPU, memory, temperature, system load and more. Everything in an intuitive and easy-to-understand dashboard.",
@@ -83,7 +49,7 @@ const slides: OnboardingSlide[] = [
     gradient: "from-blue-500 to-cyan-500",
   },
   {
-    id: 3,
+    id: 2,
     title: "Storage Management",
     description:
       "Visualize the status of all your disks and volumes. Detailed information on capacity, usage, SMART health, temperature and performance of each storage device.",
@@ -92,7 +58,7 @@ const slides: OnboardingSlide[] = [
     gradient: "from-cyan-500 to-teal-500",
   },
   {
-    id: 4,
+    id: 3,
     title: "Network Metrics",
     description:
       "Monitor network traffic in real-time. Bandwidth statistics, active interfaces, transfer speeds and historical usage graphs.",
@@ -101,7 +67,7 @@ const slides: OnboardingSlide[] = [
     gradient: "from-teal-500 to-green-500",
   },
   {
-    id: 5,
+    id: 4,
     title: "Virtual Machines & Containers",
     description:
       "Manage all your VMs and LXC containers from one place. Status, allocated resources, current usage and quick controls for each virtual machine.",
@@ -110,7 +76,7 @@ const slides: OnboardingSlide[] = [
     gradient: "from-green-500 to-emerald-500",
   },
   {
-    id: 6,
+    id: 5,
     title: "Hardware Information",
     description:
       "Complete details of your server hardware: CPU, RAM, GPU, disks, network, UPS and more. Technical specifications, models, serial numbers and status of each component.",
@@ -119,7 +85,7 @@ const slides: OnboardingSlide[] = [
     gradient: "from-emerald-500 to-blue-500",
   },
   {
-    id: 7,
+    id: 6,
     title: "System Logs",
     description:
       "Access system logs in real-time. Filter by event type, search for specific errors and keep complete track of your server activity. Download the displayed logs for further analysis.",
@@ -128,7 +94,7 @@ const slides: OnboardingSlide[] = [
     gradient: "from-blue-500 to-indigo-500",
   },
   {
-    id: 8,
+    id: 7,
     title: "Ready for the Future!",
     description:
       "ProxMenux Monitor is prepared to receive updates and improvements that will be added gradually, improving the user experience and being able to execute ProxMenux functions from the web panel.",
@@ -194,7 +160,6 @@ export function OnboardingCarousel() {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden border-0 bg-transparent">
         <div className="relative bg-card rounded-lg overflow-hidden shadow-2xl">
-          {/* Close button */}
           <Button
             variant="ghost"
             size="icon"
@@ -210,7 +175,6 @@ export function OnboardingCarousel() {
             <div className="absolute inset-0 bg-black/10" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.1),transparent)]" />
 
-            {/* Icon or Image */}
             <div className="relative z-10 text-white">
               {slide.image ? (
                 <div className="relative w-full h-36 md:h-48 flex items-center justify-center px-4">
@@ -236,7 +200,6 @@ export function OnboardingCarousel() {
               )}
             </div>
 
-            {/* Decorative elements */}
             <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full blur-2xl" />
             <div className="absolute bottom-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
           </div>
@@ -249,21 +212,6 @@ export function OnboardingCarousel() {
               </p>
             </div>
 
-            {slide.features && (
-              <div className="space-y-2 md:space-y-3 py-2">
-                {slide.features.map((feature, index) => (
-                  <div
-                    key={index}
-                    className="flex items-start gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-muted/50 border border-border/50"
-                  >
-                    <div className="text-blue-500 mt-0.5 flex-shrink-0">{feature.icon}</div>
-                    <p className="text-xs md:text-sm text-foreground leading-relaxed">{feature.text}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Progress dots */}
             <div className="flex items-center justify-center gap-2 py-2 md:py-4">
               {slides.map((_, index) => (
                 <button

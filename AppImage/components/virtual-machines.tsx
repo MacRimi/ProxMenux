@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 import {
   Server,
   Play,
@@ -124,7 +124,6 @@ interface VMDetails extends VMData {
     gpu_passthrough?: string[]
     devices?: string[]
   }
-  lxc_ip?: string
   lxc_ip_info?: {
     all_ips: string[]
     real_ips: string[]
@@ -139,7 +138,7 @@ const fetcher = async (url: string) => {
     headers: {
       "Content-Type": "application/json",
     },
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(60000),
   })
 
   if (!response.ok) {
@@ -283,15 +282,22 @@ export function VirtualMachines() {
   const [editedNotes, setEditedNotes] = useState("")
   const [savingNotes, setSavingNotes] = useState(false)
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null)
+  const [ipsLoaded, setIpsLoaded] = useState(false)
+  const [loadingIPs, setLoadingIPs] = useState(false)
 
   useEffect(() => {
     const fetchLXCIPs = async () => {
-      if (!vmData) return
+      // Only fetch if data exists, not already loaded, and not currently loading
+      if (!vmData || ipsLoaded || loadingIPs) return
 
       const lxcs = vmData.filter((vm) => vm.type === "lxc")
 
-      if (lxcs.length === 0) return
+      if (lxcs.length === 0) {
+        setIpsLoaded(true)
+        return
+      }
 
+      setLoadingIPs(true)
       const configs: Record<number, string> = {}
 
       const batchSize = 5
@@ -320,16 +326,20 @@ export function VirtualMachines() {
               }
             } catch (error) {
               console.log(`[v0] Could not fetch IP for LXC ${lxc.vmid}`)
+              configs[lxc.vmid] = "N/A"
             }
           }),
         )
 
         setVmConfigs((prev) => ({ ...prev, ...configs }))
       }
+
+      setLoadingIPs(false)
+      setIpsLoaded(true)
     }
 
     fetchLXCIPs()
-  }, [vmData])
+  }, [vmData, ipsLoaded, loadingIPs])
 
   const handleVMClick = async (vm: VMData) => {
     setSelectedVM(vm)
@@ -469,7 +479,7 @@ export function VirtualMachines() {
     "/api/system",
     fetcher,
     {
-      refreshInterval: 23000,
+      refreshInterval: 37000,
       revalidateOnFocus: false,
     },
   )
@@ -1068,6 +1078,7 @@ export function VirtualMachines() {
             <>
               <DialogHeader className="pb-4 border-b border-border px-6 pt-6">
                 <DialogTitle className="flex flex-col gap-3">
+                  {/* Desktop layout: Uptime now appears after status badge */}
                   <div className="hidden sm:flex items-center gap-3 flex-wrap">
                     <div className="flex items-center gap-2">
                       <Server className="h-5 w-5 flex-shrink-0" />
@@ -1084,15 +1095,16 @@ export function VirtualMachines() {
                           <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
                             {selectedVM.status.toUpperCase()}
                           </Badge>
+                          {selectedVM.status === "running" && (
+                            <span className="text-sm text-muted-foreground">
+                              Uptime: {formatUptime(selectedVM.uptime)}
+                            </span>
+                          )}
                         </div>
-                        {selectedVM.status === "running" && (
-                          <span className="text-sm text-muted-foreground ml-auto">
-                            Uptime: {formatUptime(selectedVM.uptime)}
-                          </span>
-                        )}
                       </>
                     )}
                   </div>
+                  {/* Mobile layout unchanged */}
                   <div className="sm:hidden flex flex-col gap-2">
                     <div className="flex items-center gap-2">
                       <Server className="h-5 w-5 flex-shrink-0" />
@@ -1117,9 +1129,6 @@ export function VirtualMachines() {
                     )}
                   </div>
                 </DialogTitle>
-                <DialogDescription>
-                  View and manage configuration, resources, and status for this virtual machine
-                </DialogDescription>
               </DialogHeader>
 
               <div className="flex-1 overflow-y-auto px-6 py-4">

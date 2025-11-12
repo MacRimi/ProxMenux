@@ -6,6 +6,7 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Wrench, Package } from "lucide-react"
+import { APP_VERSION } from "./release-notes-modal"
 import { getApiUrl } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
 
@@ -40,6 +41,9 @@ export function Settings() {
 
   const [proxmenuxTools, setProxmenuxTools] = useState<ProxMenuxTool[]>([])
   const [loadingTools, setLoadingTools] = useState(true)
+  const [expandedVersions, setExpandedVersions] = useState<Record<string, boolean>>({
+    [APP_VERSION]: true, // Current version expanded by default
+  })
 
   useEffect(() => {
     checkAuthStatus()
@@ -272,6 +276,13 @@ export function Settings() {
     localStorage.removeItem("proxmenux-auth-token")
     localStorage.removeItem("proxmenux-auth-setup-complete")
     window.location.reload()
+  }
+
+  const toggleVersion = (version: string) => {
+    setExpandedVersions((prev) => ({
+      ...prev,
+      [version]: !prev[version],
+    }))
   }
 
   return (

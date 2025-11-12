@@ -27,6 +27,7 @@ class HealthPersistence:
     VM_ERROR_RETENTION = 48 * 3600  # 48 hours
     LOG_ERROR_RETENTION = 24 * 3600  # 24 hours
     DISK_ERROR_RETENTION = 48 * 3600  # 48 hours
+    UPDATES_SUPPRESSION = 180 * 24 * 3600  # 180 days (6 months)
     
     def __init__(self):
         """Initialize persistence with database in config directory"""
@@ -102,8 +103,15 @@ class HealthPersistence:
                 resolved_dt = datetime.fromisoformat(ack_check[1])
                 hours_since_ack = (datetime.now() - resolved_dt).total_seconds() / 3600
                 
-                if hours_since_ack < 24:
-                    # Skip re-adding recently acknowledged errors (within 24h)
+                if category == 'updates':
+                    # Updates: suppress for 180 days (6 months)
+                    suppression_hours = self.UPDATES_SUPPRESSION / 3600
+                else:
+                    # Other errors: suppress for 24 hours
+                    suppression_hours = 24
+                
+                if hours_since_ack < suppression_hours:
+                    # Skip re-adding recently acknowledged errors
                     conn.close()
                     return {'type': 'skipped_acknowledged', 'needs_notification': False}
             except Exception:

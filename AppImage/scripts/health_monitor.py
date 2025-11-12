@@ -64,8 +64,8 @@ class HealthMonitor:
     LOG_CHECK_INTERVAL = 300
     
     # Updates Thresholds
-    UPDATES_WARNING = 10
-    UPDATES_CRITICAL = 30
+    UPDATES_WARNING = 365  # Only warn after 1 year without updates
+    UPDATES_CRITICAL = 730  # Critical after 2 years
     
     # Known benign errors from Proxmox that should not trigger alerts
     BENIGN_ERROR_PATTERNS = [
@@ -1376,7 +1376,8 @@ class HealthMonitor:
     def _check_updates(self) -> Optional[Dict[str, Any]]:
         """
         Check for pending system updates with intelligence.
-        Only warns for: critical security updates, kernel updates, or updates pending >30 days.
+        Now only warns after 365 days without updates.
+        Critical security updates and kernel updates trigger INFO status immediately.
         """
         cache_key = 'updates_check'
         current_time = time.time()
@@ -1386,6 +1387,17 @@ class HealthMonitor:
                 return self.cached_results.get(cache_key)
         
         try:
+            apt_history_path = '/var/log/apt/history.log'
+            last_update_days = None
+            
+            if os.path.exists(apt_history_path):
+                try:
+                    mtime = os.path.getmtime(apt_history_path)
+                    days_since_update = (current_time - mtime) / 86400
+                    last_update_days = int(days_since_update)
+                except Exception:
+                    pass
+            
             result = subprocess.run(
                 ['apt-get', 'upgrade', '--dry-run'],
                 capture_output=True,
@@ -1419,8 +1431,38 @@ class HealthMonitor:
                 if security_updates:
                     status = 'WARNING'
                     reason = f'{len(security_updates)} security update(s) available'
+                    # Record persistent error for security updates
+                    health_persistence.record_error(
+                        error_key='updates_security',
+                        category='updates',
+                        severity='WARNING',
+                        reason=reason,
+                        details={'count': len(security_updates), 'packages': security_updates[:5]}
+                    )
+                elif last_update_days and last_update_days >= 730:
+                    # 2+ years without updates - CRITICAL
+                    status = 'CRITICAL'
+                    reason = f'System not updated in {last_update_days} days (>2 years)'
+                    health_persistence.record_error(
+                        error_key='updates_730days',
+                        category='updates',
+                        severity='CRITICAL',
+                        reason=reason,
+                        details={'days': last_update_days, 'update_count': update_count}
+                    )
+                elif last_update_days and last_update_days >= 365:
+                    # 1+ year without updates - WARNING
+                    status = 'WARNING'
+                    reason = f'System not updated in {last_update_days} days (>1 year)'
+                    health_persistence.record_error(
+                        error_key='updates_365days',
+                        category='updates',
+                        severity='WARNING',
+                        reason=reason,
+                        details={'days': last_update_days, 'update_count': update_count}
+                    )
                 elif kernel_updates:
-                    status = 'INFO'  # Informational, not critical
+                    status = 'INFO'
                     reason = f'{len(kernel_updates)} kernel/PVE update(s) available'
                 elif update_count > 50:
                     status = 'INFO'
@@ -1435,6 +1477,8 @@ class HealthMonitor:
                 }
                 if reason:
                     update_result['reason'] = reason
+                if last_update_days:
+                    update_result['days_since_update'] = last_update_days
                 
                 self.cached_results[cache_key] = update_result
                 self.last_check_times[cache_key] = current_time

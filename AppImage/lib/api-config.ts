@@ -4,6 +4,14 @@
  */
 
 /**
+ * API Server Port Configuration
+ * Default: 8008 (production)
+ * Can be changed to 8009 for beta testing
+ * This can also be set via NEXT_PUBLIC_API_PORT environment variable
+ */
+export const API_PORT = process.env.NEXT_PUBLIC_API_PORT || "8008"
+
+/**
  * Gets the base URL for API calls
  * Automatically detects if running behind a proxy by checking if we're on a standard port
  *
@@ -30,8 +38,8 @@ export function getApiBaseUrl(): string {
     console.log("[v0] getApiBaseUrl: Detected proxy access, using relative URLs")
     return ""
   } else {
-    // Direct access - use explicit port 8008
-    const baseUrl = `${protocol}//${hostname}:8008`
+    // Direct access - use explicit API port
+    const baseUrl = `${protocol}//${hostname}:${API_PORT}`
     console.log("[v0] getApiBaseUrl: Direct access detected, using:", baseUrl)
     return baseUrl
   }

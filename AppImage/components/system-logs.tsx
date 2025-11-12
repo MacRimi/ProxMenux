@@ -28,6 +28,7 @@ import {
   Terminal,
 } from "lucide-react"
 import { useState, useEffect, useMemo } from "react"
+import { API_PORT } from "@/lib/api-config"
 
 interface Log {
   timestamp: string
@@ -131,10 +132,10 @@ export function SystemLogs() {
       if (isStandardPort) {
         return endpoint
       } else {
-        return `${protocol}//${hostname}:8008${endpoint}`
+        return `${protocol}//${hostname}:${API_PORT}${endpoint}`
       }
     }
-    return `http://localhost:8008${endpoint}`
+    return `${protocol}//${hostname}:${API_PORT}${endpoint}`
   }
 
   useEffect(() => {
