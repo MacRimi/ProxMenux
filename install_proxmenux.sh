@@ -35,7 +35,6 @@
 
 # Configuration ============================================
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
-# UTILS_URL - No longer used in local version (now loaded from ./scripts/utils.sh)
 INSTALL_DIR="/usr/local/bin"
 BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
@@ -51,10 +50,9 @@ MONITOR_INSTALL_PATH="$BASE_DIR/ProxMenux-Monitor.AppImage"
 MONITOR_SERVICE_FILE="/etc/systemd/system/proxmenux-monitor.service"
 MONITOR_PORT=8008
 
-# Load utils.sh from local repository
-if [[ -f "./scripts/utils.sh" ]]; then
-    source "./scripts/utils.sh"
-fi
+# Offline installer envs
+REPO_URL="https://github.com/c78-contrib/ProxMenuxOffline.git"
+TEMP_DIR="/tmp/proxmenux-install-$$"
 
 cleanup_corrupted_files() {
     if [ -f "$CONFIG_FILE" ] && ! jq empty "$CONFIG_FILE" >/dev/null 2>&1; then
@@ -66,6 +64,19 @@ cleanup_corrupted_files() {
         rm -f "$CACHE_FILE"
     fi
 }
+
+# Cleanup function
+cleanup() {
+    if [ -d "$TEMP_DIR" ]; then
+        echo -e "${YELLOW}Cleaning up temporary files...${NC}"
+        rm -rf "$TEMP_DIR"
+        echo -e "${GREEN}Cleanup completed.${NC}"
+    fi
+}
+
+# Set trap to ensure cleanup on exit
+trap cleanup EXIT
+
 
 # ==========================================================
 check_existing_installation() {
@@ -406,7 +417,7 @@ EOF
 
 ####################################################
 install_normal_version() {
-    local total_steps=4
+    local total_steps=5
     local current_step=1
     
     show_progress $current_step $total_steps "Installing basic dependencies."
@@ -438,7 +449,7 @@ install_normal_version() {
         update_config "jq" "already_installed"
     fi
     
-    BASIC_DEPS=("dialog" "curl")
+    BASIC_DEPS=("dialog" "curl" "git")
     for pkg in "${BASIC_DEPS[@]}"; do
         if ! dpkg -l | grep -qw "$pkg"; then
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
@@ -453,8 +464,33 @@ install_normal_version() {
         fi
     done
     
-    msg_ok "jq, dialog and curl installed successfully."
-    
+    msg_ok "jq, dialog, curl and git installed successfully."
+
+    # --------------------------------------------------------------------------------------
+    # Clone repository
+    ((current_step++))
+
+    show_progress $current_step $total_steps "Cloning ProxMenux repository..."
+    if ! git clone --depth 1 "$REPO_URL" "$TEMP_DIR" 2>&1; then
+        msg_error "Failed to clone repository from $REPO_URL"
+        exit 1
+    fi
+
+    msg_ok "Repository cloned successfully."
+
+    # Change to temporary directory
+    cd "$TEMP_DIR"
+
+    # Load utils.sh from local repository
+    if [[ -f "./scripts/utils.sh" ]]; then
+        source "./scripts/utils.sh"
+    else
+        msg_error "Failed to load utils.sh from local repository. Please report this issue."
+        exit 1
+    fi
+
+    # --------------------------------------------------------------------------------------
+
     ((current_step++))
     
     show_progress $current_step $total_steps "Creating directories and configuration"
