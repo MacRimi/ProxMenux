@@ -585,6 +585,12 @@ get_appimage_version() {
 install_proxmenux_monitor() {
     local appimage_source=$(detect_latest_appimage)
     
+    if [ -z "$appimage_source" ] || [ ! -f "$appimage_source" ]; then
+        msg_error "ProxMenux Monitor AppImage not found in $TEMP_DIR/AppImage/"
+        msg_warn "Please ensure the AppImage directory exists with ProxMenux-*.AppImage files."
+        update_config "proxmenux_monitor" "appimage_not_found"
+        return 1
+    fi
     
     local appimage_version=$(get_appimage_version "$appimage_source")
     
