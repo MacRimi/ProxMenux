@@ -61,8 +61,13 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
         throw new Error(data.error || "Failed to skip authentication")
       }
 
+      if (data.auth_declined) {
+        console.log("[v0] Authentication skipped successfully - APIs should be accessible without token")
+      }
+
       console.log("[v0] Authentication skipped successfully")
       localStorage.setItem("proxmenux-auth-declined", "true")
+      localStorage.removeItem("proxmenux-auth-token") // Remove any old token
       setOpen(false)
       onComplete()
     } catch (err) {

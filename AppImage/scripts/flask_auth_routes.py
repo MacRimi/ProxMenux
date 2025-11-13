@@ -135,7 +135,12 @@ def auth_skip():
         success, message = auth_manager.decline_auth()
         
         if success:
-            return jsonify({"success": True, "message": message})
+            # Return success with clear indication that APIs should be accessible
+            return jsonify({
+                "success": True, 
+                "message": message,
+                "auth_declined": True  # Add explicit flag for frontend
+            })
         else:
             return jsonify({"success": False, "message": message}), 400
     except Exception as e:
