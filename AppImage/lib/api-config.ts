@@ -61,6 +61,18 @@ export function getApiUrl(endpoint: string): string {
 }
 
 /**
+ * Gets the JWT token from localStorage
+ *
+ * @returns JWT token or null if not authenticated
+ */
+export function getAuthToken(): string | null {
+  if (typeof window === "undefined") {
+    return null
+  }
+  return localStorage.getItem("proxmenux-auth-token")
+}
+
+/**
  * Fetches data from an API endpoint with error handling
  *
  * @param endpoint - API endpoint path
@@ -70,12 +82,20 @@ export function getApiUrl(endpoint: string): string {
 export async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = getApiUrl(endpoint)
 
+  const token = getAuthToken()
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers as Record<string, string>),
+  }
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`
+  }
+
   const response = await fetch(url, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
+    headers,
     cache: "no-store",
   })
 
