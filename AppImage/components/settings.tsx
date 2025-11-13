@@ -323,21 +323,22 @@ export function Settings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           password: tokenPassword,
-          totp_code: totpEnabled ? tokenTotpCode : undefined,
+          totp_token: totpEnabled ? tokenTotpCode : undefined,
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || "Failed to generate API token")
+        throw new Error(data.message || data.error || "Failed to generate API token")
       }
 
-      const data = await response.json()
       setApiToken(data.token)
       setSuccess("API token generated successfully! Make sure to copy it now as you won't be able to see it again.")
       setTokenPassword("")
       setTokenTotpCode("")
     } catch (err) {
+      console.error("[v0] Token generation error:", err)
       setError(err instanceof Error ? err.message : "Failed to generate API token")
     } finally {
       setGeneratingToken(false)
