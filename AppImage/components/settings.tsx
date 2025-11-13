@@ -573,6 +573,26 @@ export function Settings() {
                 </div>
               )}
 
+              {!totpEnabled && (
+                <div className="space-y-3">
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
+                    <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-blue-400">
+                      <p className="font-medium mb-1">Two-Factor Authentication (2FA)</p>
+                      <p className="text-blue-300">
+                        Add an extra layer of security by requiring a code from your authenticator app in addition to
+                        your password.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button onClick={() => setShow2FASetup(true)} variant="outline" className="w-full">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Enable Two-Factor Authentication
+                  </Button>
+                </div>
+              )}
+
               {totpEnabled && (
                 <div className="space-y-3">
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-center gap-2">
