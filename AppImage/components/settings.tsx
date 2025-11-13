@@ -327,8 +327,15 @@ export function Settings() {
         }),
       })
 
-      const data = await response.json()
+      // Parse response first
+      let data
+      try {
+        data = await response.json()
+      } catch (parseError) {
+        throw new Error("Invalid server response")
+      }
 
+      // Then check if request was successful
       if (!response.ok) {
         throw new Error(data.message || data.error || "Failed to generate API token")
       }
