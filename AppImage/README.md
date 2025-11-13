@@ -3,8 +3,50 @@
 A modern, responsive dashboard for monitoring Proxmox VE systems built with Next.js and React.
 
 <p align="center">
-  <img src="public/images/proxmenux-logo.png" alt="ProxMenux Monitor Logo" width="200"/>
+  <img src="AppImage/public/images/proxmenux-logo.png" alt="ProxMenux Monitor Logo" width="200"/>
 </p>
+
+## Screenshots
+
+Get a quick overview of ProxMenux Monitor's main features:
+
+<p align="center">
+  <img src="AppImage/public/images/onboarding/imagen1.png" alt="Overview Dashboard" width="800"/>
+  <br/>
+  <em>System Overview - Monitor CPU, memory, temperature, and uptime in real-time</em>
+</p>
+
+<p align="center">
+  <img src="AppImage/public/images/onboarding/imagen2.png" alt="Storage Management" width="800"/>
+  <br/>
+  <em>Storage Management - Visual representation of disk usage and health</em>
+</p>
+
+<p align="center">
+  <img src="AppImage/public/images/onboarding/imagen3.png" alt="Network Monitoring" width="800"/>
+  <br/>
+  <em>Network Monitoring - Real-time traffic graphs and interface statistics</em>
+</p>
+
+<p align="center">
+  <img src="AppImage/public/images/onboarding/imagen4.png" alt="Virtual Machines & LXC" width="800"/>
+  <br/>
+  <em>VMs & LXC Containers - Comprehensive view with resource usage and controls</em>
+</p>
+
+<p align="center">
+  <img src="AppImage/public/images/onboarding/imagen5.png" alt="Hardware Information" width="800"/>
+  <br/>
+  <em>Hardware Information - Detailed specs for CPU, GPU, and PCIe devices</em>
+</p>
+
+<p align="center">
+  <img src="AppImage/public/images/onboarding/imagen6.png" alt="System Logs" width="800"/>
+  <br/>
+  <em>System Logs - Real-time monitoring with filtering and search</em>
+</p>
+
+---
 
 ## Table of Contents
 
@@ -22,8 +64,8 @@ A modern, responsive dashboard for monitoring Proxmox VE systems built with Next
 - [Integration Examples](#integration-examples)
   - [Homepage Integration](#homepage-integration)
   - [Home Assistant Integration](#home-assistant-integration)
-- [Onboarding Experience](#onboarding-experience)
 - [Contributing](#contributing)
+- [License](#license)
 
 ---
 
@@ -59,6 +101,43 @@ The application runs as a standalone AppImage on your Proxmox server and serves 
 
 ## Installation
 
+**ProxMenux Monitor is integrated into [ProxMenux](https://proxmenux.com) and comes enabled by default.** No manual installation is required if you're using ProxMenux.
+
+The monitor automatically starts when ProxMenux is installed and runs as a systemd service on your Proxmox server.
+
+### Accessing the Dashboard
+
+You can access ProxMenux Monitor in two ways:
+
+1. **Direct Access**: `http://your-proxmox-ip:8008`
+2. **Via Proxy** (Recommended): `https://your-domain.com/proxmenux-monitor/`
+
+**Note**: All API endpoints work seamlessly with both direct access and proxy configurations. When using a reverse proxy, the application automatically detects and adapts to the proxied environment.
+
+### Proxy Configuration
+
+ProxMenux Monitor includes built-in support for reverse proxy configurations. If you're using Nginx, Caddy, or Traefik, the application will automatically:
+
+- Detect the proxy headers (`X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host`)
+- Adjust API endpoints to work correctly through the proxy
+- Maintain full functionality for all features including authentication and API access
+
+**Example Nginx configuration:**
+```nginx
+location /proxmenux-monitor/ {
+    proxy_pass http://localhost:8008/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+}
+```
+
+### Manual Installation (Standalone)
+
+If you want to run ProxMenux Monitor as a standalone application outside of ProxMenux:
+
 1. Download the latest `ProxMenux-Monitor.AppImage` from the releases page
 2. Make it executable:
    ```bash
@@ -72,8 +151,6 @@ The application runs as a standalone AppImage on your Proxmox server and serves 
 
 The application will start automatically and create a systemd service for persistence.
 
----
-
 ## Authentication & Security
 
 ProxMenux Monitor includes an optional authentication system to protect your dashboard with a password and two-factor authentication.
@@ -86,7 +163,7 @@ On first launch, you'll be presented with three options:
 2. **Enable 2FA** - Add TOTP-based two-factor authentication for enhanced security
 3. **Skip** - Continue without authentication (not recommended for production environments)
 
-![Authentication Setup](public/images/docs/auth-setup.png)
+![Authentication Setup](AppImage/public/images/docs/auth-setup.png)
 
 ### Two-Factor Authentication (2FA)
 
@@ -98,7 +175,7 @@ After setting up your password, you can enable 2FA using any TOTP authenticator 
 4. Enter the 6-digit code to verify
 5. Save your backup codes in a secure location
 
-![2FA Setup](public/images/docs/2fa-setup.png)
+![2FA Setup](AppImage/public/images/docs/2fa-setup.png)
 
 ---
 
@@ -110,17 +187,43 @@ ProxMenux Monitor provides a comprehensive RESTful API for integrating with exte
 
 When authentication is enabled on ProxMenux Monitor, all API endpoints (except `/api/health` and `/api/auth/*`) require a valid JWT token in the `Authorization` header.
 
-#### API Endpoint Base URL
+### API Endpoint Base URL
 
+**Direct Access:**
 ```
 http://your-proxmox-ip:8008/api/
 ```
+
+**Via Proxy:**
+```
+https://your-domain.com/proxmenux-monitor/api/
+```
+
+**Note**: All API examples in this documentation work with both direct and proxied URLs. Simply replace the base URL with your preferred access method.
 
 ### Generating API Tokens
 
 To use the API with authentication enabled, you need to generate a long-lived API token.
 
-#### Option 1: Generate via API Call
+#### Option 1: Generate via Web Panel (Recommended)
+
+The easiest way to generate an API token is through the ProxMenux Monitor web interface:
+
+1. Navigate to **Settings** tab in the dashboard
+2. Scroll to the **API Access Tokens** section
+3. Enter your password
+4. If 2FA is enabled, enter your 6-digit code
+5. Provide a name for the token (e.g., "Homepage Integration")
+6. Click **Generate Token**
+7. Copy the token immediately - it will not be shown again
+
+![Generate API Token](AppImage/public/images/docs/generate-api-token.png)
+
+The token will be valid for **365 days** (1 year) and can be used for integrations with Homepage, Home Assistant, or any custom application.
+
+#### Option 2: Generate via API Call
+
+For advanced users or automation, you can generate tokens programmatically:
 
 ```bash
 curl -X POST http://your-proxmox-ip:8008/api/auth/generate-api-token \
@@ -149,15 +252,6 @@ curl -X POST http://your-proxmox-ip:8008/api/auth/generate-api-token \
 - If 2FA is not enabled, omit the `totp_token` field
 - The token is valid for **365 days** (1 year)
 - Store the token securely - it cannot be retrieved again
-
-#### Option 2: Generate via cURL (with 2FA)
-
-```bash
-# With 2FA enabled
-curl -X POST http://your-proxmox-ip:8008/api/auth/generate-api-token \
-  -H "Content-Type: application/json" \
-  -d '{"username":"pedro","password":"your-password","totp_token":"123456","token_name":"Home Assistant"}'
-```
 
 #### Option 3: Generate via cURL (without 2FA)
 
@@ -512,7 +606,7 @@ Then add the token to your Homepage configuration:
           format: bytes
 ```
 
-![Homepage Integration Example](public/images/docs/homepage-integration.png)
+![Homepage Integration Example](AppImage/public/images/docs/homepage-integration.png)
 
 ### Home Assistant Integration
 
@@ -585,31 +679,7 @@ entities:
     icon: mdi:clock-outline
 ```
 
-![Home Assistant Integration Example](public/images/docs/homeassistant-integration.png)
-
----
-
-## Onboarding Experience
-
-ProxMenux Monitor includes an interactive onboarding carousel that introduces new users to the dashboard features.
-
-### Customizing Onboarding Images
-
-To customize the onboarding screenshots, place your images in `public/images/onboarding/`:
-
-- `imagen1.png` - Overview section screenshot
-- `imagen2.png` - Storage section screenshot
-- `imagen3.png` - Network section screenshot
-- `imagen4.png` - VMs & LXCs section screenshot
-- `imagen5.png` - Hardware section screenshot
-- `imagen6.png` - System Logs section screenshot
-
-**Recommended image specifications:**
-- Format: PNG or JPG
-- Size: 1200x800px (or similar 3:2 aspect ratio)
-- Quality: High-quality screenshots with representative data
-
-The onboarding carousel appears on first visit and can be dismissed or marked as "Don't show again".
+![Home Assistant Integration Example](AppImage/public/images/docs/homeassistant-integration.png)
 
 ---
 
@@ -628,7 +698,17 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)**.
+
+You are free to:
+- Share — copy and redistribute the material in any medium or format
+- Adapt — remix, transform, and build upon the material
+
+Under the following terms:
+- Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made
+- NonCommercial — You may not use the material for commercial purposes
+
+For more details, see the [full license](https://creativecommons.org/licenses/by-nc/4.0/).
 
 ---
 
