@@ -318,8 +318,6 @@ export function Settings() {
     setGeneratingToken(true)
 
     try {
-      console.log("[v0] Generating API token with password and 2FA:", { totpEnabled, hasTotpCode: !!tokenTotpCode })
-
       const response = await fetchApi("/api/auth/generate-api-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -329,31 +327,24 @@ export function Settings() {
         }),
       })
 
-      console.log("[v0] Response status:", response.status, response.statusText)
-
       const data = await response.json()
-      console.log("[v0] Parsed response data:", { success: data.success, hasToken: !!data.token })
 
-      if (!response.ok) {
-        throw new Error(data.message || data.error || "Failed to generate API token")
-      }
-
-      if (!data.success) {
-        throw new Error(data.message || "Failed to generate API token")
+      if (!response.ok || !data.success) {
+        setError(data.message || data.error || "Failed to generate API token")
+        return
       }
 
       if (!data.token) {
-        throw new Error("No token received from server")
+        setError("No token received from server")
+        return
       }
 
-      console.log("[v0] API token generated successfully")
       setApiToken(data.token)
       setSuccess("API token generated successfully! Make sure to copy it now as you won't be able to see it again.")
       setTokenPassword("")
       setTokenTotpCode("")
     } catch (err) {
-      console.error("[v0] Token generation error:", err)
-      setError(err instanceof Error ? err.message : "Failed to generate API token")
+      setError(err instanceof Error ? err.message : "Failed to generate API token. Please try again.")
     } finally {
       setGeneratingToken(false)
     }
