@@ -1298,18 +1298,6 @@
     "type": "pve"
   },
   {
-    "name": "Fenrus",
-    "slug": "fenrus",
-    "desc": "A personal home page for quick access to all your personal apps/sites.",
-    "script": "ct/fenrus.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/fenrus.sh",
-    "categories": [
-      10
-    ],
-    "notes": [],
-    "type": "ct"
-  },
-  {
     "name": "FHEM",
     "slug": "fhem",
     "desc": "FHEM stands for \"Freundliche Hausautomation und Energie-Messung,\" which translates to \"Friendly Home Automation and Energy Measurement\" in English. The software can interface with a wide range of devices, including lighting systems, thermostats, weather stations, and media devices, among others.",
@@ -2575,7 +2563,7 @@
       20
     ],
     "notes": [
-      "Show initial Livebook password: `cat ~/livebook.creds`"
+      "Show initial Livebook password: `cat /opt/livebook/livebook.creds`"
     ],
     "type": "ct"
   },
@@ -2858,6 +2846,24 @@
     "default_credentials": {
       "username": "admin",
       "password": "admin123"
+    }
+  },
+  {
+    "name": "Miniflux",
+    "slug": "miniflux",
+    "desc": "Miniflux is a minimalist and opinionated feed reader.",
+    "script": "ct/miniflux.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/miniflux.sh",
+    "categories": [
+      13
+    ],
+    "notes": [
+      "Admin password available as `ADMIN_PASSWORD` in `~/miniflux.creds`"
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": "randomly generated during installation process"
     }
   },
   {
@@ -4772,6 +4778,22 @@
     "type": "ct"
   },
   {
+    "name": "Splunk Enterprise",
+    "slug": "splunk-enterprise",
+    "desc": "Platform for searching, monitoring, and analyzing machine-generated data at scale for operational intelligence and security.",
+    "script": "ct/splunk-enterprise.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/splunk-enterprise.sh",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "The credentials to login can be found in splunk.creds.",
+      "Trial license allows indexing 500 MB/Day. After 60 days you can convert to a perpetual free license or purchase a Splunk Enterprise license to continue using the expanded functionality designed for enterprise-scale deployments.",
+      "About Splunk Free License: https://help.splunk.com/en/splunk-enterprise/administer/admin-manual/10.0/configure-splunk-licenses/about-splunk-free"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Spoolman",
     "slug": "spoolman",
     "desc": "Spoolman is a self-hosted web service designed to help you efficiently manage your 3D printer filament spools and monitor their usage.",
@@ -5570,7 +5592,9 @@
     "categories": [
       4
     ],
-    "notes": [],
+    "notes": [
+      "This script uses a fork located here: `https://github.com/CrazyWolf13/web-check/` as the original Repository does not provide tagged Github Releases, an issues is open for this: `https://github.com/Lissy93/web-check/issues/248`"
+    ],
     "type": "ct"
   },
   {
