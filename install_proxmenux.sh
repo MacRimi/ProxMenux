@@ -1,36 +1,42 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - A menu-driven toolkit for Proxmox VE management
 # ==========================================================
-# Author      : MacRimi
-# Copyright   : (c) 2024 MacRimi
-# License     : (CC BY-NC 4.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
-# Version     : 1.3
-# Last Updated: 04/07/2025
+# Author       : MacRimi
+# Contributors : cod378
+# Subproject   : ProxMenux Monitor (System Health & Web Dashboard)
+# Copyright    : (c) 2024-2025 MacRimi
+# License      : (CC BY-NC 4.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# Version      : 1.4
+# Last Updated : 12/11/2025
 # ==========================================================
 # Description:
 # This script installs and configures ProxMenux, a menu-driven
-# tool for managing Proxmox VE.
+# toolkit for managing and optimizing Proxmox VE servers.
 #
 # - Ensures the script is run with root privileges.
 # - Displays an installation confirmation prompt.
 # - Installs required dependencies:
-# - whiptail (for interactive terminal menus)
-# - curl (for downloading remote files)
-# - jq (for handling JSON data)
-# - Python 3 and virtual environment (for translations)
-# - Configures the Python virtual environment and installs googletrans.
-# - Creates necessary directories for storing ProxMenux data.
-# - Downloads required files from GitHub, including:
-# - Cache file (`cache.json`) for translation caching.
-# - Utility script (`utils.sh`) for core functions.
-# - Main script (`menu.sh`) to launch ProxMenux.
-# - Sets correct permissions for execution.
-# - Displays final instructions on how to start ProxMenux.
+#     • whiptail (interactive terminal menus)
+#     • curl (downloads and connectivity checks)
+#     • jq (JSON parsing)
+#     • Python 3 + venv (for translation support)
+# - Creates the ProxMenux base directories and configuration files:
+#     • $BASE_DIR/config.json
+#     • $BASE_DIR/cache.json
+# - Copies local project files into the target paths (offline mode by default):
+#     • scripts/*     → $BASE_DIR/scripts/
+#     • utils.sh      → $BASE_DIR/scripts/utils.sh
+#     • menu          → $INSTALL_DIR/menu (main launcher)
+#     • install_proxmenux.sh → $BASE_DIR/install_proxmenux.sh
+# - Sets correct permissions for all executables.
+# - Displays the final instruction on how to start ProxMenux ("menu").
 #
-# This installer ensures a smooth setup process and prepares
-# the system for running ProxMenux efficiently.
+# Notes:
+# - This installer supports both offline and online setups.
+# - ProxMenux Monitor can be installed later as an optional module
+#   to provide real-time system monitoring and a web dashboard.
 # ==========================================================
 
 # Configuration ============================================
@@ -40,26 +46,224 @@ BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
 CACHE_FILE="$BASE_DIR/cache.json"
 UTILS_FILE="$BASE_DIR/utils.sh"
-UTILS_URL="https://raw.githubusercontent.com/c78-contrib/ProxMenuxOffline/refs/heads/main/scripts/utils.sh"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 MENU_SCRIPT="menu"
 VENV_PATH="/opt/googletrans-env"
 
-MONITOR_APPIMAGE_URL="https://github.com/MacRimi/ProxMenux/raw/refs/heads/main/AppImage/ProxMenux-1.0.0.AppImage"
-MONITOR_SHA256_URL="https://github.com/MacRimi/ProxMenux/raw/refs/heads/main/AppImage/ProxMenux-Monitor.AppImage.sha256"
-MONITOR_INSTALL_PATH="$BASE_DIR/ProxMenux-Monitor.AppImage"
+MONITOR_INSTALL_DIR="$BASE_DIR/monitor"
 MONITOR_SERVICE_FILE="/etc/systemd/system/proxmenux-monitor.service"
 MONITOR_PORT=8008
 
 # Offline installer envs
-REPO_URL="https://github.com/c78-contrib/ProxMenuxOffline.git"
+REPO_URL="https://github.com/MacRimi/ProxMenux.git"
 TEMP_DIR="/tmp/proxmenux-install-$$"
 
-# Load utils.sh dependency
-if ! source <(curl -sSf "$UTILS_URL"); then
-    echo "Error: Could not load utils.sh from $UTILS_URL"
-    exit 1
+# Load utility functions
+NEON_PURPLE_BLUE="\033[38;5;99m"
+WHITE="\033[38;5;15m" 
+RESET="\033[0m"  
+DARK_GRAY="\033[38;5;244m"
+ORANGE="\033[38;5;208m"
+YW="\033[33m"
+YWB="\033[1;33m"
+GN="\033[1;92m"
+RD="\033[01;31m"
+CL="\033[m"
+BL="\033[36m"
+DGN="\e[32m"
+BGN="\e[1;32m"
+DEF="\e[1;36m"
+CUS="\e[38;5;214m"
+BOLD="\033[1m"
+BFR="\\r\\033[K"
+HOLD="-"
+BOR=" | "
+CM="${GN}✓ ${CL}"
+TAB="    "   
+
+
+# Create and display spinner
+spinner() {
+    local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+    local spin_i=0
+    local interval=0.1
+    printf "\e[?25l"
+    
+    local color="${YW}"
+    
+    while true; do
+        printf "\r ${color}%s${CL}" "${frames[spin_i]}"
+        spin_i=$(( (spin_i + 1) % ${#frames[@]} ))
+        sleep "$interval"
+    done
+}
+
+
+# Function to simulate typing effect
+type_text() {
+    local text="$1"
+    local delay=0.05
+    for ((i=0; i<${#text}; i++)); do
+        echo -n "${text:$i:1}"
+        sleep $delay
+    done
+    echo
+}
+
+
+# Display info message with spinner
+msg_info() {
+    local msg="$1"
+    echo -ne "${TAB}${YW}${HOLD}${msg}"
+    spinner &
+    SPINNER_PID=$!
+}
+
+
+# Display info2 message
+msg_info2() {
+    local msg="$1"
+    echo -e "${TAB}${BOLD}${YW}${HOLD}${msg}${CL}"
+}
+
+
+
+# Display title script
+msg_title() {
+    local msg="$1"
+    echo -e "\n"
+    echo -e "${TAB}${BOLD}${HOLD}${BOR}${msg}${BOR}${HOLD}${CL}"
+    echo -e "\n"
+}
+
+
+# Display warning or highlighted information message
+msg_warn() {
+    if [ -n "$SPINNER_PID" ] && ps -p $SPINNER_PID > /dev/null; then 
+        kill $SPINNER_PID > /dev/null
+    fi
+    printf "\e[?25h"
+    local msg="$1"
+    echo -e "${BFR}${TAB}${CL} ${YWB}${msg}${CL}"
+}
+
+
+# Display success message
+msg_ok() {
+    if [ -n "$SPINNER_PID" ] && ps -p $SPINNER_PID > /dev/null; then 
+        kill $SPINNER_PID > /dev/null
+    fi
+    printf "\e[?25h"
+    local msg="$1"
+    echo -e "${BFR}${TAB}${CM}${GN}${msg}${CL}"
+}
+
+
+# Display error message
+msg_error() {
+    if [ -n "$SPINNER_PID" ] && ps -p $SPINNER_PID > /dev/null; then 
+        kill $SPINNER_PID > /dev/null
+    fi
+    printf "\e[?25h"
+    local msg="$1"
+    echo -e "${BFR}${TAB}${RD}[ERROR] ${msg}${CL}"
+}
+    
+
+
+
+show_proxmenux_logo() {
+clear
+
+if [[ -z "$SSH_TTY" && -z "$(who am i | awk '{print $NF}' | grep -E '([0-9]{1,3}\.){3}[0-9]{1,3}')" ]]; then
+
+# Logo for terminal noVNC
+
+LOGO=$(cat << "EOF"
+\e[0m\e[38;2;61;61;61m▆\e[38;2;60;60;60m▄\e[38;2;54;54;54m▂\e[0m \e[38;2;0;0;0m             \e[0m \e[38;2;54;54;54m▂\e[38;2;60;60;60m▄\e[38;2;61;61;61m▆\e[0m
+\e[38;2;59;59;59;48;2;62;62;62m▏  \e[38;2;61;61;61;48;2;37;37;37m▇\e[0m\e[38;2;60;60;60m▅\e[38;2;56;56;56m▃\e[38;2;37;37;37m▁       \e[38;2;36;36;36m▁\e[38;2;56;56;56m▃\e[38;2;60;60;60m▅\e[38;2;61;61;61;48;2;37;37;37m▇\e[48;2;62;62;62m  \e[0m\e[7m\e[38;2;60;60;60m▁\e[0m
+\e[38;2;59;59;59;48;2;62;62;62m▏  \e[0m\e[7m\e[38;2;61;61;61m▂\e[0m\e[38;2;62;62;62;48;2;61;61;61m┈\e[48;2;62;62;62m \e[48;2;61;61;61m┈\e[0m\e[38;2;60;60;60m▆\e[38;2;57;57;57m▄\e[38;2;48;48;48m▂\e[0m \e[38;2;47;47;47m▂\e[38;2;57;57;57m▄\e[38;2;60;60;60m▆\e[38;2;62;62;62;48;2;61;61;61m┈\e[48;2;62;62;62m \e[48;2;61;61;61m┈\e[0m\e[7m\e[38;2;60;60;60m▂\e[38;2;57;57;57m▄\e[38;2;47;47;47m▆\e[0m \e[0m
+\e[38;2;59;59;59;48;2;62;62;62m▏  \e[0m\e[38;2;32;32;32m▏\e[7m\e[38;2;39;39;39m▇\e[38;2;57;57;57m▅\e[38;2;60;60;60m▃\e[0m\e[38;2;40;40;40;48;2;61;61;61m▁\e[48;2;62;62;62m  \e[38;2;54;54;54;48;2;61;61;61m┊\e[48;2;62;62;62m  \e[38;2;39;39;39;48;2;61;61;61m▁\e[0m\e[7m\e[38;2;60;60;60m▃\e[38;2;57;57;57m▅\e[38;2;38;38;38m▇\e[0m \e[38;2;193;60;2m▃\e[38;2;217;67;2m▅\e[38;2;225;70;2m▇\e[0m
+\e[38;2;59;59;59;48;2;62;62;62m▏  \e[0m\e[38;2;32;32;32m▏\e[0m \e[38;2;203;63;2m▄\e[38;2;147;45;1m▂\e[0m \e[7m\e[38;2;55;55;55m▆\e[38;2;60;60;60m▄\e[38;2;61;61;61m▂\e[38;2;60;60;60m▄\e[38;2;55;55;55m▆\e[0m \e[38;2;144;44;1m▂\e[38;2;202;62;2m▄\e[38;2;219;68;2m▆\e[38;2;231;72;3;48;2;226;70;2m┈\e[48;2;231;72;3m  \e[48;2;225;70;2m▉\e[0m
+\e[38;2;59;59;59;48;2;62;62;62m▏  \e[0m\e[38;2;32;32;32m▏\e[7m\e[38;2;121;37;1m▉\e[0m\e[38;2;0;0;0;48;2;231;72;3m  \e[0m\e[38;2;221;68;2m▇\e[38;2;208;64;2m▅\e[38;2;212;66;2m▂\e[38;2;123;37;0m▁\e[38;2;211;65;2m▂\e[38;2;207;64;2m▅\e[38;2;220;68;2m▇\e[48;2;231;72;3m  \e[38;2;231;72;3;48;2;225;70;2m┈\e[0m\e[7m\e[38;2;221;68;2m▂\e[0m\e[38;2;44;13;0;48;2;231;72;3m  \e[38;2;231;72;3;48;2;225;70;2m▉\e[0m
+\e[38;2;59;59;59;48;2;62;62;62m▏  \e[0m\e[38;2;32;32;32m▏\e[0m \e[7m\e[38;2;190;59;2m▅\e[38;2;216;67;2m▃\e[38;2;225;70;2m▁\e[0m\e[38;2;95;29;0;48;2;231;72;3m  \e[38;2;231;72;3;48;2;230;71;2m┈\e[48;2;231;72;3m  \e[0m\e[7m\e[38;2;225;70;2m▁\e[38;2;216;67;2m▃\e[38;2;191;59;2m▅\e[0m  \e[38;2;0;0;0;48;2;231;72;3m  \e[38;2;231;72;3;48;2;225;70;2m▉\e[0m
+\e[38;2;59;59;59;48;2;62;62;62m▏  \e[0m\e[38;2;32;32;32m▏   \e[0m \e[7m\e[38;2;172;53;1m▆\e[38;2;213;66;2m▄\e[38;2;219;68;2m▂\e[38;2;213;66;2m▄\e[38;2;174;54;2m▆\e[0m \e[38;2;0;0;0m   \e[0m \e[38;2;0;0;0;48;2;231;72;3m  \e[38;2;231;72;3;48;2;225;70;2m▉\e[0m
+\e[38;2;59;59;59;48;2;62;62;62m▏  \e[0m\e[38;2;32;32;32m▏             \e[0m \e[38;2;0;0;0;48;2;231;72;3m  \e[38;2;231;72;3;48;2;225;70;2m▉\e[0m
+\e[7m\e[38;2;52;52;52m▆\e[38;2;59;59;59m▄\e[38;2;61;61;61m▂\e[0m\e[38;2;31;31;31m▏             \e[0m \e[7m\e[38;2;228;71;2m▂\e[38;2;221;69;2m▄\e[38;2;196;60;2m▆\e[0m
+EOF
+)
+
+
+TEXT=(
+    ""
+    ""
+    "${BOLD}ProxMenux${RESET}"
+    ""
+    "${BOLD}${NEON_PURPLE_BLUE}An Interactive Menu for${RESET}"
+    "${BOLD}${NEON_PURPLE_BLUE}Proxmox VE management${RESET}"
+    ""
+    ""
+    ""
+    ""
+)
+
+
+mapfile -t logo_lines <<< "$LOGO"
+
+for i in {0..9}; do
+    echo -e "${TAB}${logo_lines[i]}  ${WHITE}│${RESET}  ${TEXT[i]}"
+done
+echo -e
+
+else
+
+
+# Logo for terminal SSH     
+TEXT=(
+    ""
+    ""
+    ""
+    ""
+    "${BOLD}ProxMenux${RESET}"
+    ""
+    "${BOLD}${NEON_PURPLE_BLUE}An Interactive Menu for${RESET}"
+    "${BOLD}${NEON_PURPLE_BLUE}Proxmox VE management${RESET}"
+    ""
+    ""
+    ""
+    ""
+    ""
+    ""
+)
+
+LOGO=(
+    "${DARK_GRAY}░░░░                     ░░░░${RESET}"
+    "${DARK_GRAY}░░░░░░░               ░░░░░░ ${RESET}"
+    "${DARK_GRAY}░░░░░░░░░░░       ░░░░░░░    ${RESET}"
+    "${DARK_GRAY}░░░░    ░░░░░░ ░░░░░░      ${ORANGE}░░${RESET}"
+    "${DARK_GRAY}░░░░       ░░░░░░░      ${ORANGE}░░▒▒▒${RESET}"
+    "${DARK_GRAY}░░░░         ░░░     ${ORANGE}░▒▒▒▒▒▒▒${RESET}"
+    "${DARK_GRAY}░░░░   ${ORANGE}▒▒▒░       ░▒▒▒▒▒▒▒▒▒▒${RESET}"
+    "${DARK_GRAY}░░░░   ${ORANGE}░▒▒▒▒▒   ▒▒▒▒▒░░  ▒▒▒▒${RESET}"
+    "${DARK_GRAY}░░░░     ${ORANGE}░░▒▒▒▒▒▒▒░░     ▒▒▒▒${RESET}"
+    "${DARK_GRAY}░░░░         ${ORANGE}░░░         ▒▒▒▒${RESET}"
+    "${DARK_GRAY}░░░░                     ${ORANGE}▒▒▒▒${RESET}"
+    "${DARK_GRAY}░░░░                     ${ORANGE}▒▒▒░${RESET}"
+    "${DARK_GRAY}  ░░                     ${ORANGE}░░  ${RESET}"
+)
+
+for i in {0..12}; do
+    echo -e "${TAB}${LOGO[i]}  │${RESET}  ${TEXT[i]}"
+done
+echo -e
 fi
+
+}
+
+# ==========================================================
+
+
+
 
 
 cleanup_corrupted_files() {
@@ -134,6 +338,27 @@ uninstall_proxmenux() {
     fi
     
     echo "Uninstalling ProxMenux..."
+    
+    if systemctl is-active --quiet proxmenux-monitor.service; then
+        echo "Stopping ProxMenux Monitor service..."
+        systemctl stop proxmenux-monitor.service
+    fi
+    
+    if systemctl is-enabled --quiet proxmenux-monitor.service 2>/dev/null; then
+        echo "Disabling ProxMenux Monitor service..."
+        systemctl disable proxmenux-monitor.service
+    fi
+    
+    if [ -f "$MONITOR_SERVICE_FILE" ]; then
+        echo "Removing ProxMenux Monitor service file..."
+        rm -f "$MONITOR_SERVICE_FILE"
+        systemctl daemon-reload
+    fi
+    
+    if [ -d "$MONITOR_INSTALL_DIR" ]; then
+        echo "Removing ProxMenux Monitor directory..."
+        rm -rf "$MONITOR_INSTALL_DIR"
+    fi
     
     if [ -f "$VENV_PATH/bin/activate" ]; then
         echo "Removing googletrans and virtual environment..."
@@ -331,57 +556,102 @@ get_server_ip() {
     echo "$ip"
 }
 
+detect_latest_appimage() {
+    local appimage_dir="$TEMP_DIR/AppImage"
+    
+    if [ ! -d "$appimage_dir" ]; then
+        return 1
+    fi
+    
+    local latest_appimage=$(find "$appimage_dir" -name "ProxMenux-*.AppImage" -type f | sort -V | tail -1)
+    
+    if [ -z "$latest_appimage" ]; then
+        return 1
+    fi
+    
+    echo "$latest_appimage"
+    return 0
+}
+
+get_appimage_version() {
+    local appimage_path="$1"
+    local filename=$(basename "$appimage_path")
+    
+    local version=$(echo "$filename" | grep -oP 'ProxMenux-\K[0-9]+\.[0-9]+\.[0-9]+')
+    
+    echo "$version"
+}
+
 install_proxmenux_monitor() {
-    systemctl stop proxmenux-monitor 2>/dev/null || true
+    local appimage_source=$(detect_latest_appimage)
     
-    # Check if URL is accessible
-    if ! wget --spider -q "$MONITOR_APPIMAGE_URL" 2>/dev/null; then
-        msg_warn "ProxMenux Monitor AppImage not available at: $MONITOR_APPIMAGE_URL"
-        msg_info "The monitor will be available in future releases."
-        return 1
+    
+    local appimage_version=$(get_appimage_version "$appimage_source")
+    
+    if systemctl is-active --quiet proxmenux-monitor.service; then
+        systemctl stop proxmenux-monitor.service
     fi
     
-    # Download AppImage silently
-    if ! wget -q -O "$MONITOR_INSTALL_PATH" "$MONITOR_APPIMAGE_URL" 2>/dev/null; then
-        msg_warn "Failed to download ProxMenux Monitor from GitHub."
-        msg_info "You can install it manually later when available."
-        return 1
+    local service_exists=false
+    if [ -f "$MONITOR_SERVICE_FILE" ]; then
+        service_exists=true
     fi
     
-    # Download SHA256 checksum silently
-    local sha256_file="/tmp/proxmenux-monitor.sha256"
-    if ! wget -q -O "$sha256_file" "$MONITOR_SHA256_URL" 2>/dev/null; then
-        msg_warn "SHA256 checksum file not available. Skipping verification."
-        msg_info "AppImage downloaded but integrity cannot be verified."
-        rm -f "$sha256_file"
-    else
-        # Verify SHA256 silently
+    local sha256_file="$TEMP_DIR/AppImage/ProxMenux-Monitor.AppImage.sha256"
+    
+    if [ -f "$sha256_file" ]; then
+        msg_info "Verifying AppImage integrity..."
         local expected_hash=$(cat "$sha256_file" | grep -Eo '^[a-f0-9]+' | tr -d '\n')
-        local actual_hash=$(sha256sum "$MONITOR_INSTALL_PATH" | awk '{print $1}')
+        local actual_hash=$(sha256sum "$appimage_source" | awk '{print $1}')
         
         if [ "$expected_hash" != "$actual_hash" ]; then
             msg_error "SHA256 verification failed! AppImage may be corrupted."
-            msg_info "Expected: $expected_hash"
-            msg_info "Got:      $actual_hash"
-            rm -f "$MONITOR_INSTALL_PATH" "$sha256_file"
             return 1
         fi
-        rm -f "$sha256_file"
+        msg_ok "SHA256 verification passed."
+    else
+        msg_warn "SHA256 checksum not available. Skipping verification."
     fi
     
-    # Make executable
-    chmod +x "$MONITOR_INSTALL_PATH"
+    msg_info "Installing ProxMenux Monitor..."
+    mkdir -p "$MONITOR_INSTALL_DIR"
     
-    # Show single success message at the end
-    msg_ok "ProxMenux Monitor installed and activated successfully."
+    local target_path="$MONITOR_INSTALL_DIR/ProxMenux-Monitor.AppImage"
+    cp "$appimage_source" "$target_path"
+    chmod +x "$target_path"
     
-    return 0
+    msg_ok "ProxMenux Monitor v$appimage_version installed."
+    
+    if [ "$service_exists" = false ]; then
+        return 0  # New installation - service needs to be created
+    else
+
+        systemctl start proxmenux-monitor.service
+        sleep 2
+        
+        if systemctl is-active --quiet proxmenux-monitor.service; then
+
+            update_config "proxmenux_monitor" "updated"
+            return 2  # Update successful
+        else
+            msg_warn "Service failed to restart. Check: journalctl -u proxmenux-monitor"
+            update_config "proxmenux_monitor" "failed"
+            return 1
+        fi
+    fi
 }
 
 create_monitor_service() {
     msg_info "Creating ProxMenux Monitor service..."
     
-    cat > "$MONITOR_SERVICE_FILE" << EOF
+    local exec_path="$MONITOR_INSTALL_DIR/ProxMenux-Monitor.AppImage"
+    
+    if [ -f "$TEMP_DIR/systemd/proxmenux-monitor.service" ]; then
+        sed "s|ExecStart=.*|ExecStart=$exec_path|g" \
+            "$TEMP_DIR/systemd/proxmenux-monitor.service" > "$MONITOR_SERVICE_FILE"
+        msg_ok "Using service file from repository."
+    else
+        cat > "$MONITOR_SERVICE_FILE" << EOF
 [Unit]
 Description=ProxMenux Monitor - Web Dashboard
 After=network.target
@@ -389,8 +659,8 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=$BASE_DIR
-ExecStart=$MONITOR_INSTALL_PATH
+WorkingDirectory=$MONITOR_INSTALL_DIR
+ExecStart=$exec_path
 Restart=on-failure
 RestartSec=10
 Environment="PORT=$MONITOR_PORT"
@@ -398,16 +668,15 @@ Environment="PORT=$MONITOR_PORT"
 [Install]
 WantedBy=multi-user.target
 EOF
+        msg_ok "Created default service file."
+    fi
 
-    # Reload systemd, enable and start service
     systemctl daemon-reload
     systemctl enable proxmenux-monitor.service > /dev/null 2>&1
     systemctl start proxmenux-monitor.service > /dev/null 2>&1
     
-    # Wait a moment for service to start
     sleep 3
     
-    # Check if service is running
     if systemctl is-active --quiet proxmenux-monitor.service; then
         msg_ok "ProxMenux Monitor service started successfully."
         update_config "proxmenux_monitor" "installed"
@@ -421,7 +690,6 @@ EOF
     fi
 }
 
-####################################################
 install_normal_version() {
     local total_steps=5
     local current_step=1
@@ -429,13 +697,11 @@ install_normal_version() {
     show_progress $current_step $total_steps "Installing basic dependencies."
     
     if ! command -v jq > /dev/null 2>&1; then
-        # Try installing from APT (silently)
         apt-get update > /dev/null 2>&1
         
         if apt-get install -y jq > /dev/null 2>&1 && command -v jq > /dev/null 2>&1; then
             update_config "jq" "installed"
         else
-            # Fallback: Download jq binary from GitHub
             local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
             if wget -q -O /usr/local/bin/jq "$jq_url" 2>/dev/null && chmod +x /usr/local/bin/jq; then
                 if command -v jq > /dev/null 2>&1; then
@@ -472,11 +738,10 @@ install_normal_version() {
     
     msg_ok "jq, dialog, curl and git installed successfully."
 
-    # --------------------------------------------------------------------------------------
-    # Clone repository
     ((current_step++))
 
-    show_progress $current_step $total_steps "Cloning ProxMenux repository..."
+    show_progress $current_step $total_steps "Install ProxMenux repository"
+    msg_info "Cloning ProxMenux repositoryy."
     if ! git clone --depth 1 "$REPO_URL" "$TEMP_DIR" 2>/dev/null; then
         msg_error "Failed to clone repository from $REPO_URL"
         exit 1
@@ -484,10 +749,7 @@ install_normal_version() {
 
     msg_ok "Repository cloned successfully."
 
-    # Change to temporary directory
     cd "$TEMP_DIR"
-
-    # --------------------------------------------------------------------------------------
 
     ((current_step++))
     
@@ -505,8 +767,6 @@ install_normal_version() {
     
     show_progress $current_step $total_steps "Copying necessary files"
     
-    # Note: Previous version downloaded from GitHub, now using local files
-    ### Copy files from local scripts directory
     cp "./scripts/utils.sh" "$UTILS_FILE"
     cp "./menu" "$INSTALL_DIR/$MENU_SCRIPT"
     cp "./version.txt" "$LOCAL_VERSION_FILE"
@@ -517,21 +777,22 @@ install_normal_version() {
     chmod -R +x "$BASE_DIR/scripts/"
     chmod +x "$BASE_DIR/install_proxmenux.sh"
     msg_ok "Necessary files created."
-    ###
 
     chmod +x "$INSTALL_DIR/$MENU_SCRIPT"
     
     ((current_step++))
     show_progress $current_step $total_steps "Installing ProxMenux Monitor"
     
-    if install_proxmenux_monitor; then
+    install_proxmenux_monitor
+    local monitor_status=$?
+    
+    if [ $monitor_status -eq 0 ]; then
         create_monitor_service
     fi
     
     msg_ok "ProxMenux Normal Version installation completed successfully."
 }
 
-####################################################
 install_translation_version() {
     local total_steps=5
     local current_step=1
@@ -543,13 +804,11 @@ install_translation_version() {
     show_progress $current_step $total_steps "Installing system dependencies"
     
     if ! command -v jq > /dev/null 2>&1; then
-        # Try installing from APT (silently)
         apt-get update > /dev/null 2>&1
         
         if apt-get install -y jq > /dev/null 2>&1 && command -v jq > /dev/null 2>&1; then
             update_config "jq" "installed"
         else
-            # Fallback: Download jq binary from GitHub
             local jq_url="https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
             if wget -q -O /usr/local/bin/jq "$jq_url" 2>/dev/null && chmod +x /usr/local/bin/jq; then
                 if command -v jq > /dev/null 2>&1; then
@@ -569,7 +828,7 @@ install_translation_version() {
         update_config "jq" "already_installed"
     fi
     
-    DEPS=("dialog" "curl" "python3" "python3-venv" "python3-pip")
+    DEPS=("dialog" "curl" "git" "python3" "python3-venv" "python3-pip")
     for pkg in "${DEPS[@]}"; do
         if ! dpkg -l | grep -qw "$pkg"; then
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
@@ -584,7 +843,7 @@ install_translation_version() {
         fi
     done
     
-    msg_ok "jq, dialog, curl, python3, python3-venv and python3-pip installed successfully."
+    msg_ok "jq, dialog, curl, git, python3, python3-venv and python3-pip installed successfully."
     
     ((current_step++))
     
@@ -623,6 +882,16 @@ install_translation_version() {
     fi
     
     deactivate
+    
+    show_progress $current_step $total_steps "Cloning ProxMenux repository"
+    if ! git clone --depth 1 "$REPO_URL" "$TEMP_DIR" 2>/dev/null; then
+        msg_error "Failed to clone repository from $REPO_URL"
+        exit 1
+    fi
+    msg_ok "Repository cloned successfully."
+    
+    cd "$TEMP_DIR"
+    
     ((current_step++))
     
     show_progress $current_step $total_steps "Copying necessary files"
@@ -630,7 +899,6 @@ install_translation_version() {
     mkdir -p "$BASE_DIR"
     mkdir -p "$INSTALL_DIR"
     
-    ### Copy files from local scripts directory
     cp "./json/cache.json" "$CACHE_FILE"
     msg_ok "Cache file copied with translations."
     
@@ -644,21 +912,24 @@ install_translation_version() {
     chmod -R +x "$BASE_DIR/scripts/"
     chmod +x "$BASE_DIR/install_proxmenux.sh"
     msg_ok "Necessary files created."
-    ###
     
     chmod +x "$INSTALL_DIR/$MENU_SCRIPT"
     
     ((current_step++))
     show_progress $current_step $total_steps "Installing ProxMenux Monitor"
     
-    if install_proxmenux_monitor; then
+    install_proxmenux_monitor
+    local monitor_status=$?
+    
+    if [ $monitor_status -eq 0 ]; then
         create_monitor_service
+    elif [ $monitor_status -eq 2 ]; then
+        msg_ok "ProxMenux Monitor updated successfully."
     fi
     
     msg_ok "ProxMenux Translation Version installation completed successfully."
 }
 
-####################################################
 show_installation_options() {
     local current_install_type
     current_install_type=$(check_existing_installation)
@@ -709,7 +980,6 @@ show_installation_options() {
         exit 1
     fi
     
-    # For new installations, show confirmation with details
     if [ "$current_install_type" = "none" ]; then
         if ! show_installation_confirmation "$INSTALL_TYPE"; then
             show_proxmenux_logo
@@ -744,17 +1014,21 @@ install_proxmenux() {
             exit 1
             ;;
     esac
+
+    if [[ -f "$UTILS_FILE" ]]; then
+    source "$UTILS_FILE"
+    fi
     
-    msg_title "$(translate "ProxMenux has been installed successfully")"
+    msg_title "ProxMenux has been installed successfully"
     
     if systemctl is-active --quiet proxmenux-monitor.service; then
         local server_ip=$(get_server_ip)
-        echo -e "${GN}🌐  $(translate "ProxMenux Monitor activated")${CL}: ${BL}http://${server_ip}:${MONITOR_PORT}${CL}"
+        echo -e "${GN}🌐  ProxMenux Monitor activated${CL}: ${BL}http://${server_ip}:${MONITOR_PORT}${CL}"
         echo
     fi
     
     echo -ne "${GN}"
-    type_text "$(translate "To run ProxMenux, simply execute this command in the console or terminal:")"
+    type_text "To run ProxMenux, simply execute this command in the console or terminal:"
     echo -e "${YWB}    menu${CL}"
     echo
 }
