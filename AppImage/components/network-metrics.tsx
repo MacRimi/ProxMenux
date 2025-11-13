@@ -8,6 +8,7 @@ import { Wifi, Activity, Network, Router, AlertCircle, Zap } from "lucide-react"
 import useSWR from "swr"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { fetchApi } from "../lib/api-config"
 
 interface NetworkData {
   interfaces: NetworkInterface[]
@@ -128,19 +129,7 @@ const formatSpeed = (speed: number): string => {
 }
 
 const fetcher = async (url: string): Promise<NetworkData> => {
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    signal: AbortSignal.timeout(5000),
-  })
-
-  if (!response.ok) {
-    throw new Error(`Flask server responded with status: ${response.status}`)
-  }
-
-  return response.json()
+  return fetchApi<NetworkData>(url)
 }
 
 export function NetworkMetrics() {

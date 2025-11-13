@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { Loader2 } from "lucide-react"
-import { API_PORT } from "@/lib/api-config"
+import { fetchApi } from "@/lib/api-config"
 
 interface NetworkMetricsData {
   time: string
@@ -76,24 +76,13 @@ export function NetworkTrafficChart({
     setError(null)
 
     try {
-      const { protocol, hostname, port } = window.location
-      const isStandardPort = port === "" || port === "80" || port === "443"
+      const apiPath = interfaceName
+        ? `/api/network/${interfaceName}/metrics?timeframe=${timeframe}`
+        : `/api/node/metrics?timeframe=${timeframe}`
 
-      const baseUrl = isStandardPort ? "" : `${protocol}//${hostname}:${API_PORT}`
+      console.log("[v0] Fetching network metrics from:", apiPath)
 
-      const apiUrl = interfaceName
-        ? `${baseUrl}/api/network/${interfaceName}/metrics?timeframe=${timeframe}`
-        : `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
-
-      console.log("[v0] Fetching network metrics from:", apiUrl)
-
-      const response = await fetch(apiUrl)
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch network metrics: ${response.status}`)
-      }
-
-      const result = await response.json()
+      const result = await fetchApi<any>(apiPath)
 
       if (!result.data || !Array.isArray(result.data)) {
         throw new Error("Invalid data format received from server")

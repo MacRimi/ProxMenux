@@ -28,7 +28,7 @@ import {
   Terminal,
 } from "lucide-react"
 import { useState, useEffect, useMemo } from "react"
-import { API_PORT } from "@/lib/api-config"
+import { API_PORT, fetchApi } from "@/lib/api-config"
 
 interface Log {
   timestamp: string
@@ -135,6 +135,10 @@ export function SystemLogs() {
         return `${protocol}//${hostname}:${API_PORT}${endpoint}`
       }
     }
+    // This part might not be strictly necessary if only running client-side, but good for SSR safety
+    // In a real SSR scenario, you'd need to handle API_PORT differently
+    const protocol = typeof window !== "undefined" ? window.location.protocol : "http:" // Defaulting to http for SSR safety
+    const hostname = typeof window !== "undefined" ? window.location.hostname : "localhost" // Defaulting to localhost for SSR safety
     return `${protocol}//${hostname}:${API_PORT}${endpoint}`
   }
 
@@ -194,27 +198,15 @@ export function SystemLogs() {
 
       const [logsRes, backupsRes, eventsRes, notificationsRes] = await Promise.all([
         fetchSystemLogs(),
-        fetch(getApiUrl("/api/backups")),
-        fetch(getApiUrl("/api/events?limit=50")),
-        fetch(getApiUrl("/api/notifications")),
+        fetchApi("/api/backups"),
+        fetchApi("/api/events?limit=50"),
+        fetchApi("/api/notifications"),
       ])
 
       setLogs(logsRes)
-
-      if (backupsRes.ok) {
-        const backupsData = await backupsRes.json()
-        setBackups(backupsData.backups || [])
-      }
-
-      if (eventsRes.ok) {
-        const eventsData = await eventsRes.json()
-        setEvents(eventsData.events || [])
-      }
-
-      if (notificationsRes.ok) {
-        const notificationsData = await notificationsRes.json()
-        setNotifications(notificationsData.notifications || [])
-      }
+      setBackups(backupsRes.backups || [])
+      setEvents(eventsRes.events || [])
+      setNotifications(notificationsRes.notifications || [])
     } catch (err) {
       console.error("[v0] Error fetching system logs data:", err)
       setError("Failed to connect to server")
@@ -225,7 +217,7 @@ export function SystemLogs() {
 
   const fetchSystemLogs = async (): Promise<SystemLog[]> => {
     try {
-      let apiUrl = getApiUrl("/api/logs")
+      let apiUrl = "/api/logs"
       const params = new URLSearchParams()
 
       // CHANGE: Always add since_days parameter (no more "now" option)
@@ -258,22 +250,7 @@ export function SystemLogs() {
       }
 
       console.log("[v0] Making fetch request to:", apiUrl)
-      const response = await fetch(apiUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-        signal: AbortSignal.timeout(30000), // 30 second timeout
-      })
-
-      console.log("[v0] Response status:", response.status, "OK:", response.ok)
-
-      if (!response.ok) {
-        throw new Error(`Flask server responded with status: ${response.status}`)
-      }
-
-      const data = await response.json()
+      const data = await fetchApi(apiUrl)
       console.log("[v0] Received logs data, count:", data.logs?.length || 0)
 
       const logsArray = Array.isArray(data) ? data : data.logs || []
@@ -364,37 +341,33 @@ export function SystemLogs() {
       if (upid) {
         // Try to fetch the complete task log from Proxmox
         try {
-          const response = await fetch(getApiUrl(`/api/task-log/${encodeURIComponent(upid)}`))
+          const taskLog = await fetchApi(`/api/task-log/${encodeURIComponent(upid)}`, {}, "text")
 
-          if (response.ok) {
-            const taskLog = await response.text()
+          // Download the complete task log
+          const blob = new Blob(
+            [
+              `Proxmox Task Log\n`,
+              `================\n\n`,
+              `UPID: ${upid}\n`,
+              `Timestamp: ${notification.timestamp}\n`,
+              `Service: ${notification.service}\n`,
+              `Source: ${notification.source}\n\n`,
+              `Complete Task Log:\n`,
+              `${"-".repeat(80)}\n`,
+              `${taskLog}\n`,
+            ],
+            { type: "text/plain" },
+          )
 
-            // Download the complete task log
-            const blob = new Blob(
-              [
-                `Proxmox Task Log\n`,
-                `================\n\n`,
-                `UPID: ${upid}\n`,
-                `Timestamp: ${notification.timestamp}\n`,
-                `Service: ${notification.service}\n`,
-                `Source: ${notification.source}\n\n`,
-                `Complete Task Log:\n`,
-                `${"-".repeat(80)}\n`,
-                `${taskLog}\n`,
-              ],
-              { type: "text/plain" },
-            )
-
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement("a")
-            a.href = url
-            a.download = `task_log_${upid.replace(/:/g, "_")}_${notification.timestamp.replace(/[:\s]/g, "_")}.txt`
-            document.body.appendChild(a)
-            a.click()
-            window.URL.revokeObjectURL(url)
-            document.body.removeChild(a)
-            return
-          }
+          const url = window.URL.createObjectURL(blob)
+          const a = document.createElement("a")
+          a.href = url
+          a.download = `task_log_${upid.replace(/:/g, "_")}_${notification.timestamp.replace(/[:\s]/g, "_")}.txt`
+          document.body.appendChild(a)
+          a.click()
+          window.URL.revokeObjectURL(url)
+          document.body.removeChild(a)
+          return
         } catch (error) {
           console.error("[v0] Failed to fetch task log from Proxmox:", error)
           // Fall through to download notification message

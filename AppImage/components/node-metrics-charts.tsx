@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { Loader2, TrendingUp, MemoryStick } from "lucide-react"
 import { useIsMobile } from "../hooks/use-mobile"
-import { API_PORT } from "@/lib/api-config"
+import { fetchApi } from "@/lib/api-config"
 
 const TIMEFRAME_OPTIONS = [
   { value: "hour", label: "1 Hour" },
@@ -89,27 +89,8 @@ export function NodeMetricsCharts() {
     setError(null)
 
     try {
-      const { protocol, hostname, port } = window.location
-      const isStandardPort = port === "" || port === "80" || port === "443"
+      const result = await fetchApi<any>(`/api/node/metrics?timeframe=${timeframe}`)
 
-      const baseUrl = isStandardPort ? "" : `${protocol}//${hostname}:${API_PORT}`
-
-      const apiUrl = `${baseUrl}/api/node/metrics?timeframe=${timeframe}`
-
-      console.log("[v0] Fetching node metrics from:", apiUrl)
-
-      const response = await fetch(apiUrl)
-
-      console.log("[v0] Response status:", response.status)
-      console.log("[v0] Response ok:", response.ok)
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.log("[v0] Error response text:", errorText)
-        throw new Error(`Failed to fetch node metrics: ${response.status}`)
-      }
-
-      const result = await response.json()
       console.log("[v0] Node metrics result:", result)
       console.log("[v0] Result keys:", Object.keys(result))
       console.log("[v0] Data array length:", result.data?.length || 0)
