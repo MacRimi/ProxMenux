@@ -70,7 +70,10 @@ export function getAuthToken(): string | null {
     return null
   }
   const token = localStorage.getItem("proxmenux-auth-token")
-  console.log("[v0] getAuthToken:", token ? `Token found (${token.substring(0, 20)}...)` : "No token found")
+  console.log(
+    "[v0] getAuthToken called:",
+    token ? `Token found (length: ${token.length})` : "No token found in localStorage",
+  )
   return token
 }
 
@@ -93,24 +96,31 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`
-    console.log("[v0] fetchApi: Adding Authorization header to request:", endpoint)
+    console.log("[v0] fetchApi:", endpoint, "- Authorization header ADDED")
   } else {
-    console.log("[v0] fetchApi: No token available for request:", endpoint)
+    console.log("[v0] fetchApi:", endpoint, "- NO TOKEN - Request will fail if endpoint is protected")
   }
 
-  console.log("[v0] fetchApi: Fetching", url, "with headers:", Object.keys(headers))
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      cache: "no-store",
+    })
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    cache: "no-store",
-  })
+    console.log("[v0] fetchApi:", endpoint, "- Response status:", response.status)
 
-  console.log("[v0] fetchApi: Response status for", endpoint, ":", response.status)
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.error("[v0] fetchApi: 401 UNAUTHORIZED -", endpoint, "- Token present:", !!token)
+        throw new Error(`Unauthorized: ${endpoint}`)
+      }
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+    }
 
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+    return response.json()
+  } catch (error) {
+    console.error("[v0] fetchApi error for", endpoint, ":", error)
+    throw error
   }
-
-  return response.json()
 }
