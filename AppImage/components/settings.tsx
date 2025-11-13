@@ -318,7 +318,7 @@ export function Settings() {
     setGeneratingToken(true)
 
     try {
-      const response = await fetchApi("/api/auth/generate-api-token", {
+      const data = await fetchApi("/api/auth/generate-api-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -327,9 +327,7 @@ export function Settings() {
         }),
       })
 
-      const data = await response.json()
-
-      if (!response.ok || !data.success) {
+      if (!data.success) {
         setError(data.message || data.error || "Failed to generate API token")
         return
       }
