@@ -260,7 +260,7 @@ def generate_api_token():
                 'token_name': token_name,
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=365),
                 'iat': datetime.datetime.utcnow()
-            }, auth_manager.SECRET_KEY, algorithm='HS256')
+            }, auth_manager.JWT_SECRET, algorithm='HS256')
             
             return jsonify({
                 "success": True, 
