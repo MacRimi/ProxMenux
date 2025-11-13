@@ -13,6 +13,7 @@ A modern, responsive dashboard for monitoring Proxmox VE systems built with Next
 - [Authentication & Security](#authentication--security)
   - [Setup Authentication](#setup-authentication)
   - [Two-Factor Authentication (2FA)](#two-factor-authentication-2fa)
+  - [Security Best Practices for API Tokens](#security-best-practices-for-api-tokens)
 - [API Documentation](#api-documentation)
   - [API Authentication](#api-authentication)
   - [Generating API Tokens](#generating-api-tokens)
@@ -159,6 +160,100 @@ After setting up your password, you can enable 2FA using any TOTP authenticator 
 5. Save your backup codes in a secure location
 
 ![2FA Setup](AppImage/public/images/docs/2fa-setup.png)
+
+### Security Best Practices for API Tokens
+
+**IMPORTANT**: Never hardcode your API tokens directly in configuration files or scripts. Instead, use environment variables or secrets management.
+
+**Option 1: Environment Variables**
+
+Store your token in an environment variable:
+
+```bash
+# Linux/macOS - Add to ~/.bashrc or ~/.zshrc
+export PROXMENUX_API_TOKEN="your_actual_token_here"
+
+# Windows PowerShell - Add to profile
+$env:PROXMENUX_API_TOKEN = "your_actual_token_here"
+```
+
+Then reference it in your scripts:
+
+```bash
+# Linux/macOS
+curl -H "Authorization: Bearer $PROXMENUX_API_TOKEN" \
+  http://your-proxmox-ip:8008/api/system
+
+# Windows PowerShell
+curl -H "Authorization: Bearer $env:PROXMENUX_API_TOKEN" `
+  http://your-proxmox-ip:8008/api/system
+```
+
+**Option 2: Secrets File**
+
+Create a dedicated secrets file (make sure to add it to `.gitignore`):
+
+```bash
+# Create secrets file
+echo "PROXMENUX_API_TOKEN=your_actual_token_here" > ~/.proxmenux_secrets
+
+# Secure the file (Linux/macOS only)
+chmod 600 ~/.proxmenux_secrets
+
+# Load in your script
+source ~/.proxmenux_secrets
+```
+
+**Option 3: Homepage Secrets (Recommended)**
+
+Homepage supports secrets management. Create a `secrets.yaml` file:
+
+```yaml
+# secrets.yaml (add to .gitignore!)
+proxmenux_token: "your_actual_token_here"
+```
+
+Then reference it in your `services.yaml`:
+
+```yaml
+- ProxMenux Monitor:
+    widget:
+      type: customapi
+      url: http://proxmox.example.tld:8008/api/system
+      headers:
+        Authorization: Bearer {{HOMEPAGE_VAR_PROXMENUX_TOKEN}}
+```
+
+**Option 4: Home Assistant Secrets**
+
+Home Assistant has built-in secrets support. Edit `secrets.yaml`:
+
+```yaml
+# secrets.yaml
+proxmenux_api_token: "your_actual_token_here"
+```
+
+Then reference it in `configuration.yaml`:
+
+```yaml
+sensor:
+  - platform: rest
+    name: ProxMenux CPU
+    resource: http://proxmox.example.tld:8008/api/system
+    headers:
+      Authorization: !secret proxmenux_api_token
+```
+
+**Token Security Checklist:**
+- ✅ Store tokens in environment variables or secrets files
+- ✅ Add secrets files to `.gitignore`
+- ✅ Set proper file permissions (chmod 600 on Linux/macOS)
+- ✅ Rotate tokens periodically (every 3-6 months)
+- ✅ Use different tokens for different integrations
+- ✅ Delete tokens you no longer use
+- ❌ Never commit tokens to version control
+- ❌ Never share tokens in screenshots or logs
+- ❌ Never hardcode tokens in configuration files
 
 ---
 
@@ -474,21 +569,18 @@ Below is a complete list of all API endpoints with descriptions and example resp
           suffix: °C
 ```
 
-#### With Authentication Enabled
+#### With Authentication Enabled (Using Secrets)
 
-First, generate an API token:
+First, generate an API token via the web interface (Settings > API Access Tokens) or via API.
 
-```bash
-curl -X POST http://proxmox.example.tld:8008/api/auth/generate-api-token \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "your-username",
-    "password": "your-password",
-    "token_name": "Homepage Integration"
-  }'
+Then, store your token securely in Homepage's `secrets.yaml`:
+
+```yaml
+# secrets.yaml (add to .gitignore!)
+proxmenux_token: "your_actual_api_token_here"
 ```
 
-Then add the token to your Homepage configuration:
+Finally, reference the secret in your `services.yaml`:
 
 ```yaml
 - ProxMenux Monitor:
@@ -498,7 +590,7 @@ Then add the token to your Homepage configuration:
       type: customapi
       url: http://proxmox.example.tld:8008/api/system
       headers:
-        Authorization: Bearer YOUR_API_TOKEN_HERE
+        Authorization: Bearer {{HOMEPAGE_VAR_PROXMENUX_TOKEN}}
       refreshInterval: 10000
       mappings:
         - field: uptime
@@ -523,6 +615,9 @@ Then add the token to your Homepage configuration:
 #### Advanced Multi-Widget Configuration
 
 ```yaml
+# Store token in secrets.yaml
+# proxmenux_token: "your_actual_api_token_here"
+
 - ProxMenux System:
     href: http://proxmox.example.tld:8008/
     icon: lucide:server
@@ -531,7 +626,7 @@ Then add the token to your Homepage configuration:
       type: customapi
       url: http://proxmox.example.tld:8008/api/system
       headers:
-        Authorization: Bearer YOUR_API_TOKEN_HERE
+        Authorization: Bearer {{HOMEPAGE_VAR_PROXMENUX_TOKEN}}
       refreshInterval: 5000
       mappings:
         - field: cpu_usage
@@ -556,7 +651,7 @@ Then add the token to your Homepage configuration:
       type: customapi
       url: http://proxmox.example.tld:8008/api/storage/summary
       headers:
-        Authorization: Bearer YOUR_API_TOKEN_HERE
+        Authorization: Bearer {{HOMEPAGE_VAR_PROXMENUX_TOKEN}}
       refreshInterval: 30000
       mappings:
         - field: usage_percentage
@@ -576,7 +671,7 @@ Then add the token to your Homepage configuration:
       type: customapi
       url: http://proxmox.example.tld:8008/api/network/summary
       headers:
-        Authorization: Bearer YOUR_API_TOKEN_HERE
+        Authorization: Bearer {{HOMEPAGE_VAR_PROXMENUX_TOKEN}}
       refreshInterval: 5000
       mappings:
         - field: interfaces[0].rx_bytes
@@ -595,6 +690,17 @@ Then add the token to your Homepage configuration:
 
 [Home Assistant](https://www.home-assistant.io/) is an open-source home automation platform.
 
+#### Store Token Securely
+
+First, add your API token to Home Assistant's `secrets.yaml`:
+
+```yaml
+# secrets.yaml
+proxmenux_api_token: "Bearer your_actual_api_token_here"
+```
+
+**Note**: Include "Bearer " prefix in the secrets file for Home Assistant.
+
 #### Configuration.yaml
 
 ```yaml
@@ -604,7 +710,7 @@ sensor:
     name: ProxMenux CPU
     resource: http://proxmox.example.tld:8008/api/system
     headers:
-      Authorization: Bearer YOUR_API_TOKEN_HERE
+      Authorization: !secret proxmenux_api_token
     value_template: "{{ value_json.cpu_usage }}"
     unit_of_measurement: "%"
     scan_interval: 30
@@ -613,7 +719,7 @@ sensor:
     name: ProxMenux Memory
     resource: http://proxmox.example.tld:8008/api/system
     headers:
-      Authorization: Bearer YOUR_API_TOKEN_HERE
+      Authorization: !secret proxmenux_api_token
     value_template: "{{ value_json.memory_usage }}"
     unit_of_measurement: "%"
     scan_interval: 30
@@ -622,7 +728,7 @@ sensor:
     name: ProxMenux Temperature
     resource: http://proxmox.example.tld:8008/api/system
     headers:
-      Authorization: Bearer YOUR_API_TOKEN_HERE
+      Authorization: !secret proxmenux_api_token
     value_template: "{{ value_json.temperature }}"
     unit_of_measurement: "°C"
     device_class: temperature
@@ -632,7 +738,7 @@ sensor:
     name: ProxMenux Uptime
     resource: http://proxmox.example.tld:8008/api/system
     headers:
-      Authorization: Bearer YOUR_API_TOKEN_HERE
+      Authorization: !secret proxmenux_api_token
     value_template: >
       {% set uptime_seconds = value_json.uptime | int %}
       {% set days = (uptime_seconds / 86400) | int %}

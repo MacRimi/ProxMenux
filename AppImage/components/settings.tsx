@@ -785,11 +785,16 @@ export function Settings() {
                   <h3 className="font-semibold">Your API Token</h3>
                 </div>
 
-                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-500 font-medium">
-                    Save this token now! You won't be able to see it again.
-                  </p>
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm text-amber-600 dark:text-amber-400 font-semibold">
+                      ⚠️ Important: Save this token now!
+                    </p>
+                    <p className="text-xs text-amber-600/80 dark:text-amber-400/80">
+                      You won't be able to see it again. Store it securely.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
