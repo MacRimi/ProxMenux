@@ -336,8 +336,8 @@ export function Settings() {
       }
 
       // Then check if request was successful
-      if (!response.ok) {
-        throw new Error(data.message || data.error || "Failed to generate API token")
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to generate API token")
       }
 
       setApiToken(data.token)
