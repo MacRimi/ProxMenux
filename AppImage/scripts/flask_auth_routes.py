@@ -231,14 +231,19 @@ def totp_disable():
 def generate_api_token():
     """Generate a long-lived API token for external integrations (Homepage, Home Assistant, etc.)"""
     try:
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        username = auth_manager.verify_token(token)
+        
+        if not username:
+            return jsonify({"success": False, "message": "Unauthorized. Please log in first."}), 401
+        
         data = request.json
-        username = data.get('username')
         password = data.get('password')
         totp_token = data.get('totp_token')  # Optional 2FA token
         token_name = data.get('token_name', 'API Token')  # Optional token description
         
-        # Authenticate user first
-        success, token, requires_totp, message = auth_manager.authenticate(username, password, totp_token)
+        # Authenticate user with password and optional 2FA
+        success, _, requires_totp, message = auth_manager.authenticate(username, password, totp_token)
         
         if success:
             # Generate a long-lived token (1 year expiration)

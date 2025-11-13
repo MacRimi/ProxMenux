@@ -2,50 +2,6 @@
 
 A modern, responsive dashboard for monitoring Proxmox VE systems built with Next.js and React.
 
-<p align="center">
-  <img src="AppImage/public/images/proxmenux-logo.png" alt="ProxMenux Monitor Logo" width="200"/>
-</p>
-
-## Screenshots
-
-Get a quick overview of ProxMenux Monitor's main features:
-
-<p align="center">
-  <img src="AppImage/public/images/onboarding/imagen1.png" alt="Overview Dashboard" width="800"/>
-  <br/>
-  <em>System Overview - Monitor CPU, memory, temperature, and uptime in real-time</em>
-</p>
-
-<p align="center">
-  <img src="AppImage/public/images/onboarding/imagen2.png" alt="Storage Management" width="800"/>
-  <br/>
-  <em>Storage Management - Visual representation of disk usage and health</em>
-</p>
-
-<p align="center">
-  <img src="AppImage/public/images/onboarding/imagen3.png" alt="Network Monitoring" width="800"/>
-  <br/>
-  <em>Network Monitoring - Real-time traffic graphs and interface statistics</em>
-</p>
-
-<p align="center">
-  <img src="AppImage/public/images/onboarding/imagen4.png" alt="Virtual Machines & LXC" width="800"/>
-  <br/>
-  <em>VMs & LXC Containers - Comprehensive view with resource usage and controls</em>
-</p>
-
-<p align="center">
-  <img src="AppImage/public/images/onboarding/imagen5.png" alt="Hardware Information" width="800"/>
-  <br/>
-  <em>Hardware Information - Detailed specs for CPU, GPU, and PCIe devices</em>
-</p>
-
-<p align="center">
-  <img src="AppImage/public/images/onboarding/imagen6.png" alt="System Logs" width="800"/>
-  <br/>
-  <em>System Logs - Real-time monitoring with filtering and search</em>
-</p>
-
 ---
 
 ## Table of Contents
@@ -74,6 +30,52 @@ Get a quick overview of ProxMenux Monitor's main features:
 **ProxMenux Monitor** is a comprehensive, real-time monitoring dashboard for Proxmox VE environments. Built with modern web technologies, it provides an intuitive interface to monitor system resources, virtual machines, containers, storage, network traffic, and system logs.
 
 The application runs as a standalone AppImage on your Proxmox server and serves a web interface accessible from any device on your network.
+
+<p align="center">
+  <img src="public/images/proxmenux-logo.png" alt="ProxMenux Monitor Logo" width="200"/>
+</p>
+
+## Screenshots
+
+Get a quick overview of ProxMenux Monitor's main features:
+
+<p align="center">
+  <img src="public/images/onboarding/imagen1.png" alt="Overview Dashboard" width="800"/>
+  <br/>
+  <em>System Overview - Monitor CPU, memory, temperature, and uptime in real-time</em>
+</p>
+
+<p align="center">
+  <img src="public/images/onboarding/imagen2.png" alt="Storage Management" width="800"/>
+  <br/>
+  <em>Storage Management - Visual representation of disk usage and health</em>
+</p>
+
+<p align="center">
+  <img src="public/images/onboarding/imagen3.png" alt="Network Monitoring" width="800"/>
+  <br/>
+  <em>Network Monitoring - Real-time traffic graphs and interface statistics</em>
+</p>
+
+<p align="center">
+  <img src="public/images/onboarding/imagen4.png" alt="Virtual Machines & LXC" width="800"/>
+  <br/>
+  <em>VMs & LXC Containers - Comprehensive view with resource usage and controls</em>
+</p>
+
+<p align="center">
+  <img src="public/images/onboarding/imagen5.png" alt="Hardware Information" width="800"/>
+  <br/>
+  <em>Hardware Information - Detailed specs for CPU, GPU, and PCIe devices</em>
+</p>
+
+<p align="center">
+  <img src="public/images/onboarding/imagen6.png" alt="System Logs" width="800"/>
+  <br/>
+  <em>System Logs - Real-time monitoring with filtering and search</em>
+</p>
+
+---
 
 ## Features
 
@@ -680,19 +682,6 @@ entities:
 ```
 
 ![Home Assistant Integration Example](AppImage/public/images/docs/homeassistant-integration.png)
-
----
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests.
-
-### Development Setup
-
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Run development server: `npm run dev`
-4. Build AppImage: `./build_appimage.sh`
 
 ---
 
