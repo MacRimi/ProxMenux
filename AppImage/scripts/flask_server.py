@@ -35,6 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask_auth_routes import auth_bp
 from flask_proxmenux_routes import proxmenux_bp
+from jwt_middleware import require_auth
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
@@ -1740,6 +1741,7 @@ def get_proxmox_storage():
 # END OF CHANGES FOR get_proxmox_storage
 
 @app.route('/api/storage/summary', methods=['GET'])
+@require_auth
 def api_storage_summary():
     """Get storage summary without SMART data (optimized for Overview page)"""
     try:
@@ -3474,7 +3476,7 @@ def get_detailed_gpu_info(gpu):
                                                     'shared': 0,
                                                     'resident': int(vram_mb * 1024 * 1024)
                                                 }
-                                                # print(f"[v0]   VRAM: {vram_mb} MB", flush=True)
+                                                # print(f"[v0]     VRAM: {vram_mb} MB", flush=True)
                                                 pass
                                         
                                         # Parse GTT (Graphics Translation Table) usage (está dentro de usage.usage)
@@ -3488,7 +3490,7 @@ def get_detailed_gpu_info(gpu):
                                                 else:
                                                     # Add GTT to existing VRAM
                                                     process_info['memory']['total'] += int(gtt_mb * 1024 * 1024)
-                                                # print(f"[v0]   GTT: {gtt_mb} MB", flush=True)
+                                                # print(f"[v0]     GTT: {gtt_mb} MB", flush=True)
                                                 pass
                                         
                                         # Parse engine utilization for this process (están dentro de usage.usage)
@@ -4519,6 +4521,7 @@ def get_hardware_info():
 
 
 @app.route('/api/system', methods=['GET'])
+@require_auth
 def api_system():
     """Get system information including CPU, memory, and temperature"""
     try:
@@ -4575,21 +4578,25 @@ def api_system():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/storage', methods=['GET'])
+@require_auth
 def api_storage():
     """Get storage information"""
     return jsonify(get_storage_info())
 
 @app.route('/api/proxmox-storage', methods=['GET'])
+@require_auth
 def api_proxmox_storage():
     """Get Proxmox storage information"""
     return jsonify(get_proxmox_storage())
 
 @app.route('/api/network', methods=['GET'])
+@require_auth
 def api_network():
     """Get network information"""
     return jsonify(get_network_info())
 
 @app.route('/api/network/summary', methods=['GET'])
+@require_auth
 def api_network_summary():
     """Optimized network summary endpoint - returns basic network info without detailed analysis"""
     try:
@@ -4668,6 +4675,7 @@ def api_network_summary():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/network/<interface_name>/metrics', methods=['GET'])
+@require_auth
 def api_network_interface_metrics(interface_name):
     """Get historical metrics (RRD data) for a specific network interface"""
     try:
@@ -4750,12 +4758,13 @@ def api_network_interface_metrics(interface_name):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms', methods=['GET'])
+@require_auth
 def api_vms():
     """Get virtual machine information"""
     return jsonify(get_proxmox_vms())
 
-# Add the new api_vm_metrics endpoint here
 @app.route('/api/vms/<int:vmid>/metrics', methods=['GET'])
+@require_auth
 def api_vm_metrics(vmid):
     """Get historical metrics (RRD data) for a specific VM/LXC"""
     try:
@@ -4822,6 +4831,7 @@ def api_vm_metrics(vmid):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/node/metrics', methods=['GET'])
+@require_auth
 def api_node_metrics():
     """Get historical metrics (RRD data) for the node"""
     try:
@@ -4865,6 +4875,7 @@ def api_node_metrics():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/logs', methods=['GET'])
+@require_auth
 def api_logs():
     """Get system logs"""
     try:
@@ -4942,6 +4953,7 @@ def api_logs():
         })
 
 @app.route('/api/logs/download', methods=['GET'])
+@require_auth
 def api_logs_download():
     """Download system logs as a text file"""
     try:
@@ -5000,6 +5012,7 @@ def api_logs_download():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/notifications', methods=['GET'])
+@require_auth
 def api_notifications():
     """Get Proxmox notification history"""
     try:
@@ -5116,6 +5129,7 @@ def api_notifications():
         })
 
 @app.route('/api/notifications/download', methods=['GET'])
+@require_auth
 def api_notifications_download():
     """Download complete log for a specific notification"""
     try:
@@ -5171,6 +5185,7 @@ def api_notifications_download():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/backups', methods=['GET'])
+@require_auth
 def api_backups():
     """Get list of all backup files from Proxmox storage"""
     try:
@@ -5259,6 +5274,7 @@ def api_backups():
         })
 
 @app.route('/api/events', methods=['GET'])
+@require_auth
 def api_events():
     """Get recent Proxmox events and tasks"""
     try:
@@ -5335,6 +5351,7 @@ def api_events():
         })
 
 @app.route('/api/task-log/<path:upid>')
+@require_auth
 def get_task_log(upid):
     """Get complete task log from Proxmox using UPID"""
     try:
@@ -5432,6 +5449,7 @@ def get_task_log(upid):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/health', methods=['GET'])
+@require_auth
 def api_health():
     """Health check endpoint"""
     return jsonify({
@@ -5441,6 +5459,7 @@ def api_health():
     })
 
 @app.route('/api/prometheus', methods=['GET'])
+@require_auth
 def api_prometheus():
     """Export metrics in Prometheus format"""
     try:
@@ -5697,11 +5716,12 @@ def api_prometheus():
 
 
 @app.route('/api/info', methods=['GET'])
+@require_auth
 def api_info():
     """Root endpoint with API information"""
     return jsonify({
         'name': 'ProxMenux Monitor API',
-        'version': '1.0.0',
+        'version': '1.0.1',
         'endpoints': [
             '/api/system',
             '/api/system-info',
@@ -5725,6 +5745,7 @@ def api_info():
     })
 
 @app.route('/api/hardware', methods=['GET'])
+@require_auth
 def api_hardware():
     """Get hardware information"""
     try:
@@ -5761,6 +5782,7 @@ def api_hardware():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/gpu/<slot>/realtime', methods=['GET'])
+@require_auth
 def api_gpu_realtime(slot):
     """Get real-time GPU monitoring data for a specific GPU"""
     try:
@@ -5823,6 +5845,7 @@ def api_gpu_realtime(slot):
 
 # CHANGE: Modificar el endpoint para incluir la información completa de IPs
 @app.route('/api/vms/<int:vmid>', methods=['GET'])
+@require_auth
 def get_vm_config(vmid):
     """Get detailed configuration for a specific VM/LXC"""
     try:
@@ -5919,6 +5942,7 @@ def get_vm_config(vmid):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms/<int:vmid>/logs', methods=['GET'])
+@require_auth
 def api_vm_logs(vmid):
     """Download real logs for a specific VM/LXC (not task history)"""
     try:
@@ -5968,6 +5992,7 @@ def api_vm_logs(vmid):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms/<int:vmid>/control', methods=['POST'])
+@require_auth
 def api_vm_control(vmid):
     """Control VM/LXC (start, stop, shutdown, reboot)"""
     try:
@@ -6020,6 +6045,7 @@ def api_vm_control(vmid):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vms/<int:vmid>/config', methods=['PUT'])
+@require_auth
 def api_vm_config_update(vmid):
     """Update VM/LXC configuration (description/notes)"""
     try:
