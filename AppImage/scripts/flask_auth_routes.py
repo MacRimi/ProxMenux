@@ -231,16 +231,24 @@ def totp_disable():
 def generate_api_token():
     """Generate a long-lived API token for external integrations (Homepage, Home Assistant, etc.)"""
     try:
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        auth_header = request.headers.get('Authorization', '')
+        token = auth_header.replace('Bearer ', '')
+        
+        if not token:
+            return jsonify({"success": False, "message": "Unauthorized. Please log in first."}), 401
+        
         username = auth_manager.verify_token(token)
         
         if not username:
-            return jsonify({"success": False, "message": "Unauthorized. Please log in first."}), 401
+            return jsonify({"success": False, "message": "Invalid or expired session. Please log in again."}), 401
         
         data = request.json
         password = data.get('password')
         totp_token = data.get('totp_token')  # Optional 2FA token
         token_name = data.get('token_name', 'API Token')  # Optional token description
+        
+        if not password:
+            return jsonify({"success": False, "message": "Password is required"}), 400
         
         # Authenticate user with password and optional 2FA
         success, _, requires_totp, message = auth_manager.authenticate(username, password, totp_token)
@@ -266,4 +274,5 @@ def generate_api_token():
         else:
             return jsonify({"success": False, "message": message}), 401
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        print(f"[ERROR] generate_api_token: {str(e)}")  # Log error for debugging
+        return jsonify({"success": False, "message": f"Internal error: {str(e)}"}), 500

@@ -31,9 +31,6 @@ A modern, responsive dashboard for monitoring Proxmox VE systems built with Next
 
 The application runs as a standalone AppImage on your Proxmox server and serves a web interface accessible from any device on your network.
 
-<p align="center">
-  <img src="public/images/proxmenux-logo.png" alt="ProxMenux Monitor Logo" width="200"/>
-</p>
 
 ## Screenshots
 
@@ -136,22 +133,6 @@ location /proxmenux-monitor/ {
 }
 ```
 
-### Manual Installation (Standalone)
-
-If you want to run ProxMenux Monitor as a standalone application outside of ProxMenux:
-
-1. Download the latest `ProxMenux-Monitor.AppImage` from the releases page
-2. Make it executable:
-   ```bash
-   chmod +x ProxMenux-Monitor.AppImage
-   ```
-3. Run the AppImage:
-   ```bash
-   ./ProxMenux-Monitor.AppImage
-   ```
-4. Access the dashboard at `http://your-proxmox-ip:8008`
-
-The application will start automatically and create a systemd service for persistence.
 
 ## Authentication & Security
 
@@ -682,6 +663,19 @@ entities:
 ```
 
 ![Home Assistant Integration Example](AppImage/public/images/docs/homeassistant-integration.png)
+
+---
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests.
+
+### Development Setup
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Run development server: `npm run dev`
+4. Build AppImage: `./build_appimage.sh`
 
 ---
 
