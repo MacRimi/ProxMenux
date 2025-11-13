@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
-import { API_PORT } from "@/lib/api-config"
+import { fetchApi } from "@/lib/api-config"
 
 interface MetricsViewProps {
   vmid: number
@@ -119,21 +119,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
     setError(null)
 
     try {
-      const { protocol, hostname, port } = window.location
-      const isStandardPort = port === "" || port === "80" || port === "443"
-
-      const baseUrl = isStandardPort ? "" : `${protocol}//${hostname}:${API_PORT}`
-
-      const apiUrl = `${baseUrl}/api/vms/${vmid}/metrics?timeframe=${timeframe}`
-
-      const response = await fetch(apiUrl)
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to fetch metrics")
-      }
-
-      const result = await response.json()
+      const result = await fetchApi<any>(`/api/vms/${vmid}/metrics?timeframe=${timeframe}`)
 
       const transformedData = result.data.map((item: any) => {
         const date = new Date(item.time * 1000)
