@@ -61,13 +61,13 @@ The application runs as a standalone AppImage on your Proxmox server and serves 
 
 1. Download the latest `ProxMenux-Monitor.AppImage` from the releases page
 2. Make it executable:
-   \`\`\`bash
+   ```bash
    chmod +x ProxMenux-Monitor.AppImage
-   \`\`\`
+   ```
 3. Run the AppImage:
-   \`\`\`bash
+   ```bash
    ./ProxMenux-Monitor.AppImage
-   \`\`\`
+   ```
 4. Access the dashboard at `http://your-proxmox-ip:8008`
 
 The application will start automatically and create a systemd service for persistence.
@@ -112,9 +112,9 @@ When authentication is enabled on ProxMenux Monitor, all API endpoints (except `
 
 #### API Endpoint Base URL
 
-\`\`\`
+```
 http://your-proxmox-ip:8008/api/
-\`\`\`
+```
 
 ### Generating API Tokens
 
@@ -122,7 +122,7 @@ To use the API with authentication enabled, you need to generate a long-lived AP
 
 #### Option 1: Generate via API Call
 
-\`\`\`bash
+```bash
 curl -X POST http://your-proxmox-ip:8008/api/auth/generate-api-token \
   -H "Content-Type: application/json" \
   -d '{
@@ -131,10 +131,10 @@ curl -X POST http://your-proxmox-ip:8008/api/auth/generate-api-token \
     "totp_token": "123456",
     "token_name": "Homepage Integration"
   }'
-\`\`\`
+```
 
 **Response:**
-\`\`\`json
+```json
 {
   "success": true,
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -142,7 +142,7 @@ curl -X POST http://your-proxmox-ip:8008/api/auth/generate-api-token \
   "expires_in": "365 days",
   "message": "API token generated successfully. Store this token securely, it will not be shown again."
 }
-\`\`\`
+```
 
 **Notes:**
 - If 2FA is enabled, include the `totp_token` field with your 6-digit code
@@ -152,30 +152,30 @@ curl -X POST http://your-proxmox-ip:8008/api/auth/generate-api-token \
 
 #### Option 2: Generate via cURL (with 2FA)
 
-\`\`\`bash
+```bash
 # With 2FA enabled
 curl -X POST http://your-proxmox-ip:8008/api/auth/generate-api-token \
   -H "Content-Type: application/json" \
   -d '{"username":"pedro","password":"your-password","totp_token":"123456","token_name":"Home Assistant"}'
-\`\`\`
+```
 
 #### Option 3: Generate via cURL (without 2FA)
 
-\`\`\`bash
+```bash
 # Without 2FA
 curl -X POST http://your-proxmox-ip:8008/api/auth/generate-api-token \
   -H "Content-Type: application/json" \
   -d '{"username":"pedro","password":"your-password","token_name":"Homepage"}'
-\`\`\`
+```
 
 ### Using API Tokens
 
 Once you have your API token, include it in the `Authorization` header of all API requests:
 
-\`\`\`bash
+```bash
 curl -H "Authorization: Bearer YOUR_API_TOKEN_HERE" \
   http://your-proxmox-ip:8008/api/system
-\`\`\`
+```
 
 ---
 
@@ -193,7 +193,7 @@ Below is a complete list of all API endpoints with descriptions and example resp
 | `/api/prometheus` | GET | Yes | Export metrics in Prometheus format |
 
 **Example `/api/system` Response:**
-\`\`\`json
+```json
 {
   "hostname": "pve",
   "cpu_usage": 15.2,
@@ -203,7 +203,7 @@ Below is a complete list of all API endpoints with descriptions and example resp
   "kernel": "6.2.16-3-pve",
   "pve_version": "8.0.3"
 }
-\`\`\`
+```
 
 #### Storage
 
@@ -215,7 +215,7 @@ Below is a complete list of all API endpoints with descriptions and example resp
 | `/api/backups` | GET | Yes | List of all backup files |
 
 **Example `/api/storage/summary` Response:**
-\`\`\`json
+```json
 {
   "total_capacity": 1431894917120,
   "used_space": 197414092800,
@@ -230,7 +230,7 @@ Below is a complete list of all API endpoints with descriptions and example resp
     }
   ]
 }
-\`\`\`
+```
 
 #### Network
 
@@ -241,7 +241,7 @@ Below is a complete list of all API endpoints with descriptions and example resp
 | `/api/network/<interface>/metrics` | GET | Yes | Historical metrics (RRD) for specific interface |
 
 **Example `/api/network/summary` Response:**
-\`\`\`json
+```json
 {
   "interfaces": [
     {
@@ -253,7 +253,7 @@ Below is a complete list of all API endpoints with descriptions and example resp
     }
   ]
 }
-\`\`\`
+```
 
 #### Virtual Machines & Containers
 
@@ -267,7 +267,7 @@ Below is a complete list of all API endpoints with descriptions and example resp
 | `/api/vms/<vmid>/config` | PUT | Yes | Update VM/LXC configuration (description/notes) |
 
 **Example `/api/vms` Response:**
-\`\`\`json
+```json
 {
   "vms": [
     {
@@ -283,7 +283,7 @@ Below is a complete list of all API endpoints with descriptions and example resp
     }
   ]
 }
-\`\`\`
+```
 
 #### Hardware
 
@@ -293,7 +293,7 @@ Below is a complete list of all API endpoints with descriptions and example resp
 | `/api/gpu/<slot>/realtime` | GET | Yes | Real-time monitoring for specific GPU |
 
 **Example `/api/hardware` Response:**
-\`\`\`json
+```json
 {
   "cpu": {
     "model": "AMD Ryzen 9 5950X",
@@ -310,7 +310,7 @@ Below is a complete list of all API endpoints with descriptions and example resp
     }
   ]
 }
-\`\`\`
+```
 
 #### Logs, Events & Notifications
 
@@ -324,9 +324,9 @@ Below is a complete list of all API endpoints with descriptions and example resp
 | `/api/task-log/<upid>` | GET | Yes | Full log for specific task using UPID |
 
 **Example `/api/logs` Query Parameters:**
-\`\`\`
+```
 /api/logs?severity=error&since=1h&search=failed
-\`\`\`
+```
 
 #### Health Monitoring
 
@@ -369,7 +369,7 @@ Below is a complete list of all API endpoints with descriptions and example resp
 
 #### Basic Configuration (No Authentication)
 
-\`\`\`yaml
+```yaml
 - ProxMenux Monitor:
     href: http://proxmox.example.tld:8008/
     icon: lucide:flask-round
@@ -395,13 +395,13 @@ Below is a complete list of all API endpoints with descriptions and example resp
           icon: lucide:thermometer-sun
           format: number
           suffix: °C
-\`\`\`
+```
 
 #### With Authentication Enabled
 
 First, generate an API token:
 
-\`\`\`bash
+```bash
 curl -X POST http://proxmox.example.tld:8008/api/auth/generate-api-token \
   -H "Content-Type: application/json" \
   -d '{
@@ -409,11 +409,11 @@ curl -X POST http://proxmox.example.tld:8008/api/auth/generate-api-token \
     "password": "your-password",
     "token_name": "Homepage Integration"
   }'
-\`\`\`
+```
 
 Then add the token to your Homepage configuration:
 
-\`\`\`yaml
+```yaml
 - ProxMenux Monitor:
     href: http://proxmox.example.tld:8008/
     icon: lucide:flask-round
@@ -441,11 +441,11 @@ Then add the token to your Homepage configuration:
           icon: lucide:thermometer-sun
           format: number
           suffix: °C
-\`\`\`
+```
 
 #### Advanced Multi-Widget Configuration
 
-\`\`\`yaml
+```yaml
 - ProxMenux System:
     href: http://proxmox.example.tld:8008/
     icon: lucide:server
@@ -510,7 +510,7 @@ Then add the token to your Homepage configuration:
           label: Sent
           icon: lucide:upload
           format: bytes
-\`\`\`
+```
 
 ![Homepage Integration Example](public/images/docs/homepage-integration.png)
 
@@ -520,7 +520,7 @@ Then add the token to your Homepage configuration:
 
 #### Configuration.yaml
 
-\`\`\`yaml
+```yaml
 # ProxMenux Monitor Sensors
 sensor:
   - platform: rest
@@ -563,11 +563,11 @@ sensor:
       {% set minutes = ((uptime_seconds % 3600) / 60) | int %}
       {{ days }}d {{ hours }}h {{ minutes }}m
     scan_interval: 60
-\`\`\`
+```
 
 #### Lovelace Card Example
 
-\`\`\`yaml
+```yaml
 type: entities
 title: Proxmox Monitor
 entities:
@@ -583,7 +583,7 @@ entities:
   - entity: sensor.proxmenux_uptime
     name: Uptime
     icon: mdi:clock-outline
-\`\`\`
+```
 
 ![Home Assistant Integration Example](public/images/docs/homeassistant-integration.png)
 
