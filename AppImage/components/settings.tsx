@@ -318,6 +318,8 @@ export function Settings() {
     setGeneratingToken(true)
 
     try {
+      console.log("[v0] Generating API token with password and 2FA:", { totpEnabled, hasTotpCode: !!tokenTotpCode })
+
       const response = await fetchApi("/api/auth/generate-api-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -327,19 +329,24 @@ export function Settings() {
         }),
       })
 
-      // Parse response first
-      let data
-      try {
-        data = await response.json()
-      } catch (parseError) {
-        throw new Error("Invalid server response")
+      console.log("[v0] Response status:", response.status, response.statusText)
+
+      const data = await response.json()
+      console.log("[v0] Parsed response data:", { success: data.success, hasToken: !!data.token })
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || "Failed to generate API token")
       }
 
-      // Then check if request was successful
-      if (!response.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.message || "Failed to generate API token")
       }
 
+      if (!data.token) {
+        throw new Error("No token received from server")
+      }
+
+      console.log("[v0] API token generated successfully")
       setApiToken(data.token)
       setSuccess("API token generated successfully! Make sure to copy it now as you won't be able to see it again.")
       setTokenPassword("")
