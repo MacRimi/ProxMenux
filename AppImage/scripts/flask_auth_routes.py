@@ -5,6 +5,8 @@ Provides REST API endpoints for authentication management
 
 from flask import Blueprint, jsonify, request
 import auth_manager
+import jwt
+import datetime
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -221,5 +223,42 @@ def totp_disable():
             return jsonify({"success": True, "message": message})
         else:
             return jsonify({"success": False, "message": message}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/auth/generate-api-token', methods=['POST'])
+def generate_api_token():
+    """Generate a long-lived API token for external integrations (Homepage, Home Assistant, etc.)"""
+    try:
+        data = request.json
+        username = data.get('username')
+        password = data.get('password')
+        totp_token = data.get('totp_token')  # Optional 2FA token
+        token_name = data.get('token_name', 'API Token')  # Optional token description
+        
+        # Authenticate user first
+        success, token, requires_totp, message = auth_manager.authenticate(username, password, totp_token)
+        
+        if success:
+            # Generate a long-lived token (1 year expiration)
+            api_token = jwt.encode({
+                'username': username,
+                'token_name': token_name,
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(days=365),
+                'iat': datetime.datetime.utcnow()
+            }, auth_manager.SECRET_KEY, algorithm='HS256')
+            
+            return jsonify({
+                "success": True, 
+                "token": api_token,
+                "token_name": token_name,
+                "expires_in": "365 days",
+                "message": "API token generated successfully. Store this token securely, it will not be shown again."
+            })
+        elif requires_totp:
+            return jsonify({"success": False, "requires_totp": True, "message": message}), 200
+        else:
+            return jsonify({"success": False, "message": message}), 401
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
