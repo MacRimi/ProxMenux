@@ -69,7 +69,9 @@ export function getAuthToken(): string | null {
   if (typeof window === "undefined") {
     return null
   }
-  return localStorage.getItem("proxmenux-auth-token")
+  const token = localStorage.getItem("proxmenux-auth-token")
+  console.log("[v0] getAuthToken:", token ? `Token found (${token.substring(0, 20)}...)` : "No token found")
+  return token
 }
 
 /**
@@ -91,13 +93,20 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`
+    console.log("[v0] fetchApi: Adding Authorization header to request:", endpoint)
+  } else {
+    console.log("[v0] fetchApi: No token available for request:", endpoint)
   }
+
+  console.log("[v0] fetchApi: Fetching", url, "with headers:", Object.keys(headers))
 
   const response = await fetch(url, {
     ...options,
     headers,
     cache: "no-store",
   })
+
+  console.log("[v0] fetchApi: Response status for", endpoint, ":", response.status)
 
   if (!response.ok) {
     throw new Error(`API request failed: ${response.status} ${response.statusText}`)
