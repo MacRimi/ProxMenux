@@ -2430,6 +2430,22 @@
     "type": "ct"
   },
   {
+    "name": "LibreNMS",
+    "slug": "librenms",
+    "desc": "LibreNMS is an open-source, community-driven network monitoring system that provides automatic discovery, alerting, and performance tracking for network devices. It supports a wide range of hardware and integrates with various notification and logging platforms.",
+    "script": "ct/librenms.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/librenms.sh",
+    "categories": [
+      9
+    ],
+    "notes": [],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin"
+    }
+  },
+  {
     "name": "Librespeed Rust",
     "slug": "librespeed-rust",
     "desc": "Librespeed is a no flash, no java, no websocket speedtest server. This community script deploys the rust version for simplicity and low resource usage.",
