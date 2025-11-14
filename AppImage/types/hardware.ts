@@ -1,3 +1,5 @@
+import { fetchApi } from "@/lib/api-config"
+
 export interface Temperature {
   name: string
   original_name?: string
@@ -208,4 +210,8 @@ export interface HardwareData {
   ups?: UPS | UPS[]
 }
 
-export const fetcher = (url: string) => fetch(url).then((res) => res.json())
+export const fetcher = async (url: string) => {
+  // Extract just the endpoint from the URL if it's a full URL
+  const endpoint = url.startsWith("http") ? new URL(url).pathname : url
+  return fetchApi(endpoint)
+}

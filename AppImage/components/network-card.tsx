@@ -4,6 +4,7 @@ import { Card, CardContent } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Wifi, Zap } from "lucide-react"
 import { useState, useEffect } from "react"
+import { fetchApi } from "../lib/api-config"
 
 interface NetworkCardProps {
   interface_: {
@@ -94,26 +95,12 @@ export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps
   useEffect(() => {
     const fetchTrafficData = async () => {
       try {
-        const response = await fetch(`/api/network/${interface_.name}/metrics?timeframe=${timeframe}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          signal: AbortSignal.timeout(5000),
-        })
+        const data = await fetchApi(`/api/network/${interface_.name}/metrics?timeframe=${timeframe}`)
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch traffic data: ${response.status}`)
-        }
-
-        const data = await response.json()
-
-        // Calculate totals from the data points
         if (data.data && data.data.length > 0) {
           const lastPoint = data.data[data.data.length - 1]
           const firstPoint = data.data[0]
 
-          // Calculate the difference between last and first data points
           const receivedGB = Math.max(0, (lastPoint.netin || 0) - (firstPoint.netin || 0))
           const sentGB = Math.max(0, (lastPoint.netout || 0) - (firstPoint.netout || 0))
 
@@ -124,16 +111,13 @@ export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps
         }
       } catch (error) {
         console.error("[v0] Failed to fetch traffic data for card:", error)
-        // Keep showing 0 values on error
         setTrafficData({ received: 0, sent: 0 })
       }
     }
 
-    // Only fetch if interface is up and not a VM
     if (interface_.status.toLowerCase() === "up" && interface_.vm_type !== "vm") {
       fetchTrafficData()
 
-      // Refresh every 60 seconds
       const interval = setInterval(fetchTrafficData, 60000)
       return () => clearInterval(interval)
     }

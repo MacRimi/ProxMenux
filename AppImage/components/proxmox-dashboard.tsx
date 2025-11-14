@@ -14,7 +14,7 @@ import { Settings } from "./settings"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
 import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
-import { getApiUrl } from "../lib/api-config"
+import { getApiUrl, fetchApi } from "../lib/api-config"
 import {
   RefreshCw,
   AlertTriangle,
@@ -80,22 +80,8 @@ export function ProxmoxDashboard() {
   const { showReleaseNotes, setShowReleaseNotes } = useVersionCheck()
 
   const fetchSystemData = useCallback(async () => {
-    const apiUrl = getApiUrl("/api/system-info")
-
     try {
-      const response = await fetch(apiUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      })
-
-      if (!response.ok) {
-        throw new Error(`Server responded with status: ${response.status}`)
-      }
-
-      const data: FlaskSystemInfo = await response.json()
+      const data: FlaskSystemInfo = await fetchApi("/api/system-info")
 
       const uptimeValue =
         data.uptime && typeof data.uptime === "string" && data.uptime.trim() !== "" ? data.uptime : "N/A"

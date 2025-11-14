@@ -61,6 +61,23 @@ export function getApiUrl(endpoint: string): string {
 }
 
 /**
+ * Gets the JWT token from localStorage
+ *
+ * @returns JWT token or null if not authenticated
+ */
+export function getAuthToken(): string | null {
+  if (typeof window === "undefined") {
+    return null
+  }
+  const token = localStorage.getItem("proxmenux-auth-token")
+  console.log(
+    "[v0] getAuthToken called:",
+    token ? `Token found (length: ${token.length})` : "No token found in localStorage",
+  )
+  return token
+}
+
+/**
  * Fetches data from an API endpoint with error handling
  *
  * @param endpoint - API endpoint path
@@ -70,18 +87,40 @@ export function getApiUrl(endpoint: string): string {
 export async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = getApiUrl(endpoint)
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-    cache: "no-store",
-  })
+  const token = getAuthToken()
 
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers as Record<string, string>),
   }
 
-  return response.json()
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`
+    console.log("[v0] fetchApi:", endpoint, "- Authorization header ADDED")
+  } else {
+    console.log("[v0] fetchApi:", endpoint, "- NO TOKEN - Request will fail if endpoint is protected")
+  }
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      cache: "no-store",
+    })
+
+    console.log("[v0] fetchApi:", endpoint, "- Response status:", response.status)
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.error("[v0] fetchApi: 401 UNAUTHORIZED -", endpoint, "- Token present:", !!token)
+        throw new Error(`Unauthorized: ${endpoint}`)
+      }
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+    }
+
+    return response.json()
+  } catch (error) {
+    console.error("[v0] fetchApi error for", endpoint, ":", error)
+    throw error
+  }
 }

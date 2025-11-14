@@ -26,6 +26,7 @@ import {
 import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { formatStorage } from "@/lib/utils" // Import formatStorage utility
+import { fetchApi } from "../lib/api-config"
 
 interface VMData {
   vmid: number
@@ -133,20 +134,7 @@ interface VMDetails extends VMData {
 }
 
 const fetcher = async (url: string) => {
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    signal: AbortSignal.timeout(60000),
-  })
-
-  if (!response.ok) {
-    throw new Error(`Flask server responded with status: ${response.status}`)
-  }
-
-  const data = await response.json()
-  return data
+  return fetchApi(url)
 }
 
 const formatBytes = (bytes: number | undefined): string => {
@@ -310,19 +298,14 @@ export function VirtualMachines() {
               const controller = new AbortController()
               const timeoutId = setTimeout(() => controller.abort(), 10000)
 
-              const response = await fetch(`/api/vms/${lxc.vmid}`, {
-                signal: controller.signal,
-              })
+              const details = await fetchApi(`/api/vms/${lxc.vmid}`)
 
               clearTimeout(timeoutId)
 
-              if (response.ok) {
-                const details = await response.json()
-                if (details.lxc_ip_info?.primary_ip) {
-                  configs[lxc.vmid] = details.lxc_ip_info.primary_ip
-                } else if (details.config) {
-                  configs[lxc.vmid] = extractIPFromConfig(details.config, details.lxc_ip_info)
-                }
+              if (details.lxc_ip_info?.primary_ip) {
+                configs[lxc.vmid] = details.lxc_ip_info.primary_ip
+              } else if (details.config) {
+                configs[lxc.vmid] = extractIPFromConfig(details.config, details.lxc_ip_info)
               }
             } catch (error) {
               console.log(`[v0] Could not fetch IP for LXC ${lxc.vmid}`)
@@ -350,11 +333,8 @@ export function VirtualMachines() {
     setEditedNotes("")
     setDetailsLoading(true)
     try {
-      const response = await fetch(`/api/vms/${vm.vmid}`)
-      if (response.ok) {
-        const details = await response.json()
-        setVMDetails(details)
-      }
+      const details = await fetchApi(`/api/vms/${vm.vmid}`)
+      setVMDetails(details)
     } catch (error) {
       console.error("Error fetching VM details:", error)
     } finally {
@@ -373,23 +353,16 @@ export function VirtualMachines() {
   const handleVMControl = async (vmid: number, action: string) => {
     setControlLoading(true)
     try {
-      const response = await fetch(`/api/vms/${vmid}/control`, {
+      await fetchApi(`/api/vms/${vmid}/control`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ action }),
       })
 
-      if (response.ok) {
-        mutate()
-        setSelectedVM(null)
-        setVMDetails(null)
-      } else {
-        console.error("Failed to control VM")
-      }
+      mutate()
+      setSelectedVM(null)
+      setVMDetails(null)
     } catch (error) {
-      console.error("Error controlling VM:", error)
+      console.error("Failed to control VM")
     } finally {
       setControlLoading(false)
     }
@@ -397,36 +370,33 @@ export function VirtualMachines() {
 
   const handleDownloadLogs = async (vmid: number, vmName: string) => {
     try {
-      const response = await fetch(`/api/vms/${vmid}/logs`)
-      if (response.ok) {
-        const data = await response.json()
+      const data = await fetchApi(`/api/vms/${vmid}/logs`)
 
-        // Format logs as plain text
-        let logText = `=== Logs for ${vmName} (VMID: ${vmid}) ===\n`
-        logText += `Node: ${data.node}\n`
-        logText += `Type: ${data.type}\n`
-        logText += `Total lines: ${data.log_lines}\n`
-        logText += `Generated: ${new Date().toISOString()}\n`
-        logText += `\n${"=".repeat(80)}\n\n`
+      // Format logs as plain text
+      let logText = `=== Logs for ${vmName} (VMID: ${vmid}) ===\n`
+      logText += `Node: ${data.node}\n`
+      logText += `Type: ${data.type}\n`
+      logText += `Total lines: ${data.log_lines}\n`
+      logText += `Generated: ${new Date().toISOString()}\n`
+      logText += `\n${"=".repeat(80)}\n\n`
 
-        if (data.logs && Array.isArray(data.logs)) {
-          data.logs.forEach((log: any) => {
-            if (typeof log === "object" && log.t) {
-              logText += `${log.t}\n`
-            } else if (typeof log === "string") {
-              logText += `${log}\n`
-            }
-          })
-        }
-
-        const blob = new Blob([logText], { type: "text/plain" })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `${vmName}-${vmid}-logs.txt`
-        a.click()
-        URL.revokeObjectURL(url)
+      if (data.logs && Array.isArray(data.logs)) {
+        data.logs.forEach((log: any) => {
+          if (typeof log === "object" && log.t) {
+            logText += `${log.t}\n`
+          } else if (typeof log === "string") {
+            logText += `${log}\n`
+          }
+        })
       }
+
+      const blob = new Blob([logText], { type: "text/plain" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${vmName}-${vmid}-logs.txt`
+      a.click()
+      URL.revokeObjectURL(url)
     } catch (error) {
       console.error("Error downloading logs:", error)
     }
@@ -621,29 +591,21 @@ export function VirtualMachines() {
 
     setSavingNotes(true)
     try {
-      const response = await fetch(`/api/vms/${selectedVM.vmid}/config`, {
+      await fetchApi(`/api/vms/${selectedVM.vmid}/config`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           description: editedNotes, // Send as-is, pvesh will handle encoding
         }),
       })
 
-      if (response.ok) {
-        setVMDetails({
-          ...vmDetails,
-          config: {
-            ...vmDetails.config,
-            description: editedNotes, // Store unencoded
-          },
-        })
-        setIsEditingNotes(false)
-      } else {
-        console.error("Failed to save notes")
-        alert("Failed to save notes. Please try again.")
-      }
+      setVMDetails({
+        ...vmDetails,
+        config: {
+          ...vmDetails.config,
+          description: editedNotes, // Store unencoded
+        },
+      })
+      setIsEditingNotes(false)
     } catch (error) {
       console.error("Error saving notes:", error)
       alert("Error saving notes. Please try again.")

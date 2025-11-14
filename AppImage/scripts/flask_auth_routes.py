@@ -5,6 +5,8 @@ Provides REST API endpoints for authentication management
 
 from flask import Blueprint, jsonify, request
 import auth_manager
+import jwt
+import datetime
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -135,7 +137,12 @@ def auth_skip():
         success, message = auth_manager.decline_auth()
         
         if success:
-            return jsonify({"success": True, "message": message})
+            # Return success with clear indication that APIs should be accessible
+            return jsonify({
+                "success": True, 
+                "message": message,
+                "auth_declined": True  # Add explicit flag for frontend
+            })
         else:
             return jsonify({"success": False, "message": message}), 400
     except Exception as e:
@@ -218,3 +225,54 @@ def totp_disable():
             return jsonify({"success": False, "message": message}), 400
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/auth/generate-api-token', methods=['POST'])
+def generate_api_token():
+    """Generate a long-lived API token for external integrations (Homepage, Home Assistant, etc.)"""
+    try:
+        auth_header = request.headers.get('Authorization', '')
+        token = auth_header.replace('Bearer ', '')
+        
+        if not token:
+            return jsonify({"success": False, "message": "Unauthorized. Please log in first."}), 401
+        
+        username = auth_manager.verify_token(token)
+        
+        if not username:
+            return jsonify({"success": False, "message": "Invalid or expired session. Please log in again."}), 401
+        
+        data = request.json
+        password = data.get('password')
+        totp_token = data.get('totp_token')  # Optional 2FA token
+        token_name = data.get('token_name', 'API Token')  # Optional token description
+        
+        if not password:
+            return jsonify({"success": False, "message": "Password is required"}), 400
+        
+        # Authenticate user with password and optional 2FA
+        success, _, requires_totp, message = auth_manager.authenticate(username, password, totp_token)
+        
+        if success:
+            # Generate a long-lived token (1 year expiration)
+            api_token = jwt.encode({
+                'username': username,
+                'token_name': token_name,
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(days=365),
+                'iat': datetime.datetime.utcnow()
+            }, auth_manager.JWT_SECRET, algorithm='HS256')
+            
+            return jsonify({
+                "success": True, 
+                "token": api_token,
+                "token_name": token_name,
+                "expires_in": "365 days",
+                "message": "API token generated successfully. Store this token securely, it will not be shown again."
+            })
+        elif requires_totp:
+            return jsonify({"success": False, "requires_totp": True, "message": message}), 200
+        else:
+            return jsonify({"success": False, "message": message}), 401
+    except Exception as e:
+        print(f"[ERROR] generate_api_token: {str(e)}")  # Log error for debugging
+        return jsonify({"success": False, "message": f"Internal error: {str(e)}"}), 500

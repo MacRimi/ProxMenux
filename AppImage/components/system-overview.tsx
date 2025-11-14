@@ -8,7 +8,7 @@ import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Net
 import { NodeMetricsCharts } from "./node-metrics-charts"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import { getApiUrl } from "../lib/api-config"
+import { fetchApi } from "../lib/api-config"
 
 interface SystemData {
   cpu_usage: number
@@ -98,21 +98,7 @@ interface ProxmoxStorageData {
 
 const fetchSystemData = async (): Promise<SystemData | null> => {
   try {
-    const apiUrl = getApiUrl("/api/system")
-
-    const response = await fetch(apiUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    })
-
-    if (!response.ok) {
-      throw new Error(`Flask server responded with status: ${response.status}`)
-    }
-
-    const data = await response.json()
+    const data = await fetchApi<SystemData>("/api/system")
     return data
   } catch (error) {
     console.error("[v0] Failed to fetch system data:", error)
@@ -122,21 +108,7 @@ const fetchSystemData = async (): Promise<SystemData | null> => {
 
 const fetchVMData = async (): Promise<VMData[]> => {
   try {
-    const apiUrl = getApiUrl("/api/vms")
-
-    const response = await fetch(apiUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    })
-
-    if (!response.ok) {
-      throw new Error(`Flask server responded with status: ${response.status}`)
-    }
-
-    const data = await response.json()
+    const data = await fetchApi<any>("/api/vms")
     return Array.isArray(data) ? data : data.vms || []
   } catch (error) {
     console.error("[v0] Failed to fetch VM data:", error)
@@ -146,75 +118,30 @@ const fetchVMData = async (): Promise<VMData[]> => {
 
 const fetchStorageData = async (): Promise<StorageData | null> => {
   try {
-    const apiUrl = getApiUrl("/api/storage/summary")
-
-    const response = await fetch(apiUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    })
-
-    if (!response.ok) {
-      console.log("[v0] Storage API not available (this is normal if not configured)")
-      return null
-    }
-
-    const data = await response.json()
+    const data = await fetchApi<StorageData>("/api/storage/summary")
     return data
   } catch (error) {
-    console.log("[v0] Storage data unavailable:", error instanceof Error ? error.message : "Unknown error")
+    console.log("[v0] Storage API not available (this is normal if not configured)")
     return null
   }
 }
 
 const fetchNetworkData = async (): Promise<NetworkData | null> => {
   try {
-    const apiUrl = getApiUrl("/api/network/summary")
-
-    const response = await fetch(apiUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    })
-
-    if (!response.ok) {
-      console.log("[v0] Network API not available (this is normal if not configured)")
-      return null
-    }
-
-    const data = await response.json()
+    const data = await fetchApi<NetworkData>("/api/network/summary")
     return data
   } catch (error) {
-    console.log("[v0] Network data unavailable:", error instanceof Error ? error.message : "Unknown error")
+    console.log("[v0] Network API not available (this is normal if not configured)")
     return null
   }
 }
 
 const fetchProxmoxStorageData = async (): Promise<ProxmoxStorageData | null> => {
   try {
-    const apiUrl = getApiUrl("/api/proxmox-storage")
-
-    const response = await fetch(apiUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    })
-
-    if (!response.ok) {
-      console.log("[v0] Proxmox storage API not available")
-      return null
-    }
-
-    const data = await response.json()
+    const data = await fetchApi<ProxmoxStorageData>("/api/proxmox-storage")
     return data
   } catch (error) {
-    console.log("[v0] Proxmox storage data unavailable:", error instanceof Error ? error.message : "Unknown error")
+    console.log("[v0] Proxmox storage API not available")
     return null
   }
 }

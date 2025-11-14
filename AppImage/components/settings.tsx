@@ -5,9 +5,23 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
-import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Wrench, Package } from "lucide-react"
+import {
+  Shield,
+  Lock,
+  User,
+  AlertCircle,
+  CheckCircle,
+  Info,
+  LogOut,
+  Wrench,
+  Package,
+  Key,
+  Copy,
+  Eye,
+  EyeOff,
+} from "lucide-react"
 import { APP_VERSION } from "./release-notes-modal"
-import { getApiUrl } from "../lib/api-config"
+import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
 
 interface ProxMenuxTool {
@@ -44,6 +58,15 @@ export function Settings() {
   const [expandedVersions, setExpandedVersions] = useState<Record<string, boolean>>({
     [APP_VERSION]: true, // Current version expanded by default
   })
+
+  // API Token state management
+  const [showApiTokenSection, setShowApiTokenSection] = useState(false)
+  const [apiToken, setApiToken] = useState("")
+  const [apiTokenVisible, setApiTokenVisible] = useState(false)
+  const [tokenPassword, setTokenPassword] = useState("")
+  const [tokenTotpCode, setTokenTotpCode] = useState("")
+  const [generatingToken, setGeneratingToken] = useState(false)
+  const [tokenCopied, setTokenCopied] = useState(false)
 
   useEffect(() => {
     checkAuthStatus()
@@ -278,6 +301,59 @@ export function Settings() {
     window.location.reload()
   }
 
+  const handleGenerateApiToken = async () => {
+    setError("")
+    setSuccess("")
+
+    if (!tokenPassword) {
+      setError("Please enter your password")
+      return
+    }
+
+    if (totpEnabled && !tokenTotpCode) {
+      setError("Please enter your 2FA code")
+      return
+    }
+
+    setGeneratingToken(true)
+
+    try {
+      const data = await fetchApi("/api/auth/generate-api-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: tokenPassword,
+          totp_token: totpEnabled ? tokenTotpCode : undefined,
+        }),
+      })
+
+      if (!data.success) {
+        setError(data.message || data.error || "Failed to generate API token")
+        return
+      }
+
+      if (!data.token) {
+        setError("No token received from server")
+        return
+      }
+
+      setApiToken(data.token)
+      setSuccess("API token generated successfully! Make sure to copy it now as you won't be able to see it again.")
+      setTokenPassword("")
+      setTokenTotpCode("")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate API token. Please try again.")
+    } finally {
+      setGeneratingToken(false)
+    }
+  }
+
+  const copyApiToken = () => {
+    navigator.clipboard.writeText(apiToken)
+    setTokenCopied(true)
+    setTimeout(() => setTokenCopied(false), 2000)
+  }
+
   const toggleVersion = (version: string) => {
     setExpandedVersions((prev) => ({
       ...prev,
@@ -502,14 +578,23 @@ export function Settings() {
               )}
 
               {!totpEnabled && (
-                <Button
-                  onClick={() => setShow2FASetup(true)}
-                  variant="outline"
-                  className="w-full bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20"
-                >
-                  <Shield className="h-4 w-4 mr-2" />
-                  Enable Two-Factor Authentication
-                </Button>
+                <div className="space-y-3">
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
+                    <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-blue-400">
+                      <p className="font-medium mb-1">Two-Factor Authentication (2FA)</p>
+                      <p className="text-blue-300">
+                        Add an extra layer of security by requiring a code from your authenticator app in addition to
+                        your password.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button onClick={() => setShow2FASetup(true)} variant="outline" className="w-full">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Enable Two-Factor Authentication
+                  </Button>
+                </div>
               )}
 
               {totpEnabled && (
@@ -576,6 +661,199 @@ export function Settings() {
           )}
         </CardContent>
       </Card>
+
+      {/* API Access Tokens */}
+      {authEnabled && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-purple-500" />
+              <CardTitle>API Access Tokens</CardTitle>
+            </div>
+            <CardDescription>
+              Generate long-lived API tokens for external integrations like Homepage and Home Assistant
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-500">{error}</p>
+              </div>
+            )}
+
+            {success && (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-start gap-2">
+                <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-green-500">{success}</p>
+              </div>
+            )}
+
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                <div className="space-y-2 text-sm text-blue-400">
+                  <p className="font-medium">About API Tokens</p>
+                  <ul className="list-disc list-inside space-y-1 text-blue-300">
+                    <li>Tokens are valid for 1 year</li>
+                    <li>Use them to access APIs from external services</li>
+                    <li>Include in Authorization header: Bearer YOUR_TOKEN</li>
+                    <li>See README.md for complete integration examples</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {!showApiTokenSection && !apiToken && (
+              <Button onClick={() => setShowApiTokenSection(true)} className="w-full bg-purple-500 hover:bg-purple-600">
+                <Key className="h-4 w-4 mr-2" />
+                Generate New API Token
+              </Button>
+            )}
+
+            {showApiTokenSection && !apiToken && (
+              <div className="space-y-4 border border-border rounded-lg p-4">
+                <h3 className="font-semibold">Generate API Token</h3>
+                <p className="text-sm text-muted-foreground">
+                  Enter your credentials to generate a new long-lived API token
+                </p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="token-password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="token-password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={tokenPassword}
+                      onChange={(e) => setTokenPassword(e.target.value)}
+                      className="pl-10"
+                      disabled={generatingToken}
+                    />
+                  </div>
+                </div>
+
+                {totpEnabled && (
+                  <div className="space-y-2">
+                    <Label htmlFor="token-totp">2FA Code</Label>
+                    <div className="relative">
+                      <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="token-totp"
+                        type="text"
+                        placeholder="Enter 6-digit code"
+                        value={tokenTotpCode}
+                        onChange={(e) => setTokenTotpCode(e.target.value)}
+                        className="pl-10"
+                        maxLength={6}
+                        disabled={generatingToken}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleGenerateApiToken}
+                    className="flex-1 bg-purple-500 hover:bg-purple-600"
+                    disabled={generatingToken}
+                  >
+                    {generatingToken ? "Generating..." : "Generate Token"}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowApiTokenSection(false)
+                      setTokenPassword("")
+                      setTokenTotpCode("")
+                      setError("")
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={generatingToken}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {apiToken && (
+              <div className="space-y-4 border border-green-500/20 bg-green-500/5 rounded-lg p-4">
+                <div className="flex items-center gap-2 text-green-500">
+                  <CheckCircle className="h-5 w-5" />
+                  <h3 className="font-semibold">Your API Token</h3>
+                </div>
+
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm text-amber-600 dark:text-amber-400 font-semibold">
+                      ⚠️ Important: Save this token now!
+                    </p>
+                    <p className="text-xs text-amber-600/80 dark:text-amber-400/80">
+                      You won't be able to see it again. Store it securely.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Token</Label>
+                  <div className="relative">
+                    <Input
+                      value={apiToken}
+                      readOnly
+                      type={apiTokenVisible ? "text" : "password"}
+                      className="pr-20 font-mono text-sm"
+                    />
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setApiTokenVisible(!apiTokenVisible)}
+                        className="h-7 w-7 p-0"
+                      >
+                        {apiTokenVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={copyApiToken} className="h-7 w-7 p-0">
+                        <Copy className={`h-4 w-4 ${tokenCopied ? "text-green-500" : ""}`} />
+                      </Button>
+                    </div>
+                  </div>
+                  {tokenCopied && (
+                    <p className="text-xs text-green-500 flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Copied to clipboard!
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">How to use this token:</p>
+                  <div className="bg-muted/50 rounded p-3 text-xs font-mono">
+                    <p className="text-muted-foreground mb-2"># Add to request headers:</p>
+                    <p>Authorization: Bearer YOUR_TOKEN_HERE</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    See the README documentation for complete integration examples with Homepage and Home Assistant.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={() => {
+                    setApiToken("")
+                    setShowApiTokenSection(false)
+                  }}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Done
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ProxMenux Optimizations */}
       <Card>
