@@ -19,7 +19,9 @@ LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 INSTALL_DIR="/usr/local/bin"
 MENU_SCRIPT="menu"
 VENV_PATH="/opt/googletrans-env"
+
 MONITOR_SERVICE="proxmenux-monitor.service"
+MONITOR_UNIT_FILE="/etc/systemd/system/${MONITOR_SERVICE}"
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
@@ -29,6 +31,41 @@ load_language
 initialize_cache
 
 # ==========================================================
+
+uninstall_proxmenux_monitor() {
+
+    # 1. Stop service if it is running
+    if systemctl is-active --quiet "${MONITOR_SERVICE_NAME}"; then
+    echo " - Stoping service..."
+    systemctl stop "${MONITOR_SERVICE_NAME}"
+    else
+    echo " - Service is not running (ok)"
+    fi
+
+    # 2. Disable service if enabled
+    if systemctl is-enabled --quiet "${MONITOR_SERVICE_NAME}"; then
+    echo " - Disabling service..."
+    systemctl disable "${MONITOR_SERVICE_NAME}"
+    else
+    echo " - Service is not enabled (ok)"
+    fi
+
+    # 3. Remove unit file
+    if [ -f "${MONITOR_UNIT_FILE}" ]; then
+    echo " - Removing unit file ${MONITOR_UNIT_FILE}..."
+    rm -f "${MONITOR_UNIT_FILE}"
+    else
+    echo " - Unit file ${MONITOR_UNIT_FILE} does not exist (ok)"
+    fi
+
+    # 4. Reload systemd
+    echo " - Recargando systemd..."
+    systemctl daemon-reload
+    systemctl reset-failed || true
+
+    echo "==> Service ${MONITOR_SERVICE_NAME} uninstalled."
+    
+}
 
 detect_installation_type() {
     local has_venv=false
@@ -400,6 +437,9 @@ uninstall_proxmenu() {
             done
             apt-get autoremove -y --purge >/dev/null 2>&1
         fi
+
+        echo "80" ; echo "Removing ProxMenux Monitor..."
+        uninstall_proxmenux_monitor
         
         echo "90" ; echo "Restoring system files..."
         # Restore .bashrc and motd
