@@ -11,7 +11,7 @@
 # ==========================================================
 
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -54,10 +54,10 @@ check_pve9_translation_compatibility() {
                 --title "Translation Environment Incompatible with PVE $pve_version" \
                 --msgbox "NOTICE: You are running Proxmox VE $pve_version with translation components installed.\n\nTranslations are NOT supported in PVE 9+. This causes:\n• Menu loading errors\n• Translation failures\n• System instability\n\nREQUIRED ACTION:\nProxMenux will now automatically reinstall the Normal Version.\n\nThis process will:\n• Remove incompatible translation components\n• Install PVE 9+ compatible version\n• Preserve all your settings and preferences\n\nPress OK to continue with automatic reinstallation..." 20 75
             
-            bash <(curl -sSL "$REPO_URL/install_proxmenux.sh")
+            bash "$BASE_DIR/install_proxmenux.sh"
 
         fi
-        exit 
+        exit 0 
     fi
 }
 
@@ -90,9 +90,6 @@ show_menu() {
     while true; do
 
         local menu_title="Main ProxMenux"
-        if [[ -n "$PROXMENUX_PVE9_WARNING_SHOWN" ]]; then
-            menu_title="Main ProxMenux"
-        fi
 
         dialog --clear \
             --backtitle "ProxMenux" \
@@ -122,16 +119,16 @@ show_menu() {
         OPTION=$(<"$TEMP_FILE")
 
         case $OPTION in
-            1) exec bash <(curl -s "$REPO_URL/scripts/menus/menu_post_install.sh") ;;
-            2) exec bash <(curl -s "$REPO_URL/scripts/menus/hw_grafics_menu.sh") ;;
-            3) exec bash <(curl -s "$REPO_URL/scripts/menus/create_vm_menu.sh") ;;
-            4) exec bash <(curl -s "$REPO_URL/scripts/menus/storage_menu.sh") ;;
-            5) exec bash <(curl -s "$REPO_URL/scripts/menus/share_menu.sh") ;;
-            6) exec bash <(curl -s "$REPO_URL/scripts/menus/menu_Helper_Scripts.sh") ;;
-            7) exec bash <(curl -s "$REPO_URL/scripts/menus/network_menu.sh") ;;
-            8) exec bash <(curl -s "$REPO_URL/scripts/menus/utilities_menu.sh") ;;
-            h) bash <(curl -s "$REPO_URL/scripts/help_info_menu.sh") ;;
-            s) exec bash <(curl -s "$REPO_URL/scripts/menus/config_menu.sh") ;;
+            1) exec bash "$LOCAL_SCRIPTS/menus/menu_post_install.sh" ;;
+            2) exec bash "$LOCAL_SCRIPTS/menus/hw_grafics_menu.sh" ;;
+            3) exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh" ;;
+            4) exec bash "$LOCAL_SCRIPTS/menus/storage_menu.sh" ;;
+            5) exec bash "$LOCAL_SCRIPTS/menus/share_menu.sh" ;;
+            6) exec bash "$LOCAL_SCRIPTS/menus/menu_Helper_Scripts.sh" ;;
+            7) exec bash "$LOCAL_SCRIPTS/menus/network_menu.sh" ;;
+            8) exec bash "$LOCAL_SCRIPTS/menus/utilities_menu.sh" ;;
+            h) bash "$LOCAL_SCRIPTS/help_info_menu.sh" ;;
+            s) exec bash "$LOCAL_SCRIPTS/menus/config_menu.sh" ;;
             0) clear; msg_ok "$(translate "Thank you for using ProxMenux. Goodbye!")"; rm -f "$TEMP_FILE"; exit 0 ;;
             *) msg_warn "$(translate "Invalid option")"; sleep 2 ;;
         esac

@@ -7,7 +7,7 @@
 # Last Updated: 25/09/2025
 # =========================================
 
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 LOG_FILE="/tmp/coral_install.log"

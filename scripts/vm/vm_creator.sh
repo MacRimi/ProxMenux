@@ -24,7 +24,7 @@
 # consistent and maintainable way, using ProxMenux standards.
 # ==========================================================
 
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -494,7 +494,7 @@ fi
 
 msg_success "$(translate "Press Enter to return to the main menu...")"
 read -r
-bash <(curl -fsSL "$REPO_URL/scripts/menus/create_vm_menu.sh")
+bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh"
 exit 0
 
 }

@@ -11,7 +11,7 @@
 # ==========================================================
 
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -266,7 +266,7 @@ EOF${CL}" \
     read -r
     clear
     exit 0
-    #bash <(curl -fsSL "$REPO_URL/scripts/utilities/upgrade_pve8_to_pve9.sh")
+    #bash "$LOCAL_SCRIPTS/utilities/upgrade_pve8_to_pve9.sh"
 
 }
 

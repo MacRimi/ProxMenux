@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -16,7 +16,7 @@ initialize_cache
 
 get_external_backup_mount_point() {
     local BACKUP_MOUNT_FILE="/usr/local/share/proxmenux/last_backup_mount.txt"
-    local STORAGE_REPO="$REPO_URL/scripts/backup_restore"
+    local STORAGE_REPO="$LOCAL_SCRIPTS/backup_restore"
     local MOUNT_POINT
 
     if [[ -f "$BACKUP_MOUNT_FILE" ]]; then
@@ -36,7 +36,7 @@ get_external_backup_mount_point() {
         echo "$MOUNT_POINT"
         return 0
     else
-        source <(curl -s "$STORAGE_REPO/mount_disk_host_bk.sh")
+       source "$STORAGE_REPO/mount_disk_host_bk.sh"
        MOUNT_POINT=$(mount_disk_host_bk)
         [[ -z "$MOUNT_POINT" ]] && msg_error "$(translate "No disk mounted.")" && return 1
         echo "$MOUNT_POINT"

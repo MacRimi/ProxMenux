@@ -4,13 +4,14 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
+# Contributors : cod378
 # License     : (CC BY-NC 4.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
 # Version     : 1.1
 # Last Updated: 04/07/2025
 # ==========================================================
 
 # Configuration ============================================
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
 CACHE_FILE="$BASE_DIR/cache.json"
@@ -19,7 +20,9 @@ LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 INSTALL_DIR="/usr/local/bin"
 MENU_SCRIPT="menu"
 VENV_PATH="/opt/googletrans-env"
+
 MONITOR_SERVICE="proxmenux-monitor.service"
+MONITOR_UNIT_FILE="/etc/systemd/system/${MONITOR_SERVICE}"
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
@@ -29,6 +32,41 @@ load_language
 initialize_cache
 
 # ==========================================================
+
+uninstall_proxmenux_monitor() {
+
+    # 1. Stop service if it is running
+    if systemctl is-active --quiet "${MONITOR_SERVICE}"; then
+    echo " - Stoping service..."
+    systemctl stop "${MONITOR_SERVICE}" > /dev/null 2>&1
+    else
+    echo " - Service is not running (ok)"
+    fi
+
+    # 2. Disable service if enabled
+    if systemctl is-enabled --quiet "${MONITOR_SERVICE}"; then
+    echo " - Disabling service..."
+    systemctl disable "${MONITOR_SERVICE}" > /dev/null 2>&1
+    else
+    echo " - Service is not enabled (ok)"
+    fi
+
+    # 3. Remove unit file
+    if [ -f "${MONITOR_UNIT_FILE}" ]; then
+    echo " - Removing unit file ${MONITOR_UNIT_FILE}..."
+    rm -f "${MONITOR_UNIT_FILE}"
+    else
+    echo " - Unit file ${MONITOR_UNIT_FILE} does not exist (ok)"
+    fi
+
+    # 4. Reload systemd
+    echo " - Recargando systemd..."
+    systemctl daemon-reload > /dev/null 2>&1
+    systemctl reset-failed > /dev/null 2>&1 || true
+
+    echo "==> Service ${MONITOR_SERVICE} uninstalled."
+    
+}
 
 detect_installation_type() {
     local has_venv=false
@@ -218,7 +256,7 @@ show_config_menu() {
                 uninstall_proxmenu
                 ;;
             "return_main"|"")
-                exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
+                exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
                 ;;
         esac
     done
@@ -257,11 +295,7 @@ change_language() {
            --msgbox "\n\n$(translate "Language changed to") $new_language" 10 50
     
     # Reload menu with new language
-    TMP_FILE=$(mktemp)
-    curl -s "$REPO_URL/scripts/menus/config_menu.sh" > "$TMP_FILE"
-    chmod +x "$TMP_FILE"
-    trap 'rm -f "$TMP_FILE"' EXIT
-    exec bash "$TMP_FILE"
+    exec bash "$LOCAL_SCRIPTS/menus/config_menu.sh"
 }
 
 # ==========================================================
@@ -404,6 +438,9 @@ uninstall_proxmenu() {
             done
             apt-get autoremove -y --purge >/dev/null 2>&1
         fi
+
+        echo "80" ; echo "Removing ProxMenux Monitor..."
+        uninstall_proxmenux_monitor
         
         echo "90" ; echo "Restoring system files..."
         # Restore .bashrc and motd
