@@ -15,7 +15,7 @@
 
 
 # Configuration
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -26,8 +26,8 @@ if [[ -f "$UTILS_FILE" ]]; then
 fi
 
 
-SHARE_COMMON_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/scripts/global/share-common.func"
-if ! source <(curl -s "$SHARE_COMMON_URL" 2>/dev/null); then
+SHARE_COMMON_FILE="$LOCAL_SCRIPTS/global/share-common.func"
+if ! source "$SHARE_COMMON_FILE" 2>/dev/null; then
     msg_error "$(translate "Could not load shared functions. Script cannot continue.")"
     exit 1
 fi

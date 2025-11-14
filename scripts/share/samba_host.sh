@@ -13,7 +13,7 @@
 # ==========================================================
 
 # Configuration
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 CREDENTIALS_DIR="/etc/samba/credentials"
@@ -26,8 +26,8 @@ load_language
 initialize_cache
 
 # Load common share functions
-SHARE_COMMON_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/scripts/global/share-common.func"
-if ! source <(curl -s "$SHARE_COMMON_URL" 2>/dev/null); then
+SHARE_COMMON_FILE="$LOCAL_SCRIPTS/global/share-common.func"
+if ! source "$SHARE_COMMON_FILE" 2>/dev/null; then
     msg_warn "$(translate "Could not load shared functions. Using fallback methods.")"
     SHARE_COMMON_LOADED=false
 else

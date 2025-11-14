@@ -9,7 +9,7 @@
 # Last Updated: 06/07/2025
 # ==========================================================
 
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -70,7 +70,7 @@ confirm_automated_script() {
     clear
 
     if [ $response -eq 0 ]; then
-        bash <(curl -s $REPO_URL/scripts/post_install/auto_post_install.sh)
+        bash "$LOCAL_SCRIPTS/post_install/auto_post_install.sh"
     else
         msg_warn "$(translate "Cancelled by user.")"
         sleep 1
@@ -80,9 +80,9 @@ confirm_automated_script() {
 # ==========================================================
 
 declare -a PROXMENUX_SCRIPTS=(
-    "Customizable post-installation script|ProxMenux|bash <(curl -s $REPO_URL/scripts/post_install/customizable_post_install.sh)"
+    "Customizable post-installation script|ProxMenux|bash \"$LOCAL_SCRIPTS/post_install/customizable_post_install.sh\""
     "Automated post-installation script|ProxMenux|confirm_automated_script"
-    "Uninstall optimizations|ProxMenux|bash <(curl -s $REPO_URL/scripts/post_install/uninstall-tools.sh)"
+    "Uninstall optimizations|ProxMenux|bash \"$LOCAL_SCRIPTS/post_install/uninstall-tools.sh\""
 )
 
 
@@ -168,7 +168,7 @@ show_menu() {
         
 
         if [ $exit_status -ne 0 ] || [ "$script_selection" = "0" ]; then
-            exec bash <(curl -s "$REPO_URL/scripts/menus/main_menu.sh")
+            exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
         fi
         
 

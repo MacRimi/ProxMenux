@@ -9,7 +9,7 @@
 # Last Updated: 14/08/2025
 # ==========================================================
 
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 
@@ -49,21 +49,21 @@ done
 
 
 run_manual_guide() {
-    local url="$REPO_URL/scripts/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh"
-    if command -v curl >/dev/null 2>&1; then
-        bash <(curl -fsSL "$url")
-    else
-        bash <(wget -qO- "$url")
+    local SCRIPT_FILE="$LOCAL_SCRIPTS/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh"
+    if [[ ! -f "$SCRIPT_FILE" ]]; then
+        msg_error "$(translate "Manual guide script not found")"
+        return 1
     fi
+    bash "$SCRIPT_FILE"
 }
 
 run_pve8to9_check() {
-    local url="$REPO_URL/scripts/utilities/pve8to9_check.sh"
-    if command -v curl >/dev/null 2>&1; then
-        bash <(curl -fsSL "$url")
-    else
-        bash <(wget -qO- "$url")
+    local SCRIPT_FILE="$LOCAL_SCRIPTS/utilities/pve8to9_check.sh"
+    if [[ ! -f "$SCRIPT_FILE" ]]; then
+        msg_error "$(translate "Check script not found")"
+        return 1
     fi
+    bash "$SCRIPT_FILE"
 }
 
 ask_run_mode() {
@@ -564,7 +564,7 @@ apt_upgrade() {
         exit 1
 
     else
-        bash <(curl -fsSL "$REPO_URL/scripts/global/update-pve8.sh")
+        bash "$LOCAL_SCRIPTS/global/update-pve8.sh"
         hash -r
 
     fi

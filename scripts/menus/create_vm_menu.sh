@@ -26,29 +26,29 @@
 
 
 
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
-VM_REPO="$REPO_URL/scripts/vm"
-ISO_REPO="$REPO_URL/scripts/vm"
-MENU_REPO="$REPO_URL/scripts/menus"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
+VM_REPO="$LOCAL_SCRIPTS/vm"
+ISO_REPO="$LOCAL_SCRIPTS/vm"
+MENU_REPO="$LOCAL_SCRIPTS/menus"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
 
-[[ -f "$UTILS_FILE" ]] && source "$UTILS_FILE"
-
-
-source <(curl -s "$VM_REPO/vm_configurator.sh")
-source <(curl -s "$VM_REPO/disk_selector.sh")
-source <(curl -s "$VM_REPO/vm_creator.sh")
-
-
-
+# Source utilities and required scripts
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
+else
+    echo "Error: $UTILS_FILE not found"
+    exit 1
 fi
 
 load_language
 initialize_cache
+
+# Source VM management scripts
+[[ -f "$VM_REPO/vm_configurator.sh" ]] && source "$VM_REPO/vm_configurator.sh" || { echo "Error: vm_configurator.sh not found"; exit 1; }
+[[ -f "$VM_REPO/disk_selector.sh" ]] && source "$VM_REPO/disk_selector.sh" || { echo "Error: disk_selector.sh not found"; exit 1; }
+[[ -f "$VM_REPO/vm_creator.sh" ]] && source "$VM_REPO/vm_creator.sh" || { echo "Error: vm_creator.sh not found"; exit 1; }
 
 
 
@@ -108,17 +108,17 @@ while true; do
     3>&1 1>&2 2>&3)
 
 
-  [[ $? -ne 0 || "$OS_TYPE" == "6" ]] && exec bash <(curl -s "$MENU_REPO/main_menu.sh")
+  [[ $? -ne 0 || "$OS_TYPE" == "6" ]] && exec bash "$MENU_REPO/main_menu.sh"
 
   case "$OS_TYPE" in
     1)
-      source <(curl -fsSL "$ISO_REPO/select_nas_iso.sh") && select_nas_iso || continue
+      source "$ISO_REPO/select_nas_iso.sh" && select_nas_iso || continue
       ;;
     2)
-      source <(curl -fsSL "$ISO_REPO/select_windows_iso.sh") && select_windows_iso || continue
+      source "$ISO_REPO/select_windows_iso.sh" && select_windows_iso || continue
       ;;
     3)
-      source <(curl -fsSL "$ISO_REPO/select_linux_iso.sh") && select_linux_iso || continue
+      source "$ISO_REPO/select_linux_iso.sh" && select_linux_iso || continue
       ;;
     4)
       whiptail --title "OSX-PROXMOX" --yesno "$(translate "This is an external script that creates a macOS VM in Proxmox VE in just a few steps, whether you are using AMD or Intel hardware.")\n\n$(translate "The script clones the osx-proxmox.com repository and once the setup is complete, the server will automatically reboot.")\n\n$(translate "Make sure there are no critical services running as they will be interrupted. Ensure your server can be safely rebooted.")\n\n$(translate  "Visit https://osx-proxmox.com for more information.")\n\n$(translate "Do you want to run the script now?")" 24 70
@@ -128,7 +128,7 @@ while true; do
       continue
       ;;
     5)
-      source <(curl -fsSL "$ISO_REPO/select_linux_iso.sh") && select_linux_other_scripts || continue
+      source "$ISO_REPO/select_linux_iso.sh" && select_linux_other_scripts || continue
       ;;
   esac
 
@@ -149,26 +149,3 @@ while true; do
   create_vm
   break
 done
-
-
-
-
-function start_vm_configuration() {
-
-  if (whiptail --title "ProxMenux" --yesno "$(translate "Use Default Settings?")" --no-button "$(translate "Advanced")" 10 60); then
-    header_info
-    load_default_vm_config "$OS_TYPE"
-
-    if [[ -z "$HN" ]]; then
-      HN=$(whiptail --inputbox "$(translate "Enter a name for the new virtual machine:")" 10 60 --title "VM Hostname" 3>&1 1>&2 2>&3)
-      [[ -z "$HN" ]] && HN="custom-vm"
-    fi
-
-    apply_default_vm_config
-  else
-    header_info
-    echo -e "${CUS}$(translate "Using advanced configuration")${CL}"
-    configure_vm_advanced "$OS_TYPE"
-  fi
-}
-

@@ -34,7 +34,7 @@
 # ==========================================================
 
 # Repository and directory structure
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 INSTALL_DIR="/usr/local/bin"
 BASE_DIR="/usr/local/share/proxmenux"
 CONFIG_FILE="$BASE_DIR/config.json"
@@ -133,7 +133,7 @@ msg_info() {
 # Display info2 message
 msg_info2() {
     local msg="$1"
-    echo -e "${TAB}${BOLD}${YW}${HOLD}${msg}${CL}"
+    echo -e "${TAB}${BOLD}${YW}${HOLD} ${msg}${CL}"
 }
 
 # Display info message with spinner

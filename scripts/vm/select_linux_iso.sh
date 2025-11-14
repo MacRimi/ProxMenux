@@ -25,7 +25,7 @@
 # ==========================================================
 
 
-REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
@@ -219,7 +219,7 @@ function select_linux_cloudinit() {
   whiptail --title "Proxmox VE Helper-Scripts" \
            --msgbox "$(translate "Visit the website to discover more scripts, stay updated with the latest updates, and support the project:\n\nhttps://community-scripts.github.io/ProxmoxVE")" 15 70
 
-  exec bash <(curl -s "$REPO_URL/scripts/vm/create_vm.sh")
+  exec bash "$LOCAL_SCRIPTS/vm/create_vm.sh"
 }
 
 
