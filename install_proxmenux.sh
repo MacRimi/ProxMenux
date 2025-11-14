@@ -50,7 +50,7 @@ LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 MENU_SCRIPT="menu"
 VENV_PATH="/opt/googletrans-env"
 
-MONITOR_INSTALL_DIR="$BASE_DIR/monitor"
+MONITOR_INSTALL_DIR="$BASE_DIR"
 MONITOR_SERVICE_FILE="/etc/systemd/system/proxmenux-monitor.service"
 MONITOR_PORT=8008
 
