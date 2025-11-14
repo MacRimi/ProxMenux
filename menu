@@ -82,7 +82,7 @@ check_updates() {
 
 
 main_menu() {
-    exec bash <(curl -fsSL "$REPO_URL/scripts/menus/main_menu.sh")
+    exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
 }
 
 
