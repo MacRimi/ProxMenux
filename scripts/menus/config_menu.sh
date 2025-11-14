@@ -38,7 +38,7 @@ uninstall_proxmenux_monitor() {
     # 1. Stop service if it is running
     if systemctl is-active --quiet "${MONITOR_SERVICE}"; then
     echo " - Stoping service..."
-    systemctl stop "${MONITOR_SERVICE}"
+    systemctl stop "${MONITOR_SERVICE}" > /dev/null 2>&1
     else
     echo " - Service is not running (ok)"
     fi
@@ -46,7 +46,7 @@ uninstall_proxmenux_monitor() {
     # 2. Disable service if enabled
     if systemctl is-enabled --quiet "${MONITOR_SERVICE}"; then
     echo " - Disabling service..."
-    systemctl disable "${MONITOR_SERVICE}"
+    systemctl disable "${MONITOR_SERVICE}" > /dev/null 2>&1
     else
     echo " - Service is not enabled (ok)"
     fi
@@ -61,8 +61,8 @@ uninstall_proxmenux_monitor() {
 
     # 4. Reload systemd
     echo " - Recargando systemd..."
-    systemctl daemon-reload
-    systemctl reset-failed || true
+    systemctl daemon-reload > /dev/null 2>&1
+    systemctl reset-failed > /dev/null 2>&1 || true
 
     echo "==> Service ${MONITOR_SERVICE} uninstalled."
     
