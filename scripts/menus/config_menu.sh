@@ -342,7 +342,7 @@ show_version_info() {
             fi
             local translated_status=$(translate "$status")
             case "$status" in
-                "installed"|"already_installed"|"created"|"already_exists"|"upgraded")
+                "installed"|"already_installed"|"created"|"already_exists"|"upgraded"|"updated")
                     info_message+="✓ $component: $translated_status\n"
                     ;;
                 *)
