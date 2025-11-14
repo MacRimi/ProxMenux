@@ -1,3 +1,53 @@
+## 2025-09-18
+
+### New version v1.1.8 — *ProxMenux Offline Mode*
+
+![ProxMenux Offline](https://github.com/MacRimi/ProxMenux/blob/main/images/ProxMenux_offline.png)
+
+---
+
+### Added
+
+- **Offline Execution Mode (no GitHub dependency)**  
+  All ProxMenux core scripts now run **entirely locally**, without requiring live requests to GitHub (`raw.githubusercontent.com`).  
+  This change provides:
+  - Greater stability during execution
+  - No interruptions due to network timeouts or regional GitHub blocks
+  - Support for **offline or isolated environments**
+
+  ⚠️ This update resolves recent issues where users in certain regions were unable to run scripts due to CDN or TLS filtering errors while downloading `.sh` files from GitHub raw URLs.
+
+  **🎖 Special Acknowledgment: @cod378**  
+  This offline conversion has been made possible thanks to the extraordinary work of **@cod378**,  
+  who redesigned the entire internal logic of the installer and updater, refactored the file management system,  
+  and implemented the new fully local execution workflow.  
+  Without his collaboration, dedication, and technical contribution, this transformation would not have been possible.
+
+- **ProxMenux Monitor v1.0.1**  
+  This update brings a major leap in the **ProxMenux Monitor** interface.  
+  New features and improvements:
+  - `Proxy Support`: Access ProxMenux through reverse proxies with full functionality
+  - `Authentication System`: Secure your dashboard with password protection
+  - `Two-Factor Authentication (2FA)`: Optional TOTP support for enhanced security
+  - `PCIe Link Speed Detection`: View NVMe connection speeds and detect performance bottlenecks
+  - `Enhanced Storage Display`: Auto-formats disk sizes (GB → TB when appropriate)
+  - `SATA/SAS Interface Info`: Detect and show storage type (SATA, SAS, NVMe, etc.)
+  - `Health Monitoring System`: Built-in system health check with dismissible alerts
+  - Improved rendering across browsers and better performance
+
+- **Helper Scripts Menu (Mirror Support)**  
+  The `Helper Scripts` menu now:
+  - Detects **mirror URLs** and shows alternative download options when available
+  - Lists available OS versions when a helper script is version-dependent (e.g. template installers)
+
+---
+
+### Fixed
+
+- Minor fixes and refinements throughout the codebase to ensure full offline compatibility and a smoother user experience.
+
+
+
 ## 2025-09-04
 
 ### New version v1.1.7
