@@ -2,7 +2,7 @@
 
 ### New version v1.1.8 — *ProxMenux Offline Mode*
 
-![ProxMenux Offline](https://github.com/MacRimi/ProxMenux/blob/main/images/ProxMenux_offline.png)
+![ProxMenux Offline](https://macrimi.github.io/ProxMenux/ProxMenux_offline.png)
 
 ---
 
