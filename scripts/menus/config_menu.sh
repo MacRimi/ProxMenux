@@ -23,6 +23,7 @@ VENV_PATH="/opt/googletrans-env"
 
 MONITOR_SERVICE="proxmenux-monitor.service"
 MONITOR_UNIT_FILE="/etc/systemd/system/${MONITOR_SERVICE}"
+MONITOR_CONFIG_DIR="/root/.config/proxmenux-monitor"
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
@@ -59,12 +60,21 @@ uninstall_proxmenux_monitor() {
     echo " - Unit file ${MONITOR_UNIT_FILE} does not exist (ok)"
     fi
 
-    # 4. Reload systemd
+    # 4. Remove config directory (~/.config/proxmenux-monitor)
+    if [ -d "${MONITOR_CONFIG_DIR}" ]; then
+    echo " - Removing config dir ${MONITOR_CONFIG_DIR}..."
+    rm -rf "${MONITOR_CONFIG_DIR}"
+    else
+    echo " - Config dir ${MONITOR_CONFIG_DIR} does not exist (ok)"
+    fi
+
+    # 5. Reload systemd
     echo " - Recargando systemd..."
     systemctl daemon-reload > /dev/null 2>&1
     systemctl reset-failed > /dev/null 2>&1 || true
 
     echo "==> Service ${MONITOR_SERVICE} uninstalled."
+
     
 }
 
