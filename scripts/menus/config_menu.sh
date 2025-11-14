@@ -4,6 +4,7 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
+# Contributors : cod378
 # License     : (CC BY-NC 4.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
 # Version     : 1.1
 # Last Updated: 04/07/2025
