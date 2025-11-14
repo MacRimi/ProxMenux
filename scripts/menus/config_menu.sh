@@ -36,17 +36,17 @@ initialize_cache
 uninstall_proxmenux_monitor() {
 
     # 1. Stop service if it is running
-    if systemctl is-active --quiet "${MONITOR_SERVICE_NAME}"; then
+    if systemctl is-active --quiet "${MONITOR_SERVICE}"; then
     echo " - Stoping service..."
-    systemctl stop "${MONITOR_SERVICE_NAME}"
+    systemctl stop "${MONITOR_SERVICE}"
     else
     echo " - Service is not running (ok)"
     fi
 
     # 2. Disable service if enabled
-    if systemctl is-enabled --quiet "${MONITOR_SERVICE_NAME}"; then
+    if systemctl is-enabled --quiet "${MONITOR_SERVICE}"; then
     echo " - Disabling service..."
-    systemctl disable "${MONITOR_SERVICE_NAME}"
+    systemctl disable "${MONITOR_SERVICE}"
     else
     echo " - Service is not enabled (ok)"
     fi
@@ -64,7 +64,7 @@ uninstall_proxmenux_monitor() {
     systemctl daemon-reload
     systemctl reset-failed || true
 
-    echo "==> Service ${MONITOR_SERVICE_NAME} uninstalled."
+    echo "==> Service ${MONITOR_SERVICE} uninstalled."
     
 }
 
