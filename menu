@@ -43,11 +43,6 @@ if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
 fi
 
-
-# =========================================================
-# For now, update is not available in the local version.
-# Take in mind that in future versions, updates must be 
-# a warning to update the .deb package
 # =========================================================
 
 check_updates() {
