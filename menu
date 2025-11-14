@@ -29,7 +29,6 @@
 # for managing Proxmox VE using ProxMenux.
 # ==========================================================
 
-
 # Configuration ============================================
 REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
 BASE_DIR="/usr/local/share/proxmenux"
@@ -47,44 +46,57 @@ fi
 
 check_updates() {
     local INSTALL_SCRIPT="$BASE_DIR/install_proxmenux.sh"
+    local VERSION_URL="$REPO_URL/version.txt"
+    local INSTALL_URL="$REPO_URL/install_proxmenux.sh"
+
+
+    local CURL_OPTS=(
+        -fsSL
+        --connect-timeout 3
+        --max-time 5
+    )
+
 
     local REMOTE_VERSION
-    REMOTE_VERSION=$(curl -fsSL "$REPO_URL/version.txt" | head -n 1)
-    
+    REMOTE_VERSION="$(curl "${CURL_OPTS[@]}" "$VERSION_URL" 2>/dev/null | head -n 1 || true)"
+
 
     if [ -z "$REMOTE_VERSION" ]; then
         return 0
     fi
-    
 
-    local LOCAL_VERSION
-    LOCAL_VERSION=$(head -n 1 "$LOCAL_VERSION_FILE")
-    
+
+    local LOCAL_VERSION=""
+    if [ -f "$LOCAL_VERSION_FILE" ]; then
+        LOCAL_VERSION="$(head -n 1 "$LOCAL_VERSION_FILE" 2>/dev/null || true)"
+    fi
+
 
     [ "$LOCAL_VERSION" = "$REMOTE_VERSION" ] && return 0
-    
+
 
     if whiptail --title "$(translate "Update Available")" \
                 --yesno "$(translate "New version available") ($REMOTE_VERSION)\n\n$(translate "Do you want to update now?")" \
                 10 60 --defaultno; then
+
         msg_warn "$(translate "Starting ProxMenux update...")"
 
-        if wget -qO "$INSTALL_SCRIPT" "$REPO_URL/install_proxmenux.sh"; then
+
+        if curl "${CURL_OPTS[@]}" "$INSTALL_URL" -o "$INSTALL_SCRIPT"; then
             chmod +x "$INSTALL_SCRIPT"
 
             source "$INSTALL_SCRIPT"
+        else
+            msg_warn "$(translate "Unable to download the installer. Please try again later.")"
         fi
     else
         msg_warn "$(translate "Update postponed. You can update later from the menu.")"
     fi
 }
 
-
-
 main_menu() {
     exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
 }
-
 
 load_language
 initialize_cache
