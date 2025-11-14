@@ -77,7 +77,7 @@ check_updates() {
 
         if curl "${CURL_OPTS[@]}" "$INSTALL_URL" -o "$INSTALL_SCRIPT"; then
             chmod +x "$INSTALL_SCRIPT"
-            # Aquí sigues usando source, como tenías
+
             source "$INSTALL_SCRIPT"
         else
             msg_warn "$(translate 'Unable to download the installer. Please try again later.')"
