@@ -442,20 +442,6 @@
     "type": "ct"
   },
   {
-    "name": "Barcode Buddy",
-    "slug": "barcode-buddy",
-    "desc": "Barcode Buddy for Grocy is an extension for Grocy, allowing to pass barcodes to Grocy. It supports barcodes for products and chores. If you own a physical barcode scanner, it can be integrated, so that all barcodes scanned are automatically pushed to BarcodeBuddy/Grocy.",
-    "script": "ct/barcode-buddy.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/barcode-buddy.sh",
-    "categories": [
-      24
-    ],
-    "notes": [
-      "After install enable the option \"Use Redis cache\" on the settings page."
-    ],
-    "type": "ct"
-  },
-  {
     "name": "Bazarr",
     "slug": "bazarr",
     "desc": "Bazarr is a companion application to Sonarr and Radarr that manages and downloads subtitles based on your requirements.",
@@ -3070,6 +3056,20 @@
       "Execute within the Proxmox shell"
     ],
     "type": "addon"
+  },
+  {
+    "name": "NetVisor",
+    "slug": "netvisor",
+    "desc": "Automatically discover and visually document network infrastructure",
+    "script": "ct/netvisor.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/netvisor.sh",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "The integrated daemon config is located at `/root/.config/daemon/config.json`"
+    ],
+    "type": "ct"
   },
   {
     "name": "Nextcloud",
