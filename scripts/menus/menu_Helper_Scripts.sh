@@ -6,8 +6,8 @@
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
 # License     : (CC BY-NC 4.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
-# Version     : 1.1
-# Last Updated: 04/06/2025
+# Version     : 1.2
+# Last Updated: 14/11/2025
 # ==========================================================
 # Description:
 # This script provides a simple and efficient way to access and execute Proxmox VE scripts
@@ -52,7 +52,8 @@ while read -r id name; do
 done < <(echo "$META_JSON" | jq -r '.categories[] | "\(.id)\t\(.name)"')
 
 declare -A CATEGORY_COUNT
-for id in $(echo "$CACHE_JSON" | jq -r '.[].categories[]'); do
+for id in $(echo "$CACHE_JSON" | jq -r '
+  group_by(.slug) | map(.[0])[] | .categories[]'); do
   ((CATEGORY_COUNT[$id]++))
 done
 
@@ -112,74 +113,121 @@ format_credentials() {
   echo "$credentials_info"
 }
 
-
 run_script_by_slug() {
   local slug="$1"
-  local script_info
-  script_info=$(echo "$CACHE_JSON" | jq -r --arg slug "$slug" '.[] | select(.slug == $slug) | @base64')
+  local -a script_infos
+  mapfile -t script_infos < <(echo "$CACHE_JSON" | jq -r --arg slug "$slug" '.[] | select(.slug == $slug) | @base64')
+
+  if [[ ${#script_infos[@]} -eq 0 ]]; then
+    dialog --title "Helper Scripts" --msgbox "Error: No script data found for slug: $slug" 8 60
+    return
+  fi
 
   decode() {
     echo "$1" | base64 --decode | jq -r "$2"
   }
 
-  local name desc script_url notes
-  name=$(decode "$script_info" ".name")
-  desc=$(decode "$script_info" ".desc")
-  script_url=$(decode "$script_info" ".script_url")
-  notes=$(decode "$script_info" ".notes | join(\"\n\")")
-
+  local first="${script_infos[0]}"
+  local name desc notes
+  name=$(decode "$first" ".name")
+  desc=$(decode "$first" ".desc")
+  notes=$(decode "$first" ".notes | join(\"\n\")")
 
   local notes_dialog=""
   if [[ -n "$notes" ]]; then
     while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
       notes_dialog+="• $line\n"
     done <<< "$notes"
-    notes_dialog="${notes_dialog%\\n}" 
+    notes_dialog="${notes_dialog%\\n}"
   fi
 
-
   local credentials
-  credentials=$(format_credentials "$script_info")
-
+  credentials=$(format_credentials "$first")
 
   local msg="\Zb\Z4Descripción:\Zn\n$desc"
   [[ -n "$notes_dialog" ]] && msg+="\n\n\Zb\Z4Notes:\Zn\n$notes_dialog"
   [[ -n "$credentials" ]] && msg+="\n\n\Zb\Z4Default Credentials:\Zn\n$credentials"
+  
+  # Add separator before menu options
+  msg+="\n\n$(translate "Choose how to run the script:"):"
 
-  dialog --clear --colors --backtitle "ProxMenux" --title "$name" --yesno "$msg\n\nExecute this script?" 22 85
-  if [[ $? -eq 0 ]]; then
-    download_script "$script_url"
-    echo
-    echo
+  declare -a MENU_OPTS=()
+  local idx=0
+  for s in "${script_infos[@]}"; do
+    local os script_url script_url_mirror script_name
+    os=$(decode "$s" ".os // empty")
+    [[ -z "$os" ]] && os="$(translate "default")"
+    script_name=$(decode "$s" ".name")
+    script_url=$(decode "$s" ".script_url")
+    script_url_mirror=$(decode "$s" ".script_url_mirror // empty")
 
-    if [[ -n "$desc" || -n "$notes" || -n "$credentials" ]]; then
-      echo -e "$TAB\e[1;36mScript Information:\e[0m"
+    MENU_OPTS+=("${idx}_GH" "$os | $script_name | GitHub")
 
-
-
-      if [[ -n "$notes" ]]; then
-        echo -e "$TAB\e[1;33mNotes:\e[0m"
-        while IFS= read -r line; do
-          [[ -z "$line" ]] && continue
-          echo -e "$TAB• $line"
-        done <<< "$notes"
-        echo
-      fi
-
- 
-      if [[ -n "$credentials" ]]; then
-        echo -e "$TAB\e[1;32mDefault Credentials:\e[0m"
-        echo "$TAB$credentials"
-        echo
-      fi
+    if [[ -n "$script_url_mirror" ]]; then
+      MENU_OPTS+=("${idx}_MR" "$os | $script_name | Mirror")
     fi
 
-    msg_success "Press Enter to return to the main menu..."
-    read -r
-    RETURN_TO_MAIN=true
-  fi
-}
+    ((idx++))
+  done
 
+  local choice
+  choice=$(dialog --clear --colors --backtitle "ProxMenux" \
+           --title "$name" \
+           --menu "$msg" 28 80 6 \
+           "${MENU_OPTS[@]}" 3>&1 1>&2 2>&3)
+
+  if [[ $? -ne 0 || -z "$choice" ]]; then
+    RETURN_TO_MAIN=false
+    return
+  fi
+
+  local sel_idx sel_src
+  IFS="_" read -r sel_idx sel_src <<< "$choice"
+
+  local selected="${script_infos[$sel_idx]}"
+  local gh_url mirror_url
+  gh_url=$(decode "$selected" ".script_url")
+  mirror_url=$(decode "$selected" ".script_url_mirror // empty")
+
+  if [[ "$sel_src" == "GH" ]]; then
+    download_script "$gh_url"
+  elif [[ "$sel_src" == "MR" ]]; then
+    if [[ -n "$mirror_url" ]]; then
+      download_script "$mirror_url"
+    else
+      dialog --title "Helper Scripts" --msgbox "$(translate "Mirror URL not available for this script.")" 8 60
+      RETURN_TO_MAIN=false
+      return
+    fi
+  fi
+
+  echo
+  echo
+
+  if [[ -n "$desc" || -n "$notes" || -n "$credentials" ]]; then
+    echo -e "$TAB\e[1;36mScript Information:\e[0m"
+
+    if [[ -n "$notes" ]]; then
+      echo -e "$TAB\e[1;33mNotes:\e[0m"
+      while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        echo -e "$TAB• $line"
+      done <<< "$notes"
+      echo
+    fi
+
+    if [[ -n "$credentials" ]]; then
+      echo -e "$TAB\e[1;32mDefault Credentials:\e[0m"
+      echo "$TAB$credentials"
+      echo
+    fi
+  fi
+
+  msg_success "Press Enter to return to the main menu..."
+  read -r
+  RETURN_TO_MAIN=true
+}
 
 search_and_filter_scripts() {
   local search_term=""
@@ -204,7 +252,7 @@ search_and_filter_scripts() {
     fi
     
     local count
-    count=$(echo "$filtered_json" | jq length)
+    count=$(echo "$filtered_json" | jq 'group_by(.slug) | length')
     
     if [[ $count -eq 0 ]]; then
       dialog --msgbox "No scripts found for: '$search_term'\n\nTry a different search term." 8 50
@@ -226,7 +274,7 @@ search_and_filter_scripts() {
         menu_items+=("$i" "$entry")
         ((i++))
       done < <(echo "$filtered_json" | jq -r '
-        sort_by(.name)[] | [.slug, .name, .type] | @tsv')
+        group_by(.slug) | map(.[0]) | sort_by(.name)[] | [.slug, .name, .type] | @tsv')
       
       menu_items+=("" "")
       menu_items+=("new_search" "New Search")
@@ -256,7 +304,7 @@ search_and_filter_scripts() {
         "show_all")
           search_term=""
           filtered_json="$CACHE_JSON"
-          count=$(echo "$filtered_json" | jq length)
+          count=$(echo "$filtered_json" | jq 'group_by(.slug) | length')
           continue
           ;;
         "back"|"")
@@ -290,9 +338,8 @@ while true; do
   SELECTED=$(dialog --backtitle "ProxMenux" --title "Proxmox VE Helper-Scripts" --menu \
     "Select a category or search for scripts:" 20 70 14 \
     "${MENU_ITEMS[@]}" 3>&1 1>&2 2>&3) || {
-     dialog --clear --title "Proxmox VE Helper-Scripts" \
+     dialog --clear --title "ProxMenux" \
          --msgbox "\n\n$(translate "Visit the website to discover more scripts, stay updated with the latest updates, and support the project:")\n\nhttps://community-scripts.github.io/ProxmoxVE" 15 70
-      #clear
       exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"
   }
  
@@ -312,8 +359,17 @@ while true; do
       entry="$padded_name $label"
       SCRIPTS+=("$i" "$entry") 
       ((i++))
-    done < <(echo "$CACHE_JSON" | jq -r --argjson id "$SELECTED" \
-      '[.[] | select(.categories | index($id)) | {slug, name, type}] | sort_by(.name)[] | [.slug, .name, .type] | @tsv')
+    done < <(echo "$CACHE_JSON" | jq -r --argjson id "$SELECTED" '
+      [
+        .[] 
+        | select(.categories | index($id)) 
+        | {slug, name, type}
+      ]
+      | group_by(.slug)
+      | map(.[0])
+      | sort_by(.name)[]
+      | [.slug, .name, .type]
+      | @tsv')
 
     SCRIPT_INDEX=$(dialog --colors --backtitle "ProxMenux" --title "Scripts in ${CATEGORY_NAMES[$SELECTED]}" --menu \
       "Choose a script to execute:" 20 70 14 \
