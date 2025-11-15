@@ -93,17 +93,6 @@ ProxMenux Monitor includes built-in support for reverse proxy configurations. If
 - Adjust API endpoints to work correctly through the proxy
 - Maintain full functionality for all features including authentication and API access
 
-**Example Nginx configuration:**
-```nginx
-location /proxmenux-monitor/ {
-    proxy_pass http://localhost:8008/;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Forwarded-Host $host;
-}
-```
 
 
 ## Authentication & Security
