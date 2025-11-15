@@ -32,7 +32,7 @@
 # Configuration ============================================
 REPO_URL="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
 BASE_DIR="/usr/local/share/proxmenux"
-#LOCAL_SCRIPTS="$BASE_DIR/scripts" 
+LOCAL_SCRIPTS="$BASE_DIR/scripts" 
 CONFIG_FILE="$BASE_DIR/config.json"
 CACHE_FILE="$BASE_DIR/cache.json"
 UTILS_FILE="$BASE_DIR/utils.sh"
