@@ -56,19 +56,15 @@ check_updates() {
     INSTALL_URL="$REPO_URL/install_proxmenux.sh"
     INSTALL_SCRIPT="$BASE_DIR/install_proxmenux.sh"
 
-
     [[ ! -f "$LOCAL_VERSION_FILE" ]] && return 0
 
     REMOTE_VERSION="$(curl -fsSL "$VERSION_URL" 2>/dev/null | head -n 1)"
     [[ -z "$REMOTE_VERSION" ]] && return 0
 
-
     LOCAL_VERSION="$(head -n 1 "$LOCAL_VERSION_FILE" 2>/dev/null)"
     [[ -z "$LOCAL_VERSION" ]] && return 0
 
-
     [[ "$LOCAL_VERSION" = "$REMOTE_VERSION" ]] && return 0
-
 
     if whiptail --title "$(translate 'Update Available')" \
                 --yesno "$(translate 'New version available') ($REMOTE_VERSION)\n\n$(translate 'Do you want to update now?')" \
@@ -76,22 +72,18 @@ check_updates() {
 
         msg_warn "$(translate 'Starting ProxMenux update...')"
 
-
         if curl -fsSL "$INSTALL_URL" -o "$INSTALL_SCRIPT"; then
             chmod +x "$INSTALL_SCRIPT"
 
-
             bash "$INSTALL_SCRIPT" --update
 
+            exec menu
 
-            exec "$0"
-        else
-            msg_warn "$(translate 'Unable to download the installer. Please try again later.')"
         fi
-    else
-        msg_warn "$(translate 'Update postponed. You can update later from the menu.')"
+
     fi
 }
+
 
 
 
