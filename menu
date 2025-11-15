@@ -72,18 +72,18 @@ check_updates() {
 
         msg_warn "$(translate 'Starting ProxMenux update...')"
 
-        if [[ -x "$INSTALL_SCRIPT" ]]; then
-                "$INSTALL_SCRIPT" --update
+        if curl -fsSL "$INSTALL_URL" -o "$INSTALL_SCRIPT"; then
+            chmod +x "$INSTALL_SCRIPT"
 
-            exec menu
+            bash "$INSTALL_SCRIPT" --update
+
+            #exec menu
+            exit 0
 
         fi
 
     fi
 }
-
-
-
 
 
 
