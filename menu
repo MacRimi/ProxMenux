@@ -75,7 +75,7 @@ check_updates() {
         if curl -fsSL "$INSTALL_URL" -o "$INSTALL_SCRIPT"; then
             chmod +x "$INSTALL_SCRIPT"
 
-            exec bash "$INSTALL_SCRIPT"
+            exec bash "$INSTALL_SCRIPT 2>/dev/null"
 
             #exec menu
             exit 0
