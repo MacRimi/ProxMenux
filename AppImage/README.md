@@ -43,35 +43,6 @@ Get a quick overview of ProxMenux Monitor's main features:
   <em>System Overview - Monitor CPU, memory, temperature, and uptime in real-time</em>
 </p>
 
-<p align="center">
-  <img src="public/images/onboarding/imagen2.png" alt="Storage Management" width="800"/>
-  <br/>
-  <em>Storage Management - Visual representation of disk usage and health</em>
-</p>
-
-<p align="center">
-  <img src="public/images/onboarding/imagen3.png" alt="Network Monitoring" width="800"/>
-  <br/>
-  <em>Network Monitoring - Real-time traffic graphs and interface statistics</em>
-</p>
-
-<p align="center">
-  <img src="public/images/onboarding/imagen4.png" alt="Virtual Machines & LXC" width="800"/>
-  <br/>
-  <em>VMs & LXC Containers - Comprehensive view with resource usage and controls</em>
-</p>
-
-<p align="center">
-  <img src="public/images/onboarding/imagen5.png" alt="Hardware Information" width="800"/>
-  <br/>
-  <em>Hardware Information - Detailed specs for CPU, GPU, and PCIe devices</em>
-</p>
-
-<p align="center">
-  <img src="public/images/onboarding/imagen6.png" alt="System Logs" width="800"/>
-  <br/>
-  <em>System Logs - Real-time monitoring with filtering and search</em>
-</p>
 
 ---
 
