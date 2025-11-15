@@ -80,10 +80,16 @@ check_updates() {
         if curl "${CURL_OPTS[@]}" "$INSTALL_URL" -o "$INSTALL_SCRIPT"; then
             chmod +x "$INSTALL_SCRIPT"
 
-            source "$INSTALL_SCRIPT"
+
+            if bash "$INSTALL_SCRIPT" --update >/tmp/proxmenux-install.log 2>&1; then
+                exec "$0"   
+            else
+                return 0  
+            fi
         else
             msg_warn "$(translate 'Unable to download the installer. Please try again later.')"
         fi
+
     else
         msg_warn "$(translate 'Update postponed. You can update later from the menu.')"
     fi
