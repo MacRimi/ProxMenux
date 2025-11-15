@@ -75,7 +75,6 @@ check_updates() {
                 --yesno "$(translate 'New version available') ($REMOTE_VERSION)\n\n$(translate 'Do you want to update now?')" \
                 10 60 --defaultno; then
 
-        msg_warn "$(translate 'Starting ProxMenux update...')"
 
         if curl "${CURL_OPTS[@]}" "$INSTALL_URL" -o "$INSTALL_SCRIPT"; then
             chmod +x "$INSTALL_SCRIPT"
