@@ -3392,6 +3392,20 @@
     "type": "ct"
   },
   {
+    "name": "Metabase",
+    "slug": "metabase",
+    "desc": "Metabase is an open-source business intelligence platform. You can use Metabase to ask questions about your data, or embed Metabase in your app to let your customers explore their data on their own.",
+    "script": "ct/metabase.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/metabase.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/metabase.sh",
+    "os": "debian",
+    "categories": [
+      9
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "PVE Processor Microcode",
     "slug": "microcode",
     "desc": "Processor Microcode is a layer of low-level software that runs on the processor and provides patches or updates to its firmware. Microcode updates can fix hardware bugs, improve performance, and enhance security features of the processor.\r\n\r\nIt's important to note that the availability of firmware update mechanisms, such as Intel's Management Engine (ME) or AMD's Platform Security Processor (PSP), may vary depending on the processor and its specific implementation. Therefore, it's recommended to consult the documentation for your processor to confirm whether firmware updates can be applied through the operating system.",
