@@ -1037,6 +1037,8 @@ install_proxmenux() {
     type_text "To run ProxMenux, simply execute this command in the console or terminal:"
     echo -e "${YWB}    menu${CL}"
     echo
+    # -------
+    exit 0
 }
 
 if [ "$(id -u)" -ne 0 ]; then

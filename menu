@@ -82,7 +82,7 @@ check_updates() {
 
             bash "$INSTALL_SCRIPT" --update
 
-            exec menu
+            return 0
 
         fi
 
