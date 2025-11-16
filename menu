@@ -38,11 +38,10 @@ UTILS_FILE="$BASE_DIR/utils.sh"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 VENV_PATH="/opt/googletrans-env"
 
-
 if [[ -f "$UTILS_FILE" ]]; then
+
     source "$UTILS_FILE"
 fi
-
 
 : "${LOCAL_SCRIPTS:=/usr/local/share/proxmenux/scripts}"
 
@@ -56,15 +55,19 @@ check_updates() {
     INSTALL_URL="$REPO_URL/install_proxmenux.sh"
     INSTALL_SCRIPT="$BASE_DIR/install_proxmenux.sh"
 
+
     [[ ! -f "$LOCAL_VERSION_FILE" ]] && return 0
+
 
     REMOTE_VERSION="$(curl -fsSL "$VERSION_URL" 2>/dev/null | head -n 1)"
     [[ -z "$REMOTE_VERSION" ]] && return 0
+
 
     LOCAL_VERSION="$(head -n 1 "$LOCAL_VERSION_FILE" 2>/dev/null)"
     [[ -z "$LOCAL_VERSION" ]] && return 0
 
     [[ "$LOCAL_VERSION" = "$REMOTE_VERSION" ]] && return 0
+
 
     if whiptail --title "$(translate 'Update Available')" \
                 --yesno "$(translate 'New version available') ($REMOTE_VERSION)\n\n$(translate 'Do you want to update now?')" \
@@ -75,12 +78,17 @@ check_updates() {
         if curl -fsSL "$INSTALL_URL" -o "$INSTALL_SCRIPT"; then
             chmod +x "$INSTALL_SCRIPT"
 
-            "$INSTALL_SCRIPT" --update
+
+            if [[ -x "$INSTALL_SCRIPT" ]]; then
+                "$INSTALL_SCRIPT" --update
+
+            fi
 
         fi
 
     fi
 }
+
 
 
 
