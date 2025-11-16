@@ -81,7 +81,7 @@ check_updates() {
 
 
             "$INSTALL_SCRIPT" --update
-            exti 
+            exit 0
             exec menu
 
         fi
