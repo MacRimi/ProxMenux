@@ -81,8 +81,7 @@ check_updates() {
 
 
             "$INSTALL_SCRIPT" --update
-            exit 0
-            exec menu
+            local MAIN_MENU="$LOCAL_SCRIPTS/menus/main_menu.sh"
 
         fi
 
