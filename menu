@@ -80,8 +80,9 @@ check_updates() {
             chmod +x "$INSTALL_SCRIPT"
 
 
-            "$INSTALL_SCRIPT" --update
-            "$LOCAL_SCRIPTS/menus/main_menu.sh"
+            bash "$INSTALL_SCRIPT" --update
+
+            exec menu
 
         fi
 
