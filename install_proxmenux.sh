@@ -731,7 +731,7 @@ install_normal_version() {
 
 
 
-    BASIC_DEPS=("dialog" "curl")
+    BASIC_DEPS=("dialog" "curl" "git")
 
     if [ -z "${APT_UPDATED:-}" ]; then
         apt-get update -y > /dev/null 2>&1 || true
