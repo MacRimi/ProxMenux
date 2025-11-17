@@ -4851,6 +4851,20 @@ def api_node_metrics():
         # print(f"[v0] Local node: {local_node}")
         pass
         
+
+        zfs_arc_size = 0
+        try:
+            with open('/proc/spl/kstat/zfs/arcstats', 'r') as f:
+                for line in f:
+                    if line.startswith('size'):
+                        parts = line.split()
+                        if len(parts) >= 3:
+                            zfs_arc_size = int(parts[2])
+                            break
+        except (FileNotFoundError, PermissionError, ValueError):
+            # ZFS not available or no access
+            pass
+
         # Get RRD data for the node
 
         rrd_result = subprocess.run(['pvesh', 'get', f'/nodes/{local_node}/rrddata', 
@@ -4858,16 +4872,20 @@ def api_node_metrics():
                                    capture_output=True, text=True, timeout=10)
         
         if rrd_result.returncode == 0:
-
             rrd_data = json.loads(rrd_result.stdout)
-
+            
+            if zfs_arc_size > 0:
+                for item in rrd_data:
+                    # If zfsarc field is missing or 0, add current value
+                    if 'zfsarc' not in item or item.get('zfsarc', 0) == 0:
+                        item['zfsarc'] = zfs_arc_size
+            
             return jsonify({
                 'node': local_node,
                 'timeframe': timeframe,
                 'data': rrd_data
             })
         else:
-
             return jsonify({'error': f'Failed to get RRD data: {rrd_result.stderr}'}), 500
             
     except Exception as e:
