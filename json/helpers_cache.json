@@ -1356,6 +1356,23 @@
     "type": "ct"
   },
   {
+    "name": "Domain Locker",
+    "slug": "domain-locker",
+    "desc": "The all-in-one tool, for keeping track of your domain name portfolio. Got domain names? Get Domain Locker! ",
+    "script": "ct/domain-locker.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/domain-locker.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/domain-locker.sh",
+    "os": "debian",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "Show DB credentials: `cat ~/Domain-Locker.creds`",
+      "Domain-locker takes quite some time to build and a lot of ressources, RAM and Cores can be lowered after install."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Domain Monitor",
     "slug": "domain-monitor",
     "desc": "A self-hosted PHP domain expiration monitoring tool that tracks domain expiry dates, RDAP/WHOIS data, and SSL certificate validity. Supports alerts, multi-user setup, and cron automation. Built for developers, hosting providers, and IT admins who want full control without third-party services.",
@@ -4490,6 +4507,23 @@
     ],
     "notes": [
       "Show login and database credentials: `cat partdb.creds`"
+    ],
+    "type": "ct"
+  },
+  {
+    "name": "Passbolt",
+    "slug": "passbolt",
+    "desc": "Passbolt is a hybrid credential platform. It is built-first for modern IT teams, yet simple enough for everyone. A sovereign, battle-tested solution that delivers for a team of 5, or an organisation of 5000.",
+    "script": "ct/passbolt.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/passbolt.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/passbolt.sh",
+    "os": "debian",
+    "categories": [
+      6
+    ],
+    "notes": [
+      "Type `cat ~/.Passbolt.creds` to see MariaDB database credentials. You will need those to setup Passbolt.",
+      "The application uses self-signed certificates. You can also use Let's Encrypt to get a valid certificate for your domain. Please read the documentation for more information."
     ],
     "type": "ct"
   },
