@@ -440,7 +440,7 @@ update_config() {
     local status="$2"
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     
-    local tracked_components=("dialog" "curl" "jq" "python3" "python3-venv" "python3-pip" "virtual_environment" "pip" "googletrans" "proxmenux_monitor")
+    local tracked_components=("dialog" "curl" "jq" "git" "python3" "python3-venv" "python3-pip" "virtual_environment" "pip" "googletrans" "proxmenux_monitor")
     
     if [[ " ${tracked_components[@]} " =~ " ${component} " ]]; then
         mkdir -p "$(dirname "$CONFIG_FILE")"
