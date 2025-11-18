@@ -9,6 +9,7 @@ import { NodeMetricsCharts } from "./node-metrics-charts"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
+import { getUnitsSettings } from "../lib/network-utils"
 
 interface SystemData {
   cpu_usage: number
@@ -164,34 +165,20 @@ export function SystemOverview() {
   const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
 
   useEffect(() => {
-    const getSettings = () => {
-      if (typeof window === 'undefined') return { networkUnit: 'Bytes' as const }
-      try {
-        const settings = window.localStorage.getItem('unitsSettings')
-        if (settings) {
-          const parsed = JSON.parse(settings)
-          return { networkUnit: parsed.networkUnit || 'Bytes' }
-        }
-      } catch (e) {
-        console.error('[v0] Error reading units settings:', e)
-      }
-      return { networkUnit: 'Bytes' as const }
-    }
-    
-    const settings = getSettings()
+    const settings = getUnitsSettings()
     setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
     
-    const handleStorageChange = () => {
-      const settings = getSettings()
+    const handleSettingsChange = () => {
+      const settings = getUnitsSettings()
       setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
     }
     
-    window.addEventListener('storage', handleStorageChange)
-    window.addEventListener('unitsSettingsChanged', handleStorageChange)
+    window.addEventListener('storage', handleSettingsChange)
+    window.addEventListener('unitsSettingsChanged', handleSettingsChange)
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('unitsSettingsChanged', handleStorageChange)
+      window.removeEventListener('storage', handleSettingsChange)
+      window.removeEventListener('unitsSettingsChanged', handleSettingsChange)
     }
   }, [])
 
@@ -338,27 +325,6 @@ export function SystemOverview() {
       return `${(sizeInGB / 1024).toFixed(2)} TB`
     } else {
       return `${sizeInGB.toFixed(2)} GB`
-    }
-  }
-
-  const formatNetworkTraffic = (sizeInGB: number, unit: "Bytes" | "Bits" = "Bytes"): string => {
-    if (unit === "Bits") {
-      const sizeInBits = sizeInGB * 8
-      if (sizeInBits < 1024) {
-        return `${sizeInBits.toFixed(1)} b`
-      } else if (sizeInBits < 1024 ** 2) {
-        return `${(sizeInBits / 1024).toFixed(1)} Kb`
-      } else if (sizeInBits < 1024 ** 3) {
-        return `${(sizeInBits / 1024 ** 2).toFixed(1)} Mb`
-      } else if (sizeInBits < 1024 ** 4) {
-        return `${(sizeInBits / 1024 ** 3).toFixed(2)} Gb`
-      } else if (sizeInBits < 1024 ** 5) {
-        return `${(sizeInBits / 1024 ** 4).toFixed(2)} Tb`
-      } else {
-        return `${(sizeInBits / 1024 ** 5).toFixed(2)} Pb`
-      }
-    } else {
-      return formatStorage(sizeInGB)
     }
   }
 

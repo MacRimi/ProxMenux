@@ -5,7 +5,7 @@ import { Badge } from "./ui/badge"
 import { Wifi, Zap } from 'lucide-react'
 import { useState, useEffect } from "react"
 import { fetchApi } from "../lib/api-config"
-import { getUnitsSettings, formatNetworkTraffic, getNetworkLabel } from "../lib/network-utils"
+import { getUnitsSettings, formatNetworkTraffic } from "../lib/network-utils"
 
 interface NetworkCardProps {
   interface_: {
@@ -99,13 +99,18 @@ export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps
     const settings = getUnitsSettings()
     setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
     
-    const handleStorageChange = () => {
+    const handleSettingsChange = () => {
       const settings = getUnitsSettings()
       setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
     }
     
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
+    window.addEventListener('storage', handleSettingsChange)
+    window.addEventListener('unitsSettingsChanged', handleSettingsChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleSettingsChange)
+      window.removeEventListener('unitsSettingsChanged', handleSettingsChange)
+    }
   }, [])
 
   useEffect(() => {

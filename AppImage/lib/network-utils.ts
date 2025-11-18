@@ -16,18 +16,22 @@ export const getUnitsSettings = () => {
 
 export const formatNetworkTraffic = (sizeInGB: number, unit: "Bytes" | "Bits" = "Bytes"): string => {
   if (unit === "Bits") {
-    const sizeInGb = sizeInGB * 8
+    const sizeInGb = sizeInGB * 8 // Convert gigabytes to gigabits
     
+    // Use decimal (base 1000) for bits
     if (sizeInGb < 0.001) {
-      return `${(sizeInGb * 1024).toFixed(1)} Mb`
+      return `${(sizeInGb * 1000 * 1000).toFixed(2)} Mb`
     } else if (sizeInGb < 1) {
-      return `${(sizeInGb * 1024).toFixed(1)} Mb`
-    } else if (sizeInGb < 1024) {
+      return `${(sizeInGb * 1000).toFixed(2)} Mb`
+    } else if (sizeInGb < 1000) {
       return `${sizeInGb.toFixed(1)} Gb`
+    } else if (sizeInGb < 1000000) {
+      return `${(sizeInGb / 1000).toFixed(2)} Tb`
     } else {
-      return `${(sizeInGb / 1024).toFixed(1)} Tb`
+      return `${(sizeInGb / 1000000).toFixed(2)} Pb`
     }
   } else {
+    // Bytes mode - use binary base (1024)
     if (sizeInGB < 1) {
       return `${(sizeInGB * 1024).toFixed(1)} MB`
     } else if (sizeInGB < 1024) {

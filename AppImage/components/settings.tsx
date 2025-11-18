@@ -71,7 +71,7 @@ export function Settings() {
     setNetworkUnitSettings(unit);
     
     // Dispatch custom event to notify other components
-    window.dispatchEvent(new Event('unitsSettingsChanged'))
+    window.dispatchEvent(new CustomEvent('unitsSettingsChanged', { detail: settings }))
     window.dispatchEvent(new Event('storage'))
   };
 

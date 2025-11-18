@@ -1,5 +1,7 @@
+"use client"
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent } from "@radix-ui/react-dialog"
 import { getUnitsSettings, formatNetworkTraffic, getNetworkLabel } from "@/lib/network-utils"
-
 
 export function InterfaceDetailsModal({ interface_, onClose, timeframe }: InterfaceDetailsModalProps) {
   const [metricsData, setMetricsData] = useState<any[]>([])
@@ -10,15 +12,19 @@ export function InterfaceDetailsModal({ interface_, onClose, timeframe }: Interf
     const settings = getUnitsSettings()
     setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
     
-    const handleStorageChange = () => {
+    const handleSettingsChange = () => {
       const settings = getUnitsSettings()
       setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
     }
     
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
+    window.addEventListener('storage', handleSettingsChange)
+    window.addEventListener('unitsSettingsChanged', handleSettingsChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleSettingsChange)
+      window.removeEventListener('unitsSettingsChanged', handleSettingsChange)
+    }
   }, [])
-
 
   const totalReceived = metricsData.length > 0
     ? Math.max(0, (metricsData[metricsData.length - 1].netin || 0) - (metricsData[0].netin || 0))
