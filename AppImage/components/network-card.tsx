@@ -5,6 +5,7 @@ import { Badge } from "./ui/badge"
 import { Wifi, Zap } from 'lucide-react'
 import { useState, useEffect } from "react"
 import { fetchApi } from "../lib/api-config"
+import { getUnitsSettings, formatNetworkTraffic, getNetworkLabel } from "../lib/network-utils"
 
 interface NetworkCardProps {
   interface_: {
@@ -81,55 +82,6 @@ const formatStorage = (bytes: number): string => {
   const value = bytes / Math.pow(k, i)
   const decimals = value >= 10 ? 1 : 2
   return `${value.toFixed(decimals)} ${sizes[i]}`
-}
-
-const getUnitsSettings = () => {
-  if (typeof window === 'undefined') return { networkUnit: 'Bytes' as const }
-  
-  try {
-    const settings = localStorage.getItem('unitsSettings')
-    if (settings) {
-      const parsed = JSON.parse(settings)
-      return { networkUnit: parsed.networkUnit || 'Bytes' }
-    }
-  } catch (e) {
-    console.error('[v0] Error reading units settings:', e)
-  }
-  
-  return { networkUnit: 'Bytes' as const }
-}
-
-const formatNetworkTraffic = (sizeInGB: number, unit: "Bytes" | "Bits" = "Bytes"): string => {
-  if (unit === "Bits") {
-    // Convert GB to Gb (Gigabits)
-    const sizeInGb = sizeInGB * 8
-    
-    if (sizeInGb < 0.001) {
-      // Less than 0.001 Gb, show in Mb
-      return `${(sizeInGb * 1024).toFixed(1)} Mb`
-    } else if (sizeInGb < 1) {
-      // Less than 1 Gb, show in Mb
-      return `${(sizeInGb * 1024).toFixed(1)} Mb`
-    } else if (sizeInGb < 1024) {
-      // Less than 1024 Gb, show in Gb
-      return `${sizeInGb.toFixed(1)} Gb`
-    } else {
-      // 1024 Gb or more, show in Tb
-      return `${(sizeInGb / 1024).toFixed(1)} Tb`
-    }
-  } else {
-    // Bytes mode (existing behavior)
-    if (sizeInGB < 1) {
-      // Less than 1 GB, show in MB
-      return `${(sizeInGB * 1024).toFixed(1)} MB`
-    } else if (sizeInGB < 1024) {
-      // Less than 1024 GB, show in GB
-      return `${sizeInGB.toFixed(1)} GB`
-    } else {
-      // 1024 GB or more, show in TB
-      return `${(sizeInGB / 1024).toFixed(1)} TB`
-    }
-  }
 }
 
 export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps) {
