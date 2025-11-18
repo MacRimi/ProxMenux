@@ -65,8 +65,14 @@ export function Settings() {
   }, [])
 
   const changeNetworkUnit = (unit: string) => {
-    localStorage.setItem("proxmenux-network-unit", unit);
+    const settings = { networkUnit: unit }
+    localStorage.setItem('unitsSettings', JSON.stringify(settings))
+    localStorage.setItem("proxmenux-network-unit", unit); // Keep legacy for backwards compatibility
     setNetworkUnitSettings(unit);
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new Event('unitsSettingsChanged'))
+    window.dispatchEvent(new Event('storage'))
   };
 
   const getUnitsSettings = () => {

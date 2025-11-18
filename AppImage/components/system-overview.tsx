@@ -164,6 +164,38 @@ export function SystemOverview() {
   const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
 
   useEffect(() => {
+    const getSettings = () => {
+      if (typeof window === 'undefined') return { networkUnit: 'Bytes' as const }
+      try {
+        const settings = window.localStorage.getItem('unitsSettings')
+        if (settings) {
+          const parsed = JSON.parse(settings)
+          return { networkUnit: parsed.networkUnit || 'Bytes' }
+        }
+      } catch (e) {
+        console.error('[v0] Error reading units settings:', e)
+      }
+      return { networkUnit: 'Bytes' as const }
+    }
+    
+    const settings = getSettings()
+    setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
+    
+    const handleStorageChange = () => {
+      const settings = getSettings()
+      setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('unitsSettingsChanged', handleStorageChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('unitsSettingsChanged', handleStorageChange)
+    }
+  }, [])
+
+  useEffect(() => {
     const fetchAllData = async () => {
       const [systemResult, vmResult, storageResults, networkResult] = await Promise.all([
         fetchSystemData().finally(() => setLoadingStates((prev) => ({ ...prev, system: false }))),
@@ -311,13 +343,19 @@ export function SystemOverview() {
 
   const formatNetworkTraffic = (sizeInGB: number, unit: "Bytes" | "Bits" = "Bytes"): string => {
     if (unit === "Bits") {
-      const sizeInGb = sizeInGB * 8
-      if (sizeInGb < 1) {
-        return `${(sizeInGb * 1024).toFixed(1)} Mb`
-      } else if (sizeInGb > 999) {
-        return `${(sizeInGb / 1024).toFixed(2)} Tb`
+      const sizeInBits = sizeInGB * 8
+      if (sizeInBits < 1024) {
+        return `${sizeInBits.toFixed(1)} b`
+      } else if (sizeInBits < 1024 ** 2) {
+        return `${(sizeInBits / 1024).toFixed(1)} Kb`
+      } else if (sizeInBits < 1024 ** 3) {
+        return `${(sizeInBits / 1024 ** 2).toFixed(1)} Mb`
+      } else if (sizeInBits < 1024 ** 4) {
+        return `${(sizeInBits / 1024 ** 3).toFixed(2)} Gb`
+      } else if (sizeInBits < 1024 ** 5) {
+        return `${(sizeInBits / 1024 ** 4).toFixed(2)} Tb`
       } else {
-        return `${sizeInGb.toFixed(2)} Gb`
+        return `${(sizeInBits / 1024 ** 5).toFixed(2)} Pb`
       }
     } else {
       return formatStorage(sizeInGB)
@@ -428,26 +466,6 @@ export function SystemOverview() {
         </Card>
 
         <Card className="bg-card border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Temperature</CardTitle>
-            <Thermometer className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl lg:text-2xl font-bold text-foreground">
-              {systemData.temperature === 0 ? "N/A" : `${systemData.temperature}°C`}
-            </div>
-            <div className="flex items-center mt-2">
-              <Badge variant="outline" className={tempStatus.color}>
-                {tempStatus.status}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {systemData.temperature === 0 ? "No sensor available" : "Live temperature reading"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-foreground flex items-center">
               <Server className="h-5 w-5 mr-2" />
@@ -479,6 +497,28 @@ export function SystemOverview() {
                 </p>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center">
+              <Thermometer className="h-5 w-5 mr-2" />
+              Temperature
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl lg:text-2xl font-bold text-foreground">
+              {systemData.temperature === 0 ? "N/A" : `${systemData.temperature}°C`}
+            </div>
+            <div className="flex items-center mt-2">
+              <Badge variant="outline" className={tempStatus.color}>
+                {tempStatus.status}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {systemData.temperature === 0 ? "No sensor available" : "Live temperature reading"}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -615,27 +655,29 @@ export function SystemOverview() {
                 <Network className="h-5 w-5 mr-2" />
                 Network Overview
               </div>
-              <Select value={networkTimeframe} onValueChange={setNetworkTimeframe}>
-                <SelectTrigger className="w-28 h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hour">1 Hour</SelectItem>
-                  <SelectItem value="day">24 Hours</SelectItem>
-                  <SelectItem value="week">7 Days</SelectItem>
-                  <SelectItem value="month">30 Days</SelectItem>
-                  <SelectItem value="year">1 Year</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={networkUnit} onValueChange={setNetworkUnit}>
-                <SelectTrigger className="w-28 h-8 text-xs ml-2">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Bytes">Bytes</SelectItem>
-                  <SelectItem value="Bits">Bits</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={networkTimeframe} onValueChange={setNetworkTimeframe}>
+                  <SelectTrigger className="w-28 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hour">1 Hour</SelectItem>
+                    <SelectItem value="day">24 Hours</SelectItem>
+                    <SelectItem value="week">7 Days</SelectItem>
+                    <SelectItem value="month">30 Days</SelectItem>
+                    <SelectItem value="year">1 Year</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={networkUnit} onValueChange={setNetworkUnit}>
+                  <SelectTrigger className="w-28 h-8 text-xs ml-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Bytes">Bytes</SelectItem>
+                    <SelectItem value="Bits">Bits</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
