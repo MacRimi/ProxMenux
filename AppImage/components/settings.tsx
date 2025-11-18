@@ -1,16 +1,10 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "./ui/card";
+import { useState, useEffect } from "react"
+import { Button } from "./ui/button"
+import { Input } from "./ui/input"
+import { Label } from "./ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import {
   Shield,
   Lock,
@@ -26,66 +20,64 @@ import {
   Eye,
   EyeOff,
   Ruler,
-} from "lucide-react";
-import { APP_VERSION } from "./release-notes-modal";
-import { getApiUrl, fetchApi } from "../lib/api-config";
-import { TwoFactorSetup } from "./two-factor-setup";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+} from "lucide-react"
+import { APP_VERSION } from "./release-notes-modal"
+import { getApiUrl, fetchApi } from "../lib/api-config"
+import { TwoFactorSetup } from "./two-factor-setup"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 
 interface ProxMenuxTool {
-  key: string;
-  name: string;
-  enabled: boolean;
+  key: string
+  name: string
+  enabled: boolean
 }
 
 export function Settings() {
-  const [authEnabled, setAuthEnabled] = useState(false);
-  const [totpEnabled, setTotpEnabled] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [authEnabled, setAuthEnabled] = useState(false)
+  const [totpEnabled, setTotpEnabled] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
   // Setup form state
-  const [showSetupForm, setShowSetupForm] = useState(false);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showSetupForm, setShowSetupForm] = useState(false)
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
 
   // Change password form state
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showChangePassword, setShowChangePassword] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmNewPassword, setConfirmNewPassword] = useState("")
 
-  const [show2FASetup, setShow2FASetup] = useState(false);
-  const [show2FADisable, setShow2FADisable] = useState(false);
-  const [disable2FAPassword, setDisable2FAPassword] = useState("");
+  const [show2FASetup, setShow2FASetup] = useState(false)
+  const [show2FADisable, setShow2FADisable] = useState(false)
+  const [disable2FAPassword, setDisable2FAPassword] = useState("")
 
-  const [proxmenuxTools, setProxmenuxTools] = useState<ProxMenuxTool[]>([]);
-  const [loadingTools, setLoadingTools] = useState(true);
-  const [expandedVersions, setExpandedVersions] = useState<
-    Record<string, boolean>
-  >({
+  const [proxmenuxTools, setProxmenuxTools] = useState<ProxMenuxTool[]>([])
+  const [loadingTools, setLoadingTools] = useState(true)
+  const [expandedVersions, setExpandedVersions] = useState<Record<string, boolean>>({
     [APP_VERSION]: true, // Current version expanded by default
-  });
+  })
 
   const [networkUnitSettings, setNetworkUnitSettings] = useState("Bytes");
   const [loadingUnitSettings, setLoadingUnitSettings] = useState(true);
 
   // API Token state management
-  const [showApiTokenSection, setShowApiTokenSection] = useState(false);
-  const [apiToken, setApiToken] = useState("");
-  const [apiTokenVisible, setApiTokenVisible] = useState(false);
-  const [tokenPassword, setTokenPassword] = useState("");
-  const [tokenTotpCode, setTokenTotpCode] = useState("");
-  const [generatingToken, setGeneratingToken] = useState(false);
-  const [tokenCopied, setTokenCopied] = useState(false);
+  const [showApiTokenSection, setShowApiTokenSection] = useState(false)
+  const [apiToken, setApiToken] = useState("")
+  const [apiTokenVisible, setApiTokenVisible] = useState(false)
+  const [tokenPassword, setTokenPassword] = useState("")
+  const [tokenTotpCode, setTokenTotpCode] = useState("")
+  const [generatingToken, setGeneratingToken] = useState(false)
+  const [tokenCopied, setTokenCopied] = useState(false)
 
   useEffect(() => {
-    checkAuthStatus();
-    loadProxmenuxTools();
+    checkAuthStatus()
+    loadProxmenuxTools()
     getUnitsSettings();
-  }, []);
+  }, [])
 
   const changeNetworkUnit = (unit: string) => {
     localStorage.setItem("proxmenux-network-unit", unit);
@@ -102,50 +94,50 @@ export function Settings() {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch(getApiUrl("/api/auth/status"));
-      const data = await response.json();
-      setAuthEnabled(data.auth_enabled || false);
-      setTotpEnabled(data.totp_enabled || false); // Get 2FA status
+      const response = await fetch(getApiUrl("/api/auth/status"))
+      const data = await response.json()
+      setAuthEnabled(data.auth_enabled || false)
+      setTotpEnabled(data.totp_enabled || false) // Get 2FA status
     } catch (err) {
-      console.error("Failed to check auth status:", err);
+      console.error("Failed to check auth status:", err)
     }
-  };
+  }
 
   const loadProxmenuxTools = async () => {
     try {
-      const response = await fetch(getApiUrl("/api/proxmenux/installed-tools"));
-      const data = await response.json();
+      const response = await fetch(getApiUrl("/api/proxmenux/installed-tools"))
+      const data = await response.json()
 
       if (data.success) {
-        setProxmenuxTools(data.installed_tools || []);
+        setProxmenuxTools(data.installed_tools || [])
       }
     } catch (err) {
-      console.error("Failed to load ProxMenux tools:", err);
+      console.error("Failed to load ProxMenux tools:", err)
     } finally {
-      setLoadingTools(false);
+      setLoadingTools(false)
     }
-  };
+  }
 
   const handleEnableAuth = async () => {
-    setError("");
-    setSuccess("");
+    setError("")
+    setSuccess("")
 
     if (!username || !password) {
-      setError("Please fill in all fields");
-      return;
+      setError("Please fill in all fields")
+      return
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
+      setError("Passwords do not match")
+      return
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
+      setError("Password must be at least 6 characters")
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
       const response = await fetch(getApiUrl("/api/auth/setup"), {
@@ -156,155 +148,145 @@ export function Settings() {
           password,
           enable_auth: true,
         }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to enable authentication");
+        throw new Error(data.error || "Failed to enable authentication")
       }
 
       // Save token
-      localStorage.setItem("proxmenux-auth-token", data.token);
-      localStorage.setItem("proxmenux-auth-setup-complete", "true");
+      localStorage.setItem("proxmenux-auth-token", data.token)
+      localStorage.setItem("proxmenux-auth-setup-complete", "true")
 
-      setSuccess("Authentication enabled successfully!");
-      setAuthEnabled(true);
-      setShowSetupForm(false);
-      setUsername("");
-      setPassword("");
-      setConfirmPassword("");
+      setSuccess("Authentication enabled successfully!")
+      setAuthEnabled(true)
+      setShowSetupForm(false)
+      setUsername("")
+      setPassword("")
+      setConfirmPassword("")
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to enable authentication"
-      );
+      setError(err instanceof Error ? err.message : "Failed to enable authentication")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleDisableAuth = async () => {
     if (
       !confirm(
-        "Are you sure you want to disable authentication? This will remove password protection from your dashboard."
+        "Are you sure you want to disable authentication? This will remove password protection from your dashboard.",
       )
     ) {
-      return;
+      return
     }
 
-    setLoading(true);
-    setError("");
-    setSuccess("");
+    setLoading(true)
+    setError("")
+    setSuccess("")
 
     try {
-      const token = localStorage.getItem("proxmenux-auth-token");
+      const token = localStorage.getItem("proxmenux-auth-token")
       const response = await fetch(getApiUrl("/api/auth/disable"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to disable authentication");
+        throw new Error(data.message || "Failed to disable authentication")
       }
 
-      localStorage.removeItem("proxmenux-auth-token");
-      localStorage.removeItem("proxmenux-auth-setup-complete");
+      localStorage.removeItem("proxmenux-auth-token")
+      localStorage.removeItem("proxmenux-auth-setup-complete")
 
-      setSuccess("Authentication disabled successfully! Reloading...");
+      setSuccess("Authentication disabled successfully! Reloading...")
 
       setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+        window.location.reload()
+      }, 1000)
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to disable authentication. Please try again."
-      );
+      setError(err instanceof Error ? err.message : "Failed to disable authentication. Please try again.")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleChangePassword = async () => {
-    setError("");
-    setSuccess("");
+    setError("")
+    setSuccess("")
 
     if (!currentPassword || !newPassword) {
-      setError("Please fill in all fields");
-      return;
+      setError("Please fill in all fields")
+      return
     }
 
     if (newPassword !== confirmNewPassword) {
-      setError("New passwords do not match");
-      return;
+      setError("New passwords do not match")
+      return
     }
 
     if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
+      setError("Password must be at least 6 characters")
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
       const response = await fetch(getApiUrl("/api/auth/change-password"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem(
-            "proxmenux-auth-token"
-          )}`,
+          Authorization: `Bearer ${localStorage.getItem("proxmenux-auth-token")}`,
         },
         body: JSON.stringify({
           current_password: currentPassword,
           new_password: newPassword,
         }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to change password");
+        throw new Error(data.error || "Failed to change password")
       }
 
       // Update token if provided
       if (data.token) {
-        localStorage.setItem("proxmenux-auth-token", data.token);
+        localStorage.setItem("proxmenux-auth-token", data.token)
       }
 
-      setSuccess("Password changed successfully!");
-      setShowChangePassword(false);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmNewPassword("");
+      setSuccess("Password changed successfully!")
+      setShowChangePassword(false)
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmNewPassword("")
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to change password"
-      );
+      setError(err instanceof Error ? err.message : "Failed to change password")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleDisable2FA = async () => {
-    setError("");
-    setSuccess("");
+    setError("")
+    setSuccess("")
 
     if (!disable2FAPassword) {
-      setError("Please enter your password");
-      return;
+      setError("Please enter your password")
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
-      const token = localStorage.getItem("proxmenux-auth-token");
+      const token = localStorage.getItem("proxmenux-auth-token")
       const response = await fetch(getApiUrl("/api/auth/totp/disable"), {
         method: "POST",
         headers: {
@@ -312,47 +294,47 @@ export function Settings() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ password: disable2FAPassword }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to disable 2FA");
+        throw new Error(data.message || "Failed to disable 2FA")
       }
 
-      setSuccess("2FA disabled successfully!");
-      setTotpEnabled(false);
-      setShow2FADisable(false);
-      setDisable2FAPassword("");
-      checkAuthStatus();
+      setSuccess("2FA disabled successfully!")
+      setTotpEnabled(false)
+      setShow2FADisable(false)
+      setDisable2FAPassword("")
+      checkAuthStatus()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to disable 2FA");
+      setError(err instanceof Error ? err.message : "Failed to disable 2FA")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleLogout = () => {
-    localStorage.removeItem("proxmenux-auth-token");
-    localStorage.removeItem("proxmenux-auth-setup-complete");
-    window.location.reload();
-  };
+    localStorage.removeItem("proxmenux-auth-token")
+    localStorage.removeItem("proxmenux-auth-setup-complete")
+    window.location.reload()
+  }
 
   const handleGenerateApiToken = async () => {
-    setError("");
-    setSuccess("");
+    setError("")
+    setSuccess("")
 
     if (!tokenPassword) {
-      setError("Please enter your password");
-      return;
+      setError("Please enter your password")
+      return
     }
 
     if (totpEnabled && !tokenTotpCode) {
-      setError("Please enter your 2FA code");
-      return;
+      setError("Please enter your 2FA code")
+      return
     }
 
-    setGeneratingToken(true);
+    setGeneratingToken(true)
 
     try {
       const data = await fetchApi("/api/auth/generate-api-token", {
@@ -362,55 +344,47 @@ export function Settings() {
           password: tokenPassword,
           totp_token: totpEnabled ? tokenTotpCode : undefined,
         }),
-      });
+      })
 
       if (!data.success) {
-        setError(data.message || data.error || "Failed to generate API token");
-        return;
+        setError(data.message || data.error || "Failed to generate API token")
+        return
       }
 
       if (!data.token) {
-        setError("No token received from server");
-        return;
+        setError("No token received from server")
+        return
       }
 
-      setApiToken(data.token);
-      setSuccess(
-        "API token generated successfully! Make sure to copy it now as you won't be able to see it again."
-      );
-      setTokenPassword("");
-      setTokenTotpCode("");
+      setApiToken(data.token)
+      setSuccess("API token generated successfully! Make sure to copy it now as you won't be able to see it again.")
+      setTokenPassword("")
+      setTokenTotpCode("")
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to generate API token. Please try again."
-      );
+      setError(err instanceof Error ? err.message : "Failed to generate API token. Please try again.")
     } finally {
-      setGeneratingToken(false);
+      setGeneratingToken(false)
     }
-  };
+  }
 
   const copyApiToken = () => {
-    navigator.clipboard.writeText(apiToken);
-    setTokenCopied(true);
-    setTimeout(() => setTokenCopied(false), 2000);
-  };
+    navigator.clipboard.writeText(apiToken)
+    setTokenCopied(true)
+    setTimeout(() => setTokenCopied(false), 2000)
+  }
 
   const toggleVersion = (version: string) => {
     setExpandedVersions((prev) => ({
       ...prev,
       [version]: !prev[version],
-    }));
-  };
+    }))
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage your dashboard security and preferences
-        </p>
+        <p className="text-muted-foreground mt-2">Manage your dashboard security and preferences</p>
       </div>
 
       {/* Authentication Settings */}
@@ -420,9 +394,7 @@ export function Settings() {
             <Shield className="h-5 w-5 text-blue-500" />
             <CardTitle>Authentication</CardTitle>
           </div>
-          <CardDescription>
-            Protect your dashboard with username and password authentication
-          </CardDescription>
+          <CardDescription>Protect your dashboard with username and password authentication</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {error && (
@@ -442,31 +414,19 @@ export function Settings() {
           <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
             <div className="flex items-center gap-3">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  authEnabled ? "bg-green-500/10" : "bg-gray-500/10"
-                }`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${authEnabled ? "bg-green-500/10" : "bg-gray-500/10"}`}
               >
-                <Lock
-                  className={`h-5 w-5 ${
-                    authEnabled ? "text-green-500" : "text-gray-500"
-                  }`}
-                />
+                <Lock className={`h-5 w-5 ${authEnabled ? "text-green-500" : "text-gray-500"}`} />
               </div>
               <div>
                 <p className="font-medium">Authentication Status</p>
                 <p className="text-sm text-muted-foreground">
-                  {authEnabled
-                    ? "Password protection is enabled"
-                    : "No password protection"}
+                  {authEnabled ? "Password protection is enabled" : "No password protection"}
                 </p>
               </div>
             </div>
             <div
-              className={`px-3 py-1 rounded-full text-sm font-medium ${
-                authEnabled
-                  ? "bg-green-500/10 text-green-500"
-                  : "bg-gray-500/10 text-gray-500"
-              }`}
+              className={`px-3 py-1 rounded-full text-sm font-medium ${authEnabled ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}`}
             >
               {authEnabled ? "Enabled" : "Disabled"}
             </div>
@@ -477,14 +437,10 @@ export function Settings() {
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
                 <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-blue-500">
-                  Enable authentication to protect your dashboard when accessing
-                  from non-private networks.
+                  Enable authentication to protect your dashboard when accessing from non-private networks.
                 </p>
               </div>
-              <Button
-                onClick={() => setShowSetupForm(true)}
-                className="w-full bg-blue-500 hover:bg-blue-600"
-              >
+              <Button onClick={() => setShowSetupForm(true)} className="w-full bg-blue-500 hover:bg-blue-600">
                 <Shield className="h-4 w-4 mr-2" />
                 Enable Authentication
               </Button>
@@ -544,19 +500,10 @@ export function Settings() {
               </div>
 
               <div className="flex gap-2">
-                <Button
-                  onClick={handleEnableAuth}
-                  className="flex-1 bg-blue-500 hover:bg-blue-600"
-                  disabled={loading}
-                >
+                <Button onClick={handleEnableAuth} className="flex-1 bg-blue-500 hover:bg-blue-600" disabled={loading}>
                   {loading ? "Enabling..." : "Enable"}
                 </Button>
-                <Button
-                  onClick={() => setShowSetupForm(false)}
-                  variant="outline"
-                  className="flex-1"
-                  disabled={loading}
-                >
+                <Button onClick={() => setShowSetupForm(false)} variant="outline" className="flex-1" disabled={loading}>
                   Cancel
                 </Button>
               </div>
@@ -565,21 +512,13 @@ export function Settings() {
 
           {authEnabled && (
             <div className="space-y-3">
-              <Button
-                onClick={handleLogout}
-                variant="outline"
-                className="w-full bg-transparent"
-              >
+              <Button onClick={handleLogout} variant="outline" className="w-full bg-transparent">
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
 
               {!showChangePassword && (
-                <Button
-                  onClick={() => setShowChangePassword(true)}
-                  variant="outline"
-                  className="w-full"
-                >
+                <Button onClick={() => setShowChangePassword(true)} variant="outline" className="w-full">
                   <Lock className="h-4 w-4 mr-2" />
                   Change Password
                 </Button>
@@ -622,9 +561,7 @@ export function Settings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-new-password">
-                      Confirm New Password
-                    </Label>
+                    <Label htmlFor="confirm-new-password">Confirm New Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -664,21 +601,15 @@ export function Settings() {
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
                     <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-blue-400">
-                      <p className="font-medium mb-1">
-                        Two-Factor Authentication (2FA)
-                      </p>
+                      <p className="font-medium mb-1">Two-Factor Authentication (2FA)</p>
                       <p className="text-blue-300">
-                        Add an extra layer of security by requiring a code from
-                        your authenticator app in addition to your password.
+                        Add an extra layer of security by requiring a code from your authenticator app in addition to
+                        your password.
                       </p>
                     </div>
                   </div>
 
-                  <Button
-                    onClick={() => setShow2FASetup(true)}
-                    variant="outline"
-                    className="w-full"
-                  >
+                  <Button onClick={() => setShow2FASetup(true)} variant="outline" className="w-full">
                     <Shield className="h-4 w-4 mr-2" />
                     Enable Two-Factor Authentication
                   </Button>
@@ -689,17 +620,11 @@ export function Settings() {
                 <div className="space-y-3">
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500" />
-                    <p className="text-sm text-green-500 font-medium">
-                      2FA is enabled
-                    </p>
+                    <p className="text-sm text-green-500 font-medium">2FA is enabled</p>
                   </div>
 
                   {!show2FADisable && (
-                    <Button
-                      onClick={() => setShow2FADisable(true)}
-                      variant="outline"
-                      className="w-full"
-                    >
+                    <Button onClick={() => setShow2FADisable(true)} variant="outline" className="w-full">
                       <Shield className="h-4 w-4 mr-2" />
                       Disable 2FA
                     </Button>
@@ -707,12 +632,8 @@ export function Settings() {
 
                   {show2FADisable && (
                     <div className="space-y-4 border border-border rounded-lg p-4">
-                      <h3 className="font-semibold">
-                        Disable Two-Factor Authentication
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Enter your password to confirm
-                      </p>
+                      <h3 className="font-semibold">Disable Two-Factor Authentication</h3>
+                      <p className="text-sm text-muted-foreground">Enter your password to confirm</p>
 
                       <div className="space-y-2">
                         <Label htmlFor="disable-2fa-password">Password</Label>
@@ -723,9 +644,7 @@ export function Settings() {
                             type="password"
                             placeholder="Enter your password"
                             value={disable2FAPassword}
-                            onChange={(e) =>
-                              setDisable2FAPassword(e.target.value)
-                            }
+                            onChange={(e) => setDisable2FAPassword(e.target.value)}
                             className="pl-10"
                             disabled={loading}
                           />
@@ -733,19 +652,14 @@ export function Settings() {
                       </div>
 
                       <div className="flex gap-2">
-                        <Button
-                          onClick={handleDisable2FA}
-                          variant="destructive"
-                          className="flex-1"
-                          disabled={loading}
-                        >
+                        <Button onClick={handleDisable2FA} variant="destructive" className="flex-1" disabled={loading}>
                           {loading ? "Disabling..." : "Disable 2FA"}
                         </Button>
                         <Button
                           onClick={() => {
-                            setShow2FADisable(false);
-                            setDisable2FAPassword("");
-                            setError("");
+                            setShow2FADisable(false)
+                            setDisable2FAPassword("")
+                            setError("")
                           }}
                           variant="outline"
                           className="flex-1"
@@ -759,12 +673,7 @@ export function Settings() {
                 </div>
               )}
 
-              <Button
-                onClick={handleDisableAuth}
-                variant="destructive"
-                className="w-full"
-                disabled={loading}
-              >
+              <Button onClick={handleDisableAuth} variant="destructive" className="w-full" disabled={loading}>
                 Disable Authentication
               </Button>
             </div>
@@ -781,8 +690,7 @@ export function Settings() {
               <CardTitle>API Access Tokens</CardTitle>
             </div>
             <CardDescription>
-              Generate long-lived API tokens for external integrations like
-              Homepage and Home Assistant
+              Generate long-lived API tokens for external integrations like Homepage and Home Assistant
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -816,10 +724,7 @@ export function Settings() {
             </div>
 
             {!showApiTokenSection && !apiToken && (
-              <Button
-                onClick={() => setShowApiTokenSection(true)}
-                className="w-full bg-purple-500 hover:bg-purple-600"
-              >
+              <Button onClick={() => setShowApiTokenSection(true)} className="w-full bg-purple-500 hover:bg-purple-600">
                 <Key className="h-4 w-4 mr-2" />
                 Generate New API Token
               </Button>
@@ -877,10 +782,10 @@ export function Settings() {
                   </Button>
                   <Button
                     onClick={() => {
-                      setShowApiTokenSection(false);
-                      setTokenPassword("");
-                      setTokenTotpCode("");
-                      setError("");
+                      setShowApiTokenSection(false)
+                      setTokenPassword("")
+                      setTokenTotpCode("")
+                      setError("")
                     }}
                     variant="outline"
                     className="flex-1"
@@ -927,23 +832,10 @@ export function Settings() {
                         onClick={() => setApiTokenVisible(!apiTokenVisible)}
                         className="h-7 w-7 p-0"
                       >
-                        {apiTokenVisible ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        {apiTokenVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={copyApiToken}
-                        className="h-7 w-7 p-0"
-                      >
-                        <Copy
-                          className={`h-4 w-4 ${
-                            tokenCopied ? "text-green-500" : ""
-                          }`}
-                        />
+                      <Button size="sm" variant="ghost" onClick={copyApiToken} className="h-7 w-7 p-0">
+                        <Copy className={`h-4 w-4 ${tokenCopied ? "text-green-500" : ""}`} />
                       </Button>
                     </div>
                   </div>
@@ -958,21 +850,18 @@ export function Settings() {
                 <div className="space-y-2">
                   <p className="text-sm font-medium">How to use this token:</p>
                   <div className="bg-muted/50 rounded p-3 text-xs font-mono">
-                    <p className="text-muted-foreground mb-2">
-                      # Add to request headers:
-                    </p>
+                    <p className="text-muted-foreground mb-2"># Add to request headers:</p>
                     <p>Authorization: Bearer YOUR_TOKEN_HERE</p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    See the README documentation for complete integration
-                    examples with Homepage and Home Assistant.
+                    See the README documentation for complete integration examples with Homepage and Home Assistant.
                   </p>
                 </div>
 
                 <Button
                   onClick={() => {
-                    setApiToken("");
-                    setShowApiTokenSection(false);
+                    setApiToken("")
+                    setShowApiTokenSection(false)
                   }}
                   variant="outline"
                   className="w-full"
@@ -984,7 +873,7 @@ export function Settings() {
           </CardContent>
         </Card>
       )}
-
+      
       {/* ProxMenux unit settings*/}
       <Card>
         <CardHeader>
@@ -1028,9 +917,7 @@ export function Settings() {
             <Wrench className="h-5 w-5 text-orange-500" />
             <CardTitle>ProxMenux Optimizations</CardTitle>
           </div>
-          <CardDescription>
-            System optimizations and utilities installed via ProxMenux
-          </CardDescription>
+          <CardDescription>System optimizations and utilities installed via ProxMenux</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingTools ? (
@@ -1040,22 +927,14 @@ export function Settings() {
           ) : proxmenuxTools.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <p className="text-muted-foreground">
-                No ProxMenux optimizations installed yet
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Run ProxMenux to configure system optimizations
-              </p>
+              <p className="text-muted-foreground">No ProxMenux optimizations installed yet</p>
+              <p className="text-sm text-muted-foreground mt-1">Run ProxMenux to configure system optimizations</p>
             </div>
           ) : (
             <div className="space-y-2">
               <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Installed Tools
-                </span>
-                <span className="text-sm font-semibold text-orange-500">
-                  {proxmenuxTools.length} active
-                </span>
+                <span className="text-sm font-medium text-muted-foreground">Installed Tools</span>
+                <span className="text-sm font-semibold text-orange-500">{proxmenuxTools.length} active</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {proxmenuxTools.map((tool) => (
@@ -1077,10 +956,10 @@ export function Settings() {
         open={show2FASetup}
         onClose={() => setShow2FASetup(false)}
         onSuccess={() => {
-          setSuccess("2FA enabled successfully!");
-          checkAuthStatus();
+          setSuccess("2FA enabled successfully!")
+          checkAuthStatus()
         }}
       />
     </div>
-  );
+  )
 }
