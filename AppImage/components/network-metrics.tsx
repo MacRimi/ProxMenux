@@ -9,6 +9,7 @@ import useSWR from "swr"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
+import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 
 interface NetworkData {
   interfaces: NetworkInterface[]
@@ -132,11 +133,6 @@ const fetcher = async (url: string): Promise<NetworkData> => {
   return fetchApi<NetworkData>(url)
 }
 
-const getUnitsSettings = (): "Bytes" | "Bits" => {
-  if (typeof window === "undefined") return "Bytes"
-  const raw = localStorage.getItem("proxmenux-network-unit")
-  return raw && raw.toLowerCase() === "bits" ? "Bits" : "Bytes"
-}
 
 export function NetworkMetrics() {
   const {
@@ -155,10 +151,10 @@ export function NetworkMetrics() {
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
   const [interfaceTotals, setInterfaceTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
 
-  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
+  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">(() => getNetworkUnit())
 
   useEffect(() => {
-    setNetworkUnit(getUnitsSettings())
+    setNetworkUnit(getNetworkUnit())
 
     const handleUnitChange = (e: CustomEvent) => {
       setNetworkUnit(e.detail === "Bits" ? "Bits" : "Bytes")
@@ -210,8 +206,8 @@ export function NetworkMetrics() {
     )
   }
 
-  const trafficInFormatted = formatStorage(networkTotals.received * 1024 * 1024 * 1024) // Convert GB to bytes
-  const trafficOutFormatted = formatStorage(networkTotals.sent * 1024 * 1024 * 1024)
+  const trafficInFormatted = formatNetworkTraffic(networkTotals.received * 1024 * 1024 * 1024, networkUnit)
+  const trafficOutFormatted = formatNetworkTraffic(networkTotals.sent * 1024 * 1024 * 1024, networkUnit)
   const packetsRecvK = networkData.traffic.packets_recv ? (networkData.traffic.packets_recv / 1000).toFixed(0) : "0"
 
   const totalErrors = (networkData.traffic.errin || 0) + (networkData.traffic.errout || 0)
@@ -731,13 +727,6 @@ export function NetworkMetrics() {
 
                 const displayInterface = currentInterfaceData || selectedInterface
 
-                console.log("[v0] Selected Interface:", selectedInterface.name)
-                console.log("[v0] Selected Interface bytes_recv:", selectedInterface.bytes_recv)
-                console.log("[v0] Selected Interface bytes_sent:", selectedInterface.bytes_sent)
-                console.log("[v0] Display Interface bytes_recv:", displayInterface.bytes_recv)
-                console.log("[v0] Display Interface bytes_sent:", displayInterface.bytes_sent)
-                console.log("[v0] Modal Network Data available:", !!modalNetworkData)
-
                 return (
                   <>
                     {/* Basic Information */}
@@ -888,29 +877,32 @@ export function NetworkMetrics() {
                           )
                         </h3>
                         <div className="space-y-4">
-                          {/* Traffic Data - Top Row */}
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <div className="text-sm text-muted-foreground">Bytes Received</div>
+                              <div className="text-sm text-muted-foreground">
+                                {networkUnit === "Bits" ? "Bits Received" : "Bytes Received"}
+                              </div>
                               <div className="font-medium text-green-500 text-lg">
-                                {formatStorage(interfaceTotals.received * 1024 * 1024 * 1024)}
+                                {formatNetworkTraffic(interfaceTotals.received * 1024 * 1024 * 1024, networkUnit)}
                               </div>
                             </div>
                             <div>
-                              <div className="text-sm text-muted-foreground">Bytes Sent</div>
+                              <div className="text-sm text-muted-foreground">
+                                {networkUnit === "Bits" ? "Bits Sent" : "Bytes Sent"}
+                              </div>
                               <div className="font-medium text-blue-500 text-lg">
-                                {formatStorage(interfaceTotals.sent * 1024 * 1024 * 1024)}
+                                {formatNetworkTraffic(interfaceTotals.sent * 1024 * 1024 * 1024, networkUnit)}
                               </div>
                             </div>
                           </div>
 
-                          {/* Network Traffic Chart - Full Width Below */}
                           <div className="bg-muted/30 rounded-lg p-4">
                             <NetworkTrafficChart
                               timeframe={modalTimeframe}
                               interfaceName={displayInterface.name}
                               onTotalsCalculated={setInterfaceTotals}
                               refreshInterval={60000}
+                              networkUnit={networkUnit}
                             />
                           </div>
 
@@ -951,15 +943,19 @@ export function NetworkMetrics() {
                         <h3 className="text-sm font-semibold text-muted-foreground mb-4">Traffic since last boot</h3>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <div className="text-sm text-muted-foreground">Bytes Received</div>
+                            <div className="text-sm text-muted-foreground">
+                              {networkUnit === "Bits" ? "Bits Received" : "Bytes Received"}
+                            </div>
                             <div className="font-medium text-green-500 text-lg">
-                              {formatBytes(displayInterface.bytes_recv)}
+                              {formatNetworkTraffic(displayInterface.bytes_recv || 0, networkUnit)}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Bytes Sent</div>
+                            <div className="text-sm text-muted-foreground">
+                              {networkUnit === "Bits" ? "Bits Sent" : "Bytes Sent"}
+                            </div>
                             <div className="font-medium text-blue-500 text-lg">
-                              {formatBytes(displayInterface.bytes_sent)}
+                              {formatNetworkTraffic(displayInterface.bytes_sent || 0, networkUnit)}
                             </div>
                           </div>
                           <div>

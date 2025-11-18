@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { Loader2 } from 'lucide-react'
 import { fetchApi } from "@/lib/api-config"
+import { getNetworkUnit } from "@/lib/format-network"
 
 interface NetworkMetricsData {
   time: string
@@ -47,7 +48,7 @@ export function NetworkTrafficChart({
   interfaceName,
   onTotalsCalculated,
   refreshInterval = 60000,
-  networkUnit = "Bytes", // Default to Bytes
+  networkUnit: networkUnitProp, // Rename prop to avoid conflict
 }: NetworkTrafficChartProps) {
   const [data, setData] = useState<NetworkMetricsData[]>([])
   const [loading, setLoading] = useState(true)
@@ -57,11 +58,36 @@ export function NetworkTrafficChart({
     netIn: true,
     netOut: true,
   })
+  
+  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">(
+    networkUnitProp || getNetworkUnit()
+  )
+
+  useEffect(() => {
+    const handleUnitChange = () => {
+      const newUnit = getNetworkUnit()
+      setNetworkUnit(newUnit)
+    }
+
+    window.addEventListener("networkUnitChanged", handleUnitChange)
+    window.addEventListener("storage", handleUnitChange)
+
+    return () => {
+      window.removeEventListener("networkUnitChanged", handleUnitChange)
+      window.removeEventListener("storage", handleUnitChange)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (networkUnitProp) {
+      setNetworkUnit(networkUnitProp)
+    }
+  }, [networkUnitProp])
 
   useEffect(() => {
     setIsInitialLoad(true)
     fetchMetrics()
-  }, [timeframe, interfaceName, networkUnit]) // Added networkUnit to dependencies
+  }, [timeframe, interfaceName, networkUnit])
 
   useEffect(() => {
     if (refreshInterval > 0) {

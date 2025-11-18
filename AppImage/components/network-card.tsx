@@ -2,9 +2,10 @@
 
 import { Card, CardContent } from "./ui/card"
 import { Badge } from "./ui/badge"
-import { Wifi, Zap } from "lucide-react"
+import { Wifi, Zap } from 'lucide-react'
 import { useState, useEffect } from "react"
 import { fetchApi } from "../lib/api-config"
+import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 
 interface NetworkCardProps {
   interface_: {
@@ -59,38 +60,36 @@ const getVMTypeBadge = (vmType: string | undefined) => {
   return { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: "Unknown" }
 }
 
-const formatBytes = (bytes: number | undefined): string => {
-  if (!bytes || bytes === 0) return "0 B"
-  const k = 1024
-  const sizes = ["B", "KB", "MB", "GB", "TB"]
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
-}
-
 const formatSpeed = (speed: number): string => {
   if (speed === 0) return "N/A"
   if (speed >= 1000) return `${(speed / 1000).toFixed(1)} Gbps`
   return `${speed} Mbps`
 }
 
-const formatStorage = (bytes: number): string => {
-  if (bytes === 0) return "0 B"
-  const k = 1024
-  const sizes = ["B", "KB", "MB", "GB", "TB", "PB"]
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  const value = bytes / Math.pow(k, i)
-  const decimals = value >= 10 ? 1 : 2
-  return `${value.toFixed(decimals)} ${sizes[i]}`
-}
-
 export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps) {
   const typeBadge = getInterfaceTypeBadge(interface_.type)
   const vmTypeBadge = interface_.vm_type ? getVMTypeBadge(interface_.vm_type) : null
+
+  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">(getNetworkUnit())
 
   const [trafficData, setTrafficData] = useState<{ received: number; sent: number }>({
     received: 0,
     sent: 0,
   })
+
+  useEffect(() => {
+    const handleUnitChange = () => {
+      setNetworkUnit(getNetworkUnit())
+    }
+
+    window.addEventListener("networkUnitChanged", handleUnitChange)
+    window.addEventListener("storage", handleUnitChange)
+
+    return () => {
+      window.removeEventListener("networkUnitChanged", handleUnitChange)
+      window.removeEventListener("storage", handleUnitChange)
+    }
+  }, [])
 
   useEffect(() => {
     const fetchTrafficData = async () => {
@@ -207,15 +206,15 @@ export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps
               <div className="font-medium text-foreground text-xs">
                 {interface_.status.toLowerCase() === "up" && interface_.vm_type !== "vm" ? (
                   <>
-                    <span className="text-green-500">↓ {formatStorage(trafficData.received * 1024 * 1024 * 1024)}</span>
+                    <span className="text-green-500">↓ {formatNetworkTraffic(trafficData.received * 1024 * 1024 * 1024, networkUnit)}</span>
                     {" / "}
-                    <span className="text-blue-500">↑ {formatStorage(trafficData.sent * 1024 * 1024 * 1024)}</span>
+                    <span className="text-blue-500">↑ {formatNetworkTraffic(trafficData.sent * 1024 * 1024 * 1024, networkUnit)}</span>
                   </>
                 ) : (
                   <>
-                    <span className="text-green-500">↓ {formatBytes(interface_.bytes_recv)}</span>
+                    <span className="text-green-500">↓ {formatNetworkTraffic(interface_.bytes_recv || 0, networkUnit)}</span>
                     {" / "}
-                    <span className="text-blue-500">↑ {formatBytes(interface_.bytes_sent)}</span>
+                    <span className="text-blue-500">↑ {formatNetworkTraffic(interface_.bytes_sent || 0, networkUnit)}</span>
                   </>
                 )}
               </div>

@@ -10,6 +10,7 @@ import { APP_VERSION } from "./release-notes-modal"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { getNetworkUnit } from "../lib/format-network"
 
 interface ProxMenuxTool {
   key: string
@@ -55,8 +56,7 @@ export function Settings() {
   const [generatingToken, setGeneratingToken] = useState(false)
   const [tokenCopied, setTokenCopied] = useState(false)
 
-  // Network unit settings state
-  const [networkUnitSettings, setNetworkUnitSettings] = useState("Bytes")
+  const [networkUnitSettings, setNetworkUnitSettings] = useState<"Bytes" | "Bits">("Bytes")
   const [loadingUnitSettings, setLoadingUnitSettings] = useState(true)
 
   useEffect(() => {
@@ -354,14 +354,23 @@ export function Settings() {
   }
 
   const changeNetworkUnit = (unit: string) => {
-    localStorage.setItem("proxmenux-network-unit", unit)
-    setNetworkUnitSettings(unit)
+    const networkUnit = unit as "Bytes" | "Bits"
+    localStorage.setItem("proxmenux-network-unit", networkUnit)
+    setNetworkUnitSettings(networkUnit)
+    
     // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent("networkUnitChanged", { detail: unit }))
+    window.dispatchEvent(new CustomEvent("networkUnitChanged", { detail: networkUnit }))
+    
+    // Also dispatch storage event for backward compatibility
+    window.dispatchEvent(new StorageEvent("storage", {
+      key: "proxmenux-network-unit",
+      newValue: networkUnit,
+      url: window.location.href
+    }))
   }
 
   const getUnitsSettings = () => {
-    const networkUnit = localStorage.getItem("proxmenux-network-unit") || "Bytes"
+    const networkUnit = getNetworkUnit()
     setNetworkUnitSettings(networkUnit)
     setLoadingUnitSettings(false)
   }

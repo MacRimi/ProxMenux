@@ -8,24 +8,11 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
-import {
-  Server,
-  Play,
-  Square,
-  Cpu,
-  MemoryStick,
-  HardDrive,
-  Network,
-  Power,
-  RotateCcw,
-  StopCircle,
-  Container,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react"
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp } from 'lucide-react'
 import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { formatStorage } from "@/lib/utils" // Import formatStorage utility
+import { formatNetworkTraffic, getNetworkUnit } from "@/lib/format-network"
 import { fetchApi } from "../lib/api-config"
 
 interface VMData {
@@ -137,8 +124,15 @@ const fetcher = async (url: string) => {
   return fetchApi(url)
 }
 
-const formatBytes = (bytes: number | undefined): string => {
-  if (!bytes || bytes === 0) return "0 B"
+const formatBytes = (bytes: number | undefined, isNetwork: boolean = false): string => {
+  if (!bytes || bytes === 0) return isNetwork ? "0 B/s" : "0 B"
+  
+  if (isNetwork) {
+    const networkUnit = getNetworkUnit()
+    return formatNetworkTraffic(bytes, networkUnit)
+  }
+  
+  // For non-network (disk), use standard bytes
   const k = 1024
   const sizes = ["B", "KB", "MB", "GB", "TB"]
   const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -272,6 +266,7 @@ export function VirtualMachines() {
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null)
   const [ipsLoaded, setIpsLoaded] = useState(false)
   const [loadingIPs, setLoadingIPs] = useState(false)
+  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
 
   useEffect(() => {
     const fetchLXCIPs = async () => {
@@ -323,6 +318,23 @@ export function VirtualMachines() {
 
     fetchLXCIPs()
   }, [vmData, ipsLoaded, loadingIPs])
+
+  // Load initial network unit and listen for changes
+  useEffect(() => {
+    setNetworkUnit(getNetworkUnit())
+
+    const handleNetworkUnitChange = () => {
+      setNetworkUnit(getNetworkUnit())
+    }
+
+    window.addEventListener("networkUnitChanged", handleNetworkUnitChange)
+    window.addEventListener("storage", handleNetworkUnitChange)
+
+    return () => {
+      window.removeEventListener("networkUnitChanged", handleNetworkUnitChange)
+      window.removeEventListener("storage", handleNetworkUnitChange)
+    }
+  }, [])
 
   const handleVMClick = async (vm: VMData) => {
     setSelectedVM(vm)
@@ -924,11 +936,11 @@ export function VirtualMachines() {
                           <div className="text-sm font-semibold space-y-0.5">
                             <div className="flex items-center gap-1">
                               <HardDrive className="h-3 w-3 text-green-500" />
-                              <span className="text-green-500">↓ {formatBytes(vm.diskread)}</span>
+                              <span className="text-green-500">↓ {formatBytes(vm.diskread, false)}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <HardDrive className="h-3 w-3 text-blue-500" />
-                              <span className="text-blue-500">↑ {formatBytes(vm.diskwrite)}</span>
+                              <span className="text-blue-500">↑ {formatBytes(vm.diskwrite, false)}</span>
                             </div>
                           </div>
                         </div>
@@ -938,11 +950,11 @@ export function VirtualMachines() {
                           <div className="text-sm font-semibold space-y-0.5">
                             <div className="flex items-center gap-1">
                               <Network className="h-3 w-3 text-green-500" />
-                              <span className="text-green-500">↓ {formatBytes(vm.netin)}</span>
+                              <span className="text-green-500">↓ {formatBytes(vm.netin, true)}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <Network className="h-3 w-3 text-blue-500" />
-                              <span className="text-blue-500">↑ {formatBytes(vm.netout)}</span>
+                              <span className="text-blue-500">↑ {formatBytes(vm.netout, true)}</span>
                             </div>
                           </div>
                         </div>
@@ -1167,11 +1179,11 @@ export function VirtualMachines() {
                                 <div className="space-y-1">
                                   <div className="text-sm text-green-500 flex items-center gap-1">
                                     <span>↓</span>
-                                    <span>{((selectedVM.netin || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                    <span>{formatNetworkTraffic(selectedVM.netin || 0, networkUnit)}</span>
                                   </div>
                                   <div className="text-sm text-blue-500 flex items-center gap-1">
                                     <span>↑</span>
-                                    <span>{((selectedVM.netout || 0) / 1024 ** 2).toFixed(2)} MB</span>
+                                    <span>{formatNetworkTraffic(selectedVM.netout || 0, networkUnit)}</span>
                                   </div>
                                 </div>
                               </div>
