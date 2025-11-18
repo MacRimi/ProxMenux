@@ -95,12 +95,9 @@ export function Settings() {
   const getUnitsSettings = () => {
     const networkUnit =
       localStorage.getItem("proxmenux-network-unit") || "Bytes";
-    // wait 2 seconds to simulate loading
     console.log("[v0] Loaded network unit from localStorage:", networkUnit);
-    setTimeout(() => {
-      setNetworkUnitSettings(networkUnit);
-      setLoadingUnitSettings(false);
-    }, 1000);
+    setNetworkUnitSettings(networkUnit);
+    setLoadingUnitSettings(false);
   };
 
   const checkAuthStatus = async () => {
