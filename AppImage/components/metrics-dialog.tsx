@@ -3,10 +3,9 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2 } from "lucide-react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { fetchApi } from "@/lib/api-config"
-import { getUnitsSettings, formatNetworkTraffic } from "@/lib/network-utils"
 
 interface MetricsViewProps {
   vmid: number
@@ -85,7 +84,6 @@ const CustomDiskTooltip = ({ active, payload, label }: any) => {
 
 const CustomNetworkTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    const unit = networkUnit === "Bits" ? "Mb" : "MB"
     return (
       <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
         <p className="text-sm font-semibold text-white mb-2">{label}</p>
@@ -94,7 +92,7 @@ const CustomNetworkTooltip = ({ active, payload, label }: any) => {
             <div key={index} className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
               <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
-              <span className="text-sm font-semibold text-white">{entry.value} {unit}</span>
+              <span className="text-sm font-semibold text-white">{entry.value} MB</span>
             </div>
           ))}
         </div>
@@ -111,20 +109,10 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
   const [error, setError] = useState<string | null>(null)
   const [hiddenDiskLines, setHiddenDiskLines] = useState<string[]>([])
   const [hiddenNetworkLines, setHiddenNetworkLines] = useState<string[]>([])
-  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
 
   useEffect(() => {
-    const settings = getUnitsSettings()
-    setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
-    
-    const handleStorageChange = () => {
-      const settings = getUnitsSettings()
-      setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
-    }
-    
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
-  }, [])
+    fetchMetrics()
+  }, [vmid, timeframe])
 
   const fetchMetrics = async () => {
     setLoading(true)
@@ -169,9 +157,6 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
           })
         }
 
-        const netinValue = item.netin ? (item.netin / 1024 / 1024) : 0
-        const netoutValue = item.netout ? (item.netout / 1024 / 1024) : 0
-
         return {
           time: timeLabel,
           timestamp: item.time,
@@ -179,8 +164,8 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
           memory: item.mem ? Number(((item.mem / item.maxmem) * 100).toFixed(2)) : 0,
           memoryGB: item.mem ? Number((item.mem / 1024 / 1024 / 1024).toFixed(2)) : 0,
           maxMemoryGB: item.maxmem ? Number((item.maxmem / 1024 / 1024 / 1024).toFixed(2)) : 0,
-          netin: networkUnit === "Bits" ? Number((netinValue * 8).toFixed(2)) : Number(netinValue.toFixed(2)),
-          netout: networkUnit === "Bits" ? Number((netoutValue * 8).toFixed(2)) : Number(netoutValue.toFixed(2)),
+          netin: item.netin ? Number((item.netin / 1024 / 1024).toFixed(2)) : 0,
+          netout: item.netout ? Number((item.netout / 1024 / 1024).toFixed(2)) : 0,
           diskread: item.diskread ? Number((item.diskread / 1024 / 1024).toFixed(2)) : 0,
           diskwrite: item.diskwrite ? Number((item.diskwrite / 1024 / 1024).toFixed(2)) : 0,
         }
@@ -193,10 +178,6 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
       setLoading(false)
     }
   }
-
-  useEffect(() => {
-    fetchMetrics()
-  }, [vmid, timeframe])
 
   const formatXAxisTick = (tick: any) => {
     return tick
@@ -378,7 +359,7 @@ export function MetricsView({ vmid, vmName, vmType, onBack }: MetricsViewProps) 
                 stroke="currentColor"
                 className="text-foreground"
                 tick={{ fill: "currentColor" }}
-                label={{ value: networkUnit === "Bits" ? "Mb" : "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
+                label={{ value: "MB", angle: -90, position: "insideLeft", fill: "currentColor" }}
                 domain={[0, "dataMax"]}
               />
               <Tooltip content={<CustomNetworkTooltip />} />

@@ -2,10 +2,9 @@
 
 import { Card, CardContent } from "./ui/card"
 import { Badge } from "./ui/badge"
-import { Wifi, Zap } from 'lucide-react'
+import { Wifi, Zap } from "lucide-react"
 import { useState, useEffect } from "react"
 import { fetchApi } from "../lib/api-config"
-import { getUnitsSettings, formatNetworkTraffic } from "../lib/network-utils"
 
 interface NetworkCardProps {
   interface_: {
@@ -88,30 +87,10 @@ export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps
   const typeBadge = getInterfaceTypeBadge(interface_.type)
   const vmTypeBadge = interface_.vm_type ? getVMTypeBadge(interface_.vm_type) : null
 
-  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
-  
   const [trafficData, setTrafficData] = useState<{ received: number; sent: number }>({
     received: 0,
     sent: 0,
   })
-
-  useEffect(() => {
-    const settings = getUnitsSettings()
-    setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
-    
-    const handleSettingsChange = () => {
-      const settings = getUnitsSettings()
-      setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
-    }
-    
-    window.addEventListener('storage', handleSettingsChange)
-    window.addEventListener('unitsSettingsChanged', handleSettingsChange)
-    
-    return () => {
-      window.removeEventListener('storage', handleSettingsChange)
-      window.removeEventListener('unitsSettingsChanged', handleSettingsChange)
-    }
-  }, [])
 
   useEffect(() => {
     const fetchTrafficData = async () => {
@@ -228,9 +207,9 @@ export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps
               <div className="font-medium text-foreground text-xs">
                 {interface_.status.toLowerCase() === "up" && interface_.vm_type !== "vm" ? (
                   <>
-                    <span className="text-green-500">↓ {formatNetworkTraffic(trafficData.received, networkUnit)}</span>
+                    <span className="text-green-500">↓ {formatStorage(trafficData.received * 1024 * 1024 * 1024)}</span>
                     {" / "}
-                    <span className="text-blue-500">↑ {formatNetworkTraffic(trafficData.sent, networkUnit)}</span>
+                    <span className="text-blue-500">↑ {formatStorage(trafficData.sent * 1024 * 1024 * 1024)}</span>
                   </>
                 ) : (
                   <>

@@ -28,41 +28,6 @@ import { MetricsView } from "./metrics-dialog"
 import { formatStorage } from "@/lib/utils" // Import formatStorage utility
 import { fetchApi } from "../lib/api-config"
 
-const getUnitsSettings = () => {
-  if (typeof window === 'undefined') return { networkUnit: 'Bytes' as const }
-  
-  try {
-    const settings = localStorage.getItem('unitsSettings')
-    if (settings) {
-      const parsed = JSON.parse(settings)
-      return { networkUnit: parsed.networkUnit || 'Bytes' }
-    }
-  } catch (e) {
-    console.error('[v0] Error reading units settings:', e)
-  }
-  
-  return { networkUnit: 'Bytes' as const }
-}
-
-const formatBytes = (bytes: number | undefined, unit: "Bytes" | "Bits" = "Bytes"): string => {
-  if (!bytes || bytes === 0) return unit === "Bits" ? "0 b" : "0 B"
-  
-  if (unit === "Bits") {
-    // Convert bytes to bits (*8)
-    const bits = bytes * 8
-    const k = 1000 // Use decimal for bits (networking standard)
-    const sizes = ["b", "Kb", "Mb", "Gb", "Tb"]
-    const i = Math.floor(Math.log(bits) / Math.log(k))
-    return `${(bits / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
-  } else {
-    // Bytes mode (existing behavior)
-    const k = 1024
-    const sizes = ["B", "KB", "MB", "GB", "TB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
-  }
-}
-
 interface VMData {
   vmid: number
   name: string
@@ -172,6 +137,13 @@ const fetcher = async (url: string) => {
   return fetchApi(url)
 }
 
+const formatBytes = (bytes: number | undefined): string => {
+  if (!bytes || bytes === 0) return "0 B"
+  const k = 1024
+  const sizes = ["B", "KB", "MB", "GB", "TB"]
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+}
 
 const formatUptime = (seconds: number) => {
   const days = Math.floor(seconds / 86400)
@@ -300,20 +272,6 @@ export function VirtualMachines() {
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null)
   const [ipsLoaded, setIpsLoaded] = useState(false)
   const [loadingIPs, setLoadingIPs] = useState(false)
-  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
-
-  useEffect(() => {
-    const settings = getUnitsSettings()
-    setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
-    
-    const handleStorageChange = () => {
-      const settings = getUnitsSettings()
-      setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
-    }
-    
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
-  }, [])
 
   useEffect(() => {
     const fetchLXCIPs = async () => {
@@ -980,11 +938,11 @@ export function VirtualMachines() {
                           <div className="text-sm font-semibold space-y-0.5">
                             <div className="flex items-center gap-1">
                               <Network className="h-3 w-3 text-green-500" />
-                              <span className="text-green-500">↓ {formatBytes(vm.netin, networkUnit)}</span>
+                              <span className="text-green-500">↓ {formatBytes(vm.netin)}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <Network className="h-3 w-3 text-blue-500" />
-                              <span className="text-blue-500">↑ {formatBytes(vm.netout, networkUnit)}</span>
+                              <span className="text-blue-500">↑ {formatBytes(vm.netout)}</span>
                             </div>
                           </div>
                         </div>
@@ -1194,11 +1152,11 @@ export function VirtualMachines() {
                                 <div className="space-y-1">
                                   <div className="text-sm text-green-500 flex items-center gap-1">
                                     <span>↓</span>
-                                    <span>{formatBytes(selectedVM.diskread || 0, "Bytes")}</span>
+                                    <span>{((selectedVM.diskread || 0) / 1024 ** 2).toFixed(2)} MB</span>
                                   </div>
                                   <div className="text-sm text-blue-500 flex items-center gap-1">
                                     <span>↑</span>
-                                    <span>{formatBytes(selectedVM.diskwrite || 0, "Bytes")}</span>
+                                    <span>{((selectedVM.diskwrite || 0) / 1024 ** 2).toFixed(2)} MB</span>
                                   </div>
                                 </div>
                               </div>
@@ -1209,11 +1167,11 @@ export function VirtualMachines() {
                                 <div className="space-y-1">
                                   <div className="text-sm text-green-500 flex items-center gap-1">
                                     <span>↓</span>
-                                    <span>{formatBytes(selectedVM.netin || 0, networkUnit)}</span>
+                                    <span>{((selectedVM.netin || 0) / 1024 ** 2).toFixed(2)} MB</span>
                                   </div>
                                   <div className="text-sm text-blue-500 flex items-center gap-1">
                                     <span>↑</span>
-                                    <span>{formatBytes(selectedVM.netout || 0, networkUnit)}</span>
+                                    <span>{((selectedVM.netout || 0) / 1024 ** 2).toFixed(2)} MB</span>
                                   </div>
                                 </div>
                               </div>

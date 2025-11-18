@@ -9,7 +9,7 @@ import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Wrench, Pac
 import { APP_VERSION } from "./release-notes-modal"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select" // Added Select components
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 
 interface ProxMenuxTool {
   key: string
@@ -55,32 +55,15 @@ export function Settings() {
   const [generatingToken, setGeneratingToken] = useState(false)
   const [tokenCopied, setTokenCopied] = useState(false)
 
-  const [networkUnitSettings, setNetworkUnitSettings] = useState("Bytes");
-  const [loadingUnitSettings, setLoadingUnitSettings] = useState(true);
+  // Network unit settings state
+  const [networkUnitSettings, setNetworkUnitSettings] = useState("Bytes")
+  const [loadingUnitSettings, setLoadingUnitSettings] = useState(true)
 
   useEffect(() => {
     checkAuthStatus()
     loadProxmenuxTools()
-    getUnitsSettings(); // Load network unit settings on mount
+    getUnitsSettings() // Load units settings on mount
   }, [])
-
-  const changeNetworkUnit = (unit: string) => {
-    const settings = { networkUnit: unit }
-    localStorage.setItem('unitsSettings', JSON.stringify(settings))
-    localStorage.setItem("proxmenux-network-unit", unit); // Keep legacy for backwards compatibility
-    setNetworkUnitSettings(unit);
-    
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('unitsSettingsChanged', { detail: settings }))
-    window.dispatchEvent(new Event('storage'))
-  };
-
-  const getUnitsSettings = () => {
-    const networkUnit =
-      localStorage.getItem("proxmenux-network-unit") || "Bytes";
-    setNetworkUnitSettings(networkUnit);
-    setLoadingUnitSettings(false);
-  };
 
   const checkAuthStatus = async () => {
     try {
@@ -368,6 +351,19 @@ export function Settings() {
       ...prev,
       [version]: !prev[version],
     }))
+  }
+
+  const changeNetworkUnit = (unit: string) => {
+    localStorage.setItem("proxmenux-network-unit", unit)
+    setNetworkUnitSettings(unit)
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent("networkUnitChanged", { detail: unit }))
+  }
+
+  const getUnitsSettings = () => {
+    const networkUnit = localStorage.getItem("proxmenux-network-unit") || "Bytes"
+    setNetworkUnitSettings(networkUnit)
+    setLoadingUnitSettings(false)
   }
 
   return (
@@ -671,6 +667,37 @@ export function Settings() {
         </CardContent>
       </Card>
 
+      {/* Network Units Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Ruler className="h-5 w-5 text-green-500" />
+            <CardTitle>Network Units</CardTitle>
+          </div>
+          <CardDescription>Change how network traffic is displayed</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingUnitSettings ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full" />
+            </div>
+          ) : (
+            <div className="text-foreground flex items-center justify-between">
+              <div className="flex items-center">Network Unit Display</div>
+              <Select value={networkUnitSettings} onValueChange={changeNetworkUnit}>
+                <SelectTrigger className="w-28 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bytes">Bytes</SelectItem>
+                  <SelectItem value="Bits">Bits</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* API Access Tokens */}
       {authEnabled && (
         <Card>
@@ -863,42 +890,6 @@ export function Settings() {
           </CardContent>
         </Card>
       )}
-
-      {/* ProxMenux Unit Settings */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Ruler className="h-5 w-5 text-green-500" />
-            <CardTitle>ProxMenux Unit Settings</CardTitle>
-          </div>
-          <CardDescription>Change settings related to units</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loadingUnitSettings ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full" />
-            </div>
-          ) : (
-            <div className="text-foreground flex items-center justify-between">
-              <div className="flex items-center">
-                Network Unit Display
-              </div>
-              <Select
-                value={networkUnitSettings}
-                onValueChange={changeNetworkUnit}
-              >
-                <SelectTrigger className="w-28 h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Bits">Bits</SelectItem>
-                  <SelectItem value="Bytes">Bytes</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* ProxMenux Optimizations */}
       <Card>

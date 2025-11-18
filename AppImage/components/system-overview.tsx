@@ -9,7 +9,6 @@ import { NodeMetricsCharts } from "./node-metrics-charts"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { fetchApi } from "../lib/api-config"
-import { getUnitsSettings } from "../lib/network-utils"
 
 interface SystemData {
   cpu_usage: number
@@ -147,6 +146,12 @@ const fetchProxmoxStorageData = async (): Promise<ProxmoxStorageData | null> => 
   }
 }
 
+const getUnitsSettings = (): "Bytes" | "Bits" => {
+  if (typeof window === "undefined") return "Bytes"
+  const raw = window.localStorage.getItem("proxmenux-network-unit")
+  return raw && raw.toLowerCase() === "bits" ? "Bits" : "Bytes"
+}
+
 export function SystemOverview() {
   const [systemData, setSystemData] = useState<SystemData | null>(null)
   const [vmData, setVmData] = useState<VMData[]>([])
@@ -162,25 +167,7 @@ export function SystemOverview() {
   const [error, setError] = useState<string | null>(null)
   const [networkTimeframe, setNetworkTimeframe] = useState("day")
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
-  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
-
-  useEffect(() => {
-    const settings = getUnitsSettings()
-    setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
-    
-    const handleSettingsChange = () => {
-      const settings = getUnitsSettings()
-      setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
-    }
-    
-    window.addEventListener('storage', handleSettingsChange)
-    window.addEventListener('unitsSettingsChanged', handleSettingsChange)
-    
-    return () => {
-      window.removeEventListener('storage', handleSettingsChange)
-      window.removeEventListener('unitsSettingsChanged', handleSettingsChange)
-    }
-  }, [])
+  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes") // Added networkUnit state
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -235,11 +222,20 @@ export function SystemOverview() {
       if (data) setNetworkData(data)
     }, 59000)
 
+    setNetworkUnit(getUnitsSettings()) // Load initial setting
+
+    const handleUnitChange = (e: CustomEvent) => {
+      setNetworkUnit(e.detail === "Bits" ? "Bits" : "Bytes")
+    }
+
+    window.addEventListener("networkUnitChanged" as any, handleUnitChange)
+
     return () => {
       clearInterval(systemInterval)
       clearInterval(vmInterval)
       clearInterval(storageInterval)
       clearInterval(networkInterval)
+      window.removeEventListener("networkUnitChanged" as any, handleUnitChange)
     }
   }, [])
 
@@ -318,13 +314,21 @@ export function SystemOverview() {
     return (bytes / 1024 ** 3).toFixed(2)
   }
 
-  const formatStorage = (sizeInGB: number): string => {
-    if (sizeInGB < 1) {
-      return `${(sizeInGB * 1024).toFixed(1)} MB`
-    } else if (sizeInGB > 999) {
-      return `${(sizeInGB / 1024).toFixed(2)} TB`
+  const formatStorage = (sizeInGB: number, unit: "Bytes" | "Bits" = "Bytes"): string => {
+    let size = sizeInGB
+    let suffix = "B"
+    
+    if (unit === "Bits") {
+      size = size * 8
+      suffix = "b"
+    }
+    
+    if (size < 1) {
+      return `${(size * 1024).toFixed(1)} M${suffix}`
+    } else if (size > 999) {
+      return `${(size / 1024).toFixed(2)} T${suffix}`
     } else {
-      return `${sizeInGB.toFixed(2)} GB`
+      return `${size.toFixed(2)} G${suffix}`
     }
   }
 
@@ -467,11 +471,9 @@ export function SystemOverview() {
         </Card>
 
         <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center">
-              <Thermometer className="h-5 w-5 mr-2" />
-              Temperature
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Temperature</CardTitle>
+            <Thermometer className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-xl lg:text-2xl font-bold text-foreground">
@@ -621,29 +623,18 @@ export function SystemOverview() {
                 <Network className="h-5 w-5 mr-2" />
                 Network Overview
               </div>
-              <div className="flex gap-2">
-                <Select value={networkTimeframe} onValueChange={setNetworkTimeframe}>
-                  <SelectTrigger className="w-28 h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hour">1 Hour</SelectItem>
-                    <SelectItem value="day">24 Hours</SelectItem>
-                    <SelectItem value="week">7 Days</SelectItem>
-                    <SelectItem value="month">30 Days</SelectItem>
-                    <SelectItem value="year">1 Year</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={networkUnit} onValueChange={setNetworkUnit}>
-                  <SelectTrigger className="w-28 h-8 text-xs ml-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Bytes">Bytes</SelectItem>
-                    <SelectItem value="Bits">Bits</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={networkTimeframe} onValueChange={setNetworkTimeframe}>
+                <SelectTrigger className="w-28 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hour">1 Hour</SelectItem>
+                  <SelectItem value="day">24 Hours</SelectItem>
+                  <SelectItem value="week">7 Days</SelectItem>
+                  <SelectItem value="month">30 Days</SelectItem>
+                  <SelectItem value="year">1 Year</SelectItem>
+                </SelectContent>
+              </Select>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -700,21 +691,21 @@ export function SystemOverview() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Received:</span>
                     <span className="text-lg font-semibold text-green-500 flex items-center gap-1">
-                      ↓ {formatNetworkTraffic(networkTotals.received, networkUnit)}
+                      ↓ {formatStorage(networkTotals.received, networkUnit)}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Sent:</span>
                     <span className="text-lg font-semibold text-blue-500 flex items-center gap-1">
-                      ↑ {formatNetworkTraffic(networkTotals.sent, networkUnit)}
+                      ↑ {formatStorage(networkTotals.sent, networkUnit)}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-border">
-                  <NetworkTrafficChart timeframe={networkTimeframe} onTotalsCalculated={setNetworkTotals} />
+                  <NetworkTrafficChart timeframe={networkTimeframe} onTotalsCalculated={setNetworkTotals} networkUnit={networkUnit} />
                 </div>
               </div>
             ) : (

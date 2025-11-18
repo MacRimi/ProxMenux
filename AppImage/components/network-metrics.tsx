@@ -133,10 +133,10 @@ const fetcher = async (url: string): Promise<NetworkData> => {
 }
 
 const getUnitsSettings = (): "Bytes" | "Bits" => {
-  const raw = localStorage.getItem("proxmenux-network-unit");
-  const networkUnit = raw && raw.toLowerCase() === "bits" ? "Bits" : "Bytes";
-  return networkUnit;
-};
+  if (typeof window === "undefined") return "Bytes"
+  const raw = localStorage.getItem("proxmenux-network-unit")
+  return raw && raw.toLowerCase() === "bits" ? "Bits" : "Bytes"
+}
 
 export function NetworkMetrics() {
   const {
@@ -154,13 +154,19 @@ export function NetworkMetrics() {
   const [modalTimeframe, setModalTimeframe] = useState<"hour" | "day" | "week" | "month" | "year">("day")
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
   const [interfaceTotals, setInterfaceTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
-  
-  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes");
+
+  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
 
   useEffect(() => {
-    const networkUnitSetting = getUnitsSettings();
-    setNetworkUnit(networkUnitSetting);
-  }, []);
+    setNetworkUnit(getUnitsSettings())
+
+    const handleUnitChange = (e: CustomEvent) => {
+      setNetworkUnit(e.detail === "Bits" ? "Bits" : "Bytes")
+    }
+
+    window.addEventListener("networkUnitChanged" as any, handleUnitChange)
+    return () => window.removeEventListener("networkUnitChanged" as any, handleUnitChange)
+  }, [])
 
   const { data: modalNetworkData } = useSWR<NetworkData>(selectedInterface ? "/api/network" : null, fetcher, {
     refreshInterval: 17000,
@@ -905,7 +911,6 @@ export function NetworkMetrics() {
                               interfaceName={displayInterface.name}
                               onTotalsCalculated={setInterfaceTotals}
                               refreshInterval={60000}
-                              networkUnit={networkUnit}
                             />
                           </div>
 
