@@ -446,58 +446,12 @@ def extract_vmid_from_interface(interface_name):
         pass
         return None, None
 
-# Global variable to cache the Proxmox node name
-_proxmox_node_cache = None
-_proxmox_node_cache_time = 0
-CACHE_TTL = 300  # 5 minutes cache
-
-def get_proxmox_node_name():
-    """Get the actual Proxmox node name from the API (cached for 5 minutes)
-    This is more reliable than socket.gethostname() which may return FQDN"""
-    global _proxmox_node_cache, _proxmox_node_cache_time
-    
-    # Return cached value if still valid
-    current_time = time.time()
-    if _proxmox_node_cache and (current_time - _proxmox_node_cache_time) < CACHE_TTL:
-        return _proxmox_node_cache
-    
-    try:
-        # Get node list from Proxmox
-        result = subprocess.run(
-            ['pvesh', 'get', '/nodes', '--output-format', 'json'],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        
-        if result.returncode == 0:
-            nodes = json.loads(result.stdout)
-            
-            # In a single-node setup or local node, there should be one node marked as local
-            # Or we can match by IP address
-            if nodes and len(nodes) > 0:
-                # For now, use the first node (usually the local one in single-node setups)
-                # In multi-node clusters, pvesh runs on the local node so the first result is typically local
-                node_name = nodes[0].get('node')
-                if node_name:
-                    # Cache the result
-                    _proxmox_node_cache = node_name
-                    _proxmox_node_cache_time = current_time
-                    return node_name
-        
-        # Fallback to hostname if API call fails
-        return socket.gethostname().split('.')[0]  # Use short hostname as fallback
-        
-    except Exception as e:
-        # Fallback to short hostname (without domain)
-        return socket.gethostname().split('.')[0]
-
 def get_vm_lxc_names():
     """Get VM and LXC names from Proxmox API (only from local node)"""
     vm_lxc_map = {}
     
     try:
-        local_node = get_proxmox_node_name()
+        local_node = socket.gethostname()
         
         result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
                               capture_output=True, text=True, timeout=10)
@@ -1185,6 +1139,8 @@ def get_pcie_link_speed(disk_name):
     pass
     return pcie_info
 
+# get_pcie_link_speed function definition ends here
+
 def get_smart_data(disk_name):
     """Get SMART data for a specific disk - Enhanced with multiple device type attempts"""
     smart_data = {
@@ -1689,7 +1645,7 @@ def get_smart_data(disk_name):
 def get_proxmox_storage():
     """Get Proxmox storage information using pvesh (filtered by local node)"""
     try:
-        local_node = get_proxmox_node_name()
+        local_node = socket.gethostname()
         
         result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'storage', '--output-format', 'json'], 
                               capture_output=True, text=True, timeout=10)
@@ -2241,7 +2197,7 @@ def get_proxmox_vms():
         all_vms = []
         
         try:
-            local_node = get_proxmox_node_name()
+            local_node = socket.gethostname()
             # print(f"[v0] Local node detected: {local_node}")
             pass
             
@@ -2540,7 +2496,7 @@ def get_ups_info():
             except Exception as e:
                 # print(f"[v0] Error getting UPS info for {ups_spec}: {e}")
                 pass
-    
+        
     except FileNotFoundError:
         # print("[v0] upsc not found")
         pass
@@ -4718,20 +4674,24 @@ def api_network_summary():
         pass
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/network/interfaces/<interface_name>/metrics', methods=['GET'])
+@app.route('/api/network/<interface_name>/metrics', methods=['GET'])
 @require_auth
-def get_interface_metrics(interface_name):
-    """Get historical metrics for a specific network interface"""
+def api_network_interface_metrics(interface_name):
+    """Get historical metrics (RRD data) for a specific network interface"""
     try:
-        timeframe = request.args.get('timeframe', 'day')
-        valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
+        timeframe = request.args.get('timeframe', 'day')  # hour, day, week, month, year
         
+
+        
+        # Validate timeframe
+        valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
         if timeframe not in valid_timeframes:
             # print(f"[v0] ERROR: Invalid timeframe: {timeframe}")
             pass
             return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
         
-        local_node = get_proxmox_node_name()
+        # Get local node name
+        local_node = socket.gethostname()
 
         
         # Determine interface type and get appropriate RRD data
@@ -4803,52 +4763,6 @@ def api_vms():
     """Get virtual machine information"""
     return jsonify(get_proxmox_vms())
 
-@app.route('/api/vms/<int:vmid>', methods=['GET'])
-@require_auth
-def get_vm_config(vmid):
-    """Get detailed configuration for a specific VM/LXC"""
-    try:
-        node = get_proxmox_node_name()
-        
-        result = subprocess.run(
-            ['pvesh', 'get', f'/nodes/{node}/qemu/{vmid}/config', '--output-format', 'json'],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        
-        vm_type = 'qemu'
-
-        if result.returncode != 0:
-            # Try LXC if QEMU config failed
-            result = subprocess.run(
-                ['pvesh', 'get', f'/nodes/{node}/lxc/{vmid}/config', '--output-format', 'json'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            if result.returncode == 0:
-                vm_type = 'lxc'
-            else:
-                # print(f"[v0] ERROR: VM/LXC {vmid} config not found")
-                pass
-                return jsonify({'error': f'Configuration for VM/LXC {vmid} not found'}), 404
-        
-        # Parse the configuration
-        config = json.loads(result.stdout)
-        
-        # Add VMID and type to the config for convenience
-        config['vmid'] = vmid
-        config['type'] = vm_type
-        
-        return jsonify(config)
-            
-    except Exception as e:
-        # print(f"Error getting VM config: {e}")
-        pass
-        return jsonify({'error': str(e)}), 500
-
-
 @app.route('/api/vms/<int:vmid>/metrics', methods=['GET'])
 @require_auth
 def api_vm_metrics(vmid):
@@ -4909,13 +4823,11 @@ def api_vm_metrics(vmid):
                 'data': rrd_data
             })
         else:
-            # print(f"[v0] ERROR: Failed to get RRD data for VM/LXC {vmid}: {rrd_result.stderr}")
-            pass
+
             return jsonify({'error': f'Failed to get RRD data: {rrd_result.stderr}'}), 500
             
     except Exception as e:
-        # print(f"Error getting VM metrics: {e}")
-        pass
+
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/node/metrics', methods=['GET'])
@@ -4935,7 +4847,7 @@ def api_node_metrics():
             return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
         
         # Get local node name
-        local_node = get_proxmox_node_name() # Use the cached/resolved node name
+        local_node = socket.gethostname()
         # print(f"[v0] Local node: {local_node}")
         pass
         
@@ -4974,13 +4886,10 @@ def api_node_metrics():
                 'data': rrd_data
             })
         else:
-            # print(f"[v0] ERROR: Failed to get RRD data for node {local_node}: {rrd_result.stderr}")
-            pass
             return jsonify({'error': f'Failed to get RRD data: {rrd_result.stderr}'}), 500
             
     except Exception as e:
-        # print(f"Error getting node metrics: {e}")
-        pass
+
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/logs', methods=['GET'])
@@ -5047,8 +4956,6 @@ def api_logs():
                         continue
             return jsonify({'logs': logs, 'total': len(logs)})
         else:
-            # print(f"[API] Error executing journalctl: {result.stderr}")
-            pass
             return jsonify({
                 'error': 'journalctl not available or failed',
                 'logs': [],
@@ -5115,8 +5022,6 @@ def api_logs_download():
                 download_name=f'proxmox_{filename}'
             )
         else:
-            # print(f"[API] Error generating log file: {result.stderr}")
-            pass
             return jsonify({'error': 'Failed to generate log file'}), 500
             
     except Exception as e:
@@ -5290,8 +5195,6 @@ def api_notifications_download():
                 download_name=f'notification_{timestamp.replace(":", "_").replace(" ", "_")}.log'
             )
         else:
-            # print(f"[API] Error generating notification log file: {result.stderr}")
-            pass
             return jsonify({'error': 'Failed to generate log file'}), 500
             
     except Exception as e:
@@ -5580,8 +5483,7 @@ def api_prometheus():
     try:
         metrics = []
         timestamp = int(datetime.now().timestamp() * 1000)
-        # Use get_proxmox_node_name() for the node label
-        node = get_proxmox_node_name()
+        node = socket.gethostname()
         
         # Get system data
         cpu_usage = psutil.cpu_percent(interval=0.5)
