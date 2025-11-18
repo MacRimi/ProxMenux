@@ -17,33 +17,16 @@ interface NetworkTrafficChartProps {
   interfaceName?: string
   onTotalsCalculated?: (totals: { received: number; sent: number }) => void
   refreshInterval?: number // En milisegundos, por defecto 60000 (60 segundos)
+  networkUnit?: "Bytes" | "Bits"
 }
 
-const CustomNetworkTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
-        <p className="text-sm font-semibold text-white mb-2">{label}</p>
-        <div className="space-y-1.5">
-          {payload.map((entry: any, index: number) => (
-            <div key={index} className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
-              <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
-              <span className="text-sm font-semibold text-white">{entry.value.toFixed(3)} GB</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-  return null
-}
 
 export function NetworkTrafficChart({
   timeframe,
   interfaceName,
   onTotalsCalculated,
   refreshInterval = 60000,
+  networkUnit = "Bits",
 }: NetworkTrafficChartProps) {
   const [data, setData] = useState<NetworkMetricsData[]>([])
   const [loading, setLoading] = useState(true)
@@ -138,6 +121,15 @@ export function NetworkTrafficChart({
         const netInBytes = (item.netin || 0) * intervalSeconds
         const netOutBytes = (item.netout || 0) * intervalSeconds
 
+        if (networkUnit === "Bits") {
+          return {
+            time: timeLabel,
+            timestamp: item.time,
+            netIn: Number((netInBytes * 8 / 1024 / 1024 / 1024).toFixed(4)),
+            netOut: Number((netOutBytes * 8 / 1024 / 1024 / 1024).toFixed(4)),
+          }
+        }
+
         return {
           time: timeLabel,
           timestamp: item.time,
@@ -222,6 +214,26 @@ export function NetworkTrafficChart({
     )
   }
 
+  const CustomNetworkTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
+        <p className="text-sm font-semibold text-white mb-2">{label}</p>
+        <div className="space-y-1.5">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+              <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
+              <span className="text-sm font-semibold text-white">{entry.value.toFixed(3)} {networkUnit === "Bits" ? "Gb" : "GB"}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  return null
+}
+
   return (
     <ResponsiveContainer width="100%" height={300}>
       <AreaChart data={data} margin={{ bottom: 80 }}>
@@ -240,7 +252,7 @@ export function NetworkTrafficChart({
           stroke="currentColor"
           className="text-foreground"
           tick={{ fill: "currentColor", fontSize: 12 }}
-          label={{ value: "GB", angle: -90, position: "insideLeft", fill: "currentColor" }}
+          label={{ value: networkUnit === "Bits" ? "Gb" : "GB", angle: -90, position: "insideLeft", fill: "currentColor" }}
           domain={[0, "auto"]}
         />
         <Tooltip content={<CustomNetworkTooltip />} />
