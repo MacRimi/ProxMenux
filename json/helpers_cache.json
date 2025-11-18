@@ -2957,12 +2957,10 @@
     "categories": [
       9
     ],
-    "notes": [],
-    "type": "ct",
-    "default_credentials": {
-      "username": "admin",
-      "password": "admin"
-    }
+    "notes": [
+      "After installation, the admin user credentials are saved in the file ~/librenms.creds inside the container."
+    ],
+    "type": "ct"
   },
   {
     "name": "Librespeed Rust",
