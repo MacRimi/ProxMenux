@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "./ui/card"
 import { Badge } from "./ui/badge"
-import { Wifi, Zap } from "lucide-react"
+import { Wifi, Zap } from 'lucide-react'
 import { useState, useEffect } from "react"
 import { fetchApi } from "../lib/api-config"
 
@@ -83,14 +83,78 @@ const formatStorage = (bytes: number): string => {
   return `${value.toFixed(decimals)} ${sizes[i]}`
 }
 
+const getUnitsSettings = () => {
+  if (typeof window === 'undefined') return { networkUnit: 'Bytes' as const }
+  
+  try {
+    const settings = localStorage.getItem('unitsSettings')
+    if (settings) {
+      const parsed = JSON.parse(settings)
+      return { networkUnit: parsed.networkUnit || 'Bytes' }
+    }
+  } catch (e) {
+    console.error('[v0] Error reading units settings:', e)
+  }
+  
+  return { networkUnit: 'Bytes' as const }
+}
+
+const formatNetworkTraffic = (sizeInGB: number, unit: "Bytes" | "Bits" = "Bytes"): string => {
+  if (unit === "Bits") {
+    // Convert GB to Gb (Gigabits)
+    const sizeInGb = sizeInGB * 8
+    
+    if (sizeInGb < 0.001) {
+      // Less than 0.001 Gb, show in Mb
+      return `${(sizeInGb * 1024).toFixed(1)} Mb`
+    } else if (sizeInGb < 1) {
+      // Less than 1 Gb, show in Mb
+      return `${(sizeInGb * 1024).toFixed(1)} Mb`
+    } else if (sizeInGb < 1024) {
+      // Less than 1024 Gb, show in Gb
+      return `${sizeInGb.toFixed(1)} Gb`
+    } else {
+      // 1024 Gb or more, show in Tb
+      return `${(sizeInGb / 1024).toFixed(1)} Tb`
+    }
+  } else {
+    // Bytes mode (existing behavior)
+    if (sizeInGB < 1) {
+      // Less than 1 GB, show in MB
+      return `${(sizeInGB * 1024).toFixed(1)} MB`
+    } else if (sizeInGB < 1024) {
+      // Less than 1024 GB, show in GB
+      return `${sizeInGB.toFixed(1)} GB`
+    } else {
+      // 1024 GB or more, show in TB
+      return `${(sizeInGB / 1024).toFixed(1)} TB`
+    }
+  }
+}
+
 export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps) {
   const typeBadge = getInterfaceTypeBadge(interface_.type)
   const vmTypeBadge = interface_.vm_type ? getVMTypeBadge(interface_.vm_type) : null
 
+  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
+  
   const [trafficData, setTrafficData] = useState<{ received: number; sent: number }>({
     received: 0,
     sent: 0,
   })
+
+  useEffect(() => {
+    const settings = getUnitsSettings()
+    setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
+    
+    const handleStorageChange = () => {
+      const settings = getUnitsSettings()
+      setNetworkUnit(settings.networkUnit as "Bytes" | "Bits")
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
 
   useEffect(() => {
     const fetchTrafficData = async () => {
@@ -207,9 +271,9 @@ export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps
               <div className="font-medium text-foreground text-xs">
                 {interface_.status.toLowerCase() === "up" && interface_.vm_type !== "vm" ? (
                   <>
-                    <span className="text-green-500">↓ {formatStorage(trafficData.received * 1024 * 1024 * 1024)}</span>
+                    <span className="text-green-500">↓ {formatNetworkTraffic(trafficData.received, networkUnit)}</span>
                     {" / "}
-                    <span className="text-blue-500">↑ {formatStorage(trafficData.sent * 1024 * 1024 * 1024)}</span>
+                    <span className="text-blue-500">↑ {formatNetworkTraffic(trafficData.sent, networkUnit)}</span>
                   </>
                 ) : (
                   <>
