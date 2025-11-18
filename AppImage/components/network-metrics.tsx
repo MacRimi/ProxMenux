@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
@@ -132,6 +132,13 @@ const fetcher = async (url: string): Promise<NetworkData> => {
   return fetchApi<NetworkData>(url)
 }
 
+const getUnitsSettings = (): "Bytes" | "Bits" => {
+  const raw = localStorage.getItem("proxmenux-network-unit");
+  const networkUnit = raw && raw.toLowerCase() === "bits" ? "Bits" : "Bytes";
+  console.log("[v0] Loaded network unit from localStorage:", networkUnit);
+  return networkUnit;
+};
+
 export function NetworkMetrics() {
   const {
     data: networkData,
@@ -159,6 +166,13 @@ export function NetworkMetrics() {
     refreshInterval: 29000,
     revalidateOnFocus: false,
   })
+
+  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes");
+
+  useEffect(() => {
+    const networkUnitSetting = getUnitsSettings();
+    setNetworkUnit(networkUnitSetting);
+  }, []);
 
   if (isLoading) {
     return (
@@ -375,7 +389,7 @@ export function NetworkMetrics() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <NetworkTrafficChart timeframe={timeframe} onTotalsCalculated={setNetworkTotals} />
+          <NetworkTrafficChart timeframe={timeframe} onTotalsCalculated={setNetworkTotals} networkUnit={networkUnit} />
         </CardContent>
       </Card>
 
