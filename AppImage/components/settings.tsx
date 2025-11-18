@@ -5,26 +5,11 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
-import {
-  Shield,
-  Lock,
-  User,
-  AlertCircle,
-  CheckCircle,
-  Info,
-  LogOut,
-  Wrench,
-  Package,
-  Key,
-  Copy,
-  Eye,
-  EyeOff,
-  Ruler,
-} from "lucide-react"
+import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Wrench, Package, Key, Copy, Eye, EyeOff, Ruler } from 'lucide-react'
 import { APP_VERSION } from "./release-notes-modal"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select" // Added Select components
 
 interface ProxMenuxTool {
   key: string
@@ -61,9 +46,6 @@ export function Settings() {
     [APP_VERSION]: true, // Current version expanded by default
   })
 
-  const [networkUnitSettings, setNetworkUnitSettings] = useState("Bytes");
-  const [loadingUnitSettings, setLoadingUnitSettings] = useState(true);
-
   // API Token state management
   const [showApiTokenSection, setShowApiTokenSection] = useState(false)
   const [apiToken, setApiToken] = useState("")
@@ -73,10 +55,13 @@ export function Settings() {
   const [generatingToken, setGeneratingToken] = useState(false)
   const [tokenCopied, setTokenCopied] = useState(false)
 
+  const [networkUnitSettings, setNetworkUnitSettings] = useState("Bytes");
+  const [loadingUnitSettings, setLoadingUnitSettings] = useState(true);
+
   useEffect(() => {
     checkAuthStatus()
     loadProxmenuxTools()
-    getUnitsSettings();
+    getUnitsSettings(); // Load network unit settings on mount
   }, [])
 
   const changeNetworkUnit = (unit: string) => {
@@ -87,7 +72,6 @@ export function Settings() {
   const getUnitsSettings = () => {
     const networkUnit =
       localStorage.getItem("proxmenux-network-unit") || "Bytes";
-    console.log("[v0] Loaded network unit from localStorage:", networkUnit);
     setNetworkUnitSettings(networkUnit);
     setLoadingUnitSettings(false);
   };
@@ -873,13 +857,13 @@ export function Settings() {
           </CardContent>
         </Card>
       )}
-      
-      {/* ProxMenux unit settings*/}
+
+      {/* ProxMenux Unit Settings */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Ruler className="h-5 w-5 text-green-500" />
-            <CardTitle>ProxMenux unit settings</CardTitle>
+            <CardTitle>ProxMenux Unit Settings</CardTitle>
           </div>
           <CardDescription>Change settings related to units</CardDescription>
         </CardHeader>

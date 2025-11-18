@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
-import { Loader2 } from "lucide-react"
+import { Loader2 } from 'lucide-react'
 import { fetchApi } from "@/lib/api-config"
 
 interface NetworkMetricsData {
@@ -17,16 +17,15 @@ interface NetworkTrafficChartProps {
   interfaceName?: string
   onTotalsCalculated?: (totals: { received: number; sent: number }) => void
   refreshInterval?: number // En milisegundos, por defecto 60000 (60 segundos)
-  networkUnit?: "Bytes" | "Bits"
+  networkUnit?: string // Added networkUnit prop with default value
 }
-
 
 export function NetworkTrafficChart({
   timeframe,
   interfaceName,
   onTotalsCalculated,
   refreshInterval = 60000,
-  networkUnit = "Bits",
+  networkUnit = "Bytes", // Added networkUnit prop with default value
 }: NetworkTrafficChartProps) {
   const [data, setData] = useState<NetworkMetricsData[]>([])
   const [loading, setLoading] = useState(true)
@@ -122,6 +121,7 @@ export function NetworkTrafficChart({
         const netOutBytes = (item.netout || 0) * intervalSeconds
 
         if (networkUnit === "Bits") {
+          // Convert to Gigabits: bytes * 8 / 1024^3
           return {
             time: timeLabel,
             timestamp: item.time,
@@ -130,6 +130,7 @@ export function NetworkTrafficChart({
           }
         }
 
+        // Default: Convert to Gigabytes
         return {
           time: timeLabel,
           timestamp: item.time,
@@ -189,6 +190,28 @@ export function NetworkTrafficChart({
     )
   }
 
+  const CustomNetworkTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
+          <p className="text-sm font-semibold text-white mb-2">{label}</p>
+          <div className="space-y-1.5">
+            {payload.map((entry: any, index: number) => (
+              <div key={index} className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+                <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
+                <span className="text-sm font-semibold text-white">
+                  {entry.value.toFixed(3)} {networkUnit === "Bits" ? "Gb" : "GB"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
+
   if (loading && isInitialLoad) {
     return (
       <div className="flex items-center justify-center h-[300px]">
@@ -213,26 +236,6 @@ export function NetworkTrafficChart({
       </div>
     )
   }
-
-  const CustomNetworkTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
-        <p className="text-sm font-semibold text-white mb-2">{label}</p>
-        <div className="space-y-1.5">
-          {payload.map((entry: any, index: number) => (
-            <div key={index} className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
-              <span className="text-xs text-gray-300 min-w-[60px]">{entry.name}:</span>
-              <span className="text-sm font-semibold text-white">{entry.value.toFixed(3)} {networkUnit === "Bits" ? "Gb" : "GB"}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-  return null
-}
 
   return (
     <ResponsiveContainer width="100%" height={300}>

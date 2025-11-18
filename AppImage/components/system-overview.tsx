@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
-import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Network } from "lucide-react"
+import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Network } from 'lucide-react'
 import { NodeMetricsCharts } from "./node-metrics-charts"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -146,13 +146,6 @@ const fetchProxmoxStorageData = async (): Promise<ProxmoxStorageData | null> => 
   }
 }
 
-const getUnitsSettings = (): "Bytes" | "Bits" => {
-  const raw = localStorage.getItem("proxmenux-network-unit");
-  const networkUnit = raw && raw.toLowerCase() === "bits" ? "Bits" : "Bytes";
-  console.log("[v0] Loaded network unit from localStorage:", networkUnit);
-  return networkUnit;
-};
-
 export function SystemOverview() {
   const [systemData, setSystemData] = useState<SystemData | null>(null)
   const [vmData, setVmData] = useState<VMData[]>([])
@@ -168,7 +161,7 @@ export function SystemOverview() {
   const [error, setError] = useState<string | null>(null)
   const [networkTimeframe, setNetworkTimeframe] = useState("day")
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
-  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes");
+  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -185,9 +178,6 @@ export function SystemOverview() {
         setError("Flask server not available. Please ensure the server is running.")
         return
       }
-
-      const networkUnitSetting = getUnitsSettings();
-      setNetworkUnit(networkUnitSetting);
 
       setSystemData(systemResult)
       setVmData(vmResult)
@@ -309,19 +299,28 @@ export function SystemOverview() {
     return (bytes / 1024 ** 3).toFixed(2)
   }
 
-  const formatStorage = (sizeInGB: number, unit: "Bytes" | "Bits" = "Bytes"): string => {
-    let size = sizeInGB;
-    let sufix = "B";
-    if (unit === "Bits") {
-      size = size * 8;
-      sufix = "b";
-    }
-    if (size < 1) {
-      return `${(size * 1024).toFixed(1)} M${sufix}`
-    } else if (size > 999) {
-      return `${(size / 1024).toFixed(2)} T${sufix}`
+  const formatStorage = (sizeInGB: number): string => {
+    if (sizeInGB < 1) {
+      return `${(sizeInGB * 1024).toFixed(1)} MB`
+    } else if (sizeInGB > 999) {
+      return `${(sizeInGB / 1024).toFixed(2)} TB`
     } else {
-      return `${size.toFixed(2)} G${sufix}`
+      return `${sizeInGB.toFixed(2)} GB`
+    }
+  }
+
+  const formatNetworkTraffic = (sizeInGB: number, unit: "Bytes" | "Bits" = "Bytes"): string => {
+    if (unit === "Bits") {
+      const sizeInGb = sizeInGB * 8
+      if (sizeInGb < 1) {
+        return `${(sizeInGb * 1024).toFixed(1)} Mb`
+      } else if (sizeInGb > 999) {
+        return `${(sizeInGb / 1024).toFixed(2)} Tb`
+      } else {
+        return `${sizeInGb.toFixed(2)} Gb`
+      }
+    } else {
+      return formatStorage(sizeInGB)
     }
   }
 
@@ -628,6 +627,15 @@ export function SystemOverview() {
                   <SelectItem value="year">1 Year</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={networkUnit} onValueChange={setNetworkUnit}>
+                <SelectTrigger className="w-28 h-8 text-xs ml-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bytes">Bytes</SelectItem>
+                  <SelectItem value="Bits">Bits</SelectItem>
+                </SelectContent>
+              </Select>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -684,21 +692,21 @@ export function SystemOverview() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Received:</span>
                     <span className="text-lg font-semibold text-green-500 flex items-center gap-1">
-                      ↓ {formatStorage(networkTotals.received, networkUnit)}
+                      ↓ {formatNetworkTraffic(networkTotals.received, networkUnit)}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Sent:</span>
                     <span className="text-lg font-semibold text-blue-500 flex items-center gap-1">
-                      ↑ {formatStorage(networkTotals.sent, networkUnit)}
+                      ↑ {formatNetworkTraffic(networkTotals.sent, networkUnit)}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-border">
-                  <NetworkTrafficChart timeframe={networkTimeframe} onTotalsCalculated={setNetworkTotals} networkUnit={networkUnit} />
+                  <NetworkTrafficChart timeframe={networkTimeframe} onTotalsCalculated={setNetworkTotals} />
                 </div>
               </div>
             ) : (

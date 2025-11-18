@@ -573,7 +573,7 @@ class HealthMonitor:
     def _check_storage_optimized(self) -> Dict[str, Any]:
         """
         Optimized storage check - monitors Proxmox storages from pvesm status.
-        Checks for inactive storages and disk health from SMART/events.
+        Checks for inactive storages, disk health from SMART/events, and ZFS pool health.
         """
         issues = []
         storage_details = {}
@@ -606,6 +606,13 @@ class HealthMonitor:
         except Exception as e:
             # If pvesm not available, skip silently
             pass
+        
+        # Check ZFS pool health status
+        zfs_pool_issues = self._check_zfs_pool_health()
+        if zfs_pool_issues:
+            for pool_name, pool_info in zfs_pool_issues.items():
+                issues.append(f'{pool_name}: {pool_info["reason"]}')
+                storage_details[pool_name] = pool_info
         
         # Check disk health from Proxmox task log or system logs
         disk_health_issues = self._check_disk_health_from_events()
@@ -1651,6 +1658,67 @@ class HealthMonitor:
             pass
         
         return disk_issues
+    
+    def _check_zfs_pool_health(self) -> Dict[str, Any]:
+        """
+        Check ZFS pool health status using zpool status command.
+        Returns dict of pools with non-ONLINE status (DEGRADED, FAULTED, UNAVAIL, etc.)
+        """
+        zfs_issues = {}
+        
+        try:
+            # First check if zpool command exists
+            result = subprocess.run(
+                ['which', 'zpool'],
+                capture_output=True,
+                text=True,
+                timeout=1
+            )
+            
+            if result.returncode != 0:
+                # ZFS not installed, return empty
+                return zfs_issues
+            
+            # Get list of all pools
+            result = subprocess.run(
+                ['zpool', 'list', '-H', '-o', 'name,health'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode == 0:
+                lines = result.stdout.strip().split('\n')
+                for line in lines:
+                    if not line.strip():
+                        continue
+                    
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        pool_name = parts[0]
+                        pool_health = parts[1].upper()
+                        
+                        # ONLINE is healthy, anything else is a problem
+                        if pool_health != 'ONLINE':
+                            if pool_health in ['DEGRADED', 'FAULTED', 'UNAVAIL', 'REMOVED']:
+                                status = 'CRITICAL'
+                                reason = f'ZFS pool {pool_health.lower()}'
+                            else:
+                                # Any other non-ONLINE state is at least a warning
+                                status = 'WARNING'
+                                reason = f'ZFS pool status: {pool_health.lower()}'
+                            
+                            zfs_issues[f'zpool_{pool_name}'] = {
+                                'status': status,
+                                'reason': reason,
+                                'pool_name': pool_name,
+                                'health': pool_health
+                            }
+        except Exception:
+            # If zpool command fails, silently ignore
+            pass
+        
+        return zfs_issues
 
 
 # Global instance

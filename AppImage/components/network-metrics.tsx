@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
-import { Wifi, Activity, Network, Router, AlertCircle, Zap } from "lucide-react"
+import { Wifi, Activity, Network, Router, AlertCircle, Zap } from 'lucide-react'
 import useSWR from "swr"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -135,7 +135,6 @@ const fetcher = async (url: string): Promise<NetworkData> => {
 const getUnitsSettings = (): "Bytes" | "Bits" => {
   const raw = localStorage.getItem("proxmenux-network-unit");
   const networkUnit = raw && raw.toLowerCase() === "bits" ? "Bits" : "Bytes";
-  console.log("[v0] Loaded network unit from localStorage:", networkUnit);
   return networkUnit;
 };
 
@@ -155,6 +154,13 @@ export function NetworkMetrics() {
   const [modalTimeframe, setModalTimeframe] = useState<"hour" | "day" | "week" | "month" | "year">("day")
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
   const [interfaceTotals, setInterfaceTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
+  
+  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes");
+
+  useEffect(() => {
+    const networkUnitSetting = getUnitsSettings();
+    setNetworkUnit(networkUnitSetting);
+  }, []);
 
   const { data: modalNetworkData } = useSWR<NetworkData>(selectedInterface ? "/api/network" : null, fetcher, {
     refreshInterval: 17000,
@@ -166,13 +172,6 @@ export function NetworkMetrics() {
     refreshInterval: 29000,
     revalidateOnFocus: false,
   })
-
-  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes");
-
-  useEffect(() => {
-    const networkUnitSetting = getUnitsSettings();
-    setNetworkUnit(networkUnitSetting);
-  }, []);
 
   if (isLoading) {
     return (
@@ -906,6 +905,7 @@ export function NetworkMetrics() {
                               interfaceName={displayInterface.name}
                               onTotalsCalculated={setInterfaceTotals}
                               refreshInterval={60000}
+                              networkUnit={networkUnit}
                             />
                           </div>
 
