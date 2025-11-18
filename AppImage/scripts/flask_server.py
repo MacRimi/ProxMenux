@@ -15,6 +15,49 @@ import os
 import sys
 import time
 import socket
+
+# Cache for Proxmox node name (to avoid repeated API calls)
+_proxmox_node_cache = {'name': None, 'timestamp': 0}
+
+def get_proxmox_node_name():
+    """
+    Get the actual Proxmox node name from the Proxmox API.
+    Uses cache to avoid repeated API calls.
+    Falls back to short hostname if API call fails.
+    """
+    import time
+    cache_duration = 300  # 5 minutes cache
+    
+    current_time = time.time()
+    if _proxmox_node_cache['name'] and (current_time - _proxmox_node_cache['timestamp']) < cache_duration:
+        return _proxmox_node_cache['name']
+    
+    try:
+        # Query Proxmox API directly to get the actual node name
+        result = subprocess.run(
+            ['pvesh', 'get', '/nodes', '--output-format', 'json'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if result.returncode == 0:
+            nodes = json.loads(result.stdout)
+            if nodes and len(nodes) > 0:
+                # Get the first node name (in most cases there's only one local node)
+                node_name = nodes[0].get('node', '')
+                if node_name:
+                    _proxmox_node_cache['name'] = node_name
+                    _proxmox_node_cache['timestamp'] = current_time
+                    return node_name
+    except Exception as e:
+        print(f"Warning: Could not get Proxmox node name from API: {e}")
+    
+    # Fallback to short hostname (without domain) if API call fails
+    hostname = socket.gethostname()
+    short_hostname = hostname.split('.')[0]
+    return short_hostname
+
 from datetime import datetime, timedelta
 import re # Added for regex matching
 import select # Added for non-blocking read
@@ -451,7 +494,8 @@ def get_vm_lxc_names():
     vm_lxc_map = {}
     
     try:
-        local_node = socket.gethostname()
+        # local_node = socket.gethostname()
+        local_node = get_proxmox_node_name()
         
         result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'], 
                               capture_output=True, text=True, timeout=10)
@@ -1645,7 +1689,8 @@ def get_smart_data(disk_name):
 def get_proxmox_storage():
     """Get Proxmox storage information using pvesh (filtered by local node)"""
     try:
-        local_node = socket.gethostname()
+        # local_node = socket.gethostname()
+        local_node = get_proxmox_node_name()
         
         result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'storage', '--output-format', 'json'], 
                               capture_output=True, text=True, timeout=10)
@@ -1970,7 +2015,8 @@ def get_network_info():
             'bridge_interfaces': [],    # Added separate list for bridge interfaces
             'vm_lxc_interfaces': [],
             'traffic': {'bytes_sent': 0, 'bytes_recv': 0, 'packets_sent': 0, 'packets_recv': 0},
-            'hostname': socket.gethostname(),
+            # 'hostname': socket.gethostname(),
+            'hostname': get_proxmox_node_name(),
             'domain': None,
             'dns_servers': []
         }
@@ -2197,7 +2243,9 @@ def get_proxmox_vms():
         all_vms = []
         
         try:
-            local_node = socket.gethostname()
+            # local_node = socket.gethostname()
+            local_node = get_proxmox_node_name()
+
             # print(f"[v0] Local node detected: {local_node}")
             pass
             
@@ -4564,6 +4612,7 @@ def api_system():
             'uptime': uptime,
             'load_average': list(load_avg),
             'hostname': socket.gethostname(),
+            'proxmox_node': get_proxmox_node_name(),
             'node_id': socket.gethostname(),
             'timestamp': datetime.now().isoformat(),
             'cpu_cores': cpu_cores,
@@ -4691,7 +4740,8 @@ def api_network_interface_metrics(interface_name):
             return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
         
         # Get local node name
-        local_node = socket.gethostname()
+        # local_node = socket.gethostname()
+        local_node = get_proxmox_node_name()
 
         
         # Determine interface type and get appropriate RRD data
@@ -4780,7 +4830,8 @@ def api_vm_metrics(vmid):
             return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
         
         # Get local node name
-        local_node = socket.gethostname()
+        # local_node = socket.gethostname()
+        local_node = get_proxmox_node_name()
 
         
         # First, determine if it's a qemu VM or lxc container
@@ -4847,7 +4898,9 @@ def api_node_metrics():
             return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
         
         # Get local node name
-        local_node = socket.gethostname()
+        # local_node = socket.gethostname()
+        local_node = get_proxmox_node_name()
+
         # print(f"[v0] Local node: {local_node}")
         pass
         
@@ -5868,7 +5921,8 @@ def get_vm_config(vmid):
     """Get detailed configuration for a specific VM/LXC"""
     try:
         # Get VM/LXC configuration
-        node = socket.gethostname() # Get node name
+        # node = socket.gethostname() # Get node name
+        node = get_proxmox_node_name()
         
         result = subprocess.run(
             ['pvesh', 'get', f'/nodes/{node}/qemu/{vmid}/config', '--output-format', 'json'],
