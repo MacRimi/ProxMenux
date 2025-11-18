@@ -146,6 +146,13 @@ const fetchProxmoxStorageData = async (): Promise<ProxmoxStorageData | null> => 
   }
 }
 
+const getUnitsSettings = (): "Bytes" | "Bits" => {
+  const raw = localStorage.getItem("proxmenux-network-unit");
+  const networkUnit = raw && raw.toLowerCase() === "bits" ? "Bits" : "Bytes";
+  console.log("[v0] Loaded network unit from localStorage:", networkUnit);
+  return networkUnit;
+};
+
 export function SystemOverview() {
   const [systemData, setSystemData] = useState<SystemData | null>(null)
   const [vmData, setVmData] = useState<VMData[]>([])
@@ -161,6 +168,7 @@ export function SystemOverview() {
   const [error, setError] = useState<string | null>(null)
   const [networkTimeframe, setNetworkTimeframe] = useState("day")
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
+  const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes");
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -177,6 +185,9 @@ export function SystemOverview() {
         setError("Flask server not available. Please ensure the server is running.")
         return
       }
+
+      const networkUnitSetting = getUnitsSettings();
+      setNetworkUnit(networkUnitSetting);
 
       setSystemData(systemResult)
       setVmData(vmResult)
@@ -298,13 +309,19 @@ export function SystemOverview() {
     return (bytes / 1024 ** 3).toFixed(2)
   }
 
-  const formatStorage = (sizeInGB: number): string => {
-    if (sizeInGB < 1) {
-      return `${(sizeInGB * 1024).toFixed(1)} MB`
-    } else if (sizeInGB > 999) {
-      return `${(sizeInGB / 1024).toFixed(2)} TB`
+  const formatStorage = (sizeInGB: number, unit: "Bytes" | "Bits" = "Bytes"): string => {
+    let size = sizeInGB;
+    let sufix = "B";
+    if (unit === "Bits") {
+      size = size * 8;
+      sufix = "b";
+    }
+    if (size < 1) {
+      return `${(size * 1024).toFixed(1)} M${sufix}`
+    } else if (size > 999) {
+      return `${(size / 1024).toFixed(2)} T${sufix}`
     } else {
-      return `${sizeInGB.toFixed(2)} GB`
+      return `${size.toFixed(2)} G${sufix}`
     }
   }
 
@@ -667,21 +684,21 @@ export function SystemOverview() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Received:</span>
                     <span className="text-lg font-semibold text-green-500 flex items-center gap-1">
-                      ↓ {formatStorage(networkTotals.received)}
+                      ↓ {formatStorage(networkTotals.received, networkUnit)}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Sent:</span>
                     <span className="text-lg font-semibold text-blue-500 flex items-center gap-1">
-                      ↑ {formatStorage(networkTotals.sent)}
+                      ↑ {formatStorage(networkTotals.sent, networkUnit)}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-border">
-                  <NetworkTrafficChart timeframe={networkTimeframe} onTotalsCalculated={setNetworkTotals} />
+                  <NetworkTrafficChart timeframe={networkTimeframe} onTotalsCalculated={setNetworkTotals} networkUnit={networkUnit} />
                 </div>
               </div>
             ) : (

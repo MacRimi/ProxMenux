@@ -19,10 +19,12 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Ruler,
 } from "lucide-react"
 import { APP_VERSION } from "./release-notes-modal"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 
 interface ProxMenuxTool {
   key: string
@@ -59,6 +61,9 @@ export function Settings() {
     [APP_VERSION]: true, // Current version expanded by default
   })
 
+  const [networkUnitSettings, setNetworkUnitSettings] = useState("Bytes");
+  const [loadingUnitSettings, setLoadingUnitSettings] = useState(true);
+
   // API Token state management
   const [showApiTokenSection, setShowApiTokenSection] = useState(false)
   const [apiToken, setApiToken] = useState("")
@@ -71,7 +76,21 @@ export function Settings() {
   useEffect(() => {
     checkAuthStatus()
     loadProxmenuxTools()
+    getUnitsSettings();
   }, [])
+
+  const changeNetworkUnit = (unit: string) => {
+    localStorage.setItem("proxmenux-network-unit", unit);
+    setNetworkUnitSettings(unit);
+  };
+
+  const getUnitsSettings = () => {
+    const networkUnit =
+      localStorage.getItem("proxmenux-network-unit") || "Bytes";
+    console.log("[v0] Loaded network unit from localStorage:", networkUnit);
+    setNetworkUnitSettings(networkUnit);
+    setLoadingUnitSettings(false);
+  };
 
   const checkAuthStatus = async () => {
     try {
@@ -854,6 +873,42 @@ export function Settings() {
           </CardContent>
         </Card>
       )}
+      
+      {/* ProxMenux unit settings*/}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Ruler className="h-5 w-5 text-green-500" />
+            <CardTitle>ProxMenux unit settings</CardTitle>
+          </div>
+          <CardDescription>Change settings related to units</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingUnitSettings ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full" />
+            </div>
+          ) : (
+            <div className="text-foreground flex items-center justify-between">
+              <div className="flex items-center">
+                Network Unit Display
+              </div>
+              <Select
+                value={networkUnitSettings}
+                onValueChange={changeNetworkUnit}
+              >
+                <SelectTrigger className="w-28 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bits">Bits</SelectItem>
+                  <SelectItem value="Bytes">Bytes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ProxMenux Optimizations */}
       <Card>
