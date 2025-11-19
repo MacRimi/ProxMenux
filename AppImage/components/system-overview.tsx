@@ -674,14 +674,14 @@ export function SystemOverview() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Received:</span>
                     <span className="text-lg font-semibold text-green-500 flex items-center gap-1">
-                      ↓ {formatNetworkTraffic(networkTotals.received, networkUnit)}
+                      ↓ {networkData.traffic.bytes_recv.toFixed(2)} {networkUnit === "Bits" ? "Gb" : "GB"}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Sent:</span>
                     <span className="text-lg font-semibold text-blue-500 flex items-center gap-1">
-                      ↑ {formatNetworkTraffic(networkTotals.sent, networkUnit)}
+                      ↑ {networkData.traffic.bytes_sent.toFixed(2)} {networkUnit === "Bits" ? "Gb" : "GB"}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
