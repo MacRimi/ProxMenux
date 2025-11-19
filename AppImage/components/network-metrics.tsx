@@ -892,9 +892,7 @@ export function NetworkMetrics() {
                               </div>
                               <div className="font-medium text-green-500 text-lg">
                                 {formatNetworkTraffic(
-                                  networkUnit === "Bits"
-                                    ? interfaceTotals.received * 8 * 1024 ** 3
-                                    : interfaceTotals.received * 1024 ** 3,
+                                  interfaceTotals.received * 1024 ** 3,
                                   networkUnit,
                                   2
                                 )}
@@ -906,9 +904,7 @@ export function NetworkMetrics() {
                               </div>
                               <div className="font-medium text-blue-500 text-lg">
                                 {formatNetworkTraffic(
-                                  networkUnit === "Bits"
-                                    ? interfaceTotals.sent * 8 * 1024 ** 3
-                                    : interfaceTotals.sent * 1024 ** 3,
+                                  interfaceTotals.sent * 1024 ** 3,
                                   networkUnit,
                                   2
                                 )}
