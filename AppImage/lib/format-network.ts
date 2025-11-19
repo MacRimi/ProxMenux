@@ -19,7 +19,8 @@ export function formatNetworkTraffic(
 ): string {
   if (bytes === 0) return unit === 'Bits' ? '0 b' : '0 B';
 
-  const k = unit === 'Bits' ? 1000 : 1024;
+  // When converting from bytes to bits, we should keep the binary base
+  const k = 1024;
   const dm = decimals < 0 ? 0 : Math.min(decimals, 2);
   
   // For Bits: convert bytes to bits first (multiply by 8)
