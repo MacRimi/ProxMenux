@@ -207,12 +207,12 @@ export function NetworkMetrics() {
   }
 
   const trafficInFormatted = formatNetworkTraffic(
-    networkUnit === "Bits" ? networkTotals.received * 8 * 1024 ** 3 : networkTotals.received * 1024 ** 3,
+    networkTotals.received * 1024 ** 3,
     networkUnit,
     2
   )
   const trafficOutFormatted = formatNetworkTraffic(
-    networkUnit === "Bits" ? networkTotals.sent * 8 * 1024 ** 3 : networkTotals.sent * 1024 ** 3,
+    networkTotals.sent * 1024 ** 3,
     networkUnit,
     2
   )
