@@ -187,11 +187,20 @@ export function NetworkTrafficChart({
 
       setData(transformedData)
 
-      const totalReceived = transformedData.reduce((sum: number, item: NetworkMetricsData) => sum + item.netIn, 0)
-      const totalSent = transformedData.reduce((sum: number, item: NetworkMetricsData) => sum + item.netOut, 0)
+      const totalReceivedGB = result.data.reduce((sum: number, item: any, index: number) => {
+        const intervalSeconds = index > 0 ? item.time - result.data[index - 1].time : 60
+        const netInBytes = (item.netin || 0) * intervalSeconds
+        return sum + (netInBytes / 1024 / 1024 / 1024)
+      }, 0)
+      
+      const totalSentGB = result.data.reduce((sum: number, item: any, index: number) => {
+        const intervalSeconds = index > 0 ? item.time - result.data[index - 1].time : 60
+        const netOutBytes = (item.netout || 0) * intervalSeconds
+        return sum + (netOutBytes / 1024 / 1024 / 1024)
+      }, 0)
 
       if (onTotalsCalculated) {
-        onTotalsCalculated({ received: totalReceived, sent: totalSent })
+        onTotalsCalculated({ received: totalReceivedGB, sent: totalSentGB })
       }
 
       if (isInitialLoad) {
