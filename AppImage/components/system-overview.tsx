@@ -676,7 +676,7 @@ export function SystemOverview() {
                     <span className="text-lg font-semibold text-green-500 flex items-center gap-1">
                       ↓ {networkUnit === "Bytes"
                         ? `${networkTotals.received.toFixed(2)} GB`
-                        : `${(networkTotals.received * 8).toFixed(2)} Gb`}
+                        : formatNetworkTraffic(networkTotals.received * 1024 * 1024 * 1024, 'Bits')}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
@@ -685,7 +685,7 @@ export function SystemOverview() {
                     <span className="text-lg font-semibold text-blue-500 flex items-center gap-1">
                       ↑ {networkUnit === "Bytes" 
                         ? `${networkTotals.sent.toFixed(2)} GB` 
-                        : `${(networkTotals.sent * 8).toFixed(2)} Gb`}
+                        : formatNetworkTraffic(networkTotals.sent * 1024 * 1024 * 1024, 'Bits')}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
