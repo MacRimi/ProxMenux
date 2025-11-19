@@ -3739,7 +3739,8 @@
       9
     ],
     "notes": [
-      "The integrated daemon config is located at `/root/.config/daemon/config.json`"
+      "The integrated daemon config is located at `/root/.config/daemon/config.json`",
+      "When using a reverse proxy, edit `/opt/netvisor/ui/build/_app/env.js`: add 443 to `PUBLIC_SERVER_PORT` and remove 'default' from `PUBLIC_SERVER_HOSTNAME`."
     ],
     "type": "ct"
   },
