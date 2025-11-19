@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp } from 'lucide-react'
 import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
-import { formatStorage } from "@/lib/utils" // Import formatStorage utility
-import { formatNetworkTraffic, getNetworkUnit } from "@/lib/format-network"
+import { formatStorage } from "../lib/utils"
+import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
 
 interface VMData {
@@ -1238,7 +1238,8 @@ export function VirtualMachines() {
                                       </>
                                     ) : (
                                       <>
-                                        <ChevronDown className="h-3 w-3 mr-1" />+ Info
+                                        <ChevronDown className="h-3 w-3 mr-1" />
+                                        + Info
                                       </>
                                     )}
                                   </Button>

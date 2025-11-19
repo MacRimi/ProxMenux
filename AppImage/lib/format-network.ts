@@ -42,7 +42,7 @@ export function formatNetworkTraffic(
 export function getNetworkUnit(): NetworkUnit {
   if (typeof window === 'undefined') return 'Bytes';
   
-  const stored = localStorage.getItem('networkUnit');
+  const stored = localStorage.getItem('proxmenux-network-unit');
   return stored === 'Bits' ? 'Bits' : 'Bytes';
 }
 

@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { Loader2 } from 'lucide-react'
-import { fetchApi } from "@/lib/api-config"
-import { getNetworkUnit } from "@/lib/format-network"
+import { fetchApi } from "../lib/api-config"
+import { getNetworkUnit } from "../lib/format-network"
 
 interface NetworkMetricsData {
   time: string
