@@ -206,12 +206,16 @@ export function NetworkMetrics() {
     )
   }
 
-  const trafficInFormatted = networkUnit === "Bits"
-    ? `${(networkTotals.received * 8).toFixed(2)} Gb`
-    : `${networkTotals.received.toFixed(2)} GB`
-  const trafficOutFormatted = networkUnit === "Bits"
-    ? `${(networkTotals.sent * 8).toFixed(2)} Gb`
-    : `${networkTotals.sent.toFixed(2)} GB`
+  const trafficInFormatted = formatNetworkTraffic(
+    networkUnit === "Bits" ? networkTotals.received * 8 * 1024 ** 3 : networkTotals.received * 1024 ** 3,
+    networkUnit,
+    2
+  )
+  const trafficOutFormatted = formatNetworkTraffic(
+    networkUnit === "Bits" ? networkTotals.sent * 8 * 1024 ** 3 : networkTotals.sent * 1024 ** 3,
+    networkUnit,
+    2
+  )
   const packetsRecvK = networkData.traffic.packets_recv ? (networkData.traffic.packets_recv / 1000).toFixed(0) : "0"
 
   const totalErrors = (networkData.traffic.errin || 0) + (networkData.traffic.errout || 0)
@@ -887,9 +891,13 @@ export function NetworkMetrics() {
                                 {networkUnit === "Bits" ? "Bits Received" : "Bytes Received"}
                               </div>
                               <div className="font-medium text-green-500 text-lg">
-                                {networkUnit === "Bits"
-                                  ? `${(interfaceTotals.received * 8).toFixed(2)} Gb`
-                                  : `${interfaceTotals.received.toFixed(2)} GB`}
+                                {formatNetworkTraffic(
+                                  networkUnit === "Bits"
+                                    ? interfaceTotals.received * 8 * 1024 ** 3
+                                    : interfaceTotals.received * 1024 ** 3,
+                                  networkUnit,
+                                  2
+                                )}
                               </div>
                             </div>
                             <div>
@@ -897,9 +905,13 @@ export function NetworkMetrics() {
                                 {networkUnit === "Bits" ? "Bits Sent" : "Bytes Sent"}
                               </div>
                               <div className="font-medium text-blue-500 text-lg">
-                                {networkUnit === "Bits"
-                                  ? `${(interfaceTotals.sent * 8).toFixed(2)} Gb`
-                                  : `${interfaceTotals.sent.toFixed(2)} GB`}
+                                {formatNetworkTraffic(
+                                  networkUnit === "Bits"
+                                    ? interfaceTotals.sent * 8 * 1024 ** 3
+                                    : interfaceTotals.sent * 1024 ** 3,
+                                  networkUnit,
+                                  2
+                                )}
                               </div>
                             </div>
                           </div>
