@@ -4521,7 +4521,7 @@
       6
     ],
     "notes": [
-      "Type `cat ~/.Passbolt.creds` to see MariaDB database credentials. You will need those to setup Passbolt.",
+      "Type `cat ~/passbolt.creds` to see MariaDB database credentials. You will need those to setup Passbolt.",
       "The application uses self-signed certificates. You can also use Let's Encrypt to get a valid certificate for your domain. Please read the documentation for more information."
     ],
     "type": "ct"
