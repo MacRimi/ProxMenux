@@ -19,8 +19,7 @@ export function formatNetworkTraffic(
 ): string {
   if (bytes === 0) return unit === 'Bits' ? '0 b' : '0 B';
 
-  // When converting from bytes to bits, we should keep the binary base
-  const k = 1024;
+  const k = unit === 'Bits' ? 1000 : 1024;
   const dm = decimals < 0 ? 0 : Math.min(decimals, 2);
   
   // For Bits: convert bytes to bits first (multiply by 8)
@@ -31,7 +30,7 @@ export function formatNetworkTraffic(
     : ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
 
   const i = Math.floor(Math.log(value) / Math.log(k));
-  const finalDecimals = i >= 3 ? 2 : 2;
+  const finalDecimals = 2; // Always use 2 decimals for consistency
   const formattedValue = parseFloat((value / Math.pow(k, i)).toFixed(finalDecimals));
 
   return `${formattedValue} ${sizes[i]}`;
