@@ -674,14 +674,18 @@ export function SystemOverview() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Received:</span>
                     <span className="text-lg font-semibold text-green-500 flex items-center gap-1">
-                      ↓ {networkData.traffic.bytes_recv.toFixed(2)} {networkUnit === "Bits" ? "Gb" : "GB"}
+                      ↓ {networkUnit === "Bytes"
+                        ? `${networkTotals.received.toFixed(2)} GB`
+                        : `${(networkTotals.received * 8).toFixed(2)} Gb`}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Sent:</span>
                     <span className="text-lg font-semibold text-blue-500 flex items-center gap-1">
-                      ↑ {networkData.traffic.bytes_sent.toFixed(2)} {networkUnit === "Bits" ? "Gb" : "GB"}
+                      ↑ {networkUnit === "Bytes" 
+                        ? `${networkTotals.sent.toFixed(2)} GB` 
+                        : `${(networkTotals.sent * 8).toFixed(2)} Gb`}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>

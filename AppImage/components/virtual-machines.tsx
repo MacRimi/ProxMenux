@@ -129,7 +129,7 @@ const formatBytes = (bytes: number | undefined, isNetwork: boolean = false): str
   
   if (isNetwork) {
     const networkUnit = getNetworkUnit()
-    return formatNetworkTraffic(bytes, networkUnit)
+    return formatNetworkTraffic(bytes, networkUnit, 2)
   }
   
   // For non-network (disk), use standard bytes

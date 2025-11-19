@@ -20,7 +20,7 @@ export function formatNetworkTraffic(
   if (bytes === 0) return unit === 'Bits' ? '0 b' : '0 B';
 
   const k = unit === 'Bits' ? 1000 : 1024;
-  const dm = decimals < 0 ? 0 : decimals;
+  const dm = decimals < 0 ? 0 : Math.min(decimals, 2);
   
   // For Bits: convert bytes to bits first (multiply by 8)
   const value = unit === 'Bits' ? bytes * 8 : bytes;
@@ -30,7 +30,8 @@ export function formatNetworkTraffic(
     : ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
 
   const i = Math.floor(Math.log(value) / Math.log(k));
-  const formattedValue = parseFloat((value / Math.pow(k, i)).toFixed(dm));
+  const finalDecimals = i >= 3 ? 2 : 2;
+  const formattedValue = parseFloat((value / Math.pow(k, i)).toFixed(finalDecimals));
 
   return `${formattedValue} ${sizes[i]}`;
 }
