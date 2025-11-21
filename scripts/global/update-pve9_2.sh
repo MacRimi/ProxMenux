@@ -16,6 +16,8 @@ fi
 
 load_language
 initialize_cache
+APT_ENV="LC_ALL=C LANG=C LANGUAGE=C"
+
 
 ensure_tools_json() {
     [ -f "$TOOLS_JSON" ] || echo "{}" > "$TOOLS_JSON"
@@ -211,8 +213,16 @@ EOF
 
     local current_pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
     local available_pve_version=$(apt-cache policy pve-manager 2>/dev/null | grep -oP 'Candidate: \K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-    local upgradable=$(apt list --upgradable 2>/dev/null | grep -c "upgradable")
-    local security_updates=$(apt list --upgradable 2>/dev/null | grep -c "security")
+    #local upgradable=$(apt list --upgradable 2>/dev/null | grep -c "upgradable")
+    #local security_updates=$(apt list --upgradable 2>/dev/null | grep -c "security")
+    local upgradable=$($APT_ENV apt list --upgradable 2>/dev/null \
+        | sed '1d' \
+        | sed '/^\s*$/d' \
+        | wc -l)
+
+    local security_updates=$($APT_ENV apt list --upgradable 2>/dev/null \
+        | grep -c "security")
+
 
     show_update_menu() {
         local current_version="$1"
