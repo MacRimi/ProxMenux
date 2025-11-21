@@ -1,20 +1,11 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { API_PORT } from "@/lib/api-config"
 
-let Terminal: any
-let FitAddon: any
-
-if (typeof window !== "undefined") {
-  Terminal = require("xterm").Terminal
-  FitAddon = require("xterm-addon-fit").FitAddon
-  require("xterm/css/xterm.css")
-}
-
 type TerminalPanelProps = {
-  websocketUrl?: string // Custom WebSocket URL if needed
+  websocketUrl?: string
 }
 
 function getWebSocketUrl(): string {
@@ -25,14 +16,11 @@ function getWebSocketUrl(): string {
   const { protocol, hostname, port } = window.location
   const isStandardPort = port === "" || port === "80" || port === "443"
 
-  // Use wss:// for https, ws:// for http
   const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
 
   if (isStandardPort) {
-    // Behind proxy - use current host
     return `${wsProtocol}//${hostname}/ws/terminal`
   } else {
-    // Direct access - use API port
     return `${wsProtocol}//${hostname}:${API_PORT}/ws/terminal`
   }
 }
@@ -42,80 +30,91 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) =>
   const termRef = useRef<any>(null)
   const fitAddonRef = useRef<any>(null)
   const wsRef = useRef<WebSocket | null>(null)
-
-  // For touch gestures
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
 
+  const [xtermLoaded, setXtermLoaded] = useState(false)
+
   useEffect(() => {
-    if (!containerRef.current || !Terminal || !FitAddon) return
+    if (typeof window === "undefined") return
 
-    console.log("[v0] TerminalPanel: Initializing terminal")
+    Promise.all([
+      import("xterm").then((mod) => mod.Terminal),
+      import("xterm-addon-fit").then((mod) => mod.FitAddon),
+      import("xterm/css/xterm.css"),
+    ])
+      .then(([Terminal, FitAddon]) => {
+        if (!containerRef.current) return
 
-    const term = new Terminal({
-      fontFamily: "monospace",
-      fontSize: 13,
-      cursorBlink: true,
-      scrollback: 2000,
-      disableStdin: false,
-    })
+        console.log("[v0] TerminalPanel: Initializing terminal")
 
-    const fitAddon = new FitAddon()
-    term.loadAddon(fitAddon)
+        const term = new Terminal({
+          fontFamily: "monospace",
+          fontSize: 13,
+          cursorBlink: true,
+          scrollback: 2000,
+          disableStdin: false,
+        })
 
-    term.open(containerRef.current)
-    fitAddon.fit()
+        const fitAddon = new FitAddon()
+        term.loadAddon(fitAddon)
 
-    termRef.current = term
-    fitAddonRef.current = fitAddon
-
-    const wsUrl = websocketUrl || getWebSocketUrl()
-    console.log("[v0] TerminalPanel: Connecting to WebSocket:", wsUrl)
-
-    const ws = new WebSocket(wsUrl)
-    wsRef.current = ws
-
-    ws.onopen = () => {
-      console.log("[v0] TerminalPanel: WebSocket connected")
-      term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
-    }
-
-    ws.onmessage = (event) => {
-      term.write(event.data)
-    }
-
-    ws.onerror = (error) => {
-      console.error("[v0] TerminalPanel: WebSocket error:", error)
-      term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
-    }
-
-    ws.onclose = () => {
-      console.log("[v0] TerminalPanel: WebSocket closed")
-      term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
-    }
-
-    // Send user input to backend
-    term.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(data)
-      }
-    })
-
-    // Re-adjust terminal size on window resize
-    const handleResize = () => {
-      try {
+        term.open(containerRef.current)
         fitAddon.fit()
-      } catch {
-        // Ignore resize errors
-      }
-    }
-    window.addEventListener("resize", handleResize)
 
-    return () => {
-      console.log("[v0] TerminalPanel: Cleaning up")
-      window.removeEventListener("resize", handleResize)
-      ws.close()
-      term.dispose()
-    }
+        termRef.current = term
+        fitAddonRef.current = fitAddon
+        setXtermLoaded(true)
+
+        const wsUrl = websocketUrl || getWebSocketUrl()
+        console.log("[v0] TerminalPanel: Connecting to WebSocket:", wsUrl)
+
+        const ws = new WebSocket(wsUrl)
+        wsRef.current = ws
+
+        ws.onopen = () => {
+          console.log("[v0] TerminalPanel: WebSocket connected")
+          term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
+        }
+
+        ws.onmessage = (event) => {
+          term.write(event.data)
+        }
+
+        ws.onerror = (error) => {
+          console.error("[v0] TerminalPanel: WebSocket error:", error)
+          term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
+        }
+
+        ws.onclose = () => {
+          console.log("[v0] TerminalPanel: WebSocket closed")
+          term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
+        }
+
+        term.onData((data) => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(data)
+          }
+        })
+
+        const handleResize = () => {
+          try {
+            fitAddon.fit()
+          } catch {
+            // Ignore resize errors
+          }
+        }
+        window.addEventListener("resize", handleResize)
+
+        return () => {
+          console.log("[v0] TerminalPanel: Cleaning up")
+          window.removeEventListener("resize", handleResize)
+          ws.close()
+          term.dispose()
+        }
+      })
+      .catch((error) => {
+        console.error("[v0] TerminalPanel: Failed to load xterm:", error)
+      })
   }, [websocketUrl])
 
   const sendSequence = (seq: string) => {
@@ -149,7 +148,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) =>
         sendSequence("\r")
         break
       case "CTRL_C":
-        sendSequence("\x03") // Ctrl+C
+        sendSequence("\x03")
         break
       default:
         break
@@ -174,26 +173,24 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) =>
     const dy = touch.clientY - start.y
     const dt = Date.now() - start.time
 
-    const minDistance = 30 // Minimum pixels for swipe detection
-    const maxTime = 1000 // Maximum time in milliseconds
+    const minDistance = 30
+    const maxTime = 1000
 
     touchStartRef.current = null
 
-    if (dt > maxTime) return // Gesture too slow, ignore
+    if (dt > maxTime) return
 
     if (Math.abs(dx) < minDistance && Math.abs(dy) < minDistance) {
-      return // Movement too small, ignore
+      return
     }
 
     if (Math.abs(dx) > Math.abs(dy)) {
-      // Horizontal swipe
       if (dx > 0) {
         handleKeyButton("RIGHT")
       } else {
         handleKeyButton("LEFT")
       }
     } else {
-      // Vertical swipe
       if (dy > 0) {
         handleKeyButton("DOWN")
       } else {
@@ -204,15 +201,17 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) =>
 
   return (
     <div className="flex flex-col h-full w-full">
-      {/* Terminal display */}
       <div
         ref={containerRef}
         className="flex-1 bg-black rounded-t-md overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-      />
+      >
+        {!xtermLoaded && (
+          <div className="flex items-center justify-center h-full text-zinc-400">Initializing terminal...</div>
+        )}
+      </div>
 
-      {/* Touch keyboard bar for mobile/tablet */}
       <div className="flex flex-wrap gap-2 justify-center items-center px-2 py-2 bg-zinc-900 text-sm rounded-b-md">
         <TouchKey label="ESC" onClick={() => handleKeyButton("ESC")} />
         <TouchKey label="TAB" onClick={() => handleKeyButton("TAB")} />
@@ -227,7 +226,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) =>
   )
 }
 
-// Reusable button component for touch keyboard
 type TouchKeyProps = {
   label: string
   onClick: () => void
