@@ -293,8 +293,11 @@ pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" \
     googletrans==4.0.0-rc1 \
     httpx==0.13.3 \
     httpcore==0.9.1 \
-    flask-sock \
-    beautifulsoup4
+    beautifulsoup4 \
+    'h11>=0.14.0,<1.0.0' \
+    'wsproto>=1.2.0' \
+    'simple-websocket>=0.10.0' \
+    'flask-sock>=0.6.0'
 
 cat > "$APP_DIR/usr/lib/python3/dist-packages/cgi.py" << 'PYEOF'
 from typing import Tuple, Dict
