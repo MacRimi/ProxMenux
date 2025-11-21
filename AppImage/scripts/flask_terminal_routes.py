@@ -13,7 +13,8 @@ import select
 import struct
 import fcntl
 import termios
-import signal
+import threading
+import time
 
 terminal_bp = Blueprint('terminal', __name__)
 sock = Sock()
@@ -33,6 +34,25 @@ def set_winsize(fd, rows, cols):
         fcntl.ioctl(fd, termios.TIOCSWINSZ, winsize)
     except Exception as e:
         print(f"Error setting window size: {e}")
+
+def read_and_forward_output(master_fd, ws):
+    """Read from PTY and send to WebSocket"""
+    while True:
+        try:
+            # Use select with timeout to check if data is available
+            r, _, _ = select.select([master_fd], [], [], 0.01)
+            if master_fd in r:
+                try:
+                    data = os.read(master_fd, 4096)
+                    if data:
+                        ws.send(data.decode('utf-8', errors='ignore'))
+                    else:
+                        break
+                except OSError:
+                    break
+        except Exception as e:
+            print(f"Error reading from PTY: {e}")
+            break
 
 @sock.route('/ws/terminal')
 def terminal_websocket(ws):
@@ -62,44 +82,41 @@ def terminal_websocket(ws):
     fcntl.fcntl(master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
     
     # Set initial terminal size
-    set_winsize(master_fd, 24, 80)
+    set_winsize(master_fd, 30, 120)
+    
+    # Start thread to read PTY output and forward to WebSocket
+    output_thread = threading.Thread(
+        target=read_and_forward_output,
+        args=(master_fd, ws),
+        daemon=True
+    )
+    output_thread.start()
     
     try:
         while True:
-            # Use select to wait for data from either WebSocket or PTY
-            readable, _, _ = select.select([ws.sock, master_fd], [], [], 0.1)
+            # Receive data from WebSocket (blocking)
+            data = ws.receive(timeout=None)
             
-            # Read from WebSocket (user input)
-            if ws.sock in readable:
+            if data is None:
+                # Client closed connection
+                break
+            
+            # Handle terminal resize (optional)
+            if data.startswith('\x1b[8;'):
                 try:
-                    data = ws.receive(timeout=0)
-                    if data is None:
-                        break
-                    
-                    # Handle special commands (optional)
-                    if data.startswith('\x1b[8;'):  # Terminal resize
-                        # Parse resize: ESC[8;{rows};{cols}t
-                        try:
-                            parts = data[4:-1].split(';')
-                            rows, cols = int(parts[0]), int(parts[1])
-                            set_winsize(master_fd, rows, cols)
-                        except:
-                            pass
-                    else:
-                        # Send input to bash
-                        os.write(master_fd, data.encode('utf-8'))
+                    parts = data[4:-1].split(';')
+                    rows, cols = int(parts[0]), int(parts[1])
+                    set_winsize(master_fd, rows, cols)
+                    continue
                 except:
-                    break
+                    pass
             
-            # Read from PTY (bash output)
-            if master_fd in readable:
-                try:
-                    output = os.read(master_fd, 4096)
-                    if output:
-                        ws.send(output.decode('utf-8', errors='ignore'))
-                except OSError:
-                    # PTY closed
-                    break
+            # Send input to bash
+            try:
+                os.write(master_fd, data.encode('utf-8'))
+            except OSError as e:
+                print(f"Error writing to PTY: {e}")
+                break
             
             # Check if process is still alive
             if shell_process.poll() is not None:
@@ -113,15 +130,23 @@ def terminal_websocket(ws):
             shell_process.terminate()
             shell_process.wait(timeout=1)
         except:
-            shell_process.kill()
+            try:
+                shell_process.kill()
+            except:
+                pass
         
-        os.close(master_fd)
-        os.close(slave_fd)
+        try:
+            os.close(master_fd)
+        except:
+            pass
+        
+        try:
+            os.close(slave_fd)
+        except:
+            pass
         
         if session_id in active_sessions:
             del active_sessions[session_id]
-        
-        ws.close()
 
 def init_terminal_routes(app):
     """Initialize terminal routes with Flask app"""
