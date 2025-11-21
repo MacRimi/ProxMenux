@@ -15,7 +15,7 @@ import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
 import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
 import { getApiUrl, fetchApi } from "../lib/api-config"
-import TerminalPanel from "./terminal-panel"
+import { TerminalPanel } from "./terminal-panel"
 import {
   RefreshCw,
   AlertTriangle,
