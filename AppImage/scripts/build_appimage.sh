@@ -282,7 +282,15 @@ if [ -f "$APP_DIR/proxmenux-monitor.png" ]; then
 fi
 
 echo "📦 Installing Python dependencies..."
+# Phase 1: Install googletrans with its old dependencies
 pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" \
+    googletrans==4.0.0-rc1 \
+    httpx==0.13.3 \
+    httpcore==0.9.1 \
+    h11==0.9.0 || true
+
+# Phase 2: Install modern Flask/WebSocket dependencies (will upgrade h11 and related packages)
+pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade --no-deps \
     flask \
     flask-cors \
     psutil \
@@ -290,14 +298,14 @@ pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" \
     PyJWT \
     pyotp \
     segno \
-    googletrans==4.0.0-rc1 \
-    httpx==0.13.3 \
-    httpcore==0.9.1 \
-    beautifulsoup4 \
-    'h11>=0.14.0,<1.0.0' \
-    'wsproto>=1.2.0' \
-    'simple-websocket>=0.10.0' \
-    'flask-sock>=0.6.0'
+    beautifulsoup4
+
+# Phase 3: Install WebSocket with newer h11
+pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
+    h11>=0.14.0 \
+    wsproto>=1.2.0 \
+    simple-websocket>=0.10.0 \
+    flask-sock>=0.6.0
 
 cat > "$APP_DIR/usr/lib/python3/dist-packages/cgi.py" << 'PYEOF'
 from typing import Tuple, Dict
