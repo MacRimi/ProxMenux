@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useEffect, useRef } from "react"
+import { API_PORT } from "@/lib/api-config"
 
 let Terminal: any
 let FitAddon: any
@@ -16,7 +17,27 @@ type TerminalPanelProps = {
   websocketUrl?: string // Custom WebSocket URL if needed
 }
 
-export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl = "ws://localhost:8008/ws/terminal" }) => {
+function getWebSocketUrl(): string {
+  if (typeof window === "undefined") {
+    return "ws://localhost:8008/ws/terminal"
+  }
+
+  const { protocol, hostname, port } = window.location
+  const isStandardPort = port === "" || port === "80" || port === "443"
+
+  // Use wss:// for https, ws:// for http
+  const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
+
+  if (isStandardPort) {
+    // Behind proxy - use current host
+    return `${wsProtocol}//${hostname}/ws/terminal`
+  } else {
+    // Direct access - use API port
+    return `${wsProtocol}//${hostname}:${API_PORT}/ws/terminal`
+  }
+}
+
+export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const termRef = useRef<any>(null)
   const fitAddonRef = useRef<any>(null)
@@ -27,6 +48,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl = "ws
 
   useEffect(() => {
     if (!containerRef.current || !Terminal || !FitAddon) return
+
+    console.log("[v0] TerminalPanel: Initializing terminal")
 
     const term = new Terminal({
       fontFamily: "monospace",
@@ -45,33 +68,34 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl = "ws
     termRef.current = term
     fitAddonRef.current = fitAddon
 
-    // WebSocket connection to backend (Flask)
-    const ws = new WebSocket(websocketUrl)
+    const wsUrl = websocketUrl || getWebSocketUrl()
+    console.log("[v0] TerminalPanel: Connecting to WebSocket:", wsUrl)
+
+    const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
     ws.onopen = () => {
+      console.log("[v0] TerminalPanel: WebSocket connected")
       term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
-      // Optional: notify backend to start shell
-      // ws.send(JSON.stringify({ type: 'start', shell: 'bash' }));
     }
 
     ws.onmessage = (event) => {
-      // Backend sends plain text (bash output)
       term.write(event.data)
     }
 
-    ws.onerror = () => {
+    ws.onerror = (error) => {
+      console.error("[v0] TerminalPanel: WebSocket error:", error)
       term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
     }
 
     ws.onclose = () => {
+      console.log("[v0] TerminalPanel: WebSocket closed")
       term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
     }
 
     // Send user input to backend
     term.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
-        // Send raw data or JSON depending on backend implementation
         ws.send(data)
       }
     })
@@ -87,13 +111,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl = "ws
     window.addEventListener("resize", handleResize)
 
     return () => {
+      console.log("[v0] TerminalPanel: Cleaning up")
       window.removeEventListener("resize", handleResize)
       ws.close()
       term.dispose()
     }
   }, [websocketUrl])
 
-  // --- Helpers for special key sequences ---
   const sendSequence = (seq: string) => {
     const term = termRef.current
     const ws = wsRef.current
@@ -132,7 +156,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl = "ws
     }
   }
 
-  // --- Touch gestures for arrow keys ---
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const touch = e.touches[0]
     touchStartRef.current = {
