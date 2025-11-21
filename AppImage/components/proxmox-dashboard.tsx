@@ -16,7 +16,6 @@ import { HealthStatusModal } from "./health-status-modal"
 import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import TerminalPanel from "./terminal-panel"
-import TerminalIcon from "lucide-react/Terminal"
 import {
   RefreshCw,
   AlertTriangle,
@@ -31,6 +30,7 @@ import {
   Cpu,
   FileText,
   SettingsIcon,
+  Terminal,
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
@@ -570,7 +570,7 @@ export function ProxmoxDashboard() {
                         : ""
                     }`}
                   >
-                    <TerminalIcon className="h-5 w-5" />
+                    <Terminal className="h-5 w-5" />
                     <span>Terminal</span>
                   </Button>
                   <Button
