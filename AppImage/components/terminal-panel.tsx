@@ -2,9 +2,15 @@
 
 import type React from "react"
 import { useEffect, useRef } from "react"
-import { Terminal } from "xterm"
-import { FitAddon } from "xterm-addon-fit"
-import "xterm/css/xterm.css"
+
+let Terminal: any
+let FitAddon: any
+
+if (typeof window !== "undefined") {
+  Terminal = require("xterm").Terminal
+  FitAddon = require("xterm-addon-fit").FitAddon
+  require("xterm/css/xterm.css")
+}
 
 type TerminalPanelProps = {
   websocketUrl?: string // Custom WebSocket URL if needed
@@ -12,15 +18,15 @@ type TerminalPanelProps = {
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl = "ws://localhost:8008/ws/terminal" }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const termRef = useRef<Terminal | null>(null)
-  const fitAddonRef = useRef<FitAddon | null>(null)
+  const termRef = useRef<any>(null)
+  const fitAddonRef = useRef<any>(null)
   const wsRef = useRef<WebSocket | null>(null)
 
   // For touch gestures
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
 
   useEffect(() => {
-    if (!containerRef.current) return
+    if (!containerRef.current || !Terminal || !FitAddon) return
 
     const term = new Terminal({
       fontFamily: "monospace",

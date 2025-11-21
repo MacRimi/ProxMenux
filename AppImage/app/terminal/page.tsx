@@ -1,8 +1,15 @@
-"use client"
-
-import { TerminalPanel } from "@/components/terminal-panel"
+import dynamic from "next/dynamic"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { TerminalIcon } from "lucide-react"
+
+const TerminalPanel = dynamic(() => import("@/components/terminal-panel").then((mod) => mod.TerminalPanel), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-muted-foreground">Loading terminal...</div>
+    </div>
+  ),
+})
 
 export default function TerminalPage() {
   return (
