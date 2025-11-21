@@ -1,92 +1,119 @@
 #!/usr/bin/env python3
 """
 ProxMenux Flask Server
-Provides REST API endpoints for Proxmox monitoring data
-Runs on port 8008 and serves system metrics, storage info, network stats, etc.
-Also serves the Next.js dashboard as static files
+
+- Provides REST API endpoints for Proxmox monitoring (system, storage, network, VMs, etc.)
+- Serves the Next.js dashboard as static files
+- Integrates a web terminal powered by xterm.js
 """
 
-from flask import Flask, jsonify, request, send_from_directory, send_file
-from flask_cors import CORS
-import psutil
-import subprocess
 import json
+import logging
+import math
 import os
+import platform
+import re
+import select
+import shutil
+import socket
+import subprocess
 import sys
 import time
-import socket
-
-# Cache for Proxmox node name (to avoid repeated API calls)
-_proxmox_node_cache = {'name': None, 'timestamp': 0}
-
-def get_proxmox_node_name():
-    """
-    Get the actual Proxmox node name from the Proxmox API.
-    Uses cache to avoid repeated API calls.
-    Falls back to short hostname if API call fails.
-    """
-    import time
-    cache_duration = 300  # 5 minutes cache
-    
-    current_time = time.time()
-    if _proxmox_node_cache['name'] and (current_time - _proxmox_node_cache['timestamp']) < cache_duration:
-        return _proxmox_node_cache['name']
-    
-    try:
-        # Query Proxmox API directly to get the actual node name
-        result = subprocess.run(
-            ['pvesh', 'get', '/nodes', '--output-format', 'json'],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        
-        if result.returncode == 0:
-            nodes = json.loads(result.stdout)
-            if nodes and len(nodes) > 0:
-                # Get the first node name (in most cases there's only one local node)
-                node_name = nodes[0].get('node', '')
-                if node_name:
-                    _proxmox_node_cache['name'] = node_name
-                    _proxmox_node_cache['timestamp'] = current_time
-                    return node_name
-    except Exception as e:
-        print(f"Warning: Could not get Proxmox node name from API: {e}")
-    
-    # Fallback to short hostname (without domain) if API call fails
-    hostname = socket.gethostname()
-    short_hostname = hostname.split('.')[0]
-    return short_hostname
-
+import urllib.parse
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
-import re # Added for regex matching
-import select # Added for non-blocking read
-import shutil # Added for shutil.which
-import xml.etree.ElementTree as ET  # Added for XML parsing
-import math # Imported math for format_bytes function
-import urllib.parse # Added for URL encoding
-import platform # Added for platform.release()
-import hashlib
-import secrets
-import jwt
 from functools import wraps
 from pathlib import Path
 
-from flask_health_routes import health_bp
+import jwt
+import psutil
+from flask import Flask, jsonify, request, send_file, send_from_directory
+from flask_cors import CORS
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Ensure local imports work even if working directory changes
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
-from flask_auth_routes import auth_bp
-from flask_proxmenux_routes import proxmenux_bp
-from jwt_middleware import require_auth
+from flask_terminal_routes import terminal_bp, init_terminal_routes  # noqa: E402
+from flask_health_routes import health_bp  # noqa: E402
+from flask_auth_routes import auth_bp  # noqa: E402
+from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
+from jwt_middleware import require_auth  # noqa: E402
 
+# -------------------------------------------------------------------
+# Logging
+# -------------------------------------------------------------------
+logger = logging.getLogger("proxmenux.flask")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+
+# -------------------------------------------------------------------
+# Proxmox node name cache
+# -------------------------------------------------------------------
+_PROXMOX_NODE_CACHE = {"name": None, "timestamp": 0.0}
+_PROXMOX_NODE_CACHE_TTL = 300  # seconds (5 minutes)
+
+
+def get_proxmox_node_name() -> str:
+    """
+    Retrieve the real Proxmox node name.
+
+    - First tries reading from: `pvesh get /nodes`
+    - Uses an in-memory cache to avoid repeated API calls
+    - Falls back to the short hostname if the API call fails
+    """
+    now = time.time()
+    cached_name = _PROXMOX_NODE_CACHE.get("name")
+    cached_ts = _PROXMOX_NODE_CACHE.get("timestamp", 0.0)
+
+    # Cache hit
+    if cached_name and (now - float(cached_ts)) < _PROXMOX_NODE_CACHE_TTL:
+        return str(cached_name)
+
+    # Try Proxmox API
+    try:
+        result = subprocess.run(
+            ["pvesh", "get", "/nodes", "--output-format", "json"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+
+        if result.returncode == 0 and result.stdout:
+            nodes = json.loads(result.stdout)
+            if isinstance(nodes, list) and nodes:
+                node_name = nodes[0].get("node")
+                if node_name:
+                    _PROXMOX_NODE_CACHE["name"] = node_name
+                    _PROXMOX_NODE_CACHE["timestamp"] = now
+                    return node_name
+
+    except Exception as exc:
+        logger.warning("Failed to get Proxmox node name from API: %s", exc)
+
+    # Fallback: short hostname (without domain)
+    hostname = socket.gethostname()
+    short_hostname = hostname.split(".", 1)[0]
+    return short_hostname
+
+
+# -------------------------------------------------------------------
+# Flask application and Blueprints
+# -------------------------------------------------------------------
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Next.js frontend
 
+# Register Blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(health_bp)
 app.register_blueprint(proxmenux_bp)
 
+# Initialize terminal / WebSocket routes
+init_terminal_routes(app)
 
 
 def identify_gpu_type(name, vendor=None, bus=None, driver=None):
