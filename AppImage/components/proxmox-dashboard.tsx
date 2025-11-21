@@ -15,6 +15,8 @@ import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
 import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
 import { getApiUrl, fetchApi } from "../lib/api-config"
+import TerminalPanel from "./terminal-panel"
+import TerminalIcon from "lucide-react/Terminal"
 import {
   RefreshCw,
   AlertTriangle,
@@ -259,6 +261,8 @@ export function ProxmoxDashboard() {
         return "VMs & LXCs"
       case "hardware":
         return "Hardware"
+      case "terminal":
+        return "Terminal"
       case "logs":
         return "System Logs"
       case "settings":
@@ -412,7 +416,7 @@ export function ProxmoxDashboard() {
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
-            <TabsList className="hidden md:grid w-full grid-cols-7 bg-card border border-border">
+            <TabsList className="hidden md:grid w-full grid-cols-8 bg-card border border-border">
               <TabsTrigger
                 value="overview"
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
@@ -442,6 +446,12 @@ export function ProxmoxDashboard() {
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
               >
                 Hardware
+              </TabsTrigger>
+              <TabsTrigger
+                value="terminal"
+                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+              >
+                Terminal
               </TabsTrigger>
               <TabsTrigger
                 value="logs"
@@ -551,6 +561,21 @@ export function ProxmoxDashboard() {
                   <Button
                     variant="ghost"
                     onClick={() => {
+                      setActiveTab("terminal")
+                      setMobileMenuOpen(false)
+                    }}
+                    className={`w-full justify-start gap-3 ${
+                      activeTab === "terminal"
+                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                        : ""
+                    }`}
+                  >
+                    <TerminalIcon className="h-5 w-5" />
+                    <span>Terminal</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
                       setActiveTab("logs")
                       setMobileMenuOpen(false)
                     }}
@@ -605,6 +630,10 @@ export function ProxmoxDashboard() {
 
           <TabsContent value="hardware" className="space-y-4 md:space-y-6 mt-0">
             <Hardware key={`hardware-${componentKey}`} />
+          </TabsContent>
+
+          <TabsContent value="terminal" className="space-y-4 md:space-y-6 mt-0">
+            <TerminalPanel key={`terminal-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="logs" className="space-y-4 md:space-y-6 mt-0">
