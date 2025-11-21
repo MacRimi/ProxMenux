@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
-import { Dialog, DialogContent } from "./ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { X, Sparkles, Link2, Shield, Zap, HardDrive, Gauge, Wrench, Settings } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
@@ -110,6 +110,7 @@ export function ReleaseNotesModal({ open, onClose }: ReleaseNotesModalProps) {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 border-0 bg-transparent">
+        <DialogTitle className="sr-only">Release Notes - Version {APP_VERSION}</DialogTitle>
         <div className="relative bg-card rounded-lg shadow-2xl h-full flex flex-col max-h-[85vh]">
           <Button
             variant="ghost"

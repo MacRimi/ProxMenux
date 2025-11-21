@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
-import { Dialog, DialogContent } from "./ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
-import { Shield, Lock, User, AlertCircle } from "lucide-react"
+import { Shield, Lock, User, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { getApiUrl } from "../lib/api-config"
 
 interface AuthSetupProps {
@@ -20,6 +20,8 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
@@ -135,6 +137,9 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogTitle className="sr-only">
+          {step === "choice" ? "Setup Dashboard Protection" : "Create Password"}
+        </DialogTitle>
         {step === "choice" ? (
           <div className="space-y-6 py-2">
             <div className="text-center space-y-2">
@@ -210,7 +215,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Enter password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -218,6 +223,14 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                     disabled={loading}
                     autoComplete="new-password"
                   />
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                    disabled={loading}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
                 </div>
               </div>
 
@@ -229,7 +242,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="confirm-password"
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -237,6 +250,14 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
                     disabled={loading}
                     autoComplete="new-password"
                   />
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                    disabled={loading}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
                 </div>
               </div>
             </div>

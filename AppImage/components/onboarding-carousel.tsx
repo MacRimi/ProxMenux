@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
-import { Dialog, DialogContent } from "./ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import {
   ChevronLeft,
   ChevronRight,
@@ -159,6 +159,7 @@ export function OnboardingCarousel() {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden border-0 bg-transparent">
+        <DialogTitle className="sr-only">ProxMenux Onboarding</DialogTitle>
         <div className="relative bg-card rounded-lg overflow-hidden shadow-2xl">
           <Button
             variant="ghost"
