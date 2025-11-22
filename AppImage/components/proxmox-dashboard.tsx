@@ -635,7 +635,7 @@ export function ProxmoxDashboard() {
             <Hardware key={`hardware-${componentKey}`} />
           </TabsContent>
 
-          <TabsContent value="terminal" className="flex-1 flex flex-col overflow-hidden mt-0 min-h-0">
+          <TabsContent value="terminal" className="h-[calc(100vh-280px)] flex flex-col overflow-hidden mt-0">
             <TerminalPanel key={`terminal-${componentKey}`} />
           </TabsContent>
 
