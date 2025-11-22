@@ -172,39 +172,64 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         setIsSearching(true)
         setUseOnline(true)
 
-        const response = await fetch(`https://cht.sh/${encodeURIComponent(query)}?T`, {
-          signal: AbortSignal.timeout(8000),
+        // Format query: replace spaces with + for cheat.sh API
+        const formattedQuery = query.trim().replace(/\s+/g, "+")
+
+        // Use ?QT options: Q=no comments (code only), T=no syntax highlighting
+        const url = `https://cht.sh/${formattedQuery}?QT`
+
+        console.log("[v0] Fetching from cheat.sh:", url)
+
+        const response = await fetch(url, {
+          signal: AbortSignal.timeout(10000),
+          headers: {
+            "User-Agent": "curl/7.68.0", // cheat.sh works better with curl user agent
+          },
         })
 
-        if (!response.ok) throw new Error("API request failed")
+        if (!response.ok) {
+          console.log("[v0] API response not OK:", response.status)
+          throw new Error(`API request failed: ${response.status}`)
+        }
 
         const text = await response.text()
+        console.log("[v0] Received response, length:", text.length)
 
-        const lines = text.split("\n").filter((line) => line.trim())
+        if (!text || text.includes("Unknown topic") || text.includes("nothing found")) {
+          throw new Error("No results found")
+        }
+
+        // Split by double newlines to get separate examples
+        const blocks = text.split(/\n\s*\n/).filter((block) => block.trim())
         const examples: string[] = []
-        let description = ""
 
-        for (const line of lines) {
-          const trimmed = line.trim()
-          if (trimmed.startsWith("#") || trimmed.startsWith("//")) {
-            if (!description) description = trimmed.replace(/^[#/]+\s*/, "")
-          } else if (trimmed && !trimmed.includes("cheat.sh") && !trimmed.includes("http")) {
-            if (trimmed.length < 200) {
-              examples.push(trimmed)
+        for (const block of blocks) {
+          const lines = block.split("\n").filter((line) => {
+            const trimmed = line.trim()
+            // Filter out URLs, metadata, and empty lines
+            return trimmed && !trimmed.startsWith("http") && !trimmed.includes("cheat.sh") && !trimmed.includes("[") // Remove attribution lines like [user] [source]
+          })
+
+          if (lines.length > 0) {
+            const example = lines.join("\n").trim()
+            if (example.length > 10 && example.length < 500) {
+              examples.push(example)
             }
           }
         }
+
+        console.log("[v0] Parsed examples:", examples.length)
 
         if (examples.length > 0) {
           setSearchResults([
             {
               command: query,
-              description: description || `Command examples for ${query}`,
-              examples: examples.slice(0, 5),
+              description: `Results from cheat.sh for "${query}"`,
+              examples: examples.slice(0, 8), // Show up to 8 examples
             },
           ])
         } else {
-          throw new Error("No examples found")
+          throw new Error("No valid examples found")
         }
       } catch (error) {
         console.log("[v0] Falling back to offline mode:", error)
