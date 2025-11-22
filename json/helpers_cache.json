@@ -6570,6 +6570,23 @@
     "type": "pve"
   },
   {
+    "name": "Upgopher",
+    "slug": "upgopher",
+    "desc": "A simple Go web server for file upload, download, and browsing. Cross-platform alternative to Python-based file servers with no library dependencies. Features file upload via web interface, directory navigation, URL copying to clipboard, optional basic authentication, HTTPS support, and hidden files toggle.",
+    "script": "ct/upgopher.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/upgopher.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/upgopher.sh",
+    "os": "debian",
+    "categories": [
+      11
+    ],
+    "notes": [
+      "Default uploads directory: `/opt/upgopher/uploads`",
+      "Set application startup options by editing `/etc/systemd/system/upgopher.service`. Read documentation for available options."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "UpSnap",
     "slug": "upsnap",
     "desc": "UpSnap is a self-hosted web app that lets you wake up, manage and monitor devices on your network with ease. Built with SvelteKit, Go and PocketBase, it offers a clean dashboard, scheduled wake-ups, device discovery and secure user management.",
