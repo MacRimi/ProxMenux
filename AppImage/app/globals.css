@@ -139,59 +139,58 @@
 }
 
 /* ===================== */
-/* Base layer            */
+/* Base styles           */
 /* ===================== */
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+* {
+  border-color: var(--border);
+  outline-color: color-mix(in oklch, var(--ring), transparent 50%);
+}
 
-  body {
-    @apply bg-background text-foreground;
-  }
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
 
-  /* Foco accesible */
-  :is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus {
-    @apply outline-none;
-  }
-  :is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
-    @apply ring-2;
-    --tw-ring-color: var(--ring);
-    --tw-ring-opacity: 0.5; /* equivalente al /50 */
-  }
+/* Foco accesible */
+:is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus {
+  outline: none;
+}
+:is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--ring), transparent 50%);
+  outline-offset: 2px;
 }
 
 /* ===================== */
 /* Ajustes para Charts   */
 /* ===================== */
-@layer components {
-  /* Recharts axis */
-  .recharts-cartesian-axis-tick tspan {
-    fill: var(--muted-foreground);
-  }
-  .recharts-cartesian-axis-line,
-  .recharts-cartesian-grid line {
-    stroke: var(--border);
-  }
+/* Recharts axis */
+.recharts-cartesian-axis-tick tspan {
+  fill: var(--muted-foreground);
+}
+.recharts-cartesian-axis-line,
+.recharts-cartesian-grid line {
+  stroke: var(--border);
+}
 
-  /* Chart.js axis */
-  .chartjs-render-monitor text {
-    fill: var(--muted-foreground);
-  }
-  .chartjs-render-monitor line {
-    stroke: var(--border);
-  }
+/* Chart.js axis */
+.chartjs-render-monitor text {
+  fill: var(--muted-foreground);
+}
+.chartjs-render-monitor line {
+  stroke: var(--border);
+}
 
-  /* Eliminar padding de xterm para centrar contenido como en Proxmox real */
-  .xterm {
-    padding: 0 !important;
-  }
+/* ===================== */
+/* Terminal xterm styles */
+/* ===================== */
+.xterm {
+  padding: 0 !important;
+}
 
-  .xterm .xterm-viewport {
-    overflow-y: auto !important;
-  }
+.xterm .xterm-viewport {
+  overflow-y: auto !important;
+}
 
-  .xterm .xterm-screen {
-    padding: 0 !important;
-  }
+.xterm .xterm-screen {
+  padding: 0 !important;
 }
