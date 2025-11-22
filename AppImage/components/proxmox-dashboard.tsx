@@ -610,12 +610,8 @@ export function ProxmoxDashboard() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 md:px-6 py-4 md:py-6 flex-1 flex flex-col">
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="space-y-4 md:space-y-6 flex-1 flex flex-col min-h-0"
-        >
+      <div className="container mx-auto px-4 md:px-6 py-4 md:py-6 flex-1 flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <TabsContent value="overview" className="space-y-4 md:space-y-6 mt-0">
             <SystemOverview key={`overview-${componentKey}`} />
           </TabsContent>
@@ -648,21 +644,21 @@ export function ProxmoxDashboard() {
             <Settings />
           </TabsContent>
         </Tabs>
-
-        <footer className="mt-8 md:mt-12 pt-4 md:pt-6 border-t border-border text-center text-xs md:text-sm text-muted-foreground flex-shrink-0">
-          <p className="font-medium mb-2">ProxMenux Monitor v1.0.1</p>
-          <p>
-            <a
-              href="https://ko-fi.com/macrimi"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:text-blue-600 hover:underline transition-colors"
-            >
-              Support and contribute to the project
-            </a>
-          </p>
-        </footer>
       </div>
+
+      <footer className="container mx-auto px-4 md:px-6 py-4 border-t border-border text-center text-xs md:text-sm text-muted-foreground flex-shrink-0">
+        <p className="font-medium mb-2">ProxMenux Monitor v1.0.1</p>
+        <p>
+          <a
+            href="https://ko-fi.com/macrimi"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-600 hover:underline transition-colors"
+          >
+            Support and contribute to the project
+          </a>
+        </p>
+      </footer>
 
       <HealthStatusModal open={showHealthModal} onOpenChange={setShowHealthModal} getApiUrl={getApiUrl} />
     </div>

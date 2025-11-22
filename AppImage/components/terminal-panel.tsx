@@ -506,8 +506,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         }
       `}</style>
 
-      <div className="h-full flex flex-col bg-zinc-900 rounded-md overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+      <div className="h-full w-full flex flex-col bg-zinc-900 rounded-md overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800 flex-shrink-0">
           <div className="flex items-center gap-3">
             <Activity className="h-5 w-5 text-blue-500" />
             <div
@@ -588,9 +588,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden w-full">
           {isMobile ? (
-            <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
+            <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full w-full flex flex-col">
               <TabsList className="bg-zinc-900 border-b border-zinc-800 rounded-none justify-start overflow-x-auto flex-shrink-0">
                 {terminals.map((terminal) => (
                   <TabsTrigger
@@ -613,7 +613,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
               ))}
             </Tabs>
           ) : (
-            <div className={`${getLayoutClass()} gap-2 h-full p-2`}>
+            <div className={`${getLayoutClass()} gap-2 h-full w-full p-2`}>
               {terminals.map((terminal) => (
                 <div
                   key={terminal.id}
@@ -638,7 +638,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                       </Button>
                     )}
                   </div>
-                  <div ref={setContainerRef(terminal.id)} className="flex-1 w-full overflow-hidden bg-black" />
+                  <div ref={setContainerRef(terminal.id)} className="flex-1 w-full bg-black" />
                 </div>
               ))}
             </div>
