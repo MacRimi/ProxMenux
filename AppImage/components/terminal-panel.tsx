@@ -133,15 +133,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const [searchResults, setSearchResults] = useState<CheatSheetResult[]>([])
   const [useOnline, setUseOnline] = useState(true)
 
-  const containerRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const containerRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   const setContainerRef = useCallback(
     (id: string) => (el: HTMLDivElement | null) => {
-      if (el) {
-        containerRefs.current.set(id, el)
-      } else {
-        containerRefs.current.delete(id)
-      }
+      containerRefs.current[id] = el
     },
     [],
   )
@@ -267,12 +263,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       return filtered
     })
 
-    containerRefs.current.delete(id) // Clean up the ref
+    delete containerRefs.current[id] // Clean up the ref
   }
 
   useEffect(() => {
     terminals.forEach((terminal) => {
-      const container = containerRefs.current.get(terminal.id)
+      const container = containerRefs.current[terminal.id]
       if (!terminal.term && container) {
         initializeTerminal(terminal, container)
       }
@@ -287,8 +283,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
     const term = new Terminal({
-      fontFamily: "'Menlo', 'Monaco', 'Courier New', monospace",
-      fontSize: 14,
+      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
+      fontSize: isMobile ? 11 : 13,
       cursorBlink: true,
       scrollback: 2000,
       disableStdin: false,
@@ -298,64 +294,31 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         background: "#000000",
         foreground: "#ffffff",
         cursor: "#ffffff",
-        selection: "rgba(255, 255, 255, 0.3)",
-        black: "#000000",
-        red: "#ff5555",
-        green: "#50fa7b",
-        yellow: "#f1fa8c",
-        blue: "#bd93f9",
-        magenta: "#ff79c6",
-        cyan: "#8be9fd",
-        white: "#bbbbbb",
-        brightBlack: "#555555",
-        brightRed: "#ff5555",
-        brightGreen: "#50fa7b",
-        brightYellow: "#f1fa8c",
-        brightBlue: "#bd93f9",
-        brightMagenta: "#ff79c6",
-        brightCyan: "#8be9fd",
-        brightWhite: "#ffffff",
+        cursorAccent: "#000000",
+        black: "#2e3436",
+        red: "#cc0000",
+        green: "#4e9a06",
+        yellow: "#c4a000",
+        blue: "#3465a4",
+        magenta: "#75507b",
+        cyan: "#06989a",
+        white: "#d3d7cf",
+        brightBlack: "#555753",
+        brightRed: "#ef2929",
+        brightGreen: "#8ae234",
+        brightYellow: "#fce94f",
+        brightBlue: "#729fcf",
+        brightMagenta: "#ad7fa8",
+        brightCyan: "#34e2e2",
+        brightWhite: "#eeeeec",
       },
-      allowProposedApi: true,
     })
 
     const fitAddon = new FitAddon()
     term.loadAddon(fitAddon)
 
     term.open(container)
-
-    container.style.padding = "0"
-    container.style.margin = "0"
-
-    const removeXtermPadding = () => {
-      const xtermElement = container.querySelector(".xterm")
-      const viewport = container.querySelector(".xterm-viewport")
-      const screen = container.querySelector(".xterm-screen")
-
-      if (xtermElement) {
-        ;(xtermElement as HTMLElement).style.padding = "0"
-        ;(xtermElement as HTMLElement).style.margin = "0"
-      }
-      if (viewport) {
-        ;(viewport as HTMLElement).style.padding = "0"
-        ;(viewport as HTMLElement).style.margin = "0"
-      }
-      if (screen) {
-        ;(screen as HTMLElement).style.padding = "0"
-        ;(screen as HTMLElement).style.margin = "0"
-      }
-    }
-
-    removeXtermPadding()
-    setTimeout(removeXtermPadding, 100)
-
-    setTimeout(() => {
-      try {
-        fitAddon.fit()
-      } catch (error) {
-        console.error("[v0] Error fitting terminal:", error)
-      }
-    }, 50)
+    fitAddon.fit()
 
     const wsUrl = websocketUrl || getWebSocketUrl()
     const ws = new WebSocket(wsUrl)
@@ -600,9 +563,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 <div
                   ref={setContainerRef(terminal.id)}
                   className="w-full h-full bg-black"
-                  style={{
-                    height: "calc(100vh - 24rem)",
-                  }}
+                  style={{ height: "calc(100vh - 24rem)" }}
                 />
               </TabsContent>
             ))}
