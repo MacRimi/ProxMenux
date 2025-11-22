@@ -606,7 +606,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                   value={terminal.id}
                   className="flex-1 m-0 min-h-0 data-[state=active]:flex data-[state=inactive]:hidden"
                 >
-                  <div ref={setContainerRef(terminal.id)} className="absolute inset-0 bg-black" />
+                  <div ref={setContainerRef(terminal.id)} className="flex-1 w-full bg-black" />
                 </TabsContent>
               ))}
             </Tabs>
