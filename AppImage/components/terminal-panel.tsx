@@ -496,7 +496,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         }
       `}</style>
 
-      <div className="h-full flex flex-col bg-zinc-900 rounded-md overflow-hidden">
+      <div className="min-h-[calc(100vh-200px)] flex flex-col bg-zinc-900 rounded-md overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
           <div className="flex items-center gap-3">
             <Activity className="h-5 w-5 text-blue-500" />
@@ -578,7 +578,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           </div>
         </div>
 
-        <div className="h-full overflow-hidden">
+        <div className="flex-1 overflow-hidden">
           {isMobile ? (
             <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
               <TabsList className="bg-zinc-900 border-b border-zinc-800 rounded-none justify-start overflow-x-auto flex-shrink-0">
