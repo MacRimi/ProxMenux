@@ -319,9 +319,26 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
     term.open(container)
 
+    const xtermElement = container.querySelector(".xterm") as HTMLElement
+    const xtermViewport = container.querySelector(".xterm-viewport") as HTMLElement
+    const xtermScreen = container.querySelector(".xterm-screen") as HTMLElement
+
+    if (xtermElement) {
+      xtermElement.style.padding = "0"
+      xtermElement.style.margin = "0"
+    }
+    if (xtermViewport) {
+      xtermViewport.style.padding = "0"
+      xtermViewport.style.margin = "0"
+    }
+    if (xtermScreen) {
+      xtermScreen.style.padding = "0"
+      xtermScreen.style.margin = "0"
+    }
+
     setTimeout(() => {
       fitAddon.fit()
-    }, 100)
+    }, 50)
 
     const wsUrl = websocketUrl || getWebSocketUrl()
     const ws = new WebSocket(wsUrl)
@@ -563,7 +580,15 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             </TabsList>
             {terminals.map((terminal) => (
               <TabsContent key={terminal.id} value={terminal.id} className="flex-1 m-0 p-0">
-                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black overflow-hidden" />
+                <div
+                  ref={setContainerRef(terminal.id)}
+                  className="w-full h-full bg-black overflow-hidden"
+                  style={{
+                    height: "calc(100vh - 24rem)",
+                    padding: 0,
+                    margin: 0,
+                  }}
+                />
               </TabsContent>
             ))}
           </Tabs>
@@ -586,7 +611,14 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                     </button>
                   )}
                 </div>
-                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black overflow-hidden" />
+                <div
+                  ref={setContainerRef(terminal.id)}
+                  className="w-full h-full bg-black pt-7 overflow-hidden"
+                  style={{
+                    padding: "1.75rem 0 0 0",
+                    margin: 0,
+                  }}
+                />
               </div>
             ))}
           </div>
