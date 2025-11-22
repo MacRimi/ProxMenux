@@ -12,6 +12,7 @@ import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { Settings } from "./settings"
 import { OnboardingCarousel } from "./onboarding-carousel"
+import { HealthStatusModal } from "./health-status-modal"
 import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TerminalPanel } from "./terminal-panel"
@@ -272,7 +273,7 @@ export function ProxmoxDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-black text-white flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <OnboardingCarousel />
       <ReleaseNotesModal open={showReleaseNotes} onClose={() => setShowReleaseNotes(false)} />
 
@@ -609,7 +610,7 @@ export function ProxmoxDashboard() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 md:px-6 py-4 md:py-6 flex-1 flex flex-col min-h-0">
+      <div className="container mx-auto px-4 md:px-6 py-4 md:py-6 flex-1 flex flex-col">
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
@@ -635,7 +636,7 @@ export function ProxmoxDashboard() {
             <Hardware key={`hardware-${componentKey}`} />
           </TabsContent>
 
-          <TabsContent value="terminal" className="h-[calc(100vh-280px)] flex flex-col overflow-hidden mt-0">
+          <TabsContent value="terminal" className="flex-1 flex flex-col overflow-hidden mt-0 min-h-0">
             <TerminalPanel key={`terminal-${componentKey}`} />
           </TabsContent>
 
@@ -647,21 +648,23 @@ export function ProxmoxDashboard() {
             <Settings />
           </TabsContent>
         </Tabs>
+
+        <footer className="mt-8 md:mt-12 pt-4 md:pt-6 border-t border-border text-center text-xs md:text-sm text-muted-foreground flex-shrink-0">
+          <p className="font-medium mb-2">ProxMenux Monitor v1.0.1</p>
+          <p>
+            <a
+              href="https://ko-fi.com/macrimi"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:text-blue-600 hover:underline transition-colors"
+            >
+              Support and contribute to the project
+            </a>
+          </p>
+        </footer>
       </div>
 
-      <footer className="mt-8 md:mt-12 pt-4 md:pt-6 border-t border-border text-center text-xs md:text-sm text-muted-foreground flex-shrink-0">
-        <p className="font-medium mb-2">ProxMenux Monitor v1.0.1</p>
-        <p>
-          <a
-            href="https://ko-fi.com/macrimi"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-600 hover:underline transition-colors"
-          >
-            Support and contribute to the project
-          </a>
-        </p>
-      </footer>
+      <HealthStatusModal open={showHealthModal} onOpenChange={setShowHealthModal} getApiUrl={getApiUrl} />
     </div>
   )
 }
