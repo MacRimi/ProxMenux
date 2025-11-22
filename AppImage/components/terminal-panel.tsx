@@ -288,8 +288,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       cursorBlink: true,
       scrollback: 2000,
       disableStdin: false,
-      cols: isMobile ? 40 : layout === "grid" ? 60 : 120,
-      rows: isMobile ? 20 : layout === "grid" ? 15 : 30,
       theme: {
         background: "#000000",
         foreground: "#ffffff",
@@ -325,13 +323,23 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       if (xtermViewport) xtermViewport.style.padding = "0"
       if (xtermScreen) xtermScreen.style.padding = "0"
       fitAddon.fit()
+      console.log(`[v0] Terminal fitted: ${term.cols}x${term.rows}`)
 
-      const cols = term.cols
-      const rows = term.rows
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(`\x1b[8;${rows};${cols}t`)
-      }
-    }, 10)
+      // Send resize to backend via HTTP
+      const apiUrl = getApiUrl()
+      fetch(`${apiUrl}/api/terminal/${terminal.id}/resize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cols: term.cols, rows: term.rows }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log(`[v0] Backend PTY resized:`, data)
+        })
+        .catch((err) => {
+          console.error(`[v0] Error resizing backend PTY:`, err)
+        })
+    }, 100)
 
     const wsUrl = websocketUrl || getWebSocketUrl()
     const ws = new WebSocket(wsUrl)
@@ -367,9 +375,17 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         fitAddon.fit()
         const cols = term.cols
         const rows = term.rows
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(`\x1b[8;${rows};${cols}t`)
-        }
+        console.log(`[v0] Window resized, terminal now: ${cols}x${rows}`)
+
+        // Send resize to backend via HTTP
+        const apiUrl = getApiUrl()
+        fetch(`${apiUrl}/api/terminal/${terminal.id}/resize`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cols, rows }),
+        }).catch((err) => {
+          console.error(`[v0] Error resizing backend PTY:`, err)
+        })
       } catch {
         // Ignore resize errors
       }
