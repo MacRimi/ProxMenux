@@ -3,16 +3,17 @@
 import type React from "react"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { API_PORT } from "@/lib/api-config"
-import { Activity, Trash2, X, Search, Send, Lightbulb, Terminal, Plus, Split, Grid2X2 } from "lucide-react"
+import { Activity, Trash2, X, Search, Send, Lightbulb, Terminal, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { CheatSheetResult } from "@/lib/cheat-sheet-result" // Declare CheatSheetResult here
 
 type TerminalPanelProps = {
-  websocketUrl?: string
-  onClose?: () => void
+  terminals: TerminalInstance[]
+  onAddTerminal: (terminal: TerminalInstance) => void
+  onRemoveTerminal: (id: string) => void
+  onClearTerminal: (id: string) => void
 }
 
 interface TerminalInstance {
@@ -119,10 +120,13 @@ const proxmoxCommands = [
   { cmd: "clear", desc: "Clear terminal screen" },
 ]
 
-export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
-  const [terminals, setTerminals] = useState<TerminalInstance[]>([])
+export const TerminalPanel: React.FC<TerminalPanelProps> = ({
+  terminals,
+  onAddTerminal,
+  onRemoveTerminal,
+  onClearTerminal,
+}) => {
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
-  const [layout, setLayout] = useState<"single" | "vertical" | "horizontal" | "grid">("single")
   const [isMobile, setIsMobile] = useState(false)
 
   const [searchModalOpen, setSearchModalOpen] = useState(false)
@@ -133,11 +137,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const [searchResults, setSearchResults] = useState<CheatSheetResult[]>([])
   const [useOnline, setUseOnline] = useState(true)
 
-  const containerRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  const terminalRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
-  const setContainerRef = useCallback(
+  const setTerminalRef = useCallback(
     (id: string) => (el: HTMLDivElement | null) => {
-      containerRefs.current[id] = el
+      terminalRefs.current[id] = el
     },
     [],
   )
@@ -151,7 +155,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
   useEffect(() => {
     if (terminals.length === 0) {
-      addNewTerminal()
+      onAddTerminal({
+        id: `terminal-${Date.now()}`,
+        title: `Terminal 1`,
+        term: null,
+        ws: null,
+        isConnected: false,
+      })
     }
   }, [])
 
@@ -224,187 +234,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     return () => clearTimeout(debounce)
   }, [searchQuery])
 
-  const addNewTerminal = () => {
-    if (terminals.length >= 4) return
-
-    const newId = `terminal-${Date.now()}`
-    // containerRefs.current[newId] = useRef<HTMLDivElement>(null) // No longer needed
-
-    setTerminals((prev) => [
-      ...prev,
-      {
-        id: newId,
-        title: `Terminal ${prev.length + 1}`,
-        term: null,
-        ws: null,
-        isConnected: false,
-        // containerRef: containerRefs.current[newId], // No longer needed
-      },
-    ])
-    setActiveTerminalId(newId)
-  }
-
-  const closeTerminal = (id: string) => {
-    const terminal = terminals.find((t) => t.id === id)
-    if (terminal) {
-      if (terminal.ws) {
-        terminal.ws.close()
-      }
-      if (terminal.term) {
-        terminal.term.dispose()
-      }
-    }
-
-    setTerminals((prev) => {
-      const filtered = prev.filter((t) => t.id !== id)
-      if (filtered.length > 0 && activeTerminalId === id) {
-        setActiveTerminalId(filtered[0].id)
-      }
-      return filtered
-    })
-
-    delete containerRefs.current[id] // Clean up the ref
-  }
-
-  useEffect(() => {
-    terminals.forEach((terminal) => {
-      const container = containerRefs.current[terminal.id]
-      if (!terminal.term && container) {
-        initializeTerminal(terminal, container)
-      }
-    })
-  }, [terminals, isMobile])
-
-  const initializeTerminal = async (terminal: TerminalInstance, container: HTMLDivElement) => {
-    const [Terminal, FitAddon] = await Promise.all([
-      import("xterm").then((mod) => mod.Terminal),
-      import("xterm-addon-fit").then((mod) => mod.FitAddon),
-      import("xterm/css/xterm.css"),
-    ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
-
-    const term = new Terminal({
-      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
-      fontSize: isMobile ? 11 : 13,
-      cursorBlink: true,
-      scrollback: 2000,
-      disableStdin: false,
-      theme: {
-        background: "#000000",
-        foreground: "#ffffff",
-        cursor: "#ffffff",
-        cursorAccent: "#000000",
-        black: "#2e3436",
-        red: "#cc0000",
-        green: "#4e9a06",
-        yellow: "#c4a000",
-        blue: "#3465a4",
-        magenta: "#75507b",
-        cyan: "#06989a",
-        white: "#d3d7cf",
-        brightBlack: "#555753",
-        brightRed: "#ef2929",
-        brightGreen: "#8ae234",
-        brightYellow: "#fce94f",
-        brightBlue: "#729fcf",
-        brightMagenta: "#ad7fa8",
-        brightCyan: "#34e2e2",
-        brightWhite: "#eeeeec",
-      },
-    })
-
-    const fitAddon = new FitAddon()
-    term.loadAddon(fitAddon)
-
-    term.open(container)
-
-    const performResize = () => {
-      const xtermViewport = container.querySelector(".xterm-viewport") as HTMLElement
-      const xtermScreen = container.querySelector(".xterm-screen") as HTMLElement
-      if (xtermViewport) {
-        xtermViewport.style.padding = "0"
-        xtermViewport.style.width = "100%"
-        xtermViewport.style.height = "100%"
-      }
-      if (xtermScreen) {
-        xtermScreen.style.padding = "0"
-      }
-
-      fitAddon.fit()
-      const cols = term.cols
-      const rows = term.rows
-      console.log(
-        `[v0] Terminal ${terminal.id} resized: ${cols}x${rows} (container: ${container.offsetWidth}x${container.offsetHeight})`,
-      )
-
-      // Send resize to backend via HTTP
-      const apiUrl = getApiUrl()
-      fetch(`${apiUrl}/api/terminal/${terminal.id}/resize`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cols, rows }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          console.log(`[v0] Backend PTY resized:`, data)
-        })
-        .catch((err) => {
-          console.error(`[v0] Error resizing backend PTY:`, err)
-        })
-    }
-
-    setTimeout(() => performResize(), 100)
-    setTimeout(() => performResize(), 300)
-    setTimeout(() => performResize(), 600)
-
-    const wsUrl = websocketUrl || getWebSocketUrl()
-    const ws = new WebSocket(wsUrl)
-
-    ws.onopen = () => {
-      setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: true, term, ws } : t)))
-      term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
-
-      setTimeout(() => performResize(), 200)
-      setTimeout(() => performResize(), 500)
-    }
-
-    ws.onmessage = (event) => {
-      term.write(event.data)
-    }
-
-    ws.onerror = (error) => {
-      console.error("[v0] TerminalPanel: WebSocket error:", error)
-      setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: false } : t)))
-      term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
-    }
-
-    ws.onclose = () => {
-      setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: false } : t)))
-      term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
-    }
-
-    term.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(data)
-      }
-    })
-
-    const handleResize = () => {
-      try {
-        performResize()
-      } catch {
-        // Ignore resize errors
-      }
-    }
-
-    window.addEventListener("resize", handleResize)
-
-    return () => {
-      window.removeEventListener("resize", handleResize)
-      ws.close()
-      term.dispose()
-    }
-  }
-
   const handleKeyButton = (key: string) => {
     const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
     if (!activeTerminal || !activeTerminal.ws || activeTerminal.ws.readyState !== WebSocket.OPEN) return
@@ -441,19 +270,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
   }
 
-  const handleClear = () => {
-    const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
-    if (activeTerminal?.term) {
-      activeTerminal.term.clear()
-    }
-  }
-
   const handleClose = () => {
     terminals.forEach((terminal) => {
       if (terminal.ws) terminal.ws.close()
       if (terminal.term) terminal.term.dispose()
     })
-    onClose?.()
+    onRemoveTerminal(activeTerminalId)
   }
 
   const sendToActiveTerminal = (command: string) => {
@@ -485,16 +307,76 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const getLayoutClass = () => {
     const count = terminals.length
     if (isMobile || count === 1) return "grid grid-cols-1"
-    if (layout === "vertical" || count === 2) return "grid grid-cols-2"
-    if (layout === "horizontal") return "grid grid-rows-2"
-    if (layout === "grid" || count >= 3) return "grid grid-cols-2 grid-rows-2"
+    if (count === 2) return "grid grid-cols-2"
+    if (count >= 3) return "grid grid-cols-2 grid-rows-2"
     return "grid grid-cols-1"
   }
 
   const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
 
+  const renderTerminals = () => {
+    if (terminals.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-full text-muted-foreground">
+          <p>No terminals open. Click "New" to create one.</p>
+        </div>
+      )
+    }
+
+    if (terminals.length === 1 || isMobile) {
+      // Single terminal mode - fill entire container
+      return (
+        <div className="w-full h-full flex flex-col bg-black">
+          <div className="flex items-center justify-between border-b border-border px-4 py-2 bg-muted/50 flex-shrink-0">
+            <span className="text-sm font-medium">Terminal {terminals[0].id}</span>
+            <Button variant="ghost" size="sm" onClick={() => onRemoveTerminal(terminals[0].id)} className="h-6 w-6 p-0">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div ref={(el) => (terminalRefs.current[terminals[0].id] = el)} className="flex-1 w-full bg-black" />
+        </div>
+      )
+    }
+
+    if (terminals.length === 2) {
+      // Split view - two terminals side by side
+      return (
+        <div className="w-full h-full flex gap-2">
+          {terminals.map((terminal) => (
+            <div key={terminal.id} className="flex-1 flex flex-col border border-border rounded bg-black min-w-0">
+              <div className="flex items-center justify-between border-b border-border px-4 py-2 bg-muted/50 flex-shrink-0">
+                <span className="text-sm font-medium">Terminal {terminal.id}</span>
+                <Button variant="ghost" size="sm" onClick={() => onRemoveTerminal(terminal.id)} className="h-6 w-6 p-0">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div ref={(el) => (terminalRefs.current[terminal.id] = el)} className="flex-1 w-full bg-black" />
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    // Grid view for 3+ terminals
+    return (
+      <div className="w-full h-full grid grid-cols-2 gap-2">
+        {terminals.map((terminal) => (
+          <div key={terminal.id} className="flex flex-col border border-border rounded bg-black min-h-0">
+            <div className="flex items-center justify-between border-b border-border px-4 py-2 bg-muted/50 flex-shrink-0">
+              <span className="text-sm font-medium">Terminal {terminal.id}</span>
+              <Button variant="ghost" size="sm" onClick={() => onRemoveTerminal(terminal.id)} className="h-6 w-6 p-0">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div ref={(el) => (terminalRefs.current[terminal.id] = el)} className="flex-1 w-full bg-black" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full">
       <style jsx>{`
         :global(.xterm .xterm-viewport) {
           padding: 0 !important;
@@ -512,44 +394,23 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
               className={`w-2 h-2 rounded-full ${activeTerminal?.isConnected ? "bg-green-500" : "bg-red-500"}`}
               title={activeTerminal?.isConnected ? "Connected" : "Disconnected"}
             ></div>
-            <span className="text-xs text-zinc-500">{terminals.length} / 4 terminals</span>
+            <span className="text-xs text-zinc-500">{terminals.length} terminals</span>
           </div>
 
           <div className="flex gap-2">
-            {!isMobile && terminals.length > 1 && (
-              <>
-                <Button
-                  onClick={() => setLayout("vertical")}
-                  variant="outline"
-                  size="sm"
-                  className={`h-8 px-2 ${layout === "vertical" ? "bg-blue-500/20 border-blue-500" : ""}`}
-                >
-                  <Split className="h-4 w-4 rotate-90" />
-                </Button>
-                <Button
-                  onClick={() => setLayout("horizontal")}
-                  variant="outline"
-                  size="sm"
-                  className={`h-8 px-2 ${layout === "horizontal" ? "bg-blue-500/20 border-blue-500" : ""}`}
-                >
-                  <Split className="h-4 w-4" />
-                </Button>
-                <Button
-                  onClick={() => setLayout("grid")}
-                  variant="outline"
-                  size="sm"
-                  className={`h-8 px-2 ${layout === "grid" ? "bg-blue-500/20 border-blue-500" : ""}`}
-                >
-                  <Grid2X2 className="h-4 w-4" />
-                </Button>
-              </>
-            )}
             <Button
-              onClick={addNewTerminal}
+              onClick={() =>
+                onAddTerminal({
+                  id: `terminal-${Date.now()}`,
+                  title: `Terminal ${terminals.length + 1}`,
+                  term: null,
+                  ws: null,
+                  isConnected: false,
+                })
+              }
               variant="outline"
               size="sm"
-              disabled={terminals.length >= 4}
-              className="h-8 gap-2 bg-green-600 hover:bg-green-700 border-green-500 text-white disabled:opacity-50"
+              className="h-8 gap-2 bg-green-600 hover:bg-green-700 border-green-500 text-white"
             >
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">New</span>
@@ -565,7 +426,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
               <span className="hidden sm:inline">Search</span>
             </Button>
             <Button
-              onClick={handleClear}
+              onClick={() => onClearTerminal(activeTerminalId)}
               variant="outline"
               size="sm"
               disabled={!activeTerminal?.isConnected}
@@ -586,65 +447,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           </div>
         </div>
 
-        <div className="h-[calc(100%-60px)] overflow-hidden">
-          {isMobile || terminals.length === 1 ? (
-            <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
-              <TabsList className="bg-zinc-900 border-b border-zinc-800 rounded-none justify-start overflow-x-auto flex-shrink-0">
-                {terminals.map((terminal) => (
-                  <TabsTrigger
-                    key={terminal.id}
-                    value={terminal.id}
-                    className="data-[state=active]:bg-blue-500/20 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none"
-                  >
-                    {terminal.title}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {terminals.map((terminal) => (
-                <TabsContent
-                  key={terminal.id}
-                  value={terminal.id}
-                  className="h-[calc(100%-48px)] m-0 data-[state=active]:flex data-[state=inactive]:hidden"
-                >
-                  <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black" />
-                </TabsContent>
-              ))}
-            </Tabs>
-          ) : (
-            <div className={`${getLayoutClass()} gap-2 h-full w-full p-2`}>
-              {terminals.map((terminal) => (
-                <div
-                  key={terminal.id}
-                  className={`relative bg-black rounded flex flex-col overflow-hidden border ${
-                    terminal.id === activeTerminalId ? "border-blue-500" : "border-zinc-700"
-                  }`}
-                  onClick={() => setActiveTerminalId(terminal.id)}
-                >
-                  <div className="flex items-center justify-between px-2 py-1 bg-zinc-800 border-b border-zinc-700 flex-shrink-0">
-                    <span className="text-xs font-medium text-white">{terminal.title}</span>
-                    {terminals.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 w-5 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          closeTerminal(terminal.id)
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                  <div
-                    ref={setContainerRef(terminal.id)}
-                    className="w-full h-[calc(100%-32px)] overflow-hidden bg-black"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="h-[calc(100%-60px)] overflow-hidden">{renderTerminals()}</div>
 
         {isMobile && (
           <div className="flex flex-wrap gap-2 justify-center items-center px-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
