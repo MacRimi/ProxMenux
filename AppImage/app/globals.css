@@ -139,26 +139,27 @@
 }
 
 /* ===================== */
-/* Base layer            */
+/* Base Styles           */
 /* ===================== */
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+/* Removed @layer base and converted @apply to native CSS for Tailwind v4 compatibility */
+* {
+  border-color: var(--border);
+  outline-color: color-mix(in oklch, var(--ring), transparent 50%);
+}
 
-  body {
-    @apply bg-background text-foreground;
-  }
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
 
-  /* Foco accesible */
-  :is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus {
-    @apply outline-none;
-  }
-  :is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
-    @apply ring-2;
-    --tw-ring-color: var(--ring);
-    --tw-ring-opacity: 0.5; /* equivalente al /50 */
-  }
+/* Foco accesible */
+:is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus {
+  outline: none;
+}
+
+:is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--ring), transparent 50%);
+  outline-offset: 2px;
 }
 
 /* ===================== */
@@ -192,6 +193,8 @@
 
   .xterm .xterm-viewport {
     width: 100% !important;
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
   }
 
   .xterm .xterm-screen {
@@ -201,5 +204,12 @@
   /* Remove internal padding from xterm rows to fix menu centering */
   .xterm .xterm-rows {
     padding: 0 !important;
+  }
+
+  /* Ensure xterm helper elements don't interfere with layout */
+  .xterm .xterm-helpers {
+    position: absolute;
+    top: 0;
+    left: 0;
   }
 }
