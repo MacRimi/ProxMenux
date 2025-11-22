@@ -141,7 +141,7 @@
 /* ===================== */
 /* Base Styles           */
 /* ===================== */
-/* Removed @layer base and converted @apply to native CSS for Tailwind v4 compatibility */
+/* Removed @layer and converted to native CSS for Tailwind v4 compatibility */
 * {
   border-color: var(--border);
   outline-color: color-mix(in oklch, var(--ring), transparent 50%);
@@ -165,51 +165,53 @@ body {
 /* ===================== */
 /* Ajustes para Charts   */
 /* ===================== */
-@layer components {
-  /* Recharts axis */
-  .recharts-cartesian-axis-tick tspan {
-    fill: var(--muted-foreground);
-  }
-  .recharts-cartesian-axis-line,
-  .recharts-cartesian-grid line {
-    stroke: var(--border);
-  }
+/* Removed @layer components and converted to native CSS */
+/* Recharts axis */
+.recharts-cartesian-axis-tick tspan {
+  fill: var(--muted-foreground);
+}
+.recharts-cartesian-axis-line,
+.recharts-cartesian-grid line {
+  stroke: var(--border);
+}
 
-  /* Chart.js axis */
-  .chartjs-render-monitor text {
-    fill: var(--muted-foreground);
-  }
-  .chartjs-render-monitor line {
-    stroke: var(--border);
-  }
+/* Chart.js axis */
+.chartjs-render-monitor text {
+  fill: var(--muted-foreground);
+}
+.chartjs-render-monitor line {
+  stroke: var(--border);
+}
 
-  /* Fix xterm.js padding and centering issues */
-  .xterm {
-    padding: 0 !important;
-    margin: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-  }
+/* ===================== */
+/* Terminal Fixes        */
+/* ===================== */
+/* Fix xterm.js padding and centering issues for dialog menus */
+.xterm {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
 
-  .xterm .xterm-viewport {
-    width: 100% !important;
-    overflow-y: scroll !important;
-    overflow-x: hidden !important;
-  }
+.xterm .xterm-viewport {
+  width: 100% !important;
+  overflow-y: scroll !important;
+  overflow-x: hidden !important;
+}
 
-  .xterm .xterm-screen {
-    width: 100% !important;
-  }
+.xterm .xterm-screen {
+  width: 100% !important;
+}
 
-  /* Remove internal padding from xterm rows to fix menu centering */
-  .xterm .xterm-rows {
-    padding: 0 !important;
-  }
+/* Remove internal padding from xterm rows to fix menu centering */
+.xterm .xterm-rows {
+  padding: 0 !important;
+}
 
-  /* Ensure xterm helper elements don't interfere with layout */
-  .xterm .xterm-helpers {
-    position: absolute;
-    top: 0;
-    left: 0;
-  }
+/* Ensure xterm helper elements don't interfere with layout */
+.xterm .xterm-helpers {
+  position: absolute;
+  top: 0;
+  left: 0;
 }
