@@ -318,7 +318,14 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     term.loadAddon(fitAddon)
 
     term.open(container)
-    fitAddon.fit()
+
+    setTimeout(() => {
+      const xtermViewport = container.querySelector(".xterm-viewport") as HTMLElement
+      const xtermScreen = container.querySelector(".xterm-screen") as HTMLElement
+      if (xtermViewport) xtermViewport.style.padding = "0"
+      if (xtermScreen) xtermScreen.style.padding = "0"
+      fitAddon.fit()
+    }, 10)
 
     const wsUrl = websocketUrl || getWebSocketUrl()
     const ws = new WebSocket(wsUrl)
@@ -455,349 +462,360 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
 
   return (
-    <div className="flex flex-col h-full bg-zinc-950 rounded-md overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
-        <div className="flex items-center gap-3">
-          <Activity className="h-5 w-5 text-blue-500" />
-          <div
-            className={`w-2 h-2 rounded-full ${activeTerminal?.isConnected ? "bg-green-500" : "bg-red-500"}`}
-            title={activeTerminal?.isConnected ? "Connected" : "Disconnected"}
-          ></div>
-          <span className="text-xs text-zinc-500">{terminals.length} / 4 terminals</span>
+    <>
+      <style jsx>{`
+        :global(.xterm .xterm-viewport) {
+          padding: 0 !important;
+        }
+        :global(.xterm .xterm-screen) {
+          padding: 0 !important;
+        }
+      `}</style>
+
+      <div className="h-full flex flex-col bg-zinc-900 rounded-md overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+          <div className="flex items-center gap-3">
+            <Activity className="h-5 w-5 text-blue-500" />
+            <div
+              className={`w-2 h-2 rounded-full ${activeTerminal?.isConnected ? "bg-green-500" : "bg-red-500"}`}
+              title={activeTerminal?.isConnected ? "Connected" : "Disconnected"}
+            ></div>
+            <span className="text-xs text-zinc-500">{terminals.length} / 4 terminals</span>
+          </div>
+
+          <div className="flex gap-2">
+            {!isMobile && terminals.length > 1 && (
+              <>
+                <Button
+                  onClick={() => setLayout("vertical")}
+                  variant="outline"
+                  size="sm"
+                  className={`h-8 px-2 ${layout === "vertical" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                >
+                  <Split className="h-4 w-4 rotate-90" />
+                </Button>
+                <Button
+                  onClick={() => setLayout("horizontal")}
+                  variant="outline"
+                  size="sm"
+                  className={`h-8 px-2 ${layout === "horizontal" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                >
+                  <Split className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={() => setLayout("grid")}
+                  variant="outline"
+                  size="sm"
+                  className={`h-8 px-2 ${layout === "grid" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                >
+                  <Grid2X2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+            <Button
+              onClick={addNewTerminal}
+              variant="outline"
+              size="sm"
+              disabled={terminals.length >= 4}
+              className="h-8 gap-2 bg-green-600 hover:bg-green-700 border-green-500 text-white disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">New</span>
+            </Button>
+            <Button
+              onClick={() => setSearchModalOpen(true)}
+              variant="outline"
+              size="sm"
+              disabled={!activeTerminal?.isConnected}
+              className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 border-blue-500 text-white disabled:opacity-50"
+            >
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline">Search</span>
+            </Button>
+            <Button
+              onClick={handleClear}
+              variant="outline"
+              size="sm"
+              disabled={!activeTerminal?.isConnected}
+              className="h-8 gap-2 bg-yellow-600 hover:bg-yellow-700 border-yellow-500 text-white disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Clear</span>
+            </Button>
+            <Button
+              onClick={handleClose}
+              variant="outline"
+              size="sm"
+              className="h-8 gap-2 bg-red-600 hover:bg-red-700 border-red-500 text-white"
+            >
+              <X className="h-4 w-4" />
+              <span className="hidden sm:inline">Close</span>
+            </Button>
+          </div>
         </div>
 
-        <div className="flex gap-2">
-          {!isMobile && terminals.length > 1 && (
-            <>
-              <Button
-                onClick={() => setLayout("vertical")}
-                variant="outline"
-                size="sm"
-                className={`h-8 px-2 ${layout === "vertical" ? "bg-blue-500/20 border-blue-500" : ""}`}
-              >
-                <Split className="h-4 w-4 rotate-90" />
-              </Button>
-              <Button
-                onClick={() => setLayout("horizontal")}
-                variant="outline"
-                size="sm"
-                className={`h-8 px-2 ${layout === "horizontal" ? "bg-blue-500/20 border-blue-500" : ""}`}
-              >
-                <Split className="h-4 w-4" />
-              </Button>
-              <Button
-                onClick={() => setLayout("grid")}
-                variant="outline"
-                size="sm"
-                className={`h-8 px-2 ${layout === "grid" ? "bg-blue-500/20 border-blue-500" : ""}`}
-              >
-                <Grid2X2 className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-          <Button
-            onClick={addNewTerminal}
-            variant="outline"
-            size="sm"
-            disabled={terminals.length >= 4}
-            className="h-8 gap-2 bg-green-600 hover:bg-green-700 border-green-500 text-white disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">New</span>
-          </Button>
-          <Button
-            onClick={() => setSearchModalOpen(true)}
-            variant="outline"
-            size="sm"
-            disabled={!activeTerminal?.isConnected}
-            className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 border-blue-500 text-white disabled:opacity-50"
-          >
-            <Search className="h-4 w-4" />
-            <span className="hidden sm:inline">Search</span>
-          </Button>
-          <Button
-            onClick={handleClear}
-            variant="outline"
-            size="sm"
-            disabled={!activeTerminal?.isConnected}
-            className="h-8 gap-2 bg-yellow-600 hover:bg-yellow-700 border-yellow-500 text-white disabled:opacity-50"
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Clear</span>
-          </Button>
-          <Button
-            onClick={handleClose}
-            variant="outline"
-            size="sm"
-            className="h-8 gap-2 bg-red-600 hover:bg-red-700 border-red-500 text-white"
-          >
-            <X className="h-4 w-4" />
-            <span className="hidden sm:inline">Close</span>
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex-1 min-h-0">
-        {isMobile ? (
-          <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
-            <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800">
-              {terminals.map((terminal) => (
-                <TabsTrigger key={terminal.id} value={terminal.id} className="relative">
-                  {terminal.title}
-                  {terminals.length > 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        closeTerminal(terminal.id)
-                      }}
-                      className="ml-2 hover:bg-zinc-700 rounded p-0.5"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {terminals.map((terminal) => (
-              <TabsContent key={terminal.id} value={terminal.id} className="flex-1 m-0 p-0">
-                <div
-                  ref={setContainerRef(terminal.id)}
-                  className="w-full h-full bg-black"
-                  style={{ height: "calc(100vh - 24rem)" }}
-                />
-              </TabsContent>
-            ))}
-          </Tabs>
-        ) : (
-          <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5`}>
-            {terminals.map((terminal) => (
-              <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
-                  <button
-                    onClick={() => setActiveTerminalId(terminal.id)}
-                    className={`text-xs font-medium ${
-                      activeTerminalId === terminal.id ? "text-blue-400" : "text-zinc-500"
-                    }`}
-                  >
+        <div className="flex-1 min-h-0">
+          {isMobile ? (
+            <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
+              <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800">
+                {terminals.map((terminal) => (
+                  <TabsTrigger key={terminal.id} value={terminal.id} className="relative">
                     {terminal.title}
-                  </button>
-                  {terminals.length > 1 && (
-                    <button onClick={() => closeTerminal(terminal.id)} className="hover:bg-zinc-700 rounded p-0.5">
-                      <X className="h-3 w-3" />
+                    {terminals.length > 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          closeTerminal(terminal.id)
+                        }}
+                        className="ml-2 hover:bg-zinc-700 rounded p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {terminals.map((terminal) => (
+                <TabsContent key={terminal.id} value={terminal.id} className="flex-1 m-0 p-0">
+                  <div
+                    ref={setContainerRef(terminal.id)}
+                    className="w-full h-full bg-black"
+                    style={{ height: "calc(100vh - 24rem)" }}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
+          ) : (
+            <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5`}>
+              {terminals.map((terminal) => (
+                <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
+                    <button
+                      onClick={() => setActiveTerminalId(terminal.id)}
+                      className={`text-xs font-medium ${
+                        activeTerminalId === terminal.id ? "text-blue-400" : "text-zinc-500"
+                      }`}
+                    >
+                      {terminal.title}
                     </button>
-                  )}
+                    {terminals.length > 1 && (
+                      <button onClick={() => closeTerminal(terminal.id)} className="hover:bg-zinc-700 rounded p-0.5">
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black pt-7" />
                 </div>
-                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black pt-7" />
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+        </div>
+
+        {isMobile && (
+          <div className="flex flex-wrap gap-2 justify-center items-center px-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
+            {lastKeyPressed && (
+              <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded mr-2">
+                Sent: {lastKeyPressed}
+              </span>
+            )}
+            <Button onClick={() => sendSequence("\x1b")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+              ESC
+            </Button>
+            <Button onClick={() => sendSequence("\t")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+              TAB
+            </Button>
+            <Button onClick={() => handleKeyButton("UP")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+              ↑
+            </Button>
+            <Button onClick={() => handleKeyButton("DOWN")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+              ↓
+            </Button>
+            <Button onClick={() => handleKeyButton("LEFT")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+              ←
+            </Button>
+            <Button onClick={() => handleKeyButton("RIGHT")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+              →
+            </Button>
+            <Button onClick={() => sendSequence("\x03")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+              CTRL+C
+            </Button>
           </div>
         )}
-      </div>
 
-      {isMobile && (
-        <div className="flex flex-wrap gap-2 justify-center items-center px-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
-          {lastKeyPressed && (
-            <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded mr-2">
-              Sent: {lastKeyPressed}
-            </span>
-          )}
-          <Button onClick={() => sendSequence("\x1b")} variant="outline" size="sm" className="h-8 px-3 text-xs">
-            ESC
-          </Button>
-          <Button onClick={() => sendSequence("\t")} variant="outline" size="sm" className="h-8 px-3 text-xs">
-            TAB
-          </Button>
-          <Button onClick={() => handleKeyButton("UP")} variant="outline" size="sm" className="h-8 px-3 text-xs">
-            ↑
-          </Button>
-          <Button onClick={() => handleKeyButton("DOWN")} variant="outline" size="sm" className="h-8 px-3 text-xs">
-            ↓
-          </Button>
-          <Button onClick={() => handleKeyButton("LEFT")} variant="outline" size="sm" className="h-8 px-3 text-xs">
-            ←
-          </Button>
-          <Button onClick={() => handleKeyButton("RIGHT")} variant="outline" size="sm" className="h-8 px-3 text-xs">
-            →
-          </Button>
-          <Button onClick={() => sendSequence("\x03")} variant="outline" size="sm" className="h-8 px-3 text-xs">
-            CTRL+C
-          </Button>
-        </div>
-      )}
-
-      <Dialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-zinc-800">
-            <DialogTitle className="text-xl font-semibold">Search Commands</DialogTitle>
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-2 h-2 rounded-full ${useOnline ? "bg-green-500" : "bg-red-500"}`}
-                title={useOnline ? "Online - Using cheat.sh API" : "Offline - Using local commands"}
-              />
-            </div>
-          </DialogHeader>
-
-          <DialogDescription className="sr-only">Search for Linux and Proxmox commands</DialogDescription>
-
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-              <Input
-                placeholder="Search commands... (e.g., 'tar', 'docker ps', 'qm list', 'systemctl')"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-base"
-                autoCapitalize="none"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-              />
-            </div>
-
-            {isSearching && (
-              <div className="text-center py-4 text-zinc-400">
-                <div className="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent rounded-full mb-2" />
-                <p className="text-sm">Searching cheat.sh...</p>
+        <Dialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+            <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-zinc-800">
+              <DialogTitle className="text-xl font-semibold">Search Commands</DialogTitle>
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-2 h-2 rounded-full ${useOnline ? "bg-green-500" : "bg-red-500"}`}
+                  title={useOnline ? "Online - Using cheat.sh API" : "Offline - Using local commands"}
+                />
               </div>
-            )}
+            </DialogHeader>
 
-            <div className="flex-1 overflow-y-auto space-y-2 pr-2 max-h-[50vh]">
-              {searchResults.length > 0 ? (
-                <>
-                  {searchResults.map((result, index) => (
+            <DialogDescription className="sr-only">Search for Linux and Proxmox commands</DialogDescription>
+
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <Input
+                  placeholder="Search commands... (e.g., 'tar', 'docker ps', 'qm list', 'systemctl')"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-base"
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </div>
+
+              {isSearching && (
+                <div className="text-center py-4 text-zinc-400">
+                  <div className="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent rounded-full mb-2" />
+                  <p className="text-sm">Searching cheat.sh...</p>
+                </div>
+              )}
+
+              <div className="flex-1 overflow-y-auto space-y-2 pr-2 max-h-[50vh]">
+                {searchResults.length > 0 ? (
+                  <>
+                    {searchResults.map((result, index) => (
+                      <div
+                        key={index}
+                        className="p-4 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:border-zinc-600 transition-colors"
+                      >
+                        {result.description && (
+                          <p className="text-xs text-zinc-400 mb-2 leading-relaxed"># {result.description}</p>
+                        )}
+                        <div
+                          onClick={() => sendToActiveTerminal(result.command)}
+                          className="flex items-start justify-between gap-2 cursor-pointer group hover:bg-zinc-800/50 rounded p-2 -m-2"
+                        >
+                          <code className="text-sm text-blue-400 font-mono break-all flex-1">{result.command}</code>
+                          <Send className="h-4 w-4 text-zinc-600 group-hover:text-blue-400 flex-shrink-0 mt-0.5 transition-colors" />
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Powered by cheat.sh */}
+                    <div className="text-center py-2">
+                      <p className="text-xs text-zinc-500">
+                        <Lightbulb className="inline-block w-3 h-3 mr-1" />
+                        Powered by cheat.sh
+                      </p>
+                    </div>
+                  </>
+                ) : filteredCommands.length > 0 && !useOnline ? (
+                  filteredCommands.map((item, index) => (
                     <div
                       key={index}
-                      className="p-4 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:border-zinc-600 transition-colors"
+                      onClick={() => sendToActiveTerminal(item.cmd)}
+                      className="p-3 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 cursor-pointer transition-colors"
                     >
-                      {result.description && (
-                        <p className="text-xs text-zinc-400 mb-2 leading-relaxed"># {result.description}</p>
-                      )}
-                      <div
-                        onClick={() => sendToActiveTerminal(result.command)}
-                        className="flex items-start justify-between gap-2 cursor-pointer group hover:bg-zinc-800/50 rounded p-2 -m-2"
-                      >
-                        <code className="text-sm text-blue-400 font-mono break-all flex-1">{result.command}</code>
-                        <Send className="h-4 w-4 text-zinc-600 group-hover:text-blue-400 flex-shrink-0 mt-0.5 transition-colors" />
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <code className="text-sm text-blue-400 font-mono break-all">{item.cmd}</code>
+                          <p className="text-xs text-zinc-400 mt-1">{item.desc}</p>
+                        </div>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            sendToActiveTerminal(item.cmd)
+                          }}
+                          size="sm"
+                          variant="ghost"
+                          className="shrink-0 h-7 px-2 text-xs"
+                        >
+                          <Send className="h-3 w-3 mr-1" />
+                          Send
+                        </Button>
                       </div>
                     </div>
-                  ))}
-
-                  {/* Powered by cheat.sh */}
-                  <div className="text-center py-2">
-                    <p className="text-xs text-zinc-500">
-                      <Lightbulb className="inline-block w-3 h-3 mr-1" />
-                      Powered by cheat.sh
-                    </p>
-                  </div>
-                </>
-              ) : filteredCommands.length > 0 && !useOnline ? (
-                filteredCommands.map((item, index) => (
-                  <div
-                    key={index}
-                    onClick={() => sendToActiveTerminal(item.cmd)}
-                    className="p-3 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 cursor-pointer transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <code className="text-sm text-blue-400 font-mono break-all">{item.cmd}</code>
-                        <p className="text-xs text-zinc-400 mt-1">{item.desc}</p>
+                  ))
+                ) : !isSearching && !searchQuery && !useOnline ? (
+                  proxmoxCommands.map((item, index) => (
+                    <div
+                      key={index}
+                      onClick={() => sendToActiveTerminal(item.cmd)}
+                      className="p-3 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <code className="text-sm text-blue-400 font-mono break-all">{item.cmd}</code>
+                          <p className="text-xs text-zinc-400 mt-1">{item.desc}</p>
+                        </div>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            sendToActiveTerminal(item.cmd)
+                          }}
+                          size="sm"
+                          variant="ghost"
+                          className="shrink-0 h-7 px-2 text-xs"
+                        >
+                          <Send className="h-3 w-3 mr-1" />
+                          Send
+                        </Button>
                       </div>
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          sendToActiveTerminal(item.cmd)
-                        }}
-                        size="sm"
-                        variant="ghost"
-                        className="shrink-0 h-7 px-2 text-xs"
-                      >
-                        <Send className="h-3 w-3 mr-1" />
-                        Send
-                      </Button>
                     </div>
-                  </div>
-                ))
-              ) : !isSearching && !searchQuery && !useOnline ? (
-                proxmoxCommands.map((item, index) => (
-                  <div
-                    key={index}
-                    onClick={() => sendToActiveTerminal(item.cmd)}
-                    className="p-3 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 cursor-pointer transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <code className="text-sm text-blue-400 font-mono break-all">{item.cmd}</code>
-                        <p className="text-xs text-zinc-400 mt-1">{item.desc}</p>
-                      </div>
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          sendToActiveTerminal(item.cmd)
-                        }}
-                        size="sm"
-                        variant="ghost"
-                        className="shrink-0 h-7 px-2 text-xs"
-                      >
-                        <Send className="h-3 w-3 mr-1" />
-                        Send
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              ) : !isSearching ? (
-                <div className="text-center py-12 space-y-4">
-                  {searchQuery ? (
-                    <>
-                      <Search className="w-12 h-12 text-zinc-600 mx-auto" />
-                      <div>
-                        <p className="text-zinc-400 font-medium">No results found for "{searchQuery}"</p>
-                        <p className="text-xs text-zinc-500 mt-1">Try a different command or check your spelling</p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <Terminal className="w-12 h-12 text-zinc-600 mx-auto" />
-                      <div>
-                        <p className="text-zinc-400 font-medium mb-2">Search for any command</p>
-                        <div className="text-sm text-zinc-500 space-y-1">
-                          <p>Try searching for:</p>
-                          <div className="flex flex-wrap justify-center gap-2 mt-2">
-                            {["tar", "grep", "docker ps", "qm list", "systemctl"].map((cmd) => (
-                              <code
-                                key={cmd}
-                                onClick={() => setSearchQuery(cmd)}
-                                className="px-2 py-1 bg-zinc-800 rounded text-blue-400 cursor-pointer hover:bg-zinc-700"
-                              >
-                                {cmd}
-                              </code>
-                            ))}
+                  ))
+                ) : !isSearching ? (
+                  <div className="text-center py-12 space-y-4">
+                    {searchQuery ? (
+                      <>
+                        <Search className="w-12 h-12 text-zinc-600 mx-auto" />
+                        <div>
+                          <p className="text-zinc-400 font-medium">No results found for "{searchQuery}"</p>
+                          <p className="text-xs text-zinc-500 mt-1">Try a different command or check your spelling</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Terminal className="w-12 h-12 text-zinc-600 mx-auto" />
+                        <div>
+                          <p className="text-zinc-400 font-medium mb-2">Search for any command</p>
+                          <div className="text-sm text-zinc-500 space-y-1">
+                            <p>Try searching for:</p>
+                            <div className="flex flex-wrap justify-center gap-2 mt-2">
+                              {["tar", "grep", "docker ps", "qm list", "systemctl"].map((cmd) => (
+                                <code
+                                  key={cmd}
+                                  onClick={() => setSearchQuery(cmd)}
+                                  className="px-2 py-1 bg-zinc-800 rounded text-blue-400 cursor-pointer hover:bg-zinc-700"
+                                >
+                                  {cmd}
+                                </code>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      {useOnline && (
-                        <div className="flex items-center justify-center gap-2 text-xs text-zinc-600 mt-4">
-                          <Lightbulb className="w-3 h-3" />
-                          <span>Powered by cheat.sh</span>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
-              <div className="flex items-center gap-2">
-                <Lightbulb className="w-3 h-3" />
-                <span>
-                  Tip: Search for any Linux command (tar, grep, docker, etc.) or Proxmox commands (qm, pct, pvesh)
-                </span>
+                        {useOnline && (
+                          <div className="flex items-center justify-center gap-2 text-xs text-zinc-600 mt-4">
+                            <Lightbulb className="w-3 h-3" />
+                            <span>Powered by cheat.sh</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ) : null}
               </div>
-              {useOnline && searchResults.length > 0 && <span className="text-zinc-600">Powered by cheat.sh</span>}
+
+              <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="w-3 h-3" />
+                  <span>
+                    Tip: Search for any Linux command (tar, grep, docker, etc.) or Proxmox commands (qm, pct, pvesh)
+                  </span>
+                </div>
+                {useOnline && searchResults.length > 0 && <span className="text-zinc-600">Powered by cheat.sh</span>}
+              </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   )
 }
