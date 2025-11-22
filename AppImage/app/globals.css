@@ -147,33 +147,32 @@ body {
   outline-offset: 2px;
 }
 
-/* ===================== */
-/* Ajustes para Charts   */
-/* ===================== */
-/* Removed @layer components and converted to native CSS */
-/* Recharts axis */
-.recharts-cartesian-axis-tick tspan {
-  fill: var(--muted-foreground);
-}
-.recharts-cartesian-axis-line,
-.recharts-cartesian-grid line {
-  stroke: var(--border);
-}
-
-/* Chart.js axis */
-.chartjs-render-monitor text {
-  fill: var(--muted-foreground);
-}
-.chartjs-render-monitor line {
-  stroke: var(--border);
-}
-
-/* ===================== */
-/* Terminal Fixes        */
-/* ===================== */
-/* Added terminal-specific styles to fix menu centering issues */
 @layer components {
-  /* Terminal Fixes for xterm.js padding and centering */
+  /* ===================== */
+  /* Recharts axis styles  */
+  /* ===================== */
+  .recharts-cartesian-axis-tick tspan {
+    fill: var(--muted-foreground);
+  }
+  .recharts-cartesian-axis-line,
+  .recharts-cartesian-grid line {
+    stroke: var(--border);
+  }
+
+  /* ===================== */
+  /* Chart.js axis styles  */
+  /* ===================== */
+  .chartjs-render-monitor text {
+    fill: var(--muted-foreground);
+  }
+  .chartjs-render-monitor line {
+    stroke: var(--border);
+  }
+
+  /* ===================== */
+  /* Terminal Fixes        */
+  /* ===================== */
+  /* Fixed xterm.js padding to center dialog menus correctly */
   .xterm {
     padding: 0 !important;
     margin: 0 !important;
@@ -191,12 +190,10 @@ body {
     width: 100% !important;
   }
 
-  /* Remove internal padding from xterm rows to fix menu centering */
   .xterm .xterm-rows {
     padding: 0 !important;
   }
 
-  /* Ensure xterm helper elements don't interfere with layout */
   .xterm .xterm-helpers {
     position: absolute;
     top: 0;
