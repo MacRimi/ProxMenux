@@ -169,16 +169,19 @@ def terminal_websocket(ws):
                 # Client closed connection
                 break
             
-            # Handle terminal resize (optional)
             if data.startswith('\x1b[8;'):
                 try:
+                    # Parse: \x1b[8;{rows};{cols}t
                     parts = data[4:-1].split(';')
-                    rows, cols = int(parts[0]), int(parts[1])
-                    set_winsize(master_fd, rows, cols)
+                    if len(parts) >= 2:
+                        rows, cols = int(parts[0]), int(parts[1])
+                        set_winsize(master_fd, rows, cols)
+                        print(f"[Terminal] Resized to {rows}x{cols}")
                     continue
-                except:
+                except Exception as e:
+                    print(f"Error parsing resize: {e}")
                     pass
-            
+
             # Send input to bash
             try:
                 os.write(master_fd, data.encode('utf-8'))

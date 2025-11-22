@@ -325,6 +325,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       if (xtermViewport) xtermViewport.style.padding = "0"
       if (xtermScreen) xtermScreen.style.padding = "0"
       fitAddon.fit()
+
+      const cols = term.cols
+      const rows = term.rows
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(`\x1b[8;${rows};${cols}t`)
+      }
     }, 10)
 
     const wsUrl = websocketUrl || getWebSocketUrl()
@@ -359,6 +365,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     const handleResize = () => {
       try {
         fitAddon.fit()
+        const cols = term.cols
+        const rows = term.rows
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(`\x1b[8;${rows};${cols}t`)
+        }
       } catch {
         // Ignore resize errors
       }
