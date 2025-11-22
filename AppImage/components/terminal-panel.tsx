@@ -419,11 +419,16 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
   const sendToActiveTerminal = (command: string) => {
     const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
+
     if (activeTerminal?.ws && activeTerminal.ws.readyState === WebSocket.OPEN) {
       // Solo enviamos el comando sin el \n para que no se ejecute automáticamente
       // El usuario puede editar el comando y presionar Enter cuando esté listo
       activeTerminal.ws.send(command)
-      setSearchModalOpen(false) // Cerrar el modal después de escribir el comando
+
+      // Pequeño delay antes de cerrar el modal para asegurar que el comando se envió
+      setTimeout(() => {
+        setSearchModalOpen(false)
+      }, 100)
     }
   }
 
@@ -642,6 +647,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-base"
+                autoCapitalize="none"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
               />
             </div>
 
