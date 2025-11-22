@@ -37,7 +37,6 @@ def search_command():
         return jsonify({'error': 'Query too short'}), 400
     
     try:
-        # Hacer petición a cheat.sh desde el servidor
         url = f'https://cht.sh/{query.replace(" ", "+")}?QT'
         headers = {
             'User-Agent': 'curl/7.68.0'
@@ -46,9 +45,45 @@ def search_command():
         response = requests.get(url, headers=headers, timeout=10)
         
         if response.status_code == 200:
+            # Parsear el contenido para extraer ejemplos limpios
+            content = response.text
+            examples = []
+            
+            for line in content.split('\n'):
+                line = line.strip()
+                
+                # Ignorar líneas vacías
+                if not line:
+                    continue
+                
+                # Si la línea es un comentario que contiene ":"
+                # extraer el comando después de ":"
+                if line.startswith('#') and ':' in line:
+                    # Buscar el comando después del ":"
+                    parts = line.split(':', 1)
+                    if len(parts) == 2:
+                        description = parts[0].replace('#', '').strip()
+                        command = parts[1].strip()
+                        
+                        if command and not command.startswith('http'):
+                            examples.append({
+                                'description': description,
+                                'command': command
+                            })
+                # Si la línea empieza con el nombre del comando (sin #)
+                elif not line.startswith('#'):
+                    # Es probablemente un comando directo
+                    # Solo agregar si no es una URL
+                    if not line.startswith('http') and len(line) > 2:
+                        examples.append({
+                            'description': '',
+                            'command': line
+                        })
+            
             return jsonify({
                 'success': True,
-                'content': response.text
+                'examples': examples,
+                'raw_content': content
             })
         else:
             return jsonify({

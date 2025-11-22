@@ -166,7 +166,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       try {
         setIsSearching(true)
 
-        // Usar el proxy local de Flask
         const apiUrl = getApiUrl()
         const response = await fetch(`${apiUrl}/api/terminal/search-command?q=${encodeURIComponent(query)}`, {
           method: "GET",
@@ -182,47 +181,23 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
         const data = await response.json()
 
-        if (!data.success || !data.content) {
-          throw new Error("No content received")
+        if (!data.success || !data.examples || data.examples.length === 0) {
+          throw new Error("No examples found")
         }
 
-        console.log("[v0] Cheat.sh response received from proxy")
+        console.log("[v0] Received parsed examples from server:", data.examples.length)
 
-        // Parsear la respuesta de cheat.sh
-        const text = data.content
-        const blocks = text.split(/\n\s*\n/).filter((block: string) => block.trim())
-        const examples: string[] = []
+        // Usar los ejemplos ya parseados del servidor
+        const formattedResults: CheatSheetResult[] = data.examples.map((example: any) => ({
+          command: example.command,
+          description: example.description || "",
+          examples: [example.command], // El comando limpio como ejemplo
+        }))
 
-        for (const block of blocks) {
-          const lines = block.split("\n").filter((line: string) => {
-            const trimmed = line.trim()
-            return trimmed && !trimmed.startsWith("http") && !trimmed.includes("cheat.sh") && !trimmed.includes("[")
-          })
-
-          if (lines.length > 0) {
-            const example = lines.join("\n").trim()
-            if (example.length > 10 && example.length < 500) {
-              examples.push(example)
-            }
-          }
-        }
-
-        console.log("[v0] Parsed examples:", examples.length)
-
-        if (examples.length > 0) {
-          setUseOnline(true)
-          setSearchResults([
-            {
-              command: query,
-              description: `Results from cheat.sh for "${query}"`,
-              examples: examples.slice(0, 8),
-            },
-          ])
-        } else {
-          throw new Error("No valid examples found")
-        }
+        setUseOnline(true)
+        setSearchResults(formattedResults)
       } catch (error) {
-        console.log("[v0] Error fetching from cheat.sh proxy:", error)
+        console.log("[v0] Error fetching from cheat.sh proxy, using offline commands:", error)
         // Mostrar resultados offline si falla
         const filtered = proxmoxCommands.filter(
           (item) =>
@@ -666,7 +641,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 placeholder="Search commands... (e.g., 'tar', 'docker ps', 'qm list', 'systemctl')"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="pl-10 bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-base"
               />
             </div>
 
@@ -682,43 +657,15 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 searchResults.map((result, index) => (
                   <div
                     key={index}
-                    className="p-4 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 transition-colors"
+                    onClick={() => sendToActiveTerminal(result.command)}
+                    className="p-4 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 transition-colors group"
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <code className="text-sm text-blue-400 font-mono font-bold">{result.command}</code>
-                          {result.description && <p className="text-xs text-zinc-400 mt-1">{result.description}</p>}
-                        </div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <code className="text-sm text-blue-400 font-mono break-all">{result.command}</code>
+                        {result.description && <p className="text-xs text-zinc-400 mt-1">{result.description}</p>}
                       </div>
-                      {result.examples.length > 0 && (
-                        <div className="space-y-1 mt-2 pt-2 border-t border-zinc-700">
-                          <p className="text-xs text-zinc-500 mb-1">Examples:</p>
-                          {result.examples.slice(0, 3).map((example, idx) => (
-                            <div
-                              key={idx}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                sendToActiveTerminal(example)
-                              }}
-                              className="flex items-center justify-between p-2 rounded bg-zinc-900/50 hover:bg-zinc-900 group cursor-pointer transition-colors"
-                            >
-                              <code className="text-xs text-green-400 font-mono flex-1 break-all">{example}</code>
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  sendToActiveTerminal(example)
-                                }}
-                                size="sm"
-                                variant="ghost"
-                                className="shrink-0 h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <Send className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <Send className="h-4 w-4 text-zinc-600 group-hover:text-blue-400 flex-shrink-0 mt-0.5" />
                     </div>
                   </div>
                 ))
