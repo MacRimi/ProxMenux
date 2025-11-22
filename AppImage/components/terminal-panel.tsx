@@ -3,22 +3,8 @@
 import type React from "react"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { API_PORT } from "@/lib/api-config"
-import {
-  Activity,
-  Trash2,
-  X,
-  Search,
-  Send,
-  Wifi,
-  WifiOff,
-  Lightbulb,
-  Terminal,
-  Plus,
-  Split,
-  Grid2X2,
-} from "lucide-react"
+import { Activity, Trash2, X, Search, Send, Lightbulb, Terminal, Plus, Split, Grid2X2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -226,8 +212,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           throw new Error("No valid examples found")
         }
       } catch (error) {
-        console.log("[v0] Falling back to offline mode:", error)
-        setUseOnline(false)
+        console.log("[v0] Error fetching from cheat.sh, showing offline results:", error)
         const filtered = proxmoxCommands.filter(
           (item) =>
             item.cmd.toLowerCase().includes(query.toLowerCase()) ||
@@ -247,7 +232,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       } else {
         setSearchResults([])
         setFilteredCommands(proxmoxCommands)
-        setUseOnline(true) // Reset to online when query is cleared
       }
     }, 800) // Increased debounce to 800ms to avoid premature requests
 
@@ -652,19 +636,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-zinc-800">
             <DialogTitle className="text-xl font-semibold">Search Commands</DialogTitle>
-            <Badge variant={useOnline ? "default" : "secondary"} className="flex items-center gap-2">
-              {useOnline ? (
-                <>
-                  <Wifi className="w-3 h-3" />
-                  <span>Online Mode</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-3 h-3" />
-                  <span>Offline Mode</span>
-                </>
-              )}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2 h-2 rounded-full ${useOnline ? "bg-green-500" : "bg-red-500"}`}
+                title={useOnline ? "Online - Using cheat.sh API" : "Offline - Using local commands"}
+              />
+            </div>
           </DialogHeader>
 
           <DialogDescription className="sr-only">Search for Linux and Proxmox commands</DialogDescription>
