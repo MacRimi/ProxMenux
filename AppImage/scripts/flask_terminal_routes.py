@@ -4,7 +4,7 @@ ProxMenux Terminal WebSocket Routes
 Provides a WebSocket endpoint for interactive terminal sessions
 """
 
-from flask import Blueprint
+from flask import Blueprint, jsonify, request
 from flask_sock import Sock
 import subprocess
 import os
@@ -15,6 +15,7 @@ import fcntl
 import termios
 import threading
 import time
+import requests
 
 terminal_bp = Blueprint('terminal', __name__)
 sock = Sock()
@@ -26,6 +27,45 @@ active_sessions = {}
 def terminal_health():
     """Health check for terminal service"""
     return {'success': True, 'active_sessions': len(active_sessions)}
+
+@terminal_bp.route('/api/terminal/search-command', methods=['GET'])
+def search_command():
+    """Proxy endpoint for cheat.sh API to avoid CORS issues"""
+    query = request.args.get('q', '')
+    
+    if not query or len(query) < 2:
+        return jsonify({'error': 'Query too short'}), 400
+    
+    try:
+        # Hacer petición a cheat.sh desde el servidor
+        url = f'https://cht.sh/{query.replace(" ", "+")}?QT'
+        headers = {
+            'User-Agent': 'curl/7.68.0'
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            return jsonify({
+                'success': True,
+                'content': response.text
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'API returned status {response.status_code}'
+            }), response.status_code
+            
+    except requests.Timeout:
+        return jsonify({
+            'success': False,
+            'error': 'Request timeout'
+        }), 504
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 def set_winsize(fd, rows, cols):
     """Set terminal window size"""
@@ -68,7 +108,7 @@ def terminal_websocket(ws):
         stdout=slave_fd,
         stderr=slave_fd,
         preexec_fn=os.setsid,
-        cwd='/root',
+        cwd='/',
         env=dict(os.environ, TERM='xterm-256color', PS1='\\u@\\h:\\w\\$ ')
     )
     

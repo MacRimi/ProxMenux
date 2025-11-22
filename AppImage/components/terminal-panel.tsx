@@ -41,6 +41,16 @@ function getWebSocketUrl(): string {
   }
 }
 
+function getApiUrl(): string {
+  if (typeof window === "undefined") {
+    return "http://localhost:8008"
+  }
+
+  const { protocol, hostname } = window.location
+  const apiProtocol = protocol === "https:" ? "https:" : "http:"
+  return `${apiProtocol}//${hostname}:${API_PORT}`
+}
+
 const proxmoxCommands = [
   { cmd: "pvesh get /nodes", desc: "List all Proxmox nodes" },
   { cmd: "pvesh get /nodes/{node}/qemu", desc: "List VMs on a node" },
@@ -156,35 +166,35 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       try {
         setIsSearching(true)
 
-        const formattedQuery = query.trim().replace(/\s+/g, "+")
-        const url = `https://cht.sh/${formattedQuery}?QT`
-
-        console.log("[v0] Fetching from cheat.sh:", url)
-
-        const response = await fetch(url, {
-          signal: AbortSignal.timeout(10000),
+        // Usar el proxy local de Flask
+        const apiUrl = getApiUrl()
+        const response = await fetch(`${apiUrl}/api/terminal/search-command?q=${encodeURIComponent(query)}`, {
+          method: "GET",
           headers: {
-            "User-Agent": "curl/7.68.0",
+            Accept: "application/json",
           },
+          signal: AbortSignal.timeout(10000),
         })
 
         if (!response.ok) {
-          console.log("[v0] API response not OK:", response.status)
-          throw new Error(`API request failed: ${response.status}`)
+          throw new Error(`HTTP error! status: ${response.status}`)
         }
 
-        const text = await response.text()
-        console.log("[v0] Received response, length:", text.length)
+        const data = await response.json()
 
-        if (!text || text.includes("Unknown topic") || text.includes("nothing found")) {
-          throw new Error("No results found")
+        if (!data.success || !data.content) {
+          throw new Error("No content received")
         }
 
-        const blocks = text.split(/\n\s*\n/).filter((block) => block.trim())
+        console.log("[v0] Cheat.sh response received from proxy")
+
+        // Parsear la respuesta de cheat.sh
+        const text = data.content
+        const blocks = text.split(/\n\s*\n/).filter((block: string) => block.trim())
         const examples: string[] = []
 
         for (const block of blocks) {
-          const lines = block.split("\n").filter((line) => {
+          const lines = block.split("\n").filter((line: string) => {
             const trimmed = line.trim()
             return trimmed && !trimmed.startsWith("http") && !trimmed.includes("cheat.sh") && !trimmed.includes("[")
           })
@@ -212,7 +222,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           throw new Error("No valid examples found")
         }
       } catch (error) {
-        console.log("[v0] Error fetching from cheat.sh, showing offline results:", error)
+        console.log("[v0] Error fetching from cheat.sh proxy:", error)
+        // Mostrar resultados offline si falla
         const filtered = proxmoxCommands.filter(
           (item) =>
             item.cmd.toLowerCase().includes(query.toLowerCase()) ||
@@ -220,6 +231,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         )
         setFilteredCommands(filtered)
         setSearchResults([])
+        setUseOnline(false)
       } finally {
         setIsSearching(false)
       }
@@ -227,13 +239,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
     const debounce = setTimeout(() => {
       if (searchQuery && searchQuery.length >= 2) {
-        // Only search if query is at least 2 characters
         searchCheatSh(searchQuery)
       } else {
         setSearchResults([])
         setFilteredCommands(proxmoxCommands)
       }
-    }, 800) // Increased debounce to 800ms to avoid premature requests
+    }, 800)
 
     return () => clearTimeout(debounce)
   }, [searchQuery])
@@ -434,8 +445,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const sendToActiveTerminal = (command: string) => {
     const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
     if (activeTerminal?.ws && activeTerminal.ws.readyState === WebSocket.OPEN) {
-      activeTerminal.ws.send(command + "\n")
-      setSearchModalOpen(false) // Close the search modal after sending a command
+      // Solo enviamos el comando sin el \n para que no se ejecute automáticamente
+      // El usuario puede editar el comando y presionar Enter cuando esté listo
+      activeTerminal.ws.send(command)
+      setSearchModalOpen(false) // Cerrar el modal después de escribir el comando
     }
   }
 
