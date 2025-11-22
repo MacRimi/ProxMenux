@@ -578,39 +578,32 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           </div>
         </div>
 
-        <div className="flex-1 min-h-0">
+        <div className="h-full overflow-hidden">
           {isMobile ? (
             <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
-              <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800">
+              <TabsList className="bg-zinc-900 border-b border-zinc-800 rounded-none justify-start overflow-x-auto flex-shrink-0">
                 {terminals.map((terminal) => (
-                  <TabsTrigger key={terminal.id} value={terminal.id} className="relative">
+                  <TabsTrigger
+                    key={terminal.id}
+                    value={terminal.id}
+                    className="data-[state=active]:bg-blue-500/20 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none"
+                  >
                     {terminal.title}
-                    {terminals.length > 1 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          closeTerminal(terminal.id)
-                        }}
-                        className="ml-2 hover:bg-zinc-700 rounded p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
                   </TabsTrigger>
                 ))}
               </TabsList>
               {terminals.map((terminal) => (
-                <TabsContent key={terminal.id} value={terminal.id} className="flex-1 m-0 p-0">
-                  <div
-                    ref={setContainerRef(terminal.id)}
-                    className="w-full h-full bg-black"
-                    style={{ height: "calc(100vh - 24rem)" }}
-                  />
+                <TabsContent
+                  key={terminal.id}
+                  value={terminal.id}
+                  className="flex-1 m-0 data-[state=active]:flex data-[state=inactive]:hidden"
+                >
+                  <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black" />
                 </TabsContent>
               ))}
             </Tabs>
           ) : (
-            <div className={`${getLayoutClass()} gap-2 flex-1 min-h-0 p-2`}>
+            <div className={`${getLayoutClass()} gap-2 h-full p-2`}>
               {terminals.map((terminal) => (
                 <div
                   key={terminal.id}
@@ -635,11 +628,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                       </Button>
                     )}
                   </div>
-                  <div
-                    ref={setContainerRef(terminal.id)}
-                    className="flex-1 overflow-hidden"
-                    style={{ width: "100%", height: "100%" }}
-                  />
+                  <div ref={setContainerRef(terminal.id)} className="flex-1 w-full overflow-hidden bg-black" />
                 </div>
               ))}
             </div>
