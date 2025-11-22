@@ -5,7 +5,6 @@ import { GeistMono } from "geist/font/mono"
 import { ThemeProvider } from "../components/theme-provider"
 import { Suspense } from "react"
 import "./globals.css"
-import "./terminal.css"
 
 export const metadata: Metadata = {
   title: "ProxMenux Monitor",
