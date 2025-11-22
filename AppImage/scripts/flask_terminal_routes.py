@@ -20,8 +20,79 @@ import requests
 terminal_bp = Blueprint('terminal', __name__)
 sock = Sock()
 
-# Active terminal sessions - now stores session by session_id string
-sessions = {}
+# Active terminal sessions
+active_sessions = {}
+
+@terminal_bp.route('/api/terminal/health', methods=['GET'])
+def terminal_health():
+    """Health check for terminal service"""
+    return {'success': True, 'active_sessions': len(active_sessions)}
+
+@terminal_bp.route('/api/terminal/search-command', methods=['GET'])
+def search_command():
+    """Proxy endpoint for cheat.sh API to avoid CORS issues"""
+    query = request.args.get('q', '')
+    
+    if not query or len(query) < 2:
+        return jsonify({'error': 'Query too short'}), 400
+    
+    try:
+        url = f'https://cht.sh/{query.replace(" ", "+")}?QT'
+        headers = {
+            'User-Agent': 'curl/7.68.0'
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            content = response.text
+            examples = []
+            current_description = []
+            
+            for line in content.split('\n'):
+                stripped = line.strip()
+                
+                # Ignorar líneas vacías
+                if not stripped:
+                    continue
+                
+                # Si es un comentario
+                if stripped.startswith('#'):
+                    # Acumular descripciones
+                    current_description.append(stripped[1:].strip())
+                # Si no es comentario, es un comando
+                elif stripped and not stripped.startswith('http'):
+                    # Unir las descripciones acumuladas
+                    description = ' '.join(current_description) if current_description else ''
+                    
+                    examples.append({
+                        'description': description,
+                        'command': stripped
+                    })
+                    
+                    # Resetear descripciones para el siguiente comando
+                    current_description = []
+            
+            return jsonify({
+                'success': True,
+                'examples': examples
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'API returned status {response.status_code}'
+            }), response.status_code
+            
+    except requests.Timeout:
+        return jsonify({
+            'success': False,
+            'error': 'Request timeout'
+        }), 504
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 def set_winsize(fd, rows, cols):
     """Set terminal window size"""
@@ -50,33 +121,6 @@ def read_and_forward_output(master_fd, ws):
             print(f"Error reading from PTY: {e}")
             break
 
-@terminal_bp.route('/api/terminal/health', methods=['GET'])
-def terminal_health():
-    """Health check for terminal service"""
-    return {'success': True, 'active_sessions': len(sessions)}
-
-@terminal_bp.route('/api/terminal/<session_id>/resize', methods=['POST'])
-def resize_terminal(session_id):
-    """Resize the PTY for a given terminal session."""
-    if session_id not in sessions:
-        return jsonify({'error': 'Session not found'}), 404
-    
-    try:
-        data = request.get_json()
-        cols = int(data.get('cols', 120))
-        rows = int(data.get('rows', 30))
-        
-        # Resize the PTY to match the frontend terminal dimensions
-        master_fd = sessions[session_id]['master_fd']
-        set_winsize(master_fd, rows, cols)
-        
-        print(f"[v0] Terminal {session_id} resized to {cols}x{rows}")
-        
-        return jsonify({'status': 'success', 'cols': cols, 'rows': rows})
-    except Exception as e:
-        print(f"Error resizing terminal {session_id}: {e}")
-        return jsonify({'error': str(e)}), 500
-
 @sock.route('/ws/terminal')
 def terminal_websocket(ws):
     """WebSocket endpoint for terminal sessions"""
@@ -95,8 +139,8 @@ def terminal_websocket(ws):
         env=dict(os.environ, TERM='xterm-256color', PS1='\\u@\\h:\\w\\$ ')
     )
     
-    session_id = str(int(time.time() * 1000))
-    sessions[session_id] = {
+    session_id = id(ws)
+    active_sessions[session_id] = {
         'process': shell_process,
         'master_fd': master_fd
     }
@@ -105,10 +149,8 @@ def terminal_websocket(ws):
     flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
     fcntl.fcntl(master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
     
-    set_winsize(master_fd, 30, 80)
-    
-    # Send session_id to frontend
-    ws.send(f"\x1b]0;SESSION_ID:{session_id}\x07")
+    # Set initial terminal size
+    set_winsize(master_fd, 30, 120)
     
     # Start thread to read PTY output and forward to WebSocket
     output_thread = threading.Thread(
@@ -127,19 +169,16 @@ def terminal_websocket(ws):
                 # Client closed connection
                 break
             
+            # Handle terminal resize (optional)
             if data.startswith('\x1b[8;'):
                 try:
-                    # Parse: \x1b[8;{rows};{cols}t
                     parts = data[4:-1].split(';')
-                    if len(parts) >= 2:
-                        rows, cols = int(parts[0]), int(parts[1])
-                        set_winsize(master_fd, rows, cols)
-                        print(f"[v0] Terminal resized via WebSocket to {rows}x{cols}")
+                    rows, cols = int(parts[0]), int(parts[1])
+                    set_winsize(master_fd, rows, cols)
                     continue
-                except Exception as e:
-                    print(f"Error parsing resize: {e}")
+                except:
                     pass
-
+            
             # Send input to bash
             try:
                 os.write(master_fd, data.encode('utf-8'))
@@ -174,8 +213,8 @@ def terminal_websocket(ws):
         except:
             pass
         
-        if session_id in sessions:
-            del sessions[session_id]
+        if session_id in active_sessions:
+            del active_sessions[session_id]
 
 def init_terminal_routes(app):
     """Initialize terminal routes with Flask app"""
