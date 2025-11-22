@@ -496,7 +496,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         }
       `}</style>
 
-      <div className="min-h-[calc(100vh-200px)] flex flex-col bg-zinc-900 rounded-md overflow-hidden">
+      <div className="h-full flex flex-col bg-zinc-900 rounded-md overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
           <div className="flex items-center gap-3">
             <Activity className="h-5 w-5 text-blue-500" />
