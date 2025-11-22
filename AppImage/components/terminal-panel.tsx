@@ -31,7 +31,40 @@ function getWebSocketUrl(): string {
   }
 }
 
-const commonCommands = [
+interface CheatSheetResult {
+  command: string
+  description: string
+  examples: string[]
+}
+
+const proxmoxCommands = [
+  { cmd: "pvesh get /nodes", desc: "List all Proxmox nodes" },
+  { cmd: "pvesh get /nodes/{node}/qemu", desc: "List VMs on a node" },
+  { cmd: "pvesh get /nodes/{node}/lxc", desc: "List LXC containers on a node" },
+  { cmd: "pvesh get /nodes/{node}/storage", desc: "List storage on a node" },
+  { cmd: "pvesh get /nodes/{node}/network", desc: "List network interfaces" },
+  { cmd: "qm list", desc: "List all QEMU/KVM virtual machines" },
+  { cmd: "qm start <vmid>", desc: "Start a virtual machine" },
+  { cmd: "qm stop <vmid>", desc: "Stop a virtual machine" },
+  { cmd: "qm shutdown <vmid>", desc: "Shutdown a virtual machine gracefully" },
+  { cmd: "qm status <vmid>", desc: "Show VM status" },
+  { cmd: "qm config <vmid>", desc: "Show VM configuration" },
+  { cmd: "qm snapshot <vmid> <snapname>", desc: "Create VM snapshot" },
+  { cmd: "pct list", desc: "List all LXC containers" },
+  { cmd: "pct start <vmid>", desc: "Start LXC container" },
+  { cmd: "pct stop <vmid>", desc: "Stop LXC container" },
+  { cmd: "pct enter <vmid>", desc: "Enter LXC container console" },
+  { cmd: "pct config <vmid>", desc: "Show container configuration" },
+  { cmd: "pvesm status", desc: "Show storage status" },
+  { cmd: "pvesm list <storage>", desc: "List storage content" },
+  { cmd: "pveperf", desc: "Test Proxmox system performance" },
+  { cmd: "pveversion", desc: "Show Proxmox VE version" },
+  { cmd: "systemctl status pve-cluster", desc: "Check cluster status" },
+  { cmd: "pvecm status", desc: "Show cluster status" },
+  { cmd: "pvecm nodes", desc: "List cluster nodes" },
+  { cmd: "zpool status", desc: "Show ZFS pool status" },
+  { cmd: "zpool list", desc: "List all ZFS pools" },
+  { cmd: "zfs list", desc: "List all ZFS datasets" },
   { cmd: "ls -la", desc: "List all files with details" },
   { cmd: "cd /path/to/dir", desc: "Change directory" },
   { cmd: "mkdir dirname", desc: "Create new directory" },
@@ -83,9 +116,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const [isConnected, setIsConnected] = useState(false)
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredCommands, setFilteredCommands] = useState(commonCommands)
+  const [filteredCommands, setFilteredCommands] = useState<Array<{ cmd: string; desc: string }>>(proxmoxCommands)
   const [lastKeyPressed, setLastKeyPressed] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<CheatSheetResult[]>([])
+  const [useOnline, setUseOnline] = useState(true)
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768)
@@ -96,15 +132,88 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setFilteredCommands(commonCommands)
+      setFilteredCommands(proxmoxCommands)
+      setSearchResults([])
       return
     }
-    const query = searchQuery.toLowerCase()
-    const filtered = commonCommands.filter(
-      (item) => item.cmd.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query),
-    )
-    setFilteredCommands(filtered)
-  }, [searchQuery])
+
+    const query = searchQuery.toLowerCase().trim()
+
+    if (useOnline && query.length > 2) {
+      setIsSearching(true)
+
+      const searchCheatSh = async () => {
+        try {
+          const response = await fetch(`https://cheat.sh/${encodeURIComponent(query)}?T`, {
+            signal: AbortSignal.timeout(5000),
+          })
+
+          if (response.ok) {
+            const text = await response.text()
+
+            const lines = text.split("\n").filter((line) => line.trim())
+            const results: CheatSheetResult[] = []
+
+            let currentCommand = ""
+            let currentDesc = ""
+            let currentExamples: string[] = []
+
+            for (const line of lines) {
+              if (line.startsWith("#")) {
+                if (currentCommand) {
+                  results.push({
+                    command: currentCommand,
+                    description: currentDesc,
+                    examples: currentExamples,
+                  })
+                }
+                currentCommand = line.replace(/^#\s*/, "").trim()
+                currentDesc = ""
+                currentExamples = []
+              } else if (line.trim().startsWith("-")) {
+                currentDesc += line.trim().replace(/^-\s*/, "") + " "
+              } else if (line.trim() && !line.includes("cheat.sh")) {
+                currentExamples.push(line.trim())
+              }
+            }
+
+            if (currentCommand) {
+              results.push({
+                command: currentCommand,
+                description: currentDesc,
+                examples: currentExamples,
+              })
+            }
+
+            setSearchResults(results)
+            setFilteredCommands([]) // Clear local results when using online
+          } else {
+            throw new Error("API request failed")
+          }
+        } catch (error) {
+          console.log("[v0] Cheat.sh unavailable, using offline mode")
+          setUseOnline(false)
+          const filtered = proxmoxCommands.filter(
+            (item) => item.cmd.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query),
+          )
+          setFilteredCommands(filtered)
+          setSearchResults([])
+        } finally {
+          setIsSearching(false)
+        }
+      }
+
+      const timer = setTimeout(searchCheatSh, 500)
+      return () => clearTimeout(timer)
+    } else {
+      const filtered = proxmoxCommands.filter(
+        (item) => item.cmd.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query),
+      )
+      setFilteredCommands(filtered)
+      setSearchResults([])
+      setIsSearching(false)
+    }
+  }, [searchQuery, useOnline])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -318,6 +427,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
     setSearchModalOpen(false)
     setSearchQuery("")
+    setSearchResults([])
   }
 
   return (
@@ -451,21 +561,78 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       </div>
 
       <Dialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Search Commands</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Search Commands</span>
+              <Badge variant="outline" className="text-xs">
+                {useOnline ? "🌐 Online (cheat.sh)" : "📦 Offline Mode"}
+              </Badge>
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
             <Input
               type="text"
-              placeholder="Search commands... (e.g., 'list files', 'docker', 'systemctl')"
+              placeholder="Search commands... (e.g., 'tar', 'docker ps', 'qm list', 'systemctl')"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full"
+              className="w-full bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               autoFocus
             />
+
+            {isSearching && (
+              <div className="text-center py-4 text-zinc-400">
+                <div className="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent rounded-full mb-2" />
+                <p className="text-sm">Searching cheat.sh...</p>
+              </div>
+            )}
+
             <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-              {filteredCommands.length > 0 ? (
+              {searchResults.length > 0 ? (
+                searchResults.map((result, index) => (
+                  <div
+                    key={index}
+                    className="p-4 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 cursor-pointer transition-colors"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <code className="text-sm text-blue-400 font-mono font-bold">{result.command}</code>
+                          {result.description && <p className="text-xs text-zinc-400 mt-1">{result.description}</p>}
+                        </div>
+                      </div>
+                      {result.examples.length > 0 && (
+                        <div className="space-y-1 mt-2 pt-2 border-t border-zinc-700">
+                          <p className="text-xs text-zinc-500 mb-1">Examples:</p>
+                          {result.examples.slice(0, 3).map((example, idx) => (
+                            <div
+                              key={idx}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleSendCommand(example)
+                              }}
+                              className="flex items-center justify-between p-2 rounded bg-zinc-900/50 hover:bg-zinc-900 group"
+                            >
+                              <code className="text-xs text-green-400 font-mono flex-1 break-all">{example}</code>
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleSendCommand(example)
+                                }}
+                                size="sm"
+                                variant="ghost"
+                                className="shrink-0 h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Send className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : filteredCommands.length > 0 ? (
                 filteredCommands.map((item, index) => (
                   <div
                     key={index}
@@ -492,9 +659,15 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                     </div>
                   </div>
                 ))
-              ) : (
-                <div className="text-center py-8 text-zinc-400">No commands found matching "{searchQuery}"</div>
-              )}
+              ) : !isSearching ? (
+                <div className="text-center py-8 text-zinc-400">
+                  {searchQuery ? `No commands found for "${searchQuery}"` : "Type to search commands..."}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="text-xs text-zinc-500 pt-2 border-t border-zinc-700">
+              💡 Tip: Search for any Linux command (tar, grep, docker, etc.) or Proxmox commands (qm, pct, pvesh)
             </div>
           </div>
         </DialogContent>
