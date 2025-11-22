@@ -324,23 +324,36 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       const xtermViewport = container.querySelector(".xterm-viewport") as HTMLElement
       const xtermScreen = container.querySelector(".xterm-screen") as HTMLElement
       const xtermRows = container.querySelector(".xterm-rows") as HTMLElement
+      const xtermCanvas = container.querySelectorAll(".xterm canvas")
 
       if (xtermElement) {
         xtermElement.style.padding = "0"
         xtermElement.style.margin = "0"
+        xtermElement.style.position = "relative"
+        xtermElement.style.left = "-2px"
       }
       if (xtermViewport) {
         xtermViewport.style.padding = "0"
         xtermViewport.style.margin = "0"
+        xtermViewport.style.left = "-2px"
       }
       if (xtermScreen) {
         xtermScreen.style.padding = "0"
         xtermScreen.style.margin = "0"
+        xtermScreen.style.left = "-2px"
       }
       if (xtermRows) {
         xtermRows.style.padding = "0"
         xtermRows.style.margin = "0"
+        xtermRows.style.left = "-2px"
       }
+      xtermCanvas.forEach((canvas) => {
+        const canvasEl = canvas as HTMLElement
+        canvasEl.style.padding = "0"
+        canvasEl.style.margin = "0"
+        canvasEl.style.position = "relative"
+        canvasEl.style.left = "-2px"
+      })
     }
 
     // Remove padding immediately

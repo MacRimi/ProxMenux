@@ -1,22 +1,28 @@
-/* Force remove all xterm.js internal padding and margins */
+/* Aggressively force remove all xterm.js internal padding and margins */
 .xterm {
   padding: 0 !important;
   margin: 0 !important;
+  /* Move content left to compensate for xterm's internal 2px padding */
+  position: relative;
+  left: -2px !important;
 }
 
 .xterm-viewport {
   padding: 0 !important;
   margin: 0 !important;
+  left: -2px !important;
 }
 
 .xterm-screen {
   padding: 0 !important;
   margin: 0 !important;
+  left: -2px !important;
 }
 
 .xterm-rows {
   padding: 0 !important;
   margin: 0 !important;
+  left: -2px !important;
 }
 
 .xterm-helpers {
@@ -24,8 +30,22 @@
   margin: 0 !important;
 }
 
-/* Ensure terminal container has no padding */
+/* Target the canvas element that has the hardcoded padding */
+.xterm canvas {
+  padding: 0 !important;
+  margin: 0 !important;
+  left: -2px !important;
+  position: relative;
+}
+
+/* Ensure terminal container has no padding or overflow */
 [class*="terminal-container"] {
   padding: 0 !important;
   margin: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Fix any potential scrollbar offset */
+.xterm .xterm-viewport::-webkit-scrollbar {
+  width: 0px !important;
 }
