@@ -320,13 +320,21 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     const performResize = () => {
       const xtermViewport = container.querySelector(".xterm-viewport") as HTMLElement
       const xtermScreen = container.querySelector(".xterm-screen") as HTMLElement
-      if (xtermViewport) xtermViewport.style.padding = "0"
-      if (xtermScreen) xtermScreen.style.padding = "0"
+      if (xtermViewport) {
+        xtermViewport.style.padding = "0"
+        xtermViewport.style.width = "100%"
+        xtermViewport.style.height = "100%"
+      }
+      if (xtermScreen) {
+        xtermScreen.style.padding = "0"
+      }
 
       fitAddon.fit()
       const cols = term.cols
       const rows = term.rows
-      console.log(`[v0] Terminal resized: ${cols}x${rows}`)
+      console.log(
+        `[v0] Terminal ${terminal.id} resized: ${cols}x${rows} (container: ${container.offsetWidth}x${container.offsetHeight})`,
+      )
 
       // Send resize to backend via HTTP
       const apiUrl = getApiUrl()
@@ -486,7 +494,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
 
   return (
-    <>
+    <div className="flex flex-col h-full w-full">
       <style jsx>{`
         :global(.xterm .xterm-viewport) {
           padding: 0 !important;
@@ -579,8 +587,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         </div>
 
         <div className="flex-1 overflow-hidden">
-          {isMobile ? (
-            <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
+          {isMobile || terminals.length === 1 ? (
+            <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="flex-1 flex flex-col min-h-0">
               <TabsList className="bg-zinc-900 border-b border-zinc-800 rounded-none justify-start overflow-x-auto flex-shrink-0">
                 {terminals.map((terminal) => (
                   <TabsTrigger
@@ -596,20 +604,20 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 <TabsContent
                   key={terminal.id}
                   value={terminal.id}
-                  className="flex-1 m-0 data-[state=active]:flex data-[state=inactive]:hidden"
+                  className="flex-1 m-0 min-h-0 data-[state=active]:flex data-[state=inactive]:hidden"
                 >
-                  <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black" />
+                  <div ref={setContainerRef(terminal.id)} className="absolute inset-0 bg-black" />
                 </TabsContent>
               ))}
             </Tabs>
           ) : (
-            <div className={`${getLayoutClass()} gap-2 h-full p-2`}>
+            <div className={`${getLayoutClass()} gap-2 h-full w-full p-2 min-h-0`}>
               {terminals.map((terminal) => (
                 <div
                   key={terminal.id}
                   className={`relative bg-black rounded flex flex-col overflow-hidden border ${
                     terminal.id === activeTerminalId ? "border-blue-500" : "border-zinc-700"
-                  }`}
+                  } min-h-0`}
                   onClick={() => setActiveTerminalId(terminal.id)}
                 >
                   <div className="flex items-center justify-between px-2 py-1 bg-zinc-800 border-b border-zinc-700">
@@ -628,7 +636,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                       </Button>
                     )}
                   </div>
-                  <div ref={setContainerRef(terminal.id)} className="flex-1 w-full overflow-hidden bg-black" />
+                  <div ref={setContainerRef(terminal.id)} className="flex-1 w-full overflow-hidden bg-black min-h-0" />
                 </div>
               ))}
             </div>
@@ -840,6 +848,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           </DialogContent>
         </Dialog>
       </div>
-    </>
+    </div>
   )
 }
