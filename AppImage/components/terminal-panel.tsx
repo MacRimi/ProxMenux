@@ -3,9 +3,11 @@
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
 import { API_PORT } from "@/lib/api-config"
-import { Trash2, X, Send, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Activity } from "lucide-react"
+import { Trash2, X, Send, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 
 type TerminalPanelProps = {
   websocketUrl?: string
@@ -29,6 +31,47 @@ function getWebSocketUrl(): string {
   }
 }
 
+const commonCommands = [
+  { cmd: "ls -la", desc: "List all files with details" },
+  { cmd: "cd /path/to/dir", desc: "Change directory" },
+  { cmd: "mkdir dirname", desc: "Create new directory" },
+  { cmd: "rm -rf dirname", desc: "Remove directory recursively" },
+  { cmd: "cp source dest", desc: "Copy files or directories" },
+  { cmd: "mv source dest", desc: "Move or rename files" },
+  { cmd: "cat filename", desc: "Display file contents" },
+  { cmd: "grep 'pattern' file", desc: "Search for pattern in file" },
+  { cmd: "find . -name 'file'", desc: "Find files by name" },
+  { cmd: "chmod 755 file", desc: "Change file permissions" },
+  { cmd: "chown user:group file", desc: "Change file owner" },
+  { cmd: "tar -xzf file.tar.gz", desc: "Extract tar.gz archive" },
+  { cmd: "tar -czf archive.tar.gz dir/", desc: "Create tar.gz archive" },
+  { cmd: "df -h", desc: "Show disk usage" },
+  { cmd: "du -sh *", desc: "Show directory sizes" },
+  { cmd: "free -h", desc: "Show memory usage" },
+  { cmd: "top", desc: "Show running processes" },
+  { cmd: "ps aux | grep process", desc: "Find running process" },
+  { cmd: "kill -9 PID", desc: "Force kill process" },
+  { cmd: "systemctl status service", desc: "Check service status" },
+  { cmd: "systemctl start service", desc: "Start a service" },
+  { cmd: "systemctl stop service", desc: "Stop a service" },
+  { cmd: "systemctl restart service", desc: "Restart a service" },
+  { cmd: "apt update && apt upgrade", desc: "Update Debian/Ubuntu packages" },
+  { cmd: "apt install package", desc: "Install package on Debian/Ubuntu" },
+  { cmd: "apt remove package", desc: "Remove package" },
+  { cmd: "docker ps", desc: "List running containers" },
+  { cmd: "docker images", desc: "List Docker images" },
+  { cmd: "docker exec -it container bash", desc: "Enter container shell" },
+  { cmd: "ip addr show", desc: "Show IP addresses" },
+  { cmd: "ping host", desc: "Test network connectivity" },
+  { cmd: "curl -I url", desc: "Get HTTP headers" },
+  { cmd: "wget url", desc: "Download file from URL" },
+  { cmd: "ssh user@host", desc: "Connect via SSH" },
+  { cmd: "scp file user@host:/path", desc: "Copy file via SSH" },
+  { cmd: "tail -f /var/log/syslog", desc: "Follow log file in real-time" },
+  { cmd: "history", desc: "Show command history" },
+  { cmd: "clear", desc: "Clear terminal screen" },
+]
+
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const termRef = useRef<any>(null)
@@ -38,7 +81,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
   const [xtermLoaded, setXtermLoaded] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
-  const [mobileInput, setMobileInput] = useState("")
+  const [searchModalOpen, setSearchModalOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filteredCommands, setFilteredCommands] = useState(commonCommands)
   const [lastKeyPressed, setLastKeyPressed] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -48,6 +93,18 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [])
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredCommands(commonCommands)
+      return
+    }
+    const query = searchQuery.toLowerCase()
+    const filtered = commonCommands.filter(
+      (item) => item.cmd.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query),
+    )
+    setFilteredCommands(filtered)
+  }, [searchQuery])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -60,8 +117,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       .then(([Terminal, FitAddon]) => {
         if (!containerRef.current) return
 
-        console.log("[v0] TerminalPanel: Initializing terminal")
-
         const term = new Terminal({
           fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
           fontSize: isMobile ? 11 : 13,
@@ -71,26 +126,26 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           cols: 150,
           rows: 30,
           theme: {
-            background: "#0d1117",
-            foreground: "#e6edf3",
-            cursor: "#58a6ff",
-            cursorAccent: "#0d1117",
-            black: "#484f58",
-            red: "#f85149",
-            green: "#3fb950",
-            yellow: "#d29922",
-            blue: "#58a6ff",
-            magenta: "#bc8cff",
-            cyan: "#39d353",
-            white: "#b1bac4",
-            brightBlack: "#6e7681",
-            brightRed: "#ff7b72",
-            brightGreen: "#56d364",
-            brightYellow: "#e3b341",
-            brightBlue: "#79c0ff",
-            brightMagenta: "#d2a8ff",
-            brightCyan: "#56d364",
-            brightWhite: "#f0f6fc",
+            background: "#000000",
+            foreground: "#ffffff",
+            cursor: "#ffffff",
+            cursorAccent: "#000000",
+            black: "#2e3436",
+            red: "#cc0000",
+            green: "#4e9a06",
+            yellow: "#c4a000",
+            blue: "#3465a4",
+            magenta: "#75507b",
+            cyan: "#06989a",
+            white: "#d3d7cf",
+            brightBlack: "#555753",
+            brightRed: "#ef2929",
+            brightGreen: "#8ae234",
+            brightYellow: "#fce94f",
+            brightBlue: "#729fcf",
+            brightMagenta: "#ad7fa8",
+            brightCyan: "#34e2e2",
+            brightWhite: "#eeeeec",
           },
         })
 
@@ -105,13 +160,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         setXtermLoaded(true)
 
         const wsUrl = websocketUrl || getWebSocketUrl()
-        console.log("[v0] TerminalPanel: Connecting to WebSocket:", wsUrl)
 
         const ws = new WebSocket(wsUrl)
         wsRef.current = ws
 
         ws.onopen = () => {
-          console.log("[v0] TerminalPanel: WebSocket connected")
           setIsConnected(true)
           term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
         }
@@ -127,7 +180,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         }
 
         ws.onclose = () => {
-          console.log("[v0] TerminalPanel: WebSocket closed")
           setIsConnected(false)
           term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
         }
@@ -148,7 +200,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         window.addEventListener("resize", handleResize)
 
         return () => {
-          console.log("[v0] TerminalPanel: Cleaning up")
           window.removeEventListener("resize", handleResize)
           ws.close()
           term.dispose()
@@ -258,43 +309,49 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
   }
 
-  const handleMobileInputSend = () => {
-    if (!mobileInput.trim()) return
+  const handleSendCommand = (command: string) => {
     const ws = wsRef.current
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(mobileInput)
-      setLastKeyPressed(mobileInput)
-      setTimeout(() => setLastKeyPressed(null), 2000)
+      ws.send(command + "\r")
+      setLastKeyPressed(command)
+      setTimeout(() => setLastKeyPressed(null), 3000)
     }
-    setMobileInput("")
+    setSearchModalOpen(false)
+    setSearchQuery("")
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-16rem)] min-h-[500px] w-full">
+    <div className="flex flex-col h-full w-full">
       <div className="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900 border-b border-zinc-700 rounded-t-md">
-        <div className="flex items-center gap-3">
-          <Activity className="h-5 w-5 text-blue-500" />
-          <span className="text-zinc-300 text-sm font-semibold">ProxMenux Terminal</span>
-          <Badge
-            variant="outline"
-            className={`text-xs ${
-              isConnected
-                ? "border-green-500 text-green-500 bg-green-500/10"
-                : "border-red-500 text-red-500 bg-red-500/10"
-            }`}
-          >
-            <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${isConnected ? "bg-green-500" : "bg-red-500"}`}></div>
-            {isConnected ? "Connected" : "Disconnected"}
-          </Badge>
-        </div>
+        <Badge
+          variant="outline"
+          className={`text-xs ${
+            isConnected
+              ? "border-green-500 text-green-500 bg-green-500/10"
+              : "border-red-500 text-red-500 bg-red-500/10"
+          }`}
+        >
+          <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${isConnected ? "bg-green-500" : "bg-red-500"}`}></div>
+          {isConnected ? "Connected" : "Disconnected"}
+        </Badge>
 
         <div className="flex gap-2">
+          <Button
+            onClick={() => setSearchModalOpen(true)}
+            variant="outline"
+            size="sm"
+            disabled={!isConnected}
+            className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 border-blue-500 text-white disabled:opacity-50"
+          >
+            <Search className="h-4 w-4" />
+            <span className="hidden sm:inline">Search</span>
+          </Button>
           <Button
             onClick={handleClear}
             variant="outline"
             size="sm"
             disabled={!isConnected}
-            className="h-8 gap-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100 disabled:opacity-50"
+            className="h-8 gap-2 bg-yellow-600 hover:bg-yellow-700 border-yellow-500 text-white disabled:opacity-50"
           >
             <Trash2 className="h-4 w-4" />
             <span className="hidden sm:inline">Clear</span>
@@ -303,7 +360,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             onClick={handleClose}
             variant="outline"
             size="sm"
-            className="h-8 gap-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
+            className="h-8 gap-2 bg-red-600 hover:bg-red-700 border-red-500 text-white"
           >
             <X className="h-4 w-4" />
             <span className="hidden sm:inline">Close</span>
@@ -313,7 +370,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
       <div
         ref={containerRef}
-        className="flex-1 bg-[#0d1117] overflow-auto min-h-0"
+        className="flex-1 bg-black overflow-auto min-h-0"
         onTouchStart={touchStartRef.current ? undefined : handleTouchStart}
         onTouchEnd={touchStartRef.current ? handleTouchEnd : undefined}
       >
@@ -322,38 +379,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         )}
       </div>
 
-      {isMobile && (
-        <div className="px-3 py-2 bg-zinc-900/50 border-t border-zinc-700">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs text-zinc-400">Mobile Input</span>
-            {lastKeyPressed && (
-              <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded">Sent: {lastKeyPressed}</span>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={mobileInput}
-              onChange={(e) => setMobileInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleMobileInputSend()}
-              placeholder="Type command..."
-              className="flex-1 px-3 py-2 text-sm border border-zinc-600 rounded-md bg-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={!isConnected}
-            />
-            <Button
-              onClick={handleMobileInputSend}
-              variant="default"
-              size="sm"
-              disabled={!isConnected || !mobileInput.trim()}
-              className="px-3 bg-blue-600 hover:bg-blue-700"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
       <div className="flex flex-wrap gap-2 justify-center items-center px-2 py-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700">
+        {lastKeyPressed && (
+          <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded mr-2">
+            Sent: {lastKeyPressed}
+          </span>
+        )}
         <Button
           onClick={() => handleKeyButton("ESC")}
           variant="outline"
@@ -418,6 +449,56 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           CTRL+C
         </Button>
       </div>
+
+      <Dialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Search Commands</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+            <Input
+              type="text"
+              placeholder="Search commands... (e.g., 'list files', 'docker', 'systemctl')"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full"
+              autoFocus
+            />
+            <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+              {filteredCommands.length > 0 ? (
+                filteredCommands.map((item, index) => (
+                  <div
+                    key={index}
+                    onClick={() => handleSendCommand(item.cmd)}
+                    className="p-3 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <code className="text-sm text-blue-400 font-mono break-all">{item.cmd}</code>
+                        <p className="text-xs text-zinc-400 mt-1">{item.desc}</p>
+                      </div>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleSendCommand(item.cmd)
+                        }}
+                        size="sm"
+                        variant="ghost"
+                        className="shrink-0 h-7 px-2 text-xs"
+                      >
+                        <Send className="h-3 w-3 mr-1" />
+                        Send
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-zinc-400">No commands found matching "{searchQuery}"</div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
