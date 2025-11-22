@@ -14,9 +14,8 @@ import {
   Lightbulb,
   Terminal,
   Plus,
-  LayoutGrid,
-  Columns,
-  Rows,
+  Split,
+  Grid2X2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -170,12 +169,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
       try {
         setIsSearching(true)
-        setUseOnline(true)
 
-        // Format query: replace spaces with + for cheat.sh API
         const formattedQuery = query.trim().replace(/\s+/g, "+")
-
-        // Use ?QT options: Q=no comments (code only), T=no syntax highlighting
         const url = `https://cht.sh/${formattedQuery}?QT`
 
         console.log("[v0] Fetching from cheat.sh:", url)
@@ -183,7 +178,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         const response = await fetch(url, {
           signal: AbortSignal.timeout(10000),
           headers: {
-            "User-Agent": "curl/7.68.0", // cheat.sh works better with curl user agent
+            "User-Agent": "curl/7.68.0",
           },
         })
 
@@ -199,15 +194,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           throw new Error("No results found")
         }
 
-        // Split by double newlines to get separate examples
         const blocks = text.split(/\n\s*\n/).filter((block) => block.trim())
         const examples: string[] = []
 
         for (const block of blocks) {
           const lines = block.split("\n").filter((line) => {
             const trimmed = line.trim()
-            // Filter out URLs, metadata, and empty lines
-            return trimmed && !trimmed.startsWith("http") && !trimmed.includes("cheat.sh") && !trimmed.includes("[") // Remove attribution lines like [user] [source]
+            return trimmed && !trimmed.startsWith("http") && !trimmed.includes("cheat.sh") && !trimmed.includes("[")
           })
 
           if (lines.length > 0) {
@@ -221,11 +214,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         console.log("[v0] Parsed examples:", examples.length)
 
         if (examples.length > 0) {
+          setUseOnline(true)
           setSearchResults([
             {
               command: query,
               description: `Results from cheat.sh for "${query}"`,
-              examples: examples.slice(0, 8), // Show up to 8 examples
+              examples: examples.slice(0, 8),
             },
           ])
         } else {
@@ -247,13 +241,15 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
 
     const debounce = setTimeout(() => {
-      if (searchQuery) {
+      if (searchQuery && searchQuery.length >= 2) {
+        // Only search if query is at least 2 characters
         searchCheatSh(searchQuery)
       } else {
         setSearchResults([])
         setFilteredCommands(proxmoxCommands)
+        setUseOnline(true) // Reset to online when query is cleared
       }
-    }, 500)
+    }, 800) // Increased debounce to 800ms to avoid premature requests
 
     return () => clearTimeout(debounce)
   }, [searchQuery])
@@ -486,19 +482,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
         <div className="flex items-center gap-3">
           <Activity className="h-5 w-5 text-blue-500" />
-          <Badge
-            variant="outline"
-            className={`text-xs ${
-              activeTerminal?.isConnected
-                ? "border-green-500 text-green-500 bg-green-500/10"
-                : "border-red-500 text-red-500 bg-red-500/10"
-            }`}
-          >
-            <div
-              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${activeTerminal?.isConnected ? "bg-green-500" : "bg-red-500"}`}
-            ></div>
-            {activeTerminal?.isConnected ? "Connected" : "Disconnected"}
-          </Badge>
+          <div
+            className={`w-2 h-2 rounded-full ${activeTerminal?.isConnected ? "bg-green-500" : "bg-red-500"}`}
+            title={activeTerminal?.isConnected ? "Connected" : "Disconnected"}
+          ></div>
           <span className="text-xs text-zinc-500">{terminals.length} / 4 terminals</span>
         </div>
 
@@ -509,31 +496,26 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 onClick={() => setLayout("vertical")}
                 variant="outline"
                 size="sm"
-                className={`h-8 px-2 ${layout === "vertical" ? "bg-zinc-700" : ""}`}
-                title="Split Vertical"
+                className={`h-8 px-2 ${layout === "vertical" ? "bg-blue-500/20 border-blue-500" : ""}`}
               >
-                <Columns className="h-4 w-4" />
+                <Split className="h-4 w-4 rotate-90" />
               </Button>
               <Button
                 onClick={() => setLayout("horizontal")}
                 variant="outline"
                 size="sm"
-                className={`h-8 px-2 ${layout === "horizontal" ? "bg-zinc-700" : ""}`}
-                title="Split Horizontal"
+                className={`h-8 px-2 ${layout === "horizontal" ? "bg-blue-500/20 border-blue-500" : ""}`}
               >
-                <Rows className="h-4 w-4" />
+                <Split className="h-4 w-4" />
               </Button>
-              {terminals.length >= 3 && (
-                <Button
-                  onClick={() => setLayout("grid")}
-                  variant="outline"
-                  size="sm"
-                  className={`h-8 px-2 ${layout === "grid" ? "bg-zinc-700" : ""}`}
-                  title="Grid Layout"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-              )}
+              <Button
+                onClick={() => setLayout("grid")}
+                variant="outline"
+                size="sm"
+                className={`h-8 px-2 ${layout === "grid" ? "bg-blue-500/20 border-blue-500" : ""}`}
+              >
+                <Grid2X2 className="h-4 w-4" />
+              </Button>
             </>
           )}
           <Button
