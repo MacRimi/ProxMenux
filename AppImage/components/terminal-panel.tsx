@@ -288,7 +288,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       cursorBlink: true,
       scrollback: 2000,
       disableStdin: false,
-      cols: isMobile ? 80 : layout === "grid" ? 60 : 120,
+      cols: isMobile ? 40 : layout === "grid" ? 60 : 120,
       rows: isMobile ? 20 : layout === "grid" ? 15 : 30,
       theme: {
         background: "#000000",
@@ -318,7 +318,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     term.loadAddon(fitAddon)
 
     term.open(container)
-    fitAddon.fit()
+
+    setTimeout(() => {
+      fitAddon.fit()
+    }, 100)
 
     const wsUrl = websocketUrl || getWebSocketUrl()
     const ws = new WebSocket(wsUrl)
@@ -560,11 +563,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             </TabsList>
             {terminals.map((terminal) => (
               <TabsContent key={terminal.id} value={terminal.id} className="flex-1 m-0 p-0">
-                <div
-                  ref={setContainerRef(terminal.id)}
-                  className="w-full h-full bg-black"
-                  style={{ height: "calc(100vh - 24rem)" }}
-                />
+                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black overflow-hidden" />
               </TabsContent>
             ))}
           </Tabs>
@@ -587,7 +586,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                     </button>
                   )}
                 </div>
-                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black pt-7" />
+                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black overflow-hidden" />
               </div>
             ))}
           </div>
