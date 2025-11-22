@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "tw-animate-css";
+/* Removed tw-animate-css import that was causing build failure */
 
 @custom-variant dark (&:is(.dark *));
 
