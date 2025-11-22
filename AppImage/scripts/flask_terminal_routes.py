@@ -45,45 +45,37 @@ def search_command():
         response = requests.get(url, headers=headers, timeout=10)
         
         if response.status_code == 200:
-            # Parsear el contenido para extraer ejemplos limpios
             content = response.text
             examples = []
+            current_description = []
             
             for line in content.split('\n'):
-                line = line.strip()
+                stripped = line.strip()
                 
                 # Ignorar líneas vacías
-                if not line:
+                if not stripped:
                     continue
                 
-                # Si la línea es un comentario que contiene ":"
-                # extraer el comando después de ":"
-                if line.startswith('#') and ':' in line:
-                    # Buscar el comando después del ":"
-                    parts = line.split(':', 1)
-                    if len(parts) == 2:
-                        description = parts[0].replace('#', '').strip()
-                        command = parts[1].strip()
-                        
-                        if command and not command.startswith('http'):
-                            examples.append({
-                                'description': description,
-                                'command': command
-                            })
-                # Si la línea empieza con el nombre del comando (sin #)
-                elif not line.startswith('#'):
-                    # Es probablemente un comando directo
-                    # Solo agregar si no es una URL
-                    if not line.startswith('http') and len(line) > 2:
-                        examples.append({
-                            'description': '',
-                            'command': line
-                        })
+                # Si es un comentario
+                if stripped.startswith('#'):
+                    # Acumular descripciones
+                    current_description.append(stripped[1:].strip())
+                # Si no es comentario, es un comando
+                elif stripped and not stripped.startswith('http'):
+                    # Unir las descripciones acumuladas
+                    description = ' '.join(current_description) if current_description else ''
+                    
+                    examples.append({
+                        'description': description,
+                        'command': stripped
+                    })
+                    
+                    # Resetear descripciones para el siguiente comando
+                    current_description = []
             
             return jsonify({
                 'success': True,
-                'examples': examples,
-                'raw_content': content
+                'examples': examples
             })
         else:
             return jsonify({

@@ -654,21 +654,33 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
             <div className="flex-1 overflow-y-auto space-y-2 pr-2 max-h-[50vh]">
               {searchResults.length > 0 ? (
-                searchResults.map((result, index) => (
-                  <div
-                    key={index}
-                    onClick={() => sendToActiveTerminal(result.command)}
-                    className="p-4 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 transition-colors group"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <code className="text-sm text-blue-400 font-mono break-all">{result.command}</code>
-                        {result.description && <p className="text-xs text-zinc-400 mt-1">{result.description}</p>}
+                <>
+                  {searchResults.map((result, index) => (
+                    <div
+                      key={index}
+                      className="p-4 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:border-zinc-600 transition-colors"
+                    >
+                      {result.description && (
+                        <p className="text-xs text-zinc-400 mb-2 leading-relaxed"># {result.description}</p>
+                      )}
+                      <div
+                        onClick={() => sendToActiveTerminal(result.command)}
+                        className="flex items-start justify-between gap-2 cursor-pointer group hover:bg-zinc-800/50 rounded p-2 -m-2"
+                      >
+                        <code className="text-sm text-blue-400 font-mono break-all flex-1">{result.command}</code>
+                        <Send className="h-4 w-4 text-zinc-600 group-hover:text-blue-400 flex-shrink-0 mt-0.5 transition-colors" />
                       </div>
-                      <Send className="h-4 w-4 text-zinc-600 group-hover:text-blue-400 flex-shrink-0 mt-0.5" />
                     </div>
+                  ))}
+
+                  {/* Powered by cheat.sh */}
+                  <div className="text-center py-2">
+                    <p className="text-xs text-zinc-500">
+                      <Lightbulb className="inline-block w-3 h-3 mr-1" />
+                      Powered by cheat.sh
+                    </p>
                   </div>
-                ))
+                </>
               ) : filteredCommands.length > 0 && !useOnline ? (
                 filteredCommands.map((item, index) => (
                   <div
