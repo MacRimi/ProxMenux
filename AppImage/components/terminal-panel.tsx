@@ -319,26 +319,38 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
     term.open(container)
 
-    const xtermElement = container.querySelector(".xterm") as HTMLElement
-    const xtermViewport = container.querySelector(".xterm-viewport") as HTMLElement
-    const xtermScreen = container.querySelector(".xterm-screen") as HTMLElement
+    const removeXtermPadding = () => {
+      const xtermElement = container.querySelector(".xterm") as HTMLElement
+      const xtermViewport = container.querySelector(".xterm-viewport") as HTMLElement
+      const xtermScreen = container.querySelector(".xterm-screen") as HTMLElement
+      const xtermRows = container.querySelector(".xterm-rows") as HTMLElement
 
-    if (xtermElement) {
-      xtermElement.style.padding = "0"
-      xtermElement.style.margin = "0"
-    }
-    if (xtermViewport) {
-      xtermViewport.style.padding = "0"
-      xtermViewport.style.margin = "0"
-    }
-    if (xtermScreen) {
-      xtermScreen.style.padding = "0"
-      xtermScreen.style.margin = "0"
+      if (xtermElement) {
+        xtermElement.style.padding = "0"
+        xtermElement.style.margin = "0"
+      }
+      if (xtermViewport) {
+        xtermViewport.style.padding = "0"
+        xtermViewport.style.margin = "0"
+      }
+      if (xtermScreen) {
+        xtermScreen.style.padding = "0"
+        xtermScreen.style.margin = "0"
+      }
+      if (xtermRows) {
+        xtermRows.style.padding = "0"
+        xtermRows.style.margin = "0"
+      }
     }
 
+    // Remove padding immediately
+    removeXtermPadding()
+
+    // Remove padding again after a short delay to ensure it applies
     setTimeout(() => {
+      removeXtermPadding()
       fitAddon.fit()
-    }, 50)
+    }, 100)
 
     const wsUrl = websocketUrl || getWebSocketUrl()
     const ws = new WebSocket(wsUrl)

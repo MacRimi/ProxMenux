@@ -1,0 +1,31 @@
+/* Force remove all xterm.js internal padding and margins */
+.xterm {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.xterm-viewport {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.xterm-screen {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.xterm-rows {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.xterm-helpers {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Ensure terminal container has no padding */
+[class*="terminal-container"] {
+  padding: 0 !important;
+  margin: 0 !important;
+}
