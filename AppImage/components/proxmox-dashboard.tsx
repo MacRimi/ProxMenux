@@ -632,8 +632,10 @@ export function ProxmoxDashboard() {
             <Hardware key={`hardware-${componentKey}`} />
           </TabsContent>
 
-          <TabsContent value="terminal" className="space-y-4 md:space-y-6 mt-0">
-            <TerminalPanel key={`terminal-${componentKey}`} />
+          <TabsContent value="terminal" className="mt-0">
+            <div className="h-full">
+              <TerminalPanel key={`terminal-${componentKey}`} />
+            </div>
           </TabsContent>
 
           <TabsContent value="logs" className="space-y-4 md:space-y-6 mt-0">

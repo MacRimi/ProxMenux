@@ -68,6 +68,7 @@ def terminal_websocket(ws):
         stdout=slave_fd,
         stderr=slave_fd,
         preexec_fn=os.setsid,
+        cwd='/',
         env=dict(os.environ, TERM='xterm-256color', PS1='\\u@\\h:\\w\\$ ')
     )
     

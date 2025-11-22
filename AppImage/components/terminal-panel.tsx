@@ -3,9 +3,13 @@
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
 import { API_PORT } from "@/lib/api-config"
+import { Trash2, X, Send, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Activity } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 
 type TerminalPanelProps = {
   websocketUrl?: string
+  onClose?: () => void
 }
 
 function getWebSocketUrl(): string {
@@ -25,7 +29,7 @@ function getWebSocketUrl(): string {
   }
 }
 
-export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) => {
+export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const termRef = useRef<any>(null)
   const fitAddonRef = useRef<any>(null)
@@ -33,6 +37,17 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) =>
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
 
   const [xtermLoaded, setXtermLoaded] = useState(false)
+  const [isConnected, setIsConnected] = useState(false)
+  const [mobileInput, setMobileInput] = useState("")
+  const [lastKeyPressed, setLastKeyPressed] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768)
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -48,11 +63,35 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) =>
         console.log("[v0] TerminalPanel: Initializing terminal")
 
         const term = new Terminal({
-          fontFamily: "monospace",
-          fontSize: 13,
+          fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
+          fontSize: isMobile ? 11 : 13,
           cursorBlink: true,
           scrollback: 2000,
           disableStdin: false,
+          cols: 150,
+          rows: 30,
+          theme: {
+            background: "#0d1117",
+            foreground: "#e6edf3",
+            cursor: "#58a6ff",
+            cursorAccent: "#0d1117",
+            black: "#484f58",
+            red: "#f85149",
+            green: "#3fb950",
+            yellow: "#d29922",
+            blue: "#58a6ff",
+            magenta: "#bc8cff",
+            cyan: "#39d353",
+            white: "#b1bac4",
+            brightBlack: "#6e7681",
+            brightRed: "#ff7b72",
+            brightGreen: "#56d364",
+            brightYellow: "#e3b341",
+            brightBlue: "#79c0ff",
+            brightMagenta: "#d2a8ff",
+            brightCyan: "#56d364",
+            brightWhite: "#f0f6fc",
+          },
         })
 
         const fitAddon = new FitAddon()
@@ -73,6 +112,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) =>
 
         ws.onopen = () => {
           console.log("[v0] TerminalPanel: WebSocket connected")
+          setIsConnected(true)
           term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
         }
 
@@ -82,11 +122,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) =>
 
         ws.onerror = (error) => {
           console.error("[v0] TerminalPanel: WebSocket error:", error)
+          setIsConnected(false)
           term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
         }
 
         ws.onclose = () => {
           console.log("[v0] TerminalPanel: WebSocket closed")
+          setIsConnected(false)
           term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
         }
 
@@ -115,40 +157,41 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) =>
       .catch((error) => {
         console.error("[v0] TerminalPanel: Failed to load xterm:", error)
       })
-  }, [websocketUrl])
+  }, [websocketUrl, isMobile])
 
-  const sendSequence = (seq: string) => {
+  const sendSequence = (seq: string, keyName?: string) => {
     const term = termRef.current
     const ws = wsRef.current
     if (!term || !ws || ws.readyState !== WebSocket.OPEN) return
     ws.send(seq)
+    if (keyName) {
+      setLastKeyPressed(keyName)
+      setTimeout(() => setLastKeyPressed(null), 2000)
+    }
   }
 
   const handleKeyButton = (key: string) => {
     switch (key) {
       case "UP":
-        sendSequence("\x1b[A")
+        sendSequence("\x1b[A", "↑")
         break
       case "DOWN":
-        sendSequence("\x1b[B")
+        sendSequence("\x1b[B", "↓")
         break
       case "RIGHT":
-        sendSequence("\x1b[C")
+        sendSequence("\x1b[C", "→")
         break
       case "LEFT":
-        sendSequence("\x1b[D")
+        sendSequence("\x1b[D", "←")
         break
       case "ESC":
-        sendSequence("\x1b")
+        sendSequence("\x1b", "ESC")
         break
       case "TAB":
-        sendSequence("\t")
-        break
-      case "ENTER":
-        sendSequence("\r")
+        sendSequence("\t", "TAB")
         break
       case "CTRL_C":
-        sendSequence("\x03")
+        sendSequence("\x03", "CTRL+C")
         break
       default:
         break
@@ -199,44 +242,182 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl }) =>
     }
   }
 
+  const handleClear = () => {
+    const term = termRef.current
+    if (!term) return
+    term.clear()
+  }
+
+  const handleClose = () => {
+    const ws = wsRef.current
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.close()
+    }
+    if (onClose) {
+      onClose()
+    }
+  }
+
+  const handleMobileInputSend = () => {
+    if (!mobileInput.trim()) return
+    const ws = wsRef.current
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(mobileInput)
+      setLastKeyPressed(mobileInput)
+      setTimeout(() => setLastKeyPressed(null), 2000)
+    }
+    setMobileInput("")
+  }
+
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-[calc(100vh-16rem)] min-h-[500px] w-full">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900 border-b border-zinc-700 rounded-t-md">
+        <div className="flex items-center gap-3">
+          <Activity className="h-5 w-5 text-blue-500" />
+          <span className="text-zinc-300 text-sm font-semibold">ProxMenux Terminal</span>
+          <Badge
+            variant="outline"
+            className={`text-xs ${
+              isConnected
+                ? "border-green-500 text-green-500 bg-green-500/10"
+                : "border-red-500 text-red-500 bg-red-500/10"
+            }`}
+          >
+            <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${isConnected ? "bg-green-500" : "bg-red-500"}`}></div>
+            {isConnected ? "Connected" : "Disconnected"}
+          </Badge>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            onClick={handleClear}
+            variant="outline"
+            size="sm"
+            disabled={!isConnected}
+            className="h-8 gap-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100 disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Clear</span>
+          </Button>
+          <Button
+            onClick={handleClose}
+            variant="outline"
+            size="sm"
+            className="h-8 gap-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
+          >
+            <X className="h-4 w-4" />
+            <span className="hidden sm:inline">Close</span>
+          </Button>
+        </div>
+      </div>
+
       <div
         ref={containerRef}
-        className="flex-1 bg-black rounded-t-md overflow-hidden"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+        className="flex-1 bg-[#0d1117] overflow-auto min-h-0"
+        onTouchStart={touchStartRef.current ? undefined : handleTouchStart}
+        onTouchEnd={touchStartRef.current ? handleTouchEnd : undefined}
       >
         {!xtermLoaded && (
           <div className="flex items-center justify-center h-full text-zinc-400">Initializing terminal...</div>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2 justify-center items-center px-2 py-2 bg-zinc-900 text-sm rounded-b-md">
-        <TouchKey label="ESC" onClick={() => handleKeyButton("ESC")} />
-        <TouchKey label="TAB" onClick={() => handleKeyButton("TAB")} />
-        <TouchKey label="↑" onClick={() => handleKeyButton("UP")} />
-        <TouchKey label="↓" onClick={() => handleKeyButton("DOWN")} />
-        <TouchKey label="←" onClick={() => handleKeyButton("LEFT")} />
-        <TouchKey label="→" onClick={() => handleKeyButton("RIGHT")} />
-        <TouchKey label="ENTER" onClick={() => handleKeyButton("ENTER")} />
-        <TouchKey label="CTRL+C" onClick={() => handleKeyButton("CTRL_C")} />
+      {isMobile && (
+        <div className="px-3 py-2 bg-zinc-900/50 border-t border-zinc-700">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs text-zinc-400">Mobile Input</span>
+            {lastKeyPressed && (
+              <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded">Sent: {lastKeyPressed}</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={mobileInput}
+              onChange={(e) => setMobileInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleMobileInputSend()}
+              placeholder="Type command..."
+              className="flex-1 px-3 py-2 text-sm border border-zinc-600 rounded-md bg-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!isConnected}
+            />
+            <Button
+              onClick={handleMobileInputSend}
+              variant="default"
+              size="sm"
+              disabled={!isConnected || !mobileInput.trim()}
+              className="px-3 bg-blue-600 hover:bg-blue-700"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2 justify-center items-center px-2 py-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700">
+        <Button
+          onClick={() => handleKeyButton("ESC")}
+          variant="outline"
+          size="sm"
+          disabled={!isConnected}
+          className="h-8 px-3 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
+        >
+          ESC
+        </Button>
+        <Button
+          onClick={() => handleKeyButton("TAB")}
+          variant="outline"
+          size="sm"
+          disabled={!isConnected}
+          className="h-8 px-3 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
+        >
+          TAB
+        </Button>
+        <Button
+          onClick={() => handleKeyButton("UP")}
+          variant="outline"
+          size="sm"
+          disabled={!isConnected}
+          className="h-8 px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
+        >
+          <ChevronUp className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={() => handleKeyButton("DOWN")}
+          variant="outline"
+          size="sm"
+          disabled={!isConnected}
+          className="h-8 px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
+        >
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={() => handleKeyButton("LEFT")}
+          variant="outline"
+          size="sm"
+          disabled={!isConnected}
+          className="h-8 px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={() => handleKeyButton("RIGHT")}
+          variant="outline"
+          size="sm"
+          disabled={!isConnected}
+          className="h-8 px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={() => handleKeyButton("CTRL_C")}
+          variant="outline"
+          size="sm"
+          disabled={!isConnected}
+          className="h-8 px-3 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
+        >
+          CTRL+C
+        </Button>
       </div>
     </div>
   )
 }
-
-type TouchKeyProps = {
-  label: string
-  onClick: () => void
-}
-
-const TouchKey: React.FC<TouchKeyProps> = ({ label, onClick }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-zinc-100 text-xs md:text-sm border border-zinc-700"
-  >
-    {label}
-  </button>
-)
