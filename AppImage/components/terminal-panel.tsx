@@ -1,17 +1,42 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { API_PORT } from "@/lib/api-config"
-import { Trash2, X, Send, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react"
+import {
+  Activity,
+  Trash2,
+  X,
+  Search,
+  Send,
+  Wifi,
+  WifiOff,
+  Lightbulb,
+  Terminal,
+  Plus,
+  LayoutGrid,
+  Columns,
+  Rows,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { CheatSheetResult } from "@/lib/cheat-sheet-result" // Declare CheatSheetResult here
 
 type TerminalPanelProps = {
   websocketUrl?: string
   onClose?: () => void
+}
+
+interface TerminalInstance {
+  id: string
+  title: string
+  term: any
+  ws: WebSocket | null
+  isConnected: boolean
+  // containerRef: React.RefObject<HTMLDivElement> // This is no longer needed as we use callback refs
 }
 
 function getWebSocketUrl(): string {
@@ -29,12 +54,6 @@ function getWebSocketUrl(): string {
   } else {
     return `${wsProtocol}//${hostname}:${API_PORT}/ws/terminal`
   }
-}
-
-interface CheatSheetResult {
-  command: string
-  description: string
-  examples: string[]
 }
 
 const proxmoxCommands = [
@@ -106,22 +125,27 @@ const proxmoxCommands = [
 ]
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const termRef = useRef<any>(null)
-  const fitAddonRef = useRef<any>(null)
-  const wsRef = useRef<WebSocket | null>(null)
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
+  const [terminals, setTerminals] = useState<TerminalInstance[]>([])
+  const [activeTerminalId, setActiveTerminalId] = useState<string>("")
+  const [layout, setLayout] = useState<"single" | "vertical" | "horizontal" | "grid">("single")
+  const [isMobile, setIsMobile] = useState(false)
 
-  const [xtermLoaded, setXtermLoaded] = useState(false)
-  const [isConnected, setIsConnected] = useState(false)
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [filteredCommands, setFilteredCommands] = useState<Array<{ cmd: string; desc: string }>>(proxmoxCommands)
   const [lastKeyPressed, setLastKeyPressed] = useState<string | null>(null)
-  const [isMobile, setIsMobile] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<CheatSheetResult[]>([])
   const [useOnline, setUseOnline] = useState(true)
+
+  const containerRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+
+  const setContainerRef = useCallback(
+    (id: string) => (el: HTMLDivElement | null) => {
+      containerRefs.current[id] = el
+    },
+    [],
+  )
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768)
@@ -131,326 +155,377 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   }, [])
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredCommands(proxmoxCommands)
-      setSearchResults([])
-      return
+    if (terminals.length === 0) {
+      addNewTerminal()
     }
-
-    const query = searchQuery.toLowerCase().trim()
-
-    if (useOnline && query.length > 2) {
-      setIsSearching(true)
-
-      const searchCheatSh = async () => {
-        try {
-          const response = await fetch(`https://cheat.sh/${encodeURIComponent(query)}?T`, {
-            signal: AbortSignal.timeout(5000),
-          })
-
-          if (response.ok) {
-            const text = await response.text()
-
-            const lines = text.split("\n").filter((line) => line.trim())
-            const results: CheatSheetResult[] = []
-
-            let currentCommand = ""
-            let currentDesc = ""
-            let currentExamples: string[] = []
-
-            for (const line of lines) {
-              if (line.startsWith("#")) {
-                if (currentCommand) {
-                  results.push({
-                    command: currentCommand,
-                    description: currentDesc,
-                    examples: currentExamples,
-                  })
-                }
-                currentCommand = line.replace(/^#\s*/, "").trim()
-                currentDesc = ""
-                currentExamples = []
-              } else if (line.trim().startsWith("-")) {
-                currentDesc += line.trim().replace(/^-\s*/, "") + " "
-              } else if (line.trim() && !line.includes("cheat.sh")) {
-                currentExamples.push(line.trim())
-              }
-            }
-
-            if (currentCommand) {
-              results.push({
-                command: currentCommand,
-                description: currentDesc,
-                examples: currentExamples,
-              })
-            }
-
-            setSearchResults(results)
-            setFilteredCommands([]) // Clear local results when using online
-          } else {
-            throw new Error("API request failed")
-          }
-        } catch (error) {
-          console.log("[v0] Cheat.sh unavailable, using offline mode")
-          setUseOnline(false)
-          const filtered = proxmoxCommands.filter(
-            (item) => item.cmd.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query),
-          )
-          setFilteredCommands(filtered)
-          setSearchResults([])
-        } finally {
-          setIsSearching(false)
-        }
-      }
-
-      const timer = setTimeout(searchCheatSh, 500)
-      return () => clearTimeout(timer)
-    } else {
-      const filtered = proxmoxCommands.filter(
-        (item) => item.cmd.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query),
-      )
-      setFilteredCommands(filtered)
-      setSearchResults([])
-      setIsSearching(false)
-    }
-  }, [searchQuery, useOnline])
+  }, [])
 
   useEffect(() => {
-    if (typeof window === "undefined") return
+    const searchCheatSh = async (query: string) => {
+      if (!query.trim()) {
+        setSearchResults([])
+        setFilteredCommands(proxmoxCommands)
+        return
+      }
 
-    Promise.all([
+      try {
+        setIsSearching(true)
+        setUseOnline(true)
+
+        const response = await fetch(`https://cht.sh/${encodeURIComponent(query)}?T`, {
+          signal: AbortSignal.timeout(8000),
+        })
+
+        if (!response.ok) throw new Error("API request failed")
+
+        const text = await response.text()
+
+        const lines = text.split("\n").filter((line) => line.trim())
+        const examples: string[] = []
+        let description = ""
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (trimmed.startsWith("#") || trimmed.startsWith("//")) {
+            if (!description) description = trimmed.replace(/^[#/]+\s*/, "")
+          } else if (trimmed && !trimmed.includes("cheat.sh") && !trimmed.includes("http")) {
+            if (trimmed.length < 200) {
+              examples.push(trimmed)
+            }
+          }
+        }
+
+        if (examples.length > 0) {
+          setSearchResults([
+            {
+              command: query,
+              description: description || `Command examples for ${query}`,
+              examples: examples.slice(0, 5),
+            },
+          ])
+        } else {
+          throw new Error("No examples found")
+        }
+      } catch (error) {
+        console.log("[v0] Falling back to offline mode:", error)
+        setUseOnline(false)
+        const filtered = proxmoxCommands.filter(
+          (item) =>
+            item.cmd.toLowerCase().includes(query.toLowerCase()) ||
+            item.desc.toLowerCase().includes(query.toLowerCase()),
+        )
+        setFilteredCommands(filtered)
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }
+
+    const debounce = setTimeout(() => {
+      if (searchQuery) {
+        searchCheatSh(searchQuery)
+      } else {
+        setSearchResults([])
+        setFilteredCommands(proxmoxCommands)
+      }
+    }, 500)
+
+    return () => clearTimeout(debounce)
+  }, [searchQuery])
+
+  const addNewTerminal = () => {
+    if (terminals.length >= 4) return
+
+    const newId = `terminal-${Date.now()}`
+    // containerRefs.current[newId] = useRef<HTMLDivElement>(null) // No longer needed
+
+    setTerminals((prev) => [
+      ...prev,
+      {
+        id: newId,
+        title: `Terminal ${prev.length + 1}`,
+        term: null,
+        ws: null,
+        isConnected: false,
+        // containerRef: containerRefs.current[newId], // No longer needed
+      },
+    ])
+    setActiveTerminalId(newId)
+  }
+
+  const closeTerminal = (id: string) => {
+    const terminal = terminals.find((t) => t.id === id)
+    if (terminal) {
+      if (terminal.ws) {
+        terminal.ws.close()
+      }
+      if (terminal.term) {
+        terminal.term.dispose()
+      }
+    }
+
+    setTerminals((prev) => {
+      const filtered = prev.filter((t) => t.id !== id)
+      if (filtered.length > 0 && activeTerminalId === id) {
+        setActiveTerminalId(filtered[0].id)
+      }
+      return filtered
+    })
+
+    delete containerRefs.current[id] // Clean up the ref
+  }
+
+  useEffect(() => {
+    terminals.forEach((terminal) => {
+      const container = containerRefs.current[terminal.id]
+      if (!terminal.term && container) {
+        initializeTerminal(terminal, container)
+      }
+    })
+  }, [terminals, isMobile])
+
+  const initializeTerminal = async (terminal: TerminalInstance, container: HTMLDivElement) => {
+    const [Terminal, FitAddon] = await Promise.all([
       import("xterm").then((mod) => mod.Terminal),
       import("xterm-addon-fit").then((mod) => mod.FitAddon),
       import("xterm/css/xterm.css"),
-    ])
-      .then(([Terminal, FitAddon]) => {
-        if (!containerRef.current) return
+    ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
-        const term = new Terminal({
-          fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
-          fontSize: isMobile ? 11 : 13,
-          cursorBlink: true,
-          scrollback: 2000,
-          disableStdin: false,
-          cols: 150,
-          rows: 30,
-          theme: {
-            background: "#000000",
-            foreground: "#ffffff",
-            cursor: "#ffffff",
-            cursorAccent: "#000000",
-            black: "#2e3436",
-            red: "#cc0000",
-            green: "#4e9a06",
-            yellow: "#c4a000",
-            blue: "#3465a4",
-            magenta: "#75507b",
-            cyan: "#06989a",
-            white: "#d3d7cf",
-            brightBlack: "#555753",
-            brightRed: "#ef2929",
-            brightGreen: "#8ae234",
-            brightYellow: "#fce94f",
-            brightBlue: "#729fcf",
-            brightMagenta: "#ad7fa8",
-            brightCyan: "#34e2e2",
-            brightWhite: "#eeeeec",
-          },
-        })
+    const term = new Terminal({
+      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
+      fontSize: isMobile ? 11 : 13,
+      cursorBlink: true,
+      scrollback: 2000,
+      disableStdin: false,
+      cols: isMobile ? 40 : layout === "grid" ? 60 : 120,
+      rows: isMobile ? 20 : layout === "grid" ? 15 : 30,
+      theme: {
+        background: "#000000",
+        foreground: "#ffffff",
+        cursor: "#ffffff",
+        cursorAccent: "#000000",
+        black: "#2e3436",
+        red: "#cc0000",
+        green: "#4e9a06",
+        yellow: "#c4a000",
+        blue: "#3465a4",
+        magenta: "#75507b",
+        cyan: "#06989a",
+        white: "#d3d7cf",
+        brightBlack: "#555753",
+        brightRed: "#ef2929",
+        brightGreen: "#8ae234",
+        brightYellow: "#fce94f",
+        brightBlue: "#729fcf",
+        brightMagenta: "#ad7fa8",
+        brightCyan: "#34e2e2",
+        brightWhite: "#eeeeec",
+      },
+    })
 
-        const fitAddon = new FitAddon()
-        term.loadAddon(fitAddon)
+    const fitAddon = new FitAddon()
+    term.loadAddon(fitAddon)
 
-        term.open(containerRef.current)
+    term.open(container)
+    fitAddon.fit()
+
+    const wsUrl = websocketUrl || getWebSocketUrl()
+    const ws = new WebSocket(wsUrl)
+
+    ws.onopen = () => {
+      setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: true, term, ws } : t)))
+      term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
+    }
+
+    ws.onmessage = (event) => {
+      term.write(event.data)
+    }
+
+    ws.onerror = (error) => {
+      console.error("[v0] TerminalPanel: WebSocket error:", error)
+      setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: false } : t)))
+      term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
+    }
+
+    ws.onclose = () => {
+      setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: false } : t)))
+      term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
+    }
+
+    term.onData((data) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(data)
+      }
+    })
+
+    const handleResize = () => {
+      try {
         fitAddon.fit()
+      } catch {
+        // Ignore resize errors
+      }
+    }
 
-        termRef.current = term
-        fitAddonRef.current = fitAddon
-        setXtermLoaded(true)
+    window.addEventListener("resize", handleResize)
 
-        const wsUrl = websocketUrl || getWebSocketUrl()
-
-        const ws = new WebSocket(wsUrl)
-        wsRef.current = ws
-
-        ws.onopen = () => {
-          setIsConnected(true)
-          term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
-        }
-
-        ws.onmessage = (event) => {
-          term.write(event.data)
-        }
-
-        ws.onerror = (error) => {
-          console.error("[v0] TerminalPanel: WebSocket error:", error)
-          setIsConnected(false)
-          term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
-        }
-
-        ws.onclose = () => {
-          setIsConnected(false)
-          term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
-        }
-
-        term.onData((data) => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(data)
-          }
-        })
-
-        const handleResize = () => {
-          try {
-            fitAddon.fit()
-          } catch {
-            // Ignore resize errors
-          }
-        }
-        window.addEventListener("resize", handleResize)
-
-        return () => {
-          window.removeEventListener("resize", handleResize)
-          ws.close()
-          term.dispose()
-        }
-      })
-      .catch((error) => {
-        console.error("[v0] TerminalPanel: Failed to load xterm:", error)
-      })
-  }, [websocketUrl, isMobile])
-
-  const sendSequence = (seq: string, keyName?: string) => {
-    const term = termRef.current
-    const ws = wsRef.current
-    if (!term || !ws || ws.readyState !== WebSocket.OPEN) return
-    ws.send(seq)
-    if (keyName) {
-      setLastKeyPressed(keyName)
-      setTimeout(() => setLastKeyPressed(null), 2000)
+    return () => {
+      window.removeEventListener("resize", handleResize)
+      ws.close()
+      term.dispose()
     }
   }
 
   const handleKeyButton = (key: string) => {
+    const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
+    if (!activeTerminal || !activeTerminal.ws || activeTerminal.ws.readyState !== WebSocket.OPEN) return
+    let seq = ""
     switch (key) {
       case "UP":
-        sendSequence("\x1b[A", "↑")
+        seq = "\x1b[A"
         break
       case "DOWN":
-        sendSequence("\x1b[B", "↓")
+        seq = "\x1b[B"
         break
       case "RIGHT":
-        sendSequence("\x1b[C", "→")
+        seq = "\x1b[C"
         break
       case "LEFT":
-        sendSequence("\x1b[D", "←")
+        seq = "\x1b[D"
         break
       case "ESC":
-        sendSequence("\x1b", "ESC")
+        seq = "\x1b"
         break
       case "TAB":
-        sendSequence("\t", "TAB")
+        seq = "\t"
         break
       case "CTRL_C":
-        sendSequence("\x03", "CTRL+C")
+        seq = "\x03"
         break
       default:
         break
     }
-  }
-
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    const touch = e.touches[0]
-    touchStartRef.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-      time: Date.now(),
-    }
-  }
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    const start = touchStartRef.current
-    if (!start) return
-
-    const touch = e.changedTouches[0]
-    const dx = touch.clientX - start.x
-    const dy = touch.clientY - start.y
-    const dt = Date.now() - start.time
-
-    const minDistance = 30
-    const maxTime = 1000
-
-    touchStartRef.current = null
-
-    if (dt > maxTime) return
-
-    if (Math.abs(dx) < minDistance && Math.abs(dy) < minDistance) {
-      return
-    }
-
-    if (Math.abs(dx) > Math.abs(dy)) {
-      if (dx > 0) {
-        handleKeyButton("RIGHT")
-      } else {
-        handleKeyButton("LEFT")
-      }
-    } else {
-      if (dy > 0) {
-        handleKeyButton("DOWN")
-      } else {
-        handleKeyButton("UP")
-      }
+    activeTerminal.ws.send(seq)
+    if (key) {
+      setLastKeyPressed(key)
+      setTimeout(() => setLastKeyPressed(null), 2000)
     }
   }
 
   const handleClear = () => {
-    const term = termRef.current
-    if (!term) return
-    term.clear()
+    const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
+    if (activeTerminal?.term) {
+      activeTerminal.term.clear()
+    }
   }
 
   const handleClose = () => {
-    const ws = wsRef.current
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.close()
-    }
-    if (onClose) {
-      onClose()
+    terminals.forEach((terminal) => {
+      if (terminal.ws) terminal.ws.close()
+      if (terminal.term) terminal.term.dispose()
+    })
+    onClose?.()
+  }
+
+  const sendToActiveTerminal = (command: string) => {
+    const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
+    if (activeTerminal?.ws && activeTerminal.ws.readyState === WebSocket.OPEN) {
+      activeTerminal.ws.send(command + "\n")
+      setSearchModalOpen(false) // Close the search modal after sending a command
     }
   }
 
-  const handleSendCommand = (command: string) => {
-    const ws = wsRef.current
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(command + "\r")
-      setLastKeyPressed(command)
-      setTimeout(() => setLastKeyPressed(null), 3000)
+  const sendSequence = (seq: string, keyName?: string) => {
+    const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
+    if (activeTerminal?.ws && activeTerminal.ws.readyState === WebSocket.OPEN) {
+      activeTerminal.ws.send(seq)
+      if (keyName) {
+        setLastKeyPressed(keyName)
+        setTimeout(() => setLastKeyPressed(null), 2000)
+      }
     }
-    setSearchModalOpen(false)
-    setSearchQuery("")
-    setSearchResults([])
   }
+
+  const getLayoutClass = () => {
+    const count = terminals.length
+    if (isMobile || count === 1) return "grid grid-cols-1"
+    if (layout === "vertical" || count === 2) return "grid grid-cols-2"
+    if (layout === "horizontal") return "grid grid-rows-2"
+    if (layout === "grid" || count >= 3) return "grid grid-cols-2 grid-rows-2"
+    return "grid grid-cols-1"
+  }
+
+  const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
 
   return (
-    <div className="flex flex-col h-full w-full">
-      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900 border-b border-zinc-700 rounded-t-md">
-        <Badge
-          variant="outline"
-          className={`text-xs ${
-            isConnected
-              ? "border-green-500 text-green-500 bg-green-500/10"
-              : "border-red-500 text-red-500 bg-red-500/10"
-          }`}
-        >
-          <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${isConnected ? "bg-green-500" : "bg-red-500"}`}></div>
-          {isConnected ? "Connected" : "Disconnected"}
-        </Badge>
+    <div className="flex flex-col h-full bg-zinc-950 rounded-md overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+        <div className="flex items-center gap-3">
+          <Activity className="h-5 w-5 text-blue-500" />
+          <Badge
+            variant="outline"
+            className={`text-xs ${
+              activeTerminal?.isConnected
+                ? "border-green-500 text-green-500 bg-green-500/10"
+                : "border-red-500 text-red-500 bg-red-500/10"
+            }`}
+          >
+            <div
+              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${activeTerminal?.isConnected ? "bg-green-500" : "bg-red-500"}`}
+            ></div>
+            {activeTerminal?.isConnected ? "Connected" : "Disconnected"}
+          </Badge>
+          <span className="text-xs text-zinc-500">{terminals.length} / 4 terminals</span>
+        </div>
 
         <div className="flex gap-2">
+          {!isMobile && terminals.length > 1 && (
+            <>
+              <Button
+                onClick={() => setLayout("vertical")}
+                variant="outline"
+                size="sm"
+                className={`h-8 px-2 ${layout === "vertical" ? "bg-zinc-700" : ""}`}
+                title="Split Vertical"
+              >
+                <Columns className="h-4 w-4" />
+              </Button>
+              <Button
+                onClick={() => setLayout("horizontal")}
+                variant="outline"
+                size="sm"
+                className={`h-8 px-2 ${layout === "horizontal" ? "bg-zinc-700" : ""}`}
+                title="Split Horizontal"
+              >
+                <Rows className="h-4 w-4" />
+              </Button>
+              {terminals.length >= 3 && (
+                <Button
+                  onClick={() => setLayout("grid")}
+                  variant="outline"
+                  size="sm"
+                  className={`h-8 px-2 ${layout === "grid" ? "bg-zinc-700" : ""}`}
+                  title="Grid Layout"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+              )}
+            </>
+          )}
+          <Button
+            onClick={addNewTerminal}
+            variant="outline"
+            size="sm"
+            disabled={terminals.length >= 4}
+            className="h-8 gap-2 bg-green-600 hover:bg-green-700 border-green-500 text-white disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">New</span>
+          </Button>
           <Button
             onClick={() => setSearchModalOpen(true)}
             variant="outline"
             size="sm"
-            disabled={!isConnected}
+            disabled={!activeTerminal?.isConnected}
             className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 border-blue-500 text-white disabled:opacity-50"
           >
             <Search className="h-4 w-4" />
@@ -460,7 +535,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             onClick={handleClear}
             variant="outline"
             size="sm"
-            disabled={!isConnected}
+            disabled={!activeTerminal?.isConnected}
             className="h-8 gap-2 bg-yellow-600 hover:bg-yellow-700 border-yellow-500 text-white disabled:opacity-50"
           >
             <Trash2 className="h-4 w-4" />
@@ -478,107 +553,125 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         </div>
       </div>
 
-      <div
-        ref={containerRef}
-        className="flex-1 bg-black overflow-auto min-h-0"
-        onTouchStart={touchStartRef.current ? undefined : handleTouchStart}
-        onTouchEnd={touchStartRef.current ? handleTouchEnd : undefined}
-      >
-        {!xtermLoaded && (
-          <div className="flex items-center justify-center h-full text-zinc-400">Initializing terminal...</div>
+      <div className="flex-1 min-h-0">
+        {isMobile ? (
+          <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
+            <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800">
+              {terminals.map((terminal) => (
+                <TabsTrigger key={terminal.id} value={terminal.id} className="relative">
+                  {terminal.title}
+                  {terminals.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        closeTerminal(terminal.id)
+                      }}
+                      className="ml-2 hover:bg-zinc-700 rounded p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {terminals.map((terminal) => (
+              <TabsContent key={terminal.id} value={terminal.id} className="flex-1 m-0 p-0">
+                <div
+                  ref={setContainerRef(terminal.id)}
+                  className="w-full h-full bg-black"
+                  style={{ height: "calc(100vh - 24rem)" }}
+                />
+              </TabsContent>
+            ))}
+          </Tabs>
+        ) : (
+          <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5`}>
+            {terminals.map((terminal) => (
+              <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
+                  <button
+                    onClick={() => setActiveTerminalId(terminal.id)}
+                    className={`text-xs font-medium ${
+                      activeTerminalId === terminal.id ? "text-blue-400" : "text-zinc-500"
+                    }`}
+                  >
+                    {terminal.title}
+                  </button>
+                  {terminals.length > 1 && (
+                    <button onClick={() => closeTerminal(terminal.id)} className="hover:bg-zinc-700 rounded p-0.5">
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black pt-7" />
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2 justify-center items-center px-2 py-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700">
-        {lastKeyPressed && (
-          <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded mr-2">
-            Sent: {lastKeyPressed}
-          </span>
-        )}
-        <Button
-          onClick={() => handleKeyButton("ESC")}
-          variant="outline"
-          size="sm"
-          disabled={!isConnected}
-          className="h-8 px-3 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
-        >
-          ESC
-        </Button>
-        <Button
-          onClick={() => handleKeyButton("TAB")}
-          variant="outline"
-          size="sm"
-          disabled={!isConnected}
-          className="h-8 px-3 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
-        >
-          TAB
-        </Button>
-        <Button
-          onClick={() => handleKeyButton("UP")}
-          variant="outline"
-          size="sm"
-          disabled={!isConnected}
-          className="h-8 px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
-        >
-          <ChevronUp className="h-4 w-4" />
-        </Button>
-        <Button
-          onClick={() => handleKeyButton("DOWN")}
-          variant="outline"
-          size="sm"
-          disabled={!isConnected}
-          className="h-8 px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
-        >
-          <ChevronDown className="h-4 w-4" />
-        </Button>
-        <Button
-          onClick={() => handleKeyButton("LEFT")}
-          variant="outline"
-          size="sm"
-          disabled={!isConnected}
-          className="h-8 px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          onClick={() => handleKeyButton("RIGHT")}
-          variant="outline"
-          size="sm"
-          disabled={!isConnected}
-          className="h-8 px-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-        <Button
-          onClick={() => handleKeyButton("CTRL_C")}
-          variant="outline"
-          size="sm"
-          disabled={!isConnected}
-          className="h-8 px-3 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
-        >
-          CTRL+C
-        </Button>
-      </div>
+      {isMobile && (
+        <div className="flex flex-wrap gap-2 justify-center items-center px-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
+          {lastKeyPressed && (
+            <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded mr-2">
+              Sent: {lastKeyPressed}
+            </span>
+          )}
+          <Button onClick={() => sendSequence("\x1b")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+            ESC
+          </Button>
+          <Button onClick={() => sendSequence("\t")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+            TAB
+          </Button>
+          <Button onClick={() => handleKeyButton("UP")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+            ↑
+          </Button>
+          <Button onClick={() => handleKeyButton("DOWN")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+            ↓
+          </Button>
+          <Button onClick={() => handleKeyButton("LEFT")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+            ←
+          </Button>
+          <Button onClick={() => handleKeyButton("RIGHT")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+            →
+          </Button>
+          <Button onClick={() => sendSequence("\x03")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+            CTRL+C
+          </Button>
+        </div>
+      )}
 
       <Dialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>Search Commands</span>
-              <Badge variant="outline" className="text-xs">
-                {useOnline ? "🌐 Online (cheat.sh)" : "📦 Offline Mode"}
-              </Badge>
-            </DialogTitle>
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-zinc-800">
+            <DialogTitle className="text-xl font-semibold">Search Commands</DialogTitle>
+            <Badge variant={useOnline ? "default" : "secondary"} className="flex items-center gap-2">
+              {useOnline ? (
+                <>
+                  <Wifi className="w-3 h-3" />
+                  <span>Online Mode</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-3 h-3" />
+                  <span>Offline Mode</span>
+                </>
+              )}
+            </Badge>
           </DialogHeader>
-          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-            <Input
-              type="text"
-              placeholder="Search commands... (e.g., 'tar', 'docker ps', 'qm list', 'systemctl')"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              autoFocus
-            />
+
+          <DialogDescription className="sr-only">Search for Linux and Proxmox commands</DialogDescription>
+
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <Input
+                placeholder="Search commands... (e.g., 'tar', 'docker ps', 'qm list', 'systemctl')"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
 
             {isSearching && (
               <div className="text-center py-4 text-zinc-400">
@@ -587,12 +680,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+            <div className="flex-1 overflow-y-auto space-y-2 pr-2 max-h-[50vh]">
               {searchResults.length > 0 ? (
                 searchResults.map((result, index) => (
                   <div
                     key={index}
-                    className="p-4 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 cursor-pointer transition-colors"
+                    className="p-4 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 transition-colors"
                   >
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-2">
@@ -609,15 +702,15 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                               key={idx}
                               onClick={(e) => {
                                 e.stopPropagation()
-                                handleSendCommand(example)
+                                sendToActiveTerminal(example)
                               }}
-                              className="flex items-center justify-between p-2 rounded bg-zinc-900/50 hover:bg-zinc-900 group"
+                              className="flex items-center justify-between p-2 rounded bg-zinc-900/50 hover:bg-zinc-900 group cursor-pointer transition-colors"
                             >
                               <code className="text-xs text-green-400 font-mono flex-1 break-all">{example}</code>
                               <Button
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleSendCommand(example)
+                                  sendToActiveTerminal(example)
                                 }}
                                 size="sm"
                                 variant="ghost"
@@ -632,11 +725,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                     </div>
                   </div>
                 ))
-              ) : filteredCommands.length > 0 ? (
+              ) : filteredCommands.length > 0 && !useOnline ? (
                 filteredCommands.map((item, index) => (
                   <div
                     key={index}
-                    onClick={() => handleSendCommand(item.cmd)}
+                    onClick={() => sendToActiveTerminal(item.cmd)}
                     className="p-3 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 cursor-pointer transition-colors"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -647,7 +740,34 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                       <Button
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleSendCommand(item.cmd)
+                          sendToActiveTerminal(item.cmd)
+                        }}
+                        size="sm"
+                        variant="ghost"
+                        className="shrink-0 h-7 px-2 text-xs"
+                      >
+                        <Send className="h-3 w-3 mr-1" />
+                        Send
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : !isSearching && !searchQuery && !useOnline ? (
+                proxmoxCommands.map((item, index) => (
+                  <div
+                    key={index}
+                    onClick={() => sendToActiveTerminal(item.cmd)}
+                    className="p-3 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <code className="text-sm text-blue-400 font-mono break-all">{item.cmd}</code>
+                        <p className="text-xs text-zinc-400 mt-1">{item.desc}</p>
+                      </div>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          sendToActiveTerminal(item.cmd)
                         }}
                         size="sm"
                         variant="ghost"
@@ -660,14 +780,55 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                   </div>
                 ))
               ) : !isSearching ? (
-                <div className="text-center py-8 text-zinc-400">
-                  {searchQuery ? `No commands found for "${searchQuery}"` : "Type to search commands..."}
+                <div className="text-center py-12 space-y-4">
+                  {searchQuery ? (
+                    <>
+                      <Search className="w-12 h-12 text-zinc-600 mx-auto" />
+                      <div>
+                        <p className="text-zinc-400 font-medium">No results found for "{searchQuery}"</p>
+                        <p className="text-xs text-zinc-500 mt-1">Try a different command or check your spelling</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Terminal className="w-12 h-12 text-zinc-600 mx-auto" />
+                      <div>
+                        <p className="text-zinc-400 font-medium mb-2">Search for any command</p>
+                        <div className="text-sm text-zinc-500 space-y-1">
+                          <p>Try searching for:</p>
+                          <div className="flex flex-wrap justify-center gap-2 mt-2">
+                            {["tar", "grep", "docker ps", "qm list", "systemctl"].map((cmd) => (
+                              <code
+                                key={cmd}
+                                onClick={() => setSearchQuery(cmd)}
+                                className="px-2 py-1 bg-zinc-800 rounded text-blue-400 cursor-pointer hover:bg-zinc-700"
+                              >
+                                {cmd}
+                              </code>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      {useOnline && (
+                        <div className="flex items-center justify-center gap-2 text-xs text-zinc-600 mt-4">
+                          <Lightbulb className="w-3 h-3" />
+                          <span>Powered by cheat.sh</span>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               ) : null}
             </div>
 
-            <div className="text-xs text-zinc-500 pt-2 border-t border-zinc-700">
-              💡 Tip: Search for any Linux command (tar, grep, docker, etc.) or Proxmox commands (qm, pct, pvesh)
+            <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-3 h-3" />
+                <span>
+                  Tip: Search for any Linux command (tar, grep, docker, etc.) or Proxmox commands (qm, pct, pvesh)
+                </span>
+              </div>
+              {useOnline && searchResults.length > 0 && <span className="text-zinc-600">Powered by cheat.sh</span>}
             </div>
           </div>
         </DialogContent>
