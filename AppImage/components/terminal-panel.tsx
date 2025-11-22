@@ -317,20 +317,23 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
     term.open(container)
 
-    setTimeout(() => {
+    const performResize = () => {
       const xtermViewport = container.querySelector(".xterm-viewport") as HTMLElement
       const xtermScreen = container.querySelector(".xterm-screen") as HTMLElement
       if (xtermViewport) xtermViewport.style.padding = "0"
       if (xtermScreen) xtermScreen.style.padding = "0"
+
       fitAddon.fit()
-      console.log(`[v0] Terminal fitted: ${term.cols}x${term.rows}`)
+      const cols = term.cols
+      const rows = term.rows
+      console.log(`[v0] Terminal resized: ${cols}x${rows}`)
 
       // Send resize to backend via HTTP
       const apiUrl = getApiUrl()
       fetch(`${apiUrl}/api/terminal/${terminal.id}/resize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cols: term.cols, rows: term.rows }),
+        body: JSON.stringify({ cols, rows }),
       })
         .then((res) => res.json())
         .then((data) => {
@@ -339,7 +342,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         .catch((err) => {
           console.error(`[v0] Error resizing backend PTY:`, err)
         })
-    }, 100)
+    }
+
+    setTimeout(() => performResize(), 100)
+    setTimeout(() => performResize(), 300)
+    setTimeout(() => performResize(), 600)
 
     const wsUrl = websocketUrl || getWebSocketUrl()
     const ws = new WebSocket(wsUrl)
@@ -347,6 +354,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     ws.onopen = () => {
       setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: true, term, ws } : t)))
       term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
+
+      setTimeout(() => performResize(), 200)
+      setTimeout(() => performResize(), 500)
     }
 
     ws.onmessage = (event) => {
@@ -372,20 +382,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
     const handleResize = () => {
       try {
-        fitAddon.fit()
-        const cols = term.cols
-        const rows = term.rows
-        console.log(`[v0] Window resized, terminal now: ${cols}x${rows}`)
-
-        // Send resize to backend via HTTP
-        const apiUrl = getApiUrl()
-        fetch(`${apiUrl}/api/terminal/${terminal.id}/resize`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cols, rows }),
-        }).catch((err) => {
-          console.error(`[v0] Error resizing backend PTY:`, err)
-        })
+        performResize()
       } catch {
         // Ignore resize errors
       }
@@ -613,25 +610,36 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
               ))}
             </Tabs>
           ) : (
-            <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5`}>
+            <div className={`${getLayoutClass()} gap-2 flex-1 min-h-0 p-2`}>
               {terminals.map((terminal) => (
-                <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
-                    <button
-                      onClick={() => setActiveTerminalId(terminal.id)}
-                      className={`text-xs font-medium ${
-                        activeTerminalId === terminal.id ? "text-blue-400" : "text-zinc-500"
-                      }`}
-                    >
-                      {terminal.title}
-                    </button>
+                <div
+                  key={terminal.id}
+                  className={`relative bg-black rounded flex flex-col overflow-hidden border ${
+                    terminal.id === activeTerminalId ? "border-blue-500" : "border-zinc-700"
+                  }`}
+                  onClick={() => setActiveTerminalId(terminal.id)}
+                >
+                  <div className="flex items-center justify-between px-2 py-1 bg-zinc-800 border-b border-zinc-700">
+                    <span className="text-xs font-medium text-white">{terminal.title}</span>
                     {terminals.length > 1 && (
-                      <button onClick={() => closeTerminal(terminal.id)} className="hover:bg-zinc-700 rounded p-0.5">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          closeTerminal(terminal.id)
+                        }}
+                      >
                         <X className="h-3 w-3" />
-                      </button>
+                      </Button>
                     )}
                   </div>
-                  <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black pt-7" />
+                  <div
+                    ref={setContainerRef(terminal.id)}
+                    className="flex-1 overflow-hidden"
+                    style={{ width: "100%", height: "100%" }}
+                  />
                 </div>
               ))}
             </div>
