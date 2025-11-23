@@ -134,7 +134,7 @@ const proxmoxCommands = [
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
-  const [layout, setLayout] = useState<"single" | "vertical" | "horizontal" | "grid">("single")
+  const [layout, setLayout] = useState<"single" | "grid">("single")
   const [isMobile, setIsMobile] = useState(false)
   const [terminalHeight, setTerminalHeight] = useState<number>(500) // altura por defecto en px
   const [isResizing, setIsResizing] = useState(false)
@@ -175,11 +175,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     [isMobile, terminalHeight],
   )
 
-  const handleResizeMove = useCallback(
+  const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!isResizing) return
 
-      const deltaY = resizeStartY.current - e.clientY
+      const deltaY = e.clientY - resizeStartY.current
       const newHeight = Math.max(200, Math.min(1200, resizeStartHeight.current + deltaY))
       setTerminalHeight(newHeight)
     },
@@ -194,14 +194,14 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
   useEffect(() => {
     if (isResizing) {
-      document.addEventListener("mousemove", handleResizeMove)
+      document.addEventListener("mousemove", handleMouseMove)
       document.addEventListener("mouseup", handleResizeEnd)
       return () => {
-        document.removeEventListener("mousemove", handleResizeMove)
+        document.removeEventListener("mousemove", handleMouseMove)
         document.removeEventListener("mouseup", handleResizeEnd)
       }
     }
-  }, [isResizing, handleResizeMove, handleResizeEnd])
+  }, [isResizing, handleMouseMove, handleResizeEnd])
 
   useEffect(() => {
     if (terminals.length === 0) {
@@ -538,8 +538,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const getLayoutClass = () => {
     const count = terminals.length
     if (isMobile || count === 1) return "grid grid-cols-1"
-    if (layout === "vertical" || count === 2) return "grid grid-cols-2"
-    if (layout === "horizontal") return "grid grid-rows-2"
+    if (layout === "single") return "grid grid-cols-1"
     if (layout === "grid" || count >= 3) return "grid grid-cols-2 grid-rows-2"
     return "grid grid-cols-1"
   }
@@ -562,26 +561,20 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           {!isMobile && terminals.length > 1 && (
             <>
               <Button
-                onClick={() => setLayout("vertical")}
+                onClick={() => setLayout("single")}
                 variant="outline"
                 size="sm"
-                className={`h-8 px-2 ${layout === "vertical" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                className={`h-8 px-2 ${layout === "single" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                title="Vista apilada"
               >
                 <Split className="h-4 w-4 rotate-90" />
-              </Button>
-              <Button
-                onClick={() => setLayout("horizontal")}
-                variant="outline"
-                size="sm"
-                className={`h-8 px-2 ${layout === "horizontal" ? "bg-blue-500/20 border-blue-500" : ""}`}
-              >
-                <Split className="h-4 w-4" />
               </Button>
               <Button
                 onClick={() => setLayout("grid")}
                 variant="outline"
                 size="sm"
                 className={`h-8 px-2 ${layout === "grid" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                title="Vista cuadrícula"
               >
                 <Grid2X2 className="h-4 w-4" />
               </Button>
