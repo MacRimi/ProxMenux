@@ -289,7 +289,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       scrollback: 2000,
       disableStdin: false,
       cols: isMobile ? 40 : layout === "grid" ? 60 : 120,
-      rows: isMobile ? 20 : layout === "grid" ? 15 : 30,
+      rows: isMobile ? 20 : layout === "grid" ? 20 : 40,
       theme: {
         background: "#000000",
         foreground: "#ffffff",
@@ -607,7 +607,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                     </button>
                   )}
                 </div>
-                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black pt-7 min-h-[450px]" />
+                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black pt-7" />
               </div>
             ))}
           </div>
