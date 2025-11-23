@@ -360,7 +360,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
     const term = new TerminalClass({
-      fontFamily: '"DejaVu Sans Mono", "Liberation Mono", "Menlo", "Monaco", "Consolas", "Courier New", monospace',
+      fontFamily: '"Menlo", "DejaVu Sans Mono", "Liberation Mono", "Consolas", "Courier New", monospace'
 
       fontSize: isMobile ? 11 : 13,
       cursorBlink: true,
