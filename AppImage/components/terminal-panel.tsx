@@ -582,7 +582,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
               <TabsContent key={terminal.id} value={terminal.id} className="flex-1 m-0 p-0">
                 <div
                   ref={setContainerRef(terminal.id)}
-                  className="w-full h-full bg-black"
+                  className="w-full h-full bg-black overflow-hidden"
                   style={{ height: "calc(100vh - 24rem)" }}
                 />
               </TabsContent>
@@ -591,7 +591,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         ) : (
           <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5`}>
             {terminals.map((terminal) => (
-              <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden">
+              <div key={terminal.id} className="relative bg-zinc-900">
                 <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
                   <button
                     onClick={() => setActiveTerminalId(terminal.id)}
@@ -607,7 +607,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                     </button>
                   )}
                 </div>
-                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black pt-7" />
+                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black pt-7 overflow-hidden" />
               </div>
             ))}
           </div>
