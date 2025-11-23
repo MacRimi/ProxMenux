@@ -134,7 +134,7 @@ const proxmoxCommands = [
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
-  const [layout, setLayout] = useState<"single" | "grid">("single")
+  const [layout, setLayout] = useState<"single" | "grid">("grid")
   const [isMobile, setIsMobile] = useState(false)
   const [terminalHeight, setTerminalHeight] = useState<number>(500) // altura por defecto en px
   const [isResizing, setIsResizing] = useState(false)
@@ -675,7 +675,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         ) : (
           <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5 w-full overflow-hidden`}>
             {terminals.map((terminal) => (
-              <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden flex flex-col min-h-0 w-full">
+              <div
+                key={terminal.id}
+                className={`relative bg-zinc-900 overflow-hidden flex flex-col min-h-0 w-full ${
+                  activeTerminalId === terminal.id ? "ring-2 ring-blue-500" : ""
+                }`}
+              >
                 <div className="flex-shrink-0 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
                   <button
                     onClick={() => setActiveTerminalId(terminal.id)}
@@ -693,7 +698,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 </div>
                 <div
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
-                  className="flex-1 w-full max-w-full bg-black overflow-hidden"
+                  onClick={() => setActiveTerminalId(terminal.id)}
+                  className="flex-1 w-full max-w-full bg-black overflow-hidden cursor-pointer"
                 />
               </div>
             ))}
