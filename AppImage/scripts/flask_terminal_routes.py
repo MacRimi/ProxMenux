@@ -151,7 +151,7 @@ def terminal_websocket(ws):
     fcntl.fcntl(master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
     
     # Set initial terminal size
-    set_winsize(master_fd, 30, 120)
+    # set_winsize(master_fd, 30, 120)
     
     # Start thread to read PTY output and forward to WebSocket
     output_thread = threading.Thread(

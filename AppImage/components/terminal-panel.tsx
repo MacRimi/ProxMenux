@@ -360,15 +360,14 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
     const term = new TerminalClass({
-      fontFamily: 'Consolas, "DejaVu Sans Mono", "Liberation Mono", "Courier", monospace',
-      fontSize: isMobile ? 13 : 14,  
-      lineHeight: 1,                 
+      rendererType: isMobile ? "dom" : "canvas",
+      fontFamily: 'Consolas, "DejaVu Sans Mono", "Liberation Mono", "Courier New", monospace',
+      fontSize: isMobile ? 13 : 14,
+      lineHeight: 1,
       cursorBlink: true,
       scrollback: 2000,
       disableStdin: false,
-      customGlyphs: false,          
-      cols: isMobile ? 80 : layout === "grid" ? 100 : 120,
-      rows: isMobile ? 24 : layout === "grid" ? 30 : 40,
+      customGlyphs: false,
       theme: {
         background: "#000000",
         foreground: "#ffffff",
@@ -392,6 +391,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         brightWhite: "#eeeeec",
       },
     })
+
 
 
     const fitAddon = new FitAddonClass()
