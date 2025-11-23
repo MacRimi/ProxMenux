@@ -3585,6 +3585,25 @@
     "type": "ct"
   },
   {
+    "name": "OPNsense",
+    "slug": "opnsense-vm",
+    "desc": "OPNsense is an open-source firewall and routing platform based on FreeBSD. It provides advanced security features, including intrusion detection, VPN support, traffic shaping, and web filtering, with an intuitive web interface for easy management. Known for its reliability and regular updates, OPNsense is a popular choice for both businesses and home networks.",
+    "script": "vm/opnsense-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/opnsense-vm.sh",
+    "categories": [
+      4,
+      2
+    ],
+    "notes": [
+      "It will fail with default settings if there is no vmbr0 and vmbr1 on your node. Use advanced settings in this case."
+    ],
+    "type": "vm",
+    "default_credentials": {
+      "username": "root",
+      "password": "opnsense"
+    }
+  },
+  {
     "name": "OTS",
     "slug": "ots",
     "desc": "One-Time-Secret sharing platform with a symmetric 256bit AES encryption in the browser.",
