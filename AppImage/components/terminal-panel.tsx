@@ -368,8 +368,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       scrollback: 2000,
       disableStdin: false,
       customGlyphs: false,
-      fontWeight: "400",
-      fontWeightBold: "700",
+      fontWeight: "500",
+      fontWeightBold: "800",
       theme: {
         background: "#000000",
         foreground: "#ffffff",
