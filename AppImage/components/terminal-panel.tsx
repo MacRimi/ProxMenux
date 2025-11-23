@@ -352,39 +352,46 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     })
   }, [terminalHeight, layout, terminals, isMobile])
 
-  const term = new TerminalClass({
-    fontFamily: 'Consolas, "DejaVu Sans Mono", "Liberation Mono", "Courier", monospace',
-    fontSize: isMobile ? 13 : 14,
-    lineHeight: 1,                  
-    cursorBlink: true,
-    scrollback: 2000,
-    disableStdin: false,
-    customGlyphs: false,            
-    cols: isMobile ? 80 : layout === "grid" ? 100 : 120,
-    rows: isMobile ? 24 : layout === "grid" ? 30 : 40,
-    theme: {
-      background: "#000000",
-      foreground: "#ffffff",
-      cursor: "#ffffff",
-      cursorAccent: "#000000",
-      black: "#2e3436",
-      red: "#cc0000",
-      green: "#4e9a06",
-      yellow: "#c4a000",
-      blue: "#3465a4",
-      magenta: "#75507b",
-      cyan: "#06989a",
-      white: "#d3d7cf",
-      brightBlack: "#555753",
-      brightRed: "#ef2929",
-      brightGreen: "#8ae234",
-      brightYellow: "#fce94f",
-      brightBlue: "#729fcf",
-      brightMagenta: "#ad7fa8",
-      brightCyan: "#34e2e2",
-      brightWhite: "#eeeeec",
-    },
-  })
+  const initializeTerminal = async (terminal: TerminalInstance, container: HTMLDivElement) => {
+    const [TerminalClass, FitAddonClass] = await Promise.all([
+      import("xterm").then((mod) => mod.Terminal),
+      import("xterm-addon-fit").then((mod) => mod.FitAddon),
+      import("xterm/css/xterm.css"),
+    ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
+
+    const term = new TerminalClass({
+      fontFamily: 'Consolas, "DejaVu Sans Mono", "Liberation Mono", "Courier", monospace',
+      fontSize: isMobile ? 13 : 14,  
+      lineHeight: 1,                 
+      cursorBlink: true,
+      scrollback: 2000,
+      disableStdin: false,
+      customGlyphs: false,          
+      cols: isMobile ? 80 : layout === "grid" ? 100 : 120,
+      rows: isMobile ? 24 : layout === "grid" ? 30 : 40,
+      theme: {
+        background: "#000000",
+        foreground: "#ffffff",
+        cursor: "#ffffff",
+        cursorAccent: "#000000",
+        black: "#2e3436",
+        red: "#cc0000",
+        green: "#4e9a06",
+        yellow: "#c4a000",
+        blue: "#3465a4",
+        magenta: "#75507b",
+        cyan: "#06989a",
+        white: "#d3d7cf",
+        brightBlack: "#555753",
+        brightRed: "#ef2929",
+        brightGreen: "#8ae234",
+        brightYellow: "#fce94f",
+        brightBlue: "#729fcf",
+        brightMagenta: "#ad7fa8",
+        brightCyan: "#34e2e2",
+        brightWhite: "#eeeeec",
+      },
+    })
 
 
     const fitAddon = new FitAddonClass()
