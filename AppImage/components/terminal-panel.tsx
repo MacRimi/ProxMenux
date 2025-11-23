@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { CheatSheetResult } from "@/lib/cheat-sheet-result" // Declare CheatSheetResult here
 
 type TerminalPanelProps = {
@@ -665,15 +665,19 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 </TabsTrigger>
               ))}
             </TabsList>
-            {terminals.map((terminal) => (
-              <TabsContent key={terminal.id} value={terminal.id} className="flex-1 m-0 p-0">
+            <div className="flex-1 relative">
+              {terminals.map((terminal) => (
                 <div
-                  ref={(el) => (containerRefs.current[terminal.id] = el)}
-                  className="w-full h-full bg-black overflow-hidden"
-                  style={{ height: "calc(100vh - 24rem)" }}
-                />
-              </TabsContent>
-            ))}
+                  key={terminal.id}
+                  className={`absolute inset-0 ${activeTerminalId === terminal.id ? "block" : "hidden"}`}
+                >
+                  <div
+                    ref={(el) => (containerRefs.current[terminal.id] = el)}
+                    className="w-full h-full bg-black overflow-hidden"
+                  />
+                </div>
+              ))}
+            </div>
           </Tabs>
         ) : (
           <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5 w-full overflow-hidden`}>
@@ -681,7 +685,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
               <div
                 key={terminal.id}
                 className={`relative bg-zinc-900 overflow-hidden flex flex-col min-h-0 w-full ${
-                  activeTerminalId === terminal.id ? "ring-2 ring-blue-500" : ""
+                  terminals.length > 1 && activeTerminalId === terminal.id ? "ring-2 ring-blue-500" : ""
                 }`}
               >
                 <div className="flex-shrink-0 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
