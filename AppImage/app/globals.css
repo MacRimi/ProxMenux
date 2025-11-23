@@ -1,14 +1,13 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-
-@custom-variant dark (&:is(.dark *));
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ===================== */
 /* Light Mode (default)  */
 /* ===================== */
 :root {
-  --background: oklch(1 0 0); /* blanco */
-  --foreground: oklch(0.145 0 0); /* casi negro */
+  --background: oklch(1 0 0);              /* blanco */
+  --foreground: oklch(0.145 0 0);          /* casi negro */
 
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
@@ -16,14 +15,14 @@
   --popover: var(--card);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.205 0 0); /* gris oscuro */
-  --primary-foreground: oklch(0.985 0 0); /* blanco */
+  --primary: oklch(0.205 0 0);             /* gris oscuro */
+  --primary-foreground: oklch(0.985 0 0);  /* blanco */
 
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: var(--primary);
 
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0); /* gris medio */
+  --muted-foreground: oklch(0.556 0 0);    /* gris medio */
 
   --accent: oklch(0.97 0 0);
   --accent-foreground: var(--primary);
@@ -57,8 +56,8 @@
 /* Dark Mode (gris)      */
 /* ===================== */
 .dark {
-  --background: oklch(0.22 0 0); /* gris oscuro */
-  --foreground: oklch(0.97 0 0); /* blanco/gris claro */
+  --background: oklch(0.22 0 0);           /* gris oscuro */
+  --foreground: oklch(0.97 0 0);           /* blanco/gris claro */
 
   --card: oklch(0.24 0 0);
   --card-foreground: var(--foreground);
@@ -66,7 +65,7 @@
   --popover: var(--card);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.83 0 0); /* casi blanco */
+  --primary: oklch(0.83 0 0);              /* casi blanco */
   --primary-foreground: var(--background);
 
   --secondary: oklch(0.28 0 0);
@@ -85,8 +84,8 @@
   --input: var(--border);
   --ring: oklch(0.55 0 0);
 
-  --chart-1: oklch(0.6 0.2 255);
-  --chart-2: oklch(0.7 0.16 165);
+  --chart-1: oklch(0.60 0.20 255);
+  --chart-2: oklch(0.70 0.16 165);
   --chart-3: oklch(0.76 0.19 70);
   --chart-4: oklch(0.63 0.25 305);
   --chart-5: oklch(0.66 0.24 20);
@@ -101,52 +100,12 @@
   --sidebar-ring: var(--ring);
 }
 
-@theme inline {
-  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-}
-
 /* ===================== */
 /* Base layer            */
 /* ===================== */
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
 
   body {
@@ -154,10 +113,10 @@
   }
 
   /* Foco accesible */
-  :is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus {
+  :is(button,[role="button"],a,input,select,textarea,[tabindex]:not([tabindex="-1"])):focus {
     @apply outline-none;
   }
-  :is(button, [role="button"], a, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+  :is(button,[role="button"],a,input,select,textarea,[tabindex]:not([tabindex="-1"])):focus-visible {
     @apply ring-2;
     --tw-ring-color: var(--ring);
     --tw-ring-opacity: 0.5; /* equivalente al /50 */
