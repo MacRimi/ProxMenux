@@ -146,80 +146,20 @@
 }
 
 /* ===================== */
-/* Ajustes para xterm    */
+/* Ajustes para xterm.js */
 /* ===================== */
 
-/* Terminal sin padding, ancho completo pero sin overflow */
+/* Quitar padding para que la terminal ocupe el 100% del ancho */
 .xterm {
   padding: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
 }
 
-/* Viewport sin padding ni margen */
-.xterm-viewport {
+/* Por si acaso el viewport añade padding extra */
+.xterm .xterm-viewport {
   padding: 0 !important;
-  margin: 0 !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
 }
 
-/* Parte donde se pinta el texto */
-.xterm-screen {
-  padding: 0 !important;
-  margin: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-/* Quitar margen raro en filas */
+/* Opcional: asegurar que no haya margen raro */
 .xterm-rows {
   margin: 0 !important;
-}
-
-/* Mantener scrollbar vertical pero ocultar horizontal */
-.xterm-viewport::-webkit-scrollbar {
-  width: 8px;
-  height: 0;
-}
-
-.xterm-viewport::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.xterm-viewport::-webkit-scrollbar-thumb {
-  background: var(--muted);
-  border-radius: 4px;
-}
-
-.xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
-}
-
-/* ========================= */
-/* Ajustes específicos móvil */
-/* ========================= */
-@media (max-width: 768px) {
-  /* Forzar ancho correcto sin overflow */
-  .xterm {
-    max-width: 100vw !important;
-  }
-
-  .xterm-viewport {
-    overflow-x: hidden !important;
-    max-width: 100% !important;
-  }
-
-  .xterm-screen {
-    width: 100% !important;
-    max-width: 100% !important;
-    display: block;
-  }
-
-  /* Ocultar scrollbar en móvil para más espacio */
-  .xterm-viewport::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-  }
 }
