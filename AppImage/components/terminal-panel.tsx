@@ -179,8 +179,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     (e: MouseEvent) => {
       if (!isResizing) return
 
-      const deltaY = e.clientY - resizeStartY.current
-      const newHeight = Math.max(200, Math.min(800, resizeStartHeight.current - deltaY))
+      const deltaY = resizeStartY.current - e.clientY
+      const newHeight = Math.max(200, Math.min(1200, resizeStartHeight.current + deltaY))
       setTerminalHeight(newHeight)
     },
     [isResizing],
@@ -631,7 +631,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
       <div
         className="flex-1 overflow-hidden flex flex-col"
-        style={!isMobile ? { height: `${terminalHeight}px`, minHeight: "200px", maxHeight: "800px" } : undefined}
+        style={!isMobile ? { height: `${terminalHeight}px`, minHeight: "200px", maxHeight: "1200px" } : undefined}
       >
         {isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
