@@ -518,18 +518,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 rounded-md overflow-hidden">
-      {!isMobile && (
-        <div
-          onMouseDown={handleResizeStart}
-          className={`h-2 bg-zinc-800 hover:bg-blue-600 cursor-ns-resize flex items-center justify-center transition-colors ${
-            isResizing ? "bg-blue-600" : ""
-          }`}
-          title="Arrastra para redimensionar"
-        >
-          <GripHorizontal className="h-4 w-4 text-zinc-500" />
-        </div>
-      )}
-
       <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
         <div className="flex items-center gap-3">
           <Activity className="h-5 w-5 text-blue-500" />
@@ -611,7 +599,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         </div>
       </div>
 
-      <div className="flex-1 min-h-0" style={!isMobile ? { height: `${terminalHeight}px` } : undefined}>
+      <div
+        className="flex-1 overflow-hidden flex flex-col"
+        style={!isMobile ? { height: `${terminalHeight}px`, minHeight: "200px", maxHeight: "800px" } : undefined}
+      >
         {isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
             <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800">
@@ -645,7 +636,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         ) : (
           <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5`}>
             {terminals.map((terminal) => (
-              <div key={terminal.id} className="relative bg-zinc-900">
+              <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
                   <button
                     onClick={() => setActiveTerminalId(terminal.id)}
@@ -661,15 +652,24 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                     </button>
                   )}
                 </div>
-                <div
-                  ref={(el) => (containerRefs.current[terminal.id] = el)}
-                  className="w-full h-full bg-black pt-7 overflow-hidden"
-                />
+                <div ref={(el) => (containerRefs.current[terminal.id] = el)} className="w-full h-full bg-black pt-7" />
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {!isMobile && (
+        <div
+          onMouseDown={handleResizeStart}
+          className={`h-3 bg-zinc-800 hover:bg-blue-600 cursor-ns-resize flex items-center justify-center transition-colors border-t border-zinc-700 ${
+            isResizing ? "bg-blue-600" : ""
+          }`}
+          title="Arrastra para redimensionar la altura del terminal"
+        >
+          <GripHorizontal className="h-4 w-4 text-zinc-400" />
+        </div>
+      )}
 
       {isMobile && (
         <div className="flex flex-wrap gap-2 justify-center items-center px-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
