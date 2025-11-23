@@ -360,14 +360,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
     const term = new TerminalClass({
-      fontFamily:
-        '"DejaVu Sans Mono", "Liberation Mono", "Menlo", "Monaco", "Consolas", "Courier New", monospace',
+      fontFamily: '"DejaVu Sans Mono", "Liberation Mono", "Menlo", "Monaco", "Consolas", "Courier New", monospace',
 
       fontSize: isMobile ? 11 : 13,
       cursorBlink: true,
       scrollback: 2000,
       disableStdin: false,
-      customGlyphs: true, 
+      customGlyphs: true,
       cols: isMobile ? 40 : layout === "grid" ? 60 : 120,
       rows: isMobile ? 20 : layout === "grid" ? 20 : 40,
       theme: {
@@ -638,7 +637,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
       <div
         className="flex-1 overflow-hidden flex flex-col"
-        style={!isMobile ? { height: `${terminalHeight}px`, minHeight: "200px", maxHeight: "1200px" } : undefined}
+        style={!isMobile ? { height: `${terminalHeight}px` } : undefined}
       >
         {isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
@@ -671,9 +670,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             ))}
           </Tabs>
         ) : (
-          <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5`}>
+          <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5 w-full overflow-hidden`}>
             {terminals.map((terminal) => (
-              <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden flex flex-col min-h-0">
+              <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden flex flex-col min-h-0 w-full">
                 <div className="flex-shrink-0 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
                   <button
                     onClick={() => setActiveTerminalId(terminal.id)}
@@ -691,7 +690,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 </div>
                 <div
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
-                  className="flex-1 w-full bg-black overflow-hidden"
+                  className="flex-1 w-full max-w-full bg-black overflow-hidden"
                 />
               </div>
             ))}
