@@ -134,7 +134,7 @@ const proxmoxCommands = [
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
-  const [layout, setLayout] = useState<"single" | "grid">("single")
+  const [layout, setLayout] = useState<"single" | "vertical" | "horizontal" | "grid">("single")
   const [isMobile, setIsMobile] = useState(false)
   const [terminalHeight, setTerminalHeight] = useState<number>(500) // altura por defecto en px
   const [isResizing, setIsResizing] = useState(false)
@@ -538,7 +538,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const getLayoutClass = () => {
     const count = terminals.length
     if (isMobile || count === 1) return "grid grid-cols-1"
-    if (layout === "single") return "grid grid-cols-1"
+    if (layout === "vertical" || count === 2) return "grid grid-cols-2"
+    if (layout === "horizontal") return "grid grid-rows-2"
     if (layout === "grid" || count >= 3) return "grid grid-cols-2 grid-rows-2"
     return "grid grid-cols-1"
   }
@@ -561,20 +562,26 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           {!isMobile && terminals.length > 1 && (
             <>
               <Button
-                onClick={() => setLayout("single")}
+                onClick={() => setLayout("vertical")}
                 variant="outline"
                 size="sm"
-                className={`h-8 px-2 ${layout === "single" ? "bg-blue-500/20 border-blue-500" : ""}`}
-                title="Vista apilada"
+                className={`h-8 px-2 ${layout === "vertical" ? "bg-blue-500/20 border-blue-500" : ""}`}
               >
                 <Split className="h-4 w-4 rotate-90" />
+              </Button>
+              <Button
+                onClick={() => setLayout("horizontal")}
+                variant="outline"
+                size="sm"
+                className={`h-8 px-2 ${layout === "horizontal" ? "bg-blue-500/20 border-blue-500" : ""}`}
+              >
+                <Split className="h-4 w-4" />
               </Button>
               <Button
                 onClick={() => setLayout("grid")}
                 variant="outline"
                 size="sm"
                 className={`h-8 px-2 ${layout === "grid" ? "bg-blue-500/20 border-blue-500" : ""}`}
-                title="Vista cuadrícula"
               >
                 <Grid2X2 className="h-4 w-4" />
               </Button>
@@ -622,7 +629,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div
+        className="flex-1 overflow-hidden flex flex-col"
+        style={!isMobile ? { height: `${terminalHeight}px`, minHeight: "200px", maxHeight: "1200px" } : undefined}
+      >
         {isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
             <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800">
@@ -648,6 +658,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 <div
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
                   className="w-full h-full bg-black overflow-hidden"
+                  style={{ height: "calc(100vh - 24rem)" }}
                 />
               </TabsContent>
             ))}
@@ -655,37 +666,40 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         ) : (
           <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5`}>
             {terminals.map((terminal) => (
-              <div key={terminal.id} className="bg-zinc-900 rounded overflow-hidden flex flex-col relative">
-                <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-800/50 border-b border-zinc-700">
-                  <span className="text-xs font-medium text-zinc-400">{terminal.title}</span>
+              <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
                   <button
-                    onClick={() => closeTerminal(terminal.id)}
-                    className="hover:bg-zinc-700 rounded p-0.5 transition-colors"
-                    title="Close terminal"
-                  >
-                    <X className="h-3 w-3 text-zinc-400" />
-                  </button>
-                </div>
-                <div
-                  ref={(el) => (containerRefs.current[terminal.id] = el)}
-                  className="flex-1 w-full bg-black overflow-hidden"
-                />
-                {!isMobile && layout === "single" && (
-                  <div
-                    onMouseDown={handleResizeStart}
-                    className={`absolute bottom-0 left-0 right-0 h-2 bg-zinc-700/50 hover:bg-blue-500/50 cursor-ns-resize transition-colors flex items-center justify-center ${
-                      isResizing ? "bg-blue-500/70" : ""
+                    onClick={() => setActiveTerminalId(terminal.id)}
+                    className={`text-xs font-medium ${
+                      activeTerminalId === terminal.id ? "text-blue-400" : "text-zinc-500"
                     }`}
-                    title="Arrastra para redimensionar"
                   >
-                    <GripHorizontal className="h-3 w-3 text-zinc-400" />
-                  </div>
-                )}
+                    {terminal.title}
+                  </button>
+                  {terminals.length > 1 && (
+                    <button onClick={() => closeTerminal(terminal.id)} className="hover:bg-zinc-700 rounded p-0.5">
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+                <div ref={(el) => (containerRefs.current[terminal.id] = el)} className="w-full h-full bg-black pt-7" />
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {!isMobile && (
+        <div
+          onMouseDown={handleResizeStart}
+          className={`h-3 bg-zinc-800 hover:bg-blue-600 cursor-ns-resize flex items-center justify-center transition-colors border-t border-zinc-700 ${
+            isResizing ? "bg-blue-600" : ""
+          }`}
+          title="Arrastra hacia arriba para agrandar, hacia abajo para reducir"
+        >
+          <GripHorizontal className="h-4 w-4 text-zinc-400" />
+        </div>
+      )}
 
       {isMobile && (
         <div className="flex flex-wrap gap-2 justify-center items-center px-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
