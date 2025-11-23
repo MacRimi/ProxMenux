@@ -163,3 +163,11 @@
 .xterm-rows {
   margin: 0 !important;
 }
+
+/* ===================== */
+/* Escala visual del terminal (90%) */
+/* ===================== */
+.xterm {
+  transform: scale(0.90);            /* Reduce tamaño general */
+  transform-origin: top left;        /* Evita desplazamientos raros */
+}
