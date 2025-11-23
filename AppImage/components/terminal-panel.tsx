@@ -359,12 +359,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       import("xterm/css/xterm.css"),
     ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
-    const fontSize = window.innerWidth < 768 ? 12 : 16
-
     const term = new TerminalClass({
       rendererType: "dom",
       fontFamily: '"Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
-      fontSize: fontSize,
+      fontSize: isMobile ? 12 : 16,
       lineHeight: 1,
       cursorBlink: true,
       scrollback: 2000,
