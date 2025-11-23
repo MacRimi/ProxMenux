@@ -362,7 +362,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     const term = new TerminalClass({
       rendererType: isMobile ? "dom" : "canvas",
       fontFamily: 'Consolas, "DejaVu Sans Mono", "Liberation Mono", "Courier New", Courier, monospace',
-      fontSize: 16,           // para acercarnos a Proxmox
+      fontSize: 15,          
       cursorBlink: true,
       scrollback: 2000,
       disableStdin: false,
