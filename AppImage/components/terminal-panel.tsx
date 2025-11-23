@@ -546,6 +546,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       if (count === 4) return "grid grid-cols-2 grid-rows-2"
     }
 
+    if (count === 2) return "grid grid-cols-1 grid-rows-2"
+    if (count === 3) return "grid grid-cols-1 grid-rows-3"
+    if (count === 4) return "grid grid-cols-1 grid-rows-4"
+
     // Vista de filas apiladas (single) - una terminal debajo de otra
     return "grid grid-cols-1"
   }
