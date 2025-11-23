@@ -362,7 +362,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     const term = new TerminalClass({
       rendererType: isMobile ? "dom" : "canvas",
       fontFamily: 'Consolas, "DejaVu Sans Mono", "Liberation Mono", "Courier New", Courier, monospace',
-      fontSize: 15,          
+      fontSize: 16,          
       cursorBlink: true,
       scrollback: 2000,
       disableStdin: false,
@@ -388,6 +388,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         brightMagenta: "#ad7fa8",
         brightCyan: "#34e2e2",
         brightWhite: "#eeeeec",
+        fontWeight: "500",  
+        fontWeightBold: "700",
       },
     })
 
