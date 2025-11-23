@@ -360,11 +360,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
     const term = new TerminalClass({
-
-      fontFamily: '"Courier New", monospace',
-      fontSize: isMobile ? 11 : 14,
+      rendererType: isMobile ? "dom" : "canvas",
+      fontFamily: 'Consolas, "DejaVu Sans Mono", "Liberation Mono", "Courier New", Courier, monospace',
+      fontSize: 16,           // para acercarnos a Proxmox
       cursorBlink: true,
       scrollback: 2000,
+      disableStdin: false,
       customGlyphs: false,
       theme: {
         background: "#000000",
