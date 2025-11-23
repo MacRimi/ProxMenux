@@ -12,7 +12,7 @@ import {
   Lightbulb,
   Terminal,
   Plus,
-  Split,
+  AlignJustify,
   Grid2X2,
   GripHorizontal,
 } from "lucide-react"
@@ -134,7 +134,7 @@ const proxmoxCommands = [
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
-  const [layout, setLayout] = useState<"single" | "vertical" | "horizontal" | "grid">("single")
+  const [layout, setLayout] = useState<"single" | "grid">("single")
   const [isMobile, setIsMobile] = useState(false)
   const [terminalHeight, setTerminalHeight] = useState<number>(500) // altura por defecto en px
   const [isResizing, setIsResizing] = useState(false)
@@ -538,9 +538,15 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const getLayoutClass = () => {
     const count = terminals.length
     if (isMobile || count === 1) return "grid grid-cols-1"
-    if (layout === "vertical" || count === 2) return "grid grid-cols-2"
-    if (layout === "horizontal") return "grid grid-rows-2"
-    if (layout === "grid" || count >= 3) return "grid grid-cols-2 grid-rows-2"
+
+    // Vista de cuadrícula 2x2
+    if (layout === "grid") {
+      if (count === 2) return "grid grid-cols-2"
+      if (count === 3) return "grid grid-cols-2 grid-rows-2"
+      if (count === 4) return "grid grid-cols-2 grid-rows-2"
+    }
+
+    // Vista de filas apiladas (single) - una terminal debajo de otra
     return "grid grid-cols-1"
   }
 
@@ -562,26 +568,20 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           {!isMobile && terminals.length > 1 && (
             <>
               <Button
-                onClick={() => setLayout("vertical")}
+                onClick={() => setLayout("single")}
                 variant="outline"
                 size="sm"
-                className={`h-8 px-2 ${layout === "vertical" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                className={`h-8 px-2 ${layout === "single" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                title="Vista apilada (filas)"
               >
-                <Split className="h-4 w-4 rotate-90" />
-              </Button>
-              <Button
-                onClick={() => setLayout("horizontal")}
-                variant="outline"
-                size="sm"
-                className={`h-8 px-2 ${layout === "horizontal" ? "bg-blue-500/20 border-blue-500" : ""}`}
-              >
-                <Split className="h-4 w-4" />
+                <AlignJustify className="h-4 w-4" />
               </Button>
               <Button
                 onClick={() => setLayout("grid")}
                 variant="outline"
                 size="sm"
                 className={`h-8 px-2 ${layout === "grid" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                title="Vista cuadrícula 2x2"
               >
                 <Grid2X2 className="h-4 w-4" />
               </Button>
@@ -666,8 +666,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         ) : (
           <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5`}>
             {terminals.map((terminal) => (
-              <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
+              <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden flex flex-col min-h-0">
+                <div className="flex-shrink-0 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
                   <button
                     onClick={() => setActiveTerminalId(terminal.id)}
                     className={`text-xs font-medium ${
@@ -682,7 +682,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                     </button>
                   )}
                 </div>
-                <div ref={(el) => (containerRefs.current[terminal.id] = el)} className="w-full h-full bg-black pt-7" />
+                <div
+                  ref={(el) => (containerRefs.current[terminal.id] = el)}
+                  className="flex-1 w-full bg-black overflow-hidden"
+                />
               </div>
             ))}
           </div>
