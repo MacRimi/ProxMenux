@@ -33,7 +33,7 @@ interface TerminalInstance {
   term: any
   ws: WebSocket | null
   isConnected: boolean
-  // containerRef: React.RefObject<HTMLDivElement> // This is no longer needed as we use callback refs
+  fitAddon: any // Added fitAddon to TerminalInstance
 }
 
 function getWebSocketUrl(): string {
@@ -179,8 +179,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     (e: MouseEvent) => {
       if (!isResizing) return
 
-      const deltaY = resizeStartY.current - e.clientY
-      const newHeight = Math.max(200, Math.min(800, resizeStartHeight.current + deltaY))
+      const deltaY = e.clientY - resizeStartY.current
+      const newHeight = Math.max(200, Math.min(800, resizeStartHeight.current - deltaY))
       setTerminalHeight(newHeight)
     },
     [isResizing],
@@ -288,6 +288,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         term: null,
         ws: null,
         isConnected: false,
+        fitAddon: null, // Added fitAddon initialization
       },
     ])
     setActiveTerminalId(newId)
@@ -323,6 +324,33 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       }
     })
   }, [terminals, isMobile])
+
+  useEffect(() => {
+    if (isMobile) return
+
+    terminals.forEach((terminal) => {
+      if (terminal.term && terminal.fitAddon && terminal.isConnected) {
+        try {
+          setTimeout(() => {
+            terminal.fitAddon?.fit()
+            if (terminal.ws?.readyState === WebSocket.OPEN) {
+              const cols = terminal.term?.cols || 80
+              const rows = terminal.term?.rows || 24
+              terminal.ws.send(
+                JSON.stringify({
+                  type: "resize",
+                  cols,
+                  rows,
+                }),
+              )
+            }
+          }, 100)
+        } catch (err) {
+          console.warn("[Terminal] resize on height change failed:", err)
+        }
+      }
+    })
+  }, [terminalHeight, layout, terminals, isMobile])
 
   const initializeTerminal = async (terminal: TerminalInstance, container: HTMLDivElement) => {
     const [TerminalClass, FitAddonClass] = await Promise.all([
@@ -392,7 +420,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
 
     ws.onopen = () => {
-      setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: true, term, ws } : t)))
+      setTerminals((prev) =>
+        prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: true, term, ws, fitAddon } : t)),
+      )
       term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
       syncSizeWithBackend()
     }
@@ -665,7 +695,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           className={`h-3 bg-zinc-800 hover:bg-blue-600 cursor-ns-resize flex items-center justify-center transition-colors border-t border-zinc-700 ${
             isResizing ? "bg-blue-600" : ""
           }`}
-          title="Arrastra para redimensionar la altura del terminal"
+          title="Arrastra hacia arriba para agrandar, hacia abajo para reducir"
         >
           <GripHorizontal className="h-4 w-4 text-zinc-400" />
         </div>
