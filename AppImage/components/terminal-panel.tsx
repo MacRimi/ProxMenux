@@ -3,7 +3,19 @@
 import type React from "react"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { API_PORT } from "@/lib/api-config"
-import { Activity, Trash2, X, Search, Send, Lightbulb, Terminal, Plus, Split, Grid2X2 } from "lucide-react"
+import {
+  Activity,
+  Trash2,
+  X,
+  Search,
+  Send,
+  Lightbulb,
+  Terminal,
+  Plus,
+  Split,
+  Grid2X2,
+  GripHorizontal,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -124,6 +136,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
   const [layout, setLayout] = useState<"single" | "vertical" | "horizontal" | "grid">("single")
   const [isMobile, setIsMobile] = useState(false)
+  const [terminalHeight, setTerminalHeight] = useState<number>(500) // altura por defecto en px
+  const [isResizing, setIsResizing] = useState(false)
 
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -134,20 +148,60 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const [useOnline, setUseOnline] = useState(true)
 
   const containerRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
-
-  const setContainerRef = useCallback(
-    (id: string) => (el: HTMLDivElement | null) => {
-      containerRefs.current[id] = el
-    },
-    [],
-  )
+  const resizeStartY = useRef<number>(0)
+  const resizeStartHeight = useRef<number>(0)
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768)
     const handleResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener("resize", handleResize)
+
+    const savedHeight = localStorage.getItem("terminalHeight")
+    if (savedHeight) {
+      setTerminalHeight(Number.parseInt(savedHeight, 10))
+    }
+
     return () => window.removeEventListener("resize", handleResize)
   }, [])
+
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      if (isMobile) return
+      setIsResizing(true)
+      resizeStartY.current = e.clientY
+      resizeStartHeight.current = terminalHeight
+      e.preventDefault()
+    },
+    [isMobile, terminalHeight],
+  )
+
+  const handleResizeMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isResizing) return
+
+      const deltaY = resizeStartY.current - e.clientY
+      const newHeight = Math.max(200, Math.min(800, resizeStartHeight.current + deltaY))
+      setTerminalHeight(newHeight)
+    },
+    [isResizing],
+  )
+
+  const handleResizeEnd = useCallback(() => {
+    if (!isResizing) return
+    setIsResizing(false)
+    localStorage.setItem("terminalHeight", terminalHeight.toString())
+  }, [isResizing, terminalHeight])
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener("mousemove", handleResizeMove)
+      document.addEventListener("mouseup", handleResizeEnd)
+      return () => {
+        document.removeEventListener("mousemove", handleResizeMove)
+        document.removeEventListener("mouseup", handleResizeEnd)
+      }
+    }
+  }, [isResizing, handleResizeMove, handleResizeEnd])
 
   useEffect(() => {
     if (terminals.length === 0) {
@@ -187,18 +241,16 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
         console.log("[v0] Received parsed examples from server:", data.examples.length)
 
-        // Usar los ejemplos ya parseados del servidor
         const formattedResults: CheatSheetResult[] = data.examples.map((example: any) => ({
           command: example.command,
           description: example.description || "",
-          examples: [example.command], // El comando limpio como ejemplo
+          examples: [example.command],
         }))
 
         setUseOnline(true)
         setSearchResults(formattedResults)
       } catch (error) {
         console.log("[v0] Error fetching from cheat.sh proxy, using offline commands:", error)
-        // Mostrar resultados offline si falla
         const filtered = proxmoxCommands.filter(
           (item) =>
             item.cmd.toLowerCase().includes(query.toLowerCase()) ||
@@ -228,8 +280,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     if (terminals.length >= 4) return
 
     const newId = `terminal-${Date.now()}`
-    // containerRefs.current[newId] = useRef<HTMLDivElement>(null) // No longer needed
-
     setTerminals((prev) => [
       ...prev,
       {
@@ -238,7 +288,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         term: null,
         ws: null,
         isConnected: false,
-        // containerRef: containerRefs.current[newId], // No longer needed
       },
     ])
     setActiveTerminalId(newId)
@@ -263,7 +312,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       return filtered
     })
 
-    delete containerRefs.current[id] // Clean up the ref
+    delete containerRefs.current[id]
   }
 
   useEffect(() => {
@@ -323,7 +372,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     const wsUrl = websocketUrl || getWebSocketUrl()
     const ws = new WebSocket(wsUrl)
 
-    // Ajusta al contenedor y envía tamaño al backend
     const syncSizeWithBackend = () => {
       try {
         fitAddon.fit()
@@ -346,7 +394,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     ws.onopen = () => {
       setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: true, term, ws } : t)))
       term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
-      // Tamaño inicial
       syncSizeWithBackend()
     }
 
@@ -365,14 +412,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
     }
 
-    // Teclas → backend
     term.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(data)
       }
     })
 
-    // Solo reaccionamos a cambios de tamaño de la ventana
     const handleResize = () => {
       syncSizeWithBackend()
     }
@@ -441,11 +486,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
 
     if (activeTerminal?.ws && activeTerminal.ws.readyState === WebSocket.OPEN) {
-      // Solo enviamos el comando sin el \n para que no se ejecute automáticamente
-      // El usuario puede editar el comando y presionar Enter cuando esté listo
       activeTerminal.ws.send(command)
 
-      // Pequeño delay antes de cerrar el modal para asegurar que el comando se envió
       setTimeout(() => {
         setSearchModalOpen(false)
       }, 100)
@@ -476,6 +518,18 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 rounded-md overflow-hidden">
+      {!isMobile && (
+        <div
+          onMouseDown={handleResizeStart}
+          className={`h-2 bg-zinc-800 hover:bg-blue-600 cursor-ns-resize flex items-center justify-center transition-colors ${
+            isResizing ? "bg-blue-600" : ""
+          }`}
+          title="Arrastra para redimensionar"
+        >
+          <GripHorizontal className="h-4 w-4 text-zinc-500" />
+        </div>
+      )}
+
       <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
         <div className="flex items-center gap-3">
           <Activity className="h-5 w-5 text-blue-500" />
@@ -557,7 +611,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         </div>
       </div>
 
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0" style={!isMobile ? { height: `${terminalHeight}px` } : undefined}>
         {isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
             <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800">
@@ -581,7 +635,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             {terminals.map((terminal) => (
               <TabsContent key={terminal.id} value={terminal.id} className="flex-1 m-0 p-0">
                 <div
-                  ref={setContainerRef(terminal.id)}
+                  ref={(el) => (containerRefs.current[terminal.id] = el)}
                   className="w-full h-full bg-black overflow-hidden"
                   style={{ height: "calc(100vh - 24rem)" }}
                 />
@@ -607,7 +661,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                     </button>
                   )}
                 </div>
-                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black pt-7 overflow-hidden" />
+                <div
+                  ref={(el) => (containerRefs.current[terminal.id] = el)}
+                  className="w-full h-full bg-black pt-7 overflow-hidden"
+                />
               </div>
             ))}
           </div>
@@ -702,7 +759,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                     </div>
                   ))}
 
-                  {/* Powered by cheat.sh */}
                   <div className="text-center py-2">
                     <p className="text-xs text-zinc-500">
                       <Lightbulb className="inline-block w-3 h-3 mr-1" />
