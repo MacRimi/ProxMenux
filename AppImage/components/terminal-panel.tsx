@@ -363,7 +363,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       rendererType: "dom",
       fontFamily: '"Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
       fontSize: 16,
-      lineHeight: 0,9,
+      lineHeight: 0.9,
       cursorBlink: true,
       scrollback: 2000,
       disableStdin: false,
