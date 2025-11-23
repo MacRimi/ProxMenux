@@ -662,7 +662,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 <div
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
                   className="w-full h-full bg-black overflow-hidden"
-                  style={{ height: "calc(100vh - 24rem)" }}
                 />
               </TabsContent>
             ))}

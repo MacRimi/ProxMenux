@@ -144,3 +144,30 @@
     stroke: var(--border);
   }
 }
+
+/* ===================== */
+/* Ajustes para xterm    */
+/* ===================== */
+
+/* Que la terminal no tenga padding raro */
+.xterm {
+  padding: 0 !important;
+}
+
+/* El viewport a ancho completo, sin margen ni padding extra */
+.xterm-viewport {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* La parte donde se pinta el texto */
+.xterm-screen {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Opcional: ocultar la barra de scroll horizontal si aparece alguna rareza */
+.xterm-viewport::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
