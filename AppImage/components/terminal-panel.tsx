@@ -607,7 +607,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                     </button>
                   )}
                 </div>
-                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black pt-7" />
+                <div ref={setContainerRef(terminal.id)} className="w-full h-full bg-black pt-7 min-h-[450px]" />
               </div>
             ))}
           </div>
