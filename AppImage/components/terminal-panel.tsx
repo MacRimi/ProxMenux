@@ -367,8 +367,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       scrollback: 2000,
       disableStdin: false,
       customGlyphs: true,
-      cols: isMobile ? 40 : layout === "grid" ? 60 : 120,
-      rows: isMobile ? 20 : layout === "grid" ? 20 : 40,
       theme: {
         background: "#000000",
         foreground: "#ffffff",
@@ -450,8 +448,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       }
     })
 
+    let resizeTimeout: any = null
+
     const handleResize = () => {
-      syncSizeWithBackend()
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(() => {
+        syncSizeWithBackend()
+      }, 150)
     }
 
     window.addEventListener("resize", handleResize)
