@@ -622,10 +622,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         </div>
       </div>
 
-      <div
-        className="flex-1 overflow-hidden flex flex-col"
-        style={!isMobile ? { height: `${terminalHeight}px`, minHeight: "200px", maxHeight: "1200px" } : undefined}
-      >
+      <div className="flex-1 overflow-hidden flex flex-col">
         {isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
             <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800">
@@ -651,7 +648,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 <div
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
                   className="w-full h-full bg-black overflow-hidden"
-                  style={{ height: "calc(100vh - 24rem)" }}
                 />
               </TabsContent>
             ))}
@@ -659,40 +655,37 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         ) : (
           <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5`}>
             {terminals.map((terminal) => (
-              <div key={terminal.id} className="relative bg-zinc-900 overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
+              <div key={terminal.id} className="bg-zinc-900 rounded overflow-hidden flex flex-col relative">
+                <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-800/50 border-b border-zinc-700">
+                  <span className="text-xs font-medium text-zinc-400">{terminal.title}</span>
                   <button
-                    onClick={() => setActiveTerminalId(terminal.id)}
-                    className={`text-xs font-medium ${
-                      activeTerminalId === terminal.id ? "text-blue-400" : "text-zinc-500"
-                    }`}
+                    onClick={() => closeTerminal(terminal.id)}
+                    className="hover:bg-zinc-700 rounded p-0.5 transition-colors"
+                    title="Close terminal"
                   >
-                    {terminal.title}
+                    <X className="h-3 w-3 text-zinc-400" />
                   </button>
-                  {terminals.length > 1 && (
-                    <button onClick={() => closeTerminal(terminal.id)} className="hover:bg-zinc-700 rounded p-0.5">
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
                 </div>
-                <div ref={(el) => (containerRefs.current[terminal.id] = el)} className="w-full h-full bg-black pt-7" />
+                <div
+                  ref={(el) => (containerRefs.current[terminal.id] = el)}
+                  className="flex-1 w-full bg-black overflow-hidden"
+                />
+                {!isMobile && layout === "single" && (
+                  <div
+                    onMouseDown={handleResizeStart}
+                    className={`absolute bottom-0 left-0 right-0 h-2 bg-zinc-700/50 hover:bg-blue-500/50 cursor-ns-resize transition-colors flex items-center justify-center ${
+                      isResizing ? "bg-blue-500/70" : ""
+                    }`}
+                    title="Arrastra para redimensionar"
+                  >
+                    <GripHorizontal className="h-3 w-3 text-zinc-400" />
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
       </div>
-
-      {!isMobile && (
-        <div
-          onMouseDown={handleResizeStart}
-          className={`h-3 bg-zinc-800 hover:bg-blue-600 cursor-ns-resize flex items-center justify-center transition-colors border-t border-zinc-700 ${
-            isResizing ? "bg-blue-600" : ""
-          }`}
-          title="Arrastra hacia arriba para agrandar, hacia abajo para reducir"
-        >
-          <GripHorizontal className="h-4 w-4 text-zinc-400" />
-        </div>
-      )}
 
       {isMobile && (
         <div className="flex flex-wrap gap-2 justify-center items-center px-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
