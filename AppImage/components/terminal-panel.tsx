@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import type { CheatSheetResult } from "@/lib/cheat-sheet-result" // Declare CheatSheetResult here
 
 type TerminalPanelProps = {
@@ -665,19 +665,19 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 </TabsTrigger>
               ))}
             </TabsList>
-            <div className="flex-1 relative">
-              {terminals.map((terminal) => (
+            {terminals.map((terminal) => (
+              <TabsContent
+                key={terminal.id}
+                value={terminal.id}
+                forceMount
+                className={`flex-1 mt-0 ${activeTerminalId === terminal.id ? "block" : "hidden"}`}
+              >
                 <div
-                  key={terminal.id}
-                  className={`absolute inset-0 ${activeTerminalId === terminal.id ? "block" : "hidden"}`}
-                >
-                  <div
-                    ref={(el) => (containerRefs.current[terminal.id] = el)}
-                    className="w-full h-full bg-black overflow-hidden"
-                  />
-                </div>
-              ))}
-            </div>
+                  ref={(el) => (containerRefs.current[terminal.id] = el)}
+                  className="w-full h-full bg-black overflow-hidden"
+                />
+              </TabsContent>
+            ))}
           </Tabs>
         ) : (
           <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5 w-full overflow-hidden`}>
