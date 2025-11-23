@@ -367,6 +367,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       cursorBlink: true,
       scrollback: 2000,
       disableStdin: false,
+      customGlyphs: true, 
       cols: isMobile ? 40 : layout === "grid" ? 60 : 120,
       rows: isMobile ? 20 : layout === "grid" ? 20 : 40,
       theme: {
