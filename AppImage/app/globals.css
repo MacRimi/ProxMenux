@@ -149,40 +149,47 @@
 /* Ajustes para xterm    */
 /* ===================== */
 
-/* Que la terminal no tenga padding raro */
+/* Terminal sin padding, ancho completo */
 .xterm {
   padding: 0 !important;
+  width: 100% !important;
 }
 
-/* El viewport a ancho completo, sin margen ni padding extra */
+/* Viewport sin padding ni margen */
 .xterm-viewport {
   padding: 0 !important;
   margin: 0 !important;
 }
 
-/* La parte donde se pinta el texto */
+/* Parte donde se pinta el texto */
 .xterm-screen {
   padding: 0 !important;
   margin: 0 !important;
 }
 
-/* Opcional: ocultar la barra de scroll horizontal si aparece alguna rareza */
+/* Quitar margen raro en filas */
+.xterm-rows {
+  margin: 0 !important;
+}
+
+/* Ocultar barra horizontal en caso de glitch */
 .xterm-viewport::-webkit-scrollbar {
   width: 0;
   height: 0;
 }
 
-/* Quitar padding para que la terminal ocupe el 100% del ancho */
-.xterm {
-  padding: 0 !important;
-}
+/* ========================= */
+/* Ajustes específicos móvil */
+/* ========================= */
+@media (max-width: 768px) {
 
-/* Por si acaso el viewport añade padding extra */
-.xterm .xterm-viewport {
-  padding: 0 !important;
-}
+  /* Ocultamos cualquier desbordamiento horizontal */
+  .xterm-viewport {
+    overflow-x: hidden !important;
+  }
 
-/* Opcional: asegurar que no haya margen raro */
-.xterm-rows {
-  margin: 0 !important;
+  .xterm-screen {
+    width: 101% !important;  
+    display: block;
+  }
 }
