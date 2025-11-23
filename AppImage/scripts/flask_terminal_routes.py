@@ -16,6 +16,7 @@ import termios
 import threading
 import time
 import requests
+import json
 
 terminal_bp = Blueprint('terminal', __name__)
 sock = Sock()
@@ -168,15 +169,34 @@ def terminal_websocket(ws):
             if data is None:
                 # Client closed connection
                 break
-            
-            # Handle terminal resize (optional)
-            if data.startswith('\x1b[8;'):
+
+            handled = False
+
+            # Try to handle JSON control messages (e.g. resize)
+            if isinstance(data, str):
+                try:
+                    msg = json.loads(data)
+                except Exception:
+                    msg = None
+
+                if isinstance(msg, dict) and msg.get('type') == 'resize':
+                    cols = int(msg.get('cols', 120))
+                    rows = int(msg.get('rows', 30))
+                    set_winsize(master_fd, rows, cols)
+                    handled = True
+
+            if handled:
+                # Control message processed, do not send to bash
+                continue
+
+            # Optional: legacy resize escape sequence support
+            if isinstance(data, str) and data.startswith('\x1b[8;'):
                 try:
                     parts = data[4:-1].split(';')
                     rows, cols = int(parts[0]), int(parts[1])
                     set_winsize(master_fd, rows, cols)
                     continue
-                except:
+                except Exception:
                     pass
             
             # Send input to bash
@@ -215,6 +235,7 @@ def terminal_websocket(ws):
         
         if session_id in active_sessions:
             del active_sessions[session_id]
+
 
 def init_terminal_routes(app):
     """Initialize terminal routes with Flask app"""

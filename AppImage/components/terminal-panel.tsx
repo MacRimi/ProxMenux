@@ -276,13 +276,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   }, [terminals, isMobile])
 
   const initializeTerminal = async (terminal: TerminalInstance, container: HTMLDivElement) => {
-    const [Terminal, FitAddon] = await Promise.all([
+    const [TerminalClass, FitAddonClass] = await Promise.all([
       import("xterm").then((mod) => mod.Terminal),
       import("xterm-addon-fit").then((mod) => mod.FitAddon),
       import("xterm/css/xterm.css"),
     ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
-    const term = new Terminal({
+    const term = new TerminalClass({
       fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
       fontSize: isMobile ? 11 : 13,
       cursorBlink: true,
@@ -314,7 +314,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       },
     })
 
-    const fitAddon = new FitAddon()
+    const fitAddon = new FitAddonClass()
     term.loadAddon(fitAddon)
 
     term.open(container)
@@ -323,9 +323,31 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     const wsUrl = websocketUrl || getWebSocketUrl()
     const ws = new WebSocket(wsUrl)
 
+    // Ajusta al contenedor y envía tamaño al backend
+    const syncSizeWithBackend = () => {
+      try {
+        fitAddon.fit()
+        if (ws.readyState === WebSocket.OPEN) {
+          const cols = term.cols
+          const rows = term.rows
+          ws.send(
+            JSON.stringify({
+              type: "resize",
+              cols,
+              rows,
+            }),
+          )
+        }
+      } catch (err) {
+        console.warn("[Terminal] resize failed:", err)
+      }
+    }
+
     ws.onopen = () => {
       setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: true, term, ws } : t)))
       term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
+      // Tamaño inicial
+      syncSizeWithBackend()
     }
 
     ws.onmessage = (event) => {
@@ -343,18 +365,16 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
     }
 
+    // Teclas → backend
     term.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(data)
       }
     })
 
+    // Solo reaccionamos a cambios de tamaño de la ventana
     const handleResize = () => {
-      try {
-        fitAddon.fit()
-      } catch {
-        // Ignore resize errors
-      }
+      syncSizeWithBackend()
     }
 
     window.addEventListener("resize", handleResize)
