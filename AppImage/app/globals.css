@@ -171,3 +171,18 @@
   width: 0;
   height: 0;
 }
+
+/* Quitar padding para que la terminal ocupe el 100% del ancho */
+.xterm {
+  padding: 0 !important;
+}
+
+/* Por si acaso el viewport añade padding extra */
+.xterm .xterm-viewport {
+  padding: 0 !important;
+}
+
+/* Opcional: asegurar que no haya margen raro */
+.xterm-rows {
+  margin: 0 !important;
+}
