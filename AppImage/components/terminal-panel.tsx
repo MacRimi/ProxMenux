@@ -151,6 +151,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const resizeStartY = useRef<number>(0)
   const resizeStartHeight = useRef<number>(0)
 
+  const isResizingRef = useRef(false)
+  const terminalHeightRef = useRef(terminalHeight)
+
+  useEffect(() => {
+    terminalHeightRef.current = terminalHeight
+  }, [terminalHeight])
+
   useEffect(() => {
     setIsMobile(window.innerWidth < 768)
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -168,48 +175,44 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     (e: React.MouseEvent) => {
       if (isMobile) return
       setIsResizing(true)
+      isResizingRef.current = true
       resizeStartY.current = e.clientY
       resizeStartHeight.current = terminalHeight
       e.preventDefault()
       e.stopPropagation()
-      // Deshabilitar selección de texto durante el resize
       document.body.style.userSelect = "none"
       document.body.style.cursor = "ns-resize"
     },
     [isMobile, terminalHeight],
   )
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!isResizing) return
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isResizingRef.current) return
 
-      e.preventDefault()
-      e.stopPropagation()
+    e.preventDefault()
+    e.stopPropagation()
 
-      const deltaY = e.clientY - resizeStartY.current
-      const newHeight = Math.max(200, Math.min(1200, resizeStartHeight.current + deltaY))
-      setTerminalHeight(newHeight)
-    },
-    [isResizing],
-  )
+    const deltaY = e.clientY - resizeStartY.current
+    const newHeight = Math.max(200, Math.min(1200, resizeStartHeight.current + deltaY))
+    setTerminalHeight(newHeight)
+  }, [])
 
   const handleResizeEnd = useCallback(() => {
-    if (!isResizing) return
+    if (!isResizingRef.current) return
     setIsResizing(false)
-    localStorage.setItem("terminalHeight", terminalHeight.toString())
-    // Restaurar selección de texto y cursor
+    isResizingRef.current = false
+    localStorage.setItem("terminalHeight", terminalHeightRef.current.toString())
     document.body.style.userSelect = ""
     document.body.style.cursor = ""
-  }, [isResizing, terminalHeight])
+  }, [])
 
   useEffect(() => {
     if (isResizing) {
-      // Agregar capture: true para mejor compatibilidad
-      document.addEventListener("mousemove", handleMouseMove, { capture: true })
-      document.addEventListener("mouseup", handleResizeEnd, { capture: true })
+      document.addEventListener("mousemove", handleMouseMove)
+      document.addEventListener("mouseup", handleResizeEnd)
       return () => {
-        document.removeEventListener("mousemove", handleMouseMove, { capture: true })
-        document.removeEventListener("mouseup", handleResizeEnd, { capture: true })
+        document.removeEventListener("mousemove", handleMouseMove)
+        document.removeEventListener("mouseup", handleResizeEnd)
       }
     }
   }, [isResizing, handleMouseMove, handleResizeEnd])
