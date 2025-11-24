@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState } from "react"
 import { API_PORT } from "@/lib/api-config"
 import {
   Activity,
@@ -138,7 +138,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const [isMobile, setIsMobile] = useState(false)
   const [terminalHeight, setTerminalHeight] = useState<number>(500) // altura por defecto en px
   const [isResizing, setIsResizing] = useState(false)
-
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [filteredCommands, setFilteredCommands] = useState<Array<{ cmd: string; desc: string }>>(proxmoxCommands)
@@ -148,10 +147,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const [useOnline, setUseOnline] = useState(true)
 
   const containerRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
-  const resizeStartY = useRef<number>(0)
-  const resizeStartHeight = useRef<number>(0)
+  const resizeStartY = useRef(0)
+  const resizeStartHeight = useRef(terminalHeight)
 
-  const isResizingRef = useRef(false)
   const terminalHeightRef = useRef(terminalHeight)
 
   useEffect(() => {
@@ -171,61 +169,54 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
-      console.log("[v0] handleResizeStart ejecutado")
-      if (isMobile) return
-      setIsResizing(true)
-      isResizingRef.current = true
-      resizeStartY.current = e.clientY
-      resizeStartHeight.current = terminalHeight
-      console.log("[v0] Resize iniciado - clientY:", e.clientY, "altura inicial:", terminalHeight)
-      e.preventDefault()
-      e.stopPropagation()
-      document.body.style.userSelect = "none"
-      document.body.style.cursor = "ns-resize"
-    },
-    [isMobile, terminalHeight],
-  )
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    console.log("[v0] handleMouseMove ejecutado - isResizingRef:", isResizingRef.current)
-    if (!isResizingRef.current) return
+  const handleResizeStart = (e: React.MouseEvent) => {
+    console.log("[v0] Resize Start - Mouse down detectado")
+    if (isMobile) {
+      console.log("[v0] Resize bloqueado en móvil")
+      return
+    }
 
     e.preventDefault()
     e.stopPropagation()
 
-    const deltaY = e.clientY - resizeStartY.current
-    console.log("[v0] deltaY:", deltaY, "clientY:", e.clientY)
-    const newHeight = Math.max(200, Math.min(1200, resizeStartHeight.current + deltaY))
-    console.log("[v0] Nueva altura calculada:", newHeight)
-    setTerminalHeight(newHeight)
-  }, [])
+    resizeStartY.current = e.clientY
+    resizeStartHeight.current = terminalHeight
+    setIsResizing(true)
 
-  const handleResizeEnd = useCallback(() => {
-    console.log("[v0] handleResizeEnd ejecutado - isResizingRef:", isResizingRef.current)
-    if (!isResizingRef.current) return
-    setIsResizing(false)
-    isResizingRef.current = false
-    localStorage.setItem("terminalHeight", terminalHeightRef.current.toString())
-    console.log("[v0] Resize terminado - altura guardada:", terminalHeightRef.current)
-    document.body.style.userSelect = ""
-    document.body.style.cursor = ""
-  }, [])
+    console.log("[v0] Resize iniciado - Y:", e.clientY, "Altura:", terminalHeight)
+  }
 
   useEffect(() => {
-    console.log("[v0] useEffect ejecutado - isResizing:", isResizing)
-    if (isResizing) {
-      console.log("[v0] Agregando event listeners")
-      document.addEventListener("mousemove", handleMouseMove)
-      document.addEventListener("mouseup", handleResizeEnd)
-      return () => {
-        console.log("[v0] Removiendo event listeners")
-        document.removeEventListener("mousemove", handleMouseMove)
-        document.removeEventListener("mouseup", handleResizeEnd)
-      }
+    if (!isResizing) return
+
+    console.log("[v0] Event listeners agregados para resize")
+
+    const handleMouseMove = (e: MouseEvent) => {
+      console.log("[v0] Mouse move detectado - Y:", e.clientY)
+      e.preventDefault()
+
+      const deltaY = e.clientY - resizeStartY.current
+      const newHeight = Math.max(200, Math.min(1200, resizeStartHeight.current + deltaY))
+
+      console.log("[v0] DeltaY:", deltaY, "Nueva altura:", newHeight)
+      setTerminalHeight(newHeight)
     }
-  }, [isResizing, handleMouseMove, handleResizeEnd])
+
+    const handleMouseUp = () => {
+      console.log("[v0] Mouse up - Finalizando resize")
+      setIsResizing(false)
+      localStorage.setItem("terminalHeight", terminalHeight.toString())
+    }
+
+    document.addEventListener("mousemove", handleMouseMove)
+    document.addEventListener("mouseup", handleMouseUp)
+
+    return () => {
+      console.log("[v0] Limpiando event listeners")
+      document.removeEventListener("mousemove", handleMouseMove)
+      document.removeEventListener("mouseup", handleMouseUp)
+    }
+  }, [isResizing, terminalHeight])
 
   useEffect(() => {
     if (terminals.length === 0) {
@@ -746,9 +737,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           className={`h-3 bg-zinc-800 hover:bg-blue-600 cursor-ns-resize flex items-center justify-center transition-colors border-t border-zinc-700 ${
             isResizing ? "bg-blue-600" : ""
           }`}
-          title="Arrastra hacia arriba para agrandar, hacia abajo para reducir"
+          style={{
+            touchAction: "none",
+            userSelect: "none",
+          }}
+          title="Arrastra para ajustar el tamaño del terminal"
         >
-          <GripHorizontal className="h-4 w-4 text-zinc-400" />
+          <GripHorizontal className="h-4 w-4 text-zinc-400 pointer-events-none" />
         </div>
       )}
 
