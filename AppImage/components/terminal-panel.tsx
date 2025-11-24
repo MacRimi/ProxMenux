@@ -407,6 +407,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     term.loadAddon(fitAddon)
 
     term.open(container)
+
+    const isMobileDevice = window.innerWidth < 768
+    if (isMobileDevice) {
+      // Establecer un ancho mínimo de 100 columnas para forzar scroll horizontal en móvil
+      container.style.minWidth = "800px"
+    }
+
     fitAddon.fit()
 
     const wsUrl = websocketUrl || getWebSocketUrl()
@@ -651,7 +658,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       </div>
 
       <div
-        className={`overflow-hidden flex flex-col ${isMobile ? "flex-1 min-h-[60vh]" : ""}`}
+        className={`overflow-hidden flex flex-col ${isMobile ? "flex-1 h-[60vh]" : "overflow-hidden"} w-full max-w-full`}
         style={!isMobile ? { height: `${terminalHeight}px`, flexShrink: 0 } : undefined}
       >
         {isMobile ? (
@@ -679,11 +686,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                 key={terminal.id}
                 value={terminal.id}
                 forceMount
-                className={`flex-1 mt-0 ${activeTerminalId === terminal.id ? "block" : "hidden"}`}
+                className={`flex-1 h-full mt-0 ${activeTerminalId === terminal.id ? "block" : "hidden"}`}
               >
                 <div
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
-                  className="w-full h-full bg-black overflow-x-auto overflow-y-hidden"
+                  className="w-full h-full flex-1 bg-black overflow-x-auto overflow-y-hidden scroll-smooth"
+                  style={{ minWidth: "800px" }}
                 />
               </TabsContent>
             ))}
