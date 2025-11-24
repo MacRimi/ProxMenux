@@ -166,7 +166,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       isMobile,
       layout,
       terminalHeight,
-      shouldShowHandle: !isMobile && terminals.length > 0,
+      shouldShowHandle: window.innerWidth >= 640 && terminals.length > 0,
     })
   }, [terminals.length, isMobile, layout, terminalHeight])
 
@@ -177,8 +177,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       terminalHeight,
     })
 
-    if (isMobile) {
-      console.log("[v0] Resize blocked - isMobile is true")
+    if (window.innerWidth < 640) {
+      console.log("[v0] Resize blocked - pantalla muy pequeña")
       return
     }
 
@@ -192,7 +192,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
     const handleMove = (moveEvent: MouseEvent) => {
       const deltaY = moveEvent.clientY - startY
-      const newHeight = Math.max(200, Math.min(1200, startHeight + deltaY))
+      const newHeight = Math.max(200, Math.min(2400, startHeight + deltaY))
       console.log("[v0] Moving", { clientY: moveEvent.clientY, deltaY, newHeight })
 
       setTerminalHeight(newHeight)
@@ -333,7 +333,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   }, [terminals, isMobile])
 
   useEffect(() => {
-    if (isMobile) return
+    if (window.innerWidth < 640) return
 
     terminals.forEach((terminal) => {
       if (terminal.term && terminal.fitAddon && terminal.isConnected) {
@@ -366,7 +366,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       import("xterm/css/xterm.css"),
     ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
-    const fontSize = window.innerWidth < 768 ? 12 : 16
+    const fontSize = window.innerWidth < 768 ? 10 : 14
 
     const term = new TerminalClass({
       rendererType: "dom",
@@ -656,7 +656,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       >
         {isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
-            <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800">
+            <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800 overflow-x-auto">
               {terminals.map((terminal) => (
                 <TabsTrigger key={terminal.id} value={terminal.id} className="relative">
                   {terminal.title}
@@ -683,7 +683,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
               >
                 <div
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
-                  className="w-full h-full bg-black overflow-hidden"
+                  className="w-full h-full bg-black overflow-x-auto overflow-y-hidden"
                 />
               </TabsContent>
             ))}
@@ -724,17 +724,17 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         )}
       </div>
 
-      {!isMobile && terminals.length > 0 && (
+      {!isMobile && terminals.length > 1 && (
         <div
           onMouseDown={handleResizeStart}
-          onClick={() => console.log("[v0] === HANDLE CLICKED ===")}
-          onMouseEnter={() => console.log("[v0] Mouse ENTERED resize handle")}
-          onMouseLeave={() => console.log("[v0] Mouse LEFT resize handle")}
-          onPointerDown={() => console.log("[v0] === POINTER DOWN on handle ===")}
-          className="flex h-3 w-full cursor-row-resize items-center justify-center bg-muted/50 hover:bg-muted transition-colors"
-          style={{ touchAction: "none", userSelect: "none" }}
+          onClick={() => console.log("[v0] Handle clicked")}
+          onPointerDown={() => console.log("[v0] Handle pointer down")}
+          onMouseEnter={() => console.log("[v0] Mouse entered handle area")}
+          onMouseLeave={() => console.log("[v0] Mouse left handle area")}
+          className="hidden sm:flex items-center justify-center h-3 bg-zinc-800/50 hover:bg-zinc-700/50 cursor-row-resize border-y border-zinc-700/50 transition-colors"
+          style={{ touchAction: "none" }}
         >
-          <GripHorizontal className="h-4 w-4 text-muted-foreground pointer-events-none" />
+          <GripHorizontal className="h-3 w-3 text-zinc-500 pointer-events-none" />
         </div>
       )}
 
