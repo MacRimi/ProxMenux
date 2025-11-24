@@ -160,9 +160,27 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
+  useEffect(() => {
+    console.log("[v0] TerminalPanel state:", {
+      terminalsCount: terminals.length,
+      isMobile,
+      layout,
+      terminalHeight,
+      shouldShowHandle: !isMobile && terminals.length > 0,
+    })
+  }, [terminals.length, isMobile, layout, terminalHeight])
+
   const handleResizeStart = (e: React.MouseEvent) => {
-    console.log("[v0] Resize Start - Mouse down", e.clientY)
-    if (isMobile) return
+    console.log("[v0] === RESIZE START CALLED ===", {
+      clientY: e.clientY,
+      isMobile,
+      terminalHeight,
+    })
+
+    if (isMobile) {
+      console.log("[v0] Resize blocked - isMobile is true")
+      return
+    }
 
     e.preventDefault()
     e.stopPropagation()
@@ -170,23 +188,24 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     const startY = e.clientY
     const startHeight = terminalHeight
 
+    console.log("[v0] Starting resize", { startY, startHeight })
+
     const handleMove = (moveEvent: MouseEvent) => {
-      console.log("[v0] Move", moveEvent.clientY)
       const deltaY = moveEvent.clientY - startY
       const newHeight = Math.max(200, Math.min(1200, startHeight + deltaY))
-      console.log("[v0] New height", newHeight)
+      console.log("[v0] Moving", { clientY: moveEvent.clientY, deltaY, newHeight })
 
-      // Actualizar altura directamente en el estado
       setTerminalHeight(newHeight)
     }
 
     const handleUp = () => {
-      console.log("[v0] Mouse up")
+      console.log("[v0] === RESIZE END ===")
       document.removeEventListener("mousemove", handleMove)
       document.removeEventListener("mouseup", handleUp)
       localStorage.setItem("terminalHeight", terminalHeight.toString())
     }
 
+    console.log("[v0] Adding event listeners")
     document.addEventListener("mousemove", handleMove)
     document.addEventListener("mouseup", handleUp)
   }
@@ -705,17 +724,17 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         )}
       </div>
 
-      {!isMobile && (
+      {!isMobile && terminals.length > 0 && (
         <div
           onMouseDown={handleResizeStart}
-          className={`h-3 bg-zinc-800 hover:bg-blue-600 cursor-ns-resize flex items-center justify-center transition-colors border-t border-zinc-700`}
-          style={{
-            touchAction: "none",
-            userSelect: "none",
-          }}
-          title="Arrastra para ajustar el tamaño del terminal"
+          onClick={() => console.log("[v0] === HANDLE CLICKED ===")}
+          onMouseEnter={() => console.log("[v0] Mouse ENTERED resize handle")}
+          onMouseLeave={() => console.log("[v0] Mouse LEFT resize handle")}
+          onPointerDown={() => console.log("[v0] === POINTER DOWN on handle ===")}
+          className="flex h-3 w-full cursor-row-resize items-center justify-center bg-muted/50 hover:bg-muted transition-colors"
+          style={{ touchAction: "none", userSelect: "none" }}
         >
-          <GripHorizontal className="h-4 w-4 text-zinc-400 pointer-events-none" />
+          <GripHorizontal className="h-4 w-4 text-muted-foreground pointer-events-none" />
         </div>
       )}
 
