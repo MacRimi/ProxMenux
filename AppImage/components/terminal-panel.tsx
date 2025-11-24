@@ -136,6 +136,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
   const [layout, setLayout] = useState<"single" | "grid">("grid")
   const [isMobile, setIsMobile] = useState(false)
+  const [isTablet, setIsTablet] = useState(false)
   const [terminalHeight, setTerminalHeight] = useState<number>(500) // altura por defecto en px
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -148,8 +149,14 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const containerRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768)
-    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    const updateDeviceType = () => {
+      const width = window.innerWidth
+      setIsMobile(width < 768)
+      setIsTablet(width >= 768 && width < 1024)
+    }
+
+    updateDeviceType()
+    const handleResize = () => updateDeviceType()
     window.addEventListener("resize", handleResize)
 
     const savedHeight = localStorage.getItem("terminalHeight")
@@ -157,57 +164,57 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       setTerminalHeight(Number.parseInt(savedHeight, 10))
     }
 
-    return () => window.removeEventListener("resize", handleResize)
+    return () => {
+      window.removeEventListener("resize", handleResize)
+    }
   }, [])
 
   useEffect(() => {
     console.log("[v0] TerminalPanel state:", {
       terminalsCount: terminals.length,
       isMobile,
+      isTablet,
       layout,
       terminalHeight,
       shouldShowHandle: window.innerWidth >= 640 && terminals.length > 0,
     })
-  }, [terminals.length, isMobile, layout, terminalHeight])
+  }, [terminals.length, isMobile, isTablet, layout, terminalHeight])
 
-  const handleResizeStart = (e: React.MouseEvent) => {
-    console.log("[v0] === RESIZE START CALLED ===", {
-      clientY: e.clientY,
-      isMobile,
-      terminalHeight,
-    })
-
-    if (window.innerWidth < 640) {
-      console.log("[v0] Resize blocked - pantalla muy pequeña")
+  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
+    // Bloquear solo en pantallas muy pequeñas (móviles)
+    if (window.innerWidth < 640 && !isTablet) {
       return
     }
 
     e.preventDefault()
     e.stopPropagation()
 
-    const startY = e.clientY
+    // Detectar si es touch o mouse
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
+    const startY = clientY
     const startHeight = terminalHeight
 
-    console.log("[v0] Starting resize", { startY, startHeight })
-
-    const handleMove = (moveEvent: MouseEvent) => {
-      const deltaY = moveEvent.clientY - startY
+    const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
+      const currentY = "touches" in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
+      const deltaY = currentY - startY
       const newHeight = Math.max(200, Math.min(2400, startHeight + deltaY))
-      console.log("[v0] Moving", { clientY: moveEvent.clientY, deltaY, newHeight })
 
       setTerminalHeight(newHeight)
     }
 
-    const handleUp = () => {
-      console.log("[v0] === RESIZE END ===")
-      document.removeEventListener("mousemove", handleMove)
-      document.removeEventListener("mouseup", handleUp)
+    const handleEnd = () => {
+      document.removeEventListener("mousemove", handleMove as any)
+      document.removeEventListener("mouseup", handleEnd)
+      document.removeEventListener("touchmove", handleMove as any)
+      document.removeEventListener("touchend", handleEnd)
+
       localStorage.setItem("terminalHeight", terminalHeight.toString())
     }
 
-    console.log("[v0] Adding event listeners")
-    document.addEventListener("mousemove", handleMove)
-    document.addEventListener("mouseup", handleUp)
+    document.addEventListener("mousemove", handleMove as any)
+    document.addEventListener("mouseup", handleEnd)
+    document.addEventListener("touchmove", handleMove as any, { passive: false })
+    document.addEventListener("touchend", handleEnd)
   }
 
   useEffect(() => {
@@ -658,8 +665,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       </div>
 
       <div
+        data-terminal-container
+        ref={(el) => {
+          containerRefs.current["main"] = el
+        }}
         className={`overflow-hidden flex flex-col ${isMobile ? "flex-1 h-[60vh]" : "overflow-hidden"} w-full max-w-full`}
-        style={!isMobile ? { height: `${terminalHeight}px`, flexShrink: 0 } : undefined}
+        style={!isMobile || isTablet ? { height: `${terminalHeight}px`, flexShrink: 0 } : undefined}
       >
         {isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
@@ -732,21 +743,18 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         )}
       </div>
 
-      {window.innerWidth >= 640 && (
+      {(window.innerWidth >= 640 || isTablet) && (
         <div
           onMouseDown={handleResizeStart}
-          onClick={() => console.log("[v0] Handle clicked")}
-          onPointerDown={() => console.log("[v0] Handle pointer down")}
-          onMouseEnter={() => console.log("[v0] Mouse entered handle area")}
-          onMouseLeave={() => console.log("[v0] Mouse left handle area")}
-          className="hidden sm:flex items-center justify-center h-3 bg-zinc-800/50 hover:bg-zinc-700/50 cursor-row-resize border-y border-zinc-700/50 transition-colors"
-          style={{ touchAction: "none" }}
+          onTouchStart={handleResizeStart}
+          className="hidden sm:flex items-center justify-center h-3 bg-zinc-800/50 hover:bg-zinc-700/50 cursor-row-resize border-y border-zinc-700/50 transition-colors active:bg-zinc-600/50"
+          style={{ touchAction: "none", userSelect: "none" }}
         >
           <GripHorizontal className="h-3 w-3 text-zinc-500 pointer-events-none" />
         </div>
       )}
 
-      {isMobile && (
+      {(isMobile || isTablet) && (
         <div className="flex flex-wrap gap-2 justify-center items-center px-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
           {lastKeyPressed && (
             <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded mr-2">
