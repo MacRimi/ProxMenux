@@ -873,7 +873,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
               <Input
-                placeholder="Search commands... (e.g., 'tar', 'docker ps', 'qm list', 'systemctl')"
+                placeholder="Search commands... (e.g., tar, docker ps, qm list, systemctl)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-base"
@@ -1003,12 +1003,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                           </div>
                         </div>
                       </div>
-                      {useOnline && (
-                        <div className="flex items-center justify-center gap-2 text-xs text-zinc-600 mt-4">
-                          <Lightbulb className="w-3 h-3" />
-                          <span>Powered by cheat.sh</span>
-                        </div>
-                      )}
                     </>
                   )}
                 </div>
@@ -1016,10 +1010,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             </div>
 
             <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center items-center gap-2">
                 <Lightbulb className="w-3 h-3" />
                 <span>
-                  Tip: Search for any Linux command (tar, grep, docker, etc.) or Proxmox commands (qm, pct, pvesh)
+                  Powered by cheat.sh
                 </span>
               </div>
               {useOnline && searchResults.length > 0 && <span className="text-zinc-600">Powered by cheat.sh</span>}
