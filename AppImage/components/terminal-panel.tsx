@@ -173,11 +173,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
+      console.log("[v0] handleResizeStart ejecutado")
       if (isMobile) return
       setIsResizing(true)
       isResizingRef.current = true
       resizeStartY.current = e.clientY
       resizeStartHeight.current = terminalHeight
+      console.log("[v0] Resize iniciado - clientY:", e.clientY, "altura inicial:", terminalHeight)
       e.preventDefault()
       e.stopPropagation()
       document.body.style.userSelect = "none"
@@ -187,30 +189,38 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   )
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
+    console.log("[v0] handleMouseMove ejecutado - isResizingRef:", isResizingRef.current)
     if (!isResizingRef.current) return
 
     e.preventDefault()
     e.stopPropagation()
 
     const deltaY = e.clientY - resizeStartY.current
+    console.log("[v0] deltaY:", deltaY, "clientY:", e.clientY)
     const newHeight = Math.max(200, Math.min(1200, resizeStartHeight.current + deltaY))
+    console.log("[v0] Nueva altura calculada:", newHeight)
     setTerminalHeight(newHeight)
   }, [])
 
   const handleResizeEnd = useCallback(() => {
+    console.log("[v0] handleResizeEnd ejecutado - isResizingRef:", isResizingRef.current)
     if (!isResizingRef.current) return
     setIsResizing(false)
     isResizingRef.current = false
     localStorage.setItem("terminalHeight", terminalHeightRef.current.toString())
+    console.log("[v0] Resize terminado - altura guardada:", terminalHeightRef.current)
     document.body.style.userSelect = ""
     document.body.style.cursor = ""
   }, [])
 
   useEffect(() => {
+    console.log("[v0] useEffect ejecutado - isResizing:", isResizing)
     if (isResizing) {
+      console.log("[v0] Agregando event listeners")
       document.addEventListener("mousemove", handleMouseMove)
       document.addEventListener("mouseup", handleResizeEnd)
       return () => {
+        console.log("[v0] Removiendo event listeners")
         document.removeEventListener("mousemove", handleMouseMove)
         document.removeEventListener("mouseup", handleResizeEnd)
       }
