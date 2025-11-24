@@ -192,7 +192,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
     const handleMove = (moveEvent: MouseEvent) => {
       const deltaY = moveEvent.clientY - startY
-      const newHeight = Math.max(200, Math.min(1200, startHeight - deltaY))
+      const newHeight = Math.max(200, Math.min(1200, startHeight + deltaY))
       console.log("[v0] Moving", { clientY: moveEvent.clientY, deltaY, newHeight })
 
       setTerminalHeight(newHeight)
