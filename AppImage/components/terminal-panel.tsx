@@ -759,8 +759,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       {(isMobile || isTablet) && (
         <div className="flex flex-wrap gap-2 justify-center items-center px-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
           <Button
-            onClick={(e) => sendSequence("\x1b", e)}
-            onTouchStart={(e) => e.preventDefault()}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              sendSequence("\x1b", e)
+            }}
             variant="outline"
             size="sm"
             className="h-8 px-3 text-xs"
@@ -768,8 +771,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             ESC
           </Button>
           <Button
-            onClick={(e) => sendSequence("\t", e)}
-            onTouchStart={(e) => e.preventDefault()}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              sendSequence("\t", e)
+            }}
             variant="outline"
             size="sm"
             className="h-8 px-3 text-xs"
@@ -777,8 +783,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             TAB
           </Button>
           <Button
-            onClick={(e) => handleKeyButton("UP", e)}
-            onTouchStart={(e) => e.preventDefault()}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleKeyButton("UP", e)
+            }}
             variant="outline"
             size="sm"
             className="h-8 px-3 text-xs"
@@ -786,8 +795,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             ↑
           </Button>
           <Button
-            onClick={(e) => handleKeyButton("DOWN", e)}
-            onTouchStart={(e) => e.preventDefault()}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleKeyButton("DOWN", e)
+            }}
             variant="outline"
             size="sm"
             className="h-8 px-3 text-xs"
@@ -795,8 +807,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             ↓
           </Button>
           <Button
-            onClick={(e) => handleKeyButton("LEFT", e)}
-            onTouchStart={(e) => e.preventDefault()}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleKeyButton("LEFT", e)
+            }}
             variant="outline"
             size="sm"
             className="h-8 px-3 text-xs"
@@ -804,8 +819,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             ←
           </Button>
           <Button
-            onClick={(e) => handleKeyButton("RIGHT", e)}
-            onTouchStart={(e) => e.preventDefault()}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleKeyButton("RIGHT", e)
+            }}
             variant="outline"
             size="sm"
             className="h-8 px-3 text-xs"
@@ -813,8 +831,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             →
           </Button>
           <Button
-            onClick={(e) => sendSequence("\x03", e)}
-            onTouchStart={(e) => e.preventDefault()}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              sendSequence("\x03", e)
+            }}
             variant="outline"
             size="sm"
             className="h-8 px-3 text-xs"
