@@ -651,8 +651,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       </div>
 
       <div
-        className="flex-1 overflow-hidden flex flex-col"
-        style={!isMobile ? { height: `${terminalHeight}px` } : undefined}
+        className={`overflow-hidden flex flex-col ${isMobile ? "flex-1" : ""}`}
+        style={!isMobile ? { height: `${terminalHeight}px`, flexShrink: 0 } : undefined}
       >
         {isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
