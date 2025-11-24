@@ -21,7 +21,6 @@ A modern, responsive dashboard for monitoring Proxmox VE systems built with Next
 - [Integration Examples](#integration-examples)
   - [Homepage Integration](#homepage-integration)
   - [Home Assistant Integration](#home-assistant-integration)
-- [Contributing](#contributing)
 - [License](#license)
 
 ---
