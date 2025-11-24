@@ -497,6 +497,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
     const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
     if (!activeTerminal || !activeTerminal.ws || activeTerminal.ws.readyState !== WebSocket.OPEN) return
+
     let seq = ""
     switch (key) {
       case "UP":
@@ -523,6 +524,15 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       default:
         break
     }
+
+    console.log(
+      "[v0] Sending key:",
+      key,
+      "sequence:",
+      JSON.stringify(seq),
+      "bytes:",
+      Array.from(seq).map((c) => c.charCodeAt(0).toString(16)),
+    )
     activeTerminal.ws.send(seq)
   }
 
