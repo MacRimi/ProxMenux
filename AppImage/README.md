@@ -730,18 +730,6 @@ entities:
 
 ![Home Assistant Integration Example](AppImage/public/images/docs/homeassistant-integration.png)
 
----
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests.
-
-### Development Setup
-
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Run development server: `npm run dev`
-4. Build AppImage: `./build_appimage.sh`
 
 ---
 
