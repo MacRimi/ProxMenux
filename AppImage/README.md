@@ -759,13 +759,7 @@ Under the following terms:
 
 For more details, see the [full license](https://creativecommons.org/licenses/by-nc/4.0/).
 
----
 
-## Support
-
-For support, feature requests, or bug reports, please visit:
-- GitHub Issues: [github.com/your-repo/issues](https://github.com/your-repo/issues)
-- Documentation: [github.com/your-repo/wiki](https://github.com/your-repo/wiki)
 
 ---
 
