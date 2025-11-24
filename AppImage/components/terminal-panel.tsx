@@ -151,8 +151,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   useEffect(() => {
     const updateDeviceType = () => {
       const width = window.innerWidth
+      const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0
+      const isTabletSize = width >= 768 && width <= 1366 // iPads Pro pueden llegar a 1366px
+
       setIsMobile(width < 768)
-      setIsTablet(width >= 768 && width < 1024)
+      setIsTablet(isTouchDevice && isTabletSize)
     }
 
     updateDeviceType()
@@ -414,12 +417,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     term.loadAddon(fitAddon)
 
     term.open(container)
-
-    const isMobileDevice = window.innerWidth < 768
-    if (isMobileDevice) {
-      // Establecer un ancho mínimo de 100 columnas para forzar scroll horizontal en móvil
-      container.style.minWidth = "800px"
-    }
 
     fitAddon.fit()
 
@@ -701,8 +698,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
               >
                 <div
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
-                  className="w-full h-full flex-1 bg-black overflow-x-auto overflow-y-hidden scroll-smooth"
-                  style={{ minWidth: "800px" }}
+                  className="w-full h-full flex-1 bg-black overflow-hidden"
                 />
               </TabsContent>
             ))}
@@ -743,14 +739,18 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         )}
       </div>
 
-      {(window.innerWidth >= 640 || isTablet) && (
+      {(isTablet || (!isMobile && !isTablet)) && terminals.length > 0 && (
         <div
           onMouseDown={handleResizeStart}
           onTouchStart={handleResizeStart}
-          className="hidden sm:flex items-center justify-center h-3 bg-zinc-800/50 hover:bg-zinc-700/50 cursor-row-resize border-y border-zinc-700/50 transition-colors active:bg-zinc-600/50"
-          style={{ touchAction: "none", userSelect: "none" }}
+          onMouseEnter={() => console.log("[v0] Mouse entered resize handle")}
+          onMouseLeave={() => console.log("[v0] Mouse left resize handle")}
+          onClick={() => console.log("[v0] Resize handle clicked")}
+          onPointerDown={() => console.log("[v0] Pointer down on resize handle")}
+          className="h-2 w-full cursor-row-resize bg-zinc-800 hover:bg-blue-600 transition-colors flex items-center justify-center group relative"
+          style={{ touchAction: "none" }}
         >
-          <GripHorizontal className="h-3 w-3 text-zinc-500 pointer-events-none" />
+          <GripHorizontal className="h-4 w-4 text-zinc-600 group-hover:text-white pointer-events-none" />
         </div>
       )}
 
