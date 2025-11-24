@@ -366,7 +366,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       import("xterm/css/xterm.css"),
     ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
-    const fontSize = window.innerWidth < 768 ? 10 : 14
+    const fontSize = window.innerWidth < 768 ? 12 : 16
 
     const term = new TerminalClass({
       rendererType: "dom",
@@ -651,7 +651,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       </div>
 
       <div
-        className={`overflow-hidden flex flex-col ${isMobile ? "flex-1" : ""}`}
+        className={`overflow-hidden flex flex-col ${isMobile ? "flex-1 min-h-[60vh]" : ""}`}
         style={!isMobile ? { height: `${terminalHeight}px`, flexShrink: 0 } : undefined}
       >
         {isMobile ? (
@@ -724,7 +724,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         )}
       </div>
 
-      {!isMobile && terminals.length > 1 && (
+      {window.innerWidth >= 640 && (
         <div
           onMouseDown={handleResizeStart}
           onClick={() => console.log("[v0] Handle clicked")}
