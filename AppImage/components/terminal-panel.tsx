@@ -141,7 +141,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [filteredCommands, setFilteredCommands] = useState<Array<{ cmd: string; desc: string }>>(proxmoxCommands)
-  const [lastKeyPressed, setLastKeyPressed] = useState<string | null>(null)
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<CheatSheetResult[]>([])
   const [useOnline, setUseOnline] = useState(true)
@@ -489,7 +488,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
   }
 
-  const handleKeyButton = (key: string) => {
+  const handleKeyButton = (key: string, e?: React.MouseEvent | React.TouchEvent) => {
+    // Prevenir comportamientos por defecto del navegador
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
     const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
     if (!activeTerminal || !activeTerminal.ws || activeTerminal.ws.readyState !== WebSocket.OPEN) return
     let seq = ""
@@ -519,10 +524,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         break
     }
     activeTerminal.ws.send(seq)
-    if (key) {
-      setLastKeyPressed(key)
-      setTimeout(() => setLastKeyPressed(null), 2000)
-    }
   }
 
   const handleClear = () => {
@@ -552,14 +553,15 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
   }
 
-  const sendSequence = (seq: string, keyName?: string) => {
+  const sendSequence = (seq: string, e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
     const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
     if (activeTerminal?.ws && activeTerminal.ws.readyState === WebSocket.OPEN) {
       activeTerminal.ws.send(seq)
-      if (keyName) {
-        setLastKeyPressed(keyName)
-        setTimeout(() => setLastKeyPressed(null), 2000)
-      }
     }
   }
 
@@ -756,30 +758,67 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
       {(isMobile || isTablet) && (
         <div className="flex flex-wrap gap-2 justify-center items-center px-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
-          {lastKeyPressed && (
-            <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded mr-2">
-              Sent: {lastKeyPressed}
-            </span>
-          )}
-          <Button onClick={() => sendSequence("\x1b")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+          <Button
+            onClick={(e) => sendSequence("\x1b", e)}
+            onTouchStart={(e) => e.preventDefault()}
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+          >
             ESC
           </Button>
-          <Button onClick={() => sendSequence("\t")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+          <Button
+            onClick={(e) => sendSequence("\t", e)}
+            onTouchStart={(e) => e.preventDefault()}
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+          >
             TAB
           </Button>
-          <Button onClick={() => handleKeyButton("UP")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+          <Button
+            onClick={(e) => handleKeyButton("UP", e)}
+            onTouchStart={(e) => e.preventDefault()}
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+          >
             ↑
           </Button>
-          <Button onClick={() => handleKeyButton("DOWN")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+          <Button
+            onClick={(e) => handleKeyButton("DOWN", e)}
+            onTouchStart={(e) => e.preventDefault()}
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+          >
             ↓
           </Button>
-          <Button onClick={() => handleKeyButton("LEFT")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+          <Button
+            onClick={(e) => handleKeyButton("LEFT", e)}
+            onTouchStart={(e) => e.preventDefault()}
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+          >
             ←
           </Button>
-          <Button onClick={() => handleKeyButton("RIGHT")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+          <Button
+            onClick={(e) => handleKeyButton("RIGHT", e)}
+            onTouchStart={(e) => e.preventDefault()}
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+          >
             →
           </Button>
-          <Button onClick={() => sendSequence("\x03")} variant="outline" size="sm" className="h-8 px-3 text-xs">
+          <Button
+            onClick={(e) => sendSequence("\x03", e)}
+            onTouchStart={(e) => e.preventDefault()}
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+          >
             CTRL+C
           </Button>
         </div>
