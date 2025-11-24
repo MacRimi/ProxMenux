@@ -149,11 +149,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const containerRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const resizeStartY = useRef(0)
   const resizeStartHeight = useRef(terminalHeight)
-
+  const currentDragHeight = useRef(terminalHeight)
   const terminalHeightRef = useRef(terminalHeight)
 
   useEffect(() => {
     terminalHeightRef.current = terminalHeight
+    currentDragHeight.current = terminalHeight
   }, [terminalHeight])
 
   useEffect(() => {
@@ -181,6 +182,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
     resizeStartY.current = e.clientY
     resizeStartHeight.current = terminalHeight
+    currentDragHeight.current = terminalHeight
     setIsResizing(true)
 
     console.log("[v0] Resize iniciado - Y:", e.clientY, "Altura:", terminalHeight)
@@ -199,13 +201,21 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       const newHeight = Math.max(200, Math.min(1200, resizeStartHeight.current + deltaY))
 
       console.log("[v0] DeltaY:", deltaY, "Nueva altura:", newHeight)
-      setTerminalHeight(newHeight)
+      currentDragHeight.current = newHeight
+
+      const containers = document.querySelectorAll("[data-terminal-container]")
+      containers.forEach((container) => {
+        if (container instanceof HTMLElement) {
+          container.style.height = `${newHeight}px`
+        }
+      })
     }
 
     const handleMouseUp = () => {
       console.log("[v0] Mouse up - Finalizando resize")
       setIsResizing(false)
-      localStorage.setItem("terminalHeight", terminalHeight.toString())
+      setTerminalHeight(currentDragHeight.current)
+      localStorage.setItem("terminalHeight", currentDragHeight.current.toString())
     }
 
     document.addEventListener("mousemove", handleMouseMove)
@@ -216,7 +226,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       document.removeEventListener("mousemove", handleMouseMove)
       document.removeEventListener("mouseup", handleMouseUp)
     }
-  }, [isResizing, terminalHeight])
+  }, [isResizing])
 
   useEffect(() => {
     if (terminals.length === 0) {
@@ -724,6 +734,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
                   onClick={() => setActiveTerminalId(terminal.id)}
                   className="flex-1 w-full max-w-full bg-black overflow-hidden cursor-pointer"
+                  data-terminal-container
                 />
               </div>
             ))}
