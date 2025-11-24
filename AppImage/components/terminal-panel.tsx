@@ -171,17 +171,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
   }, [])
 
-  useEffect(() => {
-    console.log("[v0] TerminalPanel state:", {
-      terminalsCount: terminals.length,
-      isMobile,
-      isTablet,
-      layout,
-      terminalHeight,
-      shouldShowHandle: window.innerWidth >= 640 && terminals.length > 0,
-    })
-  }, [terminals.length, isMobile, isTablet, layout, terminalHeight])
-
   const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
     // Bloquear solo en pantallas muy pequeñas (móviles)
     if (window.innerWidth < 640 && !isTablet) {
@@ -525,14 +514,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         break
     }
 
-    console.log(
-      "[v0] Sending key:",
-      key,
-      "sequence:",
-      JSON.stringify(seq),
-      "bytes:",
-      Array.from(seq).map((c) => c.charCodeAt(0).toString(16)),
-    )
     activeTerminal.ws.send(seq)
   }
 
@@ -755,10 +736,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         <div
           onMouseDown={handleResizeStart}
           onTouchStart={handleResizeStart}
-          onMouseEnter={() => console.log("[v0] Mouse entered resize handle")}
-          onMouseLeave={() => console.log("[v0] Mouse left resize handle")}
-          onClick={() => console.log("[v0] Resize handle clicked")}
-          onPointerDown={() => console.log("[v0] Pointer down on resize handle")}
           className="h-2 w-full cursor-row-resize bg-zinc-800 hover:bg-blue-600 transition-colors flex items-center justify-center group relative"
           style={{ touchAction: "none" }}
         >
@@ -1003,6 +980,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                           </div>
                         </div>
                       </div>
+                      {useOnline && (
+                        <div className="flex items-center justify-center gap-2 text-xs text-zinc-600 mt-4">
+                          <Lightbulb className="w-3 h-3" />
+                          <span>Powered by cheat.sh</span>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -1010,11 +993,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             </div>
 
             <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
-              <div className="flex items-center items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Lightbulb className="w-3 h-3" />
-                <span>
-                  Powered by cheat.sh
-                </span>
+                <span>Tip: Search for any Linux command or Proxmox commands (qm, pct, qm list)</span>
               </div>
               {useOnline && searchResults.length > 0 && <span className="text-zinc-600">Powered by cheat.sh</span>}
             </div>
