@@ -501,16 +501,16 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     let seq = ""
     switch (key) {
       case "UP":
-        seq = "\x1b[A"
+        seq = "\x1bOA"
         break
       case "DOWN":
-        seq = "\x1b[B"
+        seq = "\x1bOB"
         break
       case "RIGHT":
-        seq = "\x1b[C"
+        seq = "\x1bOC"
         break
       case "LEFT":
-        seq = "\x1b[D"
+        seq = "\x1bOD"
         break
       case "ESC":
         seq = "\x1b"
