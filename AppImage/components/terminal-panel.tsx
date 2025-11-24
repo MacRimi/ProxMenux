@@ -171,6 +171,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       resizeStartY.current = e.clientY
       resizeStartHeight.current = terminalHeight
       e.preventDefault()
+      e.stopPropagation()
+      // Deshabilitar selección de texto durante el resize
+      document.body.style.userSelect = "none"
+      document.body.style.cursor = "ns-resize"
     },
     [isMobile, terminalHeight],
   )
@@ -178,6 +182,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!isResizing) return
+
+      e.preventDefault()
+      e.stopPropagation()
 
       const deltaY = e.clientY - resizeStartY.current
       const newHeight = Math.max(200, Math.min(1200, resizeStartHeight.current + deltaY))
@@ -190,15 +197,19 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     if (!isResizing) return
     setIsResizing(false)
     localStorage.setItem("terminalHeight", terminalHeight.toString())
+    // Restaurar selección de texto y cursor
+    document.body.style.userSelect = ""
+    document.body.style.cursor = ""
   }, [isResizing, terminalHeight])
 
   useEffect(() => {
     if (isResizing) {
-      document.addEventListener("mousemove", handleMouseMove)
-      document.addEventListener("mouseup", handleResizeEnd)
+      // Agregar capture: true para mejor compatibilidad
+      document.addEventListener("mousemove", handleMouseMove, { capture: true })
+      document.addEventListener("mouseup", handleResizeEnd, { capture: true })
       return () => {
-        document.removeEventListener("mousemove", handleMouseMove)
-        document.removeEventListener("mouseup", handleResizeEnd)
+        document.removeEventListener("mousemove", handleMouseMove, { capture: true })
+        document.removeEventListener("mouseup", handleResizeEnd, { capture: true })
       }
     }
   }, [isResizing, handleMouseMove, handleResizeEnd])
@@ -359,10 +370,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       import("xterm/css/xterm.css"),
     ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
+    const fontSize = window.innerWidth < 768 ? 12 : 16
+
     const term = new TerminalClass({
       rendererType: "dom",
       fontFamily: '"Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
-      fontSize: isMobile ? 12 : 16,
+      fontSize: fontSize,
       lineHeight: 1,
       cursorBlink: true,
       scrollback: 2000,
