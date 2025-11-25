@@ -3,6 +3,7 @@
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
 import { API_PORT } from "../lib/api-config"
+import { fetchApi } from "@/lib/api-config" // Cambiando import para usar fetchApi directamente
 import {
   Activity,
   Trash2,
@@ -226,28 +227,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         setIsSearching(true)
 
         const searchEndpoint = `/api/terminal/search-command?q=${encodeURIComponent(query)}`
-        const apiUrl = getApiUrl(searchEndpoint)
-        const token = typeof window !== "undefined" ? localStorage.getItem("proxmenux-auth-token") : null
 
-        const headers: Record<string, string> = {
-          Accept: "application/json",
-        }
-
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`
-        }
-
-        const response = await fetch(apiUrl, {
+        const data = await fetchApi<{ success: boolean; examples: any[] }>(searchEndpoint, {
           method: "GET",
-          headers,
           signal: AbortSignal.timeout(10000),
         })
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        const data = await response.json()
 
         if (!data.success || !data.examples || data.examples.length === 0) {
           throw new Error("No examples found")
