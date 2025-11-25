@@ -843,7 +843,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
               <Input
-                placeholder="Search commands... (e.g., tar, docker ps, qm list, systemctl)"
+                placeholder="Search commands... (e.g., tar, docker, qm, systemctl)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-base"
@@ -961,7 +961,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
                         <div className="text-sm text-zinc-500 space-y-1">
                           <p>Try searching for:</p>
                           <div className="flex flex-wrap justify-center gap-2 mt-2">
-                            {["tar", "grep", "docker ps", "qm list", "systemctl"].map((cmd) => (
+                            {["tar", "grep", "docker", "qm", "systemctl"].map((cmd) => (
                               <code
                                 key={cmd}
                                 onClick={() => setSearchQuery(cmd)}
@@ -988,7 +988,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
               <div className="flex items-center gap-2">
                 <Lightbulb className="w-3 h-3" />
-                <span>Tip: Search for any Linux command or Proxmox commands (qm, pct, qm list)</span>
+                <span>Tip: Search for any Linux command or Proxmox commands (qm, pct, zpool)</span>
               </div>
               {useOnline && searchResults.length > 0 && <span className="text-zinc-600">Powered by cheat.sh</span>}
             </div>
