@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { X, Sparkles, Link2, Shield, Zap, HardDrive, Gauge, Wrench, Settings } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
-const APP_VERSION = "1.0.1" // Sync with AppImage/package.json
+const APP_VERSION = "1.0.2" // Sync with AppImage/package.json
 
 interface ReleaseNote {
   date: string
