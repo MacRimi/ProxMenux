@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
-import { API_PORT } from "@/lib/api-config"
+import { API_PORT } from "../lib/api-config"
 import {
   Activity,
   Trash2,
@@ -226,11 +226,19 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         setIsSearching(true)
 
         const apiUrl = getApiUrl()
+        const token = typeof window !== "undefined" ? localStorage.getItem("proxmenux-auth-token") : null
+
+        const headers: Record<string, string> = {
+          Accept: "application/json",
+        }
+
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`
+        }
+
         const response = await fetch(`${apiUrl}/api/terminal/search-command?q=${encodeURIComponent(query)}`, {
           method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
+          headers,
           signal: AbortSignal.timeout(10000),
         })
 
