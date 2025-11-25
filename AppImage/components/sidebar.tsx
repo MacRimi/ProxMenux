@@ -8,8 +8,8 @@ const menuItems = [
   { name: "Network", href: "/network", icon: Network },
   { name: "Virtual Machines", href: "/virtual-machines", icon: Server },
   { name: "Hardware", href: "/hardware", icon: Cpu },
-  { name: "Terminal", href: "/terminal", icon: Terminal },
   { name: "System Logs", href: "/logs", icon: FileText },
+  { name: "Terminal", href: "/terminal", icon: Terminal },
   { name: "Settings", href: "/settings", icon: SettingsIcon },
 ]
 
@@ -84,18 +84,6 @@ const Sidebar = ({ currentPath, setOpen }) => {
       </button>
 
       <button
-        onClick={() => handleNavigation("terminal")}
-        className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-          currentPath === "/terminal"
-            ? "bg-blue-500/10 text-blue-500"
-            : "text-muted-foreground hover:text-foreground hover:bg-accent"
-        }`}
-      >
-        <Terminal className="h-5 w-5" />
-        <span>Terminal</span>
-      </button>
-
-      <button
         onClick={() => handleNavigation("logs")}
         className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
           currentPath === "/logs"
@@ -105,6 +93,18 @@ const Sidebar = ({ currentPath, setOpen }) => {
       >
         <FileText className="h-5 w-5" />
         <span>System Logs</span>
+      </button>
+
+      <button
+        onClick={() => handleNavigation("terminal")}
+        className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+          currentPath === "/terminal"
+            ? "bg-blue-500/10 text-blue-500"
+            : "text-muted-foreground hover:text-foreground hover:bg-accent"
+        }`}
+      >
+        <Terminal className="h-5 w-5" />
+        <span>Terminal</span>
       </button>
 
       <button
