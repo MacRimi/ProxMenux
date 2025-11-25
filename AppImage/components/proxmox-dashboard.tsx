@@ -646,7 +646,7 @@ export function ProxmoxDashboard() {
         </Tabs>
 
         <footer className="mt-8 md:mt-12 pt-4 md:pt-6 border-t border-border text-center text-xs md:text-sm text-muted-foreground">
-          <p className="font-medium mb-2">ProxMenux Monitor v1.0.2</p>
+          <p className="font-medium mb-2">ProxMenux Monitor v1.0.1</p>
           <p>
             <a
               href="https://ko-fi.com/macrimi"

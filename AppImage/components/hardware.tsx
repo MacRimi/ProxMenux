@@ -4,11 +4,30 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Thermometer, CpuIcon, Zap, HardDrive, Network, FanIcon, PowerIcon, Battery, Cpu, MemoryStick, Cpu as Gpu, Loader2 } from 'lucide-react'
+import {
+  Thermometer,
+  CpuIcon,
+  Zap,
+  HardDrive,
+  Network,
+  FanIcon,
+  PowerIcon,
+  Battery,
+  Cpu,
+  MemoryStick,
+  Cpu as Gpu,
+  Loader2,
+} from "lucide-react"
 import useSWR from "swr"
 import { useState, useEffect } from "react"
-import { type HardwareData, type GPU, type PCIDevice, type StorageDevice, fetcher } from "../types/hardware"
-import { API_PORT } from "@/lib/api-config"
+import {
+  type HardwareData,
+  type GPU,
+  type PCIDevice,
+  type StorageDevice,
+  fetcher as swrFetcher,
+} from "../types/hardware"
+import { fetchApi } from "@/lib/api-config"
 
 const parseLsblkSize = (sizeStr: string | undefined): number => {
   if (!sizeStr) return 0
@@ -16,11 +35,8 @@ const parseLsblkSize = (sizeStr: string | undefined): number => {
   // Remove spaces and convert to uppercase
   const cleaned = sizeStr.trim().toUpperCase()
 
-  // Replace comma with dot to normalize decimal separator (for European locales)
-  const normalized = cleaned.replace(',', '.')
-
   // Extract number and unit
-  const match = normalized.match(/^([\d.]+)([KMGT]?)$/)
+  const match = cleaned.match(/^([\d.]+)([KMGT]?)$/)
   if (!match) return 0
 
   const value = Number.parseFloat(match[1])
@@ -159,7 +175,7 @@ export default function Hardware() {
     data: staticHardwareData,
     error: staticError,
     isLoading: staticLoading,
-  } = useSWR<HardwareData>("/api/hardware", fetcher, {
+  } = useSWR<HardwareData>("/api/hardware", swrFetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     refreshInterval: 0, // No auto-refresh for static data
@@ -170,7 +186,7 @@ export default function Hardware() {
     data: dynamicHardwareData,
     error: dynamicError,
     isLoading: dynamicLoading,
-  } = useSWR<HardwareData>("/api/hardware", fetcher, {
+  } = useSWR<HardwareData>("/api/hardware", swrFetcher, {
     refreshInterval: 7000,
   })
 
@@ -221,6 +237,21 @@ export default function Hardware() {
   const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
   const [selectedUPS, setSelectedUPS] = useState<any>(null)
 
+  const fetcher = async (url: string) => {
+    const data = await fetchApi(url)
+    return data
+  }
+
+  const {
+    data: hardwareDataSWR,
+    error: swrError,
+    isLoading: swrLoading,
+    mutate,
+  } = useSWR<HardwareData>("/api/hardware", fetcher, {
+    refreshInterval: 30000,
+    revalidateOnFocus: false,
+  })
+
   useEffect(() => {
     if (!selectedGPU) return
 
@@ -233,30 +264,10 @@ export default function Hardware() {
 
     const fetchRealtimeData = async () => {
       try {
-        const { protocol, hostname, port } = window.location
-        const isStandardPort = port === "" || port === "80" || port === "443"
-
-        const apiUrl = isStandardPort
-          ? `/api/gpu/${fullSlot}/realtime`
-          : `${protocol}//${hostname}:${API_PORT}/api/gpu/${fullSlot}/realtime`
-
-        const response = await fetch(apiUrl, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          signal: abortController.signal,
-        })
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        const data = await response.json()
+        const data = await fetchApi(`/api/gpu/${fullSlot}/realtime`)
         setRealtimeGPUData(data)
         setDetailsLoading(false)
       } catch (error) {
-        // Only log non-abort errors
         if (error instanceof Error && error.name !== "AbortError") {
           console.error("[v0] Error fetching GPU realtime data:", error)
         }
@@ -265,10 +276,7 @@ export default function Hardware() {
       }
     }
 
-    // Initial fetch
     fetchRealtimeData()
-
-    // Poll every 3 seconds
     const interval = setInterval(fetchRealtimeData, 3000)
 
     return () => {
@@ -284,14 +292,14 @@ export default function Hardware() {
   }
 
   const findPCIDeviceForGPU = (gpu: GPU): PCIDevice | null => {
-    if (!hardwareData?.pci_devices || !gpu.slot) return null
+    if (!hardwareDataSWR?.pci_devices || !gpu.slot) return null
 
     // Try to find exact match first (e.g., "00:02.0")
-    let pciDevice = hardwareData.pci_devices.find((d) => d.slot === gpu.slot)
+    let pciDevice = hardwareDataSWR.pci_devices.find((d) => d.slot === gpu.slot)
 
     // If not found, try to match by partial slot (e.g., "00" matches "00:02.0")
     if (!pciDevice && gpu.slot.length <= 2) {
-      pciDevice = hardwareData.pci_devices.find(
+      pciDevice = hardwareDataSWR.pci_devices.find(
         (d) =>
           d.slot.startsWith(gpu.slot + ":") &&
           (d.type.toLowerCase().includes("vga") ||
@@ -310,7 +318,7 @@ export default function Hardware() {
     return realtimeGPUData.has_monitoring_tool === true
   }
 
-  if (isLoading) {
+  if (swrLoading) {
     return (
       <div className="space-y-6">
         <div className="text-center py-8">
@@ -323,7 +331,7 @@ export default function Hardware() {
   return (
     <div className="space-y-6">
       {/* System Information - CPU & Motherboard */}
-      {(hardwareData?.cpu || hardwareData?.motherboard) && (
+      {(hardwareDataSWR?.cpu || hardwareDataSWR?.motherboard) && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Cpu className="h-5 w-5 text-primary" />
@@ -332,44 +340,44 @@ export default function Hardware() {
 
           <div className="grid gap-6 md:grid-cols-2">
             {/* CPU Info */}
-            {hardwareData?.cpu && Object.keys(hardwareData.cpu).length > 0 && (
+            {hardwareDataSWR?.cpu && Object.keys(hardwareDataSWR.cpu).length > 0 && (
               <div>
                 <div className="mb-2 flex items-center gap-2">
                   <CpuIcon className="h-4 w-4 text-muted-foreground" />
                   <h3 className="text-sm font-semibold">CPU</h3>
                 </div>
                 <div className="space-y-2">
-                  {hardwareData.cpu.model && (
+                  {hardwareDataSWR.cpu.model && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Model</span>
-                      <span className="font-medium text-right">{hardwareData.cpu.model}</span>
+                      <span className="font-medium text-right">{hardwareDataSWR.cpu.model}</span>
                     </div>
                   )}
-                  {hardwareData.cpu.cores_per_socket && hardwareData.cpu.sockets && (
+                  {hardwareDataSWR.cpu.cores_per_socket && hardwareDataSWR.cpu.sockets && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Cores</span>
                       <span className="font-medium">
-                        {hardwareData.cpu.sockets} × {hardwareData.cpu.cores_per_socket} ={" "}
-                        {hardwareData.cpu.sockets * hardwareData.cpu.cores_per_socket} cores
+                        {hardwareDataSWR.cpu.sockets} × {hardwareDataSWR.cpu.cores_per_socket} ={" "}
+                        {hardwareDataSWR.cpu.sockets * hardwareDataSWR.cpu.cores_per_socket} cores
                       </span>
                     </div>
                   )}
-                  {hardwareData.cpu.total_threads && (
+                  {hardwareDataSWR.cpu.total_threads && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Threads</span>
-                      <span className="font-medium">{hardwareData.cpu.total_threads}</span>
+                      <span className="font-medium">{hardwareDataSWR.cpu.total_threads}</span>
                     </div>
                   )}
-                  {hardwareData.cpu.l3_cache && (
+                  {hardwareDataSWR.cpu.l3_cache && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">L3 Cache</span>
-                      <span className="font-medium">{hardwareData.cpu.l3_cache}</span>
+                      <span className="font-medium">{hardwareDataSWR.cpu.l3_cache}</span>
                     </div>
                   )}
-                  {hardwareData.cpu.virtualization && (
+                  {hardwareDataSWR.cpu.virtualization && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Virtualization</span>
-                      <span className="font-medium">{hardwareData.cpu.virtualization}</span>
+                      <span className="font-medium">{hardwareDataSWR.cpu.virtualization}</span>
                     </div>
                   )}
                 </div>
@@ -377,41 +385,41 @@ export default function Hardware() {
             )}
 
             {/* Motherboard Info */}
-            {hardwareData?.motherboard && Object.keys(hardwareData.motherboard).length > 0 && (
+            {hardwareDataSWR?.motherboard && Object.keys(hardwareDataSWR.motherboard).length > 0 && (
               <div>
                 <div className="mb-2 flex items-center gap-2">
                   <Cpu className="h-4 w-4 text-muted-foreground" />
                   <h3 className="text-sm font-semibold">Motherboard</h3>
                 </div>
                 <div className="space-y-2">
-                  {hardwareData.motherboard.manufacturer && (
+                  {hardwareDataSWR.motherboard.manufacturer && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Manufacturer</span>
-                      <span className="font-medium text-right">{hardwareData.motherboard.manufacturer}</span>
+                      <span className="font-medium text-right">{hardwareDataSWR.motherboard.manufacturer}</span>
                     </div>
                   )}
-                  {hardwareData.motherboard.model && (
+                  {hardwareDataSWR.motherboard.model && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Model</span>
-                      <span className="font-medium text-right">{hardwareData.motherboard.model}</span>
+                      <span className="font-medium text-right">{hardwareDataSWR.motherboard.model}</span>
                     </div>
                   )}
-                  {hardwareData.motherboard.bios?.vendor && (
+                  {hardwareDataSWR.motherboard.bios?.vendor && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">BIOS</span>
-                      <span className="font-medium text-right">{hardwareData.motherboard.bios.vendor}</span>
+                      <span className="font-medium text-right">{hardwareDataSWR.motherboard.bios.vendor}</span>
                     </div>
                   )}
-                  {hardwareData.motherboard.bios?.version && (
+                  {hardwareDataSWR.motherboard.bios?.version && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Version</span>
-                      <span className="font-medium">{hardwareData.motherboard.bios.version}</span>
+                      <span className="font-medium">{hardwareDataSWR.motherboard.bios.version}</span>
                     </div>
                   )}
-                  {hardwareData.motherboard.bios?.date && (
+                  {hardwareDataSWR.motherboard.bios?.date && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Date</span>
-                      <span className="font-medium">{hardwareData.motherboard.bios.date}</span>
+                      <span className="font-medium">{hardwareDataSWR.motherboard.bios.date}</span>
                     </div>
                   )}
                 </div>
@@ -422,18 +430,18 @@ export default function Hardware() {
       )}
 
       {/* Memory Modules */}
-      {hardwareData?.memory_modules && hardwareData.memory_modules.length > 0 && (
+      {hardwareDataSWR?.memory_modules && hardwareDataSWR.memory_modules.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <MemoryStick className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Memory Modules</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.memory_modules.length} installed
+              {hardwareDataSWR.memory_modules.length} installed
             </Badge>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {hardwareData.memory_modules.map((module, index) => (
+            {hardwareDataSWR.memory_modules.map((module, index) => (
               <div key={index} className="rounded-lg border border-border/30 bg-background/60 p-4">
                 <div className="mb-2 font-medium text-sm">{module.slot}</div>
                 <div className="space-y-1">
@@ -469,29 +477,29 @@ export default function Hardware() {
       )}
 
       {/* Thermal Monitoring */}
-      {hardwareData?.temperatures && hardwareData.temperatures.length > 0 && (
+      {hardwareDataSWR?.temperatures && hardwareDataSWR.temperatures.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Thermometer className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Thermal Monitoring</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.temperatures.length} sensors
+              {hardwareDataSWR.temperatures.length} sensors
             </Badge>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             {/* CPU Sensors */}
-            {groupAndSortTemperatures(hardwareData.temperatures).CPU.length > 0 && (
+            {groupAndSortTemperatures(hardwareDataSWR.temperatures).CPU.length > 0 && (
               <div className="md:col-span-2">
                 <div className="mb-3 flex items-center gap-2">
                   <CpuIcon className="h-4 w-4 text-muted-foreground" />
                   <h3 className="text-sm font-semibold">CPU</h3>
                   <Badge variant="outline" className="text-xs">
-                    {groupAndSortTemperatures(hardwareData.temperatures).CPU.length}
+                    {groupAndSortTemperatures(hardwareDataSWR.temperatures).CPU.length}
                   </Badge>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
-                  {groupAndSortTemperatures(hardwareData.temperatures).CPU.map((temp, index) => {
+                  {groupAndSortTemperatures(hardwareDataSWR.temperatures).CPU.map((temp, index) => {
                     const percentage =
                       temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
                     const isHot = temp.current > (temp.high || 80)
@@ -522,21 +530,21 @@ export default function Hardware() {
             )}
 
             {/* GPU Sensors */}
-            {groupAndSortTemperatures(hardwareData.temperatures).GPU.length > 0 && (
+            {groupAndSortTemperatures(hardwareDataSWR.temperatures).GPU.length > 0 && (
               <div
-                className={groupAndSortTemperatures(hardwareData.temperatures).GPU.length > 1 ? "md:col-span-2" : ""}
+                className={groupAndSortTemperatures(hardwareDataSWR.temperatures).GPU.length > 1 ? "md:col-span-2" : ""}
               >
                 <div className="mb-3 flex items-center gap-2">
                   <Gpu className="h-4 w-4 text-muted-foreground" />
                   <h3 className="text-sm font-semibold">GPU</h3>
                   <Badge variant="outline" className="text-xs">
-                    {groupAndSortTemperatures(hardwareData.temperatures).GPU.length}
+                    {groupAndSortTemperatures(hardwareDataSWR.temperatures).GPU.length}
                   </Badge>
                 </div>
                 <div
-                  className={`grid gap-4 ${groupAndSortTemperatures(hardwareData.temperatures).GPU.length > 1 ? "md:grid-cols-2" : ""}`}
+                  className={`grid gap-4 ${groupAndSortTemperatures(hardwareDataSWR.temperatures).GPU.length > 1 ? "md:grid-cols-2" : ""}`}
                 >
-                  {groupAndSortTemperatures(hardwareData.temperatures).GPU.map((temp, index) => {
+                  {groupAndSortTemperatures(hardwareDataSWR.temperatures).GPU.map((temp, index) => {
                     const percentage =
                       temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
                     const isHot = temp.current > (temp.high || 80)
@@ -567,21 +575,23 @@ export default function Hardware() {
             )}
 
             {/* NVME Sensors */}
-            {groupAndSortTemperatures(hardwareData.temperatures).NVME.length > 0 && (
+            {groupAndSortTemperatures(hardwareDataSWR.temperatures).NVME.length > 0 && (
               <div
-                className={groupAndSortTemperatures(hardwareData.temperatures).NVME.length > 1 ? "md:col-span-2" : ""}
+                className={
+                  groupAndSortTemperatures(hardwareDataSWR.temperatures).NVME.length > 1 ? "md:col-span-2" : ""
+                }
               >
                 <div className="mb-3 flex items-center gap-2">
                   <HardDrive className="h-4 w-4 text-muted-foreground" />
                   <h3 className="text-sm font-semibold">NVME</h3>
                   <Badge variant="outline" className="text-xs">
-                    {groupAndSortTemperatures(hardwareData.temperatures).NVME.length}
+                    {groupAndSortTemperatures(hardwareDataSWR.temperatures).NVME.length}
                   </Badge>
                 </div>
                 <div
-                  className={`grid gap-4 ${groupAndSortTemperatures(hardwareData.temperatures).NVME.length > 1 ? "md:grid-cols-2" : ""}`}
+                  className={`grid gap-4 ${groupAndSortTemperatures(hardwareDataSWR.temperatures).NVME.length > 1 ? "md:grid-cols-2" : ""}`}
                 >
-                  {groupAndSortTemperatures(hardwareData.temperatures).NVME.map((temp, index) => {
+                  {groupAndSortTemperatures(hardwareDataSWR.temperatures).NVME.map((temp, index) => {
                     const percentage =
                       temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
                     const isHot = temp.current > (temp.high || 80)
@@ -612,21 +622,21 @@ export default function Hardware() {
             )}
 
             {/* PCI Sensors */}
-            {groupAndSortTemperatures(hardwareData.temperatures).PCI.length > 0 && (
+            {groupAndSortTemperatures(hardwareDataSWR.temperatures).PCI.length > 0 && (
               <div
-                className={groupAndSortTemperatures(hardwareData.temperatures).PCI.length > 1 ? "md:col-span-2" : ""}
+                className={groupAndSortTemperatures(hardwareDataSWR.temperatures).PCI.length > 1 ? "md:col-span-2" : ""}
               >
                 <div className="mb-3 flex items-center gap-2">
                   <CpuIcon className="h-4 w-4 text-muted-foreground" />
                   <h3 className="text-sm font-semibold">PCI</h3>
                   <Badge variant="outline" className="text-xs">
-                    {groupAndSortTemperatures(hardwareData.temperatures).PCI.length}
+                    {groupAndSortTemperatures(hardwareDataSWR.temperatures).PCI.length}
                   </Badge>
                 </div>
                 <div
-                  className={`grid gap-4 ${groupAndSortTemperatures(hardwareData.temperatures).PCI.length > 1 ? "md:grid-cols-2" : ""}`}
+                  className={`grid gap-4 ${groupAndSortTemperatures(hardwareDataSWR.temperatures).PCI.length > 1 ? "md:grid-cols-2" : ""}`}
                 >
-                  {groupAndSortTemperatures(hardwareData.temperatures).PCI.map((temp, index) => {
+                  {groupAndSortTemperatures(hardwareDataSWR.temperatures).PCI.map((temp, index) => {
                     const percentage =
                       temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
                     const isHot = temp.current > (temp.high || 80)
@@ -657,21 +667,23 @@ export default function Hardware() {
             )}
 
             {/* OTHER Sensors */}
-            {groupAndSortTemperatures(hardwareData.temperatures).OTHER.length > 0 && (
+            {groupAndSortTemperatures(hardwareDataSWR.temperatures).OTHER.length > 0 && (
               <div
-                className={groupAndSortTemperatures(hardwareData.temperatures).OTHER.length > 1 ? "md:col-span-2" : ""}
+                className={
+                  groupAndSortTemperatures(hardwareDataSWR.temperatures).OTHER.length > 1 ? "md:col-span-2" : ""
+                }
               >
                 <div className="mb-3 flex items-center gap-2">
                   <Thermometer className="h-4 w-4 text-muted-foreground" />
                   <h3 className="text-sm font-semibold">OTHER</h3>
                   <Badge variant="outline" className="text-xs">
-                    {groupAndSortTemperatures(hardwareData.temperatures).OTHER.length}
+                    {groupAndSortTemperatures(hardwareDataSWR.temperatures).OTHER.length}
                   </Badge>
                 </div>
                 <div
-                  className={`grid gap-4 ${groupAndSortTemperatures(hardwareData.temperatures).OTHER.length > 1 ? "md:grid-cols-2" : ""}`}
+                  className={`grid gap-4 ${groupAndSortTemperatures(hardwareDataSWR.temperatures).OTHER.length > 1 ? "md:grid-cols-2" : ""}`}
                 >
-                  {groupAndSortTemperatures(hardwareData.temperatures).OTHER.map((temp, index) => {
+                  {groupAndSortTemperatures(hardwareDataSWR.temperatures).OTHER.map((temp, index) => {
                     const percentage =
                       temp.critical > 0 ? (temp.current / temp.critical) * 100 : (temp.current / 100) * 100
                     const isHot = temp.current > (temp.high || 80)
@@ -705,18 +717,18 @@ export default function Hardware() {
       )}
 
       {/* GPU Information - Enhanced with on-demand data fetching */}
-      {hardwareData?.gpus && hardwareData.gpus.length > 0 && (
+      {hardwareDataSWR?.gpus && hardwareDataSWR.gpus.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Gpu className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Graphics Cards</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.gpus.length} GPU{hardwareData.gpus.length > 1 ? "s" : ""}
+              {hardwareDataSWR.gpus.length} GPU{hardwareDataSWR.gpus.length > 1 ? "s" : ""}
             </Badge>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            {hardwareData.gpus.map((gpu, index) => {
+            {hardwareDataSWR.gpus.map((gpu, index) => {
               const pciDevice = findPCIDeviceForGPU(gpu)
               const fullSlot = pciDevice?.slot || gpu.slot
 
@@ -1094,18 +1106,18 @@ export default function Hardware() {
       </Dialog>
 
       {/* PCI Devices - Changed to modal */}
-      {hardwareData?.pci_devices && hardwareData.pci_devices.length > 0 && (
+      {hardwareDataSWR?.pci_devices && hardwareDataSWR.pci_devices.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <CpuIcon className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">PCI Devices</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.pci_devices.length} devices
+              {hardwareDataSWR.pci_devices.length} devices
             </Badge>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {hardwareData.pci_devices.map((device, index) => (
+            {hardwareDataSWR.pci_devices.map((device, index) => (
               <div
                 key={index}
                 onClick={() => setSelectedPCIDevice(device)}
@@ -1180,7 +1192,7 @@ export default function Hardware() {
       </Dialog>
 
       {/* Power Consumption */}
-      {hardwareData?.power_meter && (
+      {hardwareDataSWR?.power_meter && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Zap className="h-5 w-5 text-blue-500" />
@@ -1190,13 +1202,13 @@ export default function Hardware() {
           <div className="space-y-4">
             <div className="flex items-center justify-between rounded-lg border border-border/30 bg-background/60 p-4">
               <div className="space-y-1">
-                <p className="text-sm font-medium">{hardwareData.power_meter.name}</p>
-                {hardwareData.power_meter.adapter && (
-                  <p className="text-xs text-muted-foreground">{hardwareData.power_meter.adapter}</p>
+                <p className="text-sm font-medium">{hardwareDataSWR.power_meter.name}</p>
+                {hardwareDataSWR.power_meter.adapter && (
+                  <p className="text-xs text-muted-foreground">{hardwareDataSWR.power_meter.adapter}</p>
                 )}
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-blue-500">{hardwareData.power_meter.watts.toFixed(1)} W</p>
+                <p className="text-2xl font-bold text-blue-500">{hardwareDataSWR.power_meter.watts.toFixed(1)} W</p>
                 <p className="text-xs text-muted-foreground">Current Draw</p>
               </div>
             </div>
@@ -1205,18 +1217,18 @@ export default function Hardware() {
       )}
 
       {/* Power Supplies */}
-      {hardwareData?.power_supplies && hardwareData.power_supplies.length > 0 && (
+      {hardwareDataSWR?.power_supplies && hardwareDataSWR.power_supplies.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <PowerIcon className="h-5 w-5 text-green-500" />
             <h2 className="text-lg font-semibold">Power Supplies</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.power_supplies.length} PSUs
+              {hardwareDataSWR.power_supplies.length} PSUs
             </Badge>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            {hardwareData.power_supplies.map((psu, index) => (
+            {hardwareDataSWR.power_supplies.map((psu, index) => (
               <div key={index} className="rounded-lg border border-border/30 bg-background/60 p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{psu.name}</span>
@@ -1233,18 +1245,18 @@ export default function Hardware() {
       )}
 
       {/* Fans */}
-      {hardwareData?.fans && hardwareData.fans.length > 0 && (
+      {hardwareDataSWR?.fans && hardwareDataSWR.fans.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <FanIcon className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">System Fans</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.fans.length} fans
+              {hardwareDataSWR.fans.length} fans
             </Badge>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            {hardwareData.fans.map((fan, index) => {
+            {hardwareDataSWR.fans.map((fan, index) => {
               const isPercentage = fan.unit === "percent" || fan.unit === "%"
               const percentage = isPercentage ? fan.speed : Math.min((fan.speed / 5000) * 100, 100)
 
@@ -1268,18 +1280,18 @@ export default function Hardware() {
       )}
 
       {/* UPS */}
-      {hardwareData?.ups && Array.isArray(hardwareData.ups) && hardwareData.ups.length > 0 && (
+      {hardwareDataSWR?.ups && Array.isArray(hardwareDataSWR.ups) && hardwareDataSWR.ups.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <Battery className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">UPS Status</h2>
             <Badge variant="outline" className="ml-auto">
-              {hardwareData.ups.length} UPS
+              {hardwareDataSWR.ups.length} UPS
             </Badge>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            {hardwareData.ups.map((ups: any, index: number) => {
+            {hardwareDataSWR.ups.map((ups: any, index: number) => {
               const batteryCharge =
                 ups.battery_charge_raw || Number.parseFloat(ups.battery_charge?.replace("%", "") || "0")
               const loadPercent = ups.load_percent_raw || Number.parseFloat(ups.load_percent?.replace("%", "") || "0")
@@ -1550,19 +1562,19 @@ export default function Hardware() {
       </Dialog>
 
       {/* Network Summary - Clickable */}
-      {hardwareData?.pci_devices &&
-        hardwareData.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length > 0 && (
+      {hardwareDataSWR?.pci_devices &&
+        hardwareDataSWR.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length > 0 && (
           <Card className="border-border/50 bg-card/50 p-6">
             <div className="mb-4 flex items-center gap-2">
               <Network className="h-5 w-5 text-primary" />
               <h2 className="text-lg font-semibold">Network Summary</h2>
               <Badge variant="outline" className="ml-auto">
-                {hardwareData.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length} interfaces
+                {hardwareDataSWR.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length} interfaces
               </Badge>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {hardwareData.pci_devices
+              {hardwareDataSWR.pci_devices
                 .filter((d) => d.type.toLowerCase().includes("network"))
                 .map((device, index) => (
                   <div
@@ -1642,14 +1654,14 @@ export default function Hardware() {
       </Dialog>
 
       {/* Storage Summary - Clickable */}
-      {hardwareData?.storage_devices && hardwareData.storage_devices.length > 0 && (
+      {hardwareDataSWR?.storage_devices && hardwareDataSWR.storage_devices.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
             <HardDrive className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Storage Summary</h2>
             <Badge variant="outline" className="ml-auto">
               {
-                hardwareData.storage_devices.filter(
+                hardwareDataSWR.storage_devices.filter(
                   (device) =>
                     device.type === "disk" && !device.name.startsWith("zd") && !device.name.startsWith("loop"),
                 ).length
@@ -1659,7 +1671,7 @@ export default function Hardware() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {hardwareData.storage_devices
+            {hardwareDataSWR.storage_devices
               .filter(
                 (device) => device.type === "disk" && !device.name.startsWith("zd") && !device.name.startsWith("loop"),
               )
@@ -1768,7 +1780,7 @@ export default function Hardware() {
                       <span className="text-sm font-medium truncate flex-1">{device.name}</span>
                       <Badge className={`${diskBadge.className} px-2.5 py-0.5 shrink-0`}>{diskBadge.label}</Badge>
                     </div>
-                    {device.size && <p className="text-sm font-medium">{device.size}</p>}
+                    {device.size && <p className="text-sm font-medium">{formatMemory(parseLsblkSize(device.size))}</p>}
                     {device.model && (
                       <p className="text-xs text-muted-foreground line-clamp-2 break-words">{device.model}</p>
                     )}
@@ -1845,7 +1857,7 @@ export default function Hardware() {
               {selectedDisk.size && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-sm font-medium text-muted-foreground">Capacity</span>
-                  <span className="text-sm font-medium">{selectedDisk.size}</span>
+                  <span className="text-sm font-medium">{formatMemory(parseLsblkSize(selectedDisk.size))}</span>
                 </div>
               )}
 

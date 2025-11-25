@@ -5553,7 +5553,7 @@ def api_health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'version': '1.0.2'
+        'version': '1.0.1'
     })
 
 @app.route('/api/prometheus', methods=['GET'])
@@ -5819,7 +5819,7 @@ def api_info():
     """Root endpoint with API information"""
     return jsonify({
         'name': 'ProxMenux Monitor API',
-        'version': '1.0.2',
+        'version': '1.0.1',
         'endpoints': [
             '/api/system',
             '/api/system-info',
