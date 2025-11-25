@@ -448,16 +448,16 @@ export function ProxmoxDashboard() {
                 Hardware
               </TabsTrigger>
               <TabsTrigger
-                value="terminal"
-                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
-              >
-                Terminal
-              </TabsTrigger>
-              <TabsTrigger
                 value="logs"
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
               >
                 System Logs
+              </TabsTrigger>
+              <TabsTrigger
+                value="terminal"
+                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+              >
+                Terminal
               </TabsTrigger>
               <TabsTrigger
                 value="settings"
@@ -561,21 +561,6 @@ export function ProxmoxDashboard() {
                   <Button
                     variant="ghost"
                     onClick={() => {
-                      setActiveTab("terminal")
-                      setMobileMenuOpen(false)
-                    }}
-                    className={`w-full justify-start gap-3 ${
-                      activeTab === "terminal"
-                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
-                        : ""
-                    }`}
-                  >
-                    <Terminal className="h-5 w-5" />
-                    <span>Terminal</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
                       setActiveTab("logs")
                       setMobileMenuOpen(false)
                     }}
@@ -587,6 +572,21 @@ export function ProxmoxDashboard() {
                   >
                     <FileText className="h-5 w-5" />
                     <span>System Logs</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setActiveTab("terminal")
+                      setMobileMenuOpen(false)
+                    }}
+                    className={`w-full justify-start gap-3 ${
+                      activeTab === "terminal"
+                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                        : ""
+                    }`}
+                  >
+                    <Terminal className="h-5 w-5" />
+                    <span>Terminal</span>
                   </Button>
                   <Button
                     variant="ghost"
@@ -632,12 +632,12 @@ export function ProxmoxDashboard() {
             <Hardware key={`hardware-${componentKey}`} />
           </TabsContent>
 
-          <TabsContent value="terminal" className="mt-0">
-            <TerminalPanel key={`terminal-${componentKey}`} />
-          </TabsContent>
-
           <TabsContent value="logs" className="space-y-4 md:space-y-6 mt-0">
             <SystemLogs key={`logs-${componentKey}`} />
+          </TabsContent>
+
+          <TabsContent value="terminal" className="mt-0">
+            <TerminalPanel key={`terminal-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4 md:space-y-6 mt-0">
