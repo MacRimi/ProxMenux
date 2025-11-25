@@ -53,14 +53,14 @@ function getWebSocketUrl(): string {
   }
 }
 
-function getApiUrl(): string {
+function getApiUrl(endpoint?: string): string {
   if (typeof window === "undefined") {
     return "http://localhost:8008"
   }
 
   const { protocol, hostname } = window.location
   const apiProtocol = protocol === "https:" ? "https:" : "http:"
-  return `${apiProtocol}//${hostname}:${API_PORT}`
+  return `${apiProtocol}//${hostname}:${API_PORT}${endpoint || ""}`
 }
 
 const proxmoxCommands = [
@@ -225,7 +225,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       try {
         setIsSearching(true)
 
-        const apiUrl = getApiUrl()
+        const searchEndpoint = `/api/terminal/search-command?q=${encodeURIComponent(query)}`
+        const apiUrl = getApiUrl(searchEndpoint)
         const token = typeof window !== "undefined" ? localStorage.getItem("proxmenux-auth-token") : null
 
         const headers: Record<string, string> = {
@@ -236,7 +237,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
           headers["Authorization"] = `Bearer ${token}`
         }
 
-        const response = await fetch(`${apiUrl}/api/terminal/search-command?q=${encodeURIComponent(query)}`, {
+        const response = await fetch(apiUrl, {
           method: "GET",
           headers,
           signal: AbortSignal.timeout(10000),
