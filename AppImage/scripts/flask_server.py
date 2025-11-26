@@ -2624,34 +2624,42 @@ def identify_fan(sensor_name, adapter):
     sensor_lower = sensor_name.lower()
     adapter_lower = adapter.lower() if adapter else ""
     
-    # GPU fans - Use hardware_monitor to get real GPU names
+    # GPU fans - Detect by driver name in adapter
     if "pci adapter" in adapter_lower or any(gpu_driver in adapter_lower for gpu_driver in ["nouveau", "amdgpu", "radeon", "i915"]):
-        # Extract PCI address from adapter string
-        # Example: "nouveau-pci-0200" -> "02:00.0"
-        pci_match = re.search(r'pci-([0-9a-f]{4})', adapter_lower)
+        gpu_vendor = None
         
-        if pci_match:
-            pci_code = pci_match.group(1)
-            pci_address = f"{pci_code[0:2]}:{pci_code[2:4]}.0"
-            
-            # Get GPU mapping from hardware_monitor
-            try:
-                gpu_map = hardware_monitor.get_pci_gpu_map()
-                if pci_address in gpu_map:
-                    gpu_info = gpu_map[pci_address]
-                    return f"GPU {gpu_info['vendor']} {gpu_info['name']}"
-            except Exception:
-                pass
-        
-        # Fallback: generic GPU label
+        # Determine GPU vendor from driver
         if "nouveau" in adapter_lower:
-            return "GPU NVIDIA"
+            gpu_vendor = "NVIDIA"
         elif "amdgpu" in adapter_lower or "radeon" in adapter_lower:
-            return "GPU AMD"
+            gpu_vendor = "AMD"
         elif "i915" in adapter_lower:
-            return "GPU Intel"
-        else:
-            return "GPU"
+            gpu_vendor = "Intel"
+        
+        # Try to get detailed GPU name from lspci if possible
+        if gpu_vendor:
+            # Extract PCI address from adapter string
+            # Example: "nouveau-pci-0200" -> "02:00.0"
+            pci_match = re.search(r'pci-([0-9a-f]{4})', adapter_lower)
+            
+            if pci_match:
+                pci_code = pci_match.group(1)
+                pci_address = f"{pci_code[0:2]}:{pci_code[2:4]}.0"
+                
+                # Try to get detailed GPU name from hardware_monitor
+                try:
+                    gpu_map = hardware_monitor.get_pci_gpu_map()
+                    if pci_address in gpu_map:
+                        gpu_info = gpu_map[pci_address]
+                        return f"GPU {gpu_info['vendor']} {gpu_info['name']}"
+                except Exception:
+                    pass
+            
+            # Fallback: return vendor name only
+            return f"GPU {gpu_vendor}"
+        
+        # Ultimate fallback if vendor detection fails
+        return "GPU"
     
     # CPU/System fans - keep original name
     if any(cpu_fan in sensor_lower for cpu_fan in ["cpu_fan", "cpufan", "sys_fan", "sysfan"]):
@@ -2662,7 +2670,7 @@ def identify_fan(sensor_name, adapter):
         return sensor_name
     
     # Default: return original name
-    return sensor_name    
+    return sensor_name   
 
 
 def get_temperature_info():
