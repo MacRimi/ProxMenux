@@ -3,7 +3,10 @@ import json
 import subprocess
 import re
 import os
+import time
 from typing import Dict, List, Any, Optional
+
+_last_energy_reading = {'energy_uj': None, 'timestamp': None}
 
 def run_command(cmd: List[str]) -> str:
     """Run a command and return its output."""
@@ -328,19 +331,32 @@ def get_pci_devices() -> List[Dict[str, Any]]:
 
 def get_power_info() -> Optional[Dict[str, Any]]:
     """Get power consumption information if available."""
-    # Try to get system power from RAPL (Running Average Power Limit)
+    global _last_energy_reading
+    
     rapl_path = '/sys/class/powercap/intel-rapl/intel-rapl:0/energy_uj'
     
     if os.path.exists(rapl_path):
         try:
             with open(rapl_path, 'r') as f:
-                energy_uj = int(f.read().strip())
+                current_energy_uj = int(f.read().strip())
+            current_time = time.time()
             
-            # This is cumulative energy, would need to track over time for watts
-            # For now, just indicate power monitoring is available
+            watts = 0.0
+            
+            if _last_energy_reading['energy_uj'] is not None and _last_energy_reading['timestamp'] is not None:
+                time_diff = current_time - _last_energy_reading['timestamp']
+                if time_diff > 0:
+                    energy_diff = current_energy_uj - _last_energy_reading['energy_uj']
+                    if energy_diff < 0:
+                        energy_diff = current_energy_uj
+                    watts = round((energy_diff / time_diff) / 1000000, 2)
+            
+            _last_energy_reading['energy_uj'] = current_energy_uj
+            _last_energy_reading['timestamp'] = current_time
+            
             return {
                 'name': 'System Power',
-                'watts': 0,  # Would need time-based calculation
+                'watts': watts,
                 'adapter': 'RAPL'
             }
         except Exception:
