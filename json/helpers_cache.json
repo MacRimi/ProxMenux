@@ -2656,7 +2656,8 @@
       12
     ],
     "notes": [
-      "Application can take some time to build, depending on your host speed. Please be patient."
+      "Application can take some time to build, depending on your host speed. Please be patient.",
+      "Default RAM size for LXC is set to 6GB because of Node.js building process. You can lower it after application installs"
     ],
     "type": "ct",
     "default_credentials": {
