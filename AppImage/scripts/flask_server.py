@@ -2597,17 +2597,17 @@ def identify_temperature_sensor(sensor_name, adapter, chip_name=None):
         core_num = re.search(r'(\d+)', sensor_name)
         return f"CPU Core {core_num.group(1)}" if core_num else "CPU Core"
 
-    # DDR5 Memory temperature sensors (SPD5118)
+    # <CHANGE> DDR5 Memory temperature sensors (SPD5118)
     if "spd5118" in chip_lower or ("smbus" in adapter_lower and "temp1" in sensor_lower):
-    # Try to identify which DIMM slot
-    # Example: spd5118-i2c-0-50 -> i2c bus 0, address 0x50 (DIMM A1)
-    # Addresses: 0x50=DIMM1, 0x51=DIMM2, 0x52=DIMM3, 0x53=DIMM4, etc.
-    dimm_match = re.search(r'i2c-\d+-([0-9a-f]+)', chip_lower)
-    if dimm_match:
-        i2c_addr = int(dimm_match.group(1), 16)
-        dimm_num = (i2c_addr - 0x50) + 1
-        return f"DDR5 DIMM {dimm_num}"
-    return "DDR5 Memory"    
+        # Try to identify which DIMM slot
+        # Example: spd5118-i2c-0-50 -> i2c bus 0, address 0x50 (DIMM A1)
+        # Addresses: 0x50=DIMM1, 0x51=DIMM2, 0x52=DIMM3, 0x53=DIMM4, etc.
+        dimm_match = re.search(r'i2c-\d+-([0-9a-f]+)', chip_lower)
+        if dimm_match:
+            i2c_addr = int(dimm_match.group(1), 16)
+            dimm_num = (i2c_addr - 0x50) + 1
+            return f"DDR5 DIMM {dimm_num}"
+        return "DDR5 Memory"   
     
     # Motherboard/Chipset
     if "temp1" in sensor_lower and ("isa" in adapter_lower or "acpi" in adapter_lower):
