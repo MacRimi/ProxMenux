@@ -2584,10 +2584,11 @@ def get_ups_info():
 # END OF CHANGES FOR get_ups_info
 
 
-def identify_temperature_sensor(sensor_name, adapter):
+def identify_temperature_sensor(sensor_name, adapter, chip_name=None):
     """Identify what a temperature sensor corresponds to"""
     sensor_lower = sensor_name.lower()
     adapter_lower = adapter.lower() if adapter else ""
+    chip_lower = chip_name.lower() if chip_name else ""
     
     # CPU/Package temperatures
     if "package" in sensor_lower or "tctl" in sensor_lower or "tccd" in sensor_lower:
@@ -2608,11 +2609,42 @@ def identify_temperature_sensor(sensor_name, adapter):
     if "sata" in sensor_lower or "ata" in sensor_lower:
         return "SATA Drive"
     
-    # GPU
-    if any(gpu in adapter_lower for gpu in ["nouveau", "amdgpu", "radeon", "i915"]):
+    # GPU - Enhanced detection using both adapter and chip name
+    if any(gpu_driver in (adapter_lower + " " + chip_lower) for gpu_driver in ["nouveau", "amdgpu", "radeon", "i915"]):
+        gpu_vendor = None
+        
+        # Determine GPU vendor from driver
+        if "nouveau" in adapter_lower or "nouveau" in chip_lower:
+            gpu_vendor = "NVIDIA"
+        elif "amdgpu" in adapter_lower or "amdgpu" in chip_lower or "radeon" in adapter_lower or "radeon" in chip_lower:
+            gpu_vendor = "AMD"
+        elif "i915" in adapter_lower or "i915" in chip_lower:
+            gpu_vendor = "Intel"
+        
+        # Try to get detailed GPU name from lspci if possible
+        if gpu_vendor:
+            # Extract PCI address from chip name or adapter
+            pci_match = re.search(r'pci-([0-9a-f]{4})', adapter_lower + " " + chip_lower)
+            
+            if pci_match:
+                pci_code = pci_match.group(1)
+                pci_address = f"{pci_code[0:2]}:{pci_code[2:4]}.0"
+                
+                # Try to get detailed GPU name from hardware_monitor
+                try:
+                    gpu_map = hardware_monitor.get_pci_gpu_map()
+                    if pci_address in gpu_map:
+                        gpu_info = gpu_map[pci_address]
+                        return f"GPU {gpu_info['vendor']} {gpu_info['name']}"
+                except Exception:
+                    pass
+            
+            # Fallback: return vendor name only
+            return f"GPU {gpu_vendor}"
+        
         return "GPU"
     
-    # Network adapters
+    # Network adapters and other PCI devices
     if "pci" in adapter_lower and "temp" in sensor_lower:
         return "PCI Device"
     
@@ -2683,6 +2715,7 @@ def get_temperature_info():
         result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
         if result.returncode == 0:
             current_adapter = None
+            current_chip = None
             current_sensor = None
             
             for line in result.stdout.split('\n'):
@@ -2690,11 +2723,16 @@ def get_temperature_info():
                 if not line:
                     continue
                 
+                # Detect chip name (e.g., "nouveau-pci-0200")
+                if not ':' in line and not line.startswith(' ') and not line.startswith('Adapter'):
+                    current_chip = line
+                    continue
+
                 # Detect adapter line
                 if line.startswith('Adapter:'):
                     current_adapter = line.replace('Adapter:', '').strip()
                     continue
-                
+
                 # Detect sensor name (lines without ':' at the start are sensor names)
                 if ':' in line and not line.startswith(' '):
                     parts = line.split(':', 1)
@@ -2732,7 +2770,7 @@ def get_temperature_info():
                                 high_value = float(high_match.group(1)) if high_match else 0
                                 crit_value = float(crit_match.group(1)) if crit_match else 0
                                 
-                                identified_name = identify_temperature_sensor(sensor_name, current_adapter)
+                                identified_name = identify_temperature_sensor(sensor_name, current_adapter, current_chip)
                                 
                                 temperatures.append({
                                     'name': identified_name,
