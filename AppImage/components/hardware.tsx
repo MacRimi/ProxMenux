@@ -1476,50 +1476,6 @@ export default function Hardware() {
         </DialogContent>
       </Dialog>
 
-      {/* Network Summary - Clickable */}
-      {hardwareDataSWR?.pci_devices &&
-        hardwareDataSWR.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length > 0 && (
-          <Card className="border-border/50 bg-card/50 p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Network className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold">Network Summary</h2>
-              <Badge variant="outline" className="ml-auto">
-                {hardwareDataSWR.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length} interfaces
-              </Badge>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {hardwareDataSWR.pci_devices
-                .filter((d) => d.type.toLowerCase().includes("network"))
-                .map((device, index) => (
-                  <div
-                    key={index}
-                    onClick={() => setSelectedNetwork(device)}
-                    className="cursor-pointer rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 p-3 transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-sm font-medium line-clamp-2 break-words flex-1">{device.device}</span>
-                      <Badge
-                        className={
-                          device.network_subtype === "Wireless"
-                            ? "bg-purple-500/10 text-purple-500 border-purple-500/20 px-2.5 py-0.5 shrink-0"
-                            : "bg-blue-500/10 text-blue-500 border-blue-500/20 px-2.5 py-0.5 shrink-0"
-                        }
-                      >
-                        {device.network_subtype || "Ethernet"}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>
-                    {device.driver && (
-                      <p className="mt-1 font-mono text-xs text-green-500 truncate">Driver: {device.driver}</p>
-                    )}
-                  </div>
-                ))}
-            </div>
-            <p className="mt-4 text-xs text-muted-foreground">Click on an interface for detailed information</p>
-          </Card>
-        )}
-
 
       {/* PCI Devices - Changed to modal */}
       {hardwareDataSWR?.pci_devices && hardwareDataSWR.pci_devices.length > 0 && (
@@ -1606,6 +1562,51 @@ export default function Hardware() {
           )}
         </DialogContent>
       </Dialog> 
+
+
+      {/* Network Summary - Clickable */}
+      {hardwareDataSWR?.pci_devices &&
+        hardwareDataSWR.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length > 0 && (
+          <Card className="border-border/50 bg-card/50 p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Network className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Network Summary</h2>
+              <Badge variant="outline" className="ml-auto">
+                {hardwareDataSWR.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length} interfaces
+              </Badge>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {hardwareDataSWR.pci_devices
+                .filter((d) => d.type.toLowerCase().includes("network"))
+                .map((device, index) => (
+                  <div
+                    key={index}
+                    onClick={() => setSelectedNetwork(device)}
+                    className="cursor-pointer rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 p-3 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-sm font-medium line-clamp-2 break-words flex-1">{device.device}</span>
+                      <Badge
+                        className={
+                          device.network_subtype === "Wireless"
+                            ? "bg-purple-500/10 text-purple-500 border-purple-500/20 px-2.5 py-0.5 shrink-0"
+                            : "bg-blue-500/10 text-blue-500 border-blue-500/20 px-2.5 py-0.5 shrink-0"
+                        }
+                      >
+                        {device.network_subtype || "Ethernet"}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>
+                    {device.driver && (
+                      <p className="mt-1 font-mono text-xs text-green-500 truncate">Driver: {device.driver}</p>
+                    )}
+                  </div>
+                ))}
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">Click on an interface for detailed information</p>
+          </Card>
+        )}
 
 
       {/* Network Detail Modal */}
