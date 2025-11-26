@@ -2618,6 +2618,53 @@ def identify_temperature_sensor(sensor_name, adapter):
     
     return sensor_name
 
+
+def identify_fan(sensor_name, adapter):
+    """Identify what a fan sensor corresponds to, using hardware_monitor for GPU detection"""
+    sensor_lower = sensor_name.lower()
+    adapter_lower = adapter.lower() if adapter else ""
+    
+    # GPU fans - Use hardware_monitor to get real GPU names
+    if "pci adapter" in adapter_lower or any(gpu_driver in adapter_lower for gpu_driver in ["nouveau", "amdgpu", "radeon", "i915"]):
+        # Extract PCI address from adapter string
+        # Example: "nouveau-pci-0200" -> "02:00.0"
+        pci_match = re.search(r'pci-([0-9a-f]{4})', adapter_lower)
+        
+        if pci_match:
+            pci_code = pci_match.group(1)
+            pci_address = f"{pci_code[0:2]}:{pci_code[2:4]}.0"
+            
+            # Get GPU mapping from hardware_monitor
+            try:
+                gpu_map = hardware_monitor.get_pci_gpu_map()
+                if pci_address in gpu_map:
+                    gpu_info = gpu_map[pci_address]
+                    return f"GPU {gpu_info['vendor']} {gpu_info['name']}"
+            except Exception:
+                pass
+        
+        # Fallback: generic GPU label
+        if "nouveau" in adapter_lower:
+            return "GPU NVIDIA"
+        elif "amdgpu" in adapter_lower or "radeon" in adapter_lower:
+            return "GPU AMD"
+        elif "i915" in adapter_lower:
+            return "GPU Intel"
+        else:
+            return "GPU"
+    
+    # CPU/System fans - keep original name
+    if any(cpu_fan in sensor_lower for cpu_fan in ["cpu_fan", "cpufan", "sys_fan", "sysfan"]):
+        return sensor_name
+    
+    # Chassis fans - keep original name
+    if "chassis" in sensor_lower or "case" in sensor_lower:
+        return sensor_name
+    
+    # Default: return original name
+    return sensor_name    
+
+
 def get_temperature_info():
     """Get detailed temperature information from sensors command"""
     temperatures = []
@@ -4514,7 +4561,7 @@ def get_hardware_info():
                                     
                                     # Placeholder for identify_fan - needs implementation
                                     # identified_name = identify_fan(sensor_name, current_adapter) 
-                                    identified_name = sensor_name # Use original name for now
+                                    identified_name = identify_fan(sensor_name, current_adapter)
                                     
                                     fans.append({
                                         'name': identified_name,
