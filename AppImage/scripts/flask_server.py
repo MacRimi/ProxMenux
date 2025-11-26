@@ -2702,16 +2702,16 @@ def get_temperature_info():
         # print(f"[v0] Error getting temperature info: {e}")
         pass
 
-        if power_meter is None:
-            try:
-                rapl_power = hardware_monitor.get_power_info()
-                if rapl_power:
-                    power_meter = rapl_power
-                    # print(f"[v0] Power meter from RAPL: {power_meter.get('watts', 0)}W")
-                    pass
-            except Exception as e:
-                # print(f"[v0] Error getting RAPL power info: {e}")
-                pass   
+    if power_meter is None:
+        try:
+            rapl_power = hardware_monitor.get_power_info()
+            if rapl_power:
+                power_meter = rapl_power
+                # print(f"[v0] Power meter from RAPL: {power_meter.get('watts', 0)}W")
+                pass
+        except Exception as e:
+            # print(f"[v0] Error getting RAPL power info: {e}")
+            pass   
     
     return {
         'temperatures': temperatures,
