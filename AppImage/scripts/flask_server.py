@@ -2807,6 +2807,18 @@ def get_temperature_info():
             # print(f"[v0] Error getting RAPL power info: {e}")
             pass   
     
+    
+    try:
+        hba_temps = hardware_monitor.get_hba_temperatures()
+        for hba_temp in hba_temps:
+            temperatures.append({
+                'name': hba_temp['name'],
+                'value': hba_temp['temperature'],
+                'adapter': hba_temp['adapter']
+            })
+    except Exception:
+        pass
+
     return {
         'temperatures': temperatures,
         'power_meter': power_meter

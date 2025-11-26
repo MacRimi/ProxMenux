@@ -5,6 +5,7 @@ Hardware Monitor - RAPL Power Monitoring and GPU Identification
 This module provides:
 1. CPU power consumption monitoring using Intel RAPL (Running Average Power Limit)
 2. PCI GPU identification for better fan labeling
+3. HBA controller detection and temperature monitoring
 
 Only contains these specialized functions - all other hardware monitoring 
 is handled by flask_server.py to avoid code duplication.
@@ -160,3 +161,253 @@ def get_power_info() -> Optional[Dict[str, Any]]:
             pass
     
     return None
+
+
+def get_hba_info() -> list[Dict[str, Any]]:
+    """
+    Detect HBA/RAID controllers from lspci.
+    
+    This function identifies LSI/Broadcom, Adaptec, and other RAID/HBA controllers
+    present in the system via lspci output.
+    
+    Returns:
+        list: List of HBA controller dictionaries
+              Example: [
+                  {
+                      'pci_address': '01:00.0',
+                      'vendor': 'LSI/Broadcom',
+                      'model': 'SAS3008 PCI-Express Fusion-MPT SAS-3',
+                      'controller_id': 0
+                  }
+              ]
+    """
+    hba_list = []
+    
+    try:
+        # Run lspci to find RAID/SAS controllers
+        result = subprocess.run(
+            ['lspci', '-nn'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if result.returncode == 0:
+            controller_id = 0
+            for line in result.stdout.split('\n'):
+                # Look for RAID bus controller, SCSI storage controller, Serial Attached SCSI controller
+                if any(keyword in line for keyword in ['RAID bus controller', 'SCSI storage controller', 'Serial Attached SCSI']):
+                    # Example: "01:00.0 RAID bus controller [0104]: Broadcom / LSI SAS3008 PCI-Express Fusion-MPT SAS-3 [1000:0097]"
+                    match = re.match(r'^([0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f])\s+.*:\s+(.+?)\s+\[([0-9a-f]{4}):([0-9a-f]{4})\]', line)
+                    
+                    if match:
+                        pci_address = match.group(1)
+                        device_name = match.group(2).strip()
+                        
+                        # Extract vendor
+                        vendor = 'Unknown'
+                        if 'LSI' in device_name.upper() or 'BROADCOM' in device_name.upper() or 'AVAGO' in device_name.upper():
+                            vendor = 'LSI/Broadcom'
+                        elif 'ADAPTEC' in device_name.upper():
+                            vendor = 'Adaptec'
+                        elif 'ARECA' in device_name.upper():
+                            vendor = 'Areca'
+                        elif 'HIGHPOINT' in device_name.upper():
+                            vendor = 'HighPoint'
+                        elif 'DELL' in device_name.upper():
+                            vendor = 'Dell'
+                        elif 'HP' in device_name.upper() or 'HEWLETT' in device_name.upper():
+                            vendor = 'HP'
+                        
+                        # Extract model name
+                        model_name = device_name
+                        # Remove vendor prefix if present
+                        for v in ['Broadcom / LSI', 'Broadcom', 'LSI Logic', 'LSI', 'Adaptec', 'Areca', 'HighPoint', 'Dell', 'HP', 'Hewlett-Packard']:
+                            if model_name.startswith(v):
+                                model_name = model_name[len(v):].strip()
+                        
+                        hba_list.append({
+                            'pci_address': pci_address,
+                            'vendor': vendor,
+                            'model': model_name,
+                            'controller_id': controller_id,
+                            'full_name': device_name
+                        })
+                        controller_id += 1
+    
+    except Exception:
+        pass
+    
+    return hba_list
+
+
+def get_hba_temperatures() -> list[Dict[str, Any]]:
+    """
+    Get HBA controller temperatures using storcli64 or megacli.
+    
+    This function attempts to read temperature data from LSI/Broadcom RAID controllers
+    using the storcli64 tool (preferred) or megacli as fallback.
+    
+    Returns:
+        list: List of temperature dictionaries
+              Example: [
+                  {
+                      'name': 'HBA Controller 0',
+                      'temperature': 65,
+                      'adapter': 'LSI/Broadcom SAS3008'
+                  }
+              ]
+    """
+    temperatures = []
+    
+    # Check which tool is available
+    storcli_paths = [
+        '/opt/MegaRAID/storcli/storcli64',
+        '/usr/sbin/storcli64',
+        '/usr/local/sbin/storcli64',
+        'storcli64'
+    ]
+    
+    megacli_paths = [
+        '/opt/MegaRAID/MegaCli/MegaCli64',
+        '/usr/sbin/megacli',
+        '/usr/local/sbin/megacli',
+        'megacli'
+    ]
+    
+    storcli_path = None
+    megacli_path = None
+    
+    # Find storcli64
+    for path in storcli_paths:
+        try:
+            result = subprocess.run([path, '-v'], capture_output=True, timeout=2)
+            if result.returncode == 0:
+                storcli_path = path
+                break
+        except:
+            continue
+    
+    # Try storcli64 first (preferred)
+    if storcli_path:
+        try:
+            # Get list of controllers
+            result = subprocess.run(
+                [storcli_path, 'show'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                # Parse controller IDs
+                controller_ids = []
+                for line in result.stdout.split('\n'):
+                    match = re.search(r'^\s*(\d+)\s+', line)
+                    if match and 'Ctl' in line:
+                        controller_ids.append(match.group(1))
+                
+                # Get temperature for each controller
+                for ctrl_id in controller_ids:
+                    try:
+                        temp_result = subprocess.run(
+                            [storcli_path, f'/c{ctrl_id}', 'show', 'temperature'],
+                            capture_output=True,
+                            text=True,
+                            timeout=10
+                        )
+                        
+                        if temp_result.returncode == 0:
+                            # Parse temperature from output
+                            for line in temp_result.stdout.split('\n'):
+                                if 'ROC temperature' in line or 'Controller Temp' in line:
+                                    temp_match = re.search(r'(\d+)\s*C', line)
+                                    if temp_match:
+                                        temp_c = int(temp_match.group(1))
+                                        
+                                        # Get HBA info for better naming
+                                        hba_list = get_hba_info()
+                                        adapter_name = 'LSI/Broadcom Controller'
+                                        if int(ctrl_id) < len(hba_list):
+                                            hba = hba_list[int(ctrl_id)]
+                                            adapter_name = f"{hba['vendor']} {hba['model']}"
+                                        
+                                        temperatures.append({
+                                            'name': f'HBA Controller {ctrl_id}',
+                                            'temperature': temp_c,
+                                            'adapter': adapter_name
+                                        })
+                                        break
+                    except:
+                        continue
+        except:
+            pass
+    
+    # Fallback to megacli if storcli not available
+    elif not temperatures:
+        for path in megacli_paths:
+            try:
+                result = subprocess.run([path, '-v'], capture_output=True, timeout=2)
+                if result.returncode == 0:
+                    megacli_path = path
+                    break
+            except:
+                continue
+        
+        if megacli_path:
+            try:
+                # Get adapter count
+                result = subprocess.run(
+                    [megacli_path, '-adpCount'],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                
+                if result.returncode == 0:
+                    # Parse adapter count
+                    adapter_count = 0
+                    for line in result.stdout.split('\n'):
+                        if 'Controller Count' in line:
+                            count_match = re.search(r'(\d+)', line)
+                            if count_match:
+                                adapter_count = int(count_match.group(1))
+                                break
+                    
+                    # Get temperature for each adapter
+                    for adapter_id in range(adapter_count):
+                        try:
+                            temp_result = subprocess.run(
+                                [megacli_path, '-AdpAllInfo', f'-a{adapter_id}'],
+                                capture_output=True,
+                                text=True,
+                                timeout=10
+                            )
+                            
+                            if temp_result.returncode == 0:
+                                # Parse temperature
+                                for line in temp_result.stdout.split('\n'):
+                                    if 'ROC temperature' in line or 'Controller Temp' in line:
+                                        temp_match = re.search(r'(\d+)\s*C', line)
+                                        if temp_match:
+                                            temp_c = int(temp_match.group(1))
+                                            
+                                            # Get HBA info for better naming
+                                            hba_list = get_hba_info()
+                                            adapter_name = 'LSI/Broadcom Controller'
+                                            if adapter_id < len(hba_list):
+                                                hba = hba_list[adapter_id]
+                                                adapter_name = f"{hba['vendor']} {hba['model']}"
+                                            
+                                            temperatures.append({
+                                                'name': f'HBA Controller {adapter_id}',
+                                                'temperature': temp_c,
+                                                'adapter': adapter_name
+                                            })
+                                            break
+                        except:
+                            continue
+            except:
+                pass
+    
+    return temperatures
