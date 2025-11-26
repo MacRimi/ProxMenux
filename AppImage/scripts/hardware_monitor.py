@@ -354,10 +354,21 @@ def get_power_info() -> Optional[Dict[str, Any]]:
             _last_energy_reading['energy_uj'] = current_energy_uj
             _last_energy_reading['timestamp'] = current_time
             
+            cpu_vendor = 'CPU'
+            try:
+                with open('/proc/cpuinfo', 'r') as f:
+                    cpuinfo = f.read()
+                    if 'GenuineIntel' in cpuinfo:
+                        cpu_vendor = 'Intel'
+                    elif 'AuthenticAMD' in cpuinfo:
+                        cpu_vendor = 'AMD'
+            except:
+                pass
+            
             return {
-                'name': 'System Power',
+                'name': 'CPU Power',
                 'watts': watts,
-                'adapter': 'RAPL'
+                'adapter': f'{cpu_vendor} RAPL (CPU only)'
             }
         except Exception:
             pass
