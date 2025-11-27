@@ -173,6 +173,7 @@ export function SystemOverview() {
     network: true,
   })
   const [error, setError] = useState<string | null>(null)
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false) // Added hasAttemptedLoad state
   const [networkTimeframe, setNetworkTimeframe] = useState("day")
   const [networkTotals, setNetworkTotals] = useState<{ received: number; sent: number }>({ received: 0, sent: 0 })
   const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes") // Added networkUnit state
@@ -187,6 +188,8 @@ export function SystemOverview() {
         ),
         fetchNetworkData().finally(() => setLoadingStates((prev) => ({ ...prev, network: false }))),
       ])
+
+      setHasAttemptedLoad(true)
 
       if (!systemResult) {
         setError("Flask server not available. Please ensure the server is running.")
@@ -247,16 +250,10 @@ export function SystemOverview() {
     }
   }, [])
 
-  const isInitialLoading = loadingStates.system && !systemData
-
-  if (isInitialLoading) {
+  if (!hasAttemptedLoad || loadingStates.system) {
     return (
       <div className="space-y-6">
-        <div className="text-center py-8">
-          <div className="text-lg font-medium text-foreground mb-2">Connecting to ProxMenux Monitor...</div>
-          <div className="text-sm text-muted-foreground">Fetching real-time system data</div>
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
             <Card key={i} className="bg-card border-border animate-pulse">
               <CardContent className="p-6">
