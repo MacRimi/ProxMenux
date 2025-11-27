@@ -2162,9 +2162,3 @@ class HealthMonitor:
 
 # Global instance
 health_monitor = HealthMonitor()
-.now().isoformat()
-        }
-
-
-# Global instance
-health_monitor = HealthMonitor()
