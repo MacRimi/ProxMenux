@@ -29,6 +29,7 @@ interface CategoryCheck {
   status: string
   reason?: string
   details?: any
+  dismissable?: boolean
   [key: string]: any
 }
 
@@ -315,6 +316,8 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                         <div className="mt-2 space-y-1">
                           {Object.entries(details).map(([detailKey, detailValue]: [string, any]) => {
                             if (typeof detailValue === "object" && detailValue !== null) {
+                              const isDismissable = detailValue.dismissable !== false
+
                               return (
                                 <div
                                   key={detailKey}
@@ -326,7 +329,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                                       <span className="ml-1 text-muted-foreground">{detailValue.reason}</span>
                                     )}
                                   </div>
-                                  {(status === "WARNING" || status === "CRITICAL") && (
+                                  {(status === "WARNING" || status === "CRITICAL") && isDismissable && (
                                     <Button
                                       size="sm"
                                       variant="outline"

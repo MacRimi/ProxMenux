@@ -603,7 +603,12 @@ export function StorageOverview() {
                 )
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((storage) => (
-                  <div key={storage.name} className="border rounded-lg p-4">
+                  <div
+                    key={storage.name}
+                    className={`border rounded-lg p-4 ${
+                      storage.status === "error" ? "border-red-500/50 bg-red-500/5" : ""
+                    }`}
+                  >
                     <div className="flex items-center justify-between mb-3">
                       {/* Desktop: Icon + Name + Badge tipo alineados horizontalmente */}
                       <div className="hidden md:flex items-center gap-3">
@@ -625,7 +630,9 @@ export function StorageOverview() {
                           className={
                             storage.status === "active"
                               ? "bg-green-500/10 text-green-500 border-green-500/20"
-                              : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                              : storage.status === "error"
+                                ? "bg-red-500/10 text-red-500 border-red-500/20"
+                                : "bg-gray-500/10 text-gray-500 border-gray-500/20"
                           }
                         >
                           {storage.status}
