@@ -1794,8 +1794,13 @@ def get_proxmox_storage():
         storage_status_data = proxmox_storage_monitor.get_storage_status()
         unavailable_storages = storage_status_data.get('unavailable', [])
         
-        # Add unavailable storages to the list
-        storage_list.extend(unavailable_storages)
+        # Get list of storage names already added
+        existing_storage_names = {s['name'] for s in storage_list}
+        
+        # Add unavailable storages to the list (only if not already present)
+        for unavailable_storage in unavailable_storages:
+            if unavailable_storage['name'] not in existing_storage_names:
+                storage_list.append(unavailable_storage)
 
         return {'storage': storage_list}
         
