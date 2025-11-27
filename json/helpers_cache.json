@@ -5299,6 +5299,20 @@
     }
   },
   {
+    "name": "Qdrant",
+    "slug": "qdrant",
+    "desc": "Qdrant is a vector search engine and vector database that allows you to store, search, and manage high-dimensional vectors efficiently.",
+    "script": "ct/qdrant.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/qdrant.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/qdrant.sh",
+    "os": "debian",
+    "categories": [
+      8
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "RabbitMQ",
     "slug": "rabbitmq",
     "desc": "RabbitMQ is a robust messaging broker widely used for message queuing, streaming, and decoupling services. It supports multiple messaging protocols, ensures reliable message delivery, and offers features like routing, clustering, and federation. RabbitMQ is suitable for various use cases, including microservices communication, real-time data processing, and IoT applications.",
