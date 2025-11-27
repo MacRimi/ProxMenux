@@ -74,14 +74,43 @@ class HealthMonitor:
     UPDATES_WARNING = 365  # Only warn after 1 year without updates
     UPDATES_CRITICAL = 730  # Critical after 2 years
     
-    # Known benign errors from Proxmox that should not trigger alerts
     BENIGN_ERROR_PATTERNS = [
+        # Proxmox specific benign patterns
         r'got inotify poll request in wrong process',
         r'auth key pair too old, rotating',
         r'proxy detected vanished client connection',
         r'worker \d+ finished',
         r'connection timed out',
         r'disconnect peer',
+        r'task OK',
+        r'backup finished',
+        
+        # Systemd informational messages
+        r'(started|starting|stopped|stopping) session',
+        r'session \d+ logged (in|out)',
+        r'new session \d+ of user',
+        r'removed session \d+',
+        r'user@\d+\.service:',
+        r'user runtime directory',
+        
+        # Network transient errors (common and usually self-recovering)
+        r'dhcp.*timeout',
+        r'temporary failure in name resolution',
+        r'network is unreachable',
+        r'no route to host',
+        
+        # Backup and sync normal warnings
+        r'rsync.*vanished',
+        r'backup job .* finished',
+        r'vzdump backup .* finished',
+        
+        # ZFS informational
+        r'zfs.*scrub (started|finished|in progress)',
+        r'zpool.*resilver',
+        
+        # LXC/Container normal operations
+        r'lxc.*monitor',
+        r'systemd\[1\]: (started|stopped) .*\.scope',
     ]
     
     CRITICAL_LOG_KEYWORDS = [
@@ -112,6 +141,7 @@ class HealthMonitor:
         self.network_baseline = {}
         self.io_error_history = defaultdict(list)
         self.failed_vm_history = set()  # Track VMs that failed to start
+        self.persistent_log_patterns = defaultdict(lambda: {'count': 0, 'first_seen': 0, 'last_seen': 0})
         
         try:
             health_persistence.cleanup_old_errors()
@@ -1368,6 +1398,11 @@ class HealthMonitor:
         """
         Intelligent log checking with cascade detection and persistence.
         Focuses on detecting significant error patterns rather than transient warnings.
+        
+        New thresholds:
+        - CASCADE: ≥15 errors (increased from 10)
+        - SPIKE: ≥5 errors AND 4x increase (more restrictive)
+        - PERSISTENT: Same error in 3 consecutive checks
         """
         cache_key = 'logs_analysis'
         current_time = time.time()
@@ -1453,6 +1488,16 @@ class HealthMonitor:
                                 )
                     
                     recent_patterns[pattern] += 1
+                    
+                    if pattern in self.persistent_log_patterns:
+                        self.persistent_log_patterns[pattern]['count'] += 1
+                        self.persistent_log_patterns[pattern]['last_seen'] = current_time
+                    else:
+                        self.persistent_log_patterns[pattern] = {
+                            'count': 1,
+                            'first_seen': current_time,
+                            'last_seen': current_time
+                        }
                 
                 for line in previous_lines:
                     if not line.strip():
@@ -1472,22 +1517,46 @@ class HealthMonitor:
                     pattern = self._normalize_log_pattern(line)
                     previous_patterns[pattern] += 1
                 
-                # Detect cascades: ≥10 errors of same type in 3 min
                 cascading_errors = {
                     pattern: count for pattern, count in recent_patterns.items()
-                    if count >= 10 and self._classify_log_severity(pattern) in ['WARNING', 'CRITICAL']
+                    if count >= 15 and self._classify_log_severity(pattern) in ['WARNING', 'CRITICAL']
                 }
                 
-                # Detect spikes: ≥3 errors now AND ≥3x increase from previous period
                 spike_errors = {}
                 for pattern, recent_count in recent_patterns.items():
                     prev_count = previous_patterns.get(pattern, 0)
-                    if recent_count >= 3 and recent_count >= prev_count * 3:
+                    if recent_count >= 5 and recent_count >= prev_count * 4:
                         spike_errors[pattern] = recent_count
+                
+                persistent_errors = {}
+                for pattern, data in self.persistent_log_patterns.items():
+                    time_span = current_time - data['first_seen']
+                    if data['count'] >= 3 and time_span >= 900:  # 15 minutes
+                        persistent_errors[pattern] = data['count']
+                        
+                        # Record as warning if not already recorded
+                        pattern_hash = hashlib.md5(pattern.encode()).hexdigest()[:8]
+                        error_key = f'log_persistent_{pattern_hash}'
+                        if not health_persistence.is_error_active(error_key, category='logs'):
+                            health_persistence.record_error(
+                                error_key=error_key,
+                                category='logs',
+                                severity='WARNING',
+                                reason=f'Persistent error pattern detected: {pattern[:80]}',
+                                details={'pattern': pattern, 'dismissable': True, 'occurrences': data['count']}
+                            )
+                
+                patterns_to_remove = [
+                    p for p, data in self.persistent_log_patterns.items()
+                    if current_time - data['last_seen'] > 1800
+                ]
+                for pattern in patterns_to_remove:
+                    del self.persistent_log_patterns[pattern]
                 
                 unique_critical_count = len(critical_errors_found)
                 cascade_count = len(cascading_errors)
                 spike_count = len(spike_errors)
+                persistent_count = len(persistent_errors)
                 
                 if unique_critical_count > 0:
                     status = 'CRITICAL'
@@ -1496,10 +1565,13 @@ class HealthMonitor:
                     reason = f'Critical error detected: {representative_error[:100]}'
                 elif cascade_count > 0:
                     status = 'WARNING'
-                    reason = f'Error cascade detected: {cascade_count} pattern(s) repeating ≥10 times in 3min'
+                    reason = f'Error cascade detected: {cascade_count} pattern(s) repeating ≥15 times in 3min'
                 elif spike_count > 0:
                     status = 'WARNING'
-                    reason = f'Error spike detected: {spike_count} pattern(s) increased 3x'
+                    reason = f'Error spike detected: {spike_count} pattern(s) increased 4x'
+                elif persistent_count > 0:
+                    status = 'WARNING'
+                    reason = f'Persistent errors: {persistent_count} pattern(s) recurring over 15+ minutes'
                 else:
                     # No significant issues found
                     status = 'OK'
