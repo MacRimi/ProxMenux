@@ -2781,6 +2781,12 @@ def get_temperature_info():
                                 
                                 high_value = float(high_match.group(1)) if high_match else 0
                                 crit_value = float(crit_match.group(1)) if crit_match else 0
+                                # Skip internal NVMe sensors (only keep Composite)
+                                if current_chip and 'nvme' in current_chip.lower():
+                                    sensor_lower_check = sensor_name.lower()
+                                    # Skip "Sensor 1", "Sensor 2", "Sensor 8", etc. (keep only "Composite")
+                                    if sensor_lower_check.startswith('sensor') and sensor_lower_check.replace('sensor', '').strip().split()[0].isdigit():
+                                        continue                                
                                 
                                 identified_name = identify_temperature_sensor(sensor_name, current_adapter, current_chip)
                                 
