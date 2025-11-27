@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Progress } from "./ui/progress"
 import { Badge } from "./ui/badge"
-import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Network } from 'lucide-react'
+import { Cpu, MemoryStick, Thermometer, Server, Zap, AlertCircle, HardDrive, Network } from "lucide-react"
 import { NodeMetricsCharts } from "./node-metrics-charts"
 import { NetworkTrafficChart } from "./network-traffic-chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -97,14 +97,21 @@ interface ProxmoxStorageData {
   }>
 }
 
-const fetchSystemData = async (): Promise<SystemData | null> => {
-  try {
-    const data = await fetchApi<SystemData>("/api/system")
-    return data
-  } catch (error) {
-    console.error("[v0] Failed to fetch system data:", error)
-    return null
+const fetchSystemData = async (retries = 3, delayMs = 500): Promise<SystemData | null> => {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const data = await fetchApi<SystemData>("/api/system")
+      return data
+    } catch (error) {
+      if (attempt === retries - 1) {
+        console.error("[v0] Failed to fetch system data after retries:", error)
+        return null
+      }
+      // Wait before retry
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+    }
   }
+  return null
 }
 
 const fetchVMData = async (): Promise<VMData[]> => {
@@ -503,7 +510,9 @@ export function SystemOverview() {
                     <div className="space-y-2 pb-4 border-b-2 border-border">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-foreground">Total Node Capacity:</span>
-                        <span className="text-lg font-bold text-foreground">{formatNetworkTraffic(totalCapacity, "Bytes")}</span>
+                        <span className="text-lg font-bold text-foreground">
+                          {formatNetworkTraffic(totalCapacity, "Bytes")}
+                        </span>
                       </div>
                       <Progress
                         value={totalPercent}
@@ -512,10 +521,16 @@ export function SystemOverview() {
                       <div className="flex justify-between items-center mt-1">
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-muted-foreground">
-                            Used: <span className="font-semibold text-foreground">{formatNetworkTraffic(totalUsed, "Bytes")}</span>
+                            Used:{" "}
+                            <span className="font-semibold text-foreground">
+                              {formatNetworkTraffic(totalUsed, "Bytes")}
+                            </span>
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            Free: <span className="font-semibold text-green-500">{formatNetworkTraffic(totalAvailable, "Bytes")}</span>
+                            Free:{" "}
+                            <span className="font-semibold text-green-500">
+                              {formatNetworkTraffic(totalAvailable, "Bytes")}
+                            </span>
                           </span>
                         </div>
                         <span className="text-xs font-semibold text-muted-foreground">{totalPercent.toFixed(1)}%</span>
@@ -542,7 +557,9 @@ export function SystemOverview() {
                     <div className="text-xs font-medium text-muted-foreground mb-2">VM/LXC Storage</div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Used:</span>
-                      <span className="text-sm font-semibold text-foreground">{formatNetworkTraffic(vmLxcStorageUsed, "Bytes")}</span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {formatNetworkTraffic(vmLxcStorageUsed, "Bytes")}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Available:</span>
@@ -553,7 +570,8 @@ export function SystemOverview() {
                     <Progress value={vmLxcStoragePercent} className="mt-2 [&>div]:bg-blue-500" />
                     <div className="flex justify-between items-center mt-1">
                       <span className="text-xs text-muted-foreground">
-                        {formatNetworkTraffic(vmLxcStorageUsed, "Bytes")} / {formatNetworkTraffic(vmLxcStorageTotal, "Bytes")}
+                        {formatNetworkTraffic(vmLxcStorageUsed, "Bytes")} /{" "}
+                        {formatNetworkTraffic(vmLxcStorageTotal, "Bytes")}
                       </span>
                       <span className="text-xs text-muted-foreground">{vmLxcStoragePercent.toFixed(1)}%</span>
                     </div>
@@ -575,7 +593,9 @@ export function SystemOverview() {
                     <div className="text-xs font-medium text-muted-foreground mb-2">Local Storage (System)</div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Used:</span>
-                      <span className="text-sm font-semibold text-foreground">{formatNetworkTraffic(localStorage.used, "Bytes")}</span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {formatNetworkTraffic(localStorage.used, "Bytes")}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Available:</span>
@@ -586,7 +606,8 @@ export function SystemOverview() {
                     <Progress value={localStorage.percent} className="mt-2 [&>div]:bg-purple-500" />
                     <div className="flex justify-between items-center mt-1">
                       <span className="text-xs text-muted-foreground">
-                        {formatNetworkTraffic(localStorage.used, "Bytes")} / {formatNetworkTraffic(localStorage.total, "Bytes")}
+                        {formatNetworkTraffic(localStorage.used, "Bytes")} /{" "}
+                        {formatNetworkTraffic(localStorage.total, "Bytes")}
                       </span>
                       <span className="text-xs text-muted-foreground">{localStorage.percent.toFixed(1)}%</span>
                     </div>
@@ -674,25 +695,31 @@ export function SystemOverview() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Received:</span>
                     <span className="text-lg font-semibold text-green-500 flex items-center gap-1">
-                      ↓ {networkUnit === "Bytes"
+                      ↓{" "}
+                      {networkUnit === "Bytes"
                         ? `${networkTotals.received.toFixed(2)} GB`
-                        : formatNetworkTraffic(networkTotals.received * 1024 * 1024 * 1024, 'Bits')}
+                        : formatNetworkTraffic(networkTotals.received * 1024 * 1024 * 1024, "Bits")}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Sent:</span>
                     <span className="text-lg font-semibold text-blue-500 flex items-center gap-1">
-                      ↑ {networkUnit === "Bytes" 
-                        ? `${networkTotals.sent.toFixed(2)} GB` 
-                        : formatNetworkTraffic(networkTotals.sent * 1024 * 1024 * 1024, 'Bits')}
+                      ↑{" "}
+                      {networkUnit === "Bytes"
+                        ? `${networkTotals.sent.toFixed(2)} GB`
+                        : formatNetworkTraffic(networkTotals.sent * 1024 * 1024 * 1024, "Bits")}
                       <span className="text-xs text-muted-foreground">({getTimeframeLabel(networkTimeframe)})</span>
                     </span>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-border">
-                  <NetworkTrafficChart timeframe={networkTimeframe} onTotalsCalculated={setNetworkTotals} networkUnit={networkUnit} />
+                  <NetworkTrafficChart
+                    timeframe={networkTimeframe}
+                    onTotalsCalculated={setNetworkTotals}
+                    networkUnit={networkUnit}
+                  />
                 </div>
               </div>
             ) : (
