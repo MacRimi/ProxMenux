@@ -940,14 +940,24 @@ class HealthMonitor:
     
     def _check_network_optimized(self) -> Dict[str, Any]:
         """
-        Optimized network check - always returns status.
-        Checks interface status and basic latency.
+        Optimized network check - only alerts for interfaces that are actually in use.
+        Avoids false positives for unused physical interfaces.
         """
         try:
             issues = []
             interface_details = {}
             
             net_if_stats = psutil.net_if_stats()
+            
+            try:
+                net_io_per_nic = psutil.net_io_counters(pernic=True)
+            except Exception:
+                net_io_per_nic = {}
+            
+            try:
+                net_if_addrs = psutil.net_if_addrs()
+            except Exception:
+                net_if_addrs = {}
             
             active_interfaces = set()
             
@@ -957,8 +967,41 @@ class HealthMonitor:
                 
                 # Check if important interface is down
                 if not stats.isup:
-                    # Consider common PVE bridge interfaces and physical NICs as important
-                    if interface.startswith('vmbr') or interface.startswith('eth') or interface.startswith('ens') or interface.startswith('enp'):
+                    should_alert = False
+                    alert_reason = None
+                    
+                    # Check if it's a bridge interface (always important for VMs/LXCs)
+                    if interface.startswith('vmbr'):
+                        should_alert = True
+                        alert_reason = 'Bridge interface DOWN (VMs/LXCs may be affected)'
+                    
+                    # Check if physical interface has configuration or traffic
+                    elif interface.startswith(('eth', 'ens', 'enp', 'eno')):
+                        # Check if interface has IP address (configured)
+                        has_ip = False
+                        if interface in net_if_addrs:
+                            for addr in net_if_addrs[interface]:
+                                if addr.family == 2:  # IPv4
+                                    has_ip = True
+                                    break
+                        
+                        # Check if interface has traffic (has been used)
+                        has_traffic = False
+                        if interface in net_io_per_nic:
+                            io_stats = net_io_per_nic[interface]
+                            # If interface has sent or received any data, it's being used
+                            if io_stats.bytes_sent > 0 or io_stats.bytes_recv > 0:
+                                has_traffic = True
+                        
+                        # Only alert if interface is configured or has been used
+                        if has_ip:
+                            should_alert = True
+                            alert_reason = 'Configured interface DOWN (has IP address)'
+                        elif has_traffic:
+                            should_alert = True
+                            alert_reason = 'Active interface DOWN (was handling traffic)'
+                    
+                    if should_alert:
                         issues.append(f'{interface} is DOWN')
                         
                         error_key = interface
@@ -966,18 +1009,18 @@ class HealthMonitor:
                             error_key=error_key,
                             category='network',
                             severity='CRITICAL',
-                            reason='Interface DOWN',
+                            reason=alert_reason or 'Interface DOWN',
                             details={'interface': interface, 'dismissable': True}
                         )
                         
                         interface_details[interface] = {
                             'status': 'CRITICAL',
-                            'reason': 'Interface DOWN',
+                            'reason': alert_reason or 'Interface DOWN',
                             'dismissable': True
                         }
                 else:
                     active_interfaces.add(interface)
-                    if interface.startswith('vmbr') or interface.startswith('eth') or interface.startswith('ens') or interface.startswith('enp'):
+                    if interface.startswith('vmbr') or interface.startswith(('eth', 'ens', 'enp', 'eno')):
                         health_persistence.resolve_error(interface, 'Interface recovered')
             
             # Check connectivity (latency)
