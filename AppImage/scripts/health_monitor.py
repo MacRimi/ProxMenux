@@ -12,6 +12,7 @@ import subprocess
 import json
 import time
 import os
+import hashlib # Added for MD5 hashing
 from typing import Dict, List, Any, Tuple, Optional
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -420,12 +421,18 @@ class HealthMonitor:
             return {'status': 'UNKNOWN', 'reason': f'CPU check failed: {str(e)}'}
     
     def _check_cpu_temperature(self) -> Optional[Dict[str, Any]]:
-        """Check CPU temperature with hysteresis (5 min sustained) - cached, max 1 check per minute"""
+        """
+        Check CPU temperature with temporal logic:
+        - WARNING if temp >80°C sustained for >3 minutes
+        - Auto-clears if temp ≤80°C for 30 seconds
+        - No dismiss button (non-dismissable)
+        """
         cache_key = 'cpu_temp'
         current_time = time.time()
         
+        # Check every 10 seconds instead of 60
         if cache_key in self.last_check_times:
-            if current_time - self.last_check_times[cache_key] < 60:
+            if current_time - self.last_check_times[cache_key] < 10:
                 return self.cached_results.get(cache_key)
         
         try:
@@ -455,35 +462,54 @@ class HealthMonitor:
                         'time': current_time
                     })
                     
-                    # Keep last 6 minutes of data
+                    # Keep last 4 minutes of data (240 seconds)
                     self.state_history[state_key] = [
                         entry for entry in self.state_history[state_key]
-                        if current_time - entry['time'] < 360
+                        if current_time - entry['time'] < 240
                     ]
                     
-                    # Check sustained high temperature (5 minutes)
-                    critical_temp_samples = [
+                    # Check if temperature >80°C for more than 3 minutes (180 seconds)
+                    high_temp_samples = [
                         entry for entry in self.state_history[state_key]
-                        if entry['value'] >= self.TEMP_CRITICAL and
-                        current_time - entry['time'] <= 300
+                        if entry['value'] > 80 and current_time - entry['time'] <= 180
                     ]
                     
-                    warning_temp_samples = [
+                    # Check if temperature ≤80°C for last 30 seconds (recovery)
+                    recovery_samples = [
                         entry for entry in self.state_history[state_key]
-                        if entry['value'] >= self.TEMP_WARNING and
-                        current_time - entry['time'] <= 300
+                        if entry['value'] <= 80 and current_time - entry['time'] <= 30
                     ]
                     
-                    # Require at least 3 samples over 5 minutes to trigger alert
-                    if len(critical_temp_samples) >= 3:
-                        status = 'CRITICAL'
-                        reason = f'CPU temperature {max_temp}°C ≥{self.TEMP_CRITICAL}°C sustained >5min'
-                    elif len(warning_temp_samples) >= 3:
+                    # Require at least 18 samples over 3 minutes (one every 10 seconds) to trigger alert
+                    if len(high_temp_samples) >= 18:
+                        # Temperature has been >80°C for >3 minutes
                         status = 'WARNING'
-                        reason = f'CPU temperature {max_temp}°C ≥{self.TEMP_WARNING}°C sustained >5min'
-                    else:
+                        reason = f'CPU temperature {max_temp}°C >80°C sustained >3min'
+                        
+                        # Record non-dismissable error
+                        health_persistence.record_error(
+                            error_key='cpu_temp_high',
+                            category='temperature',
+                            severity='WARNING',
+                            reason=reason,
+                            details={'temperature': max_temp, 'dismissable': False}
+                        )
+                    elif len(recovery_samples) >= 3:
+                        # Temperature has been ≤80°C for 30 seconds - clear the error
                         status = 'OK'
                         reason = None
+                        health_persistence.resolve_error('cpu_temp_high', 'Temperature recovered')
+                    else:
+                        # Temperature is elevated but not long enough, or recovering but not yet cleared
+                        # Check if we already have an active error
+                        if health_persistence.is_error_active('cpu_temp_high', category='temperature'):
+                            # Keep the warning active
+                            status = 'WARNING'
+                            reason = f'CPU temperature {max_temp}°C still elevated'
+                        else:
+                            # No active warning yet
+                            status = 'OK'
+                            reason = None
                     
                     temp_result = {
                         'status': status,
@@ -829,15 +855,44 @@ class HealthMonitor:
                     
                     # Report based on recent error count
                     if error_count >= 3:
+                        error_key = f'disk_{disk}'
+                        severity = 'CRITICAL'
+                        reason = f'{error_count} I/O errors in 5 minutes'
+                        
+                        health_persistence.record_error(
+                            error_key=error_key,
+                            category='disks',
+                            severity=severity,
+                            reason=reason,
+                            details={'disk': disk, 'error_count': error_count, 'dismissable': True}
+                        )
+                        
                         disk_issues[f'/dev/{disk}'] = {
-                            'status': 'CRITICAL',
-                            'reason': f'{error_count} I/O errors in 5 minutes'
+                            'status': severity,
+                            'reason': reason,
+                            'dismissable': True
                         }
                     elif error_count >= 1:
+                        error_key = f'disk_{disk}'
+                        severity = 'WARNING'
+                        reason = f'{error_count} I/O error(s) in 5 minutes'
+                        
+                        health_persistence.record_error(
+                            error_key=error_key,
+                            category='disks',
+                            severity=severity,
+                            reason=reason,
+                            details={'disk': disk, 'error_count': error_count, 'dismissable': True}
+                        )
+                        
                         disk_issues[f'/dev/{disk}'] = {
-                            'status': 'WARNING',
-                            'reason': f'{error_count} I/O error(s) in 5 minutes'
+                            'status': severity,
+                            'reason': reason,
+                            'dismissable': True
                         }
+                    else:
+                        error_key = f'disk_{disk}'
+                        health_persistence.resolve_error(error_key, 'Disk errors cleared')
             
             if not disk_issues:
                 return {'status': 'OK'}
@@ -851,7 +906,6 @@ class HealthMonitor:
             }
             
         except Exception:
-            # If dmesg check fails, return OK as it's not a critical system failure
             return {'status': 'OK'}
     
     def _check_network_optimized(self) -> Dict[str, Any]:
@@ -865,6 +919,8 @@ class HealthMonitor:
             
             net_if_stats = psutil.net_if_stats()
             
+            active_interfaces = set()
+            
             for interface, stats in net_if_stats.items():
                 if interface == 'lo':
                     continue
@@ -874,10 +930,25 @@ class HealthMonitor:
                     # Consider common PVE bridge interfaces and physical NICs as important
                     if interface.startswith('vmbr') or interface.startswith('eth') or interface.startswith('ens') or interface.startswith('enp'):
                         issues.append(f'{interface} is DOWN')
+                        
+                        error_key = interface
+                        health_persistence.record_error(
+                            error_key=error_key,
+                            category='network',
+                            severity='CRITICAL',
+                            reason='Interface DOWN',
+                            details={'interface': interface, 'dismissable': True}
+                        )
+                        
                         interface_details[interface] = {
                             'status': 'CRITICAL',
-                            'reason': 'Interface DOWN'
+                            'reason': 'Interface DOWN',
+                            'dismissable': True
                         }
+                else:
+                    active_interfaces.add(interface)
+                    if interface.startswith('vmbr') or interface.startswith('eth') or interface.startswith('ens') or interface.startswith('enp'):
+                        health_persistence.resolve_error(interface, 'Interface recovered')
             
             # Check connectivity (latency)
             latency_status = self._check_network_latency()
@@ -1307,9 +1378,19 @@ class HealthMonitor:
                 # Check persistent log errors recorded by health_persistence
                 persistent_errors = health_persistence.get_active_errors('logs')
                 if persistent_errors:
+                    # Find the highest severity among persistent errors to set overall status
+                    max_severity = 'OK'
+                    reasons = []
+                    for error in persistent_errors:
+                        if error['severity'] == 'CRITICAL':
+                            max_severity = 'CRITICAL'
+                        elif error['severity'] == 'WARNING' and max_severity != 'CRITICAL':
+                            max_severity = 'WARNING'
+                        reasons.append(error['reason'])
+                    
                     return {
-                        'status': 'WARNING', # Or CRITICAL depending on severity of persistent errors
-                        'reason': f'{len(persistent_errors)} persistent log issues detected'
+                        'status': max_severity,
+                        'reason': '; '.join(reasons[:3]) # Show up to 3 persistent reasons
                     }
                 return self.cached_results.get(cache_key, {'status': 'OK'})
         
@@ -1356,30 +1437,38 @@ class HealthMonitor:
                     pattern = self._normalize_log_pattern(line)
                     
                     if severity == 'CRITICAL':
-                        # If this critical pattern is new or we haven't logged it recently
-                        error_key = f'log_critical_{abs(hash(pattern)) % 10000}'
+                        pattern_hash = hashlib.md5(pattern.encode()).hexdigest()[:8]
+                        error_key = f'log_critical_{pattern_hash}'
+                        
                         if pattern not in critical_errors_found:
                             critical_errors_found[pattern] = line
-                            # Record persistent error if it's not already active and within recent persistence
+                            # Record persistent error if it's not already active
                             if not health_persistence.is_error_active(error_key, category='logs'):
                                 health_persistence.record_error(
                                     error_key=error_key,
                                     category='logs',
                                     severity='CRITICAL',
                                     reason=line[:100], # Truncate reason for brevity
-                                    details={'pattern': pattern}
+                                    details={'pattern': pattern, 'dismissable': True}
                                 )
                     
                     recent_patterns[pattern] += 1
                 
                 for line in previous_lines:
-                    if not line.strip() or self._is_benign_error(line):
+                    if not line.strip():
                         continue
                     
+                    # Skip benign errors
+                    if self._is_benign_error(line):
+                        continue
+                    
+                    # Classify severity
                     severity = self._classify_log_severity(line)
-                    if severity is None:
+                    
+                    if severity is None: # Skip informational or classified benign lines
                         continue
                     
+                    # Normalize to a pattern for grouping
                     pattern = self._normalize_log_pattern(line)
                     previous_patterns[pattern] += 1
                 
@@ -1500,7 +1589,7 @@ class HealthMonitor:
                 lines = result.stdout.strip().split('\n')
                 
                 for line in lines:
-                    # 'Inst' indicates a package will be installed/upgraded
+                    # 'Inst ' indicates a package will be installed/upgraded
                     if line.startswith('Inst '):
                         update_count += 1
                         line_lower = line.lower()
@@ -2068,6 +2157,12 @@ class HealthMonitor:
             'summary': summary,
             'details': details,
             'timestamp': datetime.now().isoformat()
+        }
+
+
+# Global instance
+health_monitor = HealthMonitor()
+.now().isoformat()
         }
 
 
