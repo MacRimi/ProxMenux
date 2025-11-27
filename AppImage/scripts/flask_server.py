@@ -36,6 +36,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
+from proxmox_storage_monitor import proxmox_storage_monitor
 from flask_terminal_routes import terminal_bp, init_terminal_routes  # noqa: E402
 from flask_health_routes import health_bp  # noqa: E402
 from flask_auth_routes import auth_bp  # noqa: E402
@@ -1758,18 +1759,7 @@ def get_proxmox_storage():
                 pass
                 continue
             
-            # Si total es 0, significa que hay un error de conexión o el datastore no está disponible
-            if total == 0:
-                # print(f"[v0] Skipping storage {name} - invalid data (total=0, likely connection error)")
-                pass
-                continue
-            
-            # Si el status es "inactive", también lo omitimos
-            if status.lower() != "available":
-                # print(f"[v0] Skipping storage {name} - status is not available: {status}")
-                pass
-                continue
-            
+            # No filtrar storages no disponibles - mantenerlos para mostrar errores
             # Calcular porcentaje
             percent = (used / total * 100) if total > 0 else 0.0
             
@@ -1778,10 +1768,18 @@ def get_proxmox_storage():
             used_gb = round(used / (1024**3), 2)
             available_gb = round(available / (1024**3), 2)
             
+            # Determine storage status
+            if total == 0:
+                storage_status = 'error'
+            elif status.lower() != "available":
+                storage_status = 'error'
+            else:
+                storage_status = 'active'
+            
             storage_info = {
                 'name': name,
                 'type': storage_type,
-                'status': 'active',  # Normalizar status para compatibilidad con frontend
+                'status': storage_status,  # Usar el status determinado (active o error)
                 'total': total_gb,
                 'used': used_gb,
                 'available': available_gb,
@@ -1792,6 +1790,12 @@ def get_proxmox_storage():
 
             storage_list.append(storage_info)
         
+        # Get unavailable storages from monitor
+        storage_status_data = proxmox_storage_monitor.get_storage_status()
+        unavailable_storages = storage_status_data.get('unavailable', [])
+        
+        # Add unavailable storages to the list
+        storage_list.extend(unavailable_storages)
 
         return {'storage': storage_list}
         

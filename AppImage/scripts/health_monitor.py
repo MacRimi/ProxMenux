@@ -19,6 +19,12 @@ import re
 
 from health_persistence import health_persistence
 
+try:
+    from proxmox_storage_monitor import proxmox_storage_monitor
+    PROXMOX_STORAGE_AVAILABLE = True
+except ImportError:
+    PROXMOX_STORAGE_AVAILABLE = False
+
 class HealthMonitor:
     """
     Monitors system health across multiple components with minimal impact.
@@ -244,23 +250,32 @@ class HealthMonitor:
         elif services_status['status'] == 'WARNING':
             warning_issues.append(services_status.get('reason', 'Service issue'))
         
-        # Priority 2: Storage
+        # Priority 1.5: Proxmox Storage Check (uses external monitor)
+        proxmox_storage_result = self._check_proxmox_storage()
+        if proxmox_storage_result:
+            details['storage'] = proxmox_storage_result
+            if proxmox_storage_result.get('status') == 'CRITICAL':
+                critical_issues.append(proxmox_storage_result.get('reason', 'Proxmox storage unavailable'))
+            elif proxmox_storage_result.get('status') == 'WARNING':
+                warning_issues.append(proxmox_storage_result.get('reason', 'Proxmox storage issue'))
+        
+        # Priority 2: Storage (filesystem usage, ZFS, SMART etc.)
         storage_status = self._check_storage_optimized()
         if storage_status:
-            details['storage'] = storage_status
+            details['disks'] = storage_status # Rename from 'storage' to 'disks' for clarity
             if storage_status.get('status') == 'CRITICAL':
-                critical_issues.append(storage_status.get('reason', 'Storage failure'))
+                critical_issues.append(storage_status.get('reason', 'Disk/Storage failure'))
             elif storage_status.get('status') == 'WARNING':
-                warning_issues.append(storage_status.get('reason', 'Storage issue'))
+                warning_issues.append(storage_status.get('reason', 'Disk/Storage issue'))
         
-        # Priority 3: Disks
-        disks_status = self._check_disks_optimized()
-        if disks_status:
-            details['disks'] = disks_status
-            if disks_status.get('status') == 'CRITICAL':
-                critical_issues.append(disks_status.get('reason', 'Disk failure'))
-            elif disks_status.get('status') == 'WARNING':
-                warning_issues.append(disks_status.get('reason', 'Disk issue'))
+        # Priority 3: Disks (redundant with storage_optimized, but keeping for now)
+        # disks_status = self._check_disks_optimized() # This is now covered by _check_storage_optimized
+        # if disks_status:
+        #     details['disks'] = disks_status
+        #     if disks_status.get('status') == 'CRITICAL':
+        #         critical_issues.append(disks_status.get('reason', 'Disk failure'))
+        #     elif disks_status.get('status') == 'WARNING':
+        #         warning_issues.append(disks_status.get('reason', 'Disk issue'))
         
         # Priority 4: VMs/CTs - now with persistence
         vms_status = self._check_vms_cts_with_persistence()
@@ -578,49 +593,7 @@ class HealthMonitor:
         issues = []
         storage_details = {}
         
-        try:
-            result = subprocess.run(
-                ['pvesm', 'status'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            
-            if result.returncode == 0:
-                lines = result.stdout.strip().split('\n')[1:]  # Skip header
-                for line in lines:
-                    parts = line.split()
-                    if len(parts) >= 4:
-                        storage_name = parts[0]
-                        storage_type = parts[1]
-                        enabled = parts[2]
-                        active = parts[3]
-                        
-                        if enabled == '1' and active == '0':
-                            issues.append(f'{storage_name}: Inactive')
-                            storage_details[storage_name] = {
-                                'status': 'CRITICAL',
-                                'reason': 'Storage inactive',
-                                'type': storage_type
-                            }
-        except Exception as e:
-            # If pvesm not available, skip silently
-            pass
-        
-        # Check ZFS pool health status
-        zfs_pool_issues = self._check_zfs_pool_health()
-        if zfs_pool_issues:
-            for pool_name, pool_info in zfs_pool_issues.items():
-                issues.append(f'{pool_name}: {pool_info["reason"]}')
-                storage_details[pool_name] = pool_info
-        
-        # Check disk health from Proxmox task log or system logs
-        disk_health_issues = self._check_disk_health_from_events()
-        if disk_health_issues:
-            for disk, issue in disk_health_issues.items():
-                issues.append(f'{disk}: {issue["reason"]}')
-                storage_details[disk] = issue
-        
+        # Check disk usage and mount status first for critical mounts
         critical_mounts = ['/']
         
         for mount_point in critical_mounts:
@@ -660,7 +633,30 @@ class HealthMonitor:
                         issues.append(f"{mount_point}: {fs_status['reason']}")
                         storage_details[mount_point] = fs_status
             except Exception:
-                pass
+                pass # Silently skip if mountpoint check fails
+        
+        # Check ZFS pool health status
+        zfs_pool_issues = self._check_zfs_pool_health()
+        if zfs_pool_issues:
+            for pool_name, pool_info in zfs_pool_issues.items():
+                issues.append(f'{pool_name}: {pool_info["reason"]}')
+                storage_details[pool_name] = pool_info
+        
+        # Check disk health from Proxmox task log or system logs (SMART, etc.)
+        disk_health_issues = self._check_disk_health_from_events()
+        if disk_health_issues:
+            for disk, issue in disk_health_issues.items():
+                # Only add if not already covered by critical mountpoint issues
+                if disk not in storage_details or storage_details[disk].get('status') == 'OK':
+                    issues.append(f'{disk}: {issue["reason"]}')
+                    storage_details[disk] = issue
+        
+        # Check LVM status
+        lvm_status = self._check_lvm()
+        if lvm_status.get('status') == 'WARNING':
+            # LVM volumes might be okay but indicate potential issues
+            issues.append(f"LVM check: {lvm_status.get('reason')}")
+            storage_details['lvm_check'] = lvm_status
         
         if not issues:
             return {'status': 'OK'}
@@ -709,6 +705,16 @@ class HealthMonitor:
     def _check_lvm(self) -> Dict[str, Any]:
         """Check LVM volumes - improved detection"""
         try:
+            # Check if lvs command is available
+            result_which = subprocess.run(
+                ['which', 'lvs'],
+                capture_output=True,
+                text=True,
+                timeout=1
+            )
+            if result_which.returncode != 0:
+                return {'status': 'OK'} # LVM not installed
+
             result = subprocess.run(
                 ['lvs', '--noheadings', '--options', 'lv_name,vg_name,lv_attr'],
                 capture_output=True,
@@ -717,23 +723,40 @@ class HealthMonitor:
             )
             
             if result.returncode != 0:
-                return {'status': 'OK'}
+                return {'status': 'WARNING', 'reason': 'lvs command failed'}
             
             volumes = []
-            
             for line in result.stdout.strip().split('\n'):
                 if line.strip():
                     parts = line.split()
                     if len(parts) >= 2:
                         lv_name = parts[0].strip()
                         vg_name = parts[1].strip()
-                        volumes.append(f'{vg_name}/{lv_name}')
+                        # Check for 'a' attribute indicating active/available
+                        if 'a' in parts[2]:
+                            volumes.append(f'{vg_name}/{lv_name}')
+            
+            # If LVM is configured but no active volumes are found, it might be an issue or just not used
+            if not volumes:
+                # Check if any VGs exist to determine if LVM is truly unconfigured or just inactive
+                vg_result = subprocess.run(
+                    ['vgs', '--noheadings', '--options', 'vg_name'],
+                    capture_output=True,
+                    text=True,
+                    timeout=3
+                )
+                if vg_result.returncode == 0 and vg_result.stdout.strip():
+                    return {'status': 'WARNING', 'reason': 'No active LVM volumes detected'}
+                else:
+                    return {'status': 'OK'} # No VGs found, LVM not in use
             
             return {'status': 'OK', 'volumes': len(volumes)}
             
         except Exception:
             return {'status': 'OK'}
     
+    # This function is no longer used in get_detailed_status, but kept for reference if needed.
+    # The new _check_proxmox_storage function handles this logic better.
     def _check_proxmox_storages(self) -> Dict[str, Any]:
         """Check Proxmox-specific storages (only report problems)"""
         storages = {}
@@ -748,7 +771,9 @@ class HealthMonitor:
                         line = line.strip()
                         
                         if line.startswith('dir:') or line.startswith('nfs:') or \
-                           line.startswith('cifs:') or line.startswith('pbs:'):
+                           line.startswith('cifs:') or line.startswith('pbs:') or \
+                           line.startswith('rbd:') or line.startswith('cephfs:') or \
+                           line.startswith('zfs:') or line.startswith('zfs-send:'):
                             parts = line.split(':', 1)
                             storage_type = parts[0]
                             current_storage = parts[1].strip()
@@ -774,12 +799,16 @@ class HealthMonitor:
     def _check_disks_optimized(self) -> Dict[str, Any]:
         """
         Optimized disk check - always returns status.
+        Checks dmesg for I/O errors and SMART status.
+        NOTE: This function is now largely covered by _check_storage_optimized,
+              but kept for potential specific disk-level reporting if needed.
+              Currently, its primary function is to detect recent I/O errors.
         """
         current_time = time.time()
         disk_issues = {}
         
         try:
-            # Check dmesg for I/O errors
+            # Check dmesg for I/O errors in the last 5 minutes
             result = subprocess.run(
                 ['dmesg', '-T', '--level=err,warn', '--since', '5 minutes ago'],
                 capture_output=True,
@@ -790,13 +819,14 @@ class HealthMonitor:
             if result.returncode == 0:
                 for line in result.stdout.split('\n'):
                     line_lower = line.lower()
-                    if any(keyword in line_lower for keyword in ['i/o error', 'ata error', 'scsi error']):
-                        for part in line.split():
-                            if part.startswith('sd') or part.startswith('nvme') or part.startswith('hd'):
-                                disk_name = part.rstrip(':,')
-                                self.io_error_history[disk_name].append(current_time)
+                    if any(keyword in line_lower for keyword in ['i/o error', 'ata error', 'scsi error', 'medium error']):
+                        # Try to extract disk name
+                        disk_match = re.search(r'/dev/(sd[a-z]|nvme\d+n\d+)', line)
+                        if disk_match:
+                            disk_name = disk_match.group(1)
+                            self.io_error_history[disk_name].append(current_time)
                 
-                # Clean old history
+                # Clean old history (keep errors from last 5 minutes)
                 for disk in list(self.io_error_history.keys()):
                     self.io_error_history[disk] = [
                         t for t in self.io_error_history[disk]
@@ -805,6 +835,7 @@ class HealthMonitor:
                     
                     error_count = len(self.io_error_history[disk])
                     
+                    # Report based on recent error count
                     if error_count >= 3:
                         disk_issues[f'/dev/{disk}'] = {
                             'status': 'CRITICAL',
@@ -823,16 +854,18 @@ class HealthMonitor:
             
             return {
                 'status': 'CRITICAL' if has_critical else 'WARNING',
-                'reason': f"{len(disk_issues)} disk(s) with errors",
+                'reason': f"{len(disk_issues)} disk(s) with recent errors",
                 'details': disk_issues
             }
             
         except Exception:
+            # If dmesg check fails, return OK as it's not a critical system failure
             return {'status': 'OK'}
     
     def _check_network_optimized(self) -> Dict[str, Any]:
         """
         Optimized network check - always returns status.
+        Checks interface status and basic latency.
         """
         try:
             issues = []
@@ -846,16 +879,17 @@ class HealthMonitor:
                 
                 # Check if important interface is down
                 if not stats.isup:
-                    if interface.startswith('vmbr') or interface.startswith('eth') or interface.startswith('ens'):
+                    # Consider common PVE bridge interfaces and physical NICs as important
+                    if interface.startswith('vmbr') or interface.startswith('eth') or interface.startswith('ens') or interface.startswith('enp'):
                         issues.append(f'{interface} is DOWN')
                         interface_details[interface] = {
                             'status': 'CRITICAL',
                             'reason': 'Interface DOWN'
                         }
             
-            # Check connectivity
+            # Check connectivity (latency)
             latency_status = self._check_network_latency()
-            if latency_status and latency_status.get('status') not in ['OK', 'UNKNOWN']:
+            if latency_status and latency_status.get('status') not in ['OK', 'INFO', 'UNKNOWN']:
                 issues.append(latency_status.get('reason', 'Network latency issue'))
                 interface_details['connectivity'] = latency_status
             
@@ -920,16 +954,17 @@ class HealthMonitor:
                         except:
                             pass
             
+            # If ping failed (timeout, unreachable)
             packet_loss_result = {
                 'status': 'CRITICAL',
-                'reason': 'Packet loss or timeout'
+                'reason': 'Packet loss or timeout to 1.1.1.1'
             }
             self.cached_results[cache_key] = packet_loss_result
             self.last_check_times[cache_key] = current_time
             return packet_loss_result
             
         except Exception:
-            return None
+            return {'status': 'UNKNOWN', 'reason': 'Ping command failed'}
     
     def _check_vms_cts_optimized(self) -> Dict[str, Any]:
         """
@@ -1060,10 +1095,11 @@ class HealthMonitor:
                 error_key = error['error_key']
                 if error_key.startswith('vm_') or error_key.startswith('ct_'):
                     vm_id = error_key.split('_')[1]
+                    # Check if VM is running using persistence helper
                     if health_persistence.check_vm_running(vm_id):
-                        continue  # Error auto-resolved
+                        continue  # Error auto-resolved if VM is now running
                 
-                # Still active
+                # Still active, add to details
                 vm_details[error_key] = {
                     'status': error['severity'],
                     'reason': error['reason'],
@@ -1074,6 +1110,7 @@ class HealthMonitor:
                 issues.append(f"{error.get('details', {}).get('type', 'VM')} {error.get('details', {}).get('id', '')}: {error['reason']}")
             
             # Check for new errors in logs
+            # Using 'warning' priority to catch potential startup issues
             result = subprocess.run(
                 ['journalctl', '--since', '10 minutes ago', '--no-pager', '-p', 'warning'],
                 capture_output=True,
@@ -1108,7 +1145,7 @@ class HealthMonitor:
                             }
                         continue
                     
-                    # Container errors
+                    # Container errors (including startup issues via vzstart)
                     vzstart_match = re.search(r'vzstart:(\d+):', line)
                     if vzstart_match and ('error' in line_lower or 'fail' in line_lower or 'does not exist' in line_lower):
                         ctid = vzstart_match.group(1)
@@ -1139,6 +1176,41 @@ class HealthMonitor:
                                 'id': ctid,
                                 'type': 'CT'
                             }
+                    
+                    # Generic failed to start for VMs and CTs
+                    if any(keyword in line_lower for keyword in ['failed to start', 'cannot start', 'activation failed', 'start error']):
+                        id_match = re.search(r'\b(\d{3,5})\b', line) # Increased digit count for wider match
+                        if id_match:
+                            vmid_ctid = id_match.group(1)
+                            # Determine if it's a VM or CT based on context, if possible
+                            if 'vm' in line_lower or 'qemu' in line_lower:
+                                error_key = f'vm_{vmid_ctid}'
+                                vm_type = 'VM'
+                            elif 'ct' in line_lower or 'lxc' in line_lower:
+                                error_key = f'ct_{vmid_ctid}'
+                                vm_type = 'CT'
+                            else:
+                                # Fallback if type is unclear
+                                error_key = f'vmct_{vmid_ctid}'
+                                vm_type = 'VM/CT'
+                            
+                            if error_key not in vm_details:
+                                reason = 'Failed to start'
+                                # Record persistent error
+                                health_persistence.record_error(
+                                    error_key=error_key,
+                                    category='vms',
+                                    severity='CRITICAL',
+                                    reason=reason,
+                                    details={'id': vmid_ctid, 'type': vm_type}
+                                )
+                                issues.append(f'{vm_type} {vmid_ctid}: {reason}')
+                                vm_details[error_key] = {
+                                    'status': 'CRITICAL',
+                                    'reason': reason,
+                                    'id': vmid_ctid,
+                                    'type': vm_type
+                                }
             
             if not issues:
                 return {'status': 'OK'}
@@ -1171,6 +1243,7 @@ class HealthMonitor:
                     if result.returncode != 0 or result.stdout.strip() != 'active':
                         failed_services.append(service)
                 except Exception:
+                    # If systemctl fails (e.g., command not found or service doesn't exist), treat as failed
                     failed_services.append(service)
             
             if failed_services:
@@ -1183,9 +1256,10 @@ class HealthMonitor:
             return {'status': 'OK'}
             
         except Exception as e:
+            # If the entire systemctl check fails
             return {
                 'status': 'WARNING',
-                'reason': f'Service check failed: {str(e)}'
+                'reason': f'Service check command failed: {str(e)}'
             }
     
     def _is_benign_error(self, line: str) -> bool:
@@ -1199,7 +1273,7 @@ class HealthMonitor:
     def _classify_log_severity(self, line: str) -> Optional[str]:
         """
         Classify log line severity intelligently.
-        Returns: 'CRITICAL', 'WARNING', or None (benign)
+        Returns: 'CRITICAL', 'WARNING', or None (benign/info)
         """
         line_lower = line.lower()
         
@@ -1217,42 +1291,38 @@ class HealthMonitor:
             if re.search(keyword, line_lower):
                 return 'WARNING'
         
-        # Generic error/warning classification
-        if 'critical' in line_lower or 'fatal' in line_lower:
+        # Generic error/warning classification based on common terms
+        if 'critical' in line_lower or 'fatal' in line_lower or 'panic' in line_lower:
             return 'CRITICAL'
-        elif 'error' in line_lower:
+        elif 'error' in line_lower or 'fail' in line_lower:
             return 'WARNING'
         elif 'warning' in line_lower or 'warn' in line_lower:
-            return None  # Generic warnings are benign
+            return None  # Generic warnings are often informational and not critical
         
         return None
 
     def _check_logs_with_persistence(self) -> Dict[str, Any]:
         """
-        Intelligent log checking with cascade detection.
-        Only alerts when there's a real problem (error cascade), not normal background warnings.
-        
-        Logic:
-        - Looks at last 3 minutes (not 10) for immediate issues
-        - Detects cascades: ≥5 errors of same type in 3 min = problem
-        - Compares to previous period to detect spikes
-        - Whitelists known benign Proxmox warnings
+        Intelligent log checking with cascade detection and persistence.
+        Focuses on detecting significant error patterns rather than transient warnings.
         """
         cache_key = 'logs_analysis'
         current_time = time.time()
         
-        # Cache for 5 minutes
+        # Cache the result for 5 minutes to avoid excessive journalctl calls
         if cache_key in self.last_check_times:
             if current_time - self.last_check_times[cache_key] < self.LOG_CHECK_INTERVAL:
+                # Check persistent log errors recorded by health_persistence
                 persistent_errors = health_persistence.get_active_errors('logs')
                 if persistent_errors:
                     return {
-                        'status': 'WARNING',
-                        'reason': f'{len(persistent_errors)} persistent log issues'
+                        'status': 'WARNING', # Or CRITICAL depending on severity of persistent errors
+                        'reason': f'{len(persistent_errors)} persistent log issues detected'
                     }
                 return self.cached_results.get(cache_key, {'status': 'OK'})
         
         try:
+            # Fetch logs from the last 3 minutes for immediate issue detection
             result_recent = subprocess.run(
                 ['journalctl', '--since', '3 minutes ago', '--no-pager', '-p', 'warning'],
                 capture_output=True,
@@ -1260,6 +1330,7 @@ class HealthMonitor:
                 timeout=3
             )
             
+            # Fetch logs from the previous 3-minute interval to detect spikes/cascades
             result_previous = subprocess.run(
                 ['journalctl', '--since', '6 minutes ago', '--until', '3 minutes ago', '--no-pager', '-p', 'warning'],
                 capture_output=True,
@@ -1273,7 +1344,7 @@ class HealthMonitor:
                 
                 recent_patterns = defaultdict(int)
                 previous_patterns = defaultdict(int)
-                critical_errors = {}
+                critical_errors_found = {} # To store unique critical error lines for persistence
                 
                 for line in recent_lines:
                     if not line.strip():
@@ -1286,25 +1357,26 @@ class HealthMonitor:
                     # Classify severity
                     severity = self._classify_log_severity(line)
                     
-                    if severity is None:
+                    if severity is None: # Skip informational or classified benign lines
                         continue
                     
-                    # Normalize to pattern
+                    # Normalize to a pattern for grouping
                     pattern = self._normalize_log_pattern(line)
                     
                     if severity == 'CRITICAL':
-                        if pattern not in critical_errors:
-                            critical_errors[pattern] = line
-                            
-                            # Record persistent error
-                            error_key = f'log_critical_{abs(hash(pattern)) % 10000}'
-                            health_persistence.record_error(
-                                error_key=error_key,
-                                category='logs',
-                                severity='CRITICAL',
-                                reason=line[:100],
-                                details={'pattern': pattern}
-                            )
+                        # If this critical pattern is new or we haven't logged it recently
+                        error_key = f'log_critical_{abs(hash(pattern)) % 10000}'
+                        if pattern not in critical_errors_found:
+                            critical_errors_found[pattern] = line
+                            # Record persistent error if it's not already active and within recent persistence
+                            if not health_persistence.is_error_active(error_key, category='logs'):
+                                health_persistence.record_error(
+                                    error_key=error_key,
+                                    category='logs',
+                                    severity='CRITICAL',
+                                    reason=line[:100], # Truncate reason for brevity
+                                    details={'pattern': pattern}
+                                )
                     
                     recent_patterns[pattern] += 1
                 
@@ -1319,25 +1391,28 @@ class HealthMonitor:
                     pattern = self._normalize_log_pattern(line)
                     previous_patterns[pattern] += 1
                 
+                # Detect cascades: ≥10 errors of same type in 3 min
                 cascading_errors = {
                     pattern: count for pattern, count in recent_patterns.items()
                     if count >= 10 and self._classify_log_severity(pattern) in ['WARNING', 'CRITICAL']
                 }
                 
+                # Detect spikes: ≥3 errors now AND ≥3x increase from previous period
                 spike_errors = {}
                 for pattern, recent_count in recent_patterns.items():
                     prev_count = previous_patterns.get(pattern, 0)
-                    # Spike if: ≥3 errors now AND ≥3x increase
                     if recent_count >= 3 and recent_count >= prev_count * 3:
                         spike_errors[pattern] = recent_count
                 
-                unique_critical = len(critical_errors)
+                unique_critical_count = len(critical_errors_found)
                 cascade_count = len(cascading_errors)
                 spike_count = len(spike_errors)
                 
-                if unique_critical > 0:
+                if unique_critical_count > 0:
                     status = 'CRITICAL'
-                    reason = f'{unique_critical} critical error(s): cascade detected'
+                    # Get a representative critical error reason
+                    representative_error = next(iter(critical_errors_found.values()))
+                    reason = f'Critical error detected: {representative_error[:100]}'
                 elif cascade_count > 0:
                     status = 'WARNING'
                     reason = f'Error cascade detected: {cascade_count} pattern(s) repeating ≥10 times in 3min'
@@ -1345,7 +1420,7 @@ class HealthMonitor:
                     status = 'WARNING'
                     reason = f'Error spike detected: {spike_count} pattern(s) increased 3x'
                 else:
-                    # Normal background warnings, no alert
+                    # No significant issues found
                     status = 'OK'
                     reason = None
                 
@@ -1357,12 +1432,15 @@ class HealthMonitor:
                 self.last_check_times[cache_key] = current_time
                 return log_result
             
+            # If journalctl command failed or returned no data
             ok_result = {'status': 'OK'}
             self.cached_results[cache_key] = ok_result
             self.last_check_times[cache_key] = current_time
             return ok_result
             
-        except Exception:
+        except Exception as e:
+            # Log the exception but return OK to avoid alert storms on check failure
+            print(f"[HealthMonitor] Error checking logs: {e}")
             return {'status': 'OK'}
     
     def _normalize_log_pattern(self, line: str) -> str:
@@ -1370,25 +1448,32 @@ class HealthMonitor:
         Normalize log line to a pattern for grouping similar errors.
         Removes timestamps, PIDs, IDs, paths, and other variables.
         """
-        pattern = re.sub(r'\d{4}-\d{2}-\d{2}', '', line)  # Remove dates
+        # Remove standard syslog timestamp and process info if present
+        pattern = re.sub(r'^\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\S+(\s+\[\d+\])?:\s+', '', line)
+        
+        pattern = re.sub(r'\d{4}-\d{2}-\d{2}', '', pattern)  # Remove dates
         pattern = re.sub(r'\d{2}:\d{2}:\d{2}', '', pattern)  # Remove times
         pattern = re.sub(r'pid[:\s]+\d+', 'pid:XXX', pattern.lower())  # Normalize PIDs
-        pattern = re.sub(r'\b\d{3,6}\b', 'ID', pattern)  # Normalize IDs
-        pattern = re.sub(r'/dev/\S+', '/dev/XXX', pattern)  # Normalize devices
-        pattern = re.sub(r'/\S+/\S+', '/PATH/', pattern)  # Normalize paths
-        pattern = re.sub(r'0x[0-9a-f]+', '0xXXX', pattern)  # Normalize hex
+        pattern = re.sub(r'\b\d{3,6}\b', 'ID', pattern)  # Normalize IDs (common for container/VM IDs)
+        pattern = re.sub(r'/dev/\S+', '/dev/XXX', pattern)  # Normalize device paths
+        pattern = re.sub(r'/\S+/\S+', '/PATH/', pattern)  # Normalize general paths
+        pattern = re.sub(r'0x[0-9a-f]+', '0xXXX', pattern)  # Normalize hex values
+        pattern = re.sub(r'\b(uuid|guid|hash)[:=]\s*[\w-]+\b', r'\1=XXX', pattern.lower()) # Normalize UUIDs/GUIDs
         pattern = re.sub(r'\s+', ' ', pattern).strip()  # Normalize whitespace
-        return pattern[:150]  # Keep first 150 chars
+        
+        return pattern[:150]  # Keep first 150 characters to avoid overly long patterns
     
     def _check_updates(self) -> Optional[Dict[str, Any]]:
         """
-        Check for pending system updates with intelligence.
-        Now only warns after 365 days without updates.
-        Critical security updates and kernel updates trigger INFO status immediately.
+        Check for pending system updates.
+        - WARNING: If security updates are available.
+        - CRITICAL: If system not updated in >2 years.
+        - INFO: If 1-2 years without updates, or many non-security updates.
         """
         cache_key = 'updates_check'
         current_time = time.time()
         
+        # Cache for 10 minutes
         if cache_key in self.last_check_times:
             if current_time - self.last_check_times[cache_key] < 600:
                 return self.cached_results.get(cache_key)
@@ -1403,48 +1488,51 @@ class HealthMonitor:
                     days_since_update = (current_time - mtime) / 86400
                     last_update_days = int(days_since_update)
                 except Exception:
-                    pass
+                    pass # Ignore if mtime fails
             
+            # Perform a dry run of apt-get upgrade to see pending packages
             result = subprocess.run(
                 ['apt-get', 'upgrade', '--dry-run'],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5 # Increased timeout for safety
             )
+            
+            status = 'OK'
+            reason = None
+            update_count = 0
+            security_updates_packages = []
+            kernel_pve_updates_packages = []
             
             if result.returncode == 0:
                 lines = result.stdout.strip().split('\n')
                 
-                # Count total updates
-                update_count = 0
-                security_updates = []
-                kernel_updates = []
-                
                 for line in lines:
+                    # 'Inst' indicates a package will be installed/upgraded
                     if line.startswith('Inst '):
                         update_count += 1
                         line_lower = line.lower()
+                        package_name = line.split()[1].split(':')[0] # Get package name, strip arch if present
                         
-                        # Check for security updates
+                        # Check for security updates (common pattern in repo names)
                         if 'security' in line_lower or 'debian-security' in line_lower:
-                            package_name = line.split()[1]
-                            security_updates.append(package_name)
+                            security_updates_packages.append(package_name)
                         
                         # Check for kernel or critical PVE updates
-                        if any(pkg in line_lower for pkg in ['linux-image', 'pve-kernel', 'pve-manager', 'proxmox-ve']):
-                            package_name = line.split()[1]
-                            kernel_updates.append(package_name)
+                        if any(pkg in line_lower for pkg in ['linux-image', 'pve-kernel', 'pve-manager', 'proxmox-ve', 'qemu-server', 'pve-api-core']):
+                            kernel_pve_updates_packages.append(package_name)
                 
-                if security_updates:
+                # Determine overall status based on findings
+                if security_updates_packages:
                     status = 'WARNING'
-                    reason = f'{len(security_updates)} security update(s) available'
-                    # Record persistent error for security updates
+                    reason = f'{len(security_updates_packages)} security update(s) available'
+                    # Record persistent error for security updates to ensure it's visible
                     health_persistence.record_error(
                         error_key='updates_security',
                         category='updates',
                         severity='WARNING',
                         reason=reason,
-                        details={'count': len(security_updates), 'packages': security_updates[:5]}
+                        details={'count': len(security_updates_packages), 'packages': security_updates_packages[:5]}
                     )
                 elif last_update_days and last_update_days >= 730:
                     # 2+ years without updates - CRITICAL
@@ -1468,57 +1556,69 @@ class HealthMonitor:
                         reason=reason,
                         details={'days': last_update_days, 'update_count': update_count}
                     )
-                elif kernel_updates:
+                elif kernel_pve_updates_packages:
+                    # Informational: Kernel or critical PVE components need update
                     status = 'INFO'
-                    reason = f'{len(kernel_updates)} kernel/PVE update(s) available'
+                    reason = f'{len(kernel_pve_updates_packages)} kernel/PVE update(s) available'
                 elif update_count > 50:
+                    # Informational: Large number of pending updates
                     status = 'INFO'
                     reason = f'{update_count} updates pending (consider maintenance window)'
-                else:
-                    status = 'OK'
-                    reason = None
-                
-                update_result = {
-                    'status': status,
-                    'count': update_count
-                }
-                if reason:
-                    update_result['reason'] = reason
-                if last_update_days:
-                    update_result['days_since_update'] = last_update_days
-                
-                self.cached_results[cache_key] = update_result
-                self.last_check_times[cache_key] = current_time
-                return update_result
             
-            return {'status': 'OK', 'count': 0}
+            # If apt-get upgrade --dry-run failed
+            elif result.returncode != 0:
+                status = 'WARNING'
+                reason = 'Failed to check for updates (apt-get error)'
+
+            # Construct result dictionary
+            update_result = {
+                'status': status,
+                'count': update_count
+            }
+            if reason:
+                update_result['reason'] = reason
+            if last_update_days is not None: # Only add if we could determine days_since_update
+                update_result['days_since_update'] = last_update_days
+            
+            self.cached_results[cache_key] = update_result
+            self.last_check_times[cache_key] = current_time
+            return update_result
             
         except Exception as e:
+            print(f"[HealthMonitor] Error checking updates: {e}")
+            # Return OK on exception to avoid false alerts
             return {'status': 'OK', 'count': 0}
     
     def _check_security(self) -> Dict[str, Any]:
         """
         Check security-related items:
-        - SSL certificate validity and expiration
-        - Failed login attempts
-        - Excessive uptime (>365 days = kernel vulnerabilities)
+        - Uptime > 1 year (indicates potential kernel vulnerability if not updated)
+        - SSL certificate expiration (non-INFO certs)
+        - Excessive failed login attempts
         """
         try:
             issues = []
             
+            # Check uptime for potential kernel vulnerabilities (if not updated)
             try:
                 uptime_seconds = time.time() - psutil.boot_time()
                 uptime_days = uptime_seconds / 86400
                 
+                # If uptime is over a year and no recent updates, it's a warning
                 if uptime_days > 365:
-                    issues.append(f'Uptime {int(uptime_days)} days (>1 year, kernel updates needed)')
+                    # Check if updates check shows recent activity
+                    updates_data = self.cached_results.get('updates_check')
+                    if updates_data and updates_data.get('days_since_update', 9999) > 365:
+                        issues.append(f'Uptime {int(uptime_days)} days (>1 year, consider updating kernel/system)')
             except Exception:
-                pass
+                pass # Ignore if uptime calculation fails
             
+            # Check SSL certificates (only report non-OK statuses)
             cert_status = self._check_certificates()
             if cert_status and cert_status.get('status') not in ['OK', 'INFO']:
                 issues.append(cert_status.get('reason', 'Certificate issue'))
             
+            # Check for excessive failed login attempts in the last 24 hours
             try:
                 result = subprocess.run(
                     ['journalctl', '--since', '24 hours ago', '--no-pager'],
@@ -1530,28 +1630,30 @@ class HealthMonitor:
                 if result.returncode == 0:
                     failed_logins = 0
                     for line in result.stdout.split('\n'):
-                        if 'authentication failure' in line.lower() or 'failed password' in line.lower():
+                        # Common patterns for failed logins in journald
+                        if 'authentication failure' in line.lower() or 'failed password' in line.lower() or 'invalid user' in line.lower():
                             failed_logins += 1
                     
-                    if failed_logins > 50:
+                    if failed_logins > 50: # Threshold for significant failed attempts
                         issues.append(f'{failed_logins} failed login attempts in 24h')
             except Exception:
-                pass
+                pass # Ignore if journalctl fails
             
             if issues:
                 return {
-                    'status': 'WARNING',
-                    'reason': '; '.join(issues[:2])
+                    'status': 'WARNING', # Security issues are typically warnings
+                    'reason': '; '.join(issues[:2]) # Show up to 2 issues
                 }
             
             return {'status': 'OK'}
             
-        except Exception:
+        except Exception as e:
+            print(f"[HealthMonitor] Error checking security: {e}")
             return {'status': 'OK'}
     
     def _check_certificates(self) -> Optional[Dict[str, Any]]:
         """
-        Check SSL certificate expiration.
+        Check SSL certificate expiration for PVE's default certificate.
         INFO: Self-signed or no cert configured (normal for internal servers)
         WARNING: Expires <30 days
         CRITICAL: Expired
@@ -1559,6 +1661,7 @@ class HealthMonitor:
         cache_key = 'certificates'
         current_time = time.time()
         
+        # Cache for 1 day (86400 seconds)
         if cache_key in self.last_check_times:
             if current_time - self.last_check_times[cache_key] < 86400:
                 return self.cached_results.get(cache_key)
@@ -1569,12 +1672,13 @@ class HealthMonitor:
             if not os.path.exists(cert_path):
                 cert_result = {
                     'status': 'INFO',
-                    'reason': 'Self-signed or default certificate'
+                    'reason': 'Self-signed or default PVE certificate'
                 }
                 self.cached_results[cache_key] = cert_result
                 self.last_check_times[cache_key] = current_time
                 return cert_result
             
+            # Use openssl to get the expiry date
             result = subprocess.run(
                 ['openssl', 'x509', '-enddate', '-noout', '-in', cert_path],
                 capture_output=True,
@@ -1586,43 +1690,62 @@ class HealthMonitor:
                 date_str = result.stdout.strip().replace('notAfter=', '')
                 
                 try:
-                    from datetime import datetime
-                    exp_date = datetime.strptime(date_str, '%b %d %H:%M:%S %Y %Z')
-                    days_until_expiry = (exp_date - datetime.now()).days
-                    
-                    if days_until_expiry < 0:
-                        status = 'CRITICAL'
-                        reason = 'Certificate expired'
-                    elif days_until_expiry < 30:
-                        status = 'WARNING'
-                        reason = f'Certificate expires in {days_until_expiry} days'
-                    else:
-                        status = 'OK'
-                        reason = None
-                    
-                    cert_result = {'status': status}
-                    if reason:
-                        cert_result['reason'] = reason
-                    
-                    self.cached_results[cache_key] = cert_result
-                    self.last_check_times[cache_key] = current_time
-                    return cert_result
-                except Exception:
-                    pass
+                    # Parse the date string (format can vary, e.g., 'Jun 15 10:00:00 2024 GMT')
+                    # Attempt common formats
+                    exp_date = None
+                    try:
+                        # Try more detailed format first
+                        exp_date = datetime.strptime(date_str, '%b %d %H:%M:%S %Y %Z')
+                    except ValueError:
+                        # Fallback to simpler format if needed
+                        try:
+                            exp_date = datetime.strptime(date_str, '%b %d %H:%M:%S %Y')
+                        except ValueError:
+                            # Fallback for "notAfter=..." string itself being the issue
+                            if 'notAfter=' in date_str: # If it's the raw string itself
+                                pass # Will result in 'INFO' status
+                                
+                    if exp_date:
+                        days_until_expiry = (exp_date - datetime.now()).days
+                        
+                        if days_until_expiry < 0:
+                            status = 'CRITICAL'
+                            reason = 'Certificate expired'
+                        elif days_until_expiry < 30:
+                            status = 'WARNING'
+                            reason = f'Certificate expires in {days_until_expiry} days'
+                        else:
+                            status = 'OK'
+                            reason = None
+                        
+                        cert_result = {'status': status}
+                        if reason:
+                            cert_result['reason'] = reason
+                        
+                        self.cached_results[cache_key] = cert_result
+                        self.last_check_times[cache_key] = current_time
+                        return cert_result
+                except Exception as e:
+                    print(f"[HealthMonitor] Error parsing certificate expiry date '{date_str}': {e}")
+                    # Fall through to return INFO if parsing fails
             
+            # If openssl command failed or date parsing failed
             return {'status': 'INFO', 'reason': 'Certificate check inconclusive'}
             
-        except Exception:
-            return {'status': 'OK'}
+        except Exception as e:
+            print(f"[HealthMonitor] Error checking certificates: {e}")
+            return {'status': 'OK'} # Return OK on exception
     
     def _check_disk_health_from_events(self) -> Dict[str, Any]:
         """
-        Check for disk health warnings from Proxmox task log and system logs.
+        Check for disk health warnings/errors from system logs (journalctl).
+        Looks for SMART warnings and specific disk errors.
         Returns dict of disk issues found.
         """
         disk_issues = {}
         
         try:
+            # Check journalctl for warnings/errors related to disks in the last hour
             result = subprocess.run(
                 ['journalctl', '--since', '1 hour ago', '--no-pager', '-p', 'warning'],
                 capture_output=True,
@@ -1634,54 +1757,58 @@ class HealthMonitor:
                 for line in result.stdout.split('\n'):
                     line_lower = line.lower()
                     
-                    # Check for SMART warnings
+                    # Check for SMART warnings/errors
                     if 'smart' in line_lower and ('warning' in line_lower or 'error' in line_lower or 'fail' in line_lower):
-                        # Extract disk name
-                        disk_match = re.search(r'/dev/(sd[a-z]|nvme\d+n\d+)', line)
+                        # Extract disk name using regex for common disk identifiers
+                        disk_match = re.search(r'/dev/(sd[a-z]|nvme\d+n\d+|hd\d+)', line)
                         if disk_match:
                             disk_name = disk_match.group(1)
-                            disk_issues[f'/dev/{disk_name}'] = {
-                                'status': 'WARNING',
-                                'reason': 'SMART warning detected'
-                            }
+                            # Prioritize CRITICAL if already warned, otherwise set to WARNING
+                            if disk_name not in disk_issues or disk_issues[f'/dev/{disk_name}']['status'] != 'CRITICAL':
+                                disk_issues[f'/dev/{disk_name}'] = {
+                                    'status': 'WARNING',
+                                    'reason': 'SMART warning detected'
+                                }
                     
-                    # Check for disk errors
-                    if any(keyword in line_lower for keyword in ['disk error', 'ata error', 'medium error']):
-                        disk_match = re.search(r'/dev/(sd[a-z]|nvme\d+n\d+)', line)
+                    # Check for specific disk I/O or medium errors
+                    if any(keyword in line_lower for keyword in ['disk error', 'ata error', 'medium error', 'io error']):
+                        disk_match = re.search(r'/dev/(sd[a-z]|nvme\d+n\d+|hd\d+)', line)
                         if disk_match:
                             disk_name = disk_match.group(1)
                             disk_issues[f'/dev/{disk_name}'] = {
                                 'status': 'CRITICAL',
                                 'reason': 'Disk error detected'
                             }
-        except Exception:
+        except Exception as e:
+            print(f"[HealthMonitor] Error checking disk health from events: {e}")
+            # Return empty dict on error, as this check isn't system-critical itself
             pass
         
         return disk_issues
     
     def _check_zfs_pool_health(self) -> Dict[str, Any]:
         """
-        Check ZFS pool health status using zpool status command.
-        Returns dict of pools with non-ONLINE status (DEGRADED, FAULTED, UNAVAIL, etc.)
+        Check ZFS pool health status using 'zpool status' command.
+        Returns dict of pools with non-ONLINE status (DEGRADED, FAULTED, UNAVAIL, etc.).
         """
         zfs_issues = {}
         
         try:
-            # First check if zpool command exists
-            result = subprocess.run(
+            # First check if 'zpool' command exists to avoid errors on non-ZFS systems
+            result_which = subprocess.run(
                 ['which', 'zpool'],
                 capture_output=True,
                 text=True,
                 timeout=1
             )
             
-            if result.returncode != 0:
-                # ZFS not installed, return empty
+            if result_which.returncode != 0:
+                # ZFS is not installed or 'zpool' command not in PATH, so no ZFS issues to report.
                 return zfs_issues
             
-            # Get list of all pools
+            # Get list of all pools and their health status
             result = subprocess.run(
-                ['zpool', 'list', '-H', '-o', 'name,health'],
+                ['zpool', 'list', '-H', '-o', 'name,health'], # -H for no header
                 capture_output=True,
                 text=True,
                 timeout=5
@@ -1696,11 +1823,12 @@ class HealthMonitor:
                     parts = line.split()
                     if len(parts) >= 2:
                         pool_name = parts[0]
-                        pool_health = parts[1].upper()
+                        pool_health = parts[1].upper() # Ensure uppercase for consistent comparison
                         
-                        # ONLINE is healthy, anything else is a problem
+                        # 'ONLINE' is the healthy state. Any other status indicates a problem.
                         if pool_health != 'ONLINE':
                             if pool_health in ['DEGRADED', 'FAULTED', 'UNAVAIL', 'REMOVED']:
+                                # These are critical states
                                 status = 'CRITICAL'
                                 reason = f'ZFS pool {pool_health.lower()}'
                             else:
@@ -1708,17 +1836,241 @@ class HealthMonitor:
                                 status = 'WARNING'
                                 reason = f'ZFS pool status: {pool_health.lower()}'
                             
+                            # Use a unique key for each pool issue
                             zfs_issues[f'zpool_{pool_name}'] = {
                                 'status': status,
                                 'reason': reason,
                                 'pool_name': pool_name,
                                 'health': pool_health
                             }
-        except Exception:
-            # If zpool command fails, silently ignore
+        except Exception as e:
+            print(f"[HealthMonitor] Error checking ZFS pool health: {e}")
+            # If 'zpool status' command itself fails, we can't report ZFS issues.
+            # Return empty dict as no specific ZFS issues were detected by this check.
             pass
         
         return zfs_issues
+
+    def _check_proxmox_storage(self) -> Optional[Dict[str, Any]]:
+        """
+        Check Proxmox storage status using the proxmox_storage_monitor module.
+        Detects unavailable storages configured in PVE.
+        Returns CRITICAL if any configured storage is unavailable.
+        Returns None if the module is not available.
+        """
+        if not PROXMOX_STORAGE_AVAILABLE:
+            return None
+        
+        try:
+            # Reload configuration to ensure we have the latest storage definitions
+            proxmox_storage_monitor.reload_configuration()
+            
+            # Get the current status of all configured storages
+            storage_status = proxmox_storage_monitor.get_storage_status()
+            unavailable_storages = storage_status.get('unavailable', [])
+            
+            if not unavailable_storages:
+                # All storages are available. We should also clear any previously recorded storage errors.
+                active_errors = health_persistence.get_active_errors()
+                for error in active_errors:
+                    # Target errors related to storage unavailability
+                    if error.get('category') == 'storage' and error.get('error_key', '').startswith('storage_unavailable_'):
+                        health_persistence.clear_error(error['error_key'])
+                return {'status': 'OK'}
+            
+            # If there are unavailable storages, record them as persistent errors and report.
+            storage_issues_details = []
+            for storage in unavailable_storages:
+                storage_name = storage['name']
+                error_key = f'storage_unavailable_{storage_name}'
+                status_detail = storage.get('status_detail', 'unavailable') # e.g., 'not_found', 'connection_error'
+                
+                # Formulate a descriptive reason for the issue
+                if status_detail == 'not_found':
+                    reason = f"Storage '{storage_name}' is configured but not found on the server."
+                elif status_detail == 'unavailable':
+                    reason = f"Storage '{storage_name}' is not available (connection error or backend issue)."
+                else:
+                    reason = f"Storage '{storage_name}' has status: {status_detail}."
+                
+                # Record a persistent CRITICAL error for each unavailable storage
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage', # Category for persistence lookup
+                    severity='CRITICAL', # Storage unavailability is always critical
+                    reason=reason,
+                    details={
+                        'storage_name': storage_name,
+                        'storage_type': storage.get('type', 'unknown'),
+                        'status_detail': status_detail,
+                        'dismissable': False  # Storage errors are not dismissable as they impact operations
+                    }
+                )
+                storage_issues_details.append(reason) # Collect reasons for the summary
+            
+            return {
+                'status': 'CRITICAL',
+                'reason': f'{len(unavailable_storages)} Proxmox storage(s) unavailable',
+                'details': {
+                    'unavailable_storages': unavailable_storages,
+                    'issues': storage_issues_details
+                }
+            }
+        
+        except Exception as e:
+            print(f"[HealthMonitor] Error checking Proxmox storage: {e}")
+            # Return None on exception to indicate the check could not be performed, not necessarily a failure.
+            return None
+    
+    def get_health_status(self) -> Dict[str, Any]:
+        """
+        Main function to get the comprehensive health status.
+        This function orchestrates all individual checks and aggregates results.
+        """
+        # Trigger all checks, including those with caching
+        detailed_status = self.get_detailed_status()
+        overall_status = self.get_overall_status()
+        system_info = self.get_system_info()
+        
+        return {
+            'system_info': system_info,
+            'overall_health': overall_status,
+            'detailed_health': detailed_status,
+            'timestamp': datetime.now().isoformat()
+        }
+    
+    def get_detailed_status(self) -> Dict[str, Any]:
+        """
+        Get comprehensive health status with all checks.
+        Returns JSON structure with ALL 10 categories always present.
+        Now includes persistent error tracking.
+        """
+        active_errors = health_persistence.get_active_errors()
+        # No need to create persistent_issues dict here, it's implicitly handled by the checks
+        
+        details = {
+            'cpu': {'status': 'OK'},
+            'memory': {'status': 'OK'},
+            'storage': {'status': 'OK'}, # This will be overwritten by specific storage checks
+            'disks': {'status': 'OK'}, # This will be overwritten by disk/filesystem checks
+            'network': {'status': 'OK'},
+            'vms': {'status': 'OK'},
+            'services': {'status': 'OK'},
+            'logs': {'status': 'OK'},
+            'updates': {'status': 'OK'},
+            'security': {'status': 'OK'}
+        }
+        
+        critical_issues = []
+        warning_issues = []
+        info_issues = []  # Added info_issues to track INFO separately
+        
+        # --- Priority Order of Checks ---
+        
+        # Priority 1: Critical PVE Services
+        services_status = self._check_pve_services()
+        details['services'] = services_status
+        if services_status['status'] == 'CRITICAL':
+            critical_issues.append(f"PVE Services: {services_status.get('reason', 'Service failure')}")
+        elif services_status['status'] == 'WARNING':
+            warning_issues.append(f"PVE Services: {services_status.get('reason', 'Service issue')}")
+        
+        # Priority 1.5: Proxmox Storage Check (External Module)
+        proxmox_storage_result = self._check_proxmox_storage()
+        if proxmox_storage_result: # Only process if the check ran (module available)
+            details['storage'] = proxmox_storage_result
+            if proxmox_storage_result.get('status') == 'CRITICAL':
+                critical_issues.append(proxmox_storage_result.get('reason', 'Proxmox storage unavailable'))
+            elif proxmox_storage_result.get('status') == 'WARNING':
+                warning_issues.append(proxmox_storage_result.get('reason', 'Proxmox storage issue'))
+        
+        # Priority 2: Disk/Filesystem Health (Internal checks: usage, ZFS, SMART, IO errors)
+        storage_status = self._check_storage_optimized()
+        details['disks'] = storage_status # Use 'disks' for filesystem/disk specific issues
+        if storage_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"Storage/Disks: {storage_status.get('reason', 'Disk/Storage failure')}")
+        elif storage_status.get('status') == 'WARNING':
+            warning_issues.append(f"Storage/Disks: {storage_status.get('reason', 'Disk/Storage issue')}")
+        
+        # Priority 3: VMs/CTs Status (with persistence)
+        vms_status = self._check_vms_cts_with_persistence()
+        details['vms'] = vms_status
+        if vms_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"VMs/CTs: {vms_status.get('reason', 'VM/CT failure')}")
+        elif vms_status.get('status') == 'WARNING':
+            warning_issues.append(f"VMs/CTs: {vms_status.get('reason', 'VM/CT issue')}")
+        
+        # Priority 4: Network Connectivity
+        network_status = self._check_network_optimized()
+        details['network'] = network_status
+        if network_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"Network: {network_status.get('reason', 'Network failure')}")
+        elif network_status.get('status') == 'WARNING':
+            warning_issues.append(f"Network: {network_status.get('reason', 'Network issue')}")
+        
+        # Priority 5: CPU Usage (with hysteresis)
+        cpu_status = self._check_cpu_with_hysteresis()
+        details['cpu'] = cpu_status
+        if cpu_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"CPU: {cpu_status.get('reason', 'CPU critical')}")
+        elif cpu_status.get('status') == 'WARNING':
+            warning_issues.append(f"CPU: {cpu_status.get('reason', 'CPU high')}")
+        
+        # Priority 6: Memory Usage (RAM and Swap)
+        memory_status = self._check_memory_comprehensive()
+        details['memory'] = memory_status
+        if memory_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"Memory: {memory_status.get('reason', 'Memory critical')}")
+        elif memory_status.get('status') == 'WARNING':
+            warning_issues.append(f"Memory: {memory_status.get('reason', 'Memory high')}")
+        
+        # Priority 7: Log Analysis (with persistence)
+        logs_status = self._check_logs_with_persistence()
+        details['logs'] = logs_status
+        if logs_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"Logs: {logs_status.get('reason', 'Critical log errors')}")
+        elif logs_status.get('status') == 'WARNING':
+            warning_issues.append(f"Logs: {logs_status.get('reason', 'Log warnings')}")
+        
+        # Priority 8: System Updates
+        updates_status = self._check_updates()
+        details['updates'] = updates_status
+        if updates_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"Updates: {updates_status.get('reason', 'System not updated')}")
+        elif updates_status.get('status') == 'WARNING':
+            warning_issues.append(f"Updates: {updates_status.get('reason', 'Updates pending')}")
+        elif updates_status.get('status') == 'INFO':
+            info_issues.append(f"Updates: {updates_status.get('reason', 'Informational update notice')}")
+        
+        # Priority 9: Security Checks
+        security_status = self._check_security()
+        details['security'] = security_status
+        if security_status.get('status') == 'WARNING':
+            warning_issues.append(f"Security: {security_status.get('reason', 'Security issue')}")
+        elif security_status.get('status') == 'INFO':
+            info_issues.append(f"Security: {security_status.get('reason', 'Security information')}")
+        
+        # --- Determine Overall Status ---
+        # Use a fixed order of severity: CRITICAL > WARNING > INFO > OK
+        if critical_issues:
+            overall = 'CRITICAL'
+            summary = '; '.join(critical_issues[:3]) # Limit summary to 3 issues
+        elif warning_issues:
+            overall = 'WARNING'
+            summary = '; '.join(warning_issues[:3])
+        elif info_issues:
+            overall = 'OK'  # INFO statuses don't degrade overall health
+            summary = '; '.join(info_issues[:3])
+        else:
+            overall = 'OK'
+            summary = 'All systems operational'
+        
+        return {
+            'overall': overall,
+            'summary': summary,
+            'details': details,
+            'timestamp': datetime.now().isoformat()
+        }
 
 
 # Global instance
