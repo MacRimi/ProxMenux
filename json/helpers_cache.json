@@ -4280,7 +4280,7 @@
     ],
     "notes": [
       "Set a root password if using autologin. This will be the PBS password. `passwd root`",
-      "Advanced Install is only possible with disabled IPV6! Otherwise the installation sometimes stuck."
+      "Advanced Install is only possible with IPv6 disabled! Otherwise, the installation may get stuck."
     ],
     "type": "ct",
     "default_credentials": {
