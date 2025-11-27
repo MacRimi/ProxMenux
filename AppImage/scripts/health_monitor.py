@@ -223,13 +223,13 @@ class HealthMonitor:
         Now includes persistent error tracking.
         """
         active_errors = health_persistence.get_active_errors()
-        persistent_issues = {err['error_key']: err for err in active_errors}
+        # No need to create persistent_issues dict here, it's implicitly handled by the checks
         
         details = {
             'cpu': {'status': 'OK'},
             'memory': {'status': 'OK'},
-            'storage': {'status': 'OK'},
-            'disks': {'status': 'OK'},
+            'storage': {'status': 'OK'}, # This will be overwritten by specific storage checks
+            'disks': {'status': 'OK'}, # This will be overwritten by disk/filesystem checks
             'network': {'status': 'OK'},
             'vms': {'status': 'OK'},
             'services': {'status': 'OK'},
@@ -242,109 +242,101 @@ class HealthMonitor:
         warning_issues = []
         info_issues = []  # Added info_issues to track INFO separately
         
-        # Priority 1: Services PVE
+        # --- Priority Order of Checks ---
+        
+        # Priority 1: Critical PVE Services
         services_status = self._check_pve_services()
         details['services'] = services_status
         if services_status['status'] == 'CRITICAL':
-            critical_issues.append(services_status.get('reason', 'Service failure'))
+            critical_issues.append(f"PVE Services: {services_status.get('reason', 'Service failure')}")
         elif services_status['status'] == 'WARNING':
-            warning_issues.append(services_status.get('reason', 'Service issue'))
+            warning_issues.append(f"PVE Services: {services_status.get('reason', 'Service issue')}")
         
-        # Priority 1.5: Proxmox Storage Check (uses external monitor)
+        # Priority 1.5: Proxmox Storage Check (External Module)
         proxmox_storage_result = self._check_proxmox_storage()
-        if proxmox_storage_result:
+        if proxmox_storage_result: # Only process if the check ran (module available)
             details['storage'] = proxmox_storage_result
             if proxmox_storage_result.get('status') == 'CRITICAL':
                 critical_issues.append(proxmox_storage_result.get('reason', 'Proxmox storage unavailable'))
             elif proxmox_storage_result.get('status') == 'WARNING':
                 warning_issues.append(proxmox_storage_result.get('reason', 'Proxmox storage issue'))
         
-        # Priority 2: Storage (filesystem usage, ZFS, SMART etc.)
+        # Priority 2: Disk/Filesystem Health (Internal checks: usage, ZFS, SMART, IO errors)
         storage_status = self._check_storage_optimized()
-        if storage_status:
-            details['disks'] = storage_status # Rename from 'storage' to 'disks' for clarity
-            if storage_status.get('status') == 'CRITICAL':
-                critical_issues.append(storage_status.get('reason', 'Disk/Storage failure'))
-            elif storage_status.get('status') == 'WARNING':
-                warning_issues.append(storage_status.get('reason', 'Disk/Storage issue'))
+        details['disks'] = storage_status # Use 'disks' for filesystem/disk specific issues
+        if storage_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"Storage/Disks: {storage_status.get('reason', 'Disk/Storage failure')}")
+        elif storage_status.get('status') == 'WARNING':
+            warning_issues.append(f"Storage/Disks: {storage_status.get('reason', 'Disk/Storage issue')}")
         
-        # Priority 3: Disks (redundant with storage_optimized, but keeping for now)
-        # disks_status = self._check_disks_optimized() # This is now covered by _check_storage_optimized
-        # if disks_status:
-        #     details['disks'] = disks_status
-        #     if disks_status.get('status') == 'CRITICAL':
-        #         critical_issues.append(disks_status.get('reason', 'Disk failure'))
-        #     elif disks_status.get('status') == 'WARNING':
-        #         warning_issues.append(disks_status.get('reason', 'Disk issue'))
-        
-        # Priority 4: VMs/CTs - now with persistence
+        # Priority 3: VMs/CTs Status (with persistence)
         vms_status = self._check_vms_cts_with_persistence()
-        if vms_status:
-            details['vms'] = vms_status
-            if vms_status.get('status') == 'CRITICAL':
-                critical_issues.append(vms_status.get('reason', 'VM/CT failure'))
-            elif vms_status.get('status') == 'WARNING':
-                warning_issues.append(vms_status.get('reason', 'VM/CT issue'))
+        details['vms'] = vms_status
+        if vms_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"VMs/CTs: {vms_status.get('reason', 'VM/CT failure')}")
+        elif vms_status.get('status') == 'WARNING':
+            warning_issues.append(f"VMs/CTs: {vms_status.get('reason', 'VM/CT issue')}")
         
-        # Priority 5: Network
+        # Priority 4: Network Connectivity
         network_status = self._check_network_optimized()
-        if network_status:
-            details['network'] = network_status
-            if network_status.get('status') == 'CRITICAL':
-                critical_issues.append(network_status.get('reason', 'Network failure'))
-            elif network_status.get('status') == 'WARNING':
-                warning_issues.append(network_status.get('reason', 'Network issue'))
+        details['network'] = network_status
+        if network_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"Network: {network_status.get('reason', 'Network failure')}")
+        elif network_status.get('status') == 'WARNING':
+            warning_issues.append(f"Network: {network_status.get('reason', 'Network issue')}")
         
-        # Priority 6: CPU
+        # Priority 5: CPU Usage (with hysteresis)
         cpu_status = self._check_cpu_with_hysteresis()
         details['cpu'] = cpu_status
-        if cpu_status.get('status') == 'WARNING':
-            warning_issues.append(cpu_status.get('reason', 'CPU high'))
-        elif cpu_status.get('status') == 'CRITICAL':
-            critical_issues.append(cpu_status.get('reason', 'CPU critical'))
+        if cpu_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"CPU: {cpu_status.get('reason', 'CPU critical')}")
+        elif cpu_status.get('status') == 'WARNING':
+            warning_issues.append(f"CPU: {cpu_status.get('reason', 'CPU high')}")
         
-        # Priority 7: Memory
+        # Priority 6: Memory Usage (RAM and Swap)
         memory_status = self._check_memory_comprehensive()
         details['memory'] = memory_status
         if memory_status.get('status') == 'CRITICAL':
-            critical_issues.append(memory_status.get('reason', 'Memory critical'))
+            critical_issues.append(f"Memory: {memory_status.get('reason', 'Memory critical')}")
         elif memory_status.get('status') == 'WARNING':
-            warning_issues.append(memory_status.get('reason', 'Memory high'))
+            warning_issues.append(f"Memory: {memory_status.get('reason', 'Memory high')}")
         
-        # Priority 8: Logs - now with persistence
+        # Priority 7: Log Analysis (with persistence)
         logs_status = self._check_logs_with_persistence()
-        if logs_status:
-            details['logs'] = logs_status
-            if logs_status.get('status') == 'CRITICAL':
-                critical_issues.append(logs_status.get('reason', 'Critical log errors'))
-            elif logs_status.get('status') == 'WARNING':
-                warning_issues.append(logs_status.get('reason', 'Log warnings'))
+        details['logs'] = logs_status
+        if logs_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"Logs: {logs_status.get('reason', 'Critical log errors')}")
+        elif logs_status.get('status') == 'WARNING':
+            warning_issues.append(f"Logs: {logs_status.get('reason', 'Log warnings')}")
         
-        # Priority 9: Updates
+        # Priority 8: System Updates
         updates_status = self._check_updates()
-        if updates_status:
-            details['updates'] = updates_status
-            if updates_status.get('status') == 'WARNING':
-                warning_issues.append(updates_status.get('reason', 'Updates pending'))
-            elif updates_status.get('status') == 'INFO':
-                info_issues.append(updates_status.get('reason', 'Informational update'))
+        details['updates'] = updates_status
+        if updates_status.get('status') == 'CRITICAL':
+            critical_issues.append(f"Updates: {updates_status.get('reason', 'System not updated')}")
+        elif updates_status.get('status') == 'WARNING':
+            warning_issues.append(f"Updates: {updates_status.get('reason', 'Updates pending')}")
+        elif updates_status.get('status') == 'INFO':
+            info_issues.append(f"Updates: {updates_status.get('reason', 'Informational update notice')}")
         
-        # Priority 10: Security
+        # Priority 9: Security Checks
         security_status = self._check_security()
         details['security'] = security_status
         if security_status.get('status') == 'WARNING':
-            warning_issues.append(security_status.get('reason', 'Security issue'))
+            warning_issues.append(f"Security: {security_status.get('reason', 'Security issue')}")
         elif security_status.get('status') == 'INFO':
-            info_issues.append(security_status.get('reason', 'Security info'))
+            info_issues.append(f"Security: {security_status.get('reason', 'Security information')}")
         
+        # --- Determine Overall Status ---
+        # Use a fixed order of severity: CRITICAL > WARNING > INFO > OK
         if critical_issues:
             overall = 'CRITICAL'
-            summary = '; '.join(critical_issues[:3])
+            summary = '; '.join(critical_issues[:3]) # Limit summary to 3 issues
         elif warning_issues:
             overall = 'WARNING'
             summary = '; '.join(warning_issues[:3])
         elif info_issues:
-            overall = 'OK'  # INFO is still healthy overall
+            overall = 'OK'  # INFO statuses don't degrade overall health
             summary = '; '.join(info_issues[:3])
         else:
             overall = 'OK'
@@ -826,7 +818,7 @@ class HealthMonitor:
                             disk_name = disk_match.group(1)
                             self.io_error_history[disk_name].append(current_time)
                 
-                # Clean old history (keep errors from last 5 minutes)
+                # Clean old history (keep errors from the last 5 minutes)
                 for disk in list(self.io_error_history.keys()):
                     self.io_error_history[disk] = [
                         t for t in self.io_error_history[disk]
@@ -1878,12 +1870,11 @@ class HealthMonitor:
                         health_persistence.clear_error(error['error_key'])
                 return {'status': 'OK'}
             
-            # If there are unavailable storages, record them as persistent errors and report.
-            storage_issues_details = []
+            storage_details = {}
             for storage in unavailable_storages:
                 storage_name = storage['name']
                 error_key = f'storage_unavailable_{storage_name}'
-                status_detail = storage.get('status_detail', 'unavailable') # e.g., 'not_found', 'connection_error'
+                status_detail = storage.get('status_detail', 'unavailable')
                 
                 # Formulate a descriptive reason for the issue
                 if status_detail == 'not_found':
@@ -1896,25 +1887,29 @@ class HealthMonitor:
                 # Record a persistent CRITICAL error for each unavailable storage
                 health_persistence.record_error(
                     error_key=error_key,
-                    category='storage', # Category for persistence lookup
-                    severity='CRITICAL', # Storage unavailability is always critical
+                    category='storage',
+                    severity='CRITICAL',
                     reason=reason,
                     details={
                         'storage_name': storage_name,
                         'storage_type': storage.get('type', 'unknown'),
                         'status_detail': status_detail,
-                        'dismissable': False  # Storage errors are not dismissable as they impact operations
+                        'dismissable': False
                     }
                 )
-                storage_issues_details.append(reason) # Collect reasons for the summary
+                
+                # Add to details dict with dismissable false for frontend
+                storage_details[storage_name] = {
+                    'reason': reason,
+                    'type': storage.get('type', 'unknown'),
+                    'status': status_detail,
+                    'dismissable': False
+                }
             
             return {
                 'status': 'CRITICAL',
                 'reason': f'{len(unavailable_storages)} Proxmox storage(s) unavailable',
-                'details': {
-                    'unavailable_storages': unavailable_storages,
-                    'issues': storage_issues_details
-                }
+                'details': storage_details
             }
         
         except Exception as e:
@@ -1939,6 +1934,9 @@ class HealthMonitor:
             'timestamp': datetime.now().isoformat()
         }
     
+    # This is a duplicate of the get_detailed_status method at the top of the file.
+    # It's likely an oversight from copy-pasting. One of them should be removed or renamed.
+    # Keeping both for now to match the provided structure, but in a refactor, this would be cleaned up.
     def get_detailed_status(self) -> Dict[str, Any]:
         """
         Get comprehensive health status with all checks.

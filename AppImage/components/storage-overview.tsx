@@ -597,10 +597,7 @@ export function StorageOverview() {
           <CardContent>
             <div className="space-y-4">
               {proxmoxStorage.storage
-                .filter(
-                  (storage) =>
-                    storage && storage.name && storage.total > 0 && storage.used >= 0 && storage.available >= 0,
-                )
+                .filter((storage) => storage && storage.name && storage.used >= 0 && storage.available >= 0)
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((storage) => (
                   <div
