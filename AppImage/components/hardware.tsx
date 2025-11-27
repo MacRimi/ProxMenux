@@ -1105,91 +1105,6 @@ export default function Hardware() {
         </DialogContent>
       </Dialog>
 
-      {/* PCI Devices - Changed to modal */}
-      {hardwareDataSWR?.pci_devices && hardwareDataSWR.pci_devices.length > 0 && (
-        <Card className="border-border/50 bg-card/50 p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <CpuIcon className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">PCI Devices</h2>
-            <Badge variant="outline" className="ml-auto">
-              {hardwareDataSWR.pci_devices.length} devices
-            </Badge>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {hardwareDataSWR.pci_devices.map((device, index) => (
-              <div
-                key={index}
-                onClick={() => setSelectedPCIDevice(device)}
-                className="cursor-pointer rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 p-3 transition-colors"
-              >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{device.type}</Badge>
-                  <span className="font-mono text-xs text-muted-foreground shrink-0">{device.slot}</span>
-                </div>
-                <p className="font-medium text-sm line-clamp-2 break-words">{device.device}</p>
-                <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>
-                {device.driver && (
-                  <p className="mt-1 font-mono text-xs text-green-500 truncate">Driver: {device.driver}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* PCI Device Detail Modal */}
-      <Dialog open={selectedPCIDevice !== null} onOpenChange={() => setSelectedPCIDevice(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{selectedPCIDevice?.device}</DialogTitle>
-            <DialogDescription>PCI Device Information</DialogDescription>
-          </DialogHeader>
-
-          {selectedPCIDevice && (
-            <div className="space-y-3">
-              <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Device Type</span>
-                <Badge className={getDeviceTypeColor(selectedPCIDevice.type)}>{selectedPCIDevice.type}</Badge>
-              </div>
-
-              <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">PCI Slot</span>
-                <span className="font-mono text-sm">{selectedPCIDevice.slot}</span>
-              </div>
-
-              <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Device Name</span>
-                <span className="text-sm text-right">{selectedPCIDevice.device}</span>
-              </div>
-
-              <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Vendor</span>
-                <span className="text-sm">{selectedPCIDevice.vendor}</span>
-              </div>
-
-              <div className="flex justify-between border-b border-border/50 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Class</span>
-                <span className="font-mono text-sm">{selectedPCIDevice.class}</span>
-              </div>
-
-              {selectedPCIDevice.driver && (
-                <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Driver</span>
-                  <span className="font-mono text-sm text-green-500">{selectedPCIDevice.driver}</span>
-                </div>
-              )}
-
-              {selectedPCIDevice.kernel_module && (
-                <div className="flex justify-between border-b border-border/50 pb-2">
-                  <span className="text-sm font-medium text-muted-foreground">Kernel Module</span>
-                  <span className="font-mono text-sm">{selectedPCIDevice.kernel_module}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Power Consumption */}
       {hardwareDataSWR?.power_meter && (
@@ -1560,6 +1475,96 @@ export default function Hardware() {
           )}
         </DialogContent>
       </Dialog>
+
+
+
+      {/* PCI Devices - Changed to modal */}
+      {hardwareDataSWR?.pci_devices && hardwareDataSWR.pci_devices.length > 0 && (
+        <Card className="border-border/50 bg-card/50 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <CpuIcon className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">PCI Devices</h2>
+            <Badge variant="outline" className="ml-auto">
+              {hardwareDataSWR.pci_devices.length} devices
+            </Badge>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {hardwareDataSWR.pci_devices.map((device, index) => (
+              <div
+                key={index}
+                onClick={() => setSelectedPCIDevice(device)}
+                className="cursor-pointer rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 p-3 transition-colors"
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{device.type}</Badge>
+                  <span className="font-mono text-xs text-muted-foreground shrink-0">{device.slot}</span>
+                </div>
+                <p className="font-medium text-sm line-clamp-2 break-words">{device.device}</p>
+                <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>
+                {device.driver && (
+                  <p className="mt-1 font-mono text-xs text-green-500 truncate">Driver: {device.driver}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* PCI Device Detail Modal */}
+      <Dialog open={selectedPCIDevice !== null} onOpenChange={() => setSelectedPCIDevice(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedPCIDevice?.device}</DialogTitle>
+            <DialogDescription>PCI Device Information</DialogDescription>
+          </DialogHeader>
+
+          {selectedPCIDevice && (
+            <div className="space-y-3">
+              <div className="flex justify-between border-b border-border/50 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">Device Type</span>
+                <Badge className={getDeviceTypeColor(selectedPCIDevice.type)}>{selectedPCIDevice.type}</Badge>
+              </div>
+
+              <div className="flex justify-between border-b border-border/50 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">PCI Slot</span>
+                <span className="font-mono text-sm">{selectedPCIDevice.slot}</span>
+              </div>
+
+              <div className="flex justify-between border-b border-border/50 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">Device Name</span>
+                <span className="text-sm text-right">{selectedPCIDevice.device}</span>
+              </div>
+
+              <div className="flex justify-between border-b border-border/50 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">Vendor</span>
+                <span className="text-sm">{selectedPCIDevice.vendor}</span>
+              </div>
+
+              <div className="flex justify-between border-b border-border/50 pb-2">
+                <span className="text-sm font-medium text-muted-foreground">Class</span>
+                <span className="font-mono text-sm">{selectedPCIDevice.class}</span>
+              </div>
+
+              {selectedPCIDevice.driver && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Driver</span>
+                  <span className="font-mono text-sm text-green-500">{selectedPCIDevice.driver}</span>
+                </div>
+              )}
+
+              {selectedPCIDevice.kernel_module && (
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Kernel Module</span>
+                  <span className="font-mono text-sm">{selectedPCIDevice.kernel_module}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+
 
       {/* Network Summary - Clickable */}
       {hardwareDataSWR?.pci_devices &&
