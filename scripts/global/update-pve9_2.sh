@@ -9,6 +9,7 @@ BASE_DIR="/usr/local/share/proxmenux"
 UTILS_FILE="$BASE_DIR/utils.sh"
 VENV_PATH="/opt/googletrans-env"
 TOOLS_JSON="/usr/local/share/proxmenux/installed_tools.json"
+APT_ENV="env DEBIAN_FRONTEND=noninteractive LC_ALL=C LANG=C"
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
@@ -16,8 +17,6 @@ fi
 
 load_language
 initialize_cache
-APT_ENV="LC_ALL=C LANG=C LANGUAGE=C"
-
 
 ensure_tools_json() {
     [ -f "$TOOLS_JSON" ] || echo "{}" > "$TOOLS_JSON"
@@ -213,15 +212,18 @@ EOF
 
     local current_pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
     local available_pve_version=$(apt-cache policy pve-manager 2>/dev/null | grep -oP 'Candidate: \K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-    #local upgradable=$(apt list --upgradable 2>/dev/null | grep -c "upgradable")
-    #local security_updates=$(apt list --upgradable 2>/dev/null | grep -c "security")
-    local upgradable=$($APT_ENV apt list --upgradable 2>/dev/null \
+
+
+    local upgradable
+    upgradable=$($APT_ENV apt list --upgradable 2>/dev/null \
         | sed '1d' \
         | sed '/^\s*$/d' \
         | wc -l)
 
-    local security_updates=$($APT_ENV apt list --upgradable 2>/dev/null \
-        | grep -c "security")
+    local security_updates
+    security_updates=$($APT_ENV apt list --upgradable 2>/dev/null \
+        | sed '1d' \
+        | grep -ci '\-security')
 
 
     show_update_menu() {
@@ -293,7 +295,7 @@ EOF
 
     clear
     show_proxmenux_logo
-     msg_title "$(translate "$SCRIPT_TITLE")"
+    msg_title "$(translate "$SCRIPT_TITLE")"
     cat "$screen_capture"
 
     
