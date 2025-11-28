@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# Proxmox VE Update Script - Improved Version
+# Proxmox VE Update Script - Improved Version (with apt progress)
 # ==========================================================
 
 # Configuration
@@ -36,11 +36,14 @@ download_common_functions() {
 }
 
 update_pve9() {
-    local pve_version=$(pveversion | awk -F'/' '{print $2}' | cut -d'-' -f1)
-    local start_time=$(date +%s)
+    local pve_version
+    pve_version=$(pveversion | awk -F'/' '{print $2}' | cut -d'-' -f1)
+    local start_time
+    start_time=$(date +%s)
     local log_file="/var/log/proxmox-update-$(date +%Y%m%d-%H%M%S).log"
     local changes_made=false
-    local OS_CODENAME="$(grep "VERSION_CODENAME=" /etc/os-release | cut -d"=" -f 2 | xargs)"
+    local OS_CODENAME
+    OS_CODENAME="$(grep "VERSION_CODENAME=" /etc/os-release | cut -d"=" -f 2 | xargs)"
     local TARGET_CODENAME="trixie"
     
     local screen_capture="/tmp/proxmenux_screen_capture_$$.txt"
@@ -56,7 +59,8 @@ update_pve9() {
     } | tee -a "$screen_capture"
 
 
-    local available_space=$(df /var/cache/apt/archives | awk 'NR==2 {print int($4/1024)}')
+    local available_space
+    available_space=$(df /var/cache/apt/archives | awk 'NR==2 {print int($4/1024)}')
     if [ "$available_space" -lt 1024 ]; then
         msg_error "$(translate "Insufficient disk space. Available: ${available_space}MB")"
         echo -e
@@ -163,7 +167,6 @@ EOF
         # Handle common apt errors
         if echo "$update_output" | grep -Eq "NO_PUBKEY|GPG error"; then
 
-
             # Extract first missing key (NO_PUBKEY ABCDEF... pattern)
             key=$(echo "$update_output" | sed -n 's/.*NO_PUBKEY \([0-9A-F]\{8,40\}\).*/\1/p' | head -1)
 
@@ -203,17 +206,18 @@ EOF
         fi
     fi
 
-
     if apt policy 2>/dev/null | grep -q "${TARGET_CODENAME}.*pve-no-subscription"; then
         msg_ok "$(translate "Proxmox VE $pve_version repositories verified")" | tee -a "$screen_capture"
     else
         msg_warn "$(translate "Proxmox VE $pve_version repositories verification inconclusive, continuing...")"
     fi
 
-    local current_pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-    local available_pve_version=$(apt-cache policy pve-manager 2>/dev/null | grep -oP 'Candidate: \K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    local current_pve_version
+    current_pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    local available_pve_version
+    available_pve_version=$(apt-cache policy pve-manager 2>/dev/null | grep -oP 'Candidate: \K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 
-
+    # ===== NUEVA LÓGICA INDEPENDIENTE DEL IDIOMA =====
     local upgradable
     upgradable=$($APT_ENV apt list --upgradable 2>/dev/null \
         | sed '1d' \
@@ -224,7 +228,7 @@ EOF
     security_updates=$($APT_ENV apt list --upgradable 2>/dev/null \
         | sed '1d' \
         | grep -ci '\-security')
-
+    # ===== FIN NUEVA LÓGICA =====
 
     show_update_menu() {
         local current_version="$1"
@@ -232,7 +236,8 @@ EOF
         local upgradable_count="$3"
         local security_count="$4"
 
-        local menu_text="$(translate "System Update Information")\n\n"
+        local menu_text
+        menu_text="$(translate "System Update Information")\n\n"
         menu_text+="$(translate "Current PVE Version"): $current_version\n"
         if [ -n "$target_version" ] && [ "$target_version" != "$current_version" ]; then
             menu_text+="$(translate "Available PVE Version"): $target_version\n"
@@ -262,7 +267,6 @@ EOF
     msg_title "$(translate "$SCRIPT_TITLE")"
     cat "$screen_capture"
 
-
     if [[ $MENU_RESULT -eq 1 ]]; then
         msg_info2 "$(translate "Update cancelled by user")"
         apt-get -y autoremove > /dev/null 2>&1 || true
@@ -285,12 +289,14 @@ EOF
     fi
 
     echo -e
-    DEBIAN_FRONTEND=noninteractive apt-get -y \
+
+
+    DEBIAN_FRONTEND=noninteractive apt -y \
         -o Dpkg::Options::='--force-confdef' \
         -o Dpkg::Options::='--force-confold' \
-        dist-upgrade 2>&1 | tee -a "$log_file"
-    
-    upgrade_exit_code=${PIPESTATUS[0]}
+        full-upgrade 2> >(tee -a "$log_file" >&2)
+
+    upgrade_exit_code=$?
     echo -e
 
     clear
@@ -298,7 +304,6 @@ EOF
     msg_title "$(translate "$SCRIPT_TITLE")"
     cat "$screen_capture"
 
-    
     if [ $upgrade_exit_code -ne 0 ]; then
         msg_error "$(translate "System upgrade failed. Check log: $log_file")"
         rm -f "$screen_capture"
@@ -321,7 +326,8 @@ EOF
     apt-get -y autoclean > /dev/null 2>&1 || true
     msg_ok "$(translate "Cleanup finished")"
 
-    local end_time=$(date +%s)
+    local end_time
+    end_time=$(date +%s)
     local duration=$((end_time - start_time))
     local minutes=$((duration / 60))
     local seconds=$((duration % 60))
