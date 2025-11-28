@@ -217,7 +217,7 @@ EOF
     local available_pve_version
     available_pve_version=$(apt-cache policy pve-manager 2>/dev/null | grep -oP 'Candidate: \K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 
-    # ===== NUEVA LÓGICA INDEPENDIENTE DEL IDIOMA =====
+
     local upgradable
     upgradable=$($APT_ENV apt list --upgradable 2>/dev/null \
         | sed '1d' \
@@ -228,7 +228,7 @@ EOF
     security_updates=$($APT_ENV apt list --upgradable 2>/dev/null \
         | sed '1d' \
         | grep -ci '\-security')
-    # ===== FIN NUEVA LÓGICA =====
+
 
     show_update_menu() {
         local current_version="$1"
