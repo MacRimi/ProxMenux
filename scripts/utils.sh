@@ -42,6 +42,7 @@ CACHE_FILE="$BASE_DIR/cache.json"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
 MENU_SCRIPT="menu"
 VENV_PATH="/opt/googletrans-env"
+COMPONENTS_STATUS_FILE="$BASE_DIR/components_status.json"
 
 
 # Translation context
@@ -397,4 +398,50 @@ done
 echo -e
 fi
 
+}
+
+
+
+
+ensure_components_status_file() {
+  mkdir -p "$BASE_DIR"
+  if [[ ! -f "$COMPONENTS_STATUS_FILE" ]] || ! jq empty "$COMPONENTS_STATUS_FILE" >/dev/null 2>&1; then
+    echo '{}' > "$COMPONENTS_STATUS_FILE"
+  fi
+}
+
+update_component_status() {
+  # $1 = component_id (ej: "nvidia_driver", "coral_tpu_driver", "amdgpu_top")
+  # $2 = status       (ej: "installed", "removed", "failed")
+  # $3 = version      (string, puede ser "")
+  # $4 = category     (ej: "gpu", "tpu", "gpu-tool", etc.)
+  # $5 = extra JSON   (opcional: ej: '{"patched":true}' o '{}' )
+
+  local comp="$1"
+  local stat="$2"
+  local ver="$3"
+  local cat="$4"
+  local extra_json="${5:-{}}"
+
+  ensure_components_status_file
+
+  local ts
+  ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+  local tmp_file
+  tmp_file=$(mktemp)
+
+
+  if jq --arg comp "$comp" \
+        --arg stat "$stat" \
+        --arg ver "$ver" \
+        --arg cat "$cat" \
+        --arg time "$ts" \
+        --argjson extra "$extra_json" \
+        '.[$comp] = ({status:$stat, version:$ver, category:$cat, timestamp:$time} + $extra)' \
+        "$COMPONENTS_STATUS_FILE" > "$tmp_file" 2>/dev/null; then
+    mv "$tmp_file" "$COMPONENTS_STATUS_FILE"
+  else
+    echo '{}' > "$COMPONENTS_STATUS_FILE"
+  fi
 }
