@@ -403,6 +403,7 @@ fi
 
 ########################################################
 
+
 ensure_components_status_file() {
   mkdir -p "$BASE_DIR"
   if [[ ! -f "$COMPONENTS_STATUS_FILE" ]] || ! jq empty "$COMPONENTS_STATUS_FILE" >/dev/null 2>&1; then
@@ -410,13 +411,15 @@ ensure_components_status_file() {
   fi
 }
 
-
 update_component_status() {
   local comp="$1"
   local stat="$2"
   local ver="$3"
-  local cat="$4"
-  local extra_json="${5:-{}}"
+  local category="$4"
+  local extra_json="$5"
+  if [ -z "$extra_json" ]; then
+    extra_json="{}"
+  fi
 
   ensure_components_status_file
 
@@ -429,10 +432,10 @@ update_component_status() {
   if jq --arg comp "$comp" \
         --arg stat "$stat" \
         --arg ver "$ver" \
-        --arg cat "$cat" \
+        --arg category "$category" \
         --arg time "$ts" \
         --argjson extra "$extra_json" \
-        '.[$comp] = ({status:$stat, version:$ver, category:$cat, timestamp:$time} + $extra)' \
+        '.[$comp] = ({status:$stat, version:$ver, category:$category, timestamp:$time} + $extra)' \
         "$COMPONENTS_STATUS_FILE" > "$tmp_file" 2>/dev/null; then
     mv "$tmp_file" "$COMPONENTS_STATUS_FILE"
   else
