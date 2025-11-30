@@ -46,123 +46,147 @@ export function HybridScriptMonitor({
   const [isResponding, setIsResponding] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const lastLogPositionRef = useRef<number>(0)
 
-  // Auto-scroll to bottom when logs update
+  const decodeBase64 = (str: string): string => {
+    try {
+      return atob(str)
+    } catch (e) {
+      console.error("[v0] Failed to decode base64:", str, e)
+      return str
+    }
+  }
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [logs])
 
-  // Poll for logs and status
   useEffect(() => {
     if (!sessionId) return
 
-    const pollStatus = async () => {
+    const pollLogsAndStatus = async () => {
       try {
-        console.log("[v0] Polling script status for session:", sessionId)
+        console.log("[v0] Polling logs and status for session:", sessionId)
 
-        // Get status
         const statusData = await fetchApi(`/api/scripts/status/${sessionId}`)
         console.log("[v0] Status data:", statusData)
 
-        if (statusData.status === "completed") {
+        if (statusData.status === "completed" || statusData.exit_code === 0) {
+          console.log("[v0] Script execution completed:", statusData.status)
           setStatus("completed")
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current)
           }
           onComplete?.(true)
-        } else if (statusData.status === "failed") {
+        } else if (statusData.status === "failed" || (statusData.exit_code !== null && statusData.exit_code !== 0)) {
+          console.log("[v0] Script execution failed:", statusData)
           setStatus("failed")
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current)
           }
           onComplete?.(false)
         }
-      } catch (error) {
-        console.error("[v0] Error polling status:", error)
-      }
-    }
 
-    // Set up EventSource for log streaming
-    const apiUrl =
-      (typeof window !== "undefined" && window.location.port === "80") || window.location.port === "443"
-        ? `/api/scripts/logs/${sessionId}`
-        : `http://${window.location.hostname}:8008/api/scripts/logs/${sessionId}`
-
-    console.log("[v0] Connecting to log stream:", apiUrl)
-
-    const eventSource = new EventSource(apiUrl)
-
-    eventSource.onmessage = (event) => {
-      try {
-        const logLine = event.data
-        console.log("[v0] Received log:", logLine)
-
-        // Check for web interaction
-        if (logLine.includes("WEB_INTERACTION:")) {
-          const parts = logLine.split("WEB_INTERACTION:")[1].split(":")
+        if (statusData.pending_interaction) {
+          const parts = statusData.pending_interaction.split(":")
           if (parts.length >= 4) {
-            const [type, id, title, text, ...dataParts] = parts
-            const data = dataParts.join(":")
+            const [type, id, titleB64, textB64, ...dataParts] = parts
+            const dataB64 = dataParts.join(":")
 
-            console.log("[v0] Detected interaction:", { type, id, title, text, data })
+            console.log("[v0] Detected pending interaction from status:", { type, id, titleB64, textB64, dataB64 })
 
             setInteraction({
               type: type as ScriptInteraction["type"],
               id,
-              title: title.replace(/_/g, " "),
-              text: text.replace(/_/g, " "),
-              data,
+              title: decodeBase64(titleB64),
+              text: decodeBase64(textB64),
+              data: dataB64 ? decodeBase64(dataB64) : undefined,
             })
+          }
+        }
 
-            // Pause polling while waiting for user interaction
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current)
+        try {
+          const logsData = await fetchApi(`/api/scripts/session/${sessionId}/logs?from=${lastLogPositionRef.current}`)
+
+          if (logsData.logs && Array.isArray(logsData.logs)) {
+            const newLogs = logsData.logs
+              .map((line: string) => {
+                if (line.includes("WEB_INTERACTION:")) {
+                  const interactionPart = line.split("WEB_INTERACTION:")[1]
+                  const parts = interactionPart.split(":")
+
+                  if (parts.length >= 4) {
+                    const [type, id, titleB64, textB64, ...dataParts] = parts
+                    const dataB64 = dataParts.join(":")
+
+                    console.log("[v0] Detected interaction in log:", { type, id, titleB64, textB64, dataB64 })
+
+                    const decodedTitle = decodeBase64(titleB64)
+                    const decodedText = decodeBase64(textB64)
+                    const decodedData = dataB64 ? decodeBase64(dataB64) : undefined
+
+                    console.log("[v0] Decoded interaction:", {
+                      type,
+                      id,
+                      title: decodedTitle,
+                      text: decodedText,
+                      data: decodedData,
+                    })
+
+                    setInteraction({
+                      type: type as ScriptInteraction["type"],
+                      id,
+                      title: decodedTitle,
+                      text: decodedText,
+                      data: decodedData,
+                    })
+                  }
+                  return null
+                }
+
+                return {
+                  timestamp: new Date().toLocaleTimeString(),
+                  message: line,
+                  type: line.toLowerCase().includes("error")
+                    ? "error"
+                    : line.toLowerCase().includes("warning")
+                      ? "warning"
+                      : line.toLowerCase().includes("success") || line.toLowerCase().includes("complete")
+                        ? "success"
+                        : "info",
+                } as LogEntry
+              })
+              .filter(Boolean)
+
+            if (newLogs.length > 0) {
+              setLogs((prev) => [...prev, ...newLogs])
+              lastLogPositionRef.current = logsData.position || lastLogPositionRef.current + newLogs.length
             }
           }
-        } else {
-          // Regular log entry
-          setLogs((prev) => [
-            ...prev,
-            {
-              timestamp: new Date().toLocaleTimeString(),
-              message: logLine,
-              type: logLine.toLowerCase().includes("error")
-                ? "error"
-                : logLine.toLowerCase().includes("warning")
-                  ? "warning"
-                  : logLine.toLowerCase().includes("success")
-                    ? "success"
-                    : "info",
-            },
-          ])
+        } catch (logError) {
+          console.error("[v0] Error fetching logs:", logError)
         }
       } catch (error) {
-        console.error("[v0] Error parsing log:", error)
+        console.error("[v0] Error polling:", error)
+        setLogs((prev) => [
+          ...prev,
+          {
+            timestamp: new Date().toLocaleTimeString(),
+            message: `Error: ${error}`,
+            type: "error",
+          },
+        ])
       }
     }
 
-    eventSource.onerror = (error) => {
-      console.error("[v0] EventSource error:", error)
-      eventSource.close()
-      setLogs((prev) => [
-        ...prev,
-        {
-          timestamp: new Date().toLocaleTimeString(),
-          message: "Lost connection to log stream",
-          type: "error",
-        },
-      ])
-    }
+    pollLogsAndStatus()
 
-    // Poll status every 2 seconds
-    pollStatus()
-    pollingIntervalRef.current = setInterval(pollStatus, 2000)
+    pollingIntervalRef.current = setInterval(pollLogsAndStatus, 1000)
 
     return () => {
-      console.log("[v0] Cleaning up EventSource and polling")
-      eventSource.close()
+      console.log("[v0] Cleaning up polling")
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current)
       }
@@ -178,7 +202,7 @@ export function HybridScriptMonitor({
       console.log("[v0] Sending interaction response:", {
         session_id: sessionId,
         interaction_id: interaction.id,
-        response,
+        value: response,
       })
 
       await fetchApi("/api/scripts/respond", {
@@ -186,20 +210,14 @@ export function HybridScriptMonitor({
         body: JSON.stringify({
           session_id: sessionId,
           interaction_id: interaction.id,
-          response,
+          value: response,
         }),
       })
 
+      console.log("[v0] Response sent successfully")
       setInteraction(null)
       setInputValue("")
       setSelectedMenuItem("")
-
-      // Resume polling
-      if (!pollingIntervalRef.current && status === "running") {
-        pollingIntervalRef.current = setInterval(async () => {
-          // Polling logic here (same as above)
-        }, 2000)
-      }
     } catch (error) {
       console.error("[v0] Error responding to interaction:", error)
       setLogs((prev) => [
@@ -351,7 +369,6 @@ export function HybridScriptMonitor({
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Logs Display */}
             <div className="border rounded-lg p-4 bg-muted/50">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="h-4 w-4" />
@@ -383,7 +400,6 @@ export function HybridScriptMonitor({
               </ScrollArea>
             </div>
 
-            {/* Status footer */}
             <div className="flex items-center justify-between pt-4 border-t">
               <div className="text-sm text-muted-foreground">Session ID: {sessionId}</div>
               {status !== "running" && <Button onClick={onClose}>Close</Button>}
@@ -392,7 +408,6 @@ export function HybridScriptMonitor({
         </DialogContent>
       </Dialog>
 
-      {/* Interaction Modal */}
       {renderInteractionModal()}
     </>
   )
