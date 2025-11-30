@@ -7,7 +7,7 @@
 # Last Updated: 29/11/2025
 # ============================================
 
-SCRIPT_TITLE="NVIDIA GPU Driver Installer (PVE 9.x)"
+SCRIPT_TITLE="NVIDIA GPU Driver Installer for Proxmox VE"
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
