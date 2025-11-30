@@ -28,7 +28,7 @@ from pathlib import Path
 
 import jwt
 import psutil
-from flask import Flask, jsonify, request, send_file, send_from_directory
+from flask import Flask, jsonify, request, send_file, send_from_directory, Response
 from flask_cors import CORS
 
 # Ensure local imports work even if working directory changes

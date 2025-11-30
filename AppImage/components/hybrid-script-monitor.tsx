@@ -58,9 +58,9 @@ export function HybridScriptMonitor({
   useEffect(() => {
     if (!sessionId) return
 
-    const pollScript = async () => {
+    const pollStatus = async () => {
       try {
-        console.log("[v0] Polling script status and logs for session:", sessionId)
+        console.log("[v0] Polling script status for session:", sessionId)
 
         // Get status
         const statusData = await fetchApi(`/api/scripts/status/${sessionId}`)
@@ -79,75 +79,90 @@ export function HybridScriptMonitor({
           }
           onComplete?.(false)
         }
-
-        // Get logs
-        const logsData = await fetchApi(`/api/scripts/logs/${sessionId}`)
-        console.log("[v0] Logs data:", logsData)
-
-        if (logsData.logs && Array.isArray(logsData.logs)) {
-          const parsedLogs: LogEntry[] = []
-
-          for (const logLine of logsData.logs) {
-            // Check for web interaction
-            if (logLine.includes("WEB_INTERACTION:")) {
-              const parts = logLine.split("WEB_INTERACTION:")[1].split(":")
-              if (parts.length >= 4) {
-                const [type, id, title, text, ...dataParts] = parts
-                const data = dataParts.join(":")
-
-                console.log("[v0] Detected interaction:", { type, id, title, text, data })
-
-                setInteraction({
-                  type: type as ScriptInteraction["type"],
-                  id,
-                  title: title.replace(/_/g, " "),
-                  text: text.replace(/_/g, " "),
-                  data,
-                })
-
-                // Pause polling while waiting for user interaction
-                if (pollingIntervalRef.current) {
-                  clearInterval(pollingIntervalRef.current)
-                }
-              }
-            } else {
-              // Regular log entry
-              parsedLogs.push({
-                timestamp: new Date().toLocaleTimeString(),
-                message: logLine,
-                type: logLine.toLowerCase().includes("error")
-                  ? "error"
-                  : logLine.toLowerCase().includes("warning")
-                    ? "warning"
-                    : logLine.toLowerCase().includes("success")
-                      ? "success"
-                      : "info",
-              })
-            }
-          }
-
-          setLogs(parsedLogs)
-        }
       } catch (error) {
-        console.error("[v0] Error polling script:", error)
-        setLogs((prev) => [
-          ...prev,
-          {
-            timestamp: new Date().toLocaleTimeString(),
-            message: `Error: ${error}`,
-            type: "error",
-          },
-        ])
+        console.error("[v0] Error polling status:", error)
       }
     }
 
-    // Initial poll
-    pollScript()
+    // Set up EventSource for log streaming
+    const apiUrl =
+      (typeof window !== "undefined" && window.location.port === "80") || window.location.port === "443"
+        ? `/api/scripts/logs/${sessionId}`
+        : `http://${window.location.hostname}:8008/api/scripts/logs/${sessionId}`
 
-    // Set up polling interval
-    pollingIntervalRef.current = setInterval(pollScript, 2000)
+    console.log("[v0] Connecting to log stream:", apiUrl)
+
+    const eventSource = new EventSource(apiUrl)
+
+    eventSource.onmessage = (event) => {
+      try {
+        const logLine = event.data
+        console.log("[v0] Received log:", logLine)
+
+        // Check for web interaction
+        if (logLine.includes("WEB_INTERACTION:")) {
+          const parts = logLine.split("WEB_INTERACTION:")[1].split(":")
+          if (parts.length >= 4) {
+            const [type, id, title, text, ...dataParts] = parts
+            const data = dataParts.join(":")
+
+            console.log("[v0] Detected interaction:", { type, id, title, text, data })
+
+            setInteraction({
+              type: type as ScriptInteraction["type"],
+              id,
+              title: title.replace(/_/g, " "),
+              text: text.replace(/_/g, " "),
+              data,
+            })
+
+            // Pause polling while waiting for user interaction
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current)
+            }
+          }
+        } else {
+          // Regular log entry
+          setLogs((prev) => [
+            ...prev,
+            {
+              timestamp: new Date().toLocaleTimeString(),
+              message: logLine,
+              type: logLine.toLowerCase().includes("error")
+                ? "error"
+                : logLine.toLowerCase().includes("warning")
+                  ? "warning"
+                  : logLine.toLowerCase().includes("success")
+                    ? "success"
+                    : "info",
+            },
+          ])
+        }
+      } catch (error) {
+        console.error("[v0] Error parsing log:", error)
+      }
+    }
+
+    eventSource.onerror = (error) => {
+      console.error("[v0] EventSource error:", error)
+      eventSource.close()
+      setLogs((prev) => [
+        ...prev,
+        {
+          timestamp: new Date().toLocaleTimeString(),
+          message: "Lost connection to log stream",
+          type: "error",
+        },
+      ])
+    }
+
+    // Poll status every 2 seconds
+    pollStatus()
+    pollingIntervalRef.current = setInterval(pollStatus, 2000)
 
     return () => {
+      console.log("[v0] Cleaning up EventSource and polling")
+      eventSource.close()
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current)
       }
