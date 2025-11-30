@@ -493,6 +493,7 @@ hybrid_menu() {
     
     if is_web_mode; then
         local interaction_id=$(generate_interaction_id)
+        local clean_text=$(echo -e "$text" | sed 's/\\Z[0-9bn]//g')
         local options_json="["
         for ((i=0; i<${#items[@]}; i+=2)); do
             if [ $i -gt 0 ]; then options_json+=","; fi
@@ -500,10 +501,10 @@ hybrid_menu() {
         done
         options_json+="]"
         
-        echo "WEB_INTERACTION:menu:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$text" | base64 -w0):$options_json" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
+        echo "WEB_INTERACTION:menu:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$clean_text" | base64 -w0):$options_json" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
         wait_for_web_response "$interaction_id"
     else
-        dialog --title "$title" --menu "$text" "$height" "$width" "$menu_height" "${items[@]}" 3>&1 1>&2 2>&3
+        dialog --colors --title "$title" --menu "$text" "$height" "$width" "$menu_height" "${items[@]}" 3>&1 1>&2 2>&3
     fi
 }
 
@@ -516,11 +517,12 @@ hybrid_yesno() {
     
     if is_web_mode; then
         local interaction_id=$(generate_interaction_id)
-        echo "WEB_INTERACTION:yesno:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$text" | base64 -w0)" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
+        local clean_text=$(echo -e "$text" | sed 's/\\Z[0-9bn]//g')
+        echo "WEB_INTERACTION:yesno:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$clean_text" | base64 -w0)" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
         local response=$(wait_for_web_response "$interaction_id")
         [[ "$response" == "yes" ]] && return 0 || return 1
     else
-        dialog --title "$title" --yesno "$text" "$height" "$width"
+        dialog --colors --title "$title" --yesno "$text" "$height" "$width"
     fi
 }
 
@@ -533,10 +535,11 @@ hybrid_msgbox() {
     
     if is_web_mode; then
         local interaction_id=$(generate_interaction_id)
-        echo "WEB_INTERACTION:msgbox:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$text" | base64 -w0)" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
+        local clean_text=$(echo -e "$text" | sed 's/\\Z[0-9bn]//g')
+        echo "WEB_INTERACTION:msgbox:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$clean_text" | base64 -w0)" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
         wait_for_web_response "$interaction_id" > /dev/null
     else
-        dialog --title "$title" --msgbox "$text" "$height" "$width"
+        dialog --colors --title "$title" --msgbox "$text" "$height" "$width"
     fi
 }
 
