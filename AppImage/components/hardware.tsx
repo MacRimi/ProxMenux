@@ -262,6 +262,7 @@ export default function Hardware() {
 
     try {
       const payload = {
+        script_name: "nvidia_installer",
         script_relative_path: "gpu_tpu/nvidia_installer.sh",
         params: {
           EXECUTION_MODE: "web",

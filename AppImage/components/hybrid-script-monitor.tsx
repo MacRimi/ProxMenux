@@ -44,6 +44,8 @@ export function HybridScriptMonitor({
   const [inputValue, setInputValue] = useState("")
   const [selectedMenuItem, setSelectedMenuItem] = useState<string>("")
   const [isResponding, setIsResponding] = useState(false)
+  const [eventSourceState, setEventSourceState] = useState<"connecting" | "open" | "closed" | "error">("connecting")
+  const [lastEventTime, setLastEventTime] = useState<Date | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const lastLogPositionRef = useRef<number>(0)
@@ -67,15 +69,39 @@ export function HybridScriptMonitor({
     if (!sessionId) return
 
     console.log("[v0] Setting up EventSource for session:", sessionId)
-    const eventSource = new EventSource(`/api/scripts/logs/${sessionId}`)
+    const baseUrl =
+      window.location.protocol === "http:" &&
+      window.location.port &&
+      window.location.port !== "80" &&
+      window.location.port !== "443"
+        ? `${window.location.protocol}//${window.location.hostname}:8008`
+        : ""
+    const eventSourceUrl = `${baseUrl}/api/scripts/logs/${sessionId}`
+    console.log("[v0] EventSource URL:", eventSourceUrl)
+
+    const eventSource = new EventSource(eventSourceUrl)
+
+    eventSource.onopen = () => {
+      console.log("[v0] EventSource connection opened")
+      setEventSourceState("open")
+      setLogs((prev) => [
+        ...prev,
+        {
+          timestamp: new Date().toLocaleTimeString(),
+          message: "Connected to log stream",
+          type: "success",
+        },
+      ])
+    }
 
     eventSource.onmessage = (event) => {
+      setLastEventTime(new Date())
+
       try {
         const data = JSON.parse(event.data)
         console.log("[v0] Received SSE event:", data)
 
         if (data.type === "init") {
-          // Initial message, add to logs
           setLogs((prev) => [
             ...prev,
             {
@@ -85,10 +111,8 @@ export function HybridScriptMonitor({
             },
           ])
         } else if (data.type === "raw") {
-          // Raw log line from script
           const message = data.message
 
-          // Check if it contains a WEB_INTERACTION
           if (message.includes("WEB_INTERACTION:")) {
             const interactionPart = message.split("WEB_INTERACTION:")[1]
 
@@ -111,7 +135,6 @@ export function HybridScriptMonitor({
               }
             }
           } else {
-            // Regular log line
             setLogs((prev) => [
               ...prev,
               {
@@ -128,7 +151,6 @@ export function HybridScriptMonitor({
             ])
           }
         } else if (data.type === "error") {
-          // Error from script_runner
           setLogs((prev) => [
             ...prev,
             {
@@ -138,19 +160,18 @@ export function HybridScriptMonitor({
             },
           ])
         } else {
-          // Unknown type, display as-is
+          console.warn("[v0] Unknown SSE event type:", data.type, "Full data:", data)
           setLogs((prev) => [
             ...prev,
             {
               timestamp: new Date().toLocaleTimeString(),
-              message: JSON.stringify(data),
-              type: "info",
+              message: `[Unknown event type: ${data.type}] ${JSON.stringify(data)}`,
+              type: "warning",
             },
           ])
         }
       } catch (e) {
         console.error("[v0] Error parsing SSE event:", e, "Raw data:", event.data)
-        // If not JSON, display as plain text
         setLogs((prev) => [
           ...prev,
           {
@@ -164,15 +185,15 @@ export function HybridScriptMonitor({
 
     eventSource.onerror = (error) => {
       console.error("[v0] EventSource error:", error)
+      setEventSourceState("error")
       setLogs((prev) => [
         ...prev,
         {
           timestamp: new Date().toLocaleTimeString(),
-          message: "Connection to log stream lost",
+          message: "Connection to log stream lost. Retrying...",
           type: "error",
         },
       ])
-      eventSource.close()
     }
 
     const pollStatus = async () => {
@@ -180,25 +201,41 @@ export function HybridScriptMonitor({
         const statusData = await fetchApi(`/api/scripts/status/${sessionId}`)
         console.log("[v0] Status data:", statusData)
 
+        if (eventSourceState === "open" && lastEventTime) {
+          const timeSinceLastEvent = Date.now() - lastEventTime.getTime()
+          if (timeSinceLastEvent > 10000) {
+            console.warn("[v0] No logs received for 10 seconds. Flask may not be streaming logs.")
+            setLogs((prev) => [
+              ...prev,
+              {
+                timestamp: new Date().toLocaleTimeString(),
+                message: "Warning: No new logs received. Check Flask script_runner streaming.",
+                type: "warning",
+              },
+            ])
+          }
+        }
+
         if (statusData.status === "completed" || statusData.exit_code === 0) {
           console.log("[v0] Script execution completed")
           setStatus("completed")
           eventSource.close()
+          setEventSourceState("closed")
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current)
           }
           onComplete?.(true)
         } else if (statusData.status === "failed" || (statusData.exit_code !== null && statusData.exit_code !== 0)) {
-          console.log("[v0] Script execution failed")
+          console.log("[v0] Script execution failed with exit code:", statusData.exit_code)
           setStatus("failed")
           eventSource.close()
+          setEventSourceState("closed")
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current)
           }
           onComplete?.(false)
         }
 
-        // Check for pending interactions in status
         if (statusData.pending_interaction) {
           const parts = statusData.pending_interaction.split(":")
           if (parts.length >= 4) {
@@ -229,7 +266,7 @@ export function HybridScriptMonitor({
         clearInterval(pollingIntervalRef.current)
       }
     }
-  }, [sessionId, onComplete])
+  }, [sessionId, onComplete, eventSourceState, lastEventTime])
 
   const handleInteractionResponse = async (response: string) => {
     if (!interaction || !sessionId) return
@@ -411,6 +448,12 @@ export function HybridScriptMonitor({
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm font-medium">Execution Logs</span>
+                <span className="text-xs text-muted-foreground ml-auto">
+                  Stream: {eventSourceState === "open" && "🟢 Connected"}
+                  {eventSourceState === "connecting" && "🟡 Connecting..."}
+                  {eventSourceState === "closed" && "⚫ Closed"}
+                  {eventSourceState === "error" && "🔴 Error"}
+                </span>
               </div>
               <ScrollArea className="h-64" ref={scrollRef}>
                 <div className="space-y-1 font-mono text-xs">
