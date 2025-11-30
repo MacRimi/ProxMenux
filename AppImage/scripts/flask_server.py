@@ -36,6 +36,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
+from flask_script_runner import script_runner
+import threading
 from proxmox_storage_monitor import proxmox_storage_monitor
 from flask_terminal_routes import terminal_bp, init_terminal_routes  # noqa: E402
 from flask_health_routes import health_bp  # noqa: E402
@@ -6341,6 +6343,81 @@ def api_vm_config_update(vmid):
         # print(f"Error updating VM configuration: {e}")
         pass
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/scripts/execute', methods=['POST'])
+def execute_script():
+    """Execute a script with real-time logging"""
+    try:
+        data = request.json
+        script_name = data.get('script_name')
+        script_params = data.get('params', {})
+        
+        # Map script names to file paths
+        script_map = {
+            'nvidia_installer': '/usr/local/share/proxmenux/scripts/gpu_tpu/nvidia_installer.sh',
+        }
+        
+        if script_name not in script_map:
+            return jsonify({'success': False, 'error': 'Unknown script'}), 400
+        
+        script_path = script_map[script_name]
+        
+        if not os.path.exists(script_path):
+            return jsonify({'success': False, 'error': 'Script file not found'}), 404
+        
+        # Create session and start execution in background thread
+        session_id = script_runner.create_session(script_name)
+        
+        def run_script():
+            script_runner.execute_script(script_path, session_id, script_params)
+        
+        thread = threading.Thread(target=run_script, daemon=True)
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scripts/status/<session_id>', methods=['GET'])
+def get_script_status(session_id):
+    """Get status of a running script"""
+    try:
+        status = script_runner.get_session_status(session_id)
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scripts/respond', methods=['POST'])
+def respond_to_script():
+    """Respond to script interaction"""
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+        interaction_id = data.get('interaction_id')
+        value = data.get('value')
+        
+        result = script_runner.respond_to_interaction(session_id, interaction_id, value)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scripts/logs/<session_id>', methods=['GET'])
+def stream_script_logs(session_id):
+    """Stream logs from a running script"""
+    try:
+        def generate():
+            for log_entry in script_runner.stream_logs(session_id):
+                yield f"data: {log_entry}\n\n"
+        
+        return Response(generate(), mimetype='text/event-stream')
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     # API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics
