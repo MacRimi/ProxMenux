@@ -1,31 +1,26 @@
 import { NextResponse } from "next/server"
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    // Port 8008 is the production port for Flask server
+    const requestUrl = new URL(request.url)
     const API_PORT = "8008"
 
-    // Use window.location from request headers to detect proxy
+    // Check if request comes through proxy (standard HTTP/HTTPS ports)
+    const isProxied = requestUrl.port === "" || requestUrl.port === "80" || requestUrl.port === "443"
+
     let flaskUrl: string
 
-    // For server-side execution, use localhost
-    // In production, the request will come with proper headers
-    if (typeof window === "undefined") {
-      flaskUrl = `http://localhost:${API_PORT}/api/scripts/execute`
+    if (isProxied) {
+      // Behind proxy - use same host but different path
+      flaskUrl = `${requestUrl.protocol}//${requestUrl.host}/api/scripts/execute`
     } else {
-      const { protocol, hostname, port } = window.location
-      const isStandardPort = port === "" || port === "80" || port === "443"
-
-      if (isStandardPort) {
-        // Behind proxy - use relative URL
-        flaskUrl = "/api/scripts/execute"
-      } else {
-        // Direct access
-        flaskUrl = `${protocol}//${hostname}:${API_PORT}/api/scripts/execute`
-      }
+      // Direct access - use Flask port
+      flaskUrl = `${requestUrl.protocol}//${requestUrl.hostname}:${API_PORT}/api/scripts/execute`
     }
 
-    console.log("[v0] Starting NVIDIA driver installation via:", flaskUrl)
+    console.log("[v0] Starting NVIDIA driver installation")
+    console.log("[v0] Request URL:", requestUrl.href)
+    console.log("[v0] Flask URL:", flaskUrl)
 
     const response = await fetch(flaskUrl, {
       method: "POST",
@@ -42,6 +37,8 @@ export async function POST() {
     })
 
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error("[v0] Flask API error:", response.status, errorText)
       throw new Error(`Flask API error: ${response.statusText}`)
     }
 
