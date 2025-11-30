@@ -66,36 +66,94 @@ export function HybridScriptMonitor({
   useEffect(() => {
     if (!sessionId) return
 
-    const pollLogsAndStatus = async () => {
-      try {
-        console.log("[v0] Polling logs and status for session:", sessionId)
+    const eventSource = new EventSource(`/api/scripts/logs/${sessionId}`)
 
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        console.log("[v0] Received log event:", data)
+
+        // Check if it's an interaction
+        if (data.type === "interaction" || (typeof data === "string" && data.includes("WEB_INTERACTION:"))) {
+          const line = typeof data === "string" ? data : data.message
+          const interactionPart = line.split("WEB_INTERACTION:")[1]
+
+          if (interactionPart) {
+            const parts = interactionPart.split(":")
+
+            if (parts.length >= 4) {
+              const [type, id, titleB64, textB64, ...dataParts] = parts
+              const dataB64 = dataParts.join(":")
+
+              console.log("[v0] Detected interaction:", { type, id, titleB64, textB64, dataB64 })
+
+              setInteraction({
+                type: type as ScriptInteraction["type"],
+                id,
+                title: decodeBase64(titleB64),
+                text: decodeBase64(textB64),
+                data: dataB64 ? decodeBase64(dataB64) : undefined,
+              })
+            }
+          }
+        } else {
+          // Regular log entry
+          const message = typeof data === "string" ? data : data.message || JSON.stringify(data)
+
+          setLogs((prev) => [
+            ...prev,
+            {
+              timestamp: new Date().toLocaleTimeString(),
+              message,
+              type: message.toLowerCase().includes("error")
+                ? "error"
+                : message.toLowerCase().includes("warning")
+                  ? "warning"
+                  : message.toLowerCase().includes("success") || message.toLowerCase().includes("complete")
+                    ? "success"
+                    : "info",
+            },
+          ])
+        }
+      } catch (e) {
+        console.error("[v0] Error parsing log event:", e)
+      }
+    }
+
+    eventSource.onerror = (error) => {
+      console.error("[v0] EventSource error:", error)
+      eventSource.close()
+    }
+
+    const pollStatus = async () => {
+      try {
         const statusData = await fetchApi(`/api/scripts/status/${sessionId}`)
         console.log("[v0] Status data:", statusData)
 
         if (statusData.status === "completed" || statusData.exit_code === 0) {
-          console.log("[v0] Script execution completed:", statusData.status)
+          console.log("[v0] Script execution completed")
           setStatus("completed")
+          eventSource.close()
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current)
           }
           onComplete?.(true)
         } else if (statusData.status === "failed" || (statusData.exit_code !== null && statusData.exit_code !== 0)) {
-          console.log("[v0] Script execution failed:", statusData)
+          console.log("[v0] Script execution failed")
           setStatus("failed")
+          eventSource.close()
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current)
           }
           onComplete?.(false)
         }
 
+        // Check for pending interactions in status
         if (statusData.pending_interaction) {
           const parts = statusData.pending_interaction.split(":")
           if (parts.length >= 4) {
             const [type, id, titleB64, textB64, ...dataParts] = parts
             const dataB64 = dataParts.join(":")
-
-            console.log("[v0] Detected pending interaction from status:", { type, id, titleB64, textB64, dataB64 })
 
             setInteraction({
               type: type as ScriptInteraction["type"],
@@ -106,87 +164,17 @@ export function HybridScriptMonitor({
             })
           }
         }
-
-        try {
-          const logsData = await fetchApi(`/api/scripts/session/${sessionId}/logs?from=${lastLogPositionRef.current}`)
-
-          if (logsData.logs && Array.isArray(logsData.logs)) {
-            const newLogs = logsData.logs
-              .map((line: string) => {
-                if (line.includes("WEB_INTERACTION:")) {
-                  const interactionPart = line.split("WEB_INTERACTION:")[1]
-                  const parts = interactionPart.split(":")
-
-                  if (parts.length >= 4) {
-                    const [type, id, titleB64, textB64, ...dataParts] = parts
-                    const dataB64 = dataParts.join(":")
-
-                    console.log("[v0] Detected interaction in log:", { type, id, titleB64, textB64, dataB64 })
-
-                    const decodedTitle = decodeBase64(titleB64)
-                    const decodedText = decodeBase64(textB64)
-                    const decodedData = dataB64 ? decodeBase64(dataB64) : undefined
-
-                    console.log("[v0] Decoded interaction:", {
-                      type,
-                      id,
-                      title: decodedTitle,
-                      text: decodedText,
-                      data: decodedData,
-                    })
-
-                    setInteraction({
-                      type: type as ScriptInteraction["type"],
-                      id,
-                      title: decodedTitle,
-                      text: decodedText,
-                      data: decodedData,
-                    })
-                  }
-                  return null
-                }
-
-                return {
-                  timestamp: new Date().toLocaleTimeString(),
-                  message: line,
-                  type: line.toLowerCase().includes("error")
-                    ? "error"
-                    : line.toLowerCase().includes("warning")
-                      ? "warning"
-                      : line.toLowerCase().includes("success") || line.toLowerCase().includes("complete")
-                        ? "success"
-                        : "info",
-                } as LogEntry
-              })
-              .filter(Boolean)
-
-            if (newLogs.length > 0) {
-              setLogs((prev) => [...prev, ...newLogs])
-              lastLogPositionRef.current = logsData.position || lastLogPositionRef.current + newLogs.length
-            }
-          }
-        } catch (logError) {
-          console.error("[v0] Error fetching logs:", logError)
-        }
       } catch (error) {
-        console.error("[v0] Error polling:", error)
-        setLogs((prev) => [
-          ...prev,
-          {
-            timestamp: new Date().toLocaleTimeString(),
-            message: `Error: ${error}`,
-            type: "error",
-          },
-        ])
+        console.error("[v0] Error polling status:", error)
       }
     }
 
-    pollLogsAndStatus()
-
-    pollingIntervalRef.current = setInterval(pollLogsAndStatus, 1000)
+    pollStatus()
+    pollingIntervalRef.current = setInterval(pollStatus, 2000)
 
     return () => {
-      console.log("[v0] Cleaning up polling")
+      console.log("[v0] Cleaning up EventSource and polling")
+      eventSource.close()
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current)
       }
