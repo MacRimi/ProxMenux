@@ -66,62 +66,112 @@ export function HybridScriptMonitor({
   useEffect(() => {
     if (!sessionId) return
 
+    console.log("[v0] Setting up EventSource for session:", sessionId)
     const eventSource = new EventSource(`/api/scripts/logs/${sessionId}`)
 
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
-        console.log("[v0] Received log event:", data)
+        console.log("[v0] Received SSE event:", data)
 
-        // Check if it's an interaction
-        if (data.type === "interaction" || (typeof data === "string" && data.includes("WEB_INTERACTION:"))) {
-          const line = typeof data === "string" ? data : data.message
-          const interactionPart = line.split("WEB_INTERACTION:")[1]
-
-          if (interactionPart) {
-            const parts = interactionPart.split(":")
-
-            if (parts.length >= 4) {
-              const [type, id, titleB64, textB64, ...dataParts] = parts
-              const dataB64 = dataParts.join(":")
-
-              console.log("[v0] Detected interaction:", { type, id, titleB64, textB64, dataB64 })
-
-              setInteraction({
-                type: type as ScriptInteraction["type"],
-                id,
-                title: decodeBase64(titleB64),
-                text: decodeBase64(textB64),
-                data: dataB64 ? decodeBase64(dataB64) : undefined,
-              })
-            }
-          }
-        } else {
-          // Regular log entry
-          const message = typeof data === "string" ? data : data.message || JSON.stringify(data)
-
+        if (data.type === "init") {
+          // Initial message, add to logs
           setLogs((prev) => [
             ...prev,
             {
               timestamp: new Date().toLocaleTimeString(),
-              message,
-              type: message.toLowerCase().includes("error")
-                ? "error"
-                : message.toLowerCase().includes("warning")
-                  ? "warning"
-                  : message.toLowerCase().includes("success") || message.toLowerCase().includes("complete")
-                    ? "success"
-                    : "info",
+              message: `Starting script: ${data.script}`,
+              type: "info",
+            },
+          ])
+        } else if (data.type === "raw") {
+          // Raw log line from script
+          const message = data.message
+
+          // Check if it contains a WEB_INTERACTION
+          if (message.includes("WEB_INTERACTION:")) {
+            const interactionPart = message.split("WEB_INTERACTION:")[1]
+
+            if (interactionPart) {
+              const parts = interactionPart.split(":")
+
+              if (parts.length >= 4) {
+                const [type, id, titleB64, textB64, ...dataParts] = parts
+                const dataB64 = dataParts.join(":")
+
+                console.log("[v0] Detected interaction:", { type, id, titleB64, textB64, dataB64 })
+
+                setInteraction({
+                  type: type as ScriptInteraction["type"],
+                  id,
+                  title: decodeBase64(titleB64),
+                  text: decodeBase64(textB64),
+                  data: dataB64 ? decodeBase64(dataB64) : undefined,
+                })
+              }
+            }
+          } else {
+            // Regular log line
+            setLogs((prev) => [
+              ...prev,
+              {
+                timestamp: new Date().toLocaleTimeString(),
+                message,
+                type: message.toLowerCase().includes("error")
+                  ? "error"
+                  : message.toLowerCase().includes("warning")
+                    ? "warning"
+                    : message.toLowerCase().includes("success") || message.toLowerCase().includes("complete")
+                      ? "success"
+                      : "info",
+              },
+            ])
+          }
+        } else if (data.type === "error") {
+          // Error from script_runner
+          setLogs((prev) => [
+            ...prev,
+            {
+              timestamp: new Date().toLocaleTimeString(),
+              message: `Error: ${data.message}`,
+              type: "error",
+            },
+          ])
+        } else {
+          // Unknown type, display as-is
+          setLogs((prev) => [
+            ...prev,
+            {
+              timestamp: new Date().toLocaleTimeString(),
+              message: JSON.stringify(data),
+              type: "info",
             },
           ])
         }
       } catch (e) {
-        console.error("[v0] Error parsing log event:", e)
+        console.error("[v0] Error parsing SSE event:", e, "Raw data:", event.data)
+        // If not JSON, display as plain text
+        setLogs((prev) => [
+          ...prev,
+          {
+            timestamp: new Date().toLocaleTimeString(),
+            message: event.data,
+            type: "info",
+          },
+        ])
       }
     }
 
     eventSource.onerror = (error) => {
       console.error("[v0] EventSource error:", error)
+      setLogs((prev) => [
+        ...prev,
+        {
+          timestamp: new Date().toLocaleTimeString(),
+          message: "Connection to log stream lost",
+          type: "error",
+        },
+      ])
       eventSource.close()
     }
 
