@@ -401,7 +401,7 @@ fi
 }
 
 
-
+########################################################
 
 ensure_components_status_file() {
   mkdir -p "$BASE_DIR"
@@ -410,13 +410,8 @@ ensure_components_status_file() {
   fi
 }
 
-update_component_status() {
-  # $1 = component_id (ej: "nvidia_driver", "coral_tpu_driver", "amdgpu_top")
-  # $2 = status       (ej: "installed", "removed", "failed")
-  # $3 = version      (string, puede ser "")
-  # $4 = category     (ej: "gpu", "tpu", "gpu-tool", etc.)
-  # $5 = extra JSON   (opcional: ej: '{"patched":true}' o '{}' )
 
+update_component_status() {
   local comp="$1"
   local stat="$2"
   local ver="$3"
@@ -431,7 +426,6 @@ update_component_status() {
   local tmp_file
   tmp_file=$(mktemp)
 
-
   if jq --arg comp "$comp" \
         --arg stat "$stat" \
         --arg ver "$ver" \
@@ -442,6 +436,7 @@ update_component_status() {
         "$COMPONENTS_STATUS_FILE" > "$tmp_file" 2>/dev/null; then
     mv "$tmp_file" "$COMPONENTS_STATUS_FILE"
   else
+    rm -f "$tmp_file"
     echo '{}' > "$COMPONENTS_STATUS_FILE"
   fi
 }
