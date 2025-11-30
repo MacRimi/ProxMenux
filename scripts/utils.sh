@@ -556,3 +556,62 @@ hybrid_inputbox() {
         dialog --title "$title" --inputbox "$text" "$height" "$width" "$default" 3>&1 1>&2 2>&3
     fi
 }
+
+# Hybrid whiptail menu (used during installation - doesn't hide terminal output)
+hybrid_whiptail_menu() {
+    local title="$1"
+    local text="$2"
+    local height="${3:-20}"
+    local width="${4:-70}"
+    local menu_height="${5:-10}"
+    shift 5
+    local items=("$@")
+    
+    if is_web_mode; then
+        local interaction_id=$(generate_interaction_id)
+        local options_json="["
+        for ((i=0; i<${#items[@]}; i+=2)); do
+            if [ $i -gt 0 ]; then options_json+=","; fi
+            options_json+="{\"value\":\"${items[i]}\",\"label\":\"${items[i+1]}\"}"
+        done
+        options_json+="]"
+        
+        echo "WEB_INTERACTION:menu:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$text" | base64 -w0):$options_json" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
+        wait_for_web_response "$interaction_id"
+    else
+        whiptail --title "$title" --menu "$text" "$height" "$width" "$menu_height" "${items[@]}" 3>&1 1>&2 2>&3
+    fi
+}
+
+# Hybrid whiptail yes/no (used during installation)
+hybrid_whiptail_yesno() {
+    local title="$1"
+    local text="$2"
+    local height="${3:-10}"
+    local width="${4:-70}"
+    
+    if is_web_mode; then
+        local interaction_id=$(generate_interaction_id)
+        echo "WEB_INTERACTION:yesno:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$text" | base64 -w0)" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
+        local response=$(wait_for_web_response "$interaction_id")
+        [[ "$response" == "yes" ]] && return 0 || return 1
+    else
+        whiptail --title "$title" --yesno "$text" "$height" "$width"
+    fi
+}
+
+# Hybrid whiptail message box (used during installation)
+hybrid_whiptail_msgbox() {
+    local title="$1"
+    local text="$2"
+    local height="${3:-10}"
+    local width="${4:-70}"
+    
+    if is_web_mode; then
+        local interaction_id=$(generate_interaction_id)
+        echo "WEB_INTERACTION:msgbox:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$text" | base64 -w0)" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
+        wait_for_web_response "$interaction_id" > /dev/null
+    else
+        whiptail --title "$title" --msgbox "$text" "$height" "$width"
+    fi
+}
