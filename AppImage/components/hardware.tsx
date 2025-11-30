@@ -255,6 +255,27 @@ export default function Hardware() {
     revalidateOnFocus: false,
   })
 
+  const handleInstallNvidiaDriver = async () => {
+    setInstallingNvidiaDriver(true)
+    try {
+      const response = await fetch("/api/gpu/nvidia/install", {
+        method: "POST",
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        // Refresh hardware data after installation
+        mutateHardware()
+      } else {
+        console.error("[v0] Failed to install NVIDIA drivers:", data.error)
+      }
+    } catch (error) {
+      console.error("[v0] Error installing NVIDIA drivers:", error)
+    } finally {
+      setInstallingNvidiaDriver(false)
+    }
+  }
+
   useEffect(() => {
     if (!selectedGPU) return
 
@@ -312,34 +333,6 @@ export default function Hardware() {
     }
 
     return pciDevice || null
-  }
-
-  const handleInstallNvidiaDriver = async () => {
-    setInstallingNvidiaDriver(true)
-    try {
-      const response = await fetch("/api/gpu/nvidia/install", {
-        method: "POST",
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to start NVIDIA driver installation")
-      }
-
-      const data = await response.json()
-
-      // Show success message (you might want to add a toast notification here)
-      alert("NVIDIA driver installation started. Please check the terminal for progress.")
-
-      // Refresh GPU data after installation
-      setTimeout(() => {
-        mutateHardware()
-      }, 2000)
-    } catch (error) {
-      console.error("Error installing NVIDIA driver:", error)
-      alert("Failed to start NVIDIA driver installation. Please try manually.")
-    } finally {
-      setInstallingNvidiaDriver(false)
-    }
   }
 
   const hasRealtimeData = (): boolean => {

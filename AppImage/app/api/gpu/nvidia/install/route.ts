@@ -1,38 +1,37 @@
 import { NextResponse } from "next/server"
-import { executeScript } from "@/lib/script-executor"
+import { exec } from "child_process"
+import { promisify } from "util"
+
+const execAsync = promisify(exec)
 
 export async function POST() {
   try {
-    // Execute the NVIDIA installer script
-    const result = await executeScript("/usr/local/share/proxmenux/scripts/gpu_tpu/nvidia_installer.sh", {
+    const scriptPath = "/usr/local/share/proxmenux/scripts/gpu_tpu/nvidia_installer.sh"
+    const webLogPath = "/tmp/nvidia_web_install.log"
+
+    const { stdout, stderr } = await execAsync(`EXECUTION_MODE=web WEB_LOG=${webLogPath} bash ${scriptPath}`, {
       env: {
+        ...process.env,
         EXECUTION_MODE: "web",
-        WEB_LOG: "/tmp/nvidia_web_install.log",
+        WEB_LOG: webLogPath,
       },
+      maxBuffer: 10 * 1024 * 1024, // 10MB buffer
     })
 
-    if (result.exitCode === 0) {
-      return NextResponse.json({
-        success: true,
-        message: "NVIDIA drivers installed successfully",
-        output: result.stdout,
-      })
-    } else {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Installation failed",
-          output: result.stderr || result.stdout,
-        },
-        { status: 500 },
-      )
-    }
-  } catch (error) {
-    console.error("NVIDIA installation error:", error)
+    return NextResponse.json({
+      success: true,
+      message: "NVIDIA drivers installation completed",
+      output: stdout,
+      log_file: webLogPath,
+    })
+  } catch (error: any) {
+    console.error("[v0] NVIDIA installation error:", error)
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error.message || "Installation failed",
+        output: error.stdout || "",
+        stderr: error.stderr || "",
       },
       { status: 500 },
     )
