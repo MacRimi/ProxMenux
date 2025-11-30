@@ -256,40 +256,57 @@ export default function Hardware() {
   })
 
   const handleInstallNvidiaDriver = async () => {
-    console.log("[v0] NVIDIA installation button clicked")
-    try {
-      setInstallingNvidiaDriver(true)
-      console.log("[v0] Calling Flask API: /api/scripts/execute")
+    console.log("[v0] ============================================")
+    console.log("[v0] NVIDIA installation button clicked!")
+    console.log("[v0] ============================================")
 
-      const data = await fetchApi<{ success: boolean; session_id?: string; error?: string }>("/api/scripts/execute", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    try {
+      console.log("[v0] Step 1: Setting installingNvidiaDriver state to true")
+      setInstallingNvidiaDriver(true)
+
+      const payload = {
+        script_relative_path: "gpu_tpu/nvidia_installer.sh",
+        params: {
+          EXECUTION_MODE: "web",
+          WEB_LOG: "/tmp/nvidia_web_install.log",
         },
-        body: JSON.stringify({
-          script_relative_path: "gpu_tpu/nvidia_installer.sh",
-          params: {
-            EXECUTION_MODE: "web",
-            WEB_LOG: "/tmp/nvidia_web_install.log",
-          },
-        }),
+      }
+
+      console.log("[v0] Step 2: Payload prepared:", JSON.stringify(payload, null, 2))
+      console.log("[v0] Step 3: Calling fetchApi with endpoint: /api/scripts/execute")
+      console.log("[v0] Step 4: Method: POST")
+
+      const data = await fetchApi("/api/scripts/execute", {
+        method: "POST",
+        body: JSON.stringify(payload),
       })
 
-      console.log("[v0] Flask API response:", data)
+      console.log("[v0] Step 5: fetchApi returned successfully")
+      console.log("[v0] Step 6: Response data:", JSON.stringify(data, null, 2))
 
       if (data.success) {
-        console.log("[v0] Installation started successfully, session:", data.session_id)
+        console.log("[v0] Step 7: Installation started successfully")
+        console.log("[v0] Session ID:", data.session_id)
+        alert(`NVIDIA driver installation started! Session ID: ${data.session_id}`)
         mutateHardware()
       } else {
-        console.error("[v0] Installation failed:", data.error)
+        console.log("[v0] Step 7: Installation failed with error:", data.error)
         alert(`Failed to install NVIDIA drivers: ${data.error}`)
       }
     } catch (error) {
+      console.error("[v0] ============================================")
       console.error("[v0] Exception during installation:", error)
-      alert("Failed to start NVIDIA driver installation. Please try manually.")
+      console.error("[v0] Error type:", typeof error)
+      console.error("[v0] Error message:", error instanceof Error ? error.message : String(error))
+      console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
+      console.error("[v0] ============================================")
+      alert("Failed to start NVIDIA driver installation. Check console for details.")
     } finally {
+      console.log("[v0] Step 8: Setting installingNvidiaDriver state to false")
       setInstallingNvidiaDriver(false)
-      console.log("[v0] Installation process finished")
+      console.log("[v0] ============================================")
+      console.log("[v0] Handler execution completed")
+      console.log("[v0] ============================================")
     }
   }
 
