@@ -6353,15 +6353,21 @@ def execute_script():
         script_name = data.get('script_name')
         script_params = data.get('params', {})
         
-        # Map script names to file paths
-        script_map = {
-            'nvidia_installer': '/usr/local/share/proxmenux/scripts/gpu_tpu/nvidia_installer.sh',
-        }
-        
-        if script_name not in script_map:
-            return jsonify({'success': False, 'error': 'Unknown script'}), 400
-        
-        script_path = script_map[script_name]
+
+        script_relative_path = data.get('script_relative_path')
+
+        if not script_relative_path:
+            return jsonify({'error': 'script_relative_path is required'}), 400
+
+
+        BASE_SCRIPTS_DIR = '/usr/local/share/proxmenux/scripts'
+        script_path = os.path.join(BASE_SCRIPTS_DIR, script_relative_path)
+
+
+        script_path = os.path.abspath(script_path)
+        if not script_path.startswith(BASE_SCRIPTS_DIR):
+            return jsonify({'error': 'Invalid script path'}), 403
+
         
         if not os.path.exists(script_path):
             return jsonify({'success': False, 'error': 'Script file not found'}), 404

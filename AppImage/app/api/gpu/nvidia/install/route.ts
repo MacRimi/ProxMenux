@@ -28,8 +28,8 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        script_path: "/usr/local/share/proxmenux/scripts/gpu_tpu/nvidia_installer.sh",
-        env: {
+        script_relative_path: "gpu_tpu/nvidia_installer.sh",
+        params: {
           EXECUTION_MODE: "web",
           WEB_LOG: "/tmp/nvidia_web_install.log",
         },
