@@ -5510,6 +5510,18 @@
     "type": "ct"
   },
   {
+    "name": "Valkey",
+    "slug": "valkey",
+    "desc": "Valkey is an open source (BSD) high-performance key/value datastore that supports a variety of workloads such as caching, message queues, and can act as a primary database. The project is backed by the Linux Foundation, ensuring it will remain open source forever.",
+    "script": "ct/valkey.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/valkey.sh",
+    "categories": [
+      9
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Vaultwarden",
     "slug": "vaultwarden",
     "desc": "Vaultwarden is a self-hosted password manager which provides secure and encrypted password storage. It uses client-side encryption and provides access to passwords through a web interface and mobile apps.",
