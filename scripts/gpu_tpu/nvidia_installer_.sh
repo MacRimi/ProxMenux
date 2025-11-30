@@ -85,9 +85,9 @@ detect_driver_status() {
   fi
 
   if $CURRENT_DRIVER_INSTALLED; then
-    CURRENT_STATUS_COLORED="${CURRENT_STATUS_TEXT}"
+    CURRENT_STATUS_COLORED="\Z2${CURRENT_STATUS_TEXT}\Zn"
   else
-    CURRENT_STATUS_COLORED="${CURRENT_STATUS_TEXT}"
+    CURRENT_STATUS_COLORED="\Z3${CURRENT_STATUS_TEXT}\Zn"
   fi
 }
 
@@ -569,8 +569,8 @@ EOF
 }
 
 apply_nvidia_patch_if_needed() {
-  if ! hybrid_whiptail_yesno "$(translate 'NVIDIA Patch')" \
-    "\n$(translate 'Do you want to apply the optional NVIDIA patch to remove some GPU limitations?')"; then
+  if ! whiptail --title "$(translate 'NVIDIA Patch')" --yesno \
+    "\n$(translate 'Do you want to apply the optional NVIDIA patch to remove some GPU limitations?')" 10 70; then
     msg_info2 "$(translate 'NVIDIA patch not applied.')"
     update_component_status "nvidia_driver" "installed" "$CURRENT_DRIVER_VERSION" "gpu" '{"patched":false}'
     return 0
@@ -595,8 +595,8 @@ apply_nvidia_patch_if_needed() {
 }
 
 restart_prompt() {
-  if hybrid_whiptail_yesno "$(translate 'NVIDIA Drivers')" \
-    "\n$(translate 'The installation/changes require a server restart to apply correctly. Do you want to reboot now?')"; then
+  if whiptail --title "$(translate 'NVIDIA Drivers')" --yesno \
+    "\n$(translate 'The installation/changes require a server restart to apply correctly. Do you want to reboot now?')" 10 70; then
     msg_success "$(translate 'Installation completed. Press Enter to continue...')"
     read -r
     msg_warn "$(translate 'Restarting the server...')"
@@ -624,7 +624,11 @@ show_action_menu_if_installed() {
     "remove"  "$(translate 'Uninstall NVIDIA drivers and configuration')"
   )
 
-  ACTION=$(hybrid_menu "ProxMenux" "$(translate 'NVIDIA Actions')\n\n$(translate 'Choose an action:')" 14 80 8 "${menu_choices[@]}") || ACTION="cancel"
+  ACTION=$(dialog --clear --stdout \
+    --backtitle "ProxMenux" \
+    --title "$(translate 'NVIDIA GPU Driver Management')" \
+    --menu "$(translate 'Choose an action:')" 14 80 8 \
+    "${menu_choices[@]}") || ACTION="cancel"
 }
 
 show_install_overview() {
@@ -644,7 +648,9 @@ show_install_overview() {
   overview+="$(translate 'After confirming, you will be asked to choose the NVIDIA driver version to install.')\n\n"
   overview+="$(translate 'Do you want to continue?')"
 
-  hybrid_yesno "$(translate 'NVIDIA GPU Driver Installation')" "$overview" 22 90
+  dialog --colors --backtitle "ProxMenux" \
+         --title "$(translate 'NVIDIA GPU Driver Installation')" \
+         --yesno "$overview" 22 90
 }
 
 show_version_menu() {
@@ -660,7 +666,7 @@ show_version_menu() {
   
 
   if [[ -z "$latest" ]] && [[ -z "$versions_list" ]]; then
-    hybrid_msgbox "$(translate 'Error')" \
+    dialog --backtitle "ProxMenux" --title "$(translate 'Error')" --msgbox \
       "$(translate 'Could not retrieve versions list from NVIDIA. Please check your internet connection.')\n\nURL: ${NVIDIA_BASE_URL}" 10 80
     DRIVER_VERSION="cancel"
     return 1
@@ -679,57 +685,80 @@ show_version_menu() {
   # Clean latest version
   latest=$(echo "$latest" | tr -d '[:space:]')
   
-  local current_list="$versions_list"
-  
-  # Apply kernel compatibility filter if needed
-  if [[ -n "$MIN_DRIVER_VERSION" ]]; then
-    local filtered_list=""
-    while IFS= read -r ver; do
-      [[ -z "$ver" ]] && continue
-      if is_version_compatible "$ver"; then
-        filtered_list+="$ver"$'\n'
-      fi
-    done <<< "$current_list"
-    current_list="$filtered_list"
-  fi
+  local filter=""
+  local selection
+  local choices
+  local current_list
+  local menu_text
 
-  local menu_text="$(translate 'Select the NVIDIA driver version to install:')\n\n"
-  menu_text+="$(translate 'Versions shown are compatible with your kernel. Latest available is recommended in most cases.')"
+  while true; do
+    current_list="$versions_list"
+    
+    if [[ -n "$MIN_DRIVER_VERSION" ]]; then
+      local filtered_list=""
+      while IFS= read -r ver; do
+        [[ -z "$ver" ]] && continue
+        if is_version_compatible "$ver"; then
+          filtered_list+="$ver"$'\n'
+        fi
+      done <<< "$current_list"
+      current_list="$filtered_list"
+    fi
+    
 
-  local choices=()
-  choices+=("latest" "$(translate 'Latest available') (${latest:-unknown})")
-  choices+=("" "")
+    if [[ -n "$filter" ]]; then
+      current_list=$(echo "$current_list" | grep "$filter" || true)
+    fi
 
-  if [[ -n "$current_list" ]]; then
-    while IFS= read -r ver; do
-      [[ -z "$ver" ]] && continue
-      ver=$(echo "$ver" | tr -d '[:space:]')
-      [[ -z "$ver" ]] && continue
-      
-      choices+=("$ver" "$ver")
-    done <<< "$current_list"
-  else
-    choices+=("" "$(translate 'No compatible versions found for your kernel')")
-  fi
+    menu_text="$(translate 'Select the NVIDIA driver version to install:')\n\n"
+    menu_text+="$(translate 'Use the filter entry to narrow the list. Latest available (recommended in most cases), or choose a specific version from the list.')"
 
-  local selection=$(hybrid_menu "$(translate 'NVIDIA Driver Version')" "$menu_text" 26 90 16 "${choices[@]}") || { DRIVER_VERSION="cancel"; return 1; }
+    choices=()
+    choices+=("latest" "$(translate 'Latest available') (${latest:-unknown})")
+    choices+=("" "")
+    choices+=("filter" "$(translate 'Filter versions')${filter:+: $filter}")
 
-  case "$selection" in
-    "")
-      DRIVER_VERSION="cancel"
-      return 1
-      ;;
-    latest)
-      DRIVER_VERSION="$latest"
-      DRIVER_VERSION=$(echo "$DRIVER_VERSION" | tr -d '[:space:]')
-      return 0
-      ;;
-    *)
-      DRIVER_VERSION="$selection"
-      DRIVER_VERSION=$(echo "$DRIVER_VERSION" | tr -d '[:space:]')
-      return 0
-      ;;
-  esac
+
+    if [[ -n "$current_list" ]]; then
+      while IFS= read -r ver; do
+        [[ -z "$ver" ]] && continue
+        ver=$(echo "$ver" | tr -d '[:space:]')
+        [[ -z "$ver" ]] && continue
+        
+        choices+=("$ver" "$ver")
+      done <<< "$current_list"
+    else
+      choices+=("" "$(translate 'No versions match the current filter')")
+    fi
+
+    selection=$(dialog --clear --stdout \
+      --backtitle "ProxMenux" \
+      --title "$(translate 'NVIDIA Driver Version')" \
+      --menu "$menu_text" 26 90 16 \
+      "${choices[@]}") || { DRIVER_VERSION="cancel"; return 1; }
+
+    case "$selection" in
+      "")
+        continue
+        ;;
+      filter)
+        filter=$(dialog --clear --stdout \
+          --backtitle "ProxMenux" \
+          --title "$(translate 'Filter NVIDIA versions')" \
+          --inputbox "$(translate 'Enter a filter (e.g., 560, 570, 580). Leave empty to show all.')" 10 80 "$filter") || true
+        ;;
+      latest)
+        DRIVER_VERSION="$latest"
+        DRIVER_VERSION=$(echo "$DRIVER_VERSION" | tr -d '[:space:]')
+        return 0
+        ;;
+      *)
+        DRIVER_VERSION="$selection"
+        DRIVER_VERSION=$(echo "$DRIVER_VERSION" | tr -d '[:space:]')
+        return 0
+        ;;
+    esac
+  done
 }
 
 # ==========================================================
@@ -765,17 +794,18 @@ main() {
 
       if $CURRENT_DRIVER_INSTALLED; then
         if [[ "$CURRENT_DRIVER_VERSION" == "$DRIVER_VERSION" ]]; then
-          local confirm_text
-          confirm_text="\n\n\n$(translate 'Version') \Zb\Z4$DRIVER_VERSION\Zn\n\n$(translate 'is already installed. Do you want to reinstall it? This will perform a clean uninstall first.')"
-          if ! hybrid_yesno "$(translate 'Same Version Detected')" "$confirm_text" 14 70; then
+          if ! dialog --colors --backtitle "ProxMenux" --title "$(translate 'Same Version Detected')" --yesno \
+              "$(printf '\n\n\n%s \Zb%s\Zn\n\n%s' \
+                "$(translate 'Version')" "$DRIVER_VERSION" \
+                "$(translate 'is already installed. Do you want to reinstall it? This will perform a clean uninstall first.')")" 14 70; then
               exit 0
           fi
         else
-          local confirm_text
-          confirm_text="\n\n$(translate 'Current version:') \Zb$CURRENT_DRIVER_VERSION\Zn\n"
-          confirm_text+="$(translate 'New version:') \Zb\Z4$DRIVER_VERSION\Zn\n\n"
-          confirm_text+="$(translate 'The current driver will be completely uninstalled before installing the new version. Continue?')"
-          if ! hybrid_yesno "$(translate 'Version Change Detected')" "$confirm_text" 20 70; then
+          if ! dialog --colors --backtitle "ProxMenux" --title "$(translate 'Version Change Detected')" --yesno \
+              "$(printf '\n\n%s \Zb%s\Zn\n%s \Zb\Z4%s\Zn\n\n%s' \
+                "$(translate 'Current version:')" "$CURRENT_DRIVER_VERSION" \
+                "$(translate 'New version:')" "$DRIVER_VERSION" \
+                "$(translate 'The current driver will be completely uninstalled before installing the new version. Continue?')")" 20 70; then
               exit 0
           fi
         fi
@@ -860,7 +890,7 @@ main() {
       restart_prompt
       ;;
     remove)
-      if hybrid_yesno "$(translate 'NVIDIA Driver Uninstall')" \
+      if dialog --backtitle "ProxMenux" --title "$(translate 'NVIDIA Driver Uninstall')" --yesno \
         "\n\n\n$(translate 'This will remove NVIDIA drivers and related configuration. Do you want to continue?')" 14 70; then
 
         show_proxmenux_logo
