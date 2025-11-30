@@ -48,6 +48,10 @@ class ScriptRunner:
         session = self.active_sessions[session_id]
         log_file = session['log_file']
         
+        print(f"[DEBUG] execute_script called for session {session_id}", file=sys.stderr, flush=True)
+        print(f"[DEBUG] Script path: {script_path}", file=sys.stderr, flush=True)
+        print(f"[DEBUG] Log file: {log_file}", file=sys.stderr, flush=True)
+        
         # Prepare environment
         env = os.environ.copy()
         env['EXECUTION_MODE'] = 'web'
@@ -56,53 +60,90 @@ class ScriptRunner:
         if env_vars:
             env.update(env_vars)
         
+        print(f"[DEBUG] Environment variables set: EXECUTION_MODE=web, LOG_FILE={log_file}", file=sys.stderr, flush=True)
+        
         # Initialize log file
         with open(log_file, 'w') as f:
-            f.write(json.dumps({
+            init_line = json.dumps({
                 'type': 'init',
                 'session_id': session_id,
                 'script': script_path,
                 'timestamp': int(time.time())
-            }) + '\n')
+            }) + '\n'
+            f.write(init_line)
+            print(f"[DEBUG] Wrote init line to log: {init_line.strip()}", file=sys.stderr, flush=True)
         
         try:
             # Execute script
             session['status'] = 'running'
+            print(f"[DEBUG] Starting subprocess with /bin/bash {script_path}", file=sys.stderr, flush=True)
+            
             process = subprocess.Popen(
                 ['/bin/bash', script_path],
                 env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                universal_newlines=True
+                bufsize=0  # Unbuffered
             )
             
+            print(f"[DEBUG] Process started with PID: {process.pid}", file=sys.stderr, flush=True)
             session['process'] = process
+            
+            lines_read = [0]  # Lista para compartir entre threads
             
             # Monitor output for interactions
             def monitor_output():
-                for line in process.stdout:
-                    with open(log_file, 'a') as f:
-                        f.write(line)
+                print(f"[DEBUG] monitor_output thread started for session {session_id}", file=sys.stderr, flush=True)
+                try:
+                    with open(log_file, 'a') as log_f:
+                        while True:
+                            line = process.stdout.readline()
+                            if not line:
+                                print(f"[DEBUG] No more lines from stdout (EOF reached)", file=sys.stderr, flush=True)
+                                break
+                            
+                            decoded_line = line.decode('utf-8', errors='replace').rstrip()
+                            lines_read[0] += 1
+                            
+                            print(f"[DEBUG] Read line {lines_read[0]}: {decoded_line[:100]}...", file=sys.stderr, flush=True)
+                            
+                            log_f.write(decoded_line + '\n')
+                            log_f.flush()
+                            
+                            # Check for interaction requests
+                            try:
+                                if decoded_line.strip().startswith('{'):
+                                    data = json.loads(decoded_line.strip())
+                                    if data.get('type') == 'interaction_request':
+                                        session['pending_interaction'] = data
+                                        print(f"[DEBUG] Detected interaction request: {data}", file=sys.stderr, flush=True)
+                            except json.JSONDecodeError:
+                                pass
                     
-                    # Check for interaction requests
-                    try:
-                        if line.strip().startswith('{'):
-                            data = json.loads(line.strip())
-                            if data.get('type') == 'interaction_request':
-                                session['pending_interaction'] = data
-                    except json.JSONDecodeError:
-                        pass
+                    print(f"[DEBUG] monitor_output thread finished. Total lines read: {lines_read[0]}", file=sys.stderr, flush=True)
+                except Exception as e:
+                    print(f"[DEBUG ERROR] Exception in monitor_output: {e}", file=sys.stderr, flush=True)
             
-            monitor_thread = threading.Thread(target=monitor_output, daemon=True)
+            monitor_thread = threading.Thread(target=monitor_output, daemon=False)
             monitor_thread.start()
+            
+            print(f"[DEBUG] Waiting for process to complete...", file=sys.stderr, flush=True)
             
             # Wait for completion
             process.wait()
-            monitor_thread.join(timeout=5)
+            print(f"[DEBUG] Process exited with code: {process.returncode}", file=sys.stderr, flush=True)
+            
+            monitor_thread.join(timeout=30)
+            if monitor_thread.is_alive():
+                print(f"[DEBUG WARNING] monitor_thread still alive after 30s timeout", file=sys.stderr, flush=True)
+            else:
+                print(f"[DEBUG] monitor_thread joined successfully", file=sys.stderr, flush=True)
             
             session['exit_code'] = process.returncode
             session['status'] = 'completed' if process.returncode == 0 else 'failed'
             session['end_time'] = datetime.now().isoformat()
+            
+            print(f"[DEBUG] Script execution completed. Lines captured: {lines_read[0]}", file=sys.stderr, flush=True)
             
             return {
                 'success': True,
@@ -112,6 +153,7 @@ class ScriptRunner:
             }
             
         except Exception as e:
+            print(f"[DEBUG ERROR] Exception in execute_script: {e}", file=sys.stderr, flush=True)
             session['status'] = 'error'
             session['error'] = str(e)
             return {
