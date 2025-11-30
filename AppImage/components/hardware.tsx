@@ -5,19 +5,21 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
-  Thermometer,
-  CpuIcon,
-  Zap,
-  HardDrive,
-  Network,
-  FanIcon,
-  PowerIcon,
-  Battery,
   Cpu,
-  MemoryStick,
-  Cpu as Gpu,
+  HardDrive,
+  Thermometer,
+  Zap,
   Loader2,
+  CpuIcon,
+  Cpu as Gpu,
+  Network,
+  MemoryStick,
+  PowerIcon,
+  FanIcon,
+  Battery,
 } from "lucide-react"
+import { Download } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import useSWR from "swr"
 import { useState, useEffect } from "react"
 import {
@@ -236,6 +238,7 @@ export default function Hardware() {
   const [selectedDisk, setSelectedDisk] = useState<StorageDevice | null>(null)
   const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
   const [selectedUPS, setSelectedUPS] = useState<any>(null)
+  const [installingNvidiaDriver, setInstallingNvidiaDriver] = useState(false)
 
   const fetcher = async (url: string) => {
     const data = await fetchApi(url)
@@ -246,7 +249,7 @@ export default function Hardware() {
     data: hardwareDataSWR,
     error: swrError,
     isLoading: swrLoading,
-    mutate,
+    mutate: mutateHardware,
   } = useSWR<HardwareData>("/api/hardware", fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: false,
@@ -309,6 +312,34 @@ export default function Hardware() {
     }
 
     return pciDevice || null
+  }
+
+  const handleInstallNvidiaDriver = async () => {
+    setInstallingNvidiaDriver(true)
+    try {
+      const response = await fetch("/api/gpu/nvidia/install", {
+        method: "POST",
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to start NVIDIA driver installation")
+      }
+
+      const data = await response.json()
+
+      // Show success message (you might want to add a toast notification here)
+      alert("NVIDIA driver installation started. Please check the terminal for progress.")
+
+      // Refresh GPU data after installation
+      setTimeout(() => {
+        mutateHardware()
+      }, 2000)
+    } catch (error) {
+      console.error("Error installing NVIDIA driver:", error)
+      alert("Failed to start NVIDIA driver installation. Please try manually.")
+    } finally {
+      setInstallingNvidiaDriver(false)
+    }
   }
 
   const hasRealtimeData = (): boolean => {
@@ -1090,11 +1121,31 @@ export default function Hardware() {
                           />
                         </svg>
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <h4 className="text-sm font-semibold text-blue-500 mb-1">Extended Monitoring Not Available</h4>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground mb-3">
                           {getMonitoringToolRecommendation(selectedGPU.vendor)}
                         </p>
+                        {selectedGPU.vendor.toLowerCase().includes("nvidia") && (
+                          <Button
+                            onClick={handleInstallNvidiaDriver}
+                            disabled={installingNvidiaDriver}
+                            size="sm"
+                            className="bg-blue-500 hover:bg-blue-600 text-white"
+                          >
+                            {installingNvidiaDriver ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Installing...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="mr-2 h-4 w-4" />
+                                Install NVIDIA Drivers
+                              </>
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1104,7 +1155,6 @@ export default function Hardware() {
           )}
         </DialogContent>
       </Dialog>
-
 
       {/* Power Consumption */}
       {hardwareDataSWR?.power_meter && (
@@ -1476,8 +1526,6 @@ export default function Hardware() {
         </DialogContent>
       </Dialog>
 
-
-
       {/* PCI Devices - Changed to modal */}
       {hardwareDataSWR?.pci_devices && hardwareDataSWR.pci_devices.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
@@ -1563,8 +1611,6 @@ export default function Hardware() {
           )}
         </DialogContent>
       </Dialog>
-
-
 
       {/* Network Summary - Clickable */}
       {hardwareDataSWR?.pci_devices &&
