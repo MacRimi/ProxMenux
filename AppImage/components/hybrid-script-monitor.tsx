@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react"
+import { Loader2, CheckCircle2, XCircle, TerminalIcon } from "lucide-react"
+
+import { Terminal } from "xterm"
+import { FitAddon } from "xterm-addon-fit"
+import "xterm/css/xterm.css"
 
 interface HybridScriptMonitorProps {
   sessionId: string | null
@@ -25,12 +29,6 @@ interface ScriptInteraction {
   data?: string
 }
 
-interface LogEntry {
-  timestamp: string
-  message: string
-  type: "info" | "error" | "warning" | "success"
-}
-
 export function HybridScriptMonitor({
   sessionId,
   title = "Script Execution",
@@ -38,17 +36,16 @@ export function HybridScriptMonitor({
   onClose,
   onComplete,
 }: HybridScriptMonitorProps) {
-  const [logs, setLogs] = useState<LogEntry[]>([])
   const [interaction, setInteraction] = useState<ScriptInteraction | null>(null)
   const [status, setStatus] = useState<"running" | "completed" | "failed">("running")
   const [inputValue, setInputValue] = useState("")
   const [selectedMenuItem, setSelectedMenuItem] = useState<string>("")
   const [isResponding, setIsResponding] = useState(false)
-  const [eventSourceState, setEventSourceState] = useState<"connecting" | "open" | "closed" | "error">("connecting")
-  const [lastEventTime, setLastEventTime] = useState<Date | null>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const terminalRef = useRef<HTMLDivElement>(null)
+  const xtermRef = useRef<Terminal | null>(null)
+  const fitAddonRef = useRef<FitAddon | null>(null)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const lastLogPositionRef = useRef<number>(0)
 
   const decodeBase64 = (str: string): string => {
     try {
@@ -60,61 +57,84 @@ export function HybridScriptMonitor({
   }
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    if (!terminalRef.current || xtermRef.current) return
+
+    const term = new Terminal({
+      cursorBlink: false,
+      fontSize: 13,
+      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+      theme: {
+        background: "#1e1e1e",
+        foreground: "#d4d4d4",
+        cursor: "#d4d4d4",
+        black: "#000000",
+        red: "#cd3131",
+        green: "#0dbc79",
+        yellow: "#e5e510",
+        blue: "#2472c8",
+        magenta: "#bc3fbc",
+        cyan: "#11a8cd",
+        white: "#e5e5e5",
+        brightBlack: "#666666",
+        brightRed: "#f14c4c",
+        brightGreen: "#23d18b",
+        brightYellow: "#f5f543",
+        brightBlue: "#3b8eea",
+        brightMagenta: "#d670d6",
+        brightCyan: "#29b8db",
+        brightWhite: "#ffffff",
+      },
+      convertEol: true,
+      disableStdin: true, // Terminal es solo lectura
+    })
+
+    const fitAddon = new FitAddon()
+    term.loadAddon(fitAddon)
+    term.open(terminalRef.current)
+    fitAddon.fit()
+
+    xtermRef.current = term
+    fitAddonRef.current = fitAddon
+
+    // Ajustar terminal cuando cambia el tamaño
+    const resizeObserver = new ResizeObserver(() => {
+      fitAddon.fit()
+    })
+    resizeObserver.observe(terminalRef.current)
+
+    return () => {
+      resizeObserver.disconnect()
+      term.dispose()
+      xtermRef.current = null
+      fitAddonRef.current = null
     }
-  }, [logs])
+  }, [])
 
   useEffect(() => {
-    if (!sessionId) return
+    if (!sessionId || !xtermRef.current) return
 
-    console.log("[v0] Setting up EventSource for session:", sessionId)
+    const term = xtermRef.current
+    term.writeln("\x1b[32m[INFO] Conectando al stream de logs...\x1b[0m")
+
     const eventSourceUrl = getApiUrl(`/api/scripts/logs/${sessionId}`)
-    console.log("[v0] EventSource URL:", eventSourceUrl)
-
     const eventSource = new EventSource(eventSourceUrl)
 
     eventSource.onopen = () => {
-      console.log("[v0] EventSource connection opened")
-      setEventSourceState("open")
-      setLogs((prev) => [
-        ...prev,
-        {
-          timestamp: new Date().toLocaleTimeString(),
-          message: "Connected to log stream",
-          type: "success",
-        },
-      ])
+      term.writeln("\x1b[32m[INFO] Conexión establecida con el servidor\x1b[0m")
     }
 
     eventSource.onmessage = (event) => {
-      setLastEventTime(new Date())
-
-      console.log("[v0] RAW SSE event.data:", event.data)
-      console.log("[v0] RAW SSE event.data type:", typeof event.data)
-      console.log("[v0] RAW SSE event.data length:", event.data.length)
-
       try {
         const data = JSON.parse(event.data)
-        console.log("[v0] Parsed SSE event:", data)
-        console.log("[v0] Event type:", data.type)
-        console.log("[v0] Event keys:", Object.keys(data))
 
         if (data.type === "init") {
-          console.log("[v0] INIT event - script:", data.script, "session_id:", data.session_id)
-          setLogs((prev) => [
-            ...prev,
-            {
-              timestamp: new Date().toLocaleTimeString(),
-              message: `Starting script: ${data.script}`,
-              type: "info",
-            },
-          ])
+          term.writeln(`\x1b[36m[INICIO] Ejecutando: ${data.script}\x1b[0m`)
+          term.writeln(`\x1b[36m[INICIO] Session ID: ${data.session_id}\x1b[0m`)
+          term.writeln("")
         } else if (data.type === "raw") {
           const message = data.message
-          console.log("[v0] RAW event - message:", message)
-          console.log("[v0] RAW event - message length:", message?.length)
 
+          // Detectar WEB_INTERACTION y mostrar modal, pero NO escribir en terminal
           if (message.includes("WEB_INTERACTION:")) {
             const interactionPart = message.split("WEB_INTERACTION:")[1]
 
@@ -124,8 +144,6 @@ export function HybridScriptMonitor({
               if (parts.length >= 4) {
                 const [type, id, titleB64, textB64, ...dataParts] = parts
                 const dataB64 = dataParts.join(":")
-
-                console.log("[v0] Detected interaction:", { type, id, titleB64, textB64, dataB64 })
 
                 setInteraction({
                   type: type as ScriptInteraction["type"],
@@ -137,115 +155,49 @@ export function HybridScriptMonitor({
               }
             }
           } else {
-            setLogs((prev) => [
-              ...prev,
-              {
-                timestamp: new Date().toLocaleTimeString(),
-                message,
-                type: message.toLowerCase().includes("error")
-                  ? "error"
-                  : message.toLowerCase().includes("warning")
-                    ? "warning"
-                    : message.toLowerCase().includes("success") || message.toLowerCase().includes("complete")
-                      ? "success"
-                      : "info",
-              },
-            ])
+            term.writeln(message)
           }
         } else if (data.type === "error") {
-          console.log("[v0] ERROR event - message:", data.message)
-          setLogs((prev) => [
-            ...prev,
-            {
-              timestamp: new Date().toLocaleTimeString(),
-              message: `Error: ${data.message}`,
-              type: "error",
-            },
-          ])
-        } else {
-          console.warn("[v0] UNKNOWN EVENT TYPE:", data.type)
-          console.warn("[v0] Full event data:", JSON.stringify(data, null, 2))
-          setLogs((prev) => [
-            ...prev,
-            {
-              timestamp: new Date().toLocaleTimeString(),
-              message: `[Unknown event type: ${data.type}] ${JSON.stringify(data)}`,
-              type: "warning",
-            },
-          ])
+          term.writeln(`\x1b[31m[ERROR] ${data.message}\x1b[0m`)
         }
       } catch (e) {
-        console.error("[v0] ERROR parsing SSE event:", e)
-        console.error("[v0] Stack:", (e as Error).stack)
-        console.error("[v0] Raw event.data that failed to parse:", event.data)
-        console.error("[v0] First 200 chars:", event.data.substring(0, 200))
-        setLogs((prev) => [
-          ...prev,
-          {
-            timestamp: new Date().toLocaleTimeString(),
-            message: `Parse error: ${event.data.substring(0, 100)}`,
-            type: "error",
-          },
-        ])
+        term.writeln(`\x1b[31m[PARSE ERROR] ${event.data.substring(0, 100)}\x1b[0m`)
       }
     }
 
-    eventSource.onerror = (error) => {
-      console.error("[v0] EventSource error:", error)
-      setEventSourceState("error")
-      setLogs((prev) => [
-        ...prev,
-        {
-          timestamp: new Date().toLocaleTimeString(),
-          message: "Connection to log stream lost. Retrying...",
-          type: "error",
-        },
-      ])
+    eventSource.onerror = () => {
+      term.writeln("\x1b[31m[ERROR] Conexión perdida, reintentando...\x1b[0m")
     }
 
     const pollStatus = async () => {
       try {
         const statusData = await fetchApi(`/api/scripts/status/${sessionId}`)
-        console.log("[v0] ==> Status poll result:", JSON.stringify(statusData, null, 2))
-        console.log("[v0] ==> Status:", statusData.status)
-        console.log("[v0] ==> Exit code:", statusData.exit_code)
-        console.log("[v0] ==> Pending interaction:", statusData.pending_interaction)
-
-        if (eventSourceState === "open" && lastEventTime) {
-          const timeSinceLastEvent = Date.now() - lastEventTime.getTime()
-          if (timeSinceLastEvent > 10000) {
-            console.warn("[v0] No logs received for 10 seconds. Flask may not be streaming logs.")
-            setLogs((prev) => [
-              ...prev,
-              {
-                timestamp: new Date().toLocaleTimeString(),
-                message: "Warning: No new logs received. Check Flask script_runner streaming.",
-                type: "warning",
-              },
-            ])
-          }
-        }
 
         if (statusData.status === "completed" || statusData.exit_code === 0) {
-          console.log("[v0] Script execution completed")
+          term.writeln("")
+          term.writeln("\x1b[32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m")
+          term.writeln("\x1b[32m✓ Script completado exitosamente\x1b[0m")
+          term.writeln("\x1b[32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m")
           setStatus("completed")
           eventSource.close()
-          setEventSourceState("closed")
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current)
           }
           onComplete?.(true)
         } else if (statusData.status === "failed" || (statusData.exit_code !== null && statusData.exit_code !== 0)) {
-          console.log("[v0] Script execution failed with exit code:", statusData.exit_code)
+          term.writeln("")
+          term.writeln("\x1b[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m")
+          term.writeln(`\x1b[31m✗ Script falló con código de salida: ${statusData.exit_code}\x1b[0m`)
+          term.writeln("\x1b[31m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m")
           setStatus("failed")
           eventSource.close()
-          setEventSourceState("closed")
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current)
           }
           onComplete?.(false)
         }
 
+        // Detectar interacciones pendientes desde el status
         if (statusData.pending_interaction) {
           const parts = statusData.pending_interaction.split(":")
           if (parts.length >= 4) {
@@ -270,25 +222,21 @@ export function HybridScriptMonitor({
     pollingIntervalRef.current = setInterval(pollStatus, 2000)
 
     return () => {
-      console.log("[v0] Cleaning up EventSource and polling")
       eventSource.close()
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current)
       }
     }
-  }, [sessionId, onComplete, eventSourceState, lastEventTime])
+  }, [sessionId, onComplete])
 
   const handleInteractionResponse = async (response: string) => {
-    if (!interaction || !sessionId) return
+    if (!interaction || !sessionId || !xtermRef.current) return
 
+    const term = xtermRef.current
     setIsResponding(true)
 
     try {
-      console.log("[v0] Sending interaction response:", {
-        session_id: sessionId,
-        interaction_id: interaction.id,
-        value: response,
-      })
+      term.writeln(`\x1b[33m[USUARIO] Respuesta: ${response}\x1b[0m`)
 
       await fetchApi("/api/scripts/respond", {
         method: "POST",
@@ -299,20 +247,11 @@ export function HybridScriptMonitor({
         }),
       })
 
-      console.log("[v0] Response sent successfully")
       setInteraction(null)
       setInputValue("")
       setSelectedMenuItem("")
     } catch (error) {
-      console.error("[v0] Error responding to interaction:", error)
-      setLogs((prev) => [
-        ...prev,
-        {
-          timestamp: new Date().toLocaleTimeString(),
-          message: `Error responding: ${error}`,
-          type: "error",
-        },
-      ])
+      term.writeln(`\x1b[31m[ERROR] Error enviando respuesta: ${error}\x1b[0m`)
     } finally {
       setIsResponding(false)
     }
@@ -325,11 +264,11 @@ export function HybridScriptMonitor({
       case "msgbox":
         return (
           <Dialog open={true} onOpenChange={() => {}}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>{interaction.title}</DialogTitle>
               </DialogHeader>
-              <DialogDescription className="py-4">{interaction.text}</DialogDescription>
+              <DialogDescription className="py-6 text-base whitespace-pre-wrap">{interaction.text}</DialogDescription>
               <div className="flex justify-end">
                 <Button onClick={() => handleInteractionResponse("ok")} disabled={isResponding}>
                   {isResponding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -343,12 +282,12 @@ export function HybridScriptMonitor({
       case "yesno":
         return (
           <Dialog open={true} onOpenChange={() => {}}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>{interaction.title}</DialogTitle>
               </DialogHeader>
-              <DialogDescription className="py-4">{interaction.text}</DialogDescription>
-              <div className="flex justify-end gap-2">
+              <DialogDescription className="py-6 text-base whitespace-pre-wrap">{interaction.text}</DialogDescription>
+              <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={() => handleInteractionResponse("no")} disabled={isResponding}>
                   No
                 </Button>
@@ -364,24 +303,25 @@ export function HybridScriptMonitor({
       case "inputbox":
         return (
           <Dialog open={true} onOpenChange={() => {}}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>{interaction.title}</DialogTitle>
               </DialogHeader>
-              <DialogDescription className="py-4">{interaction.text}</DialogDescription>
+              <DialogDescription className="py-4 text-base whitespace-pre-wrap">{interaction.text}</DialogDescription>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="input-value">Input</Label>
+                  <Label htmlFor="input-value">Valor</Label>
                   <Input
                     id="input-value"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    placeholder={interaction.data || "Enter value..."}
+                    placeholder={interaction.data || "Introduce el valor..."}
+                    autoFocus
                   />
                 </div>
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-3">
                   <Button variant="outline" onClick={() => handleInteractionResponse("")} disabled={isResponding}>
-                    Cancel
+                    Cancelar
                   </Button>
                   <Button onClick={() => handleInteractionResponse(inputValue)} disabled={isResponding || !inputValue}>
                     {isResponding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -397,35 +337,38 @@ export function HybridScriptMonitor({
         const menuItems = interaction.data?.split("|").filter(Boolean) || []
         return (
           <Dialog open={true} onOpenChange={() => {}}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="sm:max-w-2xl max-h-[80vh]">
               <DialogHeader>
                 <DialogTitle>{interaction.title}</DialogTitle>
               </DialogHeader>
-              <DialogDescription className="py-4">{interaction.text}</DialogDescription>
-              <ScrollArea className="max-h-96">
+              <DialogDescription className="py-4 text-base whitespace-pre-wrap">{interaction.text}</DialogDescription>
+              <ScrollArea className="max-h-96 pr-4">
                 <div className="space-y-2">
-                  {menuItems.map((item, index) => (
-                    <Button
-                      key={index}
-                      variant={selectedMenuItem === item ? "default" : "outline"}
-                      className="w-full justify-start"
-                      onClick={() => setSelectedMenuItem(item)}
-                    >
-                      {item}
-                    </Button>
-                  ))}
+                  {menuItems.map((item, index) => {
+                    const [value, label] = item.includes(":") ? item.split(":") : [item, item]
+                    return (
+                      <Button
+                        key={index}
+                        variant={selectedMenuItem === value ? "default" : "outline"}
+                        className="w-full justify-start text-left h-auto py-3 px-4"
+                        onClick={() => setSelectedMenuItem(value)}
+                      >
+                        {label}
+                      </Button>
+                    )
+                  })}
                 </div>
               </ScrollArea>
-              <div className="flex justify-end gap-2 mt-4">
+              <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
                 <Button variant="outline" onClick={() => handleInteractionResponse("")} disabled={isResponding}>
-                  Cancel
+                  Cancelar
                 </Button>
                 <Button
                   onClick={() => handleInteractionResponse(selectedMenuItem)}
                   disabled={isResponding || !selectedMenuItem}
                 >
                   {isResponding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Select
+                  Seleccionar
                 </Button>
               </div>
             </DialogContent>
@@ -442,58 +385,32 @@ export function HybridScriptMonitor({
   return (
     <>
       <Dialog open={true} onOpenChange={status !== "running" ? onClose : undefined}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent className="max-w-5xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {status === "running" && <Loader2 className="h-5 w-5 animate-spin" />}
               {status === "completed" && <CheckCircle2 className="h-5 w-5 text-green-500" />}
               {status === "failed" && <XCircle className="h-5 w-5 text-red-500" />}
+              <TerminalIcon className="h-5 w-5" />
               {title}
             </DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="border rounded-lg p-4 bg-muted/50">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="h-4 w-4" />
-                <span className="text-sm font-medium">Execution Logs</span>
-                <span className="text-xs text-muted-foreground ml-auto">
-                  Stream: {eventSourceState === "open" && "🟢 Connected"}
-                  {eventSourceState === "connecting" && "🟡 Connecting..."}
-                  {eventSourceState === "closed" && "⚫ Closed"}
-                  {eventSourceState === "error" && "🔴 Error"}
-                </span>
-              </div>
-              <ScrollArea className="h-64" ref={scrollRef}>
-                <div className="space-y-1 font-mono text-xs">
-                  {logs.length === 0 ? (
-                    <div className="text-muted-foreground">Waiting for logs...</div>
-                  ) : (
-                    logs.map((log, index) => (
-                      <div
-                        key={index}
-                        className={`${
-                          log.type === "error"
-                            ? "text-red-500"
-                            : log.type === "warning"
-                              ? "text-yellow-500"
-                              : log.type === "success"
-                                ? "text-green-500"
-                                : "text-foreground"
-                        }`}
-                      >
-                        <span className="text-muted-foreground">[{log.timestamp}]</span> {log.message}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
+            <div className="border rounded-lg overflow-hidden bg-[#1e1e1e]">
+              <div ref={terminalRef} className="h-[500px] p-2" style={{ width: "100%", height: "500px" }} />
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t">
-              <div className="text-sm text-muted-foreground">Session ID: {sessionId}</div>
-              {status !== "running" && <Button onClick={onClose}>Close</Button>}
+              <div className="text-sm text-muted-foreground">
+                Session ID: <span className="font-mono">{sessionId}</span>
+              </div>
+              {status !== "running" && (
+                <Button onClick={onClose} size="lg">
+                  Cerrar
+                </Button>
+              )}
             </div>
           </div>
         </DialogContent>
