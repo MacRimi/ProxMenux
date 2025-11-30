@@ -30,6 +30,7 @@ import {
   fetcher as swrFetcher,
 } from "../types/hardware"
 import { fetchApi } from "@/lib/api-config"
+import { HybridScriptMonitor } from "./hybrid-script-monitor"
 
 const parseLsblkSize = (sizeStr: string | undefined): number => {
   if (!sizeStr) return 0
@@ -238,6 +239,7 @@ export default function Hardware() {
   const [selectedDisk, setSelectedDisk] = useState<StorageDevice | null>(null)
   const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
   const [selectedUPS, setSelectedUPS] = useState<any>(null)
+  const [nvidiaSessionId, setNvidiaSessionId] = useState<string | null>(null)
   const [installingNvidiaDriver, setInstallingNvidiaDriver] = useState(false)
 
   const fetcher = async (url: string) => {
@@ -256,14 +258,9 @@ export default function Hardware() {
   })
 
   const handleInstallNvidiaDriver = async () => {
-    console.log("[v0] ============================================")
-    console.log("[v0] NVIDIA installation button clicked!")
-    console.log("[v0] ============================================")
+    console.log("[v0] NVIDIA installation button clicked")
 
     try {
-      console.log("[v0] Step 1: Setting installingNvidiaDriver state to true")
-      setInstallingNvidiaDriver(true)
-
       const payload = {
         script_relative_path: "gpu_tpu/nvidia_installer.sh",
         params: {
@@ -272,41 +269,25 @@ export default function Hardware() {
         },
       }
 
-      console.log("[v0] Step 2: Payload prepared:", JSON.stringify(payload, null, 2))
-      console.log("[v0] Step 3: Calling fetchApi with endpoint: /api/scripts/execute")
-      console.log("[v0] Step 4: Method: POST")
+      console.log("[v0] Calling Flask to execute script:", payload)
 
       const data = await fetchApi("/api/scripts/execute", {
         method: "POST",
         body: JSON.stringify(payload),
       })
 
-      console.log("[v0] Step 5: fetchApi returned successfully")
-      console.log("[v0] Step 6: Response data:", JSON.stringify(data, null, 2))
+      console.log("[v0] Flask response:", data)
 
-      if (data.success) {
-        console.log("[v0] Step 7: Installation started successfully")
-        console.log("[v0] Session ID:", data.session_id)
-        alert(`NVIDIA driver installation started! Session ID: ${data.session_id}`)
-        mutateHardware()
+      if (data.success && data.session_id) {
+        console.log("[v0] Installation started with session ID:", data.session_id)
+        setNvidiaSessionId(data.session_id)
       } else {
-        console.log("[v0] Step 7: Installation failed with error:", data.error)
+        console.error("[v0] Installation failed:", data.error)
         alert(`Failed to install NVIDIA drivers: ${data.error}`)
       }
     } catch (error) {
-      console.error("[v0] ============================================")
       console.error("[v0] Exception during installation:", error)
-      console.error("[v0] Error type:", typeof error)
-      console.error("[v0] Error message:", error instanceof Error ? error.message : String(error))
-      console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
-      console.error("[v0] ============================================")
       alert("Failed to start NVIDIA driver installation. Check console for details.")
-    } finally {
-      console.log("[v0] Step 8: Setting installingNvidiaDriver state to false")
-      setInstallingNvidiaDriver(false)
-      console.log("[v0] ============================================")
-      console.log("[v0] Handler execution completed")
-      console.log("[v0] ============================================")
     }
   }
 
@@ -836,13 +817,7 @@ export default function Hardware() {
       )}
 
       {/* GPU Detail Modal - Shows immediately with basic info, then loads real-time data */}
-      <Dialog
-        open={selectedGPU !== null}
-        onOpenChange={() => {
-          setSelectedGPU(null)
-          setRealtimeGPUData(null)
-        }}
-      >
+      <Dialog open={!!selectedGPU} onOpenChange={(open) => !open && setSelectedGPU(null)}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           {selectedGPU && (
             <>
@@ -1154,13 +1129,8 @@ export default function Hardware() {
                           {getMonitoringToolRecommendation(selectedGPU.vendor)}
                         </p>
                         {selectedGPU.vendor.toLowerCase().includes("nvidia") && (
-                          <Button
-                            onClick={handleInstallNvidiaDriver}
-                            disabled={installingNvidiaDriver}
-                            size="sm"
-                            className="bg-blue-500 hover:bg-blue-600 text-white"
-                          >
-                            {installingNvidiaDriver ? (
+                          <Button onClick={handleInstallNvidiaDriver} disabled={!!nvidiaSessionId} className="w-full">
+                            {nvidiaSessionId ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 Installing...
@@ -2084,6 +2054,25 @@ export default function Hardware() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* NVIDIA Installation Monitor */}
+      {nvidiaSessionId && (
+        <HybridScriptMonitor
+          sessionId={nvidiaSessionId}
+          title="NVIDIA Driver Installation"
+          description="Installing NVIDIA proprietary drivers for GPU monitoring..."
+          onClose={() => {
+            setNvidiaSessionId(null)
+            mutateHardware()
+          }}
+          onComplete={(success) => {
+            console.log("[v0] NVIDIA installation completed:", success ? "success" : "failed")
+            if (success) {
+              mutateHardware()
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -1,0 +1,384 @@
+"use client"
+
+import { useEffect, useState, useRef } from "react"
+import { fetchApi } from "@/lib/api-config"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react"
+
+interface HybridScriptMonitorProps {
+  sessionId: string | null
+  title?: string
+  description?: string
+  onClose: () => void
+  onComplete?: (success: boolean) => void
+}
+
+interface ScriptInteraction {
+  type: "msgbox" | "yesno" | "inputbox" | "menu"
+  id: string
+  title: string
+  text: string
+  data?: string
+}
+
+interface LogEntry {
+  timestamp: string
+  message: string
+  type: "info" | "error" | "warning" | "success"
+}
+
+export function HybridScriptMonitor({
+  sessionId,
+  title = "Script Execution",
+  description = "Monitoring script execution...",
+  onClose,
+  onComplete,
+}: HybridScriptMonitorProps) {
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [interaction, setInteraction] = useState<ScriptInteraction | null>(null)
+  const [status, setStatus] = useState<"running" | "completed" | "failed">("running")
+  const [inputValue, setInputValue] = useState("")
+  const [selectedMenuItem, setSelectedMenuItem] = useState<string>("")
+  const [isResponding, setIsResponding] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Auto-scroll to bottom when logs update
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [logs])
+
+  // Poll for logs and status
+  useEffect(() => {
+    if (!sessionId) return
+
+    const pollScript = async () => {
+      try {
+        console.log("[v0] Polling script status and logs for session:", sessionId)
+
+        // Get status
+        const statusData = await fetchApi(`/api/scripts/status/${sessionId}`)
+        console.log("[v0] Status data:", statusData)
+
+        if (statusData.status === "completed") {
+          setStatus("completed")
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current)
+          }
+          onComplete?.(true)
+        } else if (statusData.status === "failed") {
+          setStatus("failed")
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current)
+          }
+          onComplete?.(false)
+        }
+
+        // Get logs
+        const logsData = await fetchApi(`/api/scripts/logs/${sessionId}`)
+        console.log("[v0] Logs data:", logsData)
+
+        if (logsData.logs && Array.isArray(logsData.logs)) {
+          const parsedLogs: LogEntry[] = []
+
+          for (const logLine of logsData.logs) {
+            // Check for web interaction
+            if (logLine.includes("WEB_INTERACTION:")) {
+              const parts = logLine.split("WEB_INTERACTION:")[1].split(":")
+              if (parts.length >= 4) {
+                const [type, id, title, text, ...dataParts] = parts
+                const data = dataParts.join(":")
+
+                console.log("[v0] Detected interaction:", { type, id, title, text, data })
+
+                setInteraction({
+                  type: type as ScriptInteraction["type"],
+                  id,
+                  title: title.replace(/_/g, " "),
+                  text: text.replace(/_/g, " "),
+                  data,
+                })
+
+                // Pause polling while waiting for user interaction
+                if (pollingIntervalRef.current) {
+                  clearInterval(pollingIntervalRef.current)
+                }
+              }
+            } else {
+              // Regular log entry
+              parsedLogs.push({
+                timestamp: new Date().toLocaleTimeString(),
+                message: logLine,
+                type: logLine.toLowerCase().includes("error")
+                  ? "error"
+                  : logLine.toLowerCase().includes("warning")
+                    ? "warning"
+                    : logLine.toLowerCase().includes("success")
+                      ? "success"
+                      : "info",
+              })
+            }
+          }
+
+          setLogs(parsedLogs)
+        }
+      } catch (error) {
+        console.error("[v0] Error polling script:", error)
+        setLogs((prev) => [
+          ...prev,
+          {
+            timestamp: new Date().toLocaleTimeString(),
+            message: `Error: ${error}`,
+            type: "error",
+          },
+        ])
+      }
+    }
+
+    // Initial poll
+    pollScript()
+
+    // Set up polling interval
+    pollingIntervalRef.current = setInterval(pollScript, 2000)
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+      }
+    }
+  }, [sessionId, onComplete])
+
+  const handleInteractionResponse = async (response: string) => {
+    if (!interaction || !sessionId) return
+
+    setIsResponding(true)
+
+    try {
+      console.log("[v0] Sending interaction response:", {
+        session_id: sessionId,
+        interaction_id: interaction.id,
+        response,
+      })
+
+      await fetchApi("/api/scripts/respond", {
+        method: "POST",
+        body: JSON.stringify({
+          session_id: sessionId,
+          interaction_id: interaction.id,
+          response,
+        }),
+      })
+
+      setInteraction(null)
+      setInputValue("")
+      setSelectedMenuItem("")
+
+      // Resume polling
+      if (!pollingIntervalRef.current && status === "running") {
+        pollingIntervalRef.current = setInterval(async () => {
+          // Polling logic here (same as above)
+        }, 2000)
+      }
+    } catch (error) {
+      console.error("[v0] Error responding to interaction:", error)
+      setLogs((prev) => [
+        ...prev,
+        {
+          timestamp: new Date().toLocaleTimeString(),
+          message: `Error responding: ${error}`,
+          type: "error",
+        },
+      ])
+    } finally {
+      setIsResponding(false)
+    }
+  }
+
+  const renderInteractionModal = () => {
+    if (!interaction) return null
+
+    switch (interaction.type) {
+      case "msgbox":
+        return (
+          <Dialog open={true} onOpenChange={() => {}}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{interaction.title}</DialogTitle>
+              </DialogHeader>
+              <DialogDescription className="py-4">{interaction.text}</DialogDescription>
+              <div className="flex justify-end">
+                <Button onClick={() => handleInteractionResponse("ok")} disabled={isResponding}>
+                  {isResponding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  OK
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )
+
+      case "yesno":
+        return (
+          <Dialog open={true} onOpenChange={() => {}}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{interaction.title}</DialogTitle>
+              </DialogHeader>
+              <DialogDescription className="py-4">{interaction.text}</DialogDescription>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => handleInteractionResponse("no")} disabled={isResponding}>
+                  No
+                </Button>
+                <Button onClick={() => handleInteractionResponse("yes")} disabled={isResponding}>
+                  {isResponding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Yes
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )
+
+      case "inputbox":
+        return (
+          <Dialog open={true} onOpenChange={() => {}}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{interaction.title}</DialogTitle>
+              </DialogHeader>
+              <DialogDescription className="py-4">{interaction.text}</DialogDescription>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="input-value">Input</Label>
+                  <Input
+                    id="input-value"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder={interaction.data || "Enter value..."}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => handleInteractionResponse("")} disabled={isResponding}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => handleInteractionResponse(inputValue)} disabled={isResponding || !inputValue}>
+                    {isResponding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    OK
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )
+
+      case "menu":
+        const menuItems = interaction.data?.split("|").filter(Boolean) || []
+        return (
+          <Dialog open={true} onOpenChange={() => {}}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>{interaction.title}</DialogTitle>
+              </DialogHeader>
+              <DialogDescription className="py-4">{interaction.text}</DialogDescription>
+              <ScrollArea className="max-h-96">
+                <div className="space-y-2">
+                  {menuItems.map((item, index) => (
+                    <Button
+                      key={index}
+                      variant={selectedMenuItem === item ? "default" : "outline"}
+                      className="w-full justify-start"
+                      onClick={() => setSelectedMenuItem(item)}
+                    >
+                      {item}
+                    </Button>
+                  ))}
+                </div>
+              </ScrollArea>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="outline" onClick={() => handleInteractionResponse("")} disabled={isResponding}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleInteractionResponse(selectedMenuItem)}
+                  disabled={isResponding || !selectedMenuItem}
+                >
+                  {isResponding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Select
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  if (!sessionId) return null
+
+  return (
+    <>
+      <Dialog open={true} onOpenChange={status !== "running" ? onClose : undefined}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {status === "running" && <Loader2 className="h-5 w-5 animate-spin" />}
+              {status === "completed" && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+              {status === "failed" && <XCircle className="h-5 w-5 text-red-500" />}
+              {title}
+            </DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Logs Display */}
+            <div className="border rounded-lg p-4 bg-muted/50">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-sm font-medium">Execution Logs</span>
+              </div>
+              <ScrollArea className="h-64" ref={scrollRef}>
+                <div className="space-y-1 font-mono text-xs">
+                  {logs.length === 0 ? (
+                    <div className="text-muted-foreground">Waiting for logs...</div>
+                  ) : (
+                    logs.map((log, index) => (
+                      <div
+                        key={index}
+                        className={`${
+                          log.type === "error"
+                            ? "text-red-500"
+                            : log.type === "warning"
+                              ? "text-yellow-500"
+                              : log.type === "success"
+                                ? "text-green-500"
+                                : "text-foreground"
+                        }`}
+                      >
+                        <span className="text-muted-foreground">[{log.timestamp}]</span> {log.message}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+
+            {/* Status footer */}
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="text-sm text-muted-foreground">Session ID: {sessionId}</div>
+              {status !== "running" && <Button onClick={onClose}>Close</Button>}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Interaction Modal */}
+      {renderInteractionModal()}
+    </>
+  )
+}
