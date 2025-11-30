@@ -256,21 +256,33 @@ export default function Hardware() {
   })
 
   const handleInstallNvidiaDriver = async () => {
-    setInstallingNvidiaDriver(true)
     try {
-      const response = await fetch("/api/gpu/nvidia/install", {
+      setInstallingNvidiaDriver(true)
+
+      const data = await fetchApi<{ success: boolean; session_id?: string; error?: string }>("/api/scripts/execute", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          script_relative_path: "gpu_tpu/nvidia_installer.sh",
+          params: {
+            EXECUTION_MODE: "web",
+            WEB_LOG: "/tmp/nvidia_web_install.log",
+          },
+        }),
       })
-      const data = await response.json()
 
       if (data.success) {
-        // Refresh hardware data after installation
+        console.log("[v0] Installation started, session:", data.session_id)
         mutateHardware()
       } else {
         console.error("[v0] Failed to install NVIDIA drivers:", data.error)
+        alert(`Failed to install NVIDIA drivers: ${data.error}`)
       }
     } catch (error) {
       console.error("[v0] Error installing NVIDIA drivers:", error)
+      alert("Failed to start NVIDIA driver installation. Please try manually.")
     } finally {
       setInstallingNvidiaDriver(false)
     }
