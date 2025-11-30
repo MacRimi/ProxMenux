@@ -443,3 +443,116 @@ update_component_status() {
     echo '{}' > "$COMPONENTS_STATUS_FILE"
   fi
 }
+
+
+# ============================================
+# Hybrid Dialog Functions (Web/Terminal)
+# ============================================
+
+# Detect if running in web mode
+is_web_mode() {
+    [[ "$EXECUTION_MODE" == "web" ]]
+}
+
+# Generate unique interaction ID
+generate_interaction_id() {
+    echo "$(date +%s%N)_$$"
+}
+
+# Wait for web response with timeout
+wait_for_web_response() {
+    local interaction_id="$1"
+    local response_file="/tmp/proxmenux_response_${interaction_id}"
+    local timeout=300  # 5 minutes
+    local elapsed=0
+    
+    while [[ ! -f "$response_file" ]] && [[ $elapsed -lt $timeout ]]; do
+        sleep 0.1
+        elapsed=$((elapsed + 1))
+    done
+    
+    if [[ -f "$response_file" ]]; then
+        cat "$response_file"
+        rm -f "$response_file"
+        return 0
+    else
+        echo ""
+        return 1
+    fi
+}
+
+# Hybrid menu function
+hybrid_menu() {
+    local title="$1"
+    local text="$2"
+    local height="${3:-20}"
+    local width="${4:-70}"
+    local menu_height="${5:-10}"
+    shift 5
+    local items=("$@")
+    
+    if is_web_mode; then
+        local interaction_id=$(generate_interaction_id)
+        local options_json="["
+        for ((i=0; i<${#items[@]}; i+=2)); do
+            if [ $i -gt 0 ]; then options_json+=","; fi
+            options_json+="{\"value\":\"${items[i]}\",\"label\":\"${items[i+1]}\"}"
+        done
+        options_json+="]"
+        
+        echo "WEB_INTERACTION:menu:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$text" | base64 -w0):$options_json" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
+        wait_for_web_response "$interaction_id"
+    else
+        dialog --title "$title" --menu "$text" "$height" "$width" "$menu_height" "${items[@]}" 3>&1 1>&2 2>&3
+    fi
+}
+
+# Hybrid yes/no prompt
+hybrid_yesno() {
+    local title="$1"
+    local text="$2"
+    local height="${3:-10}"
+    local width="${4:-60}"
+    
+    if is_web_mode; then
+        local interaction_id=$(generate_interaction_id)
+        echo "WEB_INTERACTION:yesno:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$text" | base64 -w0)" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
+        local response=$(wait_for_web_response "$interaction_id")
+        [[ "$response" == "yes" ]] && return 0 || return 1
+    else
+        dialog --title "$title" --yesno "$text" "$height" "$width"
+    fi
+}
+
+# Hybrid message box
+hybrid_msgbox() {
+    local title="$1"
+    local text="$2"
+    local height="${3:-10}"
+    local width="${4:-60}"
+    
+    if is_web_mode; then
+        local interaction_id=$(generate_interaction_id)
+        echo "WEB_INTERACTION:msgbox:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$text" | base64 -w0)" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
+        wait_for_web_response "$interaction_id" > /dev/null
+    else
+        dialog --title "$title" --msgbox "$text" "$height" "$width"
+    fi
+}
+
+# Hybrid input box
+hybrid_inputbox() {
+    local title="$1"
+    local text="$2"
+    local height="${3:-10}"
+    local width="${4:-60}"
+    local default="${5:-}"
+    
+    if is_web_mode; then
+        local interaction_id=$(generate_interaction_id)
+        echo "WEB_INTERACTION:inputbox:${interaction_id}:$(echo -n "$title" | base64 -w0):$(echo -n "$text" | base64 -w0):$(echo -n "$default" | base64 -w0)" >> "${WEB_LOG:-/tmp/proxmenux_web.log}"
+        wait_for_web_response "$interaction_id"
+    else
+        dialog --title "$title" --inputbox "$text" "$height" "$width" "$default" 3>&1 1>&2 2>&3
+    fi
+}
