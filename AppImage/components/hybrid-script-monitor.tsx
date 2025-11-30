@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { fetchApi } from "@/lib/api-config"
+import { fetchApi, getApiUrl } from "@/lib/api-config"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -69,14 +69,7 @@ export function HybridScriptMonitor({
     if (!sessionId) return
 
     console.log("[v0] Setting up EventSource for session:", sessionId)
-    const baseUrl =
-      window.location.protocol === "http:" &&
-      window.location.port &&
-      window.location.port !== "80" &&
-      window.location.port !== "443"
-        ? `${window.location.protocol}//${window.location.hostname}:8008`
-        : ""
-    const eventSourceUrl = `${baseUrl}/api/scripts/logs/${sessionId}`
+    const eventSourceUrl = getApiUrl(`/api/scripts/logs/${sessionId}`)
     console.log("[v0] EventSource URL:", eventSourceUrl)
 
     const eventSource = new EventSource(eventSourceUrl)
