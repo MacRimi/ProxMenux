@@ -9,9 +9,8 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, CheckCircle2, XCircle, TerminalIcon } from "lucide-react"
 
-import { Terminal } from "xterm"
-import { FitAddon } from "xterm-addon-fit"
-import "xterm/css/xterm.css"
+import type { Terminal } from "xterm"
+import type { FitAddon } from "xterm-addon-fit"
 
 interface HybridScriptMonitorProps {
   sessionId: string | null
@@ -57,57 +56,64 @@ export function HybridScriptMonitor({
   }
 
   useEffect(() => {
-    if (!terminalRef.current || xtermRef.current) return
+    if (!terminalRef.current || xtermRef.current || typeof window === "undefined") return
 
-    const term = new Terminal({
-      cursorBlink: false,
-      fontSize: 13,
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      theme: {
-        background: "#1e1e1e",
-        foreground: "#d4d4d4",
-        cursor: "#d4d4d4",
-        black: "#000000",
-        red: "#cd3131",
-        green: "#0dbc79",
-        yellow: "#e5e510",
-        blue: "#2472c8",
-        magenta: "#bc3fbc",
-        cyan: "#11a8cd",
-        white: "#e5e5e5",
-        brightBlack: "#666666",
-        brightRed: "#f14c4c",
-        brightGreen: "#23d18b",
-        brightYellow: "#f5f543",
-        brightBlue: "#3b8eea",
-        brightMagenta: "#d670d6",
-        brightCyan: "#29b8db",
-        brightWhite: "#ffffff",
-      },
-      convertEol: true,
-      disableStdin: true, // Terminal es solo lectura
-    })
+    const loadTerminal = async () => {
+      const { Terminal } = await import("xterm")
+      const { FitAddon } = await import("xterm-addon-fit")
+      await import("xterm/css/xterm.css")
 
-    const fitAddon = new FitAddon()
-    term.loadAddon(fitAddon)
-    term.open(terminalRef.current)
-    fitAddon.fit()
+      const term = new Terminal({
+        cursorBlink: false,
+        fontSize: 13,
+        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        theme: {
+          background: "#1e1e1e",
+          foreground: "#d4d4d4",
+          cursor: "#d4d4d4",
+          black: "#000000",
+          red: "#cd3131",
+          green: "#0dbc79",
+          yellow: "#e5e510",
+          blue: "#2472c8",
+          magenta: "#bc3fbc",
+          cyan: "#11a8cd",
+          white: "#e5e5e5",
+          brightBlack: "#666666",
+          brightRed: "#f14c4c",
+          brightGreen: "#23d18b",
+          brightYellow: "#f5f543",
+          brightBlue: "#3b8eea",
+          brightMagenta: "#d670d6",
+          brightCyan: "#29b8db",
+          brightWhite: "#ffffff",
+        },
+        convertEol: true,
+        disableStdin: true,
+      })
 
-    xtermRef.current = term
-    fitAddonRef.current = fitAddon
-
-    // Ajustar terminal cuando cambia el tamaño
-    const resizeObserver = new ResizeObserver(() => {
+      const fitAddon = new FitAddon()
+      term.loadAddon(fitAddon)
+      term.open(terminalRef.current!)
       fitAddon.fit()
-    })
-    resizeObserver.observe(terminalRef.current)
 
-    return () => {
-      resizeObserver.disconnect()
-      term.dispose()
-      xtermRef.current = null
-      fitAddonRef.current = null
+      xtermRef.current = term
+      fitAddonRef.current = fitAddon
+
+      const resizeObserver = new ResizeObserver(() => {
+        fitAddon.fit()
+      })
+      resizeObserver.observe(terminalRef.current!)
+
+      return () => {
+        resizeObserver.disconnect()
+        term.dispose()
+        xtermRef.current = null
+        fitAddonRef.current = null
+      }
     }
+
+    loadTerminal()
   }, [])
 
   useEffect(() => {
