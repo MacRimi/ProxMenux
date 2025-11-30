@@ -90,11 +90,18 @@ export function HybridScriptMonitor({
     eventSource.onmessage = (event) => {
       setLastEventTime(new Date())
 
+      console.log("[v0] RAW SSE event.data:", event.data)
+      console.log("[v0] RAW SSE event.data type:", typeof event.data)
+      console.log("[v0] RAW SSE event.data length:", event.data.length)
+
       try {
         const data = JSON.parse(event.data)
-        console.log("[v0] Received SSE event:", data)
+        console.log("[v0] Parsed SSE event:", data)
+        console.log("[v0] Event type:", data.type)
+        console.log("[v0] Event keys:", Object.keys(data))
 
         if (data.type === "init") {
+          console.log("[v0] INIT event - script:", data.script, "session_id:", data.session_id)
           setLogs((prev) => [
             ...prev,
             {
@@ -105,6 +112,8 @@ export function HybridScriptMonitor({
           ])
         } else if (data.type === "raw") {
           const message = data.message
+          console.log("[v0] RAW event - message:", message)
+          console.log("[v0] RAW event - message length:", message?.length)
 
           if (message.includes("WEB_INTERACTION:")) {
             const interactionPart = message.split("WEB_INTERACTION:")[1]
@@ -144,6 +153,7 @@ export function HybridScriptMonitor({
             ])
           }
         } else if (data.type === "error") {
+          console.log("[v0] ERROR event - message:", data.message)
           setLogs((prev) => [
             ...prev,
             {
@@ -153,7 +163,8 @@ export function HybridScriptMonitor({
             },
           ])
         } else {
-          console.warn("[v0] Unknown SSE event type:", data.type, "Full data:", data)
+          console.warn("[v0] UNKNOWN EVENT TYPE:", data.type)
+          console.warn("[v0] Full event data:", JSON.stringify(data, null, 2))
           setLogs((prev) => [
             ...prev,
             {
@@ -164,13 +175,16 @@ export function HybridScriptMonitor({
           ])
         }
       } catch (e) {
-        console.error("[v0] Error parsing SSE event:", e, "Raw data:", event.data)
+        console.error("[v0] ERROR parsing SSE event:", e)
+        console.error("[v0] Stack:", (e as Error).stack)
+        console.error("[v0] Raw event.data that failed to parse:", event.data)
+        console.error("[v0] First 200 chars:", event.data.substring(0, 200))
         setLogs((prev) => [
           ...prev,
           {
             timestamp: new Date().toLocaleTimeString(),
-            message: event.data,
-            type: "info",
+            message: `Parse error: ${event.data.substring(0, 100)}`,
+            type: "error",
           },
         ])
       }
@@ -192,7 +206,10 @@ export function HybridScriptMonitor({
     const pollStatus = async () => {
       try {
         const statusData = await fetchApi(`/api/scripts/status/${sessionId}`)
-        console.log("[v0] Status data:", statusData)
+        console.log("[v0] ==> Status poll result:", JSON.stringify(statusData, null, 2))
+        console.log("[v0] ==> Status:", statusData.status)
+        console.log("[v0] ==> Exit code:", statusData.exit_code)
+        console.log("[v0] ==> Pending interaction:", statusData.pending_interaction)
 
         if (eventSourceState === "open" && lastEventTime) {
           const timeSinceLastEvent = Date.now() - lastEventTime.getTime()
