@@ -1,37 +1,69 @@
 import { NextResponse } from "next/server"
-import { exec } from "child_process"
-import { promisify } from "util"
-
-const execAsync = promisify(exec)
 
 export async function POST() {
   try {
-    const scriptPath = "/usr/local/share/proxmenux/scripts/gpu_tpu/nvidia_installer.sh"
-    const webLogPath = "/tmp/nvidia_web_install.log"
+    // Port 8008 is the production port for Flask server
+    const API_PORT = "8008"
 
-    const { stdout, stderr } = await execAsync(`EXECUTION_MODE=web WEB_LOG=${webLogPath} bash ${scriptPath}`, {
-      env: {
-        ...process.env,
-        EXECUTION_MODE: "web",
-        WEB_LOG: webLogPath,
+    // Use window.location from request headers to detect proxy
+    let flaskUrl: string
+
+    // For server-side execution, use localhost
+    // In production, the request will come with proper headers
+    if (typeof window === "undefined") {
+      flaskUrl = `http://localhost:${API_PORT}/api/scripts/execute`
+    } else {
+      const { protocol, hostname, port } = window.location
+      const isStandardPort = port === "" || port === "80" || port === "443"
+
+      if (isStandardPort) {
+        // Behind proxy - use relative URL
+        flaskUrl = "/api/scripts/execute"
+      } else {
+        // Direct access
+        flaskUrl = `${protocol}//${hostname}:${API_PORT}/api/scripts/execute`
+      }
+    }
+
+    console.log("[v0] Starting NVIDIA driver installation via:", flaskUrl)
+
+    const response = await fetch(flaskUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-      maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      body: JSON.stringify({
+        script_path: "/usr/local/share/proxmenux/scripts/gpu_tpu/nvidia_installer.sh",
+        env: {
+          EXECUTION_MODE: "web",
+          WEB_LOG: "/tmp/nvidia_web_install.log",
+        },
+      }),
     })
+
+    if (!response.ok) {
+      throw new Error(`Flask API error: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    if (!data.success) {
+      throw new Error(data.error || "Failed to start installation")
+    }
+
+    console.log("[v0] NVIDIA installation started, session_id:", data.session_id)
 
     return NextResponse.json({
       success: true,
-      message: "NVIDIA drivers installation completed",
-      output: stdout,
-      log_file: webLogPath,
+      session_id: data.session_id,
+      message: "NVIDIA installation started",
     })
   } catch (error: any) {
     console.error("[v0] NVIDIA installation error:", error)
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Installation failed",
-        output: error.stdout || "",
-        stderr: error.stderr || "",
+        error: error.message || "Failed to start NVIDIA driver installation. Please try manually.",
       },
       { status: 500 },
     )
