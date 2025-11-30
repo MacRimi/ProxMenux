@@ -266,7 +266,7 @@ export default function Hardware() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.JSONstringify({
+        body: JSON.stringify({
           script_relative_path: "gpu_tpu/nvidia_installer.sh",
           params: {
             EXECUTION_MODE: "web",
