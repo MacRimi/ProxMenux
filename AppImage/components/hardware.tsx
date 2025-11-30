@@ -256,15 +256,17 @@ export default function Hardware() {
   })
 
   const handleInstallNvidiaDriver = async () => {
+    console.log("[v0] NVIDIA installation button clicked")
     try {
       setInstallingNvidiaDriver(true)
+      console.log("[v0] Calling Flask API: /api/scripts/execute")
 
       const data = await fetchApi<{ success: boolean; session_id?: string; error?: string }>("/api/scripts/execute", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
+        body: JSON.JSONstringify({
           script_relative_path: "gpu_tpu/nvidia_installer.sh",
           params: {
             EXECUTION_MODE: "web",
@@ -273,18 +275,21 @@ export default function Hardware() {
         }),
       })
 
+      console.log("[v0] Flask API response:", data)
+
       if (data.success) {
-        console.log("[v0] Installation started, session:", data.session_id)
+        console.log("[v0] Installation started successfully, session:", data.session_id)
         mutateHardware()
       } else {
-        console.error("[v0] Failed to install NVIDIA drivers:", data.error)
+        console.error("[v0] Installation failed:", data.error)
         alert(`Failed to install NVIDIA drivers: ${data.error}`)
       }
     } catch (error) {
-      console.error("[v0] Error installing NVIDIA drivers:", error)
+      console.error("[v0] Exception during installation:", error)
       alert("Failed to start NVIDIA driver installation. Please try manually.")
     } finally {
       setInstallingNvidiaDriver(false)
+      console.log("[v0] Installation process finished")
     }
   }
 
@@ -1495,31 +1500,31 @@ export default function Hardware() {
                   <div className="grid gap-2">
                     {selectedUPS.manufacturer && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Manufacturer</span>
+                        <span className="text-sm font-medium text-muted-foreground">Manufacturer</span>
                         <span className="text-sm font-medium">{selectedUPS.manufacturer}</span>
                       </div>
                     )}
                     {selectedUPS.model && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Model</span>
+                        <span className="text-sm font-medium text-muted-foreground">Model</span>
                         <span className="text-sm font-medium">{selectedUPS.model}</span>
                       </div>
                     )}
                     {selectedUPS.serial && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Serial Number</span>
+                        <span className="text-sm font-medium text-muted-foreground">Serial Number</span>
                         <span className="font-mono text-sm">{selectedUPS.serial}</span>
                       </div>
                     )}
                     {selectedUPS.firmware && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Firmware</span>
+                        <span className="text-sm font-medium text-muted-foreground">Firmware</span>
                         <span className="text-sm font-medium">{selectedUPS.firmware}</span>
                       </div>
                     )}
                     {selectedUPS.driver && (
                       <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-sm text-muted-foreground">Driver</span>
+                        <span className="text-sm font-medium text-muted-foreground">Driver</span>
                         <span className="font-mono text-sm text-green-500">{selectedUPS.driver}</span>
                       </div>
                     )}
