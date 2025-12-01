@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { X, CheckCircle2, XCircle, Loader2 } from "lucide-react"
@@ -82,13 +82,15 @@ export function ScriptTerminalModal({
           brightCyan: "#0db9d7",
           brightWhite: "#acb0d0",
         },
-        allowProposedApi: true,
       })
 
       fitAddon = new FitAddon()
       term.loadAddon(fitAddon)
       term.open(terminalRef.current)
-      fitAddon.fit()
+
+      setTimeout(() => {
+        fitAddon.fit()
+      }, 100)
 
       termRef.current = term
       fitAddonRef.current = fitAddon
@@ -102,12 +104,11 @@ export function ScriptTerminalModal({
       ws.onopen = () => {
         setIsConnected(true)
         term.writeln("\x1b[32mConnected to script execution.\x1b[0m")
-        console.log("[v0] WebSocket connected, sending execute request")
+        console.log("[v0] WebSocket connected, sending init message")
 
-        // Send script execution request
+        // Flask expects to receive the session info and will start the script
         ws.send(
           JSON.stringify({
-            action: "execute",
             script_path: scriptPath,
             script_name: scriptName,
             params: params,
@@ -118,28 +119,29 @@ export function ScriptTerminalModal({
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
-          console.log("[v0] Received WebSocket message:", data.type)
+          console.log("[v0] Received WebSocket message type:", data.type, data)
 
           if (data.type === "output") {
             // Regular terminal output
             term.write(data.data)
           } else if (data.type === "interaction") {
             // Web interaction detected
-            console.log("[v0] Web interaction:", data.data)
-            setCurrentInteraction(data.data)
-          } else if (data.type === "complete") {
-            // Script completed
-            console.log("[v0] Script complete, exit code:", data.exit_code)
+            console.log("[v0] Web interaction received:", data.interaction)
+            setCurrentInteraction(data.interaction)
+          } else if (data.type === "exit") {
+            // Script exited, code:
+            console.log("[v0] Script exited, code:", data.code)
             setIsComplete(true)
-            setExitCode(data.exit_code)
-            if (data.exit_code === 0) {
+            setExitCode(data.code)
+            if (data.code === 0) {
               term.writeln("\r\n\x1b[32m✓ Script completed successfully\x1b[0m")
             } else {
-              term.writeln(`\r\n\x1b[31m✗ Script failed with exit code ${data.exit_code}\x1b[0m`)
+              term.writeln(`\r\n\x1b[31m✗ Script failed with exit code ${data.code}\x1b[0m`)
             }
           }
-        } catch {
+        } catch (e) {
           // Not JSON, treat as raw output
+          console.log("[v0] Received raw data:", event.data)
           term.write(event.data)
         }
       }
@@ -207,15 +209,13 @@ export function ScriptTerminalModal({
 
   const handleInteractionResponse = (value: string) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      console.log("[v0] Sending interaction response:", value)
-      wsRef.current.send(
-        JSON.stringify({
-          action: "respond",
-          interaction_id: currentInteraction?.id,
-          value: value,
-        }),
-      )
+      console.log("[v0] Sending interaction response:", value, "for interaction:", currentInteraction?.id)
+      wsRef.current.send(value + "\n")
       setCurrentInteraction(null)
+
+      if (termRef.current) {
+        termRef.current.writeln(`\r\n\x1b[36m> ${value}\x1b[0m`)
+      }
     }
   }
 
@@ -287,6 +287,8 @@ export function ScriptTerminalModal({
     <>
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl h-[80vh] p-0 flex flex-col">
+          <DialogTitle className="sr-only">{title}</DialogTitle>
+
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2">
