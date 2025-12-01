@@ -30,7 +30,7 @@ import {
   fetcher as swrFetcher,
 } from "../types/hardware"
 import { fetchApi } from "@/lib/api-config"
-import { HybridScriptMonitor } from "./hybrid-script-monitor"
+import { ScriptTerminalModal } from "./script-terminal-modal"
 
 const parseLsblkSize = (sizeStr: string | undefined): number => {
   if (!sizeStr) return 0
@@ -239,7 +239,7 @@ export default function Hardware() {
   const [selectedDisk, setSelectedDisk] = useState<StorageDevice | null>(null)
   const [selectedNetwork, setSelectedNetwork] = useState<PCIDevice | null>(null)
   const [selectedUPS, setSelectedUPS] = useState<any>(null)
-  const [nvidiaSessionId, setNvidiaSessionId] = useState<string | null>(null)
+  const [showNvidiaInstaller, setShowNvidiaInstaller] = useState(false)
   const [installingNvidiaDriver, setInstallingNvidiaDriver] = useState(false)
 
   const fetcher = async (url: string) => {
@@ -257,39 +257,9 @@ export default function Hardware() {
     revalidateOnFocus: false,
   })
 
-  const handleInstallNvidiaDriver = async () => {
-    console.log("[v0] NVIDIA installation button clicked")
-
-    try {
-      const payload = {
-        script_name: "nvidia_installer",
-        script_relative_path: "gpu_tpu/nvidia_installer.sh",
-        params: {
-          EXECUTION_MODE: "web",
-          WEB_LOG: "/tmp/nvidia_web_install.log",
-        },
-      }
-
-      console.log("[v0] Calling Flask to execute script:", payload)
-
-      const data = await fetchApi("/api/scripts/execute", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      })
-
-      console.log("[v0] Flask response:", data)
-
-      if (data.success && data.session_id) {
-        console.log("[v0] Installation started with session ID:", data.session_id)
-        setNvidiaSessionId(data.session_id)
-      } else {
-        console.error("[v0] Installation failed:", data.error)
-        alert(`Failed to install NVIDIA drivers: ${data.error}`)
-      }
-    } catch (error) {
-      console.error("[v0] Exception during installation:", error)
-      alert("Failed to start NVIDIA driver installation. Check console for details.")
-    }
+  const handleInstallNvidiaDriver = () => {
+    console.log("[v0] Opening NVIDIA installer terminal")
+    setShowNvidiaInstaller(true)
   }
 
   useEffect(() => {
@@ -1130,18 +1100,11 @@ export default function Hardware() {
                           {getMonitoringToolRecommendation(selectedGPU.vendor)}
                         </p>
                         {selectedGPU.vendor.toLowerCase().includes("nvidia") && (
-                          <Button onClick={handleInstallNvidiaDriver} disabled={!!nvidiaSessionId} className="w-full">
-                            {nvidiaSessionId ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Installing...
-                              </>
-                            ) : (
-                              <>
-                                <Download className="mr-2 h-4 w-4" />
-                                Install NVIDIA Drivers
-                              </>
-                            )}
+                          <Button onClick={handleInstallNvidiaDriver} className="w-full">
+                            <>
+                              <Download className="mr-2 h-4 w-4" />
+                              Install NVIDIA Drivers
+                            </>
                           </Button>
                         )}
                       </div>
@@ -2057,23 +2020,35 @@ export default function Hardware() {
       </Dialog>
 
       {/* NVIDIA Installation Monitor */}
-      {nvidiaSessionId && (
-        <HybridScriptMonitor
-          sessionId={nvidiaSessionId}
-          title="NVIDIA Driver Installation"
-          description="Installing NVIDIA proprietary drivers for GPU monitoring..."
-          onClose={() => {
-            setNvidiaSessionId(null)
+      {/* <HybridScriptMonitor
+        sessionId={nvidiaSessionId}
+        title="NVIDIA Driver Installation"
+        description="Installing NVIDIA proprietary drivers for GPU monitoring..."
+        onClose={() => {
+          setNvidiaSessionId(null)
+          mutateHardware()
+        }}
+        onComplete={(success) => {
+          console.log("[v0] NVIDIA installation completed:", success ? "success" : "failed")
+          if (success) {
             mutateHardware()
-          }}
-          onComplete={(success) => {
-            console.log("[v0] NVIDIA installation completed:", success ? "success" : "failed")
-            if (success) {
-              mutateHardware()
-            }
-          }}
-        />
-      )}
+          }
+        }}
+      /> */}
+      <ScriptTerminalModal
+        open={showNvidiaInstaller}
+        onClose={() => {
+          setShowNvidiaInstaller(false)
+          mutateHardware()
+        }}
+        scriptPath="/usr/local/share/proxmenux/scripts/gpu_tpu/nvidia_installer.sh"
+        scriptName="nvidia_installer"
+        params={{
+          EXECUTION_MODE: "web",
+        }}
+        title="NVIDIA Driver Installation"
+        description="Installing NVIDIA proprietary drivers for GPU monitoring..."
+      />
     </div>
   )
 }

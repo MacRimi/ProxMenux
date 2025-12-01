@@ -236,6 +236,169 @@ def terminal_websocket(ws):
         if session_id in active_sessions:
             del active_sessions[session_id]
 
+@sock.route('/ws/script/<session_id>')
+def script_websocket(ws, session_id):
+    """WebSocket endpoint for executing scripts with hybrid web mode"""
+    
+    # Receive initial script execution request
+    try:
+        init_data = ws.receive(timeout=5)
+        if not init_data:
+            ws.send(json.dumps({'type': 'error', 'message': 'No script data received'}))
+            return
+            
+        script_data = json.loads(init_data)
+        script_path = script_data.get('script_path')
+        params = script_data.get('params', {})
+        
+        if not script_path:
+            ws.send(json.dumps({'type': 'error', 'message': 'No script_path provided'}))
+            return
+            
+    except Exception as e:
+        ws.send(json.dumps({'type': 'error', 'message': f'Invalid init data: {str(e)}'}))
+        return
+    
+    # Create pseudo-terminal for script execution
+    master_fd, slave_fd = pty.openpty()
+    
+    # Build environment variables from params
+    env = os.environ.copy()
+    for key, value in params.items():
+        env[key] = str(value)
+    
+    # Start script process with PTY
+    script_process = subprocess.Popen(
+        ['/bin/bash', script_path],
+        stdin=slave_fd,
+        stdout=slave_fd,
+        stderr=slave_fd,
+        preexec_fn=os.setsid,
+        env=env
+    )
+    
+    # Set non-blocking mode for master_fd
+    flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
+    fcntl.fcntl(master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+    
+    # Set terminal size
+    set_winsize(master_fd, 30, 120)
+    
+    # Thread to read script output and forward to WebSocket
+    def read_script_output():
+        buffer = ""
+        while True:
+            try:
+                r, _, _ = select.select([master_fd], [], [], 0.01)
+                if master_fd in r:
+                    try:
+                        data = os.read(master_fd, 4096)
+                        if not data:
+                            break
+                        
+                        text = data.decode('utf-8', errors='ignore')
+                        buffer += text
+                        
+                        # Process line by line to detect WEB_INTERACTION
+                        lines = buffer.split('\n')
+                        buffer = lines[-1]  # Keep incomplete line in buffer
+                        
+                        for line in lines[:-1]:
+                            # Detect WEB_INTERACTION lines
+                            if line.strip().startswith('WEB_INTERACTION:'):
+                                # Parse interaction: WEB_INTERACTION:type:id:title_b64:text_b64:data_b64
+                                try:
+                                    parts = line.strip().split(':', 6)
+                                    if len(parts) >= 5:
+                                        interaction = {
+                                            'type': 'interaction',
+                                            'interaction_type': parts[1],
+                                            'interaction_id': parts[2],
+                                            'title': parts[3],
+                                            'text': parts[4],
+                                            'data': parts[5] if len(parts) > 5 else ''
+                                        }
+                                        ws.send(json.dumps(interaction))
+                                        continue
+                                except Exception as e:
+                                    print(f"Error parsing WEB_INTERACTION: {e}")
+                            
+                            # Regular output line
+                            ws.send(json.dumps({
+                                'type': 'output',
+                                'data': line + '\n'
+                            }))
+                    except OSError:
+                        break
+            except Exception as e:
+                print(f"Error reading script output: {e}")
+                break
+        
+        # Send completion message
+        exit_code = script_process.poll()
+        ws.send(json.dumps({
+            'type': 'exit',
+            'code': exit_code if exit_code is not None else 0
+        }))
+    
+    output_thread = threading.Thread(target=read_script_output, daemon=True)
+    output_thread.start()
+    
+    try:
+        while True:
+            # Receive user input or interaction responses
+            data = ws.receive(timeout=None)
+            
+            if data is None:
+                break
+            
+            try:
+                msg = json.loads(data)
+                
+                # Handle resize
+                if msg.get('type') == 'resize':
+                    cols = int(msg.get('cols', 120))
+                    rows = int(msg.get('rows', 30))
+                    set_winsize(master_fd, rows, cols)
+                    continue
+                
+                # Handle interaction response
+                if msg.get('type') == 'response':
+                    response_value = msg.get('value', '')
+                    # Write response to script's stdin
+                    os.write(master_fd, (str(response_value) + '\n').encode('utf-8'))
+                    continue
+                    
+            except json.JSONDecodeError:
+                # Raw text input, send to script
+                os.write(master_fd, data.encode('utf-8'))
+            
+            # Check if process is still alive
+            if script_process.poll() is not None:
+                break
+                
+    except Exception as e:
+        print(f"Script session error: {e}")
+    finally:
+        # Cleanup
+        try:
+            script_process.terminate()
+            script_process.wait(timeout=1)
+        except:
+            try:
+                script_process.kill()
+            except:
+                pass
+        
+        try:
+            os.close(master_fd)
+        except:
+            pass
+        
+        try:
+            os.close(slave_fd)
+        except:
+            pass
 
 def init_terminal_routes(app):
     """Initialize terminal routes with Flask app"""

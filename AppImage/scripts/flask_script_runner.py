@@ -91,36 +91,44 @@ class ScriptRunner:
             
             lines_read = [0]  # Lista para compartir entre threads
             
-            # Monitor output for interactions
             def monitor_output():
                 print(f"[DEBUG] monitor_output thread started for session {session_id}", file=sys.stderr, flush=True)
+                print(f"[DEBUG] Will monitor log file: {log_file}", file=sys.stderr, flush=True)
+                
                 try:
-                    with open(log_file, 'a') as log_f:
-                        while True:
-                            line = process.stdout.readline()
-                            if not line:
-                                print(f"[DEBUG] No more lines from stdout (EOF reached)", file=sys.stderr, flush=True)
-                                break
-                            
-                            decoded_line = line.decode('utf-8', errors='replace').rstrip()
-                            lines_read[0] += 1
-                            
-                            print(f"[DEBUG] Read line {lines_read[0]}: {decoded_line[:100]}...", file=sys.stderr, flush=True)
-                            
-                            log_f.write(decoded_line + '\n')
-                            log_f.flush()
-                            
-                            # Check for interaction requests
-                            try:
-                                if decoded_line.strip().startswith('{'):
-                                    data = json.loads(decoded_line.strip())
-                                    if data.get('type') == 'interaction_request':
-                                        session['pending_interaction'] = data
-                                        print(f"[DEBUG] Detected interaction request: {data}", file=sys.stderr, flush=True)
-                            except json.JSONDecodeError:
-                                pass
+                    # Read log file in real-time (similar to tail -f)
+                    last_position = 0
+                    
+                    # Wait a moment for script to start writing
+                    time.sleep(0.5)
+                    
+                    while process.poll() is None or last_position < os.path.getsize(log_file):
+                        try:
+                            if os.path.exists(log_file):
+                                with open(log_file, 'r') as log_f:
+                                    log_f.seek(last_position)
+                                    new_lines = log_f.readlines()
+                                    
+                                    for line in new_lines:
+                                        decoded_line = line.rstrip()
+                                        if decoded_line:  # Skip empty lines
+                                            lines_read[0] += 1
+                                            print(f"[DEBUG] Read line {lines_read[0]} from log: {decoded_line[:100]}...", file=sys.stderr, flush=True)
+                                            
+                                            # Check for interaction requests in the line
+                                            if 'WEB_INTERACTION:' in decoded_line:
+                                                print(f"[DEBUG] Detected WEB_INTERACTION line: {decoded_line}", file=sys.stderr, flush=True)
+                                                session['pending_interaction'] = decoded_line
+                                    
+                                    last_position = log_f.tell()
+                        
+                        except Exception as e:
+                            print(f"[DEBUG ERROR] Error reading log file: {e}", file=sys.stderr, flush=True)
+                        
+                        time.sleep(0.1)  # Poll every 100ms
                     
                     print(f"[DEBUG] monitor_output thread finished. Total lines read: {lines_read[0]}", file=sys.stderr, flush=True)
+                    
                 except Exception as e:
                     print(f"[DEBUG ERROR] Exception in monitor_output: {e}", file=sys.stderr, flush=True)
             
