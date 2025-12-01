@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useEffect, useRef, useState } from "react"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, CheckCircle2 } from "lucide-react"
-import { io, type Socket } from "socket.io-client"
+import { Card } from "@/components/ui/card"
+import { X, CheckCircle2, XCircle, Loader2 } from "lucide-react"
 
 interface ScriptTerminalModalProps {
   open: boolean
@@ -20,8 +20,8 @@ interface WebInteraction {
   type: "yesno" | "menu" | "msgbox" | "input"
   id: string
   title: string
-  text: string
-  options?: string[]
+  message: string
+  options?: Array<{ label: string; value: string }>
 }
 
 export function ScriptTerminalModal({
@@ -33,130 +33,300 @@ export function ScriptTerminalModal({
   title,
   description,
 }: ScriptTerminalModalProps) {
-  const [socket, setSocket] = useState<Socket | null>(null)
+  const terminalRef = useRef<HTMLDivElement>(null)
+  const termRef = useRef<any>(null)
+  const wsRef = useRef<WebSocket | null>(null)
+  const fitAddonRef = useRef<any>(null)
   const [sessionId] = useState(() => Math.random().toString(36).substring(7))
-  const [terminalOutput, setTerminalOutput] = useState<string>("")
-  const [isRunning, setIsRunning] = useState(false)
+
+  const [isConnected, setIsConnected] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
-  const [interaction, setInteraction] = useState<WebInteraction | null>(null)
+  const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
 
   useEffect(() => {
     if (!open) return
 
-    const newSocket = io("http://localhost:8008", {
-      transports: ["websocket"],
-      reconnection: true,
-    })
+    let term: any = null
+    let fitAddon: any = null
 
-    newSocket.on("connect", () => {
-      console.log("[v0] WebSocket connected")
-      // Ejecutar el script
-      newSocket.emit("execute_script", {
-        session_id: sessionId,
-        script_path: scriptPath,
-        script_name: scriptName,
-        params,
+    const initTerminal = async () => {
+      if (!terminalRef.current) return
+
+      // Dynamic import to avoid SSR issues
+      const { Terminal } = await import("xterm")
+      const { FitAddon } = await import("xterm-addon-fit")
+
+      term = new Terminal({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        theme: {
+          background: "#1a1b26",
+          foreground: "#a9b1d6",
+          cursor: "#c0caf5",
+          black: "#32344a",
+          red: "#f7768e",
+          green: "#9ece6a",
+          yellow: "#e0af68",
+          blue: "#7aa2f7",
+          magenta: "#ad8ee6",
+          cyan: "#449dab",
+          white: "#787c99",
+          brightBlack: "#444b6a",
+          brightRed: "#ff7a93",
+          brightGreen: "#b9f27c",
+          brightYellow: "#ff9e64",
+          brightBlue: "#7da6ff",
+          brightMagenta: "#bb9af7",
+          brightCyan: "#0db9d7",
+          brightWhite: "#acb0d0",
+        },
+        allowProposedApi: true,
       })
-      setIsRunning(true)
-    })
 
-    newSocket.on("script_output", (data: { line: string }) => {
-      setTerminalOutput((prev) => prev + data.line + "\n")
-    })
+      fitAddon = new FitAddon()
+      term.loadAddon(fitAddon)
+      term.open(terminalRef.current)
+      fitAddon.fit()
 
-    newSocket.on("web_interaction", (data: WebInteraction) => {
-      console.log("[v0] Web interaction received:", data)
-      setInteraction(data)
-    })
+      termRef.current = term
+      fitAddonRef.current = fitAddon
 
-    newSocket.on("script_complete", (data: { exit_code: number }) => {
-      console.log("[v0] Script complete, exit code:", data.exit_code)
-      setIsRunning(false)
-      setIsComplete(true)
-      setExitCode(data.exit_code)
-    })
+      // Connect to WebSocket
+      const wsUrl = getWebSocketUrl()
+      console.log("[v0] Connecting to WebSocket:", wsUrl)
+      const ws = new WebSocket(wsUrl)
+      wsRef.current = ws
 
-    setSocket(newSocket)
+      ws.onopen = () => {
+        setIsConnected(true)
+        term.writeln("\x1b[32mConnected to script execution.\x1b[0m")
+        console.log("[v0] WebSocket connected, sending execute request")
+
+        // Send script execution request
+        ws.send(
+          JSON.stringify({
+            action: "execute",
+            script_path: scriptPath,
+            script_name: scriptName,
+            params: params,
+          }),
+        )
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          console.log("[v0] Received WebSocket message:", data.type)
+
+          if (data.type === "output") {
+            // Regular terminal output
+            term.write(data.data)
+          } else if (data.type === "interaction") {
+            // Web interaction detected
+            console.log("[v0] Web interaction:", data.data)
+            setCurrentInteraction(data.data)
+          } else if (data.type === "complete") {
+            // Script completed
+            console.log("[v0] Script complete, exit code:", data.exit_code)
+            setIsComplete(true)
+            setExitCode(data.exit_code)
+            if (data.exit_code === 0) {
+              term.writeln("\r\n\x1b[32m✓ Script completed successfully\x1b[0m")
+            } else {
+              term.writeln(`\r\n\x1b[31m✗ Script failed with exit code ${data.exit_code}\x1b[0m`)
+            }
+          }
+        } catch {
+          // Not JSON, treat as raw output
+          term.write(event.data)
+        }
+      }
+
+      ws.onerror = (error) => {
+        console.error("[v0] WebSocket error:", error)
+        setIsConnected(false)
+        term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
+      }
+
+      ws.onclose = () => {
+        console.log("[v0] WebSocket closed")
+        setIsConnected(false)
+        term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
+      }
+
+      // Handle window resize
+      const handleResize = () => {
+        fitAddon.fit()
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(
+            JSON.stringify({
+              type: "resize",
+              cols: term.cols,
+              rows: term.rows,
+            }),
+          )
+        }
+      }
+      window.addEventListener("resize", handleResize)
+
+      return () => {
+        window.removeEventListener("resize", handleResize)
+      }
+    }
+
+    initTerminal()
 
     return () => {
-      newSocket.disconnect()
+      if (wsRef.current) {
+        wsRef.current.close()
+      }
+      if (termRef.current) {
+        termRef.current.dispose()
+      }
     }
   }, [open, sessionId, scriptPath, scriptName, params])
 
-  const handleInteractionResponse = (value: string) => {
-    if (!socket || !interaction) return
+  function getWebSocketUrl(): string {
+    if (typeof window === "undefined") {
+      return `ws://localhost:8008/ws/script/${sessionId}`
+    }
 
-    console.log("[v0] Sending interaction response:", value)
-    socket.emit("interaction_response", {
-      session_id: sessionId,
-      interaction_id: interaction.id,
-      value,
-    })
+    const { hostname } = window.location
+    const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1"
 
-    // Escribir la respuesta en la terminal
-    setTerminalOutput((prev) => prev + `\n> ${value}\n`)
-    setInteraction(null)
+    if (isLocalhost) {
+      return `ws://localhost:8008/ws/script/${sessionId}`
+    }
+
+    // Direct access to server
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+    return `${wsProtocol}//${hostname}:8008/ws/script/${sessionId}`
   }
+
+  const handleInteractionResponse = (value: string) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      console.log("[v0] Sending interaction response:", value)
+      wsRef.current.send(
+        JSON.stringify({
+          action: "respond",
+          interaction_id: currentInteraction?.id,
+          value: value,
+        }),
+      )
+      setCurrentInteraction(null)
+    }
+  }
+
+  const renderInteraction = () => {
+    if (!currentInteraction) return null
+
+    const { type, title, message, options } = currentInteraction
+
+    if (type === "yesno") {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-md p-6 space-y-4">
+            <h3 className="text-lg font-semibold">{title}</h3>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{message}</p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => handleInteractionResponse("no")}>
+                No
+              </Button>
+              <Button onClick={() => handleInteractionResponse("yes")}>Yes</Button>
+            </div>
+          </Card>
+        </div>
+      )
+    }
+
+    if (type === "menu" && options) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-md p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold">{title}</h3>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{message}</p>
+            <div className="space-y-2">
+              {options.map((option: any) => (
+                <Button
+                  key={option.value}
+                  variant="outline"
+                  className="w-full justify-start bg-transparent"
+                  onClick={() => handleInteractionResponse(option.value)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )
+    }
+
+    if (type === "msgbox") {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-md p-6 space-y-4">
+            <h3 className="text-lg font-semibold">{title}</h3>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{message}</p>
+            <div className="flex justify-end">
+              <Button onClick={() => handleInteractionResponse("ok")}>OK</Button>
+            </div>
+          </Card>
+        </div>
+      )
+    }
+
+    return null
+  }
+
+  if (!open) return null
 
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {isRunning && <span className="animate-spin">⚙️</span>}
-              {isComplete && exitCode === 0 && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-              {isComplete && exitCode !== 0 && <AlertCircle className="w-5 h-5 text-red-500" />}
-              {title}
-            </DialogTitle>
-            <p className="text-sm text-muted-foreground">{description}</p>
-          </DialogHeader>
-
-          <div className="flex-1 bg-black rounded-md p-4 overflow-auto font-mono text-sm text-green-400">
-            <pre className="whitespace-pre-wrap">{terminalOutput}</pre>
-            {isRunning && <span className="animate-pulse">_</span>}
+        <DialogContent className="max-w-4xl h-[80vh] p-0 flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2">
+              {isComplete ? (
+                exitCode === 0 ? (
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-red-500" />
+                )
+              ) : (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              )}
+              <div>
+                <h2 className="text-lg font-semibold">{title}</h2>
+                {description && <p className="text-sm text-muted-foreground">{description}</p>}
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
-          {isComplete && (
-            <div
-              className={`p-3 rounded-md ${exitCode === 0 ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}`}
-            >
-              {exitCode === 0 ? "✓ Script completed successfully" : `✗ Script failed with exit code ${exitCode}`}
-            </div>
-          )}
+          {/* Terminal */}
+          <div className="flex-1 overflow-hidden p-4">
+            <div ref={terminalRef} className="h-full w-full" />
+          </div>
 
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Session ID: {sessionId}</span>
-            <Button onClick={onClose} disabled={isRunning}>
-              {isRunning ? "Running..." : "Close"}
-            </Button>
+          {/* Footer */}
+          <div className="flex items-center justify-between p-4 border-t">
+            <div className="text-sm text-muted-foreground">
+              Session ID: {sessionId}
+              {isConnected && <span className="ml-2 text-green-500">● Connected</span>}
+            </div>
+            {isComplete && <Button onClick={onClose}>Close</Button>}
           </div>
         </DialogContent>
       </Dialog>
 
-      {interaction && (
-        <Dialog open={true} onOpenChange={() => setInteraction(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{interaction.title}</DialogTitle>
-            </DialogHeader>
-            <p className="text-sm">{interaction.text}</p>
-
-            <div className="flex gap-2 justify-end">
-              {interaction.type === "yesno" && (
-                <>
-                  <Button variant="outline" onClick={() => handleInteractionResponse("no")}>
-                    No
-                  </Button>
-                  <Button onClick={() => handleInteractionResponse("yes")}>Yes</Button>
-                </>
-              )}
-              {interaction.type === "msgbox" && <Button onClick={() => handleInteractionResponse("ok")}>OK</Button>}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* Interaction Modal */}
+      {renderInteraction()}
     </>
   )
 }
