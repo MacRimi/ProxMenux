@@ -44,14 +44,23 @@ export function ScriptTerminalModal({
   const [exitCode, setExitCode] = useState<number | null>(null)
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
 
+  const paramsStr = JSON.stringify(params)
+
   useEffect(() => {
     if (!open) return
+
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      console.log("[v0] WebSocket already connected, skipping initialization")
+      return
+    }
 
     let term: any = null
     let fitAddon: any = null
 
     const initTerminal = async () => {
       if (!terminalRef.current) return
+
+      console.log("[v0] Initializing terminal for session:", sessionId)
 
       // Dynamic import to avoid SSR issues
       const { Terminal } = await import("xterm")
@@ -106,12 +115,14 @@ export function ScriptTerminalModal({
         term.writeln("\x1b[32mConnected to script execution.\x1b[0m")
         console.log("[v0] WebSocket connected, sending init message")
 
+        const parsedParams = JSON.parse(paramsStr)
+
         // Flask expects to receive the session info and will start the script
         ws.send(
           JSON.stringify({
             script_path: scriptPath,
             script_name: scriptName,
-            params: params,
+            params: parsedParams,
           }),
         )
       }
@@ -181,14 +192,19 @@ export function ScriptTerminalModal({
     initTerminal()
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
-      if (termRef.current) {
-        termRef.current.dispose()
+      if (!open) {
+        console.log("[v0] Cleaning up WebSocket and terminal")
+        if (wsRef.current) {
+          wsRef.current.close()
+          wsRef.current = null
+        }
+        if (termRef.current) {
+          termRef.current.dispose()
+          termRef.current = null
+        }
       }
     }
-  }, [open, sessionId, scriptPath, scriptName, params])
+  }, [open, sessionId, scriptPath, scriptName, paramsStr])
 
   function getWebSocketUrl(): string {
     if (typeof window === "undefined") {
