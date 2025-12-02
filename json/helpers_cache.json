@@ -527,7 +527,8 @@
       12
     ],
     "notes": [
-      "Bookstack works only with static ip. If you Change the IP of your LXC, you Need to edit the .env File `nano /opt/bookstack/.env`"
+      "Bookstack works only with static IP. If you change the IP of your LXC, you need to edit the .env file",
+      "To see database credentials, type `cat ~/bookstack.creds` in LXC console"
     ],
     "type": "ct",
     "default_credentials": {
@@ -4810,6 +4811,18 @@
     "type": "ct"
   },
   {
+    "name": "SnowShare",
+    "slug": "snowshare",
+    "desc": "A modern, secure file and link sharing platform built with Next.js, Prisma, and NextAuth. Share URLs, code snippets, and files with customizable expiration, privacy, and QR codes.",
+    "script": "ct/snowshare.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/snowshare.sh",
+    "categories": [
+      11
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "sonarqube",
     "slug": "sonarqube",
     "desc": "SonarQube Server automates code quality and security reviews and provides actionable code intelligence so developers can focus on building better, faster.",
@@ -5518,7 +5531,9 @@
     "categories": [
       9
     ],
-    "notes": [],
+    "notes": [
+      "Show Login Credentials, type `cat ~/valkey.creds` in the LXC console"
+    ],
     "type": "ct"
   },
   {
