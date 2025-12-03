@@ -5610,7 +5610,7 @@
     "script": "ct/wanderer.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/wanderer.sh",
     "categories": [
-      0
+      24
     ],
     "notes": [],
     "type": "ct"
