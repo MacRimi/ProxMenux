@@ -6773,7 +6773,7 @@
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/wanderer.sh",
     "os": "debian",
     "categories": [
-      0
+      24
     ],
     "notes": [],
     "type": "ct"
