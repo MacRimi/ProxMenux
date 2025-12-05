@@ -4269,8 +4269,7 @@
       1
     ],
     "notes": [
-      "Set a root password if using autologin. This will be the Proxmox-Datacenter-Manager password. `sudo passwd root`",
-      "Proxmox Datacenter Manager is in an alpha stage of development. Use it cautiously, as bugs, incomplete features, and potential instabilities are expected."
+      "Set a root password if using autologin. This will be the Proxmox-Datacenter-Manager password. `sudo passwd root`"
     ],
     "type": "ct"
   },
