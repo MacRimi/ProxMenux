@@ -1218,6 +1218,24 @@
     }
   },
   {
+    "name": "Endurain",
+    "slug": "endurain",
+    "desc": "Endurain is a self-hosted fitness tracking service designed to give users full control over their data and hosting environment. It's similar to Strava but focused on privacy and customization",
+    "script": "ct/endurain.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/endurain.sh",
+    "categories": [
+      24
+    ],
+    "notes": [
+      "When using a reverse proxy, edit `/opt/endurain/frontend/app/dist/env.js`."
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin"
+    }
+  },
+  {
     "name": "ErsatzTV",
     "slug": "ersatztv",
     "desc": "ErsatzTV is software for configuring and streaming custom live channels using your media library.",
@@ -2802,6 +2820,18 @@
     "type": "ct"
   },
   {
+    "name": "MeTube",
+    "slug": "metube",
+    "desc": "MeTube allows you to download videos from YouTube and dozens of other sites.",
+    "script": "ct/metube.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/metube.sh",
+    "categories": [
+      11
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "PVE Processor Microcode",
     "slug": "microcode",
     "desc": "Processor Microcode is a layer of low-level software that runs on the processor and provides patches or updates to its firmware. Microcode updates can fix hardware bugs, improve performance, and enhance security features of the processor.\r\n\r\nIt's important to note that the availability of firmware update mechanisms, such as Intel's Management Engine (ME) or AMD's Platform Security Processor (PSP), may vary depending on the processor and its specific implementation. Therefore, it's recommended to consult the documentation for your processor to confirm whether firmware updates can be applied through the operating system.",
@@ -3082,8 +3112,8 @@
       9
     ],
     "notes": [
-      "The integrated daemon config is located at `/root/.config/daemon/config.json`",
-      "When using a reverse proxy, edit `/opt/netvisor/ui/build/_app/env.js`: add 443 to `PUBLIC_SERVER_PORT` and remove 'default' from `PUBLIC_SERVER_HOSTNAME`."
+      "To configure the integrated daemon after install is complete, either use the `Create Daemon` menu in the UI, or run `/root/configure_daemon.sh` for automatic configuration",
+      "The integrated daemon config is located at `/root/.config/daemon/config.json`"
     ],
     "type": "ct"
   },
