@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CheckCircle2, XCircle, Loader2, Activity, GripHorizontal } from "lucide-react"
 import { TerminalPanel } from "./terminal-panel"
-const API_PORT =
-  typeof window !== "undefined" && process.env.NEXT_PUBLIC_API_PORT ? process.env.NEXT_PUBLIC_API_PORT : "8008"
+import { API_PORT } from "@/lib/api-config"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 interface WebInteraction {
@@ -58,28 +57,6 @@ export function ScriptTerminalModal({
   const [isResizing, setIsResizing] = useState(false)
   const startYRef = useRef(0)
   const startHeightRef = useRef(80)
-
-  const terminalRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!terminalRef.current) return
-
-    const resizeObserver = new ResizeObserver(() => {
-      // Notificar a la terminal que necesita redimensionarse
-      const event = new CustomEvent("terminal-resize-needed")
-      window.dispatchEvent(event)
-    })
-
-    resizeObserver.observe(terminalRef.current)
-
-    return () => {
-      resizeObserver.disconnect()
-    }
-  }, [])
-
-  const handleTerminalResize = () => {
-    // Este callback será usado por TerminalPanel para saber cuándo redimensionar
-  }
 
   useEffect(() => {
     if (open) {
@@ -212,6 +189,20 @@ export function ScriptTerminalModal({
     onClose()
   }
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "resize" }))
+      }
+    }
+
+    window.addEventListener("resize", handleResize)
+
+    return () => {
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [open])
+
   return (
     <>
       <Dialog open={open}>
@@ -239,7 +230,7 @@ export function ScriptTerminalModal({
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden relative" ref={terminalRef}>
+          <div className="flex-1 overflow-hidden relative">
             <TerminalPanel
               websocketUrl={wsUrl}
               initMessage={{
@@ -255,7 +246,6 @@ export function ScriptTerminalModal({
                 }
               }}
               isScriptModal={true}
-              onResizeNeeded={handleTerminalResize}
             />
 
             {isWaitingNextInteraction && !currentInteraction && (
