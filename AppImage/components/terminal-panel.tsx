@@ -2,8 +2,8 @@
 
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
-import { API_PORT } from "../lib/api-config"
-import { fetchApi } from "@/lib/api-config" // Cambiando import para usar fetchApi directamente
+const API_PORT =
+  typeof window !== "undefined" && process.env.NEXT_PUBLIC_API_PORT ? process.env.NEXT_PUBLIC_API_PORT : "8008"
 import {
   Activity,
   Trash2,
@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import type { CheatSheetResult } from "@/lib/cheat-sheet-result" // Declare CheatSheetResult here
+import { ResizablePanelGroup, ResizablePanel } from "@/components/ui/resizable-panel-group" // Added import for ResizablePanelGroup and ResizablePanel
 
 type TerminalPanelProps = {
   websocketUrl?: string
@@ -31,6 +32,7 @@ type TerminalPanelProps = {
   onWebSocketCreated?: (ws: WebSocket) => void
   onTerminalOutput?: () => void
   isScriptModal?: boolean
+  onResizeNeeded?: () => void // Added prop for notifying when resize is needed
 }
 
 interface TerminalInstance {
@@ -145,6 +147,7 @@ export function TerminalPanel({
   onWebSocketCreated,
   onTerminalOutput,
   isScriptModal = false,
+  onResizeNeeded,
 }: TerminalPanelProps) {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
@@ -241,10 +244,16 @@ export function TerminalPanel({
 
         const searchEndpoint = `/api/terminal/search-command?q=${encodeURIComponent(query)}`
 
-        const data = await fetchApi<{ success: boolean; examples: any[] }>(searchEndpoint, {
+        const response = await fetch(searchEndpoint, {
           method: "GET",
           signal: AbortSignal.timeout(10000),
         })
+
+        if (!response.ok) {
+          throw new Error("Network response was not ok")
+        }
+
+        const data = await response.json()
 
         if (!data.success || !data.examples || data.examples.length === 0) {
           throw new Error("No examples found")
@@ -359,6 +368,48 @@ export function TerminalPanel({
       }
     })
   }, [terminalHeight, layout, terminals, isMobile])
+
+  useEffect(() => {
+    if (onResizeNeeded && terminals.length > 0) {
+      const terminal = terminals[0]
+      if (terminal.term && terminal.fitAddon && terminal.isConnected) {
+        const triggerResize = () => {
+          try {
+            setTimeout(() => {
+              terminal.fitAddon?.fit()
+              if (terminal.ws?.readyState === WebSocket.OPEN) {
+                const cols = terminal.term?.cols || 80
+                const rows = terminal.term?.rows || 24
+                terminal.ws.send(
+                  JSON.stringify({
+                    type: "resize",
+                    cols,
+                    rows,
+                  }),
+                )
+              }
+            }, 100)
+          } catch (err) {
+            console.warn("[Terminal] resize failed:", err)
+          }
+        }
+
+        // Llamar automáticamente cuando sea necesario
+        const resizeObserver = new ResizeObserver(() => {
+          triggerResize()
+        })
+
+        const terminalElement = document.querySelector(".xterm")
+        if (terminalElement) {
+          resizeObserver.observe(terminalElement)
+        }
+
+        return () => {
+          resizeObserver.disconnect()
+        }
+      }
+    }
+  }, [terminals, onResizeNeeded])
 
   const initializeTerminal = async (terminal: TerminalInstance, container: HTMLDivElement) => {
     const [TerminalClass, FitAddonClass] = await Promise.all([
@@ -604,7 +655,7 @@ export function TerminalPanel({
   const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
 
   return (
-    <div className="flex flex-col h-full bg-zinc-950 rounded-md overflow-hidden">
+    <div className={`flex flex-col ${isScriptModal ? "h-full" : "h-screen"}`}>
       {!isScriptModal && (
         <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
           <div className="flex items-center gap-3">
@@ -704,89 +755,108 @@ export function TerminalPanel({
         </div>
       )}
 
-      <div
-        data-terminal-container
-        ref={(el) => {
-          containerRefs.current["main"] = el
-        }}
-        className={`overflow-hidden flex flex-col ${isMobile ? "flex-1 h-[60vh]" : "overflow-hidden"} w-full max-w-full`}
-        style={
-          isScriptModal
-            ? { height: "100%", flexShrink: 0 }
-            : !isMobile || isTablet
-              ? { height: `${terminalHeight}px`, flexShrink: 0 }
-              : undefined
-        }
-      >
-        {isMobile ? (
-          <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
-            <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800 overflow-x-auto">
-              {terminals.map((terminal) => (
-                <TabsTrigger key={terminal.id} value={terminal.id} className="relative">
-                  {terminal.title}
-                  {terminals.length > 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        closeTerminal(terminal.id)
-                      }}
-                      className="ml-2 hover:bg-zinc-700 rounded p-0.5"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {terminals.map((terminal) => (
-              <TabsContent
-                key={terminal.id}
-                value={terminal.id}
-                forceMount
-                className={`flex-1 h-full mt-0 ${activeTerminalId === terminal.id ? "block" : "hidden"}`}
-              >
-                <div
-                  ref={(el) => (containerRefs.current[terminal.id] = el)}
-                  className="w-full h-full flex-1 bg-black overflow-hidden"
-                />
-              </TabsContent>
-            ))}
-          </Tabs>
-        ) : (
-          <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5 w-full overflow-hidden`}>
-            {terminals.map((terminal) => (
-              <div
-                key={terminal.id}
-                className={`relative bg-zinc-900 overflow-hidden flex flex-col min-h-0 w-full ${
-                  terminals.length > 1 && activeTerminalId === terminal.id ? "ring-2 ring-blue-500" : ""
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
+        <ResizablePanel defaultSize={100} className="flex flex-col">
+          <div className="flex items-center border-b bg-background">
+            {!isScriptModal && (
+              <button
+                onClick={() => setActiveTerminalId(terminals[0].id)}
+                className={`px-3 py-1.5 text-sm ${
+                  activeTerminalId === terminals[0].id
+                    ? "border-b-2 border-blue-500 text-blue-500"
+                    : "text-muted-foreground"
                 }`}
               >
-                <div className="flex-shrink-0 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
-                  <button
-                    onClick={() => setActiveTerminalId(terminal.id)}
-                    className={`text-xs font-medium ${
-                      activeTerminalId === terminal.id ? "text-blue-400" : "text-zinc-500"
-                    } ${isScriptModal ? "hidden" : ""}`}
-                  >
-                    {terminal.title}
-                  </button>
-                  {terminals.length > 1 && (
-                    <button onClick={() => closeTerminal(terminal.id)} className="hover:bg-zinc-700 rounded p-0.5">
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-                <div
-                  ref={(el) => (containerRefs.current[terminal.id] = el)}
-                  onClick={() => setActiveTerminalId(terminal.id)}
-                  className="flex-1 w-full max-w-full bg-black overflow-hidden cursor-pointer"
-                  data-terminal-container
-                />
-              </div>
-            ))}
+                Terminal {1}
+              </button>
+            )}
           </div>
-        )}
-      </div>
+
+          <div
+            data-terminal-container
+            ref={(el) => {
+              containerRefs.current["main"] = el
+            }}
+            className={`overflow-hidden flex flex-col ${isMobile ? "flex-1 h-[60vh]" : "overflow-hidden"} w-full max-w-full`}
+            style={
+              isScriptModal
+                ? { height: "100%", flexShrink: 0 }
+                : !isMobile || isTablet
+                  ? { height: `${terminalHeight}px`, flexShrink: 0 }
+                  : undefined
+            }
+          >
+            {isMobile ? (
+              <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
+                <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800 overflow-x-auto">
+                  {terminals.map((terminal) => (
+                    <TabsTrigger key={terminal.id} value={terminal.id} className="relative">
+                      {terminal.title}
+                      {terminals.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            closeTerminal(terminal.id)
+                          }}
+                          className="ml-2 hover:bg-zinc-700 rounded p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {terminals.map((terminal) => (
+                  <TabsContent
+                    key={terminal.id}
+                    value={terminal.id}
+                    forceMount
+                    className={`flex-1 h-full mt-0 ${activeTerminalId === terminal.id ? "block" : "hidden"}`}
+                  >
+                    <div
+                      ref={(el) => (containerRefs.current[terminal.id] = el)}
+                      className="w-full h-full flex-1 bg-black overflow-hidden"
+                    />
+                  </TabsContent>
+                ))}
+              </Tabs>
+            ) : (
+              <div className={`${getLayoutClass()} h-full gap-0.5 bg-zinc-800 p-0.5 w-full overflow-hidden`}>
+                {terminals.map((terminal) => (
+                  <div
+                    key={terminal.id}
+                    className={`relative bg-zinc-900 overflow-hidden flex flex-col min-h-0 w-full ${
+                      terminals.length > 1 && activeTerminalId === terminal.id ? "ring-2 ring-blue-500" : ""
+                    }`}
+                  >
+                    <div className="flex-shrink-0 flex items-center justify-between px-2 py-1 bg-zinc-900/95 border-b border-zinc-800">
+                      <button
+                        onClick={() => setActiveTerminalId(terminal.id)}
+                        className={`text-xs font-medium ${
+                          activeTerminalId === terminal.id ? "text-blue-400" : "text-zinc-500"
+                        } ${isScriptModal ? "hidden" : ""}`}
+                      >
+                        {terminal.title}
+                      </button>
+                      {terminals.length > 1 && (
+                        <button onClick={() => closeTerminal(terminal.id)} className="hover:bg-zinc-700 rounded p-0.5">
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                    <div
+                      ref={(el) => (containerRefs.current[terminal.id] = el)}
+                      onClick={() => setActiveTerminalId(terminal.id)}
+                      className="flex-1 w-full max-w-full bg-black overflow-hidden cursor-pointer"
+                      data-terminal-container
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       {!isScriptModal && (isTablet || (!isMobile && !isTablet)) && terminals.length > 0 && (
         <div
