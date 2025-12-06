@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { X, CheckCircle2, XCircle, Loader2 } from "lucide-react"
-import { TerminalPanel } from "./terminal-panel"
+import { TerminalPanel, type TerminalPanelHandle } from "./terminal-panel"
 import { API_PORT } from "@/lib/api-config"
 
 interface WebInteraction {
@@ -42,7 +42,7 @@ export function ScriptTerminalModal({
   const [exitCode, setExitCode] = useState<number | null>(null)
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
   const [interactionInput, setInteractionInput] = useState("")
-  const terminalRef = useRef<any>(null)
+  const terminalRef = useRef<TerminalPanelHandle>(null)
 
   useEffect(() => {
     console.log("[v0] currentInteraction changed:", currentInteraction)
@@ -106,14 +106,8 @@ export function ScriptTerminalModal({
 
     console.log("[v0] Sending interaction response:", response)
 
-    // Access the terminal instance to send the response
-    const terminal = terminalRef.current
-    if (terminal?.terminals?.[0]?.ws) {
-      terminal.terminals[0].ws.send(response)
-      console.log("[v0] Response sent successfully")
-    } else {
-      console.log("[v0] Could not send response - no WebSocket available")
-    }
+    terminalRef.current.sendMessage(response)
+    console.log("[v0] Response sent successfully")
 
     console.log("[v0] Clearing currentInteraction after response")
     setCurrentInteraction(null)
