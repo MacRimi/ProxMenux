@@ -144,14 +144,18 @@ export function ScriptTerminalModal({
       </Dialog>
 
       {currentInteraction && (
-        <Dialog
-          open={true}
-          onOpenChange={() => {
-            console.log("[v0] Interaction modal onOpenChange triggered")
-            setCurrentInteraction(null)
-          }}
-        >
-          <DialogContent>
+        <Dialog open={true} modal={true}>
+          <DialogContent
+            className="max-w-4xl max-h-[80vh] overflow-y-auto"
+            onInteractOutside={(e) => {
+              // Prevent closing when clicking outside
+              e.preventDefault()
+            }}
+            onEscapeKeyDown={(e) => {
+              // Prevent closing with ESC key
+              e.preventDefault()
+            }}
+          >
             <DialogTitle>{currentInteraction.title}</DialogTitle>
             <div className="space-y-4">
               <p className="whitespace-pre-wrap">{currentInteraction.message}</p>

@@ -1100,7 +1100,10 @@ export default function Hardware() {
                           {getMonitoringToolRecommendation(selectedGPU.vendor)}
                         </p>
                         {selectedGPU.vendor.toLowerCase().includes("nvidia") && (
-                          <Button onClick={handleInstallNvidiaDriver} className="w-full">
+                          <Button
+                            onClick={handleInstallNvidiaDriver}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                          >
                             <>
                               <Download className="mr-2 h-4 w-4" />
                               Install NVIDIA Drivers
