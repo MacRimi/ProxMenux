@@ -62,10 +62,16 @@ export function ScriptTerminalModal({
         params,
         sessionId,
       })
-      setCurrentInteraction(null)
+      // Reset state only when modal opens
+      setIsComplete(false)
+      setExitCode(null)
       setInteractionInput("")
+      // Don't clear currentInteraction here - it causes issues
+    } else {
+      // Clear interaction when modal closes
+      setCurrentInteraction(null)
     }
-  }, [open, scriptPath, scriptName, params, sessionId])
+  }, [open]) // Only depend on 'open' to avoid unnecessary re-runs
 
   const getScriptWebSocketUrl = (): string => {
     if (typeof window === "undefined") {
@@ -82,7 +88,7 @@ export function ScriptTerminalModal({
   const handleWebInteraction = (interaction: WebInteraction) => {
     console.log("[v0] handleWebInteraction called with:", interaction)
     setCurrentInteraction(interaction)
-    console.log("[v0] setCurrentInteraction called with interaction")
+    console.log("[v0] currentInteraction set to:", interaction.type, interaction.id)
   }
 
   const handleInteractionResponse = (value: string) => {
