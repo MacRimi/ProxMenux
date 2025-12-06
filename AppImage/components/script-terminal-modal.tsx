@@ -10,11 +10,12 @@ import { TerminalPanel } from "./terminal-panel"
 import { API_PORT } from "@/lib/api-config"
 
 interface WebInteraction {
-  type: "yesno" | "menu" | "msgbox" | "input"
+  type: "yesno" | "menu" | "msgbox" | "input" | "inputbox"
   id: string
   title: string
   message: string
   options?: Array<{ label: string; value: string }>
+  default?: string
 }
 
 interface ScriptTerminalModalProps {
@@ -42,6 +43,7 @@ export function ScriptTerminalModal({
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
   const [interactionInput, setInteractionInput] = useState("")
   const terminalRef = useRef<any>(null)
+  const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -57,10 +59,34 @@ export function ScriptTerminalModal({
   useEffect(() => {
     if (!open) return
 
-    // We'll pass initMessage prop to TerminalPanel instead
+    const handleWebSocketMessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data)
+        console.log("[v0] Received WebSocket message:", data)
+
+        if (data.type === "web_interaction") {
+          console.log("[v0] Detected web interaction:", data.interaction)
+          setCurrentInteraction(data.interaction)
+        }
+      } catch (e) {
+        // Not JSON, ignore (it's terminal output)
+      }
+    }
+
+    const checkWs = setInterval(() => {
+      if (terminalRef.current?.ws) {
+        wsRef.current = terminalRef.current.ws
+        wsRef.current.addEventListener("message", handleWebSocketMessage)
+        clearInterval(checkWs)
+        console.log("[v0] Attached WebSocket message listener")
+      }
+    }, 100)
 
     return () => {
-      // Cleanup if needed
+      clearInterval(checkWs)
+      if (wsRef.current) {
+        wsRef.current.removeEventListener("message", handleWebSocketMessage)
+      }
     }
   }, [open])
 
@@ -82,7 +108,7 @@ export function ScriptTerminalModal({
   })
 
   const handleInteractionResponse = (value: string) => {
-    if (!terminalRef.current || !currentInteraction) return
+    if (!wsRef.current || !currentInteraction) return
 
     const response = JSON.stringify({
       type: "interaction_response",
@@ -91,7 +117,7 @@ export function ScriptTerminalModal({
     })
 
     console.log("[v0] Sending interaction response:", response)
-    terminalRef.current.send(response)
+    wsRef.current.send(response)
     setCurrentInteraction(null)
     setInteractionInput("")
   }
@@ -148,7 +174,7 @@ export function ScriptTerminalModal({
           <DialogContent>
             <DialogTitle>{currentInteraction.title}</DialogTitle>
             <div className="space-y-4">
-              <p>{currentInteraction.message}</p>
+              <p className="whitespace-pre-wrap">{currentInteraction.message}</p>
 
               {currentInteraction.type === "yesno" && (
                 <div className="flex gap-2">
@@ -176,23 +202,25 @@ export function ScriptTerminalModal({
                 </div>
               )}
 
-              {currentInteraction.type === "input" && (
-                <div className="space-y-2">
-                  <Label>Your input:</Label>
-                  <Input
-                    value={interactionInput}
-                    onChange={(e) => setInteractionInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleInteractionResponse(interactionInput)
-                      }
-                    }}
-                  />
-                  <Button onClick={() => handleInteractionResponse(interactionInput)} className="w-full">
-                    Submit
-                  </Button>
-                </div>
-              )}
+              {currentInteraction.type === "input" ||
+                (currentInteraction.type === "inputbox" && (
+                  <div className="space-y-2">
+                    <Label>Your input:</Label>
+                    <Input
+                      value={interactionInput}
+                      onChange={(e) => setInteractionInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleInteractionResponse(interactionInput)
+                        }
+                      }}
+                      placeholder={currentInteraction.default || ""}
+                    />
+                    <Button onClick={() => handleInteractionResponse(interactionInput)} className="w-full">
+                      Submit
+                    </Button>
+                  </div>
+                ))}
 
               {currentInteraction.type === "msgbox" && (
                 <Button onClick={() => handleInteractionResponse("ok")} className="w-full">
