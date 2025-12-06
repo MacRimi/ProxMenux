@@ -26,6 +26,7 @@ import type { CheatSheetResult } from "@/lib/cheat-sheet-result" // Declare Chea
 type TerminalPanelProps = {
   websocketUrl?: string
   onClose?: () => void
+  initMessage?: Record<string, any>
 }
 
 interface TerminalInstance {
@@ -132,7 +133,7 @@ const proxmoxCommands = [
   { cmd: "clear", desc: "Clear terminal screen" },
 ]
 
-export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
+export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose, initMessage }) => {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
   const [layout, setLayout] = useState<"single" | "grid">("grid")
@@ -427,7 +428,14 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       setTerminals((prev) =>
         prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: true, term, ws, fitAddon } : t)),
       )
-      term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
+
+      if (initMessage) {
+        console.log("[v0] TerminalPanel: Sending init message:", initMessage)
+        ws.send(JSON.stringify(initMessage))
+      } else {
+        term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
+      }
+
       syncSizeWithBackend()
     }
 

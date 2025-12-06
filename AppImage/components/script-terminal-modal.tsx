@@ -41,80 +41,17 @@ export function ScriptTerminalModal({
   const [exitCode, setExitCode] = useState<number | null>(null)
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
   const [interactionInput, setInteractionInput] = useState("")
-  const wsRef = useRef<WebSocket | null>(null)
   const terminalRef = useRef<any>(null)
 
   useEffect(() => {
     if (!open) return
 
-    let ws: WebSocket | null = null
-    const wsUrl = getScriptWebSocketUrl()
-
-    const connectWebSocket = () => {
-      try {
-        ws = new WebSocket(wsUrl)
-        wsRef.current = ws
-
-        ws.onopen = () => {
-          console.log("[v0] WebSocket connected, sending init message")
-          const initMessage = JSON.stringify({
-            script_path: scriptPath,
-            params: params,
-          })
-          ws?.send(initMessage)
-        }
-
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data)
-
-            // Detectar interacciones híbridas
-            if (data.type === "interaction") {
-              console.log("[v0] Interaction detected:", data)
-              setCurrentInteraction(data as WebInteraction)
-              return
-            }
-
-            // Detectar finalización
-            if (data.type === "exit") {
-              console.log("[v0] Script completed with exit code:", data.code)
-              setIsComplete(true)
-              setExitCode(data.code || 0)
-              return
-            }
-
-            // Detectar errores
-            if (data.type === "error") {
-              console.error("[v0] Script error:", data.message)
-              return
-            }
-          } catch (e) {
-            // No es JSON, es output normal - TerminalPanel lo manejará
-          }
-        }
-
-        ws.onerror = (error) => {
-          console.error("[v0] WebSocket error:", error)
-        }
-
-        ws.onclose = () => {
-          console.log("[v0] WebSocket closed")
-          wsRef.current = null
-        }
-      } catch (error) {
-        console.error("[v0] Failed to create WebSocket:", error)
-      }
-    }
-
-    connectWebSocket()
+    // We'll pass initMessage prop to TerminalPanel instead
 
     return () => {
-      if (ws) {
-        ws.close()
-        wsRef.current = null
-      }
+      // Cleanup if needed
     }
-  }, [open, sessionId, scriptPath, params])
+  }, [open])
 
   const getScriptWebSocketUrl = (): string => {
     if (typeof window === "undefined") {
@@ -127,7 +64,7 @@ export function ScriptTerminalModal({
   }
 
   const handleInteractionResponse = (value: string) => {
-    if (!wsRef.current || !currentInteraction) return
+    if (!terminalRef.current || !currentInteraction) return
 
     const response = JSON.stringify({
       type: "interaction_response",
@@ -136,7 +73,7 @@ export function ScriptTerminalModal({
     })
 
     console.log("[v0] Sending interaction response:", response)
-    wsRef.current.send(response)
+    terminalRef.current.send(response)
     setCurrentInteraction(null)
     setInteractionInput("")
   }
@@ -170,7 +107,14 @@ export function ScriptTerminalModal({
           </div>
 
           <div className="flex-1 overflow-hidden">
-            <TerminalPanel ref={terminalRef} websocketUrl={getScriptWebSocketUrl()} />
+            <TerminalPanel
+              ref={terminalRef}
+              websocketUrl={getScriptWebSocketUrl()}
+              initMessage={{
+                script_path: scriptPath,
+                params: params,
+              }}
+            />
           </div>
 
           {/* Footer */}
