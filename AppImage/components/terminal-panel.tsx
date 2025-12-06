@@ -26,9 +26,6 @@ import type { CheatSheetResult } from "@/lib/cheat-sheet-result" // Declare Chea
 type TerminalPanelProps = {
   websocketUrl?: string
   onClose?: () => void
-  isScriptModal?: boolean
-  initMessage?: { script_path: string; params: Record<string, string> }
-  onWebInteraction?: (interaction: any) => void
 }
 
 interface TerminalInstance {
@@ -135,13 +132,7 @@ const proxmoxCommands = [
   { cmd: "clear", desc: "Clear terminal screen" },
 ]
 
-export const TerminalPanel: React.FC<TerminalPanelProps> = ({
-  websocketUrl,
-  onClose,
-  isScriptModal,
-  initMessage,
-  onWebInteraction,
-}) => {
+export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
   const [layout, setLayout] = useState<"single" | "grid">("grid")
@@ -578,16 +569,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   }
 
   const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
-
-  useEffect(() => {
-    if (initMessage && activeTerminal?.ws && activeTerminal.ws.readyState === WebSocket.OPEN) {
-      const message = JSON.stringify(initMessage)
-      activeTerminal.ws.send(message)
-      if (onWebInteraction) {
-        onWebInteraction({ type: "script_init", message })
-      }
-    }
-  }, [initMessage, activeTerminal])
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 rounded-md overflow-hidden">
