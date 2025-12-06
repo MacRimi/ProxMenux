@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { X, CheckCircle2, XCircle, Loader2 } from "lucide-react"
-import { TerminalPanel, type TerminalPanelHandle } from "./terminal-panel"
+import { TerminalPanel } from "./terminal-panel"
 import { API_PORT } from "@/lib/api-config"
 
 interface WebInteraction {
@@ -42,36 +42,16 @@ export function ScriptTerminalModal({
   const [exitCode, setExitCode] = useState<number | null>(null)
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
   const [interactionInput, setInteractionInput] = useState("")
-  const terminalRef = useRef<TerminalPanelHandle>(null)
-
-  useEffect(() => {
-    console.log("[v0] currentInteraction changed:", currentInteraction)
-    if (currentInteraction) {
-      console.log("[v0] Interaction opened, type:", currentInteraction.type, "id:", currentInteraction.id)
-    } else {
-      console.log("[v0] Interaction closed/cleared")
-      console.trace("[v0] Stack trace for currentInteraction = null")
-    }
-  }, [currentInteraction])
+  const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
     if (open) {
-      console.log("[v0] ScriptTerminalModal opened with:", {
-        scriptPath,
-        scriptName,
-        params,
-        sessionId,
-      })
-      // Reset state only when modal opens
       setIsComplete(false)
       setExitCode(null)
       setInteractionInput("")
-      // Don't clear currentInteraction here - it causes issues
-    } else {
-      // Clear interaction when modal closes
       setCurrentInteraction(null)
     }
-  }, [open]) // Only depend on 'open' to avoid unnecessary re-runs
+  }, [open])
 
   const getScriptWebSocketUrl = (): string => {
     if (typeof window === "undefined") {
@@ -85,16 +65,16 @@ export function ScriptTerminalModal({
 
   const wsUrl = getScriptWebSocketUrl()
 
+  const handleWebSocketCreated = (ws: WebSocket) => {
+    wsRef.current = ws
+  }
+
   const handleWebInteraction = (interaction: WebInteraction) => {
-    console.log("[v0] handleWebInteraction called with:", interaction)
     setCurrentInteraction(interaction)
-    console.log("[v0] currentInteraction set to:", interaction.type, interaction.id)
   }
 
   const handleInteractionResponse = (value: string) => {
-    console.log("[v0] handleInteractionResponse called with value:", value)
-    if (!terminalRef.current || !currentInteraction) {
-      console.log("[v0] Cannot send response - no terminal ref or interaction")
+    if (!wsRef.current || !currentInteraction) {
       return
     }
 
@@ -104,12 +84,10 @@ export function ScriptTerminalModal({
       value: value,
     })
 
-    console.log("[v0] Sending interaction response:", response)
+    if (wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(response)
+    }
 
-    terminalRef.current.sendMessage(response)
-    console.log("[v0] Response sent successfully")
-
-    console.log("[v0] Clearing currentInteraction after response")
     setCurrentInteraction(null)
     setInteractionInput("")
   }
@@ -144,13 +122,13 @@ export function ScriptTerminalModal({
 
           <div className="flex-1 overflow-hidden">
             <TerminalPanel
-              ref={terminalRef}
               websocketUrl={wsUrl}
               initMessage={{
                 script_path: scriptPath,
                 params: params,
               }}
               onWebInteraction={handleWebInteraction}
+              onWebSocketCreated={handleWebSocketCreated}
             />
           </div>
 
@@ -163,17 +141,11 @@ export function ScriptTerminalModal({
       </Dialog>
 
       {currentInteraction && (
-        <Dialog open={true} modal={true}>
+        <Dialog open={true}>
           <DialogContent
             className="max-w-4xl max-h-[80vh] overflow-y-auto"
-            onInteractOutside={(e) => {
-              console.log("[v0] onInteractOutside triggered - preventing close")
-              e.preventDefault()
-            }}
-            onEscapeKeyDown={(e) => {
-              console.log("[v0] onEscapeKeyDown triggered - preventing close")
-              e.preventDefault()
-            }}
+            onInteractOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
           >
             <DialogTitle>{currentInteraction.title}</DialogTitle>
             <div className="space-y-4">
@@ -212,25 +184,24 @@ export function ScriptTerminalModal({
                 </div>
               )}
 
-              {currentInteraction.type === "input" ||
-                (currentInteraction.type === "inputbox" && (
-                  <div className="space-y-2">
-                    <Label>Your input:</Label>
-                    <Input
-                      value={interactionInput}
-                      onChange={(e) => setInteractionInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleInteractionResponse(interactionInput)
-                        }
-                      }}
-                      placeholder={currentInteraction.default || ""}
-                    />
-                    <Button onClick={() => handleInteractionResponse(interactionInput)} className="w-full">
-                      Submit
-                    </Button>
-                  </div>
-                ))}
+              {(currentInteraction.type === "input" || currentInteraction.type === "inputbox") && (
+                <div className="space-y-2">
+                  <Label>Your input:</Label>
+                  <Input
+                    value={interactionInput}
+                    onChange={(e) => setInteractionInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleInteractionResponse(interactionInput)
+                      }
+                    }}
+                    placeholder={currentInteraction.default || ""}
+                  />
+                  <Button onClick={() => handleInteractionResponse(interactionInput)} className="w-full">
+                    Submit
+                  </Button>
+                </div>
+              )}
 
               {currentInteraction.type === "msgbox" && (
                 <Button onClick={() => handleInteractionResponse("ok")} className="w-full">
