@@ -56,8 +56,10 @@ export function ScriptTerminalModal({
 
   const [modalHeight, setModalHeight] = useState(80)
   const [isResizing, setIsResizing] = useState(false)
-  const startYRef = useRef(0)
-  const startHeightRef = useRef(80)
+  const resizeHandlersRef = useRef<{
+    handleMove: ((e: MouseEvent | TouchEvent) => void) | null
+    handleEnd: (() => void) | null
+  }>({ handleMove: null, handleEnd: null })
 
   const terminalContainerRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -283,6 +285,16 @@ export function ScriptTerminalModal({
         termRef.current.dispose()
         termRef.current = null
       }
+      if (resizeHandlersRef.current.handleMove) {
+        document.removeEventListener("mousemove", resizeHandlersRef.current.handleMove as any)
+        document.removeEventListener("touchmove", resizeHandlersRef.current.handleMove as any)
+      }
+      if (resizeHandlersRef.current.handleEnd) {
+        document.removeEventListener("mouseup", resizeHandlersRef.current.handleEnd)
+        document.removeEventListener("touchend", resizeHandlersRef.current.handleEnd)
+      }
+      resizeHandlersRef.current = { handleMove: null, handleEnd: null }
+
       sessionIdRef.current = Math.random().toString(36).substring(2, 8)
       setIsComplete(false)
       setExitCode(null)
@@ -347,29 +359,73 @@ export function ScriptTerminalModal({
   }
 
   const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
     setIsResizing(true)
-    startYRef.current = "clientY" in e ? e.clientY : e.touches[0].clientY
-    startHeightRef.current = modalHeight
-    document.addEventListener("mousemove", handleResize as any)
-    document.addEventListener("touchmove", handleResize as any)
-    document.addEventListener("mouseup", handleResizeEnd)
-    document.addEventListener("touchend", handleResizeEnd)
-  }
+    const startY = "clientY" in e ? e.clientY : e.touches[0].clientY
+    const startHeight = modalHeight
 
-  const handleResize = (e: MouseEvent | TouchEvent) => {
-    if (!isResizing) return
-    const currentY = e instanceof MouseEvent ? e.clientY : e.touches[0].clientY
-    const deltaY = currentY - startYRef.current
-    const newHeight = startHeightRef.current + (deltaY / window.innerHeight) * 100
-    setModalHeight(Math.max(50, Math.min(95, newHeight)))
-  }
+    const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
+      const currentY = moveEvent instanceof MouseEvent ? moveEvent.clientY : moveEvent.touches[0].clientY
+      const deltaY = currentY - startY
+      const deltaPercent = (deltaY / window.innerHeight) * 100
+      const newHeight = Math.max(50, Math.min(95, startHeight + deltaPercent))
 
-  const handleResizeEnd = () => {
-    setIsResizing(false)
-    document.removeEventListener("mousemove", handleResize as any)
-    document.removeEventListener("touchmove", handleResize as any)
-    document.removeEventListener("mouseup", handleResizeEnd)
-    document.removeEventListener("touchend", handleResizeEnd)
+      setModalHeight(newHeight)
+
+      if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+        try {
+          setTimeout(() => {
+            fitAddonRef.current.fit()
+            wsRef.current?.send(
+              JSON.stringify({
+                type: "resize",
+                cols: termRef.current.cols,
+                rows: termRef.current.rows,
+              }),
+            )
+          }, 10)
+        } catch (err) {
+          // Ignore
+        }
+      }
+    }
+
+    const handleEnd = () => {
+      setIsResizing(false)
+
+      if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+        try {
+          setTimeout(() => {
+            fitAddonRef.current.fit()
+            wsRef.current?.send(
+              JSON.stringify({
+                type: "resize",
+                cols: termRef.current.cols,
+                rows: termRef.current.rows,
+              }),
+            )
+          }, 50)
+        } catch (err) {
+          // Ignore
+        }
+      }
+
+      document.removeEventListener("mousemove", handleMove as any)
+      document.removeEventListener("touchmove", handleMove as any)
+      document.removeEventListener("mouseup", handleEnd)
+      document.removeEventListener("touchend", handleEnd)
+
+      resizeHandlersRef.current = { handleMove: null, handleEnd: null }
+    }
+
+    resizeHandlersRef.current = { handleMove, handleEnd }
+
+    document.addEventListener("mousemove", handleMove as any)
+    document.addEventListener("touchmove", handleMove as any, { passive: false })
+    document.addEventListener("mouseup", handleEnd)
+    document.addEventListener("touchend", handleEnd)
   }
 
   return (
@@ -411,13 +467,15 @@ export function ScriptTerminalModal({
 
           {!isMobile && (
             <div
-              className={`h-2 cursor-ns-resize flex items-center justify-center transition-colors ${
-                isResizing ? "bg-blue-500" : "bg-zinc-800 hover:bg-blue-500/50"
+              className={`h-2 cursor-ns-resize flex items-center justify-center transition-all duration-150 ${
+                isResizing ? "bg-blue-500 h-3" : "bg-zinc-800 hover:bg-blue-500/50"
               }`}
               onMouseDown={handleResizeStart}
               onTouchStart={handleResizeStart}
             >
-              <GripHorizontal className={`h-4 w-4 ${isResizing ? "text-white" : "text-zinc-500"}`} />
+              <GripHorizontal
+                className={`h-4 w-4 transition-all duration-150 ${isResizing ? "text-white scale-110" : "text-zinc-500"}`}
+              />
             </div>
           )}
 
@@ -445,7 +503,7 @@ export function ScriptTerminalModal({
       {currentInteraction && (
         <Dialog open={true}>
           <DialogContent
-            className="max-w-4xl max-h-[80vh] overflow-y-auto"
+            className="max-w-4xl max-h-[80vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 duration-100"
             onInteractOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
             hideClose
@@ -458,14 +516,14 @@ export function ScriptTerminalModal({
                 <div className="flex gap-2">
                   <Button
                     onClick={() => handleInteractionResponse("yes")}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white transition-all duration-150"
                   >
                     Yes
                   </Button>
                   <Button
                     onClick={() => handleInteractionResponse("cancel")}
                     variant="outline"
-                    className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600"
+                    className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all duration-150"
                   >
                     Cancel
                   </Button>
@@ -474,12 +532,13 @@ export function ScriptTerminalModal({
 
               {currentInteraction.type === "menu" && currentInteraction.options && (
                 <div className="space-y-2">
-                  {currentInteraction.options.map((option) => (
+                  {currentInteraction.options.map((option, index) => (
                     <Button
                       key={option.value}
                       onClick={() => handleInteractionResponse(option.value)}
                       variant="outline"
-                      className="w-full justify-start hover:bg-blue-600 hover:text-white"
+                      className="w-full justify-start hover:bg-blue-600 hover:text-white transition-all duration-100 animate-in fade-in-0 slide-in-from-left-2"
+                      style={{ animationDelay: `${index * 30}ms` }}
                     >
                       {option.label}
                     </Button>
@@ -487,7 +546,7 @@ export function ScriptTerminalModal({
                   <Button
                     onClick={() => handleInteractionResponse("cancel")}
                     variant="outline"
-                    className="w-full hover:bg-red-600 hover:text-white hover:border-red-600"
+                    className="w-full hover:bg-red-600 hover:text-white hover:border-red-600 transition-all duration-150"
                   >
                     Cancel
                   </Button>
@@ -506,18 +565,19 @@ export function ScriptTerminalModal({
                       }
                     }}
                     placeholder={currentInteraction.default || ""}
+                    className="transition-all duration-150"
                   />
                   <div className="flex gap-2">
                     <Button
                       onClick={() => handleInteractionResponse(interactionInput)}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 transition-all duration-150"
                     >
                       Submit
                     </Button>
                     <Button
                       onClick={() => handleInteractionResponse("cancel")}
                       variant="outline"
-                      className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600"
+                      className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all duration-150"
                     >
                       Cancel
                     </Button>
@@ -529,14 +589,14 @@ export function ScriptTerminalModal({
                 <div className="flex gap-2">
                   <Button
                     onClick={() => handleInteractionResponse("ok")}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 transition-all duration-150"
                   >
                     OK
                   </Button>
                   <Button
                     onClick={() => handleInteractionResponse("cancel")}
                     variant="outline"
-                    className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600"
+                    className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all duration-150"
                   >
                     Cancel
                   </Button>
