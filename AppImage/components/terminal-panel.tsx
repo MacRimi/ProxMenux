@@ -29,6 +29,7 @@ type TerminalPanelProps = {
   initMessage?: Record<string, any>
   onWebInteraction?: (interaction: any) => void
   onWebSocketCreated?: (ws: WebSocket) => void
+  onTerminalOutput?: () => void
   isScriptModal?: boolean
 }
 
@@ -142,6 +143,7 @@ export function TerminalPanel({
   initMessage,
   onWebInteraction,
   onWebSocketCreated,
+  onTerminalOutput,
   isScriptModal = false,
 }: TerminalPanelProps) {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
@@ -458,6 +460,10 @@ export function TerminalPanel({
         }
       } catch (e) {
         // Not JSON, it's regular terminal output
+      }
+
+      if (onTerminalOutput) {
+        onTerminalOutput()
       }
 
       term.write(event.data)

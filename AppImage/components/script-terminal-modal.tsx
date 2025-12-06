@@ -225,6 +225,12 @@ export function ScriptTerminalModal({
               }}
               onWebInteraction={handleWebInteraction}
               onWebSocketCreated={handleWebSocketCreated}
+              onTerminalOutput={() => {
+                setIsWaitingNextInteraction(false)
+                if (waitingTimeoutRef.current) {
+                  clearTimeout(waitingTimeoutRef.current)
+                }
+              }}
               isScriptModal={true}
             />
 
