@@ -4,7 +4,19 @@ import type React from "react"
 import { useEffect, useRef, useState } from "react"
 import { API_PORT } from "../lib/api-config"
 import { fetchApi } from "@/lib/api-config" // Cambiando import para usar fetchApi directamente
-import { X, Search, Send, Lightbulb, Terminal, Plus, GripHorizontal } from "lucide-react"
+import {
+  Activity,
+  Trash2,
+  X,
+  Search,
+  Send,
+  Lightbulb,
+  Terminal,
+  Plus,
+  AlignJustify,
+  Grid2X2,
+  GripHorizontal,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -17,7 +29,6 @@ type TerminalPanelProps = {
   initMessage?: Record<string, any>
   onWebInteraction?: (interaction: any) => void
   onWebSocketCreated?: (ws: WebSocket) => void
-  onTerminalOutput?: () => void
   isScriptModal?: boolean
 }
 
@@ -125,15 +136,14 @@ const proxmoxCommands = [
   { cmd: "clear", desc: "Clear terminal screen" },
 ]
 
-export function TerminalPanel({
+export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   websocketUrl,
   onClose,
   initMessage,
   onWebInteraction,
   onWebSocketCreated,
-  onTerminalOutput,
   isScriptModal = false,
-}: TerminalPanelProps) {
+}) => {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
   const [layout, setLayout] = useState<"single" | "grid">("grid")
@@ -148,7 +158,6 @@ export function TerminalPanel({
   const [useOnline, setUseOnline] = useState(true)
 
   const containerRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
-  const panelRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const updateDeviceType = () => {
@@ -313,11 +322,6 @@ export function TerminalPanel({
     delete containerRefs.current[id]
   }
 
-  const handleCloseTab = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation()
-    closeTerminal(id)
-  }
-
   useEffect(() => {
     terminals.forEach((terminal) => {
       const container = containerRefs.current[terminal.id]
@@ -353,44 +357,6 @@ export function TerminalPanel({
       }
     })
   }, [terminalHeight, layout, terminals, isMobile])
-
-  useEffect(() => {
-    if (!isScriptModal) return
-
-    const mainContainer = containerRefs.current["main"]
-    if (!mainContainer) return
-
-    const resizeObserver = new ResizeObserver(() => {
-      terminals.forEach((terminal) => {
-        if (terminal.term && terminal.fitAddon && terminal.isConnected) {
-          try {
-            setTimeout(() => {
-              terminal.fitAddon?.fit()
-              if (terminal.ws?.readyState === WebSocket.OPEN) {
-                const cols = terminal.term?.cols || 80
-                const rows = terminal.term?.rows || 24
-                terminal.ws.send(
-                  JSON.stringify({
-                    type: "resize",
-                    cols,
-                    rows,
-                  }),
-                )
-              }
-            }, 50)
-          } catch (err) {
-            // Silently handle resize errors
-          }
-        }
-      })
-    })
-
-    resizeObserver.observe(mainContainer)
-
-    return () => {
-      resizeObserver.disconnect()
-    }
-  }, [terminals, isScriptModal])
 
   const initializeTerminal = async (terminal: TerminalInstance, container: HTMLDivElement) => {
     const [TerminalClass, FitAddonClass] = await Promise.all([
@@ -492,10 +458,6 @@ export function TerminalPanel({
         }
       } catch (e) {
         // Not JSON, it's regular terminal output
-      }
-
-      if (onTerminalOutput) {
-        onTerminalOutput()
       }
 
       term.write(event.data)
@@ -636,61 +598,81 @@ export function TerminalPanel({
   const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
 
   return (
-    <div
-      ref={panelRef}
-      className="flex flex-col bg-background"
-      style={isScriptModal ? { height: "100%" } : { height: `${terminalHeight}px` }}
-    >
-      {!isScriptModal && (
-        <div className="border-b border-border flex-none relative">
-          <div className="flex items-center justify-between px-2 pt-1">
-            <div className="flex gap-1 overflow-x-auto scrollbar-hide">
-              {terminals.map((terminal) => (
-                <button
-                  key={terminal.id}
-                  onClick={() => setActiveTerminalId(terminal.id)}
-                  className={`px-3 py-1 text-sm rounded-t-md transition-colors whitespace-nowrap ${
-                    terminal.id === activeTerminalId
-                      ? "bg-background text-foreground font-medium"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  {terminal.title}
-                  {terminals.length > 1 && (
-                    <span onClick={(e) => handleCloseTab(e, terminal.id)} className="ml-2 hover:text-destructive">
-                      ×
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={addNewTerminal}
-              className="text-muted-foreground hover:text-foreground transition-colors p-1"
-              title="New Terminal"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
+    <div className="flex flex-col h-full bg-zinc-950 rounded-md overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+        <div className="flex items-center gap-3">
+          <Activity className="h-5 w-5 text-blue-500" />
+          <div
+            className={`w-2 h-2 rounded-full ${activeTerminal?.isConnected ? "bg-green-500" : "bg-red-500"}`}
+            title={activeTerminal?.isConnected ? "Connected" : "Disconnected"}
+          ></div>
+          <span className="text-xs text-zinc-500">{terminals.length} / 4 terminals</span>
         </div>
-      )}
 
-      {/* Terminal Tabs */}
-      {!isScriptModal && (
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {terminals.map((terminal) => (
-            <button
-              key={terminal.id}
-              onClick={() => setActiveTerminalId(terminal.id)}
-              className={`px-3 py-1 text-xs rounded-t transition-colors ${
-                terminal.id === activeTerminalId ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-white"
-              }`}
-            >
-              {terminal.title}
-            </button>
-          ))}
+        <div className="flex gap-2">
+          {!isMobile && terminals.length > 1 && (
+            <>
+              <Button
+                onClick={() => setLayout("single")}
+                variant="outline"
+                size="sm"
+                className={`h-8 px-2 ${layout === "single" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                title="Vista apilada (filas)"
+              >
+                <AlignJustify className="h-4 w-4" />
+              </Button>
+              <Button
+                onClick={() => setLayout("grid")}
+                variant="outline"
+                size="sm"
+                className={`h-8 px-2 ${layout === "grid" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                title="Vista cuadrícula 2x2"
+              >
+                <Grid2X2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+          <Button
+            onClick={addNewTerminal}
+            variant="outline"
+            size="sm"
+            disabled={terminals.length >= 4}
+            className="h-8 gap-2 bg-green-600 hover:bg-green-700 border-green-500 text-white disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">New</span>
+          </Button>
+          <Button
+            onClick={() => setSearchModalOpen(true)}
+            variant="outline"
+            size="sm"
+            disabled={!activeTerminal?.isConnected}
+            className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 border-blue-500 text-white disabled:opacity-50"
+          >
+            <Search className="h-4 w-4" />
+            <span className="hidden sm:inline">Search</span>
+          </Button>
+          <Button
+            onClick={handleClear}
+            variant="outline"
+            size="sm"
+            disabled={!activeTerminal?.isConnected}
+            className="h-8 gap-2 bg-yellow-600 hover:bg-yellow-700 border-yellow-500 text-white disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Clear</span>
+          </Button>
+          <Button
+            onClick={handleClose}
+            variant="outline"
+            size="sm"
+            className="h-8 gap-2 bg-red-600 hover:bg-red-700 border-red-500 text-white"
+          >
+            <X className="h-4 w-4" />
+            <span className="hidden sm:inline">Close</span>
+          </Button>
         </div>
-      )}
+      </div>
 
       {isScriptModal && (
         <div className="sr-only" data-connection-status={activeTerminal?.isConnected ? "connected" : "disconnected"}>
@@ -704,15 +686,16 @@ export function TerminalPanel({
           containerRefs.current["main"] = el
         }}
         className={`overflow-hidden flex flex-col ${isMobile ? "flex-1 h-[60vh]" : "overflow-hidden"} w-full max-w-full`}
-        style={
-          isScriptModal
-            ? { height: "100%", flexShrink: 0 }
-            : !isMobile || isTablet
-              ? { height: `${terminalHeight}px`, flexShrink: 0 }
-              : undefined
-        }
+        style={!isMobile || isTablet ? { height: `${terminalHeight}px`, flexShrink: 0 } : undefined}
       >
-        {isMobile ? (
+        {isScriptModal ? (
+          // In script modal: render terminal container directly without tabs
+          <div
+            ref={(el) => (containerRefs.current[activeTerminalId] = el)}
+            className="w-full h-full flex-1 bg-black overflow-hidden"
+          />
+        ) : // Normal terminal page: show tabs/grid as usual
+        isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
             <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800 overflow-x-auto">
               {terminals.map((terminal) => (
@@ -760,7 +743,7 @@ export function TerminalPanel({
                     onClick={() => setActiveTerminalId(terminal.id)}
                     className={`text-xs font-medium ${
                       activeTerminalId === terminal.id ? "text-blue-400" : "text-zinc-500"
-                    } ${isScriptModal ? "hidden" : ""}`}
+                    }`}
                   >
                     {terminal.title}
                   </button>
@@ -782,7 +765,7 @@ export function TerminalPanel({
         )}
       </div>
 
-      {!isScriptModal && (isTablet || (!isMobile && !isTablet)) && terminals.length > 0 && (
+      {(isTablet || (!isMobile && !isTablet)) && terminals.length > 0 && (
         <div
           onMouseDown={handleResizeStart}
           onTouchStart={handleResizeStart}
