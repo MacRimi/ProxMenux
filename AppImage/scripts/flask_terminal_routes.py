@@ -286,15 +286,17 @@ def script_websocket(ws, session_id):
     master_fd, slave_fd = pty.openpty()
     print(f"[DEBUG] Created PTY: master_fd={master_fd}, slave_fd={slave_fd}")
     
-    # Build environment variables from params
     env = os.environ.copy()
     for key, value in params.items():
         env[key] = str(value)
+    # Force unbuffered output
+    env['PYTHONUNBUFFERED'] = '1'
+    env['TERM'] = 'xterm-256color'
+    # Add stdbuf to force unbuffered output for the script
     
-    # Start script process with PTY
-    print(f"[DEBUG] Starting script process: {script_path}")
+    print(f"[DEBUG] Starting script process with unbuffered output: {script_path}")
     script_process = subprocess.Popen(
-        ['/bin/bash', script_path],
+        ['script', '-qefc', f'/bin/bash {script_path}', '/dev/null'],
         stdin=slave_fd,
         stdout=slave_fd,
         stderr=slave_fd,
@@ -324,11 +326,12 @@ def script_websocket(ws, session_id):
                             break
                         
                         text = data.decode('utf-8', errors='ignore')
-                        print(f"[DEBUG] Read {len(text)} chars from script")
+                        print(f"[DEBUG] Read {len(data)} bytes ({len(text)} chars) from script: {text[:100]}")
                         
                         # Send raw text to terminal (TerminalPanel expects plain text)
                         try:
                             ws.send(text)
+                            print(f"[DEBUG] Sent {len(text)} chars to WebSocket")
                         except Exception as e:
                             print(f"[DEBUG] Error sending to WebSocket: {e}")
                             break
