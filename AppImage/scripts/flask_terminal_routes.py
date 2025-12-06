@@ -240,26 +240,51 @@ def terminal_websocket(ws):
 def script_websocket(ws, session_id):
     """WebSocket endpoint for executing scripts with hybrid web mode"""
     
+    print(f"[DEBUG] Script WebSocket connected for session: {session_id}")
+    
     try:
+        print(f"[DEBUG] Waiting for init data...")
         init_data = ws.receive(timeout=10)
+        print(f"[DEBUG] Received init data: {init_data}")
+        
         if not init_data:
-            ws.send('{"type": "error", "message": "No script data received"}\r\n')
+            error_msg = '{"type": "error", "message": "No script data received"}\r\n'
+            print(f"[DEBUG] Error: No init data received")
+            ws.send(error_msg)
             return
             
         script_data = json.loads(init_data)
+        print(f"[DEBUG] Parsed script data: {script_data}")
+        
         script_path = script_data.get('script_path')
         params = script_data.get('params', {})
         
+        print(f"[DEBUG] Script path: {script_path}")
+        print(f"[DEBUG] Params: {params}")
+        
         if not script_path:
-            ws.send('{"type": "error", "message": "No script_path provided"}\r\n')
+            error_msg = '{"type": "error", "message": "No script_path provided"}\r\n'
+            print(f"[DEBUG] Error: No script_path in data")
+            ws.send(error_msg)
+            return
+        
+        if not os.path.exists(script_path):
+            error_msg = f'{{"type": "error", "message": "Script not found: {script_path}"}}\r\n'
+            print(f"[DEBUG] Error: Script file not found: {script_path}")
+            ws.send(error_msg)
             return
             
+        print(f"[DEBUG] Script file exists, starting execution...")
+            
     except Exception as e:
-        ws.send(f'{{"type": "error", "message": "Invalid init data: {str(e)}"}}\r\n')
+        error_msg = f'{{"type": "error", "message": "Invalid init data: {str(e)}"}}\r\n'
+        print(f"[DEBUG] Exception parsing init data: {e}")
+        ws.send(error_msg)
         return
     
     # Create pseudo-terminal for script execution
     master_fd, slave_fd = pty.openpty()
+    print(f"[DEBUG] Created PTY: master_fd={master_fd}, slave_fd={slave_fd}")
     
     # Build environment variables from params
     env = os.environ.copy()
@@ -267,6 +292,7 @@ def script_websocket(ws, session_id):
         env[key] = str(value)
     
     # Start script process with PTY
+    print(f"[DEBUG] Starting script process: {script_path}")
     script_process = subprocess.Popen(
         ['/bin/bash', script_path],
         stdin=slave_fd,
@@ -275,6 +301,7 @@ def script_websocket(ws, session_id):
         preexec_fn=os.setsid,
         env=env
     )
+    print(f"[DEBUG] Script process started with PID: {script_process.pid}")
     
     # Set non-blocking mode for master_fd
     flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
@@ -285,6 +312,7 @@ def script_websocket(ws, session_id):
     
     # Thread to read script output and forward to WebSocket
     def read_script_output():
+        print(f"[DEBUG] Output reader thread started")
         while True:
             try:
                 r, _, _ = select.select([master_fd], [], [], 0.01)
@@ -292,33 +320,39 @@ def script_websocket(ws, session_id):
                     try:
                         data = os.read(master_fd, 4096)
                         if not data:
+                            print(f"[DEBUG] No more data from script")
                             break
                         
                         text = data.decode('utf-8', errors='ignore')
+                        print(f"[DEBUG] Read {len(text)} chars from script")
                         
                         # Send raw text to terminal (TerminalPanel expects plain text)
                         try:
                             ws.send(text)
-                        except Exception:
+                        except Exception as e:
+                            print(f"[DEBUG] Error sending to WebSocket: {e}")
                             break
                             
-                    except OSError:
+                    except OSError as e:
+                        print(f"[DEBUG] OSError reading from PTY: {e}")
                         break
             except Exception as e:
-                print(f"Error reading script output: {e}")
+                print(f"[DEBUG] Error reading script output: {e}")
                 break
         
         script_process.wait()
         exit_code = script_process.returncode if script_process.returncode is not None else 0
+        print(f"[DEBUG] Script exited with code: {exit_code}")
         
         # Only send exit message if WebSocket is still open
         try:
             ws.send(f'\r\n[Script exited with code {exit_code}]\r\n')
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[DEBUG] Could not send exit message: {e}")
     
     output_thread = threading.Thread(target=read_script_output, daemon=True)
     output_thread.start()
+    print(f"[DEBUG] Output thread started")
     
     try:
         while True:
@@ -326,7 +360,10 @@ def script_websocket(ws, session_id):
             data = ws.receive(timeout=None)
             
             if data is None:
+                print(f"[DEBUG] WebSocket closed by client")
                 break
+            
+            print(f"[DEBUG] Received from client: {data[:100] if len(data) > 100 else data}")
             
             try:
                 msg = json.loads(data)
@@ -336,22 +373,27 @@ def script_websocket(ws, session_id):
                     cols = int(msg.get('cols', 120))
                     rows = int(msg.get('rows', 30))
                     set_winsize(master_fd, rows, cols)
+                    print(f"[DEBUG] Resized terminal to {cols}x{rows}")
                     continue
                     
             except json.JSONDecodeError:
                 # Raw text input, send to script
                 try:
                     os.write(master_fd, data.encode('utf-8'))
-                except OSError:
+                    print(f"[DEBUG] Sent input to script")
+                except OSError as e:
+                    print(f"[DEBUG] Error writing to script: {e}")
                     break
             
             # Check if process is still alive
             if script_process.poll() is not None:
+                print(f"[DEBUG] Script process terminated")
                 break
                 
     except Exception as e:
-        print(f"Script session error: Connection closed: {e}")
+        print(f"[DEBUG] Script session error: {e}")
     finally:
+        print(f"[DEBUG] Cleaning up script session")
         # Cleanup
         try:
             script_process.terminate()

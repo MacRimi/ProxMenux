@@ -44,6 +44,17 @@ export function ScriptTerminalModal({
   const terminalRef = useRef<any>(null)
 
   useEffect(() => {
+    if (open) {
+      console.log("[v0] ScriptTerminalModal opened with:", {
+        scriptPath,
+        scriptName,
+        params,
+        sessionId,
+      })
+    }
+  }, [open, scriptPath, scriptName, params, sessionId])
+
+  useEffect(() => {
     if (!open) return
 
     // We'll pass initMessage prop to TerminalPanel instead
@@ -62,6 +73,13 @@ export function ScriptTerminalModal({
     const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
     return `${wsProtocol}//${hostname}:${API_PORT}/ws/script/${sessionId}`
   }
+
+  const wsUrl = getScriptWebSocketUrl()
+  console.log("[v0] ScriptTerminalModal WebSocket URL:", wsUrl)
+  console.log("[v0] ScriptTerminalModal initMessage:", {
+    script_path: scriptPath,
+    params: params,
+  })
 
   const handleInteractionResponse = (value: string) => {
     if (!terminalRef.current || !currentInteraction) return
@@ -109,7 +127,7 @@ export function ScriptTerminalModal({
           <div className="flex-1 overflow-hidden">
             <TerminalPanel
               ref={terminalRef}
-              websocketUrl={getScriptWebSocketUrl()}
+              websocketUrl={wsUrl}
               initMessage={{
                 script_path: scriptPath,
                 params: params,
