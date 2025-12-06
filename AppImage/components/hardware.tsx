@@ -2043,9 +2043,7 @@ export default function Hardware() {
         }}
         scriptPath="/usr/local/share/proxmenux/scripts/gpu_tpu/nvidia_installer.sh"
         scriptName="nvidia_installer"
-        params={{
-          EXECUTION_MODE: "web",
-        }}
+        params={{}}
         title="NVIDIA Driver Installation"
         description="Installing NVIDIA proprietary drivers for GPU monitoring..."
       />
