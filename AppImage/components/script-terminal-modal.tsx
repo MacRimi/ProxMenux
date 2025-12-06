@@ -144,7 +144,13 @@ export function ScriptTerminalModal({
       </Dialog>
 
       {currentInteraction && (
-        <Dialog open={true} onOpenChange={() => setCurrentInteraction(null)}>
+        <Dialog
+          open={true}
+          onOpenChange={() => {
+            console.log("[v0] Interaction modal onOpenChange triggered")
+            setCurrentInteraction(null)
+          }}
+        >
           <DialogContent>
             <DialogTitle>{currentInteraction.title}</DialogTitle>
             <div className="space-y-4">
@@ -152,10 +158,17 @@ export function ScriptTerminalModal({
 
               {currentInteraction.type === "yesno" && (
                 <div className="flex gap-2">
-                  <Button onClick={() => handleInteractionResponse("yes")} className="flex-1">
+                  <Button
+                    onClick={() => handleInteractionResponse("yes")}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
                     Yes
                   </Button>
-                  <Button onClick={() => handleInteractionResponse("no")} variant="outline" className="flex-1">
+                  <Button
+                    onClick={() => handleInteractionResponse("no")}
+                    variant="outline"
+                    className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600"
+                  >
                     No
                   </Button>
                 </div>
