@@ -3,9 +3,19 @@
 import { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { X, CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { TerminalPanel } from "./terminal-panel"
 import { API_PORT } from "@/lib/api-config"
+
+interface WebInteraction {
+  type: "yesno" | "menu" | "msgbox" | "input"
+  id: string
+  title: string
+  message: string
+  options?: Array<{ label: string; value: string }>
+}
 
 interface ScriptTerminalModalProps {
   open: boolean
@@ -29,94 +39,78 @@ export function ScriptTerminalModal({
   const [sessionId] = useState(() => Math.random().toString(36).substring(7))
   const [isComplete, setIsComplete] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
+  const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
+  const [interactionInput, setInteractionInput] = useState("")
   const wsRef = useRef<WebSocket | null>(null)
   const terminalRef = useRef<any>(null)
 
   useEffect(() => {
     if (!open) return
 
-    const originalWebSocket = window.WebSocket
-    let interceptedWs: WebSocket | null = null
+    let ws: WebSocket | null = null
+    const wsUrl = getScriptWebSocketUrl()
 
-    window.WebSocket = ((url: string | URL, protocols?: string | string[]) => {
-      const ws = new originalWebSocket(url, protocols)
-
-      // Solo interceptar nuestro WebSocket específico
-      if (url.toString().includes(`/ws/script/${sessionId}`)) {
-        interceptedWs = ws
+    const connectWebSocket = () => {
+      try {
+        ws = new WebSocket(wsUrl)
         wsRef.current = ws
 
-        // Cuando se abre la conexión, enviar los parámetros del script
-        ws.addEventListener("open", () => {
+        ws.onopen = () => {
+          console.log("[v0] WebSocket connected, sending init message")
           const initMessage = JSON.stringify({
             script_path: scriptPath,
             params: params,
           })
-          console.log("[v0] Sending script init message:", initMessage)
-          ws.send(initMessage)
-        })
+          ws?.send(initMessage)
+        }
 
-        // Interceptar mensajes entrantes para filtrar y detectar eventos especiales
-        const originalOnMessage = Object.getOwnPropertyDescriptor(WebSocket.prototype, "onmessage")
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data)
 
-        Object.defineProperty(ws, "onmessage", {
-          set(handler) {
-            const wrappedHandler = (event: MessageEvent) => {
-              const data = event.data
-
-              if (typeof data === "string" && data.includes("Connected to ProxMenux terminal")) {
-                console.log("[v0] Filtered welcome message")
-                return // No pasar este mensaje a la terminal
-              }
-
-              // Detectar mensajes JSON especiales
-              try {
-                const parsed = JSON.parse(data)
-
-                // Detectar finalización del script
-                if (parsed.type === "exit") {
-                  console.log("[v0] Script completed with exit code:", parsed.code)
-                  setIsComplete(true)
-                  setExitCode(parsed.code || 0)
-                }
-
-                // Detectar errores
-                if (parsed.type === "error") {
-                  console.error("[v0] Script error:", parsed.message)
-                }
-              } catch (e) {
-                // No es JSON, es output normal de terminal
-              }
-
-              // Pasar el mensaje al handler original
-              if (handler) {
-                handler.call(ws, event)
-              }
+            // Detectar interacciones híbridas
+            if (data.type === "interaction") {
+              console.log("[v0] Interaction detected:", data)
+              setCurrentInteraction(data as WebInteraction)
+              return
             }
 
-            // Almacenar el handler wrapped
-            Object.defineProperty(this, "_wrappedOnMessage", {
-              value: wrappedHandler,
-              writable: true,
-            })
-
-            if (originalOnMessage?.set) {
-              originalOnMessage.set.call(this, wrappedHandler)
+            // Detectar finalización
+            if (data.type === "exit") {
+              console.log("[v0] Script completed with exit code:", data.code)
+              setIsComplete(true)
+              setExitCode(data.code || 0)
+              return
             }
-          },
-          get() {
-            return this._wrappedOnMessage
-          },
-        })
+
+            // Detectar errores
+            if (data.type === "error") {
+              console.error("[v0] Script error:", data.message)
+              return
+            }
+          } catch (e) {
+            // No es JSON, es output normal - TerminalPanel lo manejará
+          }
+        }
+
+        ws.onerror = (error) => {
+          console.error("[v0] WebSocket error:", error)
+        }
+
+        ws.onclose = () => {
+          console.log("[v0] WebSocket closed")
+          wsRef.current = null
+        }
+      } catch (error) {
+        console.error("[v0] Failed to create WebSocket:", error)
       }
+    }
 
-      return ws
-    }) as any
+    connectWebSocket()
 
-    // Cleanup: restaurar WebSocket original
     return () => {
-      window.WebSocket = originalWebSocket
-      if (interceptedWs) {
+      if (ws) {
+        ws.close()
         wsRef.current = null
       }
     }
@@ -129,9 +123,22 @@ export function ScriptTerminalModal({
 
     const { hostname, protocol } = window.location
     const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
-
-    // Siempre usar el puerto de Flask directamente
     return `${wsProtocol}//${hostname}:${API_PORT}/ws/script/${sessionId}`
+  }
+
+  const handleInteractionResponse = (value: string) => {
+    if (!wsRef.current || !currentInteraction) return
+
+    const response = JSON.stringify({
+      type: "interaction_response",
+      id: currentInteraction.id,
+      value: value,
+    })
+
+    console.log("[v0] Sending interaction response:", response)
+    wsRef.current.send(response)
+    setCurrentInteraction(null)
+    setInteractionInput("")
   }
 
   return (
@@ -173,6 +180,67 @@ export function ScriptTerminalModal({
           </div>
         </DialogContent>
       </Dialog>
+
+      {currentInteraction && (
+        <Dialog open={true} onOpenChange={() => setCurrentInteraction(null)}>
+          <DialogContent>
+            <DialogTitle>{currentInteraction.title}</DialogTitle>
+            <div className="space-y-4">
+              <p>{currentInteraction.message}</p>
+
+              {currentInteraction.type === "yesno" && (
+                <div className="flex gap-2">
+                  <Button onClick={() => handleInteractionResponse("yes")} className="flex-1">
+                    Yes
+                  </Button>
+                  <Button onClick={() => handleInteractionResponse("no")} variant="outline" className="flex-1">
+                    No
+                  </Button>
+                </div>
+              )}
+
+              {currentInteraction.type === "menu" && currentInteraction.options && (
+                <div className="space-y-2">
+                  {currentInteraction.options.map((option) => (
+                    <Button
+                      key={option.value}
+                      onClick={() => handleInteractionResponse(option.value)}
+                      variant="outline"
+                      className="w-full justify-start"
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
+
+              {currentInteraction.type === "input" && (
+                <div className="space-y-2">
+                  <Label>Your input:</Label>
+                  <Input
+                    value={interactionInput}
+                    onChange={(e) => setInteractionInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleInteractionResponse(interactionInput)
+                      }
+                    }}
+                  />
+                  <Button onClick={() => handleInteractionResponse(interactionInput)} className="w-full">
+                    Submit
+                  </Button>
+                </div>
+              )}
+
+              {currentInteraction.type === "msgbox" && (
+                <Button onClick={() => handleInteractionResponse("ok")} className="w-full">
+                  OK
+                </Button>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   )
 }
