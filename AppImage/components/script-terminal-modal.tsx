@@ -43,7 +43,6 @@ export function ScriptTerminalModal({
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
   const [interactionInput, setInteractionInput] = useState("")
   const terminalRef = useRef<any>(null)
-  const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -53,42 +52,10 @@ export function ScriptTerminalModal({
         params,
         sessionId,
       })
+      setCurrentInteraction(null)
+      setInteractionInput("")
     }
   }, [open, scriptPath, scriptName, params, sessionId])
-
-  useEffect(() => {
-    if (!open) return
-
-    const handleWebSocketMessage = (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data)
-        console.log("[v0] Received WebSocket message:", data)
-
-        if (data.type === "web_interaction") {
-          console.log("[v0] Detected web interaction:", data.interaction)
-          setCurrentInteraction(data.interaction)
-        }
-      } catch (e) {
-        // Not JSON, ignore (it's terminal output)
-      }
-    }
-
-    const checkWs = setInterval(() => {
-      if (terminalRef.current?.ws) {
-        wsRef.current = terminalRef.current.ws
-        wsRef.current.addEventListener("message", handleWebSocketMessage)
-        clearInterval(checkWs)
-        console.log("[v0] Attached WebSocket message listener")
-      }
-    }, 100)
-
-    return () => {
-      clearInterval(checkWs)
-      if (wsRef.current) {
-        wsRef.current.removeEventListener("message", handleWebSocketMessage)
-      }
-    }
-  }, [open])
 
   const getScriptWebSocketUrl = (): string => {
     if (typeof window === "undefined") {
@@ -101,14 +68,14 @@ export function ScriptTerminalModal({
   }
 
   const wsUrl = getScriptWebSocketUrl()
-  console.log("[v0] ScriptTerminalModal WebSocket URL:", wsUrl)
-  console.log("[v0] ScriptTerminalModal initMessage:", {
-    script_path: scriptPath,
-    params: params,
-  })
+
+  const handleWebInteraction = (interaction: WebInteraction) => {
+    console.log("[v0] Received web interaction:", interaction)
+    setCurrentInteraction(interaction)
+  }
 
   const handleInteractionResponse = (value: string) => {
-    if (!wsRef.current || !currentInteraction) return
+    if (!terminalRef.current || !currentInteraction) return
 
     const response = JSON.stringify({
       type: "interaction_response",
@@ -117,7 +84,13 @@ export function ScriptTerminalModal({
     })
 
     console.log("[v0] Sending interaction response:", response)
-    wsRef.current.send(response)
+
+    // Access the terminal instance to send the response
+    const terminal = terminalRef.current
+    if (terminal?.terminals?.[0]?.ws) {
+      terminal.terminals[0].ws.send(response)
+    }
+
     setCurrentInteraction(null)
     setInteractionInput("")
   }
@@ -158,6 +131,7 @@ export function ScriptTerminalModal({
                 script_path: scriptPath,
                 params: params,
               }}
+              onWebInteraction={handleWebInteraction}
             />
           </div>
 

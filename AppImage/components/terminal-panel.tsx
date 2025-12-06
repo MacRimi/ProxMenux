@@ -27,6 +27,7 @@ type TerminalPanelProps = {
   websocketUrl?: string
   onClose?: () => void
   initMessage?: Record<string, any>
+  onWebInteraction?: (interaction: any) => void
 }
 
 interface TerminalInstance {
@@ -133,7 +134,12 @@ const proxmoxCommands = [
   { cmd: "clear", desc: "Clear terminal screen" },
 ]
 
-export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose, initMessage }) => {
+export const TerminalPanel: React.FC<TerminalPanelProps> = ({
+  websocketUrl,
+  onClose,
+  initMessage,
+  onWebInteraction,
+}) => {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
   const [layout, setLayout] = useState<"single" | "grid">("grid")
@@ -440,6 +446,17 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
 
     ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === "web_interaction" && onWebInteraction) {
+          console.log("[v0] TerminalPanel: Intercepted web_interaction:", data.interaction)
+          onWebInteraction(data.interaction)
+          return // Don't write to terminal
+        }
+      } catch (e) {
+        // Not JSON, it's regular terminal output
+      }
+
       term.write(event.data)
     }
 
