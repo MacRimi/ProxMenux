@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -30,6 +29,13 @@ interface ScriptTerminalModalProps {
   description: string
 }
 
+interface TerminalInstance {
+  term: any | null
+  ws: WebSocket | null
+  fitAddon: any | null
+  isConnected: boolean
+}
+
 export function ScriptTerminalModal({
   open,
   onClose,
@@ -39,14 +45,18 @@ export function ScriptTerminalModal({
   title,
   description,
 }: ScriptTerminalModalProps) {
-  const sessionIdRef = useRef<string | null>(null)
-  const hasInitializedRef = useRef(false)
+  const [terminal, setTerminal] = useState<TerminalInstance>({
+    term: null,
+    ws: null,
+    fitAddon: null,
+    isConnected: false,
+  })
+
+  const sessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 8))
   const [isComplete, setIsComplete] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
   const [interactionInput, setInteractionInput] = useState("")
-  const wsRef = useRef<WebSocket | null>(null)
-  const [isConnected, setIsConnected] = useState(false)
   const checkConnectionInterval = useRef<NodeJS.Timeout | null>(null)
   const isMobile = useIsMobile()
 
@@ -58,88 +68,45 @@ export function ScriptTerminalModal({
   const startYRef = useRef(0)
   const startHeightRef = useRef(80)
 
-  const terminalRef = useRef<any>(null)
-  const fitAddonRef = useRef<any>(null)
-
-  const terminalContainerRef = useRef<((node: HTMLDivElement | null) => void) | null>(null)
-
-  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
-    setIsResizing(true)
-    startYRef.current = e.clientY || e.touches[0].clientY
-    startHeightRef.current = modalHeight
-    document.addEventListener("mousemove", handleResize)
-    document.addEventListener("touchmove", handleResize)
-    document.addEventListener("mouseup", handleResizeEnd)
-    document.addEventListener("touchend", handleResizeEnd)
-  }
-
-  const handleResize = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isResizing) return
-    const currentY = e.clientY || e.touches[0].clientY
-    const newHeight = startHeightRef.current + (currentY - startYRef.current)
-    setModalHeight(Math.max(20, Math.min(80, newHeight)))
-  }
-
-  const handleResizeEnd = () => {
-    setIsResizing(false)
-    document.removeEventListener("mousemove", handleResize)
-    document.removeEventListener("touchmove", handleResize)
-    document.removeEventListener("mouseup", handleResizeEnd)
-    document.removeEventListener("touchend", handleResizeEnd)
-  }
+  const terminalContainerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!open) {
-      // Cleanup
       if (checkConnectionInterval.current) {
         clearInterval(checkConnectionInterval.current)
       }
       if (waitingTimeoutRef.current) {
         clearTimeout(waitingTimeoutRef.current)
       }
-      if (terminalRef.current) {
-        terminalRef.current.dispose()
-        terminalRef.current = null
+      if (terminal.ws) {
+        terminal.ws.close()
       }
-      if (wsRef.current) {
-        wsRef.current.close()
-        wsRef.current = null
+      if (terminal.term) {
+        terminal.term.dispose()
       }
-      // Reset for next open
-      sessionIdRef.current = null
-      hasInitializedRef.current = false
+      setTerminal({ term: null, ws: null, fitAddon: null, isConnected: false })
+      sessionIdRef.current = Math.random().toString(36).substring(2, 8)
       setIsComplete(false)
       setExitCode(null)
       setInteractionInput("")
       setCurrentInteraction(null)
-      setIsConnected(false)
       setIsWaitingNextInteraction(false)
     }
   }, [open])
 
-  const handleTerminalContainerRef = (node: HTMLDivElement | null) => {
-    if (!node || !open || hasInitializedRef.current) {
+  useEffect(() => {
+    const container = terminalContainerRef.current
+    if (!open || !container || terminal.term) {
       return
     }
 
-    console.log("[v0] Terminal container mounted, starting initialization")
-    hasInitializedRef.current = true
-
-    // Generate session ID once
-    if (!sessionIdRef.current) {
-      sessionIdRef.current = Math.random().toString(36).substring(2, 8)
-      console.log("[v0] Generated session ID:", sessionIdRef.current)
-    }
-
-    const initTerminal = async () => {
-      console.log("[v0] Loading xterm modules...")
+    const initializeTerminal = async () => {
       const [TerminalClass, FitAddonClass] = await Promise.all([
         import("xterm").then((mod) => mod.Terminal),
         import("xterm-addon-fit").then((mod) => mod.FitAddon),
         import("xterm/css/xterm.css"),
       ])
 
-      console.log("[v0] Creating terminal instance...")
       const fontSize = window.innerWidth < 768 ? 12 : 16
 
       const term = new TerminalClass({
@@ -179,28 +146,21 @@ export function ScriptTerminalModal({
 
       const fitAddon = new FitAddonClass()
       term.loadAddon(fitAddon)
-      term.open(node)
-      console.log("[v0] Terminal opened in container")
+      term.open(container)
 
       setTimeout(() => {
         try {
           fitAddon.fit()
-          console.log("[v0] Initial fit completed")
         } catch (err) {
-          console.error("[v0] Initial fit failed:", err)
+          // Ignore
         }
       }, 50)
 
-      terminalRef.current = term
-      fitAddonRef.current = fitAddon
-
-      const wsUrl = getScriptWebSocketUrl(sessionIdRef.current!)
-      console.log("[v0] Connecting to WebSocket:", wsUrl)
+      const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
       const ws = new WebSocket(wsUrl)
 
       ws.onopen = () => {
-        console.log("[v0] WebSocket connected!")
-        setIsConnected(true)
+        setTerminal((prev) => ({ ...prev, isConnected: true, term, ws, fitAddon }))
 
         const initMessage = {
           script_path: scriptPath,
@@ -210,16 +170,13 @@ export function ScriptTerminalModal({
           },
         }
 
-        console.log("[v0] Sending init message:", initMessage)
         ws.send(JSON.stringify(initMessage))
 
-        // Fit and resize after connection
         setTimeout(() => {
           try {
             fitAddon.fit()
             const cols = term.cols
             const rows = term.rows
-            console.log("[v0] Sending resize:", { cols, rows })
             ws.send(
               JSON.stringify({
                 type: "resize",
@@ -228,19 +185,16 @@ export function ScriptTerminalModal({
               }),
             )
           } catch (err) {
-            console.error("[v0] Resize after connect failed:", err)
+            // Ignore
           }
         }, 100)
       }
 
       ws.onmessage = (event) => {
-        console.log("[v0] Received message:", event.data)
         try {
           const msg = JSON.parse(event.data)
 
-          // Detect web interactions
           if (msg.type === "web_interaction" && msg.interaction) {
-            console.log("[v0] Web interaction detected:", msg.interaction)
             setIsWaitingNextInteraction(false)
             if (waitingTimeoutRef.current) {
               clearTimeout(waitingTimeoutRef.current)
@@ -257,19 +211,15 @@ export function ScriptTerminalModal({
           }
 
           if (msg.type === "error") {
-            console.error("[v0] Error message:", msg.message)
-            term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
+            terminal.term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
             return
           }
         } catch {
           // Not JSON, it's regular terminal output
-          console.log("[v0] Regular terminal output received")
         }
 
-        // Write regular output to terminal
-        term.write(event.data)
+        terminal.term.write(event.data)
 
-        // Hide spinner when output arrives
         setIsWaitingNextInteraction(false)
         if (waitingTimeoutRef.current) {
           clearTimeout(waitingTimeoutRef.current)
@@ -277,15 +227,13 @@ export function ScriptTerminalModal({
       }
 
       ws.onerror = (error) => {
-        console.error("[v0] WebSocket error:", error)
-        setIsConnected(false)
-        term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
+        setTerminal((prev) => ({ ...prev, isConnected: false }))
+        terminal.term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
       }
 
       ws.onclose = (event) => {
-        console.log("[v0] WebSocket closed:", event.code, event.reason)
-        setIsConnected(false)
-        term.writeln("\x1b[33mConnection closed\x1b[0m")
+        setTerminal((prev) => ({ ...prev, isConnected: false }))
+        terminal.term.writeln("\x1b[33mConnection closed\x1b[0m")
 
         if (!isComplete) {
           setIsComplete(true)
@@ -295,54 +243,43 @@ export function ScriptTerminalModal({
 
       term.onData((data) => {
         if (ws.readyState === WebSocket.OPEN) {
-          console.log("[v0] Sending user input to WebSocket")
           ws.send(data)
         }
       })
 
-      wsRef.current = ws
-
-      // Monitor connection status
       checkConnectionInterval.current = setInterval(() => {
         if (ws) {
-          setIsConnected(ws.readyState === WebSocket.OPEN)
+          setTerminal((prev) => ({ ...prev, isConnected: ws.readyState === WebSocket.OPEN }))
         }
       }, 500)
 
-      // Setup ResizeObserver for the terminal container
       let resizeTimeout: NodeJS.Timeout | null = null
 
       const resizeObserver = new ResizeObserver(() => {
-        if (resizeTimeout) {
-          clearTimeout(resizeTimeout)
-        }
-
+        if (resizeTimeout) clearTimeout(resizeTimeout)
         resizeTimeout = setTimeout(() => {
           if (fitAddon && term && ws?.readyState === WebSocket.OPEN) {
             try {
               fitAddon.fit()
-              const cols = term.cols
-              const rows = term.rows
-              console.log("[v0] Terminal resized to:", cols, "x", rows)
               ws.send(
                 JSON.stringify({
                   type: "resize",
-                  cols: cols,
-                  rows: rows,
+                  cols: term.cols,
+                  rows: term.rows,
                 }),
               )
             } catch (err) {
-              console.warn("[v0] Resize failed:", err)
+              // Ignore
             }
           }
         }, 100)
       })
 
-      resizeObserver.observe(node)
+      resizeObserver.observe(container)
     }
 
-    initTerminal()
-  }
+    initializeTerminal()
+  }, [open, terminal.term])
 
   const getScriptWebSocketUrl = (sid: string): string => {
     if (typeof window === "undefined") {
@@ -355,7 +292,7 @@ export function ScriptTerminalModal({
   }
 
   const handleInteractionResponse = (value: string) => {
-    if (!wsRef.current || !currentInteraction) {
+    if (!terminal.ws || !currentInteraction) {
       return
     }
 
@@ -372,8 +309,8 @@ export function ScriptTerminalModal({
       value: value,
     })
 
-    if (wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(response)
+    if (terminal.ws.readyState === WebSocket.OPEN) {
+      terminal.ws.send(response)
     }
 
     setCurrentInteraction(null)
@@ -385,17 +322,42 @@ export function ScriptTerminalModal({
   }
 
   const handleCloseModal = () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.close()
+    if (terminal.ws && terminal.ws.readyState === WebSocket.OPEN) {
+      terminal.ws.close()
     }
     if (checkConnectionInterval.current) {
       clearInterval(checkConnectionInterval.current)
     }
-    if (terminalRef.current) {
-      terminalRef.current.dispose()
-      terminalRef.current = null
+    if (terminal.term) {
+      terminal.term.dispose()
     }
     onClose()
+  }
+
+  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsResizing(true)
+    startYRef.current = "clientY" in e ? e.clientY : e.touches[0].clientY
+    startHeightRef.current = modalHeight
+    document.addEventListener("mousemove", handleResize as any)
+    document.addEventListener("touchmove", handleResize as any)
+    document.addEventListener("mouseup", handleResizeEnd)
+    document.addEventListener("touchend", handleResizeEnd)
+  }
+
+  const handleResize = (e: MouseEvent | TouchEvent) => {
+    if (!isResizing) return
+    const currentY = e instanceof MouseEvent ? e.clientY : e.touches[0].clientY
+    const deltaY = currentY - startYRef.current
+    const newHeight = startHeightRef.current + (deltaY / window.innerHeight) * 100
+    setModalHeight(Math.max(50, Math.min(95, newHeight)))
+  }
+
+  const handleResizeEnd = () => {
+    setIsResizing(false)
+    document.removeEventListener("mousemove", handleResize as any)
+    document.removeEventListener("touchmove", handleResize as any)
+    document.removeEventListener("mouseup", handleResizeEnd)
+    document.removeEventListener("touchend", handleResizeEnd)
   }
 
   return (
@@ -422,7 +384,7 @@ export function ScriptTerminalModal({
             </div>
           </div>
 
-          <div className="overflow-hidden relative" style={{ height: "calc(100% - 120px)" }}>
+          <div className="overflow-hidden relative flex-1">
             <div ref={terminalContainerRef} className="w-full h-full" />
 
             {isWaitingNextInteraction && !currentInteraction && (
@@ -451,10 +413,10 @@ export function ScriptTerminalModal({
             <div className="flex items-center gap-3">
               <Activity className="h-5 w-5 text-blue-500" />
               <div
-                className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
-                title={isConnected ? "Connected" : "Disconnected"}
+                className={`w-2 h-2 rounded-full ${terminal.isConnected ? "bg-green-500" : "bg-red-500"}`}
+                title={terminal.isConnected ? "Connected" : "Disconnected"}
               ></div>
-              <span className="text-xs text-muted-foreground">{isConnected ? "Online" : "Offline"}</span>
+              <span className="text-xs text-muted-foreground">{terminal.isConnected ? "Online" : "Offline"}</span>
             </div>
 
             <Button
