@@ -89,17 +89,31 @@ export function ScriptTerminalModal({
 
   useEffect(() => {
     const container = terminalContainerRef.current
+
+    console.log("[v0] Script modal useEffect triggered:", {
+      open,
+      hasContainer: !!container,
+      hasExistingTerm: !!termRef.current,
+      scriptPath,
+      sessionId: sessionIdRef.current,
+    })
+
     if (!open || !container || termRef.current) {
+      console.log("[v0] Skipping terminal init")
       return
     }
 
+    console.log("[v0] Starting terminal initialization...")
+
     const initializeTerminal = async () => {
+      console.log("[v0] Loading xterm modules...")
       const [TerminalClass, FitAddonClass] = await Promise.all([
         import("xterm").then((mod) => mod.Terminal),
         import("xterm-addon-fit").then((mod) => mod.FitAddon),
         import("xterm/css/xterm.css"),
       ])
 
+      console.log("[v0] Creating terminal instance...")
       const fontSize = window.innerWidth < 768 ? 12 : 16
 
       const term = new TerminalClass({
@@ -139,6 +153,7 @@ export function ScriptTerminalModal({
 
       const fitAddon = new FitAddonClass()
       term.loadAddon(fitAddon)
+      console.log("[v0] Opening terminal in container...")
       term.open(container)
 
       termRef.current = term
@@ -147,16 +162,19 @@ export function ScriptTerminalModal({
       setTimeout(() => {
         try {
           fitAddon.fit()
+          console.log("[v0] Terminal fitted, cols:", term.cols, "rows:", term.rows)
         } catch (err) {
-          // Ignore
+          console.log("[v0] Fit error:", err)
         }
       }, 50)
 
       const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
+      console.log("[v0] Connecting to WebSocket:", wsUrl)
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
 
       ws.onopen = () => {
+        console.log("[v0] WebSocket connected!")
         setIsConnected(true)
 
         const initMessage = {
@@ -167,6 +185,7 @@ export function ScriptTerminalModal({
           },
         }
 
+        console.log("[v0] Sending init message:", initMessage)
         ws.send(JSON.stringify(initMessage))
 
         setTimeout(() => {
@@ -174,6 +193,7 @@ export function ScriptTerminalModal({
             fitAddon.fit()
             const cols = term.cols
             const rows = term.rows
+            console.log("[v0] Sending resize:", { cols, rows })
             ws.send(
               JSON.stringify({
                 type: "resize",
@@ -182,16 +202,18 @@ export function ScriptTerminalModal({
               }),
             )
           } catch (err) {
-            // Ignore
+            console.log("[v0] Resize error:", err)
           }
         }, 100)
       }
 
       ws.onmessage = (event) => {
+        console.log("[v0] WebSocket message received:", event.data.substring(0, 100))
         try {
           const msg = JSON.parse(event.data)
 
           if (msg.type === "web_interaction" && msg.interaction) {
+            console.log("[v0] Web interaction detected:", msg.interaction.type)
             setIsWaitingNextInteraction(false)
             if (waitingTimeoutRef.current) {
               clearTimeout(waitingTimeoutRef.current)
@@ -208,6 +230,7 @@ export function ScriptTerminalModal({
           }
 
           if (msg.type === "error") {
+            console.log("[v0] Error message:", msg.message)
             term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
             return
           }
@@ -224,11 +247,13 @@ export function ScriptTerminalModal({
       }
 
       ws.onerror = (error) => {
+        console.log("[v0] WebSocket error:", error)
         setIsConnected(false)
         term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
       }
 
       ws.onclose = (event) => {
+        console.log("[v0] WebSocket closed:", event.code, event.reason)
         setIsConnected(false)
         term.writeln("\x1b[33mConnection closed\x1b[0m")
 
