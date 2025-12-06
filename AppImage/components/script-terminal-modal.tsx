@@ -45,6 +45,16 @@ export function ScriptTerminalModal({
   const terminalRef = useRef<any>(null)
 
   useEffect(() => {
+    console.log("[v0] currentInteraction changed:", currentInteraction)
+    if (currentInteraction) {
+      console.log("[v0] Interaction opened, type:", currentInteraction.type, "id:", currentInteraction.id)
+    } else {
+      console.log("[v0] Interaction closed/cleared")
+      console.trace("[v0] Stack trace for currentInteraction = null")
+    }
+  }, [currentInteraction])
+
+  useEffect(() => {
     if (open) {
       console.log("[v0] ScriptTerminalModal opened with:", {
         scriptPath,
@@ -70,12 +80,17 @@ export function ScriptTerminalModal({
   const wsUrl = getScriptWebSocketUrl()
 
   const handleWebInteraction = (interaction: WebInteraction) => {
-    console.log("[v0] Received web interaction:", interaction)
+    console.log("[v0] handleWebInteraction called with:", interaction)
     setCurrentInteraction(interaction)
+    console.log("[v0] setCurrentInteraction called with interaction")
   }
 
   const handleInteractionResponse = (value: string) => {
-    if (!terminalRef.current || !currentInteraction) return
+    console.log("[v0] handleInteractionResponse called with value:", value)
+    if (!terminalRef.current || !currentInteraction) {
+      console.log("[v0] Cannot send response - no terminal ref or interaction")
+      return
+    }
 
     const response = JSON.stringify({
       type: "interaction_response",
@@ -89,8 +104,12 @@ export function ScriptTerminalModal({
     const terminal = terminalRef.current
     if (terminal?.terminals?.[0]?.ws) {
       terminal.terminals[0].ws.send(response)
+      console.log("[v0] Response sent successfully")
+    } else {
+      console.log("[v0] Could not send response - no WebSocket available")
     }
 
+    console.log("[v0] Clearing currentInteraction after response")
     setCurrentInteraction(null)
     setInteractionInput("")
   }
@@ -148,11 +167,11 @@ export function ScriptTerminalModal({
           <DialogContent
             className="max-w-4xl max-h-[80vh] overflow-y-auto"
             onInteractOutside={(e) => {
-              // Prevent closing when clicking outside
+              console.log("[v0] onInteractOutside triggered - preventing close")
               e.preventDefault()
             }}
             onEscapeKeyDown={(e) => {
-              // Prevent closing with ESC key
+              console.log("[v0] onEscapeKeyDown triggered - preventing close")
               e.preventDefault()
             }}
           >
