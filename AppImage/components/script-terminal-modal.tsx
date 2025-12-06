@@ -50,6 +50,9 @@ export function ScriptTerminalModal({
   const checkConnectionInterval = useRef<NodeJS.Timeout | null>(null)
   const isMobile = useIsMobile()
 
+  const [isWaitingNextInteraction, setIsWaitingNextInteraction] = useState(false)
+  const waitingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   const [modalHeight, setModalHeight] = useState(80)
   const [isResizing, setIsResizing] = useState(false)
   const startYRef = useRef(0)
@@ -62,6 +65,7 @@ export function ScriptTerminalModal({
       setInteractionInput("")
       setCurrentInteraction(null)
       setIsConnected(false)
+      setIsWaitingNextInteraction(false)
 
       checkConnectionInterval.current = setInterval(() => {
         if (wsRef.current) {
@@ -73,6 +77,9 @@ export function ScriptTerminalModal({
     return () => {
       if (checkConnectionInterval.current) {
         clearInterval(checkConnectionInterval.current)
+      }
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current)
       }
     }
   }, [open])
@@ -135,6 +142,10 @@ export function ScriptTerminalModal({
   }
 
   const handleWebInteraction = (interaction: WebInteraction) => {
+    setIsWaitingNextInteraction(false)
+    if (waitingTimeoutRef.current) {
+      clearTimeout(waitingTimeoutRef.current)
+    }
     setCurrentInteraction(interaction)
   }
 
@@ -162,6 +173,10 @@ export function ScriptTerminalModal({
 
     setCurrentInteraction(null)
     setInteractionInput("")
+
+    waitingTimeoutRef.current = setTimeout(() => {
+      setIsWaitingNextInteraction(true)
+    }, 300)
   }
 
   const handleCloseModal = () => {
@@ -201,7 +216,7 @@ export function ScriptTerminalModal({
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden relative">
             <TerminalPanel
               websocketUrl={wsUrl}
               initMessage={{
@@ -212,6 +227,15 @@ export function ScriptTerminalModal({
               onWebSocketCreated={handleWebSocketCreated}
               isScriptModal={true}
             />
+
+            {isWaitingNextInteraction && !currentInteraction && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                  <p className="text-sm text-muted-foreground">Processing...</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {!isMobile && (

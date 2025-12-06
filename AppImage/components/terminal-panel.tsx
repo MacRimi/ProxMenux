@@ -136,14 +136,14 @@ const proxmoxCommands = [
   { cmd: "clear", desc: "Clear terminal screen" },
 ]
 
-export const TerminalPanel: React.FC<TerminalPanelProps> = ({
+export function TerminalPanel({
   websocketUrl,
   onClose,
   initMessage,
   onWebInteraction,
   onWebSocketCreated,
   isScriptModal = false,
-}) => {
+}: TerminalPanelProps) {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
   const [layout, setLayout] = useState<"single" | "grid">("grid")
@@ -704,7 +704,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
           containerRefs.current["main"] = el
         }}
         className={`overflow-hidden flex flex-col ${isMobile ? "flex-1 h-[60vh]" : "overflow-hidden"} w-full max-w-full`}
-        style={!isMobile || isTablet ? { height: `${terminalHeight}px`, flexShrink: 0 } : undefined}
+        style={
+          isScriptModal
+            ? { height: "100%", flexShrink: 0 }
+            : !isMobile || isTablet
+              ? { height: `${terminalHeight}px`, flexShrink: 0 }
+              : undefined
+        }
       >
         {isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
@@ -754,7 +760,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
                     onClick={() => setActiveTerminalId(terminal.id)}
                     className={`text-xs font-medium ${
                       activeTerminalId === terminal.id ? "text-blue-400" : "text-zinc-500"
-                    }`}
+                    } ${isScriptModal ? "hidden" : ""}`}
                   >
                     {terminal.title}
                   </button>
