@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CheckCircle2, XCircle, Loader2, Activity, GripHorizontal } from "lucide-react"
-import { TerminalPanel } from "./terminal-panel"
 import { API_PORT } from "@/lib/api-config"
 import { useIsMobile } from "@/hooks/use-mobile"
 
@@ -58,6 +57,10 @@ export function ScriptTerminalModal({
   const startYRef = useRef(0)
   const startHeightRef = useRef(80)
 
+  const terminalRef = useRef<any>(null)
+  const terminalContainerRef = useRef<HTMLDivElement>(null)
+  const fitAddonRef = useRef<any>(null)
+
   useEffect(() => {
     if (open) {
       setIsComplete(false)
@@ -81,6 +84,172 @@ export function ScriptTerminalModal({
       if (waitingTimeoutRef.current) {
         clearTimeout(waitingTimeoutRef.current)
       }
+      if (terminalRef.current) {
+        terminalRef.current.dispose()
+        terminalRef.current = null
+      }
+      if (wsRef.current) {
+        wsRef.current.close()
+        wsRef.current = null
+      }
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open || !terminalContainerRef.current || terminalRef.current) {
+      return
+    }
+
+    const initTerminal = async () => {
+      const [TerminalClass, FitAddonClass] = await Promise.all([
+        import("xterm").then((mod) => mod.Terminal),
+        import("xterm-addon-fit").then((mod) => mod.FitAddon),
+        import("xterm/css/xterm.css"),
+      ])
+
+      const fontSize = window.innerWidth < 768 ? 12 : 16
+
+      const term = new TerminalClass({
+        rendererType: "dom",
+        fontFamily: '"Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
+        fontSize: fontSize,
+        lineHeight: 1,
+        cursorBlink: true,
+        scrollback: 2000,
+        disableStdin: false,
+        customGlyphs: true,
+        fontWeight: "500",
+        fontWeightBold: "700",
+        theme: {
+          background: "#000000",
+          foreground: "#ffffff",
+          cursor: "#ffffff",
+          cursorAccent: "#000000",
+          black: "#2e3436",
+          red: "#cc0000",
+          green: "#4e9a06",
+          yellow: "#c4a000",
+          blue: "#3465a4",
+          magenta: "#75507b",
+          cyan: "#06989a",
+          white: "#d3d7cf",
+          brightBlack: "#555753",
+          brightRed: "#ef2929",
+          brightGreen: "#8ae234",
+          brightYellow: "#fce94f",
+          brightBlue: "#729fcf",
+          brightMagenta: "#ad7fa8",
+          brightCyan: "#34e2e2",
+          brightWhite: "#eeeeec",
+        },
+      })
+
+      const fitAddon = new FitAddonClass()
+      term.loadAddon(fitAddon)
+      term.open(terminalContainerRef.current!)
+      fitAddon.fit()
+
+      terminalRef.current = term
+      fitAddonRef.current = fitAddon
+
+      const wsUrl = getScriptWebSocketUrl()
+      const ws = new WebSocket(wsUrl)
+
+      ws.onopen = () => {
+        setIsConnected(true)
+        ws.send(
+          JSON.stringify({
+            script_path: scriptPath,
+            params: params,
+          }),
+        )
+        ws.send(
+          JSON.stringify({
+            type: "resize",
+            cols: term.cols,
+            rows: term.rows,
+          }),
+        )
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data)
+
+          if (msg.type === "interaction") {
+            setIsWaitingNextInteraction(false)
+            if (waitingTimeoutRef.current) {
+              clearTimeout(waitingTimeoutRef.current)
+            }
+            setCurrentInteraction({
+              type: msg.interaction_type,
+              id: msg.id,
+              title: msg.title || "",
+              message: msg.message || "",
+              options: msg.options,
+              default: msg.default,
+            })
+          } else if (msg.type === "complete") {
+            setIsComplete(true)
+            setExitCode(msg.exit_code)
+          }
+        } catch {
+          term.write(event.data)
+          setIsWaitingNextInteraction(false)
+          if (waitingTimeoutRef.current) {
+            clearTimeout(waitingTimeoutRef.current)
+          }
+        }
+      }
+
+      ws.onerror = () => {
+        setIsConnected(false)
+        term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
+      }
+
+      ws.onclose = () => {
+        setIsConnected(false)
+        term.writeln("\x1b[33mConnection closed\x1b[0m")
+      }
+
+      term.onData((data) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(data)
+        }
+      })
+
+      wsRef.current = ws
+    }
+
+    initTerminal()
+  }, [open, scriptPath, params])
+
+  useEffect(() => {
+    if (!terminalContainerRef.current || !terminalRef.current || !fitAddonRef.current) {
+      return
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (fitAddonRef.current && terminalRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+        try {
+          fitAddonRef.current.fit()
+          wsRef.current.send(
+            JSON.stringify({
+              type: "resize",
+              cols: terminalRef.current.cols,
+              rows: terminalRef.current.rows,
+            }),
+          )
+        } catch (err) {
+          console.warn("[ScriptTerminal] resize failed:", err)
+        }
+      }
+    })
+
+    resizeObserver.observe(terminalContainerRef.current)
+
+    return () => {
+      resizeObserver.disconnect()
     }
   }, [open])
 
@@ -134,21 +303,6 @@ export function ScriptTerminalModal({
     return `${wsProtocol}//${hostname}:${API_PORT}/ws/script/${sessionId}`
   }
 
-  const wsUrl = getScriptWebSocketUrl()
-
-  const handleWebSocketCreated = (ws: WebSocket) => {
-    wsRef.current = ws
-    setIsConnected(ws.readyState === WebSocket.OPEN)
-  }
-
-  const handleWebInteraction = (interaction: WebInteraction) => {
-    setIsWaitingNextInteraction(false)
-    if (waitingTimeoutRef.current) {
-      clearTimeout(waitingTimeoutRef.current)
-    }
-    setCurrentInteraction(interaction)
-  }
-
   const handleInteractionResponse = (value: string) => {
     if (!wsRef.current || !currentInteraction) {
       return
@@ -186,22 +340,12 @@ export function ScriptTerminalModal({
     if (checkConnectionInterval.current) {
       clearInterval(checkConnectionInterval.current)
     }
+    if (terminalRef.current) {
+      terminalRef.current.dispose()
+      terminalRef.current = null
+    }
     onClose()
   }
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: "resize" }))
-      }
-    }
-
-    window.addEventListener("resize", handleResize)
-
-    return () => {
-      window.removeEventListener("resize", handleResize)
-    }
-  }, [open])
 
   return (
     <>
@@ -228,22 +372,7 @@ export function ScriptTerminalModal({
           </div>
 
           <div className="flex-1 overflow-hidden relative">
-            <TerminalPanel
-              websocketUrl={wsUrl}
-              initMessage={{
-                script_path: scriptPath,
-                params: params,
-              }}
-              onWebInteraction={handleWebInteraction}
-              onWebSocketCreated={handleWebSocketCreated}
-              onTerminalOutput={() => {
-                setIsWaitingNextInteraction(false)
-                if (waitingTimeoutRef.current) {
-                  clearTimeout(waitingTimeoutRef.current)
-                }
-              }}
-              isScriptModal={true}
-            />
+            <div ref={terminalContainerRef} className="w-full h-full" />
 
             {isWaitingNextInteraction && !currentInteraction && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
