@@ -39,7 +39,8 @@ export function ScriptTerminalModal({
   title,
   description,
 }: ScriptTerminalModalProps) {
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
+  const hasInitializedRef = useRef(false)
   const [isComplete, setIsComplete] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
@@ -63,26 +64,6 @@ export function ScriptTerminalModal({
 
   useEffect(() => {
     if (!open) {
-      return
-    }
-
-    // Generate session ID on client
-    const generateSessionId = () => {
-      return Math.random().toString(36).substring(2, 8)
-    }
-
-    const newSessionId = generateSessionId()
-    console.log("[v0] Generated session ID:", newSessionId)
-
-    setIsComplete(false)
-    setExitCode(null)
-    setInteractionInput("")
-    setCurrentInteraction(null)
-    setIsConnected(false)
-    setIsWaitingNextInteraction(false)
-    setSessionId(newSessionId)
-
-    return () => {
       if (checkConnectionInterval.current) {
         clearInterval(checkConnectionInterval.current)
       }
@@ -97,13 +78,41 @@ export function ScriptTerminalModal({
         wsRef.current.close()
         wsRef.current = null
       }
-    }
-  }, [open, scriptPath, scriptName, params])
-
-  useEffect(() => {
-    if (!open || !sessionId || !terminalContainerRef.current || terminalRef.current) {
+      sessionIdRef.current = null
+      hasInitializedRef.current = false
       return
     }
+
+    if (!sessionIdRef.current) {
+      const generateSessionId = () => {
+        return Math.random().toString(36).substring(2, 8)
+      }
+      sessionIdRef.current = generateSessionId()
+    }
+
+    setIsComplete(false)
+    setExitCode(null)
+    setInteractionInput("")
+    setCurrentInteraction(null)
+    setIsConnected(false)
+    setIsWaitingNextInteraction(false)
+
+    return () => {
+      if (checkConnectionInterval.current) {
+        clearInterval(checkConnectionInterval.current)
+      }
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current)
+      }
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open || !sessionIdRef.current || !terminalContainerRef.current || hasInitializedRef.current) {
+      return
+    }
+
+    hasInitializedRef.current = true
 
     const initTerminal = async () => {
       const [TerminalClass, FitAddonClass] = await Promise.all([
@@ -164,15 +173,12 @@ export function ScriptTerminalModal({
       terminalRef.current = term
       fitAddonRef.current = fitAddon
 
-      const wsUrl = getScriptWebSocketUrl(sessionId)
-      console.log("[v0] Connecting to WebSocket:", wsUrl)
+      const wsUrl = getScriptWebSocketUrl(sessionIdRef.current!)
       const ws = new WebSocket(wsUrl)
 
       ws.onopen = () => {
-        console.log("[v0] WebSocket connected, sending init data...")
         setIsConnected(true)
 
-        // Send initial script data to start execution
         const initData = {
           script_path: scriptPath,
           params: {
@@ -181,12 +187,11 @@ export function ScriptTerminalModal({
           },
         }
 
-        console.log("[v0] Sending init data:", initData)
         ws.send(JSON.stringify(initData))
 
-        // Send terminal size
         setTimeout(() => {
           try {
+            fitAddon.fit()
             ws.send(
               JSON.stringify({
                 type: "resize",
@@ -201,12 +206,10 @@ export function ScriptTerminalModal({
       }
 
       ws.onmessage = (event) => {
-        // Try to parse as JSON for web interactions
         try {
           const msg = JSON.parse(event.data)
 
           if (msg.type === "web_interaction") {
-            console.log("[v0] Received web interaction:", msg.interaction)
             setIsWaitingNextInteraction(false)
             if (waitingTimeoutRef.current) {
               clearTimeout(waitingTimeoutRef.current)
@@ -223,7 +226,6 @@ export function ScriptTerminalModal({
             term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
           }
         } catch {
-          // Not JSON, write as raw terminal output
           term.write(event.data)
           setIsWaitingNextInteraction(false)
           if (waitingTimeoutRef.current) {
@@ -239,11 +241,9 @@ export function ScriptTerminalModal({
       }
 
       ws.onclose = (event) => {
-        console.log("[v0] WebSocket closed:", event.code, event.reason)
         setIsConnected(false)
         term.writeln("\x1b[33mConnection closed\x1b[0m")
 
-        // Mark as complete when connection closes
         if (!isComplete) {
           setIsComplete(true)
           setExitCode(event.code === 1000 ? 0 : 1)
@@ -266,7 +266,7 @@ export function ScriptTerminalModal({
     }
 
     initTerminal()
-  }, [open, sessionId, scriptPath, params])
+  }, [open, scriptPath])
 
   useEffect(() => {
     if (!terminalContainerRef.current || !terminalRef.current || !fitAddonRef.current) {
@@ -309,7 +309,7 @@ export function ScriptTerminalModal({
       }
       resizeObserver.disconnect()
     }
-  }, [open, sessionId])
+  }, [open])
 
   const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
     if (isMobile) return
