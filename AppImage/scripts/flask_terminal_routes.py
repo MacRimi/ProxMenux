@@ -240,11 +240,10 @@ def terminal_websocket(ws):
 def script_websocket(ws, session_id):
     """WebSocket endpoint for executing scripts with hybrid web mode"""
     
-    # Receive initial script execution request
     try:
-        init_data = ws.receive(timeout=5)
+        init_data = ws.receive(timeout=10)
         if not init_data:
-            ws.send(json.dumps({'type': 'error', 'message': 'No script data received'}))
+            ws.send('{"type": "error", "message": "No script data received"}\r\n')
             return
             
         script_data = json.loads(init_data)
@@ -252,11 +251,11 @@ def script_websocket(ws, session_id):
         params = script_data.get('params', {})
         
         if not script_path:
-            ws.send(json.dumps({'type': 'error', 'message': 'No script_path provided'}))
+            ws.send('{"type": "error", "message": "No script_path provided"}\r\n')
             return
             
     except Exception as e:
-        ws.send(json.dumps({'type': 'error', 'message': f'Invalid init data: {str(e)}'}))
+        ws.send(f'{{"type": "error", "message": "Invalid init data: {str(e)}"}}\r\n')
         return
     
     # Create pseudo-terminal for script execution
@@ -286,7 +285,6 @@ def script_websocket(ws, session_id):
     
     # Thread to read script output and forward to WebSocket
     def read_script_output():
-        buffer = ""
         while True:
             try:
                 r, _, _ = select.select([master_fd], [], [], 0.01)
@@ -297,49 +295,27 @@ def script_websocket(ws, session_id):
                             break
                         
                         text = data.decode('utf-8', errors='ignore')
-                        buffer += text
                         
-                        # Process line by line to detect WEB_INTERACTION
-                        lines = buffer.split('\n')
-                        buffer = lines[-1]  # Keep incomplete line in buffer
-                        
-                        for line in lines[:-1]:
-                            # Detect WEB_INTERACTION lines
-                            if line.strip().startswith('WEB_INTERACTION:'):
-                                # Parse interaction: WEB_INTERACTION:type:id:title_b64:text_b64:data_b64
-                                try:
-                                    parts = line.strip().split(':', 6)
-                                    if len(parts) >= 5:
-                                        interaction = {
-                                            'type': 'interaction',
-                                            'interaction_type': parts[1],
-                                            'interaction_id': parts[2],
-                                            'title': parts[3],
-                                            'text': parts[4],
-                                            'data': parts[5] if len(parts) > 5 else ''
-                                        }
-                                        ws.send(json.dumps(interaction))
-                                        continue
-                                except Exception as e:
-                                    print(f"Error parsing WEB_INTERACTION: {e}")
+                        # Send raw text to terminal (TerminalPanel expects plain text)
+                        try:
+                            ws.send(text)
+                        except Exception:
+                            break
                             
-                            # Regular output line
-                            ws.send(json.dumps({
-                                'type': 'output',
-                                'data': line + '\n'
-                            }))
                     except OSError:
                         break
             except Exception as e:
                 print(f"Error reading script output: {e}")
                 break
         
-        # Send completion message
-        exit_code = script_process.poll()
-        ws.send(json.dumps({
-            'type': 'exit',
-            'code': exit_code if exit_code is not None else 0
-        }))
+        script_process.wait()
+        exit_code = script_process.returncode if script_process.returncode is not None else 0
+        
+        # Only send exit message if WebSocket is still open
+        try:
+            ws.send(f'\r\n[Script exited with code {exit_code}]\r\n')
+        except Exception:
+            pass
     
     output_thread = threading.Thread(target=read_script_output, daemon=True)
     output_thread.start()
@@ -361,24 +337,20 @@ def script_websocket(ws, session_id):
                     rows = int(msg.get('rows', 30))
                     set_winsize(master_fd, rows, cols)
                     continue
-                
-                # Handle interaction response
-                if msg.get('type') == 'response':
-                    response_value = msg.get('value', '')
-                    # Write response to script's stdin
-                    os.write(master_fd, (str(response_value) + '\n').encode('utf-8'))
-                    continue
                     
             except json.JSONDecodeError:
                 # Raw text input, send to script
-                os.write(master_fd, data.encode('utf-8'))
+                try:
+                    os.write(master_fd, data.encode('utf-8'))
+                except OSError:
+                    break
             
             # Check if process is still alive
             if script_process.poll() is not None:
                 break
                 
     except Exception as e:
-        print(f"Script session error: {e}")
+        print(f"Script session error: Connection closed: {e}")
     finally:
         # Cleanup
         try:
