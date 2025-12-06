@@ -92,7 +92,7 @@ export function ScriptTerminalModal({
 
     const handleResizeMove = (e: MouseEvent | TouchEvent) => {
       const currentY = "touches" in e ? e.touches[0].clientY : e.clientY
-      const deltaY = startYRef.current - currentY
+      const deltaY = currentY - startYRef.current
       const viewportHeight = window.innerHeight
       const deltaVh = (deltaY / viewportHeight) * 100
 
@@ -266,13 +266,6 @@ export function ScriptTerminalModal({
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     Yes
-                  </Button>
-                  <Button
-                    onClick={() => handleInteractionResponse("no")}
-                    variant="outline"
-                    className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600"
-                  >
-                    No
                   </Button>
                   <Button
                     onClick={() => handleInteractionResponse("cancel")}
