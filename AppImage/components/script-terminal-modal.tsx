@@ -215,15 +215,12 @@ export function ScriptTerminalModal({
           <DialogTitle className="sr-only">{title}</DialogTitle>
 
           <div className="flex items-center gap-2 p-4 border-b">
-            {isComplete ? (
-              exitCode === 0 ? (
+            {isComplete &&
+              (exitCode === 0 ? (
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
               ) : (
                 <XCircle className="h-5 w-5 text-red-500" />
-              )
-            ) : (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            )}
+              ))}
             <div>
               <h2 className="text-lg font-semibold">{title}</h2>
               {description && <p className="text-sm text-muted-foreground">{description}</p>}
