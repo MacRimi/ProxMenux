@@ -59,8 +59,34 @@ export function ScriptTerminalModal({
   const startHeightRef = useRef(80)
 
   const terminalRef = useRef<any>(null)
-  const terminalContainerRef = useRef<HTMLDivElement>(null)
   const fitAddonRef = useRef<any>(null)
+
+  const terminalContainerRef = useRef<((node: HTMLDivElement | null) => void) | null>(null)
+
+  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsResizing(true)
+    startYRef.current = e.clientY || e.touches[0].clientY
+    startHeightRef.current = modalHeight
+    document.addEventListener("mousemove", handleResize)
+    document.addEventListener("touchmove", handleResize)
+    document.addEventListener("mouseup", handleResizeEnd)
+    document.addEventListener("touchend", handleResizeEnd)
+  }
+
+  const handleResize = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isResizing) return
+    const currentY = e.clientY || e.touches[0].clientY
+    const newHeight = startHeightRef.current + (currentY - startYRef.current)
+    setModalHeight(Math.max(20, Math.min(80, newHeight)))
+  }
+
+  const handleResizeEnd = () => {
+    setIsResizing(false)
+    document.removeEventListener("mousemove", handleResize)
+    document.removeEventListener("touchmove", handleResize)
+    document.removeEventListener("mouseup", handleResizeEnd)
+    document.removeEventListener("touchend", handleResizeEnd)
+  }
 
   useEffect(() => {
     if (!open) {
@@ -91,17 +117,12 @@ export function ScriptTerminalModal({
     }
   }, [open])
 
-  useEffect(() => {
-    if (!open || !terminalContainerRef.current || hasInitializedRef.current) {
-      console.log("[v0] Skipping init:", {
-        open,
-        hasContainer: !!terminalContainerRef.current,
-        hasInitialized: hasInitializedRef.current,
-      })
+  const handleTerminalContainerRef = (node: HTMLDivElement | null) => {
+    if (!node || !open || hasInitializedRef.current) {
       return
     }
 
-    console.log("[v0] Starting terminal initialization")
+    console.log("[v0] Terminal container mounted, starting initialization")
     hasInitializedRef.current = true
 
     // Generate session ID once
@@ -158,7 +179,7 @@ export function ScriptTerminalModal({
 
       const fitAddon = new FitAddonClass()
       term.loadAddon(fitAddon)
-      term.open(terminalContainerRef.current!)
+      term.open(node)
       console.log("[v0] Terminal opened in container")
 
       setTimeout(() => {
@@ -287,93 +308,41 @@ export function ScriptTerminalModal({
           setIsConnected(ws.readyState === WebSocket.OPEN)
         }
       }, 500)
+
+      // Setup ResizeObserver for the terminal container
+      let resizeTimeout: NodeJS.Timeout | null = null
+
+      const resizeObserver = new ResizeObserver(() => {
+        if (resizeTimeout) {
+          clearTimeout(resizeTimeout)
+        }
+
+        resizeTimeout = setTimeout(() => {
+          if (fitAddon && term && ws?.readyState === WebSocket.OPEN) {
+            try {
+              fitAddon.fit()
+              const cols = term.cols
+              const rows = term.rows
+              console.log("[v0] Terminal resized to:", cols, "x", rows)
+              ws.send(
+                JSON.stringify({
+                  type: "resize",
+                  cols: cols,
+                  rows: rows,
+                }),
+              )
+            } catch (err) {
+              console.warn("[v0] Resize failed:", err)
+            }
+          }
+        }, 100)
+      })
+
+      resizeObserver.observe(node)
     }
 
     initTerminal()
-  }, [open]) // Only depend on open, not scriptPath or params
-
-  useEffect(() => {
-    if (!terminalContainerRef.current || !terminalRef.current || !fitAddonRef.current) {
-      return
-    }
-
-    let resizeTimeout: NodeJS.Timeout | null = null
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (resizeTimeout) {
-        clearTimeout(resizeTimeout)
-      }
-
-      resizeTimeout = setTimeout(() => {
-        if (fitAddonRef.current && terminalRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
-          try {
-            fitAddonRef.current.fit()
-            const cols = terminalRef.current.cols
-            const rows = terminalRef.current.rows
-            console.log("[v0] Terminal resized to:", cols, "x", rows)
-            wsRef.current.send(
-              JSON.stringify({
-                type: "resize",
-                cols: cols,
-                rows: rows,
-              }),
-            )
-          } catch (err) {
-            console.warn("[v0] Resize failed:", err)
-          }
-        }
-      }, 100)
-    })
-
-    resizeObserver.observe(terminalContainerRef.current)
-
-    return () => {
-      if (resizeTimeout) {
-        clearTimeout(resizeTimeout)
-      }
-      resizeObserver.disconnect()
-    }
-  }, [open])
-
-  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
-    if (isMobile) return
-
-    setIsResizing(true)
-    startYRef.current = "touches" in e ? e.touches[0].clientY : e.clientY
-    startHeightRef.current = modalHeight
-
-    e.preventDefault()
   }
-
-  const handleResizeMove = (e: MouseEvent | TouchEvent) => {
-    const currentY = "touches" in e ? e.touches[0].clientY : e.clientY
-    const deltaY = currentY - startYRef.current
-    const viewportHeight = window.innerHeight
-    const deltaVh = (deltaY / viewportHeight) * 100
-
-    const newHeight = Math.min(Math.max(startHeightRef.current + deltaVh, 50), 95)
-    setModalHeight(newHeight)
-  }
-
-  const handleResizeEnd = () => {
-    setIsResizing(false)
-  }
-
-  useEffect(() => {
-    if (!isResizing) return
-
-    document.addEventListener("mousemove", handleResizeMove)
-    document.addEventListener("mouseup", handleResizeEnd)
-    document.addEventListener("touchmove", handleResizeMove)
-    document.addEventListener("touchend", handleResizeEnd)
-
-    return () => {
-      document.removeEventListener("mousemove", handleResizeMove)
-      document.removeEventListener("mouseup", handleResizeEnd)
-      document.removeEventListener("touchmove", handleResizeMove)
-      document.removeEventListener("touchend", handleResizeEnd)
-    }
-  }, [isResizing])
 
   const getScriptWebSocketUrl = (sid: string): string => {
     if (typeof window === "undefined") {
