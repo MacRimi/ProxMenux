@@ -64,6 +64,7 @@ export function ScriptTerminalModal({
 
   useEffect(() => {
     if (!open) {
+      // Cleanup
       if (checkConnectionInterval.current) {
         clearInterval(checkConnectionInterval.current)
       }
@@ -78,41 +79,29 @@ export function ScriptTerminalModal({
         wsRef.current.close()
         wsRef.current = null
       }
+      // Reset for next open
       sessionIdRef.current = null
       hasInitializedRef.current = false
-      return
-    }
-
-    if (!sessionIdRef.current) {
-      const generateSessionId = () => {
-        return Math.random().toString(36).substring(2, 8)
-      }
-      sessionIdRef.current = generateSessionId()
-    }
-
-    setIsComplete(false)
-    setExitCode(null)
-    setInteractionInput("")
-    setCurrentInteraction(null)
-    setIsConnected(false)
-    setIsWaitingNextInteraction(false)
-
-    return () => {
-      if (checkConnectionInterval.current) {
-        clearInterval(checkConnectionInterval.current)
-      }
-      if (waitingTimeoutRef.current) {
-        clearTimeout(waitingTimeoutRef.current)
-      }
+      setIsComplete(false)
+      setExitCode(null)
+      setInteractionInput("")
+      setCurrentInteraction(null)
+      setIsConnected(false)
+      setIsWaitingNextInteraction(false)
     }
   }, [open])
 
   useEffect(() => {
-    if (!open || !sessionIdRef.current || !terminalContainerRef.current || hasInitializedRef.current) {
+    if (!open || !terminalContainerRef.current || hasInitializedRef.current) {
       return
     }
 
     hasInitializedRef.current = true
+
+    // Generate session ID once
+    if (!sessionIdRef.current) {
+      sessionIdRef.current = Math.random().toString(36).substring(2, 8)
+    }
 
     const initTerminal = async () => {
       const [TerminalClass, FitAddonClass] = await Promise.all([
@@ -166,7 +155,7 @@ export function ScriptTerminalModal({
         try {
           fitAddon.fit()
         } catch (err) {
-          console.warn("[v0] Initial fit failed:", err)
+          // Silent fail on initial fit
         }
       }, 50)
 
@@ -179,7 +168,7 @@ export function ScriptTerminalModal({
       ws.onopen = () => {
         setIsConnected(true)
 
-        const initData = {
+        const initMessage = {
           script_path: scriptPath,
           params: {
             EXECUTION_MODE: "web",
@@ -187,8 +176,9 @@ export function ScriptTerminalModal({
           },
         }
 
-        ws.send(JSON.stringify(initData))
+        ws.send(JSON.stringify(initMessage))
 
+        // Fit and resize after connection
         setTimeout(() => {
           try {
             fitAddon.fit()
@@ -200,7 +190,7 @@ export function ScriptTerminalModal({
               }),
             )
           } catch (err) {
-            console.warn("[v0] Failed to send resize:", err)
+            // Silent fail
           }
         }, 100)
       }
@@ -209,7 +199,8 @@ export function ScriptTerminalModal({
         try {
           const msg = JSON.parse(event.data)
 
-          if (msg.type === "web_interaction") {
+          // Detect web interactions
+          if (msg.type === "web_interaction" && msg.interaction) {
             setIsWaitingNextInteraction(false)
             if (waitingTimeoutRef.current) {
               clearTimeout(waitingTimeoutRef.current)
@@ -222,20 +213,28 @@ export function ScriptTerminalModal({
               options: msg.interaction.options,
               default: msg.interaction.default,
             })
-          } else if (msg.type === "error") {
+            return // Don't write JSON to terminal
+          }
+
+          if (msg.type === "error") {
             term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
+            return
           }
         } catch {
-          term.write(event.data)
-          setIsWaitingNextInteraction(false)
-          if (waitingTimeoutRef.current) {
-            clearTimeout(waitingTimeoutRef.current)
-          }
+          // Not JSON, it's regular terminal output
+        }
+
+        // Write regular output to terminal
+        term.write(event.data)
+
+        // Hide spinner when output arrives
+        setIsWaitingNextInteraction(false)
+        if (waitingTimeoutRef.current) {
+          clearTimeout(waitingTimeoutRef.current)
         }
       }
 
       ws.onerror = (error) => {
-        console.error("[v0] WebSocket error:", error)
         setIsConnected(false)
         term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
       }
@@ -258,6 +257,7 @@ export function ScriptTerminalModal({
 
       wsRef.current = ws
 
+      // Monitor connection status
       checkConnectionInterval.current = setInterval(() => {
         if (ws) {
           setIsConnected(ws.readyState === WebSocket.OPEN)
@@ -266,7 +266,7 @@ export function ScriptTerminalModal({
     }
 
     initTerminal()
-  }, [open, scriptPath])
+  }, [open]) // Only depend on open, not scriptPath or params
 
   useEffect(() => {
     if (!terminalContainerRef.current || !terminalRef.current || !fitAddonRef.current) {
