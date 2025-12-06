@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CheckCircle2, XCircle, Loader2, Activity, GripHorizontal } from "lucide-react"
-import { API_PORT } from "@/lib/api-config"
+import { fetchApi, API_PORT } from "@/lib/api-config"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 interface WebInteraction {
@@ -39,7 +39,7 @@ export function ScriptTerminalModal({
   title,
   description,
 }: ScriptTerminalModalProps) {
-  const [sessionId] = useState(() => Math.random().toString(36).substring(7))
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const [isComplete, setIsComplete] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
@@ -62,20 +62,45 @@ export function ScriptTerminalModal({
   const fitAddonRef = useRef<any>(null)
 
   useEffect(() => {
-    if (open) {
-      setIsComplete(false)
-      setExitCode(null)
-      setInteractionInput("")
-      setCurrentInteraction(null)
-      setIsConnected(false)
-      setIsWaitingNextInteraction(false)
-
-      checkConnectionInterval.current = setInterval(() => {
-        if (wsRef.current) {
-          setIsConnected(wsRef.current.readyState === WebSocket.OPEN)
-        }
-      }, 500)
+    if (!open) {
+      return
     }
+
+    const executeScript = async () => {
+      try {
+        console.log("[v0] Executing script:", scriptPath)
+        const response = await fetchApi<{ success: boolean; session_id: string }>("/api/scripts/execute", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            script_name: scriptName,
+            script_relative_path: scriptPath,
+            params: params,
+          }),
+        })
+
+        if (response.success && response.session_id) {
+          console.log("[v0] Script started with session:", response.session_id)
+          setSessionId(response.session_id)
+        } else {
+          console.error("[v0] Failed to start script")
+        }
+      } catch (error) {
+        console.error("[v0] Error executing script:", error)
+      }
+    }
+
+    setIsComplete(false)
+    setExitCode(null)
+    setInteractionInput("")
+    setCurrentInteraction(null)
+    setIsConnected(false)
+    setIsWaitingNextInteraction(false)
+    setSessionId(null)
+
+    executeScript()
 
     return () => {
       if (checkConnectionInterval.current) {
@@ -93,10 +118,10 @@ export function ScriptTerminalModal({
         wsRef.current = null
       }
     }
-  }, [open])
+  }, [open, scriptPath, scriptName, params])
 
   useEffect(() => {
-    if (!open || !terminalContainerRef.current || terminalRef.current) {
+    if (!open || !sessionId || !terminalContainerRef.current || terminalRef.current) {
       return
     }
 
@@ -147,29 +172,36 @@ export function ScriptTerminalModal({
       const fitAddon = new FitAddonClass()
       term.loadAddon(fitAddon)
       term.open(terminalContainerRef.current!)
-      fitAddon.fit()
+
+      setTimeout(() => {
+        try {
+          fitAddon.fit()
+        } catch (err) {
+          console.warn("[v0] Initial fit failed:", err)
+        }
+      }, 50)
 
       terminalRef.current = term
       fitAddonRef.current = fitAddon
 
-      const wsUrl = getScriptWebSocketUrl()
+      const wsUrl = getScriptWebSocketUrl(sessionId)
+      console.log("[v0] Connecting to WebSocket:", wsUrl)
       const ws = new WebSocket(wsUrl)
 
       ws.onopen = () => {
+        console.log("[v0] WebSocket connected")
         setIsConnected(true)
-        ws.send(
-          JSON.stringify({
-            script_path: scriptPath,
-            params: params,
-          }),
-        )
-        ws.send(
-          JSON.stringify({
-            type: "resize",
-            cols: term.cols,
-            rows: term.rows,
-          }),
-        )
+        try {
+          ws.send(
+            JSON.stringify({
+              type: "resize",
+              cols: term.cols,
+              rows: term.rows,
+            }),
+          )
+        } catch (err) {
+          console.warn("[v0] Failed to send initial resize:", err)
+        }
       }
 
       ws.onmessage = (event) => {
@@ -219,39 +251,59 @@ export function ScriptTerminalModal({
       })
 
       wsRef.current = ws
+
+      checkConnectionInterval.current = setInterval(() => {
+        if (ws) {
+          setIsConnected(ws.readyState === WebSocket.OPEN)
+        }
+      }, 500)
     }
 
     initTerminal()
-  }, [open, scriptPath, params])
+  }, [open, sessionId])
 
   useEffect(() => {
     if (!terminalContainerRef.current || !terminalRef.current || !fitAddonRef.current) {
       return
     }
 
+    let resizeTimeout: NodeJS.Timeout | null = null
+
     const resizeObserver = new ResizeObserver(() => {
-      if (fitAddonRef.current && terminalRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
-        try {
-          fitAddonRef.current.fit()
-          wsRef.current.send(
-            JSON.stringify({
-              type: "resize",
-              cols: terminalRef.current.cols,
-              rows: terminalRef.current.rows,
-            }),
-          )
-        } catch (err) {
-          console.warn("[ScriptTerminal] resize failed:", err)
-        }
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout)
       }
+
+      resizeTimeout = setTimeout(() => {
+        if (fitAddonRef.current && terminalRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+          try {
+            fitAddonRef.current.fit()
+            const cols = terminalRef.current.cols
+            const rows = terminalRef.current.rows
+            console.log("[v0] Terminal resized to:", cols, "x", rows)
+            wsRef.current.send(
+              JSON.stringify({
+                type: "resize",
+                cols: cols,
+                rows: rows,
+              }),
+            )
+          } catch (err) {
+            console.warn("[v0] Resize failed:", err)
+          }
+        }
+      }, 100)
     })
 
     resizeObserver.observe(terminalContainerRef.current)
 
     return () => {
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout)
+      }
       resizeObserver.disconnect()
     }
-  }, [open])
+  }, [open, sessionId])
 
   const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
     if (isMobile) return
@@ -263,22 +315,22 @@ export function ScriptTerminalModal({
     e.preventDefault()
   }
 
+  const handleResizeMove = (e: MouseEvent | TouchEvent) => {
+    const currentY = "touches" in e ? e.touches[0].clientY : e.clientY
+    const deltaY = currentY - startYRef.current
+    const viewportHeight = window.innerHeight
+    const deltaVh = (deltaY / viewportHeight) * 100
+
+    const newHeight = Math.min(Math.max(startHeightRef.current + deltaVh, 50), 95)
+    setModalHeight(newHeight)
+  }
+
+  const handleResizeEnd = () => {
+    setIsResizing(false)
+  }
+
   useEffect(() => {
     if (!isResizing) return
-
-    const handleResizeMove = (e: MouseEvent | TouchEvent) => {
-      const currentY = "touches" in e ? e.touches[0].clientY : e.clientY
-      const deltaY = currentY - startYRef.current
-      const viewportHeight = window.innerHeight
-      const deltaVh = (deltaY / viewportHeight) * 100
-
-      const newHeight = Math.min(Math.max(startHeightRef.current + deltaVh, 50), 95)
-      setModalHeight(newHeight)
-    }
-
-    const handleResizeEnd = () => {
-      setIsResizing(false)
-    }
 
     document.addEventListener("mousemove", handleResizeMove)
     document.addEventListener("mouseup", handleResizeEnd)
@@ -293,14 +345,14 @@ export function ScriptTerminalModal({
     }
   }, [isResizing])
 
-  const getScriptWebSocketUrl = (): string => {
+  const getScriptWebSocketUrl = (sid: string): string => {
     if (typeof window === "undefined") {
-      return `ws://localhost:${API_PORT}/ws/script/${sessionId}`
+      return `ws://localhost:${API_PORT}/ws/script/${sid}`
     }
 
     const { hostname, protocol } = window.location
     const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
-    return `${wsProtocol}//${hostname}:${API_PORT}/ws/script/${sessionId}`
+    return `${wsProtocol}//${hostname}:${API_PORT}/ws/script/${sid}`
   }
 
   const handleInteractionResponse = (value: string) => {
@@ -371,7 +423,7 @@ export function ScriptTerminalModal({
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden relative">
+          <div className="overflow-hidden relative" style={{ height: "calc(100% - 120px)" }}>
             <div ref={terminalContainerRef} className="w-full h-full" />
 
             {isWaitingNextInteraction && !currentInteraction && (

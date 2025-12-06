@@ -26,10 +26,6 @@ import type { CheatSheetResult } from "@/lib/cheat-sheet-result" // Declare Chea
 type TerminalPanelProps = {
   websocketUrl?: string
   onClose?: () => void
-  initMessage?: Record<string, any>
-  onWebInteraction?: (interaction: any) => void
-  onWebSocketCreated?: (ws: WebSocket) => void
-  isScriptModal?: boolean
 }
 
 interface TerminalInstance {
@@ -136,14 +132,7 @@ const proxmoxCommands = [
   { cmd: "clear", desc: "Clear terminal screen" },
 ]
 
-export const TerminalPanel: React.FC<TerminalPanelProps> = ({
-  websocketUrl,
-  onClose,
-  initMessage,
-  onWebInteraction,
-  onWebSocketCreated,
-  isScriptModal = false,
-}) => {
+export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
   const [layout, setLayout] = useState<"single" | "grid">("grid")
@@ -248,6 +237,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
           throw new Error("No examples found")
         }
 
+        console.log("[v0] Received parsed examples from server:", data.examples.length)
+
         const formattedResults: CheatSheetResult[] = data.examples.map((example: any) => ({
           command: example.command,
           description: example.description || "",
@@ -257,6 +248,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         setUseOnline(true)
         setSearchResults(formattedResults)
       } catch (error) {
+        console.log("[v0] Error fetching from cheat.sh proxy, using offline commands:", error)
         const filtered = proxmoxCommands.filter(
           (item) =>
             item.cmd.toLowerCase().includes(query.toLowerCase()) ||
@@ -435,35 +427,16 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       setTerminals((prev) =>
         prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: true, term, ws, fitAddon } : t)),
       )
-
-      if (onWebSocketCreated) {
-        onWebSocketCreated(ws)
-      }
-
-      if (initMessage) {
-        ws.send(JSON.stringify(initMessage))
-      } else {
-        term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
-      }
-
+      term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
       syncSizeWithBackend()
     }
 
     ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (data.type === "web_interaction" && data.interaction && onWebInteraction) {
-          onWebInteraction(data.interaction)
-          return // Don't write to terminal
-        }
-      } catch (e) {
-        // Not JSON, it's regular terminal output
-      }
-
       term.write(event.data)
     }
 
-    ws.onerror = () => {
+    ws.onerror = (error) => {
+      console.error("[v0] TerminalPanel: WebSocket error:", error)
       setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: false } : t)))
       term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
     }
@@ -674,12 +647,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         </div>
       </div>
 
-      {isScriptModal && (
-        <div className="sr-only" data-connection-status={activeTerminal?.isConnected ? "connected" : "disconnected"}>
-          Connection Status
-        </div>
-      )}
-
       <div
         data-terminal-container
         ref={(el) => {
@@ -688,14 +655,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         className={`overflow-hidden flex flex-col ${isMobile ? "flex-1 h-[60vh]" : "overflow-hidden"} w-full max-w-full`}
         style={!isMobile || isTablet ? { height: `${terminalHeight}px`, flexShrink: 0 } : undefined}
       >
-        {isScriptModal ? (
-          // In script modal: render terminal container directly without tabs
-          <div
-            ref={(el) => (containerRefs.current[activeTerminalId] = el)}
-            className="w-full h-full flex-1 bg-black overflow-hidden"
-          />
-        ) : // Normal terminal page: show tabs/grid as usual
-        isMobile ? (
+        {isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
             <TabsList className="w-full justify-start bg-zinc-900 rounded-none border-b border-zinc-800 overflow-x-auto">
               {terminals.map((terminal) => (
