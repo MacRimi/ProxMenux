@@ -93,23 +93,32 @@ export function ScriptTerminalModal({
 
   useEffect(() => {
     if (!open || !terminalContainerRef.current || hasInitializedRef.current) {
+      console.log("[v0] Skipping init:", {
+        open,
+        hasContainer: !!terminalContainerRef.current,
+        hasInitialized: hasInitializedRef.current,
+      })
       return
     }
 
+    console.log("[v0] Starting terminal initialization")
     hasInitializedRef.current = true
 
     // Generate session ID once
     if (!sessionIdRef.current) {
       sessionIdRef.current = Math.random().toString(36).substring(2, 8)
+      console.log("[v0] Generated session ID:", sessionIdRef.current)
     }
 
     const initTerminal = async () => {
+      console.log("[v0] Loading xterm modules...")
       const [TerminalClass, FitAddonClass] = await Promise.all([
         import("xterm").then((mod) => mod.Terminal),
         import("xterm-addon-fit").then((mod) => mod.FitAddon),
         import("xterm/css/xterm.css"),
       ])
 
+      console.log("[v0] Creating terminal instance...")
       const fontSize = window.innerWidth < 768 ? 12 : 16
 
       const term = new TerminalClass({
@@ -150,12 +159,14 @@ export function ScriptTerminalModal({
       const fitAddon = new FitAddonClass()
       term.loadAddon(fitAddon)
       term.open(terminalContainerRef.current!)
+      console.log("[v0] Terminal opened in container")
 
       setTimeout(() => {
         try {
           fitAddon.fit()
+          console.log("[v0] Initial fit completed")
         } catch (err) {
-          // Silent fail on initial fit
+          console.error("[v0] Initial fit failed:", err)
         }
       }, 50)
 
@@ -163,9 +174,11 @@ export function ScriptTerminalModal({
       fitAddonRef.current = fitAddon
 
       const wsUrl = getScriptWebSocketUrl(sessionIdRef.current!)
+      console.log("[v0] Connecting to WebSocket:", wsUrl)
       const ws = new WebSocket(wsUrl)
 
       ws.onopen = () => {
+        console.log("[v0] WebSocket connected!")
         setIsConnected(true)
 
         const initMessage = {
@@ -176,31 +189,37 @@ export function ScriptTerminalModal({
           },
         }
 
+        console.log("[v0] Sending init message:", initMessage)
         ws.send(JSON.stringify(initMessage))
 
         // Fit and resize after connection
         setTimeout(() => {
           try {
             fitAddon.fit()
+            const cols = term.cols
+            const rows = term.rows
+            console.log("[v0] Sending resize:", { cols, rows })
             ws.send(
               JSON.stringify({
                 type: "resize",
-                cols: term.cols,
-                rows: term.rows,
+                cols: cols,
+                rows: rows,
               }),
             )
           } catch (err) {
-            // Silent fail
+            console.error("[v0] Resize after connect failed:", err)
           }
         }, 100)
       }
 
       ws.onmessage = (event) => {
+        console.log("[v0] Received message:", event.data)
         try {
           const msg = JSON.parse(event.data)
 
           // Detect web interactions
           if (msg.type === "web_interaction" && msg.interaction) {
+            console.log("[v0] Web interaction detected:", msg.interaction)
             setIsWaitingNextInteraction(false)
             if (waitingTimeoutRef.current) {
               clearTimeout(waitingTimeoutRef.current)
@@ -217,11 +236,13 @@ export function ScriptTerminalModal({
           }
 
           if (msg.type === "error") {
+            console.error("[v0] Error message:", msg.message)
             term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
             return
           }
         } catch {
           // Not JSON, it's regular terminal output
+          console.log("[v0] Regular terminal output received")
         }
 
         // Write regular output to terminal
@@ -235,11 +256,13 @@ export function ScriptTerminalModal({
       }
 
       ws.onerror = (error) => {
+        console.error("[v0] WebSocket error:", error)
         setIsConnected(false)
         term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
       }
 
       ws.onclose = (event) => {
+        console.log("[v0] WebSocket closed:", event.code, event.reason)
         setIsConnected(false)
         term.writeln("\x1b[33mConnection closed\x1b[0m")
 
@@ -251,6 +274,7 @@ export function ScriptTerminalModal({
 
       term.onData((data) => {
         if (ws.readyState === WebSocket.OPEN) {
+          console.log("[v0] Sending user input to WebSocket")
           ws.send(data)
         }
       })
