@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CheckCircle2, XCircle, Loader2, Activity, GripHorizontal } from "lucide-react"
-import { fetchApi, API_PORT } from "@/lib/api-config"
+import { API_PORT } from "@/lib/api-config"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 interface WebInteraction {
@@ -66,31 +66,13 @@ export function ScriptTerminalModal({
       return
     }
 
-    const executeScript = async () => {
-      try {
-        console.log("[v0] Executing script:", scriptPath)
-        const response = await fetchApi<{ success: boolean; session_id: string }>("/api/scripts/execute", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            script_name: scriptName,
-            script_relative_path: scriptPath,
-            params: params,
-          }),
-        })
-
-        if (response.success && response.session_id) {
-          console.log("[v0] Script started with session:", response.session_id)
-          setSessionId(response.session_id)
-        } else {
-          console.error("[v0] Failed to start script")
-        }
-      } catch (error) {
-        console.error("[v0] Error executing script:", error)
-      }
+    // Generate session ID on client
+    const generateSessionId = () => {
+      return Math.random().toString(36).substring(2, 8)
     }
+
+    const newSessionId = generateSessionId()
+    console.log("[v0] Generated session ID:", newSessionId)
 
     setIsComplete(false)
     setExitCode(null)
@@ -98,9 +80,7 @@ export function ScriptTerminalModal({
     setCurrentInteraction(null)
     setIsConnected(false)
     setIsWaitingNextInteraction(false)
-    setSessionId(null)
-
-    executeScript()
+    setSessionId(newSessionId)
 
     return () => {
       if (checkConnectionInterval.current) {
@@ -189,43 +169,61 @@ export function ScriptTerminalModal({
       const ws = new WebSocket(wsUrl)
 
       ws.onopen = () => {
-        console.log("[v0] WebSocket connected")
+        console.log("[v0] WebSocket connected, sending init data...")
         setIsConnected(true)
-        try {
-          ws.send(
-            JSON.stringify({
-              type: "resize",
-              cols: term.cols,
-              rows: term.rows,
-            }),
-          )
-        } catch (err) {
-          console.warn("[v0] Failed to send initial resize:", err)
+
+        // Send initial script data to start execution
+        const initData = {
+          script_path: scriptPath,
+          params: {
+            EXECUTION_MODE: "web",
+            ...params,
+          },
         }
+
+        console.log("[v0] Sending init data:", initData)
+        ws.send(JSON.stringify(initData))
+
+        // Send terminal size
+        setTimeout(() => {
+          try {
+            ws.send(
+              JSON.stringify({
+                type: "resize",
+                cols: term.cols,
+                rows: term.rows,
+              }),
+            )
+          } catch (err) {
+            console.warn("[v0] Failed to send resize:", err)
+          }
+        }, 100)
       }
 
       ws.onmessage = (event) => {
+        // Try to parse as JSON for web interactions
         try {
           const msg = JSON.parse(event.data)
 
-          if (msg.type === "interaction") {
+          if (msg.type === "web_interaction") {
+            console.log("[v0] Received web interaction:", msg.interaction)
             setIsWaitingNextInteraction(false)
             if (waitingTimeoutRef.current) {
               clearTimeout(waitingTimeoutRef.current)
             }
             setCurrentInteraction({
-              type: msg.interaction_type,
-              id: msg.id,
-              title: msg.title || "",
-              message: msg.message || "",
-              options: msg.options,
-              default: msg.default,
+              type: msg.interaction.type,
+              id: msg.interaction.id,
+              title: msg.interaction.title || "",
+              message: msg.interaction.message || "",
+              options: msg.interaction.options,
+              default: msg.interaction.default,
             })
-          } else if (msg.type === "complete") {
-            setIsComplete(true)
-            setExitCode(msg.exit_code)
+          } else if (msg.type === "error") {
+            term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
           }
         } catch {
+          // Not JSON, write as raw terminal output
           term.write(event.data)
           setIsWaitingNextInteraction(false)
           if (waitingTimeoutRef.current) {
@@ -234,14 +232,22 @@ export function ScriptTerminalModal({
         }
       }
 
-      ws.onerror = () => {
+      ws.onerror = (error) => {
+        console.error("[v0] WebSocket error:", error)
         setIsConnected(false)
         term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
       }
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
+        console.log("[v0] WebSocket closed:", event.code, event.reason)
         setIsConnected(false)
         term.writeln("\x1b[33mConnection closed\x1b[0m")
+
+        // Mark as complete when connection closes
+        if (!isComplete) {
+          setIsComplete(true)
+          setExitCode(event.code === 1000 ? 0 : 1)
+        }
       }
 
       term.onData((data) => {
@@ -260,7 +266,7 @@ export function ScriptTerminalModal({
     }
 
     initTerminal()
-  }, [open, sessionId])
+  }, [open, sessionId, scriptPath, params])
 
   useEffect(() => {
     if (!terminalContainerRef.current || !terminalRef.current || !fitAddonRef.current) {
