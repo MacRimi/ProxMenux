@@ -676,6 +676,21 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         </div>
       )}
 
+      {/* Terminal Tabs */}
+      <div className="flex gap-1 px-2 py-1 bg-zinc-900 border-b border-zinc-800 overflow-x-auto">
+        {terminals.map((terminal) => (
+          <button
+            key={terminal.id}
+            onClick={() => setActiveTerminalId(terminal.id)}
+            className={`px-3 py-1 text-xs rounded-t transition-colors ${
+              terminal.id === activeTerminalId ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-white"
+            } ${isScriptModal ? "hidden" : ""}`}
+          >
+            {terminal.title}
+          </button>
+        ))}
+      </div>
+
       {isScriptModal && (
         <div className="sr-only" data-connection-status={activeTerminal?.isConnected ? "connected" : "disconnected"}>
           Connection Status

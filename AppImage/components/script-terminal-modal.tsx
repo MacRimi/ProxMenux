@@ -143,6 +143,13 @@ export function ScriptTerminalModal({
       return
     }
 
+    if (value === "cancel" || value === "") {
+      setCurrentInteraction(null)
+      setInteractionInput("")
+      handleCloseModal()
+      return
+    }
+
     const response = JSON.stringify({
       type: "interaction_response",
       id: currentInteraction.id,
@@ -209,11 +216,13 @@ export function ScriptTerminalModal({
 
           {!isMobile && (
             <div
-              className="h-2 bg-border hover:bg-primary/20 cursor-ns-resize flex items-center justify-center transition-colors"
+              className={`h-2 cursor-ns-resize flex items-center justify-center transition-colors ${
+                isResizing ? "bg-blue-500" : "bg-zinc-800 hover:bg-blue-500/50"
+              }`}
               onMouseDown={handleResizeStart}
               onTouchStart={handleResizeStart}
             >
-              <GripHorizontal className="h-4 w-4 text-muted-foreground" />
+              <GripHorizontal className={`h-4 w-4 ${isResizing ? "text-white" : "text-zinc-500"}`} />
             </div>
           )}
 
@@ -244,6 +253,7 @@ export function ScriptTerminalModal({
             className="max-w-4xl max-h-[80vh] overflow-y-auto"
             onInteractOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
+            hideClose
           >
             <DialogTitle>{currentInteraction.title}</DialogTitle>
             <div className="space-y-4">
@@ -263,6 +273,13 @@ export function ScriptTerminalModal({
                     className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600"
                   >
                     No
+                  </Button>
+                  <Button
+                    onClick={() => handleInteractionResponse("cancel")}
+                    variant="outline"
+                    className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600"
+                  >
+                    Cancel
                   </Button>
                 </div>
               )}
@@ -284,7 +301,7 @@ export function ScriptTerminalModal({
                     variant="outline"
                     className="w-full hover:bg-red-600 hover:text-white hover:border-red-600"
                   >
-                    Cancel / Go Back
+                    Cancel
                   </Button>
                 </div>
               )}
@@ -310,7 +327,7 @@ export function ScriptTerminalModal({
                       Submit
                     </Button>
                     <Button
-                      onClick={() => handleInteractionResponse("")}
+                      onClick={() => handleInteractionResponse("cancel")}
                       variant="outline"
                       className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600"
                     >
@@ -321,12 +338,21 @@ export function ScriptTerminalModal({
               )}
 
               {currentInteraction.type === "msgbox" && (
-                <Button
-                  onClick={() => handleInteractionResponse("ok")}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  OK
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleInteractionResponse("ok")}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  >
+                    OK
+                  </Button>
+                  <Button
+                    onClick={() => handleInteractionResponse("cancel")}
+                    variant="outline"
+                    className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600"
+                  >
+                    Cancel
+                  </Button>
+                </div>
               )}
             </div>
           </DialogContent>

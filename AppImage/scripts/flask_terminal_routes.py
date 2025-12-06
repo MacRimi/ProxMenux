@@ -350,7 +350,7 @@ def script_websocket(ws, session_id):
                                 except Exception as e:
                                     pass
                 
-                time.sleep(0.1)
+                time.sleep(0.01)
             except Exception as e:
                 break
     
