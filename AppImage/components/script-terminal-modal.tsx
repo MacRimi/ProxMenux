@@ -342,7 +342,7 @@ export function ScriptTerminalModal({
 
     waitingTimeoutRef.current = setTimeout(() => {
       setIsWaitingNextInteraction(true)
-    }, 300)
+    }, 50)
   }
 
   const handleCloseModal = () => {
