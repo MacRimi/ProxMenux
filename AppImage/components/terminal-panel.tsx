@@ -29,6 +29,7 @@ type TerminalPanelProps = {
   initMessage?: Record<string, any>
   onWebInteraction?: (interaction: any) => void
   onWebSocketCreated?: (ws: WebSocket) => void
+  isScriptModal?: boolean
 }
 
 interface TerminalInstance {
@@ -141,6 +142,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   initMessage,
   onWebInteraction,
   onWebSocketCreated,
+  isScriptModal = false,
 }) => {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
@@ -246,8 +248,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
           throw new Error("No examples found")
         }
 
-        console.log("[v0] Received parsed examples from server:", data.examples.length)
-
         const formattedResults: CheatSheetResult[] = data.examples.map((example: any) => ({
           command: example.command,
           description: example.description || "",
@@ -257,7 +257,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         setUseOnline(true)
         setSearchResults(formattedResults)
       } catch (error) {
-        console.log("[v0] Error fetching from cheat.sh proxy, using offline commands:", error)
         const filtered = proxmoxCommands.filter(
           (item) =>
             item.cmd.toLowerCase().includes(query.toLowerCase()) ||
@@ -442,7 +441,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       }
 
       if (initMessage) {
-        console.log("[v0] TerminalPanel: Sending init message:", initMessage)
         ws.send(JSON.stringify(initMessage))
       } else {
         term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
@@ -454,8 +452,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
-        if (data.type === "web_interaction" && onWebInteraction) {
-          console.log("[v0] TerminalPanel: Intercepted web_interaction:", data.interaction)
+        if (data.type === "web_interaction" && data.interaction && onWebInteraction) {
           onWebInteraction(data.interaction)
           return // Don't write to terminal
         }
@@ -466,8 +463,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       term.write(event.data)
     }
 
-    ws.onerror = (error) => {
-      console.error("[v0] TerminalPanel: WebSocket error:", error)
+    ws.onerror = () => {
       setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: false } : t)))
       term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
     }
@@ -603,80 +599,88 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 rounded-md overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
-        <div className="flex items-center gap-3">
-          <Activity className="h-5 w-5 text-blue-500" />
-          <div
-            className={`w-2 h-2 rounded-full ${activeTerminal?.isConnected ? "bg-green-500" : "bg-red-500"}`}
-            title={activeTerminal?.isConnected ? "Connected" : "Disconnected"}
-          ></div>
-          <span className="text-xs text-zinc-500">{terminals.length} / 4 terminals</span>
-        </div>
+      {!isScriptModal && (
+        <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+          <div className="flex items-center gap-3">
+            <Activity className="h-5 w-5 text-blue-500" />
+            <div
+              className={`w-2 h-2 rounded-full ${activeTerminal?.isConnected ? "bg-green-500" : "bg-red-500"}`}
+              title={activeTerminal?.isConnected ? "Connected" : "Disconnected"}
+            ></div>
+            <span className="text-xs text-zinc-500">{terminals.length} / 4 terminals</span>
+          </div>
 
-        <div className="flex gap-2">
-          {!isMobile && terminals.length > 1 && (
-            <>
-              <Button
-                onClick={() => setLayout("single")}
-                variant="outline"
-                size="sm"
-                className={`h-8 px-2 ${layout === "single" ? "bg-blue-500/20 border-blue-500" : ""}`}
-                title="Vista apilada (filas)"
-              >
-                <AlignJustify className="h-4 w-4" />
-              </Button>
-              <Button
-                onClick={() => setLayout("grid")}
-                variant="outline"
-                size="sm"
-                className={`h-8 px-2 ${layout === "grid" ? "bg-blue-500/20 border-blue-500" : ""}`}
-                title="Vista cuadrícula 2x2"
-              >
-                <Grid2X2 className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-          <Button
-            onClick={addNewTerminal}
-            variant="outline"
-            size="sm"
-            disabled={terminals.length >= 4}
-            className="h-8 gap-2 bg-green-600 hover:bg-green-700 border-green-500 text-white disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">New</span>
-          </Button>
-          <Button
-            onClick={() => setSearchModalOpen(true)}
-            variant="outline"
-            size="sm"
-            disabled={!activeTerminal?.isConnected}
-            className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 border-blue-500 text-white disabled:opacity-50"
-          >
-            <Search className="h-4 w-4" />
-            <span className="hidden sm:inline">Search</span>
-          </Button>
-          <Button
-            onClick={handleClear}
-            variant="outline"
-            size="sm"
-            disabled={!activeTerminal?.isConnected}
-            className="h-8 gap-2 bg-yellow-600 hover:bg-yellow-700 border-yellow-500 text-white disabled:opacity-50"
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Clear</span>
-          </Button>
-          <Button
-            onClick={handleClose}
-            variant="outline"
-            size="sm"
-            className="h-8 gap-2 bg-red-600 hover:bg-red-700 border-red-500 text-white"
-          >
-            <X className="h-4 w-4" />
-            <span className="hidden sm:inline">Close</span>
-          </Button>
+          <div className="flex gap-2">
+            {!isMobile && terminals.length > 1 && (
+              <>
+                <Button
+                  onClick={() => setLayout("single")}
+                  variant="outline"
+                  size="sm"
+                  className={`h-8 px-2 ${layout === "single" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                  title="Vista apilada (filas)"
+                >
+                  <AlignJustify className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={() => setLayout("grid")}
+                  variant="outline"
+                  size="sm"
+                  className={`h-8 px-2 ${layout === "grid" ? "bg-blue-500/20 border-blue-500" : ""}`}
+                  title="Vista cuadrícula 2x2"
+                >
+                  <Grid2X2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+            <Button
+              onClick={addNewTerminal}
+              variant="outline"
+              size="sm"
+              disabled={terminals.length >= 4}
+              className="h-8 gap-2 bg-green-600 hover:bg-green-700 border-green-500 text-white disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">New</span>
+            </Button>
+            <Button
+              onClick={() => setSearchModalOpen(true)}
+              variant="outline"
+              size="sm"
+              disabled={!activeTerminal?.isConnected}
+              className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 border-blue-500 text-white disabled:opacity-50"
+            >
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline">Search</span>
+            </Button>
+            <Button
+              onClick={handleClear}
+              variant="outline"
+              size="sm"
+              disabled={!activeTerminal?.isConnected}
+              className="h-8 gap-2 bg-yellow-600 hover:bg-yellow-700 border-yellow-500 text-white disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Clear</span>
+            </Button>
+            <Button
+              onClick={handleClose}
+              variant="outline"
+              size="sm"
+              className="h-8 gap-2 bg-red-600 hover:bg-red-700 border-red-500 text-white"
+            >
+              <X className="h-4 w-4" />
+              <span className="hidden sm:inline">Close</span>
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {isScriptModal && (
+        <div className="sr-only" data-connection-status={activeTerminal?.isConnected ? "connected" : "disconnected"}>
+          Connection Status
+        </div>
+      )}
 
       <div
         data-terminal-container

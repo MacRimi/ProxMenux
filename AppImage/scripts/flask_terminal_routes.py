@@ -242,54 +242,38 @@ def terminal_websocket(ws):
 def script_websocket(ws, session_id):
     """WebSocket endpoint for executing scripts with hybrid web mode"""
     
-    print(f"[DEBUG] Script WebSocket connected for session: {session_id}")
-    
     try:
-        print(f"[DEBUG] Waiting for init data...")
         init_data = ws.receive(timeout=10)
-        print(f"[DEBUG] Received init data: {init_data}")
         
         if not init_data:
             error_msg = '{"type": "error", "message": "No script data received"}\r\n'
-            print(f"[DEBUG] Error: No init data received")
             ws.send(error_msg)
             return
             
         script_data = json.loads(init_data)
-        print(f"[DEBUG] Parsed script data: {script_data}")
         
         script_path = script_data.get('script_path')
         params = script_data.get('params', {})
         
-        print(f"[DEBUG] Script path: {script_path}")
-        print(f"[DEBUG] Params: {params}")
-        
         if not script_path:
             error_msg = '{"type": "error", "message": "No script_path provided"}\r\n'
-            print(f"[DEBUG] Error: No script_path in data")
             ws.send(error_msg)
             return
         
         if not os.path.exists(script_path):
             error_msg = f'{{"type": "error", "message": "Script not found: {script_path}"}}\r\n'
-            print(f"[DEBUG] Error: Script file not found: {script_path}")
             ws.send(error_msg)
             return
             
-        print(f"[DEBUG] Script file exists, starting execution...")
-            
     except Exception as e:
         error_msg = f'{{"type": "error", "message": "Invalid init data: {str(e)}"}}\r\n'
-        print(f"[DEBUG] Exception parsing init data: {e}")
         ws.send(error_msg)
         return
     
     web_log_fd, web_log_path = tempfile.mkstemp(suffix='.log', prefix='proxmenux_web_')
-    print(f"[DEBUG] Created WEB_LOG file: {web_log_path}")
     
     # Create pseudo-terminal for script execution
     master_fd, slave_fd = pty.openpty()
-    print(f"[DEBUG] Created PTY: master_fd={master_fd}, slave_fd={slave_fd}")
     
     env = os.environ.copy()
     env['EXECUTION_MODE'] = 'web'
@@ -299,7 +283,6 @@ def script_websocket(ws, session_id):
     env['PYTHONUNBUFFERED'] = '1'
     env['TERM'] = 'xterm-256color'
     
-    print(f"[DEBUG] Starting script in hybrid web mode: {script_path}")
     script_process = subprocess.Popen(
         ['/bin/bash', script_path],
         stdin=slave_fd,
@@ -308,7 +291,6 @@ def script_websocket(ws, session_id):
         preexec_fn=os.setsid,
         env=env
     )
-    print(f"[DEBUG] Script process started with PID: {script_process.pid}")
     
     # Set non-blocking mode for master_fd
     flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
@@ -318,7 +300,6 @@ def script_websocket(ws, session_id):
     set_winsize(master_fd, 30, 120)
     
     def monitor_web_log():
-        print(f"[DEBUG] WEB_LOG monitor thread started")
         last_position = 0
         
         while script_process.poll() is None:
@@ -332,7 +313,6 @@ def script_websocket(ws, session_id):
                         for line in new_lines:
                             line = line.strip()
                             if line.startswith('WEB_INTERACTION:'):
-                                print(f"[DEBUG] Detected web interaction: {line[:100]}")
                                 try:
                                     # Parse: WEB_INTERACTION:type:id:title_b64:message_b64[:options_json]
                                     parts = line[16:].split(':', 4)
@@ -366,24 +346,19 @@ def script_websocket(ws, session_id):
                                     
                                     # Send interaction to WebSocket
                                     ws.send(json.dumps(interaction_data))
-                                    print(f"[DEBUG] Sent web interaction to client: {interaction_type}")
                                     
                                 except Exception as e:
-                                    print(f"[DEBUG] Error parsing web interaction: {e}")
+                                    pass
                 
                 time.sleep(0.1)
             except Exception as e:
-                print(f"[DEBUG] Error monitoring WEB_LOG: {e}")
                 break
-        
-        print(f"[DEBUG] WEB_LOG monitor thread stopped")
     
     web_log_thread = threading.Thread(target=monitor_web_log, daemon=True)
     web_log_thread.start()
     
     # Thread to read script output and forward to WebSocket
     def read_script_output():
-        print(f"[DEBUG] Output reader thread started")
         while True:
             try:
                 r, _, _ = select.select([master_fd], [], [], 0.01)
@@ -391,7 +366,6 @@ def script_websocket(ws, session_id):
                     try:
                         data = os.read(master_fd, 4096)
                         if not data:
-                            print(f"[DEBUG] No more data from script")
                             break
                         
                         text = data.decode('utf-8', errors='ignore')
@@ -400,35 +374,29 @@ def script_websocket(ws, session_id):
                         try:
                             ws.send(text)
                         except Exception as e:
-                            print(f"[DEBUG] Error sending to WebSocket: {e}")
                             break
                             
                     except OSError as e:
-                        print(f"[DEBUG] OSError reading from PTY: {e}")
                         break
             except Exception as e:
-                print(f"[DEBUG] Error reading script output: {e}")
                 break
         
         script_process.wait()
         exit_code = script_process.returncode if script_process.returncode is not None else 0
-        print(f"[DEBUG] Script exited with code: {exit_code}")
         
         try:
             ws.send(f'\r\n[Script exited with code {exit_code}]\r\n')
         except Exception as e:
-            print(f"[DEBUG] Could not send exit message: {e}")
+            pass
     
     output_thread = threading.Thread(target=read_script_output, daemon=True)
     output_thread.start()
-    print(f"[DEBUG] Output thread started")
     
     try:
         while True:
             data = ws.receive(timeout=None)
             
             if data is None:
-                print(f"[DEBUG] WebSocket closed by client")
                 break
             
             try:
@@ -440,7 +408,6 @@ def script_websocket(ws, session_id):
                     
                     # Write response to the file the script is waiting for
                     response_file = f"/tmp/proxmenux_response_{interaction_id}"
-                    print(f"[DEBUG] Writing interaction response to {response_file}: {value}")
                     
                     with open(response_file, 'w') as f:
                         f.write(value)
@@ -452,7 +419,6 @@ def script_websocket(ws, session_id):
                     cols = int(msg.get('cols', 120))
                     rows = int(msg.get('rows', 30))
                     set_winsize(master_fd, rows, cols)
-                    print(f"[DEBUG] Resized terminal to {cols}x{rows}")
                     continue
                     
             except json.JSONDecodeError:
@@ -460,17 +426,14 @@ def script_websocket(ws, session_id):
                 try:
                     os.write(master_fd, data.encode('utf-8'))
                 except OSError as e:
-                    print(f"[DEBUG] Error writing to script: {e}")
                     break
             
             if script_process.poll() is not None:
-                print(f"[DEBUG] Script process terminated")
                 break
                 
     except Exception as e:
-        print(f"[DEBUG] Script session error: {e}")
+        pass
     finally:
-        print(f"[DEBUG] Cleaning up script session")
         try:
             script_process.terminate()
             script_process.wait(timeout=1)
@@ -493,7 +456,6 @@ def script_websocket(ws, session_id):
         try:
             os.close(web_log_fd)
             os.unlink(web_log_path)
-            print(f"[DEBUG] Removed WEB_LOG file: {web_log_path}")
         except:
             pass
 

@@ -1,13 +1,16 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { X, CheckCircle2, XCircle, Loader2 } from "lucide-react"
+import { CheckCircle2, XCircle, Loader2, Activity, GripHorizontal } from "lucide-react"
 import { TerminalPanel } from "./terminal-panel"
 import { API_PORT } from "@/lib/api-config"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface WebInteraction {
   type: "yesno" | "menu" | "msgbox" | "input" | "inputbox"
@@ -43,6 +46,14 @@ export function ScriptTerminalModal({
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
   const [interactionInput, setInteractionInput] = useState("")
   const wsRef = useRef<WebSocket | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
+  const checkConnectionInterval = useRef<NodeJS.Timeout | null>(null)
+  const isMobile = useIsMobile()
+
+  const [modalHeight, setModalHeight] = useState(80)
+  const [isResizing, setIsResizing] = useState(false)
+  const startYRef = useRef(0)
+  const startHeightRef = useRef(80)
 
   useEffect(() => {
     if (open) {
@@ -50,8 +61,61 @@ export function ScriptTerminalModal({
       setExitCode(null)
       setInteractionInput("")
       setCurrentInteraction(null)
+      setIsConnected(false)
+
+      checkConnectionInterval.current = setInterval(() => {
+        if (wsRef.current) {
+          setIsConnected(wsRef.current.readyState === WebSocket.OPEN)
+        }
+      }, 500)
+    }
+
+    return () => {
+      if (checkConnectionInterval.current) {
+        clearInterval(checkConnectionInterval.current)
+      }
     }
   }, [open])
+
+  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (isMobile) return
+
+    setIsResizing(true)
+    startYRef.current = "touches" in e ? e.touches[0].clientY : e.clientY
+    startHeightRef.current = modalHeight
+
+    e.preventDefault()
+  }
+
+  useEffect(() => {
+    if (!isResizing) return
+
+    const handleResizeMove = (e: MouseEvent | TouchEvent) => {
+      const currentY = "touches" in e ? e.touches[0].clientY : e.clientY
+      const deltaY = startYRef.current - currentY
+      const viewportHeight = window.innerHeight
+      const deltaVh = (deltaY / viewportHeight) * 100
+
+      const newHeight = Math.min(Math.max(startHeightRef.current + deltaVh, 50), 95)
+      setModalHeight(newHeight)
+    }
+
+    const handleResizeEnd = () => {
+      setIsResizing(false)
+    }
+
+    document.addEventListener("mousemove", handleResizeMove)
+    document.addEventListener("mouseup", handleResizeEnd)
+    document.addEventListener("touchmove", handleResizeMove)
+    document.addEventListener("touchend", handleResizeEnd)
+
+    return () => {
+      document.removeEventListener("mousemove", handleResizeMove)
+      document.removeEventListener("mouseup", handleResizeEnd)
+      document.removeEventListener("touchmove", handleResizeMove)
+      document.removeEventListener("touchend", handleResizeEnd)
+    }
+  }, [isResizing])
 
   const getScriptWebSocketUrl = (): string => {
     if (typeof window === "undefined") {
@@ -67,6 +131,7 @@ export function ScriptTerminalModal({
 
   const handleWebSocketCreated = (ws: WebSocket) => {
     wsRef.current = ws
+    setIsConnected(ws.readyState === WebSocket.OPEN)
   }
 
   const handleWebInteraction = (interaction: WebInteraction) => {
@@ -92,32 +157,41 @@ export function ScriptTerminalModal({
     setInteractionInput("")
   }
 
+  const handleCloseModal = () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.close()
+    }
+    if (checkConnectionInterval.current) {
+      clearInterval(checkConnectionInterval.current)
+    }
+    onClose()
+  }
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl h-[80vh] p-0 flex flex-col">
+      <Dialog open={open}>
+        <DialogContent
+          className="max-w-4xl p-0 flex flex-col"
+          style={{ height: isMobile ? "80vh" : `${modalHeight}vh` }}
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogTitle className="sr-only">{title}</DialogTitle>
 
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <div className="flex items-center gap-2">
-              {isComplete ? (
-                exitCode === 0 ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                ) : (
-                  <XCircle className="h-5 w-5 text-red-500" />
-                )
+          <div className="flex items-center gap-2 p-4 border-b">
+            {isComplete ? (
+              exitCode === 0 ? (
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
               ) : (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              )}
-              <div>
-                <h2 className="text-lg font-semibold">{title}</h2>
-                {description && <p className="text-sm text-muted-foreground">{description}</p>}
-              </div>
+                <XCircle className="h-5 w-5 text-red-500" />
+              )
+            ) : (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            )}
+            <div>
+              <h2 className="text-lg font-semibold">{title}</h2>
+              {description && <p className="text-sm text-muted-foreground">{description}</p>}
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
           </div>
 
           <div className="flex-1 overflow-hidden">
@@ -129,13 +203,37 @@ export function ScriptTerminalModal({
               }}
               onWebInteraction={handleWebInteraction}
               onWebSocketCreated={handleWebSocketCreated}
+              isScriptModal={true}
             />
           </div>
 
-          {/* Footer */}
+          {!isMobile && (
+            <div
+              className="h-2 bg-border hover:bg-primary/20 cursor-ns-resize flex items-center justify-center transition-colors"
+              onMouseDown={handleResizeStart}
+              onTouchStart={handleResizeStart}
+            >
+              <GripHorizontal className="h-4 w-4 text-muted-foreground" />
+            </div>
+          )}
+
           <div className="flex items-center justify-between p-4 border-t">
-            <div className="text-sm text-muted-foreground">Session ID: {sessionId}</div>
-            {isComplete && <Button onClick={onClose}>Close</Button>}
+            <div className="flex items-center gap-3">
+              <Activity className="h-5 w-5 text-blue-500" />
+              <div
+                className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
+                title={isConnected ? "Connected" : "Disconnected"}
+              ></div>
+              <span className="text-xs text-muted-foreground">{isConnected ? "Online" : "Offline"}</span>
+            </div>
+
+            <Button
+              onClick={handleCloseModal}
+              variant="outline"
+              className="bg-red-600 hover:bg-red-700 border-red-500 text-white"
+            >
+              Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -176,11 +274,18 @@ export function ScriptTerminalModal({
                       key={option.value}
                       onClick={() => handleInteractionResponse(option.value)}
                       variant="outline"
-                      className="w-full justify-start"
+                      className="w-full justify-start hover:bg-blue-600 hover:text-white"
                     >
                       {option.label}
                     </Button>
                   ))}
+                  <Button
+                    onClick={() => handleInteractionResponse("cancel")}
+                    variant="outline"
+                    className="w-full hover:bg-red-600 hover:text-white hover:border-red-600"
+                  >
+                    Cancel / Go Back
+                  </Button>
                 </div>
               )}
 
@@ -197,14 +302,29 @@ export function ScriptTerminalModal({
                     }}
                     placeholder={currentInteraction.default || ""}
                   />
-                  <Button onClick={() => handleInteractionResponse(interactionInput)} className="w-full">
-                    Submit
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleInteractionResponse(interactionInput)}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    >
+                      Submit
+                    </Button>
+                    <Button
+                      onClick={() => handleInteractionResponse("")}
+                      variant="outline"
+                      className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               )}
 
               {currentInteraction.type === "msgbox" && (
-                <Button onClick={() => handleInteractionResponse("ok")} className="w-full">
+                <Button
+                  onClick={() => handleInteractionResponse("ok")}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
                   OK
                 </Button>
               )}
