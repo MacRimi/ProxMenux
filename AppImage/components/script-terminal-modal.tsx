@@ -29,13 +29,6 @@ interface ScriptTerminalModalProps {
   description: string
 }
 
-interface TerminalInstance {
-  term: any | null
-  ws: WebSocket | null
-  fitAddon: any | null
-  isConnected: boolean
-}
-
 export function ScriptTerminalModal({
   open,
   onClose,
@@ -45,14 +38,12 @@ export function ScriptTerminalModal({
   title,
   description,
 }: ScriptTerminalModalProps) {
-  const [terminal, setTerminal] = useState<TerminalInstance>({
-    term: null,
-    ws: null,
-    fitAddon: null,
-    isConnected: false,
-  })
-
+  const termRef = useRef<any>(null)
+  const wsRef = useRef<WebSocket | null>(null)
+  const fitAddonRef = useRef<any>(null)
   const sessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 8))
+
+  const [isConnected, setIsConnected] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
@@ -78,25 +69,27 @@ export function ScriptTerminalModal({
       if (waitingTimeoutRef.current) {
         clearTimeout(waitingTimeoutRef.current)
       }
-      if (terminal.ws) {
-        terminal.ws.close()
+      if (wsRef.current) {
+        wsRef.current.close()
+        wsRef.current = null
       }
-      if (terminal.term) {
-        terminal.term.dispose()
+      if (termRef.current) {
+        termRef.current.dispose()
+        termRef.current = null
       }
-      setTerminal({ term: null, ws: null, fitAddon: null, isConnected: false })
       sessionIdRef.current = Math.random().toString(36).substring(2, 8)
       setIsComplete(false)
       setExitCode(null)
       setInteractionInput("")
       setCurrentInteraction(null)
       setIsWaitingNextInteraction(false)
+      setIsConnected(false)
     }
   }, [open])
 
   useEffect(() => {
     const container = terminalContainerRef.current
-    if (!open || !container || terminal.term) {
+    if (!open || !container || termRef.current) {
       return
     }
 
@@ -148,6 +141,9 @@ export function ScriptTerminalModal({
       term.loadAddon(fitAddon)
       term.open(container)
 
+      termRef.current = term
+      fitAddonRef.current = fitAddon
+
       setTimeout(() => {
         try {
           fitAddon.fit()
@@ -158,9 +154,10 @@ export function ScriptTerminalModal({
 
       const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
       const ws = new WebSocket(wsUrl)
+      wsRef.current = ws
 
       ws.onopen = () => {
-        setTerminal((prev) => ({ ...prev, isConnected: true, term, ws, fitAddon }))
+        setIsConnected(true)
 
         const initMessage = {
           script_path: scriptPath,
@@ -207,18 +204,18 @@ export function ScriptTerminalModal({
               options: msg.interaction.options,
               default: msg.interaction.default,
             })
-            return // Don't write JSON to terminal
+            return
           }
 
           if (msg.type === "error") {
-            terminal.term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
+            term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
             return
           }
         } catch {
-          // Not JSON, it's regular terminal output
+          // Not JSON, es output normal de terminal
         }
 
-        terminal.term.write(event.data)
+        term.write(event.data)
 
         setIsWaitingNextInteraction(false)
         if (waitingTimeoutRef.current) {
@@ -227,13 +224,13 @@ export function ScriptTerminalModal({
       }
 
       ws.onerror = (error) => {
-        setTerminal((prev) => ({ ...prev, isConnected: false }))
-        terminal.term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
+        setIsConnected(false)
+        term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
       }
 
       ws.onclose = (event) => {
-        setTerminal((prev) => ({ ...prev, isConnected: false }))
-        terminal.term.writeln("\x1b[33mConnection closed\x1b[0m")
+        setIsConnected(false)
+        term.writeln("\x1b[33mConnection closed\x1b[0m")
 
         if (!isComplete) {
           setIsComplete(true)
@@ -249,7 +246,7 @@ export function ScriptTerminalModal({
 
       checkConnectionInterval.current = setInterval(() => {
         if (ws) {
-          setTerminal((prev) => ({ ...prev, isConnected: ws.readyState === WebSocket.OPEN }))
+          setIsConnected(ws.readyState === WebSocket.OPEN)
         }
       }, 500)
 
@@ -279,7 +276,7 @@ export function ScriptTerminalModal({
     }
 
     initializeTerminal()
-  }, [open, terminal.term])
+  }, [open])
 
   const getScriptWebSocketUrl = (sid: string): string => {
     if (typeof window === "undefined") {
@@ -292,7 +289,7 @@ export function ScriptTerminalModal({
   }
 
   const handleInteractionResponse = (value: string) => {
-    if (!terminal.ws || !currentInteraction) {
+    if (!wsRef.current || !currentInteraction) {
       return
     }
 
@@ -309,8 +306,8 @@ export function ScriptTerminalModal({
       value: value,
     })
 
-    if (terminal.ws.readyState === WebSocket.OPEN) {
-      terminal.ws.send(response)
+    if (wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(response)
     }
 
     setCurrentInteraction(null)
@@ -322,14 +319,14 @@ export function ScriptTerminalModal({
   }
 
   const handleCloseModal = () => {
-    if (terminal.ws && terminal.ws.readyState === WebSocket.OPEN) {
-      terminal.ws.close()
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.close()
     }
     if (checkConnectionInterval.current) {
       clearInterval(checkConnectionInterval.current)
     }
-    if (terminal.term) {
-      terminal.term.dispose()
+    if (termRef.current) {
+      termRef.current.dispose()
     }
     onClose()
   }
@@ -413,10 +410,10 @@ export function ScriptTerminalModal({
             <div className="flex items-center gap-3">
               <Activity className="h-5 w-5 text-blue-500" />
               <div
-                className={`w-2 h-2 rounded-full ${terminal.isConnected ? "bg-green-500" : "bg-red-500"}`}
-                title={terminal.isConnected ? "Connected" : "Disconnected"}
+                className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
+                title={isConnected ? "Connected" : "Disconnected"}
               ></div>
-              <span className="text-xs text-muted-foreground">{terminal.isConnected ? "Online" : "Offline"}</span>
+              <span className="text-xs text-muted-foreground">{isConnected ? "Online" : "Offline"}</span>
             </div>
 
             <Button
