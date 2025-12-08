@@ -41,7 +41,7 @@ function select_nas_iso() {
 
   local NAS_OPTIONS=(
     "1" "Synology DSM   VM          (Loader Linux-based)"
-    "2" "TrueNAS SCALE  VM          (Fangtooth)"
+    "2" "TrueNAS SCALE  VM          (Goldeye)"
     "3" "TrueNAS CORE   VM          (FreeBSD based)"
     "4" "OpenMediaVault VM          (Debian based)"
     "5" "XigmaNAS       VM          (FreeBSD based)"
@@ -68,9 +68,9 @@ function select_nas_iso() {
       return 1
       ;;
     2)
-      ISO_NAME="TrueNAS SCALE 25 (Fangtooth)"
-      ISO_URL="https://download.truenas.com/TrueNAS-SCALE-Fangtooth/25.04.0/TrueNAS-SCALE-25.04.0.iso"
-      ISO_FILE="TrueNAS-SCALE-25.04.0.iso"
+      ISO_NAME="TrueNAS SCALE 25 (Goldeye)"
+      ISO_URL="https://download.sys.truenas.net/TrueNAS-SCALE-Goldeye/25.10.0.1/TrueNAS-SCALE-25.10.0.1.iso"
+      ISO_FILE="TrueNAS-SCALE-25.10.0.1.iso"
       ISO_PATH="$ISO_DIR/$ISO_FILE"
       HN="TrueNAS-Scale"
       ;;
