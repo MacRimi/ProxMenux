@@ -807,6 +807,23 @@
     "type": "ct"
   },
   {
+    "name": "Coolify",
+    "slug": "coolify",
+    "desc": "Coolify is an open-source & self-hostable alternative to Heroku, Netlify, and Vercel. It helps you manage your servers, applications, and databases on your own hardware with Docker. Deploy any application from Git repositories, Docker images, or use pre-built templates.",
+    "script": "ct/coolify.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/coolify.sh",
+    "categories": [
+      6
+    ],
+    "notes": [
+      "Initial setup will be done via the web interface on first access.",
+      "Coolify has built-in auto-updates. You can configure update frequency in Settings.",
+      "Coolify requires SSH access to manage deployments. SSH is enabled automatically.",
+      "This container uses Docker-in-Docker (nesting) for application deployments."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Copyparty",
     "slug": "copyparty",
     "desc": "Copyparty is a lightweight, portable HTTP file server with a browser-based interface. It supports drag-and-drop uploads, downloads, deduplication, media playback, and advanced search, making it ideal for quickly sharing and managing files.",
@@ -1085,6 +1102,22 @@
     ],
     "notes": [
       "Use `cat ~/docmost.creds` to see database credentials."
+    ],
+    "type": "ct"
+  },
+  {
+    "name": "Dokploy",
+    "slug": "dokploy",
+    "desc": "Dokploy is a free, self-hostable Platform as a Service (PaaS) that simplifies the deployment and management of applications and databases. Built with Docker and Traefik, it offers features like automatic SSL, Docker Compose support, database backups, and a real-time monitoring dashboard.",
+    "script": "ct/dokploy.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/dokploy.sh",
+    "categories": [
+      6
+    ],
+    "notes": [
+      "Initial setup will be done via the web interface on first access.",
+      "Dokploy has built-in auto-updates via the web interface.",
+      "This container uses Docker-in-Docker (nesting) for application deployments."
     ],
     "type": "ct"
   },
