@@ -6,7 +6,16 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Activity, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, CornerDownLeft } from "lucide-react"
+import {
+  Loader2,
+  Activity,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  CornerDownLeft,
+  GripHorizontal,
+} from "lucide-react"
 import "xterm/css/xterm.css"
 import { API_PORT } from "@/lib/api-config"
 
@@ -482,6 +491,18 @@ export function ScriptTerminalModal({
             )}
           </div>
 
+          {/* Resize bar - visible en tablet y escritorio */}
+          {!isMobile && (
+            <div
+              onPointerDown={handleResizeStart}
+              className="h-2 cursor-ns-resize flex items-center justify-center hover:bg-accent transition-colors z-50 pointer-events-auto touch-none"
+              style={{ touchAction: "none" }}
+            >
+              <GripHorizontal className="h-3 w-8 text-muted-foreground/50" />
+            </div>
+          )}
+
+          {/* Mobile/Tablet button toolbar */}
           {(isMobile || isTablet) && (
             <div className="flex items-center justify-center gap-1.5 px-1 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <Button
@@ -583,7 +604,8 @@ export function ScriptTerminalModal({
             </div>
           )}
 
-          <div className="flex items-center justify-between p-4 border-t">
+          {/* Footer with connection status and close button */}
+          <div className="flex items-center justify-between px-4 py-3 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center gap-3">
               <Activity className="h-5 w-5 text-blue-500" />
               <div
@@ -733,11 +755,6 @@ export function ScriptTerminalModal({
           </DialogContent>
         </Dialog>
       )}
-
-      <div
-        onPointerDown={handleResizeStart}
-        className="hidden md:flex h-2 cursor-ns-resize items-center justify-center hover:bg-accent transition-colors z-50 pointer-events-auto touch-none"
-      ></div>
     </>
   )
 }
