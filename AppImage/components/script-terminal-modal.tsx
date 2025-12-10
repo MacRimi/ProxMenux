@@ -413,10 +413,6 @@ export function ScriptTerminalModal({
   }
 
   const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
-    if (window.innerWidth < 640 && !isTablet) {
-      return
-    }
-
     e.preventDefault()
     e.stopPropagation()
 
@@ -512,7 +508,7 @@ export function ScriptTerminalModal({
             </div>
           )}
 
-          {(isMobile || isTablet) && (
+          {isMobile && (
             <div className="flex items-center justify-center gap-1.5 px-1 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <Button
                 onPointerDown={(e) => {
