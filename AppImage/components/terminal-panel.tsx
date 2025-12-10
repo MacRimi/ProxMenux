@@ -2,8 +2,7 @@
 
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
-import { API_PORT } from "../lib/api-config"
-import { fetchApi } from "@/lib/api-config" // Cambiando import para usar fetchApi directamente
+import { API_PORT, fetchApi } from "@/lib/api-config" // Unificando importaciones de api-config en una sola línea con alias @/
 import {
   Activity,
   Trash2,

@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Activity, GripHorizontal } from "lucide-react"
-import { API_PORT } from "../lib/api-config"
+import "xterm/css/xterm.css"
+import { API_PORT } from "@/lib/api-config"
 
 interface WebInteraction {
   type: "yesno" | "menu" | "msgbox" | "input" | "inputbox"
@@ -23,7 +24,7 @@ interface ScriptTerminalModalProps {
   onClose: () => void
   scriptPath: string
   scriptName: string
-  params?: Record<string, string>
+  scriptDescription?: string
   title: string
   description: string
 }
@@ -33,7 +34,7 @@ export function ScriptTerminalModal({
   onClose,
   scriptPath,
   scriptName,
-  params = {},
+  scriptDescription,
   title,
   description,
 }: ScriptTerminalModalProps) {
@@ -42,7 +43,7 @@ export function ScriptTerminalModal({
   const fitAddonRef = useRef<any>(null)
   const sessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 8))
 
-  const [isConnected, setIsConnected] = useState(true)
+  const [connectionStatus, setConnectionStatus] = useState<"connecting" | "online" | "offline">("connecting")
   const [isComplete, setIsComplete] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
@@ -161,13 +162,12 @@ export function ScriptTerminalModal({
     wsRef.current = ws
 
     ws.onopen = () => {
-      setIsConnected(true)
+      setConnectionStatus("online")
 
       const initMessage = {
         script_path: scriptPath,
         params: {
           EXECUTION_MODE: "web",
-          ...params,
         },
       }
 
@@ -232,12 +232,12 @@ export function ScriptTerminalModal({
     }
 
     ws.onerror = (error) => {
-      setIsConnected(false)
+      setConnectionStatus("offline")
       term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
     }
 
     ws.onclose = (event) => {
-      setIsConnected(false)
+      setConnectionStatus("offline")
       term.writeln("\x1b[33mConnection closed\x1b[0m")
 
       if (!isComplete) {
@@ -254,7 +254,13 @@ export function ScriptTerminalModal({
 
     checkConnectionInterval.current = setInterval(() => {
       if (ws) {
-        setIsConnected(ws.readyState === WebSocket.OPEN)
+        setConnectionStatus(
+          ws.readyState === WebSocket.OPEN
+            ? "online"
+            : ws.readyState === WebSocket.CONNECTING
+              ? "connecting"
+              : "offline",
+        )
       }
     }, 500)
 
@@ -333,7 +339,7 @@ export function ScriptTerminalModal({
       setInteractionInput("")
       setCurrentInteraction(null)
       setIsWaitingNextInteraction(false)
-      setIsConnected(false)
+      setConnectionStatus("connecting")
     }
   }, [isOpen])
 
@@ -617,10 +623,28 @@ export function ScriptTerminalModal({
             <div className="flex items-center gap-3">
               <Activity className="h-5 w-5 text-blue-500" />
               <div
-                className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
-                title={isConnected ? "Connected" : "Disconnected"}
+                className={`w-2 h-2 rounded-full ${
+                  connectionStatus === "online"
+                    ? "bg-green-500"
+                    : connectionStatus === "connecting"
+                      ? "bg-blue-500"
+                      : "bg-red-500"
+                }`}
+                title={
+                  connectionStatus === "online"
+                    ? "Connected"
+                    : connectionStatus === "connecting"
+                      ? "Connecting"
+                      : "Disconnected"
+                }
               ></div>
-              <span className="text-xs text-muted-foreground">{isConnected ? "Online" : "Offline"}</span>
+              <span className="text-xs text-muted-foreground">
+                {connectionStatus === "online"
+                  ? "Online"
+                  : connectionStatus === "connecting"
+                    ? "Connecting..."
+                    : "Offline"}
+              </span>
             </div>
 
             <Button
