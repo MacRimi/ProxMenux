@@ -64,7 +64,7 @@ export function ScriptTerminalModal({
   const [isWaitingNextInteraction, setIsWaitingNextInteraction] = useState(false)
   const waitingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const [modalHeight, setModalHeight] = useState(80) // Cambiado de 600px a 80vh
+  const [modalHeight, setModalHeight] = useState(60) // Reducido de 80vh a 60vh para que sea visible el header y footer
   const [isResizing, setIsResizing] = useState(false)
   const resizeHandlersRef = useRef<{
     handleMouseMove: ((e: MouseEvent) => void) | null
@@ -424,7 +424,7 @@ export function ScriptTerminalModal({
       const currentY = "touches" in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
       const deltaY = currentY - startY
       const deltaPercent = (deltaY / window.innerHeight) * 100
-      const newHeight = Math.max(50, Math.min(95, startHeight + deltaPercent))
+      const newHeight = Math.max(30, Math.min(85, startHeight + deltaPercent)) // Cambiado límites a 30vh mínimo y 85vh máximo
 
       setModalHeight(newHeight)
 
