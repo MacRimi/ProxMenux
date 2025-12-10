@@ -413,6 +413,10 @@ export function ScriptTerminalModal({
   }
 
   const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (window.innerWidth < 640 && !isTablet) {
+      return
+    }
+
     e.preventDefault()
     e.stopPropagation()
 
@@ -420,10 +424,11 @@ export function ScriptTerminalModal({
     const startHeight = modalHeight
 
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
-      moveEvent.preventDefault() // Añadido preventDefault en cada move para mejor soporte táctil
+      moveEvent.preventDefault()
+      moveEvent.stopPropagation()
       const currentY = "touches" in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
       const deltaY = currentY - startY
-      const newHeight = Math.max(300, Math.min(2400, startHeight + deltaY)) // Restaurado a píxeles con límites razonables
+      const newHeight = Math.max(300, Math.min(2400, startHeight + deltaY))
 
       setModalHeight(newHeight)
 
@@ -444,17 +449,17 @@ export function ScriptTerminalModal({
     }
 
     const handleEnd = () => {
-      document.removeEventListener("mousemove", handleMove as any)
+      document.removeEventListener("mousemove", handleMove)
       document.removeEventListener("mouseup", handleEnd)
-      document.removeEventListener("touchmove", handleMove as any)
+      document.removeEventListener("touchmove", handleMove)
       document.removeEventListener("touchend", handleEnd)
 
       localStorage.setItem("scriptModalHeight", modalHeight.toString())
     }
 
-    document.addEventListener("mousemove", handleMove as any)
+    document.addEventListener("mousemove", handleMove)
     document.addEventListener("mouseup", handleEnd)
-    document.addEventListener("touchmove", handleMove as any, { passive: false })
+    document.addEventListener("touchmove", handleMove, { passive: false })
     document.addEventListener("touchend", handleEnd)
   }
 
@@ -496,11 +501,11 @@ export function ScriptTerminalModal({
             )}
           </div>
 
-          {(isTablet || (!isMobile && !isTablet)) && ( // Barra visible en tablet y escritorio
+          {(isTablet || (!isMobile && !isTablet)) && (
             <div
               onMouseDown={handleResizeStart}
               onTouchStart={handleResizeStart}
-              className="h-2 w-full cursor-row-resize bg-zinc-800 hover:bg-blue-600 transition-colors flex items-center justify-center group relative"
+              className="h-2 w-full cursor-row-resize bg-zinc-800 hover:bg-blue-600 transition-colors flex items-center justify-center group relative pointer-events-auto z-50"
               style={{ touchAction: "none" }}
             >
               <GripHorizontal className="h-4 w-4 text-zinc-600 group-hover:text-white pointer-events-none" />
