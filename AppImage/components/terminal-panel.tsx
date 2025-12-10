@@ -427,7 +427,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       setTerminals((prev) =>
         prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: true, term, ws, fitAddon } : t)),
       )
-      term.writeln("\x1b[32mConnected to ProxMenux terminal.\x1b[0m")
       syncSizeWithBackend()
     }
 
@@ -821,7 +820,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-2.5 text-xs"
+            className="h-8 px-3 text-xs"
           >
             ↵
           </Button>
