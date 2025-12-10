@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Activity, GripHorizontal } from "lucide-react"
+import { API_PORT } from "../lib/api-config"
 import { fetchApi } from "@/lib/api-config"
 import { useIsMobile } from "@/hooks/use-mobile"
 
