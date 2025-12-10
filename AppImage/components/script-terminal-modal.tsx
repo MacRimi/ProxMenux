@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Activity, GripHorizontal } from "lucide-react"
 import { API_PORT } from "../lib/api-config"
-import { useIsMobile } from "@/hooks/use-mobile"
 
 interface WebInteraction {
   type: "yesno" | "menu" | "msgbox" | "input" | "inputbox"
@@ -49,7 +48,8 @@ export function ScriptTerminalModal({
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
   const [interactionInput, setInteractionInput] = useState("")
   const checkConnectionInterval = useRef<NodeJS.Timeout | null>(null)
-  const isMobile = useIsMobile()
+  const [isMobile, setIsMobile] = useState(false)
+  const [isTablet, setIsTablet] = useState(false)
 
   const [isWaitingNextInteraction, setIsWaitingNextInteraction] = useState(false)
   const waitingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -341,6 +341,25 @@ export function ScriptTerminalModal({
     }
   }, [isOpen])
 
+  useEffect(() => {
+    const updateDeviceType = () => {
+      const width = window.innerWidth
+      const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0
+      const isTabletSize = width >= 768 && width <= 1366
+
+      setIsMobile(width < 768)
+      setIsTablet(isTouchDevice && isTabletSize)
+    }
+
+    updateDeviceType()
+    const handleResize = () => updateDeviceType()
+    window.addEventListener("resize", handleResize)
+
+    return () => {
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [])
+
   const getScriptWebSocketUrl = (sid: string): string => {
     if (typeof window === "undefined") {
       return `ws://localhost:${API_PORT}/ws/script/${sid}`
@@ -488,7 +507,7 @@ export function ScriptTerminalModal({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
           className="max-w-7xl p-0 flex flex-col gap-0 overflow-hidden"
-          style={{ height: isMobile ? "80vh" : `${modalHeight}px`, maxHeight: "none" }}
+          style={{ height: isMobile || isTablet ? "80vh" : `${modalHeight}px`, maxHeight: "none" }}
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
@@ -514,78 +533,76 @@ export function ScriptTerminalModal({
             )}
           </div>
 
-          {isMobile && (
-            <div className="border-t bg-zinc-900/50 px-1 py-2 overflow-x-auto">
-              <div className="flex gap-1.5 justify-center min-w-max">
-                <Button
-                  onClick={() => sendKey("escape")}
-                  variant="outline"
-                  size="sm"
-                  className="px-2.5 py-2 text-xs h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
-                >
-                  ESC
-                </Button>
-                <Button
-                  onClick={() => sendKey("tab")}
-                  variant="outline"
-                  size="sm"
-                  className="px-2.5 py-2 text-xs h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
-                >
-                  TAB
-                </Button>
-                <Button
-                  onClick={() => sendKey("up")}
-                  variant="outline"
-                  size="sm"
-                  className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
-                >
-                  ↑
-                </Button>
-                <Button
-                  onClick={() => sendKey("down")}
-                  variant="outline"
-                  size="sm"
-                  className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
-                >
-                  ↓
-                </Button>
-                <Button
-                  onClick={() => sendKey("left")}
-                  variant="outline"
-                  size="sm"
-                  className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
-                >
-                  ←
-                </Button>
-                <Button
-                  onClick={() => sendKey("right")}
-                  variant="outline"
-                  size="sm"
-                  className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
-                >
-                  →
-                </Button>
-                <Button
-                  onClick={() => sendKey("enter")}
-                  variant="outline"
-                  size="sm"
-                  className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
-                >
-                  ↵
-                </Button>
-                <Button
-                  onClick={() => sendKey("ctrlc")}
-                  variant="outline"
-                  size="sm"
-                  className="px-2 py-2 text-xs h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
-                >
-                  CTRL+C
-                </Button>
-              </div>
+          {(isMobile || isTablet) && (
+            <div className="flex flex-wrap gap-1.5 justify-center items-center px-1 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
+              <Button
+                onClick={() => sendKey("escape")}
+                variant="outline"
+                size="sm"
+                className="px-2.5 py-2 text-xs h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+              >
+                ESC
+              </Button>
+              <Button
+                onClick={() => sendKey("tab")}
+                variant="outline"
+                size="sm"
+                className="px-2.5 py-2 text-xs h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+              >
+                TAB
+              </Button>
+              <Button
+                onClick={() => sendKey("up")}
+                variant="outline"
+                size="sm"
+                className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+              >
+                ↑
+              </Button>
+              <Button
+                onClick={() => sendKey("down")}
+                variant="outline"
+                size="sm"
+                className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+              >
+                ↓
+              </Button>
+              <Button
+                onClick={() => sendKey("left")}
+                variant="outline"
+                size="sm"
+                className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+              >
+                ←
+              </Button>
+              <Button
+                onClick={() => sendKey("right")}
+                variant="outline"
+                size="sm"
+                className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+              >
+                →
+              </Button>
+              <Button
+                onClick={() => sendKey("enter")}
+                variant="outline"
+                size="sm"
+                className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+              >
+                ↵
+              </Button>
+              <Button
+                onClick={() => sendKey("ctrlc")}
+                variant="outline"
+                size="sm"
+                className="px-2 py-2 text-xs h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+              >
+                CTRL+C
+              </Button>
             </div>
           )}
 
-          {!isMobile && (
+          {!isMobile && !isTablet && (
             <div
               className={`h-2 cursor-ns-resize flex items-center justify-center transition-all duration-150 ${
                 isResizing ? "bg-blue-500 h-3" : "bg-zinc-800 hover:bg-blue-500/50"
