@@ -503,6 +503,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       case "CTRL_C":
         seq = "\x03"
         break
+      case "ENTER":
+        seq = "\r"
+        break
       default:
         break
     }
@@ -770,7 +773,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs"
+            className="h-8 px-2 text-xs"
           >
             ↑
           </Button>
@@ -782,7 +785,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs"
+            className="h-8 px-2 text-xs"
           >
             ↓
           </Button>
@@ -794,7 +797,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs"
+            className="h-8 px-2 text-xs"
           >
             ←
           </Button>
@@ -806,9 +809,21 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs"
+            className="h-8 px-2 text-xs"
           >
             →
+          </Button>
+          <Button
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleKeyButton("ENTER", e)
+            }}
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+          >
+            ↵
           </Button>
           <Button
             onPointerDown={(e) => {
@@ -818,7 +833,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs"
+            className="h-8 px-2 text-xs"
           >
             CTRL+C
           </Button>
