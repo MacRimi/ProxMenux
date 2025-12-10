@@ -512,6 +512,21 @@ export function ScriptTerminalModal({
             )}
           </div>
 
+          {(isTablet || (!isMobile && !isTablet)) && (
+            <div
+              className={`h-2 cursor-ns-resize flex items-center justify-center transition-all duration-150 ${
+                isResizing ? "bg-blue-500 h-3" : "bg-zinc-800 hover:bg-blue-500/50"
+              }`}
+              onMouseDown={handleResizeStart}
+              onTouchStart={handleResizeStart}
+              style={{ touchAction: "none" }}
+            >
+              <GripHorizontal
+                className={`h-4 w-4 transition-all duration-150 ${isResizing ? "text-white scale-110" : "text-zinc-500"}`}
+              />
+            </div>
+          )}
+
           {(isMobile || isTablet) && (
             <div className="flex flex-wrap gap-1.5 justify-center items-center px-1 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
               <Button
@@ -578,21 +593,6 @@ export function ScriptTerminalModal({
               >
                 CTRL+C
               </Button>
-            </div>
-          )}
-
-          {(isTablet || (!isMobile && !isTablet)) && (
-            <div
-              className={`h-2 cursor-ns-resize flex items-center justify-center transition-all duration-150 ${
-                isResizing ? "bg-blue-500 h-3" : "bg-zinc-800 hover:bg-blue-500/50"
-              }`}
-              onMouseDown={handleResizeStart}
-              onTouchStart={handleResizeStart}
-              style={{ touchAction: "none" }}
-            >
-              <GripHorizontal
-                className={`h-4 w-4 transition-all duration-150 ${isResizing ? "text-white scale-110" : "text-zinc-500"}`}
-              />
             </div>
           )}
 
