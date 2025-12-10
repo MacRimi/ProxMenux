@@ -412,6 +412,7 @@ export function ScriptTerminalModal({
     const startHeight = modalHeight
 
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
+      moveEvent.preventDefault()
       const currentY = moveEvent instanceof MouseEvent ? moveEvent.clientY : moveEvent.touches[0].clientY
       const deltaY = currentY - startY
       const newHeight = Math.max(300, Math.min(2400, startHeight + deltaY))
@@ -420,14 +421,16 @@ export function ScriptTerminalModal({
 
       if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
         setTimeout(() => {
-          fitAddonRef.current.fit()
-          wsRef.current?.send(
-            JSON.stringify({
-              type: "resize",
-              cols: termRef.current.cols,
-              rows: termRef.current.rows,
-            }),
-          )
+          if (fitAddonRef.current && termRef.current) {
+            fitAddonRef.current.fit()
+            wsRef.current?.send(
+              JSON.stringify({
+                type: "resize",
+                cols: termRef.current.cols,
+                rows: termRef.current.rows,
+              }),
+            )
+          }
         }, 10)
       }
     }
@@ -439,14 +442,16 @@ export function ScriptTerminalModal({
 
       if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
         setTimeout(() => {
-          fitAddonRef.current.fit()
-          wsRef.current?.send(
-            JSON.stringify({
-              type: "resize",
-              cols: termRef.current.cols,
-              rows: termRef.current.rows,
-            }),
-          )
+          if (fitAddonRef.current && termRef.current) {
+            fitAddonRef.current.fit()
+            wsRef.current?.send(
+              JSON.stringify({
+                type: "resize",
+                cols: termRef.current.cols,
+                rows: termRef.current.rows,
+              }),
+            )
+          }
         }, 50)
       }
 
