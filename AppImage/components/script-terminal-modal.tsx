@@ -6,9 +6,13 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CheckCircle2, XCircle, Loader2, Activity, GripHorizontal } from "lucide-react"
+import { Loader2, GripHorizontal } from "lucide-react"
 import { API_PORT } from "../lib/api-config"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { Terminal } from "@xterm/xterm"
+import { FitAddon } from "@xterm/addon-fit"
+import { WebLinksAddon } from "@xterm/addon-web-links"
+import "@xterm/xterm/css/xterm.css"
 
 interface WebInteraction {
   type: "yesno" | "menu" | "msgbox" | "input" | "inputbox"
@@ -29,7 +33,14 @@ interface ScriptTerminalModalProps {
   description: string
 }
 
-export function ScriptTerminalModal({
+const processMessageText = (text: string): string => {
+  return text
+    .replace(/\\r\\n/g, "\n") // Windows line endings
+    .replace(/\\n/g, "\n") // Unix line endings
+    .replace(/\n\n+/g, "\n\n") // Multiple newlines to double newline
+}
+
+export default function ScriptTerminalModal({
   open,
   onClose,
   scriptPath,
@@ -41,25 +52,30 @@ export function ScriptTerminalModal({
   const termRef = useRef<any>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const fitAddonRef = useRef<any>(null)
+  const webLinksAddonRef = useRef<any>(null)
   const sessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 8))
 
-  const [isConnected, setIsConnected] = useState(false)
-  const [isComplete, setIsComplete] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
+  const [isComplete, setIsComplete] = useState(false)
+  const [isConnected, setIsConnected] = useState(false)
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
-  const [interactionInput, setInteractionInput] = useState("")
-  const checkConnectionInterval = useRef<NodeJS.Timeout | null>(null)
-  const isMobile = useIsMobile()
-
   const [isWaitingNextInteraction, setIsWaitingNextInteraction] = useState(false)
-  const waitingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [showingInteraction, setShowingInteraction] = useState(false)
 
-  const [modalHeight, setModalHeight] = useState(80)
+  const [modalHeight, setModalHeight] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("scriptModalHeight")
+      return saved ? Number.parseInt(saved) : 600
+    }
+    return 600
+  })
   const [isResizing, setIsResizing] = useState(false)
   const resizeHandlersRef = useRef<{
     handleMove: ((e: MouseEvent | TouchEvent) => void) | null
     handleEnd: (() => void) | null
   }>({ handleMove: null, handleEnd: null })
+
+  const isMobile = useIsMobile()
 
   const terminalContainerRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -70,17 +86,10 @@ export function ScriptTerminalModal({
       console.log("[v0] Terminal container mounted, initializing...")
 
       const initializeTerminal = async () => {
-        console.log("[v0] Loading xterm modules...")
-        const [TerminalClass, FitAddonClass] = await Promise.all([
-          import("xterm").then((mod) => mod.Terminal),
-          import("xterm-addon-fit").then((mod) => mod.FitAddon),
-          import("xterm/css/xterm.css"),
-        ])
-
         console.log("[v0] Creating terminal instance...")
         const fontSize = window.innerWidth < 768 ? 12 : 16
 
-        const term = new TerminalClass({
+        const term = new Terminal({
           rendererType: "dom",
           fontFamily: '"Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
           fontSize: fontSize,
@@ -115,13 +124,16 @@ export function ScriptTerminalModal({
           },
         })
 
-        const fitAddon = new FitAddonClass()
+        const fitAddon = new FitAddon()
+        const webLinksAddon = new WebLinksAddon()
         term.loadAddon(fitAddon)
+        term.loadAddon(webLinksAddon)
         console.log("[v0] Opening terminal in container...")
         term.open(node)
 
         termRef.current = term
         fitAddonRef.current = fitAddon
+        webLinksAddonRef.current = webLinksAddon
 
         setTimeout(() => {
           try {
@@ -179,8 +191,8 @@ export function ScriptTerminalModal({
             if (msg.type === "web_interaction" && msg.interaction) {
               console.log("[v0] Web interaction detected:", msg.interaction.type)
               setIsWaitingNextInteraction(false)
-              if (waitingTimeoutRef.current) {
-                clearTimeout(waitingTimeoutRef.current)
+              if (resizeHandlersRef.current.handleMove) {
+                clearTimeout(resizeHandlersRef.current.handleMove)
               }
               setCurrentInteraction({
                 type: msg.interaction.type,
@@ -190,6 +202,7 @@ export function ScriptTerminalModal({
                 options: msg.interaction.options,
                 default: msg.interaction.default,
               })
+              setShowingInteraction(true)
               return
             }
 
@@ -205,8 +218,8 @@ export function ScriptTerminalModal({
           term.write(event.data)
 
           setIsWaitingNextInteraction(false)
-          if (waitingTimeoutRef.current) {
-            clearTimeout(waitingTimeoutRef.current)
+          if (resizeHandlersRef.current.handleMove) {
+            clearTimeout(resizeHandlersRef.current.handleMove)
           }
         }
 
@@ -221,7 +234,7 @@ export function ScriptTerminalModal({
           setIsConnected(false)
           term.writeln("\x1b[33mConnection closed\x1b[0m")
 
-          if (!isComplete) {
+          if (!isComplete && event.code !== 1006) {
             setIsComplete(true)
             setExitCode(event.code === 1000 ? 0 : 1)
           }
@@ -233,7 +246,7 @@ export function ScriptTerminalModal({
           }
         })
 
-        checkConnectionInterval.current = setInterval(() => {
+        const checkConnectionInterval = setInterval(() => {
           if (ws) {
             setIsConnected(ws.readyState === WebSocket.OPEN)
           }
@@ -262,6 +275,11 @@ export function ScriptTerminalModal({
         })
 
         resizeObserver.observe(node)
+
+        return () => {
+          clearInterval(checkConnectionInterval)
+          resizeObserver.disconnect()
+        }
       }
 
       initializeTerminal()
@@ -271,12 +289,6 @@ export function ScriptTerminalModal({
 
   useEffect(() => {
     if (!open) {
-      if (checkConnectionInterval.current) {
-        clearInterval(checkConnectionInterval.current)
-      }
-      if (waitingTimeoutRef.current) {
-        clearTimeout(waitingTimeoutRef.current)
-      }
       if (wsRef.current) {
         wsRef.current.close()
         wsRef.current = null
@@ -295,10 +307,15 @@ export function ScriptTerminalModal({
       }
       resizeHandlersRef.current = { handleMove: null, handleEnd: null }
 
-      sessionIdRef.current = Math.random().toString(36).substring(2, 8)
+      setModalHeight(() => {
+        if (typeof window !== "undefined") {
+          return Number.parseInt(localStorage.getItem("scriptModalHeight") || "600")
+        }
+        return 600
+      })
       setIsComplete(false)
       setExitCode(null)
-      setInteractionInput("")
+      setShowingInteraction(false)
       setCurrentInteraction(null)
       setIsWaitingNextInteraction(false)
       setIsConnected(false)
@@ -322,7 +339,7 @@ export function ScriptTerminalModal({
 
     if (value === "cancel" || value === "") {
       setCurrentInteraction(null)
-      setInteractionInput("")
+      setShowingInteraction(false)
       handleCloseModal()
       return
     }
@@ -338,19 +355,14 @@ export function ScriptTerminalModal({
     }
 
     setCurrentInteraction(null)
-    setInteractionInput("")
+    setShowingInteraction(false)
 
-    waitingTimeoutRef.current = setTimeout(() => {
-      setIsWaitingNextInteraction(true)
-    }, 50)
+    setIsWaitingNextInteraction(true)
   }
 
   const handleCloseModal = () => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.close()
-    }
-    if (checkConnectionInterval.current) {
-      clearInterval(checkConnectionInterval.current)
     }
     if (termRef.current) {
       termRef.current.dispose()
@@ -369,8 +381,7 @@ export function ScriptTerminalModal({
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
       const currentY = moveEvent instanceof MouseEvent ? moveEvent.clientY : moveEvent.touches[0].clientY
       const deltaY = currentY - startY
-      const deltaPercent = (deltaY / window.innerHeight) * 100
-      const newHeight = Math.max(50, Math.min(95, startHeight + deltaPercent))
+      const newHeight = Math.max(300, Math.min(2400, startHeight + deltaY))
 
       setModalHeight(newHeight)
 
@@ -412,6 +423,8 @@ export function ScriptTerminalModal({
         }
       }
 
+      localStorage.setItem("scriptModalHeight", modalHeight.toString())
+
       document.removeEventListener("mousemove", handleMove as any)
       document.removeEventListener("touchmove", handleMove as any)
       document.removeEventListener("mouseup", handleEnd)
@@ -432,24 +445,21 @@ export function ScriptTerminalModal({
     <>
       <Dialog open={open}>
         <DialogContent
-          className="max-w-4xl p-0 flex flex-col"
-          style={{ height: isMobile ? "80vh" : `${modalHeight}vh` }}
+          className="max-w-7xl flex flex-col overflow-hidden p-0"
+          style={{
+            height: isMobile ? "80vh" : `${Math.min(modalHeight, window.innerHeight * 0.9)}px`,
+            maxHeight: isMobile ? "80vh" : "2400px",
+          }}
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
-          <DialogTitle className="sr-only">{title}</DialogTitle>
-
-          <div className="flex items-center gap-2 p-4 border-b">
-            {isComplete &&
-              (exitCode === 0 ? (
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-              ) : (
-                <XCircle className="h-5 w-5 text-red-500" />
-              ))}
-            <div>
-              <h2 className="text-lg font-semibold">{title}</h2>
-              {description && <p className="text-sm text-muted-foreground">{description}</p>}
+          <div className="flex items-center justify-between border-b px-6 py-4">
+            <div className="flex items-center gap-3">
+              <DialogTitle className="text-xl font-semibold">{scriptName}</DialogTitle>
             </div>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <GripHorizontal className="h-4 w-4" />
+            </Button>
           </div>
 
           <div className="overflow-hidden relative flex-1">
@@ -481,11 +491,6 @@ export function ScriptTerminalModal({
 
           <div className="flex items-center justify-between p-4 border-t">
             <div className="flex items-center gap-3">
-              <Activity className="h-5 w-5 text-blue-500" />
-              <div
-                className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
-                title={isConnected ? "Connected" : "Disconnected"}
-              ></div>
               <span className="text-xs text-muted-foreground">{isConnected ? "Online" : "Offline"}</span>
             </div>
 
@@ -500,7 +505,7 @@ export function ScriptTerminalModal({
         </DialogContent>
       </Dialog>
 
-      {currentInteraction && (
+      {showingInteraction && currentInteraction && (
         <Dialog open={true}>
           <DialogContent
             className="max-w-4xl max-h-[80vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 duration-100"
@@ -510,7 +515,7 @@ export function ScriptTerminalModal({
           >
             <DialogTitle>{currentInteraction.title}</DialogTitle>
             <div className="space-y-4">
-              <p className="whitespace-pre-wrap">{currentInteraction.message}</p>
+              <p className="whitespace-pre-wrap">{processMessageText(currentInteraction.message)}</p>
 
               {currentInteraction.type === "yesno" && (
                 <div className="flex gap-2">
@@ -557,31 +562,16 @@ export function ScriptTerminalModal({
                 <div className="space-y-2">
                   <Label>Your input:</Label>
                   <Input
-                    value={interactionInput}
-                    onChange={(e) => setInteractionInput(e.target.value)}
+                    value={currentInteraction.default || ""}
+                    onChange={(e) => handleInteractionResponse(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        handleInteractionResponse(interactionInput)
+                        handleInteractionResponse(currentInteraction.default || "")
                       }
                     }}
                     placeholder={currentInteraction.default || ""}
                     className="transition-all duration-150"
                   />
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleInteractionResponse(interactionInput)}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 transition-all duration-150"
-                    >
-                      Submit
-                    </Button>
-                    <Button
-                      onClick={() => handleInteractionResponse("cancel")}
-                      variant="outline"
-                      className="flex-1 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all duration-150"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
                 </div>
               )}
 
