@@ -6,16 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Loader2,
-  Activity,
-  GripHorizontal,
-  ArrowUp,
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  CornerDownLeft,
-} from "lucide-react"
+import { Loader2, Activity, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, CornerDownLeft } from "lucide-react"
 import "xterm/css/xterm.css"
 import { API_PORT } from "@/lib/api-config"
 
@@ -64,7 +55,7 @@ export function ScriptTerminalModal({
   const [isWaitingNextInteraction, setIsWaitingNextInteraction] = useState(false)
   const waitingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const [modalHeight, setModalHeight] = useState(600) // Restaurado a píxeles como en la versión que funciona
+  const [modalHeight, setModalHeight] = useState(60) // vh en lugar de píxeles
   const [isResizing, setIsResizing] = useState(false)
   const resizeHandlersRef = useRef<{
     handleMouseMove: ((e: MouseEvent) => void) | null
@@ -424,7 +415,10 @@ export function ScriptTerminalModal({
       moveEvent.stopPropagation()
       const currentY = "touches" in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
       const deltaY = currentY - startY
-      const newHeight = Math.max(300, Math.min(2400, startHeight + deltaY))
+
+      const viewportHeight = window.innerHeight
+      const deltaVh = (deltaY / viewportHeight) * 100
+      const newHeight = Math.max(30, Math.min(85, startHeight + deltaVh))
 
       setModalHeight(newHeight)
 
@@ -470,7 +464,10 @@ export function ScriptTerminalModal({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
           className="max-w-7xl p-0 flex flex-col gap-0 overflow-hidden"
-          style={{ height: isMobile || isTablet ? "80vh" : `${modalHeight}px`, maxHeight: "none" }} // Restaurado: 80vh fijo para móvil/tablet, píxeles para escritorio
+          style={{
+            height: isMobile ? "80vh" : `${modalHeight}vh`,
+            maxHeight: "none",
+          }}
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
           hideClose
@@ -497,18 +494,7 @@ export function ScriptTerminalModal({
             )}
           </div>
 
-          {(isTablet || (!isMobile && !isTablet)) && (
-            <div
-              onMouseDown={handleResizeStart}
-              onTouchStart={handleResizeStart}
-              className="h-2 w-full cursor-row-resize bg-zinc-800 hover:bg-blue-600 transition-colors flex items-center justify-center group relative pointer-events-auto z-50"
-              style={{ touchAction: "none" }}
-            >
-              <GripHorizontal className="h-4 w-4 text-zinc-600 group-hover:text-white pointer-events-none" />
-            </div>
-          )}
-
-          {isMobile && (
+          {(isMobile || isTablet) && (
             <div className="flex items-center justify-center gap-1.5 px-1 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <Button
                 onPointerDown={(e) => {
