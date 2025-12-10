@@ -64,7 +64,7 @@ export function ScriptTerminalModal({
   const [isWaitingNextInteraction, setIsWaitingNextInteraction] = useState(false)
   const waitingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const [modalHeight, setModalHeight] = useState(600)
+  const [modalHeight, setModalHeight] = useState(80) // Cambiado de 600px a 80vh
   const [isResizing, setIsResizing] = useState(false)
   const resizeHandlersRef = useRef<{
     handleMouseMove: ((e: MouseEvent) => void) | null
@@ -416,13 +416,15 @@ export function ScriptTerminalModal({
     e.preventDefault()
     e.stopPropagation()
 
+    setIsResizing(true)
     const startY = "touches" in e ? e.touches[0].clientY : e.clientY
     const startHeight = modalHeight
 
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
       const currentY = "touches" in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
       const deltaY = currentY - startY
-      const newHeight = Math.max(300, Math.min(2400, startHeight + deltaY))
+      const deltaPercent = (deltaY / window.innerHeight) * 100
+      const newHeight = Math.max(50, Math.min(95, startHeight + deltaPercent))
 
       setModalHeight(newHeight)
 
@@ -443,9 +445,26 @@ export function ScriptTerminalModal({
     }
 
     const handleEnd = () => {
+      setIsResizing(false)
+
+      if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+        setTimeout(() => {
+          if (fitAddonRef.current && termRef.current) {
+            fitAddonRef.current.fit()
+            wsRef.current?.send(
+              JSON.stringify({
+                type: "resize",
+                cols: termRef.current.cols,
+                rows: termRef.current.rows,
+              }),
+            )
+          }
+        }, 50)
+      }
+
       document.removeEventListener("mousemove", handleMove as any)
       document.removeEventListener("mouseup", handleEnd)
-      document.removeEventListener("touchmove", handleMove as any)
+      document.removeEventListener("touchmove", handleMove as any, { passive: false } as any)
       document.removeEventListener("touchend", handleEnd)
 
       localStorage.setItem("scriptModalHeight", modalHeight.toString())
@@ -468,9 +487,10 @@ export function ScriptTerminalModal({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
           className="max-w-7xl p-0 flex flex-col gap-0 overflow-hidden"
-          style={{ height: isMobile || isTablet ? "80vh" : `${modalHeight}px`, maxHeight: "none" }}
+          style={{ height: isMobile ? "80vh" : `${modalHeight}vh` }} // Cambiado para usar vh en tablet y escritorio
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
+          hideClose
         >
           <DialogTitle className="sr-only">{title}</DialogTitle>
 
@@ -494,8 +514,23 @@ export function ScriptTerminalModal({
             )}
           </div>
 
+          {!isMobile && (
+            <div
+              className={`h-2 cursor-ns-resize flex items-center justify-center transition-all duration-150 ${
+                isResizing ? "bg-blue-500 h-3" : "bg-zinc-800 hover:bg-blue-500/50"
+              }`}
+              onMouseDown={handleResizeStart}
+              onTouchStart={handleResizeStart}
+              style={{ touchAction: "none" }}
+            >
+              <GripHorizontal
+                className={`h-4 w-4 transition-all duration-150 ${isResizing ? "text-white scale-110" : "text-zinc-500"}`}
+              />
+            </div>
+          )}
+
           {(isMobile || isTablet) && (
-            <div className="flex flex-wrap gap-1.5 justify-center items-center px-1 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
+            <div className="flex items-center justify-center gap-1.5 px-1 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <Button
                 onPointerDown={(e) => {
                   e.preventDefault()
@@ -592,17 +627,6 @@ export function ScriptTerminalModal({
               >
                 CTRL+C
               </Button>
-            </div>
-          )}
-
-          {(isTablet || (!isMobile && !isTablet)) && (
-            <div
-              onMouseDown={handleResizeStart}
-              onTouchStart={handleResizeStart}
-              className="h-2 w-full cursor-row-resize bg-zinc-800 hover:bg-blue-600 transition-colors flex items-center justify-center group relative"
-              style={{ touchAction: "none" }}
-            >
-              <GripHorizontal className="h-4 w-4 text-zinc-600 group-hover:text-white pointer-events-none" />
             </div>
           )}
 
