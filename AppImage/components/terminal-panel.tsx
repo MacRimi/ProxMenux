@@ -740,7 +740,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       )}
 
       {(isMobile || isTablet) && (
-        <div className="flex flex-wrap gap-2 justify-center items-center px-2 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
+        <div className="flex flex-wrap gap-1.5 justify-center items-center px-1 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
           <Button
             onPointerDown={(e) => {
               e.preventDefault()
@@ -749,7 +749,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs"
+            className="h-8 px-2.5 text-xs"
           >
             ESC
           </Button>
@@ -761,7 +761,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs"
+            className="h-8 px-2.5 text-xs"
           >
             TAB
           </Button>
@@ -773,7 +773,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-2 text-xs"
+            className="h-8 px-3 text-xs"
           >
             ↑
           </Button>
@@ -785,7 +785,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-2 text-xs"
+            className="h-8 px-3 text-xs"
           >
             ↓
           </Button>
@@ -797,7 +797,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-2 text-xs"
+            className="h-8 px-3 text-xs"
           >
             ←
           </Button>
@@ -809,7 +809,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-2 text-xs"
+            className="h-8 px-3 text-xs"
           >
             →
           </Button>
@@ -821,7 +821,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs"
+            className="h-8 px-2.5 text-xs"
           >
             ↵
           </Button>
