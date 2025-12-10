@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Loader2, GripHorizontal, X } from "lucide-react"
 import { API_PORT } from "@/lib/api-config"
 import { useIsMobile } from "@/hooks/use-mobile"
-import WebLinksAddon from "xterm-addon-web-links"
+import { Terminal as XTerm, FitAddon } from "xterm"
+import "xterm/css/xterm.css"
 
 interface WebInteraction {
   type: "yesno" | "menu" | "msgbox" | "input" | "inputbox"
@@ -46,10 +47,9 @@ export default function ScriptTerminalModal({
   title,
   description,
 }: ScriptTerminalModalProps) {
-  const termRef = useRef<any>(null)
+  const termRef = useRef<XTerm | null>(null)
+  const fitAddonRef = useRef<FitAddon | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
-  const fitAddonRef = useRef<any>(null)
-  const webLinksAddonRef = useRef<any>(null)
   const sessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 8))
 
   const [exitCode, setExitCode] = useState<number | null>(null)
@@ -86,13 +86,7 @@ export default function ScriptTerminalModal({
         console.log("[v0] Creating terminal instance...")
         const fontSize = window.innerWidth < 768 ? 12 : 16
 
-        const [Terminal, FitAddon] = await Promise.all([
-          import("xterm").then((mod) => mod.Terminal),
-          import("xterm-addon-fit").then((mod) => mod.FitAddon),
-          import("xterm/css/xterm.css"),
-        ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
-
-        const term = new Terminal({
+        const term = new XTerm({
           rendererType: "dom",
           fontFamily: '"Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
           fontSize: fontSize,
@@ -128,15 +122,12 @@ export default function ScriptTerminalModal({
         })
 
         const fitAddon = new FitAddon()
-        const webLinksAddon = new WebLinksAddon()
         term.loadAddon(fitAddon)
-        term.loadAddon(webLinksAddon)
         console.log("[v0] Opening terminal in container...")
         term.open(node)
 
         termRef.current = term
         fitAddonRef.current = fitAddon
-        webLinksAddonRef.current = webLinksAddon
 
         setTimeout(() => {
           try {
