@@ -55,18 +55,14 @@ export function ScriptTerminalModal({
   const [isWaitingNextInteraction, setIsWaitingNextInteraction] = useState(false)
   const waitingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const [modalHeight, setModalHeight] = useState(60) // vh en lugar de píxeles
+  const [modalHeight, setModalHeight] = useState(600)
   const [isResizing, setIsResizing] = useState(false)
   const resizeHandlersRef = useRef<{
-    handleMouseMove: ((e: MouseEvent) => void) | null
-    handleMouseUp: (() => void) | null
-    handleTouchMove: ((e: TouchEvent) => void) | null
-    handleTouchEnd: (() => void) | null
+    handlePointerMove: ((e: PointerEvent) => void) | null
+    handlePointerUp: (() => void) | null
   }>({
-    handleMouseMove: null,
-    handleMouseUp: null,
-    handleTouchMove: null,
-    handleTouchEnd: null,
+    handlePointerMove: null,
+    handlePointerUp: null,
   })
 
   const terminalContainerRef = useRef<HTMLDivElement>(null)
@@ -296,23 +292,15 @@ export function ScriptTerminalModal({
         termRef.current.dispose()
         termRef.current = null
       }
-      if (resizeHandlersRef.current.handleMouseMove) {
-        document.removeEventListener("mousemove", resizeHandlersRef.current.handleMouseMove)
+      if (resizeHandlersRef.current.handlePointerMove) {
+        document.removeEventListener("pointermove", resizeHandlersRef.current.handlePointerMove)
       }
-      if (resizeHandlersRef.current.handleMouseUp) {
-        document.removeEventListener("mouseup", resizeHandlersRef.current.handleMouseUp)
-      }
-      if (resizeHandlersRef.current.handleTouchMove) {
-        document.removeEventListener("touchmove", resizeHandlersRef.current.handleTouchMove)
-      }
-      if (resizeHandlersRef.current.handleTouchEnd) {
-        document.removeEventListener("touchend", resizeHandlersRef.current.handleTouchEnd)
+      if (resizeHandlersRef.current.handlePointerUp) {
+        document.removeEventListener("pointerup", resizeHandlersRef.current.handlePointerUp)
       }
       resizeHandlersRef.current = {
-        handleMouseMove: null,
-        handleMouseUp: null,
-        handleTouchMove: null,
-        handleTouchEnd: null,
+        handlePointerMove: null,
+        handlePointerUp: null,
       }
 
       sessionIdRef.current = Math.random().toString(36).substring(2, 8)
@@ -403,22 +391,19 @@ export function ScriptTerminalModal({
     onClose()
   }
 
-  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleResizeStart = (e: React.PointerEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
-    const startY = "touches" in e ? e.touches[0].clientY : e.clientY
+    const startY = e.clientY
     const startHeight = modalHeight
 
-    const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
+    const handleMove = (moveEvent: PointerEvent) => {
       moveEvent.preventDefault()
-      moveEvent.stopPropagation()
-      const currentY = "touches" in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
+      const currentY = moveEvent.clientY
       const deltaY = currentY - startY
 
-      const viewportHeight = window.innerHeight
-      const deltaVh = (deltaY / viewportHeight) * 100
-      const newHeight = Math.max(30, Math.min(85, startHeight + deltaVh))
+      const newHeight = Math.max(300, Math.min(window.innerHeight - 100, startHeight + deltaY))
 
       setModalHeight(newHeight)
 
@@ -439,18 +424,21 @@ export function ScriptTerminalModal({
     }
 
     const handleEnd = () => {
-      document.removeEventListener("mousemove", handleMove)
-      document.removeEventListener("mouseup", handleEnd)
-      document.removeEventListener("touchmove", handleMove)
-      document.removeEventListener("touchend", handleEnd)
+      document.removeEventListener("pointermove", handleMove)
+      document.removeEventListener("pointerup", handleEnd)
+      document.removeEventListener("pointercancel", handleEnd)
 
       localStorage.setItem("scriptModalHeight", modalHeight.toString())
     }
 
-    document.addEventListener("mousemove", handleMove)
-    document.addEventListener("mouseup", handleEnd)
-    document.addEventListener("touchmove", handleMove, { passive: false })
-    document.addEventListener("touchend", handleEnd)
+    document.addEventListener("pointermove", handleMove)
+    document.addEventListener("pointerup", handleEnd)
+    document.addEventListener("pointercancel", handleEnd)
+
+    // Capturar el pointer para asegurar que recibimos todos los eventos
+    if (e.currentTarget instanceof Element) {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    }
   }
 
   const sendCommand = (command: string) => {
@@ -465,7 +453,7 @@ export function ScriptTerminalModal({
         <DialogContent
           className="max-w-7xl p-0 flex flex-col gap-0 overflow-hidden"
           style={{
-            height: isMobile ? "80vh" : `${modalHeight}vh`,
+            height: isMobile || isTablet ? "80vh" : `${modalHeight}px`,
             maxHeight: "none",
           }}
           onInteractOutside={(e) => e.preventDefault()}
@@ -745,6 +733,11 @@ export function ScriptTerminalModal({
           </DialogContent>
         </Dialog>
       )}
+
+      <div
+        onPointerDown={handleResizeStart}
+        className="hidden md:flex h-2 cursor-ns-resize items-center justify-center hover:bg-accent transition-colors z-50 pointer-events-auto touch-none"
+      ></div>
     </>
   )
 }
