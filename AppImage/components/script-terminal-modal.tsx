@@ -6,7 +6,16 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Activity, GripHorizontal } from "lucide-react"
+import {
+  Loader2,
+  Activity,
+  GripHorizontal,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  CornerDownLeft,
+} from "lucide-react"
 import "xterm/css/xterm.css"
 import { API_PORT } from "@/lib/api-config"
 
@@ -407,13 +416,11 @@ export function ScriptTerminalModal({
     e.preventDefault()
     e.stopPropagation()
 
-    setIsResizing(true)
-    const startY = "clientY" in e ? e.clientY : e.touches[0].clientY
+    const startY = "touches" in e ? e.touches[0].clientY : e.clientY
     const startHeight = modalHeight
 
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
-      moveEvent.preventDefault()
-      const currentY = moveEvent instanceof MouseEvent ? moveEvent.clientY : moveEvent.touches[0].clientY
+      const currentY = "touches" in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
       const deltaY = currentY - startY
       const newHeight = Math.max(300, Math.min(2400, startHeight + deltaY))
 
@@ -436,49 +443,24 @@ export function ScriptTerminalModal({
     }
 
     const handleEnd = () => {
-      setIsResizing(false)
-
-      localStorage.setItem("scriptModalHeight", modalHeight.toString())
-
-      if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
-        setTimeout(() => {
-          if (fitAddonRef.current && termRef.current) {
-            fitAddonRef.current.fit()
-            wsRef.current?.send(
-              JSON.stringify({
-                type: "resize",
-                cols: termRef.current.cols,
-                rows: termRef.current.rows,
-              }),
-            )
-          }
-        }, 50)
-      }
-
-      document.removeEventListener("mousemove", handleMove)
-      document.removeEventListener("touchmove", handleMove)
+      document.removeEventListener("mousemove", handleMove as any)
       document.removeEventListener("mouseup", handleEnd)
+      document.removeEventListener("touchmove", handleMove as any)
       document.removeEventListener("touchend", handleEnd)
 
-      resizeHandlersRef.current = {
-        handleMouseMove: null,
-        handleMouseUp: null,
-        handleTouchMove: null,
-        handleTouchEnd: null,
-      }
-    }
-
-    resizeHandlersRef.current = {
-      handleMouseMove: handleMove as any,
-      handleMouseUp: handleEnd,
-      handleTouchMove: handleMove as any,
-      handleTouchEnd: handleEnd,
+      localStorage.setItem("scriptModalHeight", modalHeight.toString())
     }
 
     document.addEventListener("mousemove", handleMove as any)
-    document.addEventListener("touchmove", handleMove as any, { passive: false })
     document.addEventListener("mouseup", handleEnd)
+    document.addEventListener("touchmove", handleMove as any, { passive: false })
     document.addEventListener("touchend", handleEnd)
+  }
+
+  const sendCommand = (command: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: "input", data: command }))
+    }
   }
 
   return (
@@ -512,87 +494,115 @@ export function ScriptTerminalModal({
             )}
           </div>
 
-          {(isTablet || (!isMobile && !isTablet)) && (
-            <div
-              className={`h-2 cursor-ns-resize flex items-center justify-center transition-all duration-150 ${
-                isResizing ? "bg-blue-500 h-3" : "bg-zinc-800 hover:bg-blue-500/50"
-              }`}
-              onMouseDown={handleResizeStart}
-              onTouchStart={handleResizeStart}
-              style={{ touchAction: "none" }}
-            >
-              <GripHorizontal
-                className={`h-4 w-4 transition-all duration-150 ${isResizing ? "text-white scale-110" : "text-zinc-500"}`}
-              />
-            </div>
-          )}
-
           {(isMobile || isTablet) && (
             <div className="flex flex-wrap gap-1.5 justify-center items-center px-1 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
               <Button
-                onClick={() => sendKey("escape")}
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  sendCommand("\x1b")
+                }}
                 variant="outline"
                 size="sm"
-                className="px-2.5 py-2 text-xs h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[60px]"
               >
                 ESC
               </Button>
               <Button
-                onClick={() => sendKey("tab")}
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  sendCommand("\t")
+                }}
                 variant="outline"
                 size="sm"
-                className="px-2.5 py-2 text-xs h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[60px]"
               >
                 TAB
               </Button>
               <Button
-                onClick={() => sendKey("up")}
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  sendCommand("\x1b[A")
+                }}
                 variant="outline"
                 size="sm"
-                className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
               >
-                ↑
+                <ArrowUp className="h-4 w-4" />
               </Button>
               <Button
-                onClick={() => sendKey("down")}
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  sendCommand("\x1b[B")
+                }}
                 variant="outline"
                 size="sm"
-                className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
               >
-                ↓
+                <ArrowDown className="h-4 w-4" />
               </Button>
               <Button
-                onClick={() => sendKey("left")}
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  sendCommand("\x1b[D")
+                }}
                 variant="outline"
                 size="sm"
-                className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
               >
-                ←
+                <ArrowLeft className="h-4 w-4" />
               </Button>
               <Button
-                onClick={() => sendKey("right")}
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  sendCommand("\x1b[C")
+                }}
                 variant="outline"
                 size="sm"
-                className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
               >
-                →
+                <ArrowRight className="h-4 w-4" />
               </Button>
               <Button
-                onClick={() => sendKey("enter")}
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  sendCommand("\r")
+                }}
                 variant="outline"
                 size="sm"
-                className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
               >
-                ↵
+                <CornerDownLeft className="h-4 w-4" />
               </Button>
               <Button
-                onClick={() => sendKey("ctrlc")}
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  sendCommand("\x03")
+                }}
                 variant="outline"
                 size="sm"
-                className="px-2 py-2 text-xs h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[75px]"
               >
                 CTRL+C
               </Button>
+            </div>
+          )}
+
+          {(isTablet || (!isMobile && !isTablet)) && (
+            <div
+              onMouseDown={handleResizeStart}
+              onTouchStart={handleResizeStart}
+              className="h-2 w-full cursor-row-resize bg-zinc-800 hover:bg-blue-600 transition-colors flex items-center justify-center group relative"
+              style={{ touchAction: "none" }}
+            >
+              <GripHorizontal className="h-4 w-4 text-zinc-600 group-hover:text-white pointer-events-none" />
             </div>
           )}
 
