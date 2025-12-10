@@ -510,7 +510,12 @@ export function ScriptTerminalModal({
           >
             <DialogTitle>{currentInteraction.title}</DialogTitle>
             <div className="space-y-4">
-              <p className="whitespace-pre-wrap">{currentInteraction.message}</p>
+              <p
+                className="whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{
+                  __html: currentInteraction.message.replace(/\\n/g, "<br/>").replace(/\n/g, "<br/>"),
+                }}
+              />
 
               {currentInteraction.type === "yesno" && (
                 <div className="flex gap-2">
