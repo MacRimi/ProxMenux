@@ -2,17 +2,14 @@
 
 import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, GripHorizontal } from "lucide-react"
-import { API_PORT } from "../lib/api-config"
+import { Loader2, GripHorizontal, X } from "lucide-react"
+import { API_PORT } from "@/lib/api-config"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { Terminal } from "@xterm/xterm"
-import { FitAddon } from "@xterm/addon-fit"
-import { WebLinksAddon } from "@xterm/addon-web-links"
-import "@xterm/xterm/css/xterm.css"
+import WebLinksAddon from "xterm-addon-web-links"
 
 interface WebInteraction {
   type: "yesno" | "menu" | "msgbox" | "input" | "inputbox"
@@ -88,6 +85,12 @@ export default function ScriptTerminalModal({
       const initializeTerminal = async () => {
         console.log("[v0] Creating terminal instance...")
         const fontSize = window.innerWidth < 768 ? 12 : 16
+
+        const [Terminal, FitAddon] = await Promise.all([
+          import("xterm").then((mod) => mod.Terminal),
+          import("xterm-addon-fit").then((mod) => mod.FitAddon),
+          import("xterm/css/xterm.css"),
+        ]).then(([Terminal, FitAddon]) => [Terminal, FitAddon])
 
         const term = new Terminal({
           rendererType: "dom",
@@ -453,14 +456,12 @@ export default function ScriptTerminalModal({
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
-          <div className="flex items-center justify-between border-b px-6 py-4">
-            <div className="flex items-center gap-3">
-              <DialogTitle className="text-xl font-semibold">{scriptName}</DialogTitle>
-            </div>
+          <DialogHeader className="flex items-center justify-between border-b px-6 py-4">
+            <DialogTitle className="text-xl font-semibold">{scriptName}</DialogTitle>
             <Button variant="ghost" size="icon" onClick={onClose}>
-              <GripHorizontal className="h-4 w-4" />
+              <X className="h-4 w-4" />
             </Button>
-          </div>
+          </DialogHeader>
 
           <div className="overflow-hidden relative flex-1">
             <div ref={terminalContainerRef} className="w-full h-full" />
