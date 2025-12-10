@@ -42,7 +42,7 @@ export function ScriptTerminalModal({
   const fitAddonRef = useRef<any>(null)
   const sessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 8))
 
-  const [isConnected, setIsConnected] = useState(false)
+  const [isConnected, setIsConnected] = useState(true)
   const [isComplete, setIsComplete] = useState(false)
   const [exitCode, setExitCode] = useState<number | null>(null)
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
@@ -161,7 +161,6 @@ export function ScriptTerminalModal({
     wsRef.current = ws
 
     ws.onopen = () => {
-      console.log("[v0] WebSocket connected!")
       setIsConnected(true)
 
       const initMessage = {
@@ -172,7 +171,6 @@ export function ScriptTerminalModal({
         },
       }
 
-      console.log("[v0] Sending init message:", initMessage)
       ws.send(JSON.stringify(initMessage))
 
       setTimeout(() => {
@@ -234,13 +232,11 @@ export function ScriptTerminalModal({
     }
 
     ws.onerror = (error) => {
-      console.log("[v0] WebSocket error:", error)
       setIsConnected(false)
       term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
     }
 
     ws.onclose = (event) => {
-      console.log("[v0] WebSocket closed:", event.code, event.reason)
       setIsConnected(false)
       term.writeln("\x1b[33mConnection closed\x1b[0m")
 
@@ -602,13 +598,14 @@ export function ScriptTerminalModal({
             </div>
           )}
 
-          {!isMobile && !isTablet && (
+          {(isTablet || (!isMobile && !isTablet)) && (
             <div
               className={`h-2 cursor-ns-resize flex items-center justify-center transition-all duration-150 ${
                 isResizing ? "bg-blue-500 h-3" : "bg-zinc-800 hover:bg-blue-500/50"
               }`}
               onMouseDown={handleResizeStart}
               onTouchStart={handleResizeStart}
+              style={{ touchAction: "none" }}
             >
               <GripHorizontal
                 className={`h-4 w-4 transition-all duration-150 ${isResizing ? "text-white scale-110" : "text-zinc-500"}`}
