@@ -92,14 +92,12 @@ export function ScriptTerminalModal({
   }, [])
 
   const initializeTerminal = async () => {
-    console.log("[v0] Loading xterm modules...")
     const [TerminalClass, FitAddonClass] = await Promise.all([
       import("xterm").then((mod) => mod.Terminal),
       import("xterm-addon-fit").then((mod) => mod.FitAddon),
       import("xterm/css/xterm.css"),
     ])
 
-    console.log("[v0] Creating terminal instance...")
     const fontSize = window.innerWidth < 768 ? 12 : 16
 
     const term = new TerminalClass({
@@ -139,7 +137,6 @@ export function ScriptTerminalModal({
 
     const fitAddon = new FitAddonClass()
     term.loadAddon(fitAddon)
-    console.log("[v0] Opening terminal in container...")
     if (terminalContainerRef.current) {
       term.open(terminalContainerRef.current)
     }
@@ -148,16 +145,12 @@ export function ScriptTerminalModal({
     fitAddonRef.current = fitAddon
 
     setTimeout(() => {
-      try {
-        fitAddon.fit()
-        console.log("[v0] Terminal fitted, cols:", term.cols, "rows:", term.rows)
-      } catch (err) {
-        console.log("[v0] Fit error:", err)
+      if (fitAddonRef.current && termRef.current) {
+        fitAddonRef.current.fit()
       }
-    }, 50)
+    }, 100)
 
     const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
-    console.log("[v0] Connecting to WebSocket:", wsUrl)
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
@@ -174,11 +167,9 @@ export function ScriptTerminalModal({
       ws.send(JSON.stringify(initMessage))
 
       setTimeout(() => {
-        try {
-          fitAddon.fit()
-          const cols = term.cols
-          const rows = term.rows
-          console.log("[v0] Sending resize:", { cols, rows })
+        if (fitAddonRef.current && termRef.current && ws.readyState === WebSocket.OPEN) {
+          const cols = termRef.current.cols
+          const rows = termRef.current.rows
           ws.send(
             JSON.stringify({
               type: "resize",
@@ -186,19 +177,15 @@ export function ScriptTerminalModal({
               rows: rows,
             }),
           )
-        } catch (err) {
-          console.log("[v0] Resize error:", err)
         }
       }, 100)
     }
 
     ws.onmessage = (event) => {
-      console.log("[v0] WebSocket message received:", event.data.substring(0, 100))
       try {
         const msg = JSON.parse(event.data)
 
         if (msg.type === "web_interaction" && msg.interaction) {
-          console.log("[v0] Web interaction detected:", msg.interaction.type)
           setIsWaitingNextInteraction(false)
           if (waitingTimeoutRef.current) {
             clearTimeout(waitingTimeoutRef.current)
@@ -215,7 +202,6 @@ export function ScriptTerminalModal({
         }
 
         if (msg.type === "error") {
-          console.log("[v0] Error message:", msg.message)
           term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
           return
         }
@@ -253,11 +239,11 @@ export function ScriptTerminalModal({
     })
 
     checkConnectionInterval.current = setInterval(() => {
-      if (ws) {
+      if (wsRef.current) {
         setConnectionStatus(
-          ws.readyState === WebSocket.OPEN
+          wsRef.current.readyState === WebSocket.OPEN
             ? "online"
-            : ws.readyState === WebSocket.CONNECTING
+            : wsRef.current.readyState === WebSocket.CONNECTING
               ? "connecting"
               : "offline",
         )
@@ -269,19 +255,15 @@ export function ScriptTerminalModal({
     const resizeObserver = new ResizeObserver(() => {
       if (resizeTimeout) clearTimeout(resizeTimeout)
       resizeTimeout = setTimeout(() => {
-        if (fitAddon && term && ws?.readyState === WebSocket.OPEN) {
-          try {
-            fitAddon.fit()
-            ws.send(
-              JSON.stringify({
-                type: "resize",
-                cols: term.cols,
-                rows: term.rows,
-              }),
-            )
-          } catch (err) {
-            // Ignore
-          }
+        if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+          fitAddonRef.current.fit()
+          wsRef.current.send(
+            JSON.stringify({
+              type: "resize",
+              cols: termRef.current.cols,
+              rows: termRef.current.rows,
+            }),
+          )
         }
       }, 100)
     })
@@ -372,10 +354,8 @@ export function ScriptTerminalModal({
     const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
 
     if (isStandardPort) {
-      // When using standard port (proxy scenario), don't add port number
       return `${wsProtocol}//${hostname}/ws/script/${sid}`
     } else {
-      // Development or custom port, use API_PORT
       return `${wsProtocol}//${hostname}:${API_PORT}/ws/script/${sid}`
     }
   }
@@ -439,20 +419,16 @@ export function ScriptTerminalModal({
       setModalHeight(newHeight)
 
       if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
-        try {
-          setTimeout(() => {
-            fitAddonRef.current.fit()
-            wsRef.current?.send(
-              JSON.stringify({
-                type: "resize",
-                cols: termRef.current.cols,
-                rows: termRef.current.rows,
-              }),
-            )
-          }, 10)
-        } catch (err) {
-          // Ignore
-        }
+        setTimeout(() => {
+          fitAddonRef.current.fit()
+          wsRef.current?.send(
+            JSON.stringify({
+              type: "resize",
+              cols: termRef.current.cols,
+              rows: termRef.current.rows,
+            }),
+          )
+        }, 10)
       }
     }
 
@@ -462,20 +438,16 @@ export function ScriptTerminalModal({
       localStorage.setItem("scriptModalHeight", modalHeight.toString())
 
       if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
-        try {
-          setTimeout(() => {
-            fitAddonRef.current.fit()
-            wsRef.current?.send(
-              JSON.stringify({
-                type: "resize",
-                cols: termRef.current.cols,
-                rows: termRef.current.rows,
-              }),
-            )
-          }, 50)
-        } catch (err) {
-          // Ignore
-        }
+        setTimeout(() => {
+          fitAddonRef.current.fit()
+          wsRef.current?.send(
+            JSON.stringify({
+              type: "resize",
+              cols: termRef.current.cols,
+              rows: termRef.current.rows,
+            }),
+          )
+        }, 50)
       }
 
       document.removeEventListener("mousemove", handleMove)
