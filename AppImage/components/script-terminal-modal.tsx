@@ -23,6 +23,7 @@ interface ScriptTerminalModalProps {
   onClose: () => void
   scriptPath: string
   scriptTitle: string
+  scriptDescription: string // Added scriptDescription prop
   params?: Record<string, string>
 }
 
@@ -31,6 +32,7 @@ export function ScriptTerminalModal({
   onClose,
   scriptPath,
   scriptTitle,
+  scriptDescription, // Added scriptDescription variable
   params = {},
 }: ScriptTerminalModalProps) {
   const termRef = useRef<any>(null)
@@ -545,6 +547,7 @@ export function ScriptTerminalModal({
           <div className="flex items-center gap-2 p-4 border-b">
             <div>
               <h2 className="text-lg font-semibold">{scriptTitle}</h2>
+              <p className="text-sm text-muted-foreground">{scriptDescription}</p>
             </div>
           </div>
 
