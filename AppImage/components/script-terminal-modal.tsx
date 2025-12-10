@@ -23,7 +23,6 @@ interface ScriptTerminalModalProps {
   onClose: () => void
   scriptPath: string
   scriptTitle: string
-  scriptDescription: string // Added scriptDescription prop
   params?: Record<string, string>
 }
 
@@ -32,7 +31,6 @@ export function ScriptTerminalModal({
   onClose,
   scriptPath,
   scriptTitle,
-  scriptDescription, // Added scriptDescription variable
   params = {},
 }: ScriptTerminalModalProps) {
   const termRef = useRef<any>(null)
@@ -361,35 +359,6 @@ export function ScriptTerminalModal({
     }
   }, [])
 
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Enviar ping para mantener conexión activa cuando la pantalla se bloquea
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: "ping" }))
-        }
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-
-    const keepAliveInterval = setInterval(() => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: "ping" }))
-      }
-    }, 30000)
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-      clearInterval(keepAliveInterval)
-      if (checkConnectionInterval.current) {
-        clearInterval(checkConnectionInterval.current)
-      }
-    }
-  }, [isOpen])
-
   const getScriptWebSocketUrl = (sid: string): string => {
     if (typeof window === "undefined") {
       return `ws://localhost:${API_PORT}/ws/script/${sid}`
@@ -540,14 +509,12 @@ export function ScriptTerminalModal({
           style={{ height: isMobile || isTablet ? "80vh" : `${modalHeight}px`, maxHeight: "none" }}
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
-          hideClose={true}
         >
           <DialogTitle className="sr-only">{scriptTitle}</DialogTitle>
 
           <div className="flex items-center gap-2 p-4 border-b">
             <div>
               <h2 className="text-lg font-semibold">{scriptTitle}</h2>
-              <p className="text-sm text-muted-foreground">{scriptDescription}</p>
             </div>
           </div>
 
@@ -563,21 +530,6 @@ export function ScriptTerminalModal({
               </div>
             )}
           </div>
-
-          {(isTablet || (!isMobile && !isTablet)) && (
-            <div
-              className={`h-2 cursor-ns-resize flex items-center justify-center transition-all duration-150 ${
-                isResizing ? "bg-blue-500 h-3" : "bg-zinc-800 hover:bg-blue-500/50"
-              }`}
-              onMouseDown={handleResizeStart}
-              onTouchStart={handleResizeStart}
-              style={{ touchAction: "none" }}
-            >
-              <GripHorizontal
-                className={`h-4 w-4 transition-all duration-150 ${isResizing ? "text-white scale-110" : "text-zinc-500"}`}
-              />
-            </div>
-          )}
 
           {(isMobile || isTablet) && (
             <div className="flex flex-wrap gap-1.5 justify-center items-center px-1 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
@@ -648,7 +600,22 @@ export function ScriptTerminalModal({
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-2 p-2 border-t bg-zinc-900">
+          {(isTablet || (!isMobile && !isTablet)) && (
+            <div
+              className={`h-2 cursor-ns-resize flex items-center justify-center transition-all duration-150 ${
+                isResizing ? "bg-blue-500 h-3" : "bg-zinc-800 hover:bg-blue-500/50"
+              }`}
+              onMouseDown={handleResizeStart}
+              onTouchStart={handleResizeStart}
+              style={{ touchAction: "none" }}
+            >
+              <GripHorizontal
+                className={`h-4 w-4 transition-all duration-150 ${isResizing ? "text-white scale-110" : "text-zinc-500"}`}
+              />
+            </div>
+          )}
+
+          <div className="flex items-center justify-between p-4 border-t">
             <div className="flex items-center gap-3">
               <Activity className="h-5 w-5 text-blue-500" />
               <div
@@ -656,7 +623,7 @@ export function ScriptTerminalModal({
                   connectionStatus === "online"
                     ? "bg-green-500"
                     : connectionStatus === "connecting"
-                      ? "bg-blue-500" // Changed from bg-yellow-500 to bg-blue-500
+                      ? "bg-blue-500"
                       : "bg-red-500"
                 }`}
                 title={
