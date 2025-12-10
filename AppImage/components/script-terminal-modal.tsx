@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Activity, GripHorizontal } from "lucide-react"
 import { API_PORT } from "../lib/api-config"
-import { fetchApi } from "@/lib/api-config"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 interface WebInteraction {
@@ -58,217 +57,237 @@ export function ScriptTerminalModal({
   const [modalHeight, setModalHeight] = useState(600)
   const [isResizing, setIsResizing] = useState(false)
   const resizeHandlersRef = useRef<{
-    handleMove: ((e: MouseEvent | TouchEvent) => void) | null
-    handleEnd: (() => void) | null
-  }>({ handleMove: null, handleEnd: null })
+    handleMouseMove: ((e: MouseEvent) => void) | null
+    handleMouseUp: (() => void) | null
+    handleTouchMove: ((e: TouchEvent) => void) | null
+    handleTouchEnd: (() => void) | null
+  }>({
+    handleMouseMove: null,
+    handleMouseUp: null,
+    handleTouchMove: null,
+    handleTouchEnd: null,
+  })
 
-  const terminalContainerRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (!node || !isOpen || termRef.current) {
-        return
+  const terminalContainerRef = useRef<HTMLDivElement>(null)
+
+  const sendKey = useCallback((key: string) => {
+    if (!termRef.current) return
+
+    const keyMap: Record<string, string> = {
+      escape: "\x1b",
+      tab: "\t",
+      up: "\x1b[A",
+      down: "\x1b[B",
+      left: "\x1b[D",
+      right: "\x1b[C",
+      enter: "\r",
+      ctrlc: "\x03",
+    }
+
+    const sequence = keyMap[key]
+    if (sequence && wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: "input", data: sequence }))
+    }
+  }, [])
+
+  const initializeTerminal = async () => {
+    console.log("[v0] Loading xterm modules...")
+    const [TerminalClass, FitAddonClass] = await Promise.all([
+      import("xterm").then((mod) => mod.Terminal),
+      import("xterm-addon-fit").then((mod) => mod.FitAddon),
+      import("xterm/css/xterm.css"),
+    ])
+
+    console.log("[v0] Creating terminal instance...")
+    const fontSize = window.innerWidth < 768 ? 12 : 16
+
+    const term = new TerminalClass({
+      rendererType: "dom",
+      fontFamily: '"Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
+      fontSize: fontSize,
+      lineHeight: 1,
+      cursorBlink: true,
+      scrollback: 2000,
+      disableStdin: false,
+      customGlyphs: true,
+      fontWeight: "500",
+      fontWeightBold: "700",
+      theme: {
+        background: "#000000",
+        foreground: "#ffffff",
+        cursor: "#ffffff",
+        cursorAccent: "#000000",
+        black: "#2e3436",
+        red: "#cc0000",
+        green: "#4e9a06",
+        yellow: "#c4a000",
+        blue: "#3465a4",
+        magenta: "#75507b",
+        cyan: "#06989a",
+        white: "#d3d7cf",
+        brightBlack: "#555753",
+        brightRed: "#ef2929",
+        brightGreen: "#8ae234",
+        brightYellow: "#fce94f",
+        brightBlue: "#729fcf",
+        brightMagenta: "#ad7fa8",
+        brightCyan: "#34e2e2",
+        brightWhite: "#eeeeec",
+      },
+    })
+
+    const fitAddon = new FitAddonClass()
+    term.loadAddon(fitAddon)
+    console.log("[v0] Opening terminal in container...")
+    if (terminalContainerRef.current) {
+      term.open(terminalContainerRef.current)
+    }
+
+    termRef.current = term
+    fitAddonRef.current = fitAddon
+
+    setTimeout(() => {
+      try {
+        fitAddon.fit()
+        console.log("[v0] Terminal fitted, cols:", term.cols, "rows:", term.rows)
+      } catch (err) {
+        console.log("[v0] Fit error:", err)
+      }
+    }, 50)
+
+    const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
+    console.log("[v0] Connecting to WebSocket:", wsUrl)
+    const ws = new WebSocket(wsUrl)
+    wsRef.current = ws
+
+    ws.onopen = () => {
+      console.log("[v0] WebSocket connected!")
+      setIsConnected(true)
+
+      const initMessage = {
+        script_path: scriptPath,
+        params: {
+          EXECUTION_MODE: "web",
+          ...params,
+        },
       }
 
-      console.log("[v0] Terminal container mounted, initializing...")
+      console.log("[v0] Sending init message:", initMessage)
+      ws.send(JSON.stringify(initMessage))
 
-      const initializeTerminal = async () => {
-        console.log("[v0] Loading xterm modules...")
-        const [TerminalClass, FitAddonClass] = await Promise.all([
-          import("xterm").then((mod) => mod.Terminal),
-          import("xterm-addon-fit").then((mod) => mod.FitAddon),
-          import("xterm/css/xterm.css"),
-        ])
-
-        console.log("[v0] Creating terminal instance...")
-        const fontSize = window.innerWidth < 768 ? 12 : 16
-
-        const term = new TerminalClass({
-          rendererType: "dom",
-          fontFamily: '"Courier", "Courier New", "Liberation Mono", "DejaVu Sans Mono", monospace',
-          fontSize: fontSize,
-          lineHeight: 1,
-          cursorBlink: true,
-          scrollback: 2000,
-          disableStdin: false,
-          customGlyphs: true,
-          fontWeight: "500",
-          fontWeightBold: "700",
-          theme: {
-            background: "#000000",
-            foreground: "#ffffff",
-            cursor: "#ffffff",
-            cursorAccent: "#000000",
-            black: "#2e3436",
-            red: "#cc0000",
-            green: "#4e9a06",
-            yellow: "#c4a000",
-            blue: "#3465a4",
-            magenta: "#75507b",
-            cyan: "#06989a",
-            white: "#d3d7cf",
-            brightBlack: "#555753",
-            brightRed: "#ef2929",
-            brightGreen: "#8ae234",
-            brightYellow: "#fce94f",
-            brightBlue: "#729fcf",
-            brightMagenta: "#ad7fa8",
-            brightCyan: "#34e2e2",
-            brightWhite: "#eeeeec",
-          },
-        })
-
-        const fitAddon = new FitAddonClass()
-        term.loadAddon(fitAddon)
-        console.log("[v0] Opening terminal in container...")
-        term.open(node)
-
-        termRef.current = term
-        fitAddonRef.current = fitAddon
-
-        setTimeout(() => {
-          try {
-            fitAddon.fit()
-            console.log("[v0] Terminal fitted, cols:", term.cols, "rows:", term.rows)
-          } catch (err) {
-            console.log("[v0] Fit error:", err)
-          }
-        }, 50)
-
-        const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
-        console.log("[v0] Connecting to WebSocket:", wsUrl)
-        const ws = new WebSocket(wsUrl)
-        wsRef.current = ws
-
-        ws.onopen = () => {
-          console.log("[v0] WebSocket connected!")
-          setIsConnected(true)
-
-          const initMessage = {
-            script_path: scriptPath,
-            params: {
-              EXECUTION_MODE: "web",
-              ...params,
-            },
-          }
-
-          console.log("[v0] Sending init message:", initMessage)
-          ws.send(JSON.stringify(initMessage))
-
-          setTimeout(() => {
-            try {
-              fitAddon.fit()
-              const cols = term.cols
-              const rows = term.rows
-              console.log("[v0] Sending resize:", { cols, rows })
-              ws.send(
-                JSON.stringify({
-                  type: "resize",
-                  cols: cols,
-                  rows: rows,
-                }),
-              )
-            } catch (err) {
-              console.log("[v0] Resize error:", err)
-            }
-          }, 100)
+      setTimeout(() => {
+        try {
+          fitAddon.fit()
+          const cols = term.cols
+          const rows = term.rows
+          console.log("[v0] Sending resize:", { cols, rows })
+          ws.send(
+            JSON.stringify({
+              type: "resize",
+              cols: cols,
+              rows: rows,
+            }),
+          )
+        } catch (err) {
+          console.log("[v0] Resize error:", err)
         }
+      }, 100)
+    }
 
-        ws.onmessage = (event) => {
-          console.log("[v0] WebSocket message received:", event.data.substring(0, 100))
-          try {
-            const msg = JSON.parse(event.data)
+    ws.onmessage = (event) => {
+      console.log("[v0] WebSocket message received:", event.data.substring(0, 100))
+      try {
+        const msg = JSON.parse(event.data)
 
-            if (msg.type === "web_interaction" && msg.interaction) {
-              console.log("[v0] Web interaction detected:", msg.interaction.type)
-              setIsWaitingNextInteraction(false)
-              if (waitingTimeoutRef.current) {
-                clearTimeout(waitingTimeoutRef.current)
-              }
-              setCurrentInteraction({
-                type: msg.interaction.type,
-                id: msg.interaction.id,
-                title: msg.interaction.title || "",
-                message: msg.interaction.message || "",
-                options: msg.interaction.options,
-                default: msg.interaction.default,
-              })
-              return
-            }
-
-            if (msg.type === "error") {
-              console.log("[v0] Error message:", msg.message)
-              term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
-              return
-            }
-          } catch {
-            // Not JSON, es output normal de terminal
-          }
-
-          term.write(event.data)
-
+        if (msg.type === "web_interaction" && msg.interaction) {
+          console.log("[v0] Web interaction detected:", msg.interaction.type)
           setIsWaitingNextInteraction(false)
           if (waitingTimeoutRef.current) {
             clearTimeout(waitingTimeoutRef.current)
           }
+          setCurrentInteraction({
+            type: msg.interaction.type,
+            id: msg.interaction.id,
+            title: msg.interaction.title || "",
+            message: msg.interaction.message || "",
+            options: msg.interaction.options,
+            default: msg.interaction.default,
+          })
+          return
         }
 
-        ws.onerror = (error) => {
-          console.log("[v0] WebSocket error:", error)
-          setIsConnected(false)
-          term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
+        if (msg.type === "error") {
+          console.log("[v0] Error message:", msg.message)
+          term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
+          return
         }
-
-        ws.onclose = (event) => {
-          console.log("[v0] WebSocket closed:", event.code, event.reason)
-          setIsConnected(false)
-          term.writeln("\x1b[33mConnection closed\x1b[0m")
-
-          if (!isComplete) {
-            setIsComplete(true)
-            setExitCode(event.code === 1000 ? 0 : 1)
-          }
-        }
-
-        term.onData((data) => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(data)
-          }
-        })
-
-        checkConnectionInterval.current = setInterval(() => {
-          if (ws) {
-            setIsConnected(ws.readyState === WebSocket.OPEN)
-          }
-        }, 500)
-
-        let resizeTimeout: NodeJS.Timeout | null = null
-
-        const resizeObserver = new ResizeObserver(() => {
-          if (resizeTimeout) clearTimeout(resizeTimeout)
-          resizeTimeout = setTimeout(() => {
-            if (fitAddon && term && ws?.readyState === WebSocket.OPEN) {
-              try {
-                fitAddon.fit()
-                ws.send(
-                  JSON.stringify({
-                    type: "resize",
-                    cols: term.cols,
-                    rows: term.rows,
-                  }),
-                )
-              } catch (err) {
-                // Ignore
-              }
-            }
-          }, 100)
-        })
-
-        resizeObserver.observe(node)
+      } catch {
+        // Not JSON, es output normal de terminal
       }
 
-      initializeTerminal()
-    },
-    [isOpen, scriptPath, params],
-  )
+      term.write(event.data)
+
+      setIsWaitingNextInteraction(false)
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current)
+      }
+    }
+
+    ws.onerror = (error) => {
+      console.log("[v0] WebSocket error:", error)
+      setIsConnected(false)
+      term.writeln("\x1b[31mWebSocket error occurred\x1b[0m")
+    }
+
+    ws.onclose = (event) => {
+      console.log("[v0] WebSocket closed:", event.code, event.reason)
+      setIsConnected(false)
+      term.writeln("\x1b[33mConnection closed\x1b[0m")
+
+      if (!isComplete) {
+        setIsComplete(true)
+        setExitCode(event.code === 1000 ? 0 : 1)
+      }
+    }
+
+    term.onData((data) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(data)
+      }
+    })
+
+    checkConnectionInterval.current = setInterval(() => {
+      if (ws) {
+        setIsConnected(ws.readyState === WebSocket.OPEN)
+      }
+    }, 500)
+
+    let resizeTimeout: NodeJS.Timeout | null = null
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (resizeTimeout) clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(() => {
+        if (fitAddon && term && ws?.readyState === WebSocket.OPEN) {
+          try {
+            fitAddon.fit()
+            ws.send(
+              JSON.stringify({
+                type: "resize",
+                cols: term.cols,
+                rows: term.rows,
+              }),
+            )
+          } catch (err) {
+            // Ignore
+          }
+        }
+      }, 100)
+    })
+
+    if (terminalContainerRef.current) {
+      resizeObserver.observe(terminalContainerRef.current)
+    }
+  }
 
   useEffect(() => {
     const savedHeight = localStorage.getItem("scriptModalHeight")
@@ -276,7 +295,9 @@ export function ScriptTerminalModal({
       setModalHeight(Number.parseInt(savedHeight, 10))
     }
 
-    if (!isOpen) {
+    if (isOpen) {
+      initializeTerminal()
+    } else {
       if (checkConnectionInterval.current) {
         clearInterval(checkConnectionInterval.current)
       }
@@ -291,15 +312,24 @@ export function ScriptTerminalModal({
         termRef.current.dispose()
         termRef.current = null
       }
-      if (resizeHandlersRef.current.handleMove) {
-        document.removeEventListener("mousemove", resizeHandlersRef.current.handleMove as any)
-        document.removeEventListener("touchmove", resizeHandlersRef.current.handleMove as any)
+      if (resizeHandlersRef.current.handleMouseMove) {
+        document.removeEventListener("mousemove", resizeHandlersRef.current.handleMouseMove)
       }
-      if (resizeHandlersRef.current.handleEnd) {
-        document.removeEventListener("mouseup", resizeHandlersRef.current.handleEnd)
-        document.removeEventListener("touchend", resizeHandlersRef.current.handleEnd)
+      if (resizeHandlersRef.current.handleMouseUp) {
+        document.removeEventListener("mouseup", resizeHandlersRef.current.handleMouseUp)
       }
-      resizeHandlersRef.current = { handleMove: null, handleEnd: null }
+      if (resizeHandlersRef.current.handleTouchMove) {
+        document.removeEventListener("touchmove", resizeHandlersRef.current.handleTouchMove)
+      }
+      if (resizeHandlersRef.current.handleTouchEnd) {
+        document.removeEventListener("touchend", resizeHandlersRef.current.handleTouchEnd)
+      }
+      resizeHandlersRef.current = {
+        handleMouseMove: null,
+        handleMouseUp: null,
+        handleTouchMove: null,
+        handleTouchEnd: null,
+      }
 
       sessionIdRef.current = Math.random().toString(36).substring(2, 8)
       setIsComplete(false)
@@ -316,9 +346,17 @@ export function ScriptTerminalModal({
       return `ws://localhost:${API_PORT}/ws/script/${sid}`
     }
 
-    const { hostname, protocol } = window.location
+    const { protocol, hostname, port } = window.location
+    const isStandardPort = port === "" || port === "80" || port === "443"
     const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
-    return `${wsProtocol}//${hostname}:${API_PORT}/ws/script/${sid}`
+
+    if (isStandardPort) {
+      // When using standard port (proxy scenario), don't add port number
+      return `${wsProtocol}//${hostname}/ws/script/${sid}`
+    } else {
+      // Development or custom port, use API_PORT
+      return `${wsProtocol}//${hostname}:${API_PORT}/ws/script/${sid}`
+    }
   }
 
   const handleInteractionResponse = (value: string) => {
@@ -419,15 +457,25 @@ export function ScriptTerminalModal({
         }
       }
 
-      document.removeEventListener("mousemove", handleMove as any)
-      document.removeEventListener("touchmove", handleMove as any)
+      document.removeEventListener("mousemove", handleMove)
+      document.removeEventListener("touchmove", handleMove)
       document.removeEventListener("mouseup", handleEnd)
       document.removeEventListener("touchend", handleEnd)
 
-      resizeHandlersRef.current = { handleMove: null, handleEnd: null }
+      resizeHandlersRef.current = {
+        handleMouseMove: null,
+        handleMouseUp: null,
+        handleTouchMove: null,
+        handleTouchEnd: null,
+      }
     }
 
-    resizeHandlersRef.current = { handleMove, handleEnd }
+    resizeHandlersRef.current = {
+      handleMouseMove: handleMove as any,
+      handleMouseUp: handleEnd,
+      handleTouchMove: handleMove as any,
+      handleTouchEnd: handleEnd,
+    }
 
     document.addEventListener("mousemove", handleMove as any)
     document.addEventListener("touchmove", handleMove as any, { passive: false })
@@ -465,6 +513,77 @@ export function ScriptTerminalModal({
               </div>
             )}
           </div>
+
+          {isMobile && (
+            <div className="border-t bg-zinc-900/50 px-1 py-2 overflow-x-auto">
+              <div className="flex gap-1.5 justify-center min-w-max">
+                <Button
+                  onClick={() => sendKey("escape")}
+                  variant="outline"
+                  size="sm"
+                  className="px-2.5 py-2 text-xs h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                >
+                  ESC
+                </Button>
+                <Button
+                  onClick={() => sendKey("tab")}
+                  variant="outline"
+                  size="sm"
+                  className="px-2.5 py-2 text-xs h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                >
+                  TAB
+                </Button>
+                <Button
+                  onClick={() => sendKey("up")}
+                  variant="outline"
+                  size="sm"
+                  className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                >
+                  ↑
+                </Button>
+                <Button
+                  onClick={() => sendKey("down")}
+                  variant="outline"
+                  size="sm"
+                  className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                >
+                  ↓
+                </Button>
+                <Button
+                  onClick={() => sendKey("left")}
+                  variant="outline"
+                  size="sm"
+                  className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                >
+                  ←
+                </Button>
+                <Button
+                  onClick={() => sendKey("right")}
+                  variant="outline"
+                  size="sm"
+                  className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                >
+                  →
+                </Button>
+                <Button
+                  onClick={() => sendKey("enter")}
+                  variant="outline"
+                  size="sm"
+                  className="px-3 py-2 text-base h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                >
+                  ↵
+                </Button>
+                <Button
+                  onClick={() => sendKey("ctrlc")}
+                  variant="outline"
+                  size="sm"
+                  className="px-2 py-2 text-xs h-9 bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+                >
+                  CTRL+C
+                </Button>
+              </div>
+            </div>
+          )}
 
           {!isMobile && (
             <div
