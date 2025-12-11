@@ -68,6 +68,9 @@ export function ScriptTerminalModal({
   const [isResizing, setIsResizing] = useState(false)
   const resizeBarRef = useRef<HTMLDivElement>(null)
 
+  // Debug visual para tablets
+  const [debugInfo, setDebugInfo] = useState<string[]>([])
+
   const terminalContainerRef = useRef<HTMLDivElement>(null)
 
   const sendKey = useCallback((key: string) => {
@@ -388,12 +391,20 @@ export function ScriptTerminalModal({
     e.preventDefault()
     e.stopPropagation()
 
+    const debugMsg = `[${new Date().toLocaleTimeString()}] Resize start - Type: ${e.type}, isMobile: ${isMobile}, isTablet: ${isTablet}`
+    console.log(debugMsg)
+    setDebugInfo(prev => [...prev.slice(-4), debugMsg])
+    
     setIsResizing(true)
     
     // Detectar si es touch o mouse
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
     const startY = clientY
     const startHeight = modalHeight
+
+    const debugMsg2 = `Start Y: ${startY}, Start height: ${startHeight}`
+    console.log(debugMsg2)
+    setDebugInfo(prev => [...prev.slice(-4), debugMsg2])
 
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
       const currentY = "touches" in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
@@ -419,6 +430,10 @@ export function ScriptTerminalModal({
     }
 
     const handleEnd = () => {
+      const debugMsg3 = `Resize end - Final height: ${modalHeight}`
+      console.log(debugMsg3)
+      setDebugInfo(prev => [...prev.slice(-4), debugMsg3])
+      
       setIsResizing(false)
       
       document.removeEventListener("mousemove", handleMove as any)
@@ -462,6 +477,15 @@ export function ScriptTerminalModal({
               {description && <p className="text-sm text-muted-foreground">{description}</p>}
             </div>
           </div>
+
+          {/* Debug panel - solo visible en tablets */}
+          {isTablet && debugInfo.length > 0 && (
+            <div className="bg-yellow-900/50 border-b border-yellow-700 p-2 text-xs font-mono text-yellow-200 max-h-20 overflow-y-auto">
+              {debugInfo.map((info, i) => (
+                <div key={i}>{info}</div>
+              ))}
+            </div>
+          )}
 
           <div className="overflow-hidden relative flex-1">
             <div ref={terminalContainerRef} className="w-full h-full" />
