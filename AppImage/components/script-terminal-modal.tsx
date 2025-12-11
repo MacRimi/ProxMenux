@@ -406,11 +406,23 @@ export function ScriptTerminalModal({
     console.log(debugMsg2)
     setDebugInfo(prev => [...prev.slice(-4), debugMsg2])
 
+    let lastY = startY
+    let moveCount = 0
+
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
+      moveEvent.preventDefault()
+      moveEvent.stopPropagation()
+      
       const currentY = "touches" in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
       const deltaY = currentY - startY
       const newHeight = Math.max(300, Math.min(window.innerHeight - 100, startHeight + deltaY))
 
+      moveCount++
+      if (moveCount % 5 === 0) {
+        console.log(`Move #${moveCount} - currentY: ${currentY}, deltaY: ${deltaY}, newHeight: ${newHeight}`)
+      }
+
+      lastY = currentY
       setModalHeight(newHeight)
 
       if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
@@ -430,24 +442,26 @@ export function ScriptTerminalModal({
     }
 
     const handleEnd = () => {
-      const debugMsg3 = `Resize end - Final height: ${modalHeight}`
+      const debugMsg3 = `Resize end - Final height: ${modalHeight}, Total moves: ${moveCount}, Last Y: ${lastY}`
       console.log(debugMsg3)
       setDebugInfo(prev => [...prev.slice(-4), debugMsg3])
       
       setIsResizing(false)
       
-      document.removeEventListener("mousemove", handleMove as any)
-      document.removeEventListener("mouseup", handleEnd)
-      document.removeEventListener("touchmove", handleMove as any)
-      document.removeEventListener("touchend", handleEnd)
+      document.removeEventListener("mousemove", handleMove as any, false)
+      document.removeEventListener("mouseup", handleEnd, false)
+      document.removeEventListener("touchmove", handleMove as any, false)
+      document.removeEventListener("touchend", handleEnd, false)
+      document.removeEventListener("touchcancel", handleEnd, false)
 
       localStorage.setItem("scriptModalHeight", modalHeight.toString())
     }
 
-    document.addEventListener("mousemove", handleMove as any)
-    document.addEventListener("mouseup", handleEnd)
-    document.addEventListener("touchmove", handleMove as any, { passive: false })
-    document.addEventListener("touchend", handleEnd)
+    document.addEventListener("mousemove", handleMove as any, false)
+    document.addEventListener("mouseup", handleEnd, false)
+    document.addEventListener("touchmove", handleMove as any, { passive: false, capture: false })
+    document.addEventListener("touchend", handleEnd, false)
+    document.addEventListener("touchcancel", handleEnd, false)
   }
 
   const sendCommand = (command: string) => {
