@@ -55,6 +55,7 @@ export function ScriptTerminalModal({
   const checkConnectionInterval = useRef<NodeJS.Timeout | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttemptsRef = useRef(0)
+  const keepAliveIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [isTablet, setIsTablet] = useState(false)
 
@@ -93,6 +94,15 @@ export function ScriptTerminalModal({
         ws.onopen = () => {
           setConnectionStatus("online")
           reconnectAttemptsRef.current = 0
+
+          if (keepAliveIntervalRef.current) {
+            clearInterval(keepAliveIntervalRef.current)
+          }
+          keepAliveIntervalRef.current = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "ping" }))
+            }
+          }, 30000)
 
           const initMessage = {
             script_path: scriptPath,
@@ -147,6 +157,10 @@ export function ScriptTerminalModal({
 
         ws.onclose = (event) => {
           setConnectionStatus("offline")
+          if (keepAliveIntervalRef.current) {
+            clearInterval(keepAliveIntervalRef.current)
+            keepAliveIntervalRef.current = null
+          }
           if (!isComplete && reconnectAttemptsRef.current < 3) {
             reconnectTimeoutRef.current = setTimeout(attemptReconnect, 2000)
           } else {
@@ -243,6 +257,15 @@ export function ScriptTerminalModal({
     ws.onopen = () => {
       setConnectionStatus("online")
 
+      if (keepAliveIntervalRef.current) {
+        clearInterval(keepAliveIntervalRef.current)
+      }
+      keepAliveIntervalRef.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "ping" }))
+        }
+      }, 30000)
+
       const initMessage = {
         script_path: scriptPath,
         params: {
@@ -311,6 +334,11 @@ export function ScriptTerminalModal({
     ws.onclose = (event) => {
       setConnectionStatus("offline")
       term.writeln("\x1b[33mConnection closed\x1b[0m")
+
+      if (keepAliveIntervalRef.current) {
+        clearInterval(keepAliveIntervalRef.current)
+        keepAliveIntervalRef.current = null
+      }
 
       if (!isComplete) {
         setIsComplete(true)
@@ -387,6 +415,11 @@ export function ScriptTerminalModal({
         termRef.current = null
       }
 
+      if (keepAliveIntervalRef.current) {
+        clearInterval(keepAliveIntervalRef.current)
+        keepAliveIntervalRef.current = null
+      }
+
       sessionIdRef.current = Math.random().toString(36).substring(2, 8)
       reconnectAttemptsRef.current = 0
       setIsComplete(false)
@@ -425,6 +458,19 @@ export function ScriptTerminalModal({
       }
     }
 
+    let wakeLock: any = null
+    const requestWakeLock = async () => {
+      if ("wakeLock" in navigator && isOpen) {
+        try {
+          wakeLock = await (navigator as any).wakeLock.request("screen")
+        } catch (err) {
+          // Wake Lock no soportado o denegado, continuar sin él
+        }
+      }
+    }
+
+    requestWakeLock()
+
     document.addEventListener("visibilitychange", handleVisibilityChange)
     window.addEventListener("focus", handleFocus)
 
@@ -432,6 +478,9 @@ export function ScriptTerminalModal({
       window.removeEventListener("resize", handleResize)
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("focus", handleFocus)
+      if (wakeLock) {
+        wakeLock.release().catch(() => {})
+      }
     }
   }, [isOpen, isComplete, attemptReconnect])
 
