@@ -67,6 +67,7 @@ export function ScriptTerminalModal({
   const [modalHeight, setModalHeight] = useState(600)
   const [isResizing, setIsResizing] = useState(false)
   const resizeBarRef = useRef<HTMLDivElement>(null)
+  const modalHeightRef = useRef(600) // Ref para mantener el valor actualizado
 
   // Debug visual para tablets
   const [debugInfo, setDebugInfo] = useState<string[]>([])
@@ -278,7 +279,9 @@ export function ScriptTerminalModal({
   useEffect(() => {
     const savedHeight = localStorage.getItem("scriptModalHeight")
     if (savedHeight) {
-      setModalHeight(Number.parseInt(savedHeight, 10))
+      const height = Number.parseInt(savedHeight, 10)
+      setModalHeight(height)
+      modalHeightRef.current = height // Sincronizar el ref
     }
 
     if (isOpen) {
@@ -406,7 +409,6 @@ export function ScriptTerminalModal({
     console.log(debugMsg2)
     setDebugInfo(prev => [...prev.slice(-4), debugMsg2])
 
-    let lastY = startY
     let moveCount = 0
 
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
@@ -422,7 +424,8 @@ export function ScriptTerminalModal({
         console.log(`Move #${moveCount} - currentY: ${currentY}, deltaY: ${deltaY}, newHeight: ${newHeight}`)
       }
 
-      lastY = currentY
+      // Actualizar tanto el state como el ref
+      modalHeightRef.current = newHeight
       setModalHeight(newHeight)
 
       if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
@@ -442,7 +445,9 @@ export function ScriptTerminalModal({
     }
 
     const handleEnd = () => {
-      const debugMsg3 = `Resize end - Final height: ${modalHeight}, Total moves: ${moveCount}, Last Y: ${lastY}`
+      // Usar el ref que tiene el valor actualizado
+      const finalHeight = modalHeightRef.current
+      const debugMsg3 = `Resize end - Final height: ${finalHeight}, Total moves: ${moveCount}`
       console.log(debugMsg3)
       setDebugInfo(prev => [...prev.slice(-4), debugMsg3])
       
@@ -454,7 +459,8 @@ export function ScriptTerminalModal({
       document.removeEventListener("touchend", handleEnd, false)
       document.removeEventListener("touchcancel", handleEnd, false)
 
-      localStorage.setItem("scriptModalHeight", modalHeight.toString())
+      // Guardar usando el valor del ref
+      localStorage.setItem("scriptModalHeight", finalHeight.toString())
     }
 
     document.addEventListener("mousemove", handleMove as any, false)
