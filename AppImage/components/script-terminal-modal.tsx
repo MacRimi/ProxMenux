@@ -66,13 +66,7 @@ export function ScriptTerminalModal({
 
   const [modalHeight, setModalHeight] = useState(600)
   const [isResizing, setIsResizing] = useState(false)
-  const resizeHandlersRef = useRef<{
-    handlePointerMove: ((e: PointerEvent) => void) | null
-    handlePointerUp: (() => void) | null
-  }>({
-    handlePointerMove: null,
-    handlePointerUp: null,
-  })
+  const resizeBarRef = useRef<HTMLDivElement>(null)
 
   const terminalContainerRef = useRef<HTMLDivElement>(null)
 
@@ -301,16 +295,6 @@ export function ScriptTerminalModal({
         termRef.current.dispose()
         termRef.current = null
       }
-      if (resizeHandlersRef.current.handlePointerMove) {
-        document.removeEventListener("pointermove", resizeHandlersRef.current.handlePointerMove)
-      }
-      if (resizeHandlersRef.current.handlePointerUp) {
-        document.removeEventListener("pointerup", resizeHandlersRef.current.handlePointerUp)
-      }
-      resizeHandlersRef.current = {
-        handlePointerMove: null,
-        handlePointerUp: null,
-      }
 
       sessionIdRef.current = Math.random().toString(36).substring(2, 8)
       setIsComplete(false)
@@ -404,6 +388,7 @@ export function ScriptTerminalModal({
     e.preventDefault()
     e.stopPropagation()
 
+    setIsResizing(true)
     const startY = e.clientY
     const startHeight = modalHeight
 
@@ -433,11 +418,21 @@ export function ScriptTerminalModal({
     }
 
     const handleEnd = () => {
+      setIsResizing(false)
       document.removeEventListener("pointermove", handleMove)
       document.removeEventListener("pointerup", handleEnd)
       document.removeEventListener("pointercancel", handleEnd)
 
       localStorage.setItem("scriptModalHeight", modalHeight.toString())
+      
+      // Release pointer capture
+      if (resizeBarRef.current) {
+        try {
+          resizeBarRef.current.releasePointerCapture(e.pointerId)
+        } catch (err) {
+          // Ignore if already released
+        }
+      }
     }
 
     document.addEventListener("pointermove", handleMove)
@@ -445,8 +440,12 @@ export function ScriptTerminalModal({
     document.addEventListener("pointercancel", handleEnd)
 
     // Capturar el pointer para asegurar que recibimos todos los eventos
-    if (e.currentTarget instanceof Element) {
-      e.currentTarget.setPointerCapture(e.pointerId)
+    if (resizeBarRef.current) {
+      try {
+        resizeBarRef.current.setPointerCapture(e.pointerId)
+      } catch (err) {
+        // Ignore if capture fails
+      }
     }
   }
 
@@ -494,11 +493,20 @@ export function ScriptTerminalModal({
           {/* Resize bar - visible en tablet y escritorio */}
           {!isMobile && (
             <div
+              ref={resizeBarRef}
               onPointerDown={handleResizeStart}
-              className="h-2 cursor-ns-resize flex items-center justify-center hover:bg-accent transition-colors z-50 pointer-events-auto touch-none"
-              style={{ touchAction: "none" }}
+              className={`h-2 cursor-ns-resize flex items-center justify-center transition-colors z-50 select-none ${
+                isResizing ? "bg-blue-500" : "hover:bg-accent"
+              }`}
+              style={{ 
+                touchAction: "none",
+                WebkitUserSelect: "none",
+                userSelect: "none"
+              }}
             >
-              <GripHorizontal className="h-3 w-8 text-muted-foreground/50" />
+              <GripHorizontal className={`h-3 w-8 transition-colors ${
+                isResizing ? "text-white" : "text-muted-foreground/50"
+              } pointer-events-none`} />
             </div>
           )}
 
@@ -513,7 +521,7 @@ export function ScriptTerminalModal({
                 }}
                 variant="outline"
                 size="sm"
-                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[60px]"
+                className="h-8 px-2 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[60px]"
               >
                 ESC
               </Button>
@@ -525,7 +533,7 @@ export function ScriptTerminalModal({
                 }}
                 variant="outline"
                 size="sm"
-                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[60px]"
+                className="h-8 px-2 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[60px]"
               >
                 TAB
               </Button>
@@ -597,7 +605,7 @@ export function ScriptTerminalModal({
                 }}
                 variant="outline"
                 size="sm"
-                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[75px]"
+                className="h-8 px-2 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[75px]"
               >
                 CTRL+C
               </Button>
