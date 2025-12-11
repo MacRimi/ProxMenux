@@ -32,8 +32,6 @@ interface ScriptTerminalModalProps {
   open: boolean
   onClose: () => void
   scriptPath: string
-  scriptName: string
-  scriptDescription?: string
   title: string
   description: string
 }
@@ -42,8 +40,6 @@ export function ScriptTerminalModal({
   open: isOpen,
   onClose,
   scriptPath,
-  scriptName,
-  scriptDescription,
   title,
   description,
 }: ScriptTerminalModalProps) {
@@ -503,7 +499,7 @@ export function ScriptTerminalModal({
     e.stopPropagation()
 
     setIsResizing(true)
-    
+
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
     const startY = clientY
     const startHeight = modalHeight
@@ -520,7 +516,7 @@ export function ScriptTerminalModal({
     const handleEnd = () => {
       const finalHeight = modalHeightRef.current
       setIsResizing(false)
-      
+
       document.removeEventListener("mousemove", handleMove as any)
       document.removeEventListener("mouseup", handleEnd)
       document.removeEventListener("touchmove", handleMove as any)
@@ -569,14 +565,12 @@ export function ScriptTerminalModal({
           onEscapeKeyDown={(e) => e.preventDefault()}
           hideClose
         >
-          <DialogTitle className="sr-only">{scriptName || title}</DialogTitle>
+          <DialogTitle className="sr-only">{title}</DialogTitle>
 
           <div className="flex items-center gap-2 p-4 border-b">
             <div>
-              <h2 className="text-lg font-semibold">{scriptName || title}</h2>
-              {(scriptDescription || description) && (
-                <p className="text-sm text-muted-foreground">{scriptDescription || description}</p>
-              )}
+              <h2 className="text-lg font-semibold">{title}</h2>
+              {description && <p className="text-sm text-muted-foreground">{description}</p>}
             </div>
           </div>
 
@@ -603,9 +597,11 @@ export function ScriptTerminalModal({
               }`}
               style={{ touchAction: "none" }}
             >
-              <GripHorizontal className={`h-4 w-4 transition-colors pointer-events-none ${
-                isResizing ? "text-white" : "text-zinc-600 group-hover:text-white"
-              }`} />
+              <GripHorizontal
+                className={`h-4 w-4 transition-colors pointer-events-none ${
+                  isResizing ? "text-white" : "text-zinc-600 group-hover:text-white"
+                }`}
+              />
             </div>
           )}
 
