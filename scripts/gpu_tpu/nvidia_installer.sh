@@ -324,6 +324,40 @@ is_version_compatible() {
   fi
 }
 
+
+version_le() {
+  local v1="$1"
+  local v2="$2"
+
+  IFS='.' read -r a1 b1 c1 <<<"$v1"
+  IFS='.' read -r a2 b2 c2 <<<"$v2"
+
+  a1=${a1:-0}; b1=${b1:-0}; c1=${c1:-0}
+  a2=${a2:-0}; b2=${b2:-0}; c2=${c2:-0}
+
+  a1=$((10#$a1)); b1=$((10#$b1)); c1=$((10#$c1))
+  a2=$((10#$a2)); b2=$((10#$b2)); c2=$((10#$c2))
+
+  if (( a1 < a2 )); then
+    return 0
+  elif (( a1 > a2 )); then
+    return 1
+  fi
+
+  if (( b1 < b2 )); then
+    return 0
+  elif (( b1 > b2 )); then
+    return 1
+  fi
+
+  if (( c1 <= c2 )); then
+    return 0
+  else
+    return 1
+  fi
+}
+
+
 # ==========================================================
 # NVIDIA version management - FIXED VERSION
 # ==========================================================
@@ -691,6 +725,17 @@ show_version_menu() {
       fi
     done <<< "$current_list"
     current_list="$filtered_list"
+  fi
+
+  if [[ -n "$latest" ]]; then
+    local filtered_max_list=""
+    while IFS= read -r ver; do
+      [[ -z "$ver" ]] && continue
+      if version_le "$ver" "$latest"; then
+        filtered_max_list+="$ver"$'\n'
+      fi
+    done <<< "$current_list"
+    current_list="$filtered_max_list"
   fi
 
   local menu_text="$(translate 'Select the NVIDIA driver version to install:')\n\n"
