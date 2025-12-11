@@ -54,7 +54,6 @@ export function ScriptTerminalModal({
 
   const [connectionStatus, setConnectionStatus] = useState<"connecting" | "online" | "offline">("connecting")
   const [isComplete, setIsComplete] = useState(false)
-  const [exitCode, setExitCode] = useState<number | null>(null)
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
   const [interactionInput, setInteractionInput] = useState("")
   const checkConnectionInterval = useRef<NodeJS.Timeout | null>(null)
@@ -69,7 +68,7 @@ export function ScriptTerminalModal({
   const [modalHeight, setModalHeight] = useState(600)
   const [isResizing, setIsResizing] = useState(false)
   const resizeBarRef = useRef<HTMLDivElement>(null)
-  const modalHeightRef = useRef(600) // Ref para mantener el valor actualizado
+  const modalHeightRef = useRef(600)
 
   const terminalContainerRef = useRef<HTMLDivElement>(null)
 
@@ -87,12 +86,10 @@ export function ScriptTerminalModal({
 
     reconnectTimeoutRef.current = setTimeout(() => {
       if (wsRef.current?.readyState !== WebSocket.OPEN && termRef.current) {
-        // Cerrar conexión anterior si existe
         if (wsRef.current) {
           wsRef.current.close()
         }
 
-        // Crear nueva conexión
         const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
         const ws = new WebSocket(wsUrl)
         wsRef.current = ws
@@ -101,7 +98,6 @@ export function ScriptTerminalModal({
           setConnectionStatus("online")
           reconnectAttemptsRef.current = 0
 
-          // Reiniciar el script
           const initMessage = {
             script_path: scriptPath,
             params: {
@@ -110,7 +106,6 @@ export function ScriptTerminalModal({
           }
           ws.send(JSON.stringify(initMessage))
 
-          // Redimensionar terminal
           setTimeout(() => {
             if (fitAddonRef.current && termRef.current && ws.readyState === WebSocket.OPEN) {
               const cols = termRef.current.cols
@@ -157,11 +152,9 @@ export function ScriptTerminalModal({
         ws.onclose = (event) => {
           setConnectionStatus("offline")
           if (!isComplete && reconnectAttemptsRef.current < 3) {
-            // Intentar reconectar después de 2 segundos
             reconnectTimeoutRef.current = setTimeout(attemptReconnect, 2000)
           } else {
             setIsComplete(true)
-            setExitCode(event.code === 1000 ? 0 : 1)
           }
         }
       }
@@ -174,17 +167,17 @@ export function ScriptTerminalModal({
     const keyMap: Record<string, string> = {
       escape: "\x1b",
       tab: "\t",
-      up: "\x1b[A",
-      down: "\x1b[B",
-      left: "\x1b[D",
-      right: "\x1b[C",
+      up: "\x1bOA",
+      down: "\x1bOB",
+      left: "\x1bOD",
+      right: "\x1bOC",
       enter: "\r",
       ctrlc: "\x03",
     }
 
     const sequence = keyMap[key]
     if (sequence && wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: "input", data: sequence }))
+      wsRef.current.send(sequence)
     }
   }, [])
 
@@ -325,7 +318,6 @@ export function ScriptTerminalModal({
 
       if (!isComplete) {
         setIsComplete(true)
-        setExitCode(event.code === 1000 ? 0 : 1)
       }
     }
 
@@ -375,7 +367,7 @@ export function ScriptTerminalModal({
     if (savedHeight) {
       const height = Number.parseInt(savedHeight, 10)
       setModalHeight(height)
-      modalHeightRef.current = height // Sincronizar el ref
+      modalHeightRef.current = height
     }
 
     if (isOpen) {
@@ -402,7 +394,6 @@ export function ScriptTerminalModal({
       sessionIdRef.current = Math.random().toString(36).substring(2, 8)
       reconnectAttemptsRef.current = 0
       setIsComplete(false)
-      setExitCode(null)
       setInteractionInput("")
       setCurrentInteraction(null)
       setIsWaitingNextInteraction(false)
@@ -424,17 +415,14 @@ export function ScriptTerminalModal({
     const handleResize = () => updateDeviceType()
     window.addEventListener("resize", handleResize)
 
-    // Detectar cuando la app vuelve a estar visible (desbloqueo de pantalla)
     const handleVisibilityChange = () => {
       if (!document.hidden && isOpen) {
-        // La pantalla se desbloqueó, verificar conexión
         if (wsRef.current?.readyState !== WebSocket.OPEN && !isComplete) {
           attemptReconnect()
         }
       }
     }
 
-    // Detectar cuando la app vuelve desde background
     const handleFocus = () => {
       if (isOpen && wsRef.current?.readyState !== WebSocket.OPEN && !isComplete) {
         attemptReconnect()
@@ -525,7 +513,6 @@ export function ScriptTerminalModal({
       const deltaY = currentY - startY
       const newHeight = Math.max(300, Math.min(window.innerHeight - 50, startHeight + deltaY))
 
-      // Actualizar directamente sin requestAnimationFrame para mayor fluidez
       modalHeightRef.current = newHeight
       setModalHeight(newHeight)
     }
@@ -542,7 +529,6 @@ export function ScriptTerminalModal({
 
       localStorage.setItem("scriptModalHeight", finalHeight.toString())
 
-      // Ajustar terminal al final del resize
       if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
         setTimeout(() => {
           fitAddonRef.current?.fit()
@@ -566,7 +552,7 @@ export function ScriptTerminalModal({
 
   const sendCommand = (command: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: "input", data: command }))
+      wsRef.current.send(command)
     }
   }
 
@@ -583,12 +569,14 @@ export function ScriptTerminalModal({
           onEscapeKeyDown={(e) => e.preventDefault()}
           hideClose
         >
-          <DialogTitle className="sr-only">{title}</DialogTitle>
+          <DialogTitle className="sr-only">{scriptName || title}</DialogTitle>
 
           <div className="flex items-center gap-2 p-4 border-b">
             <div>
-              <h2 className="text-lg font-semibold">{title}</h2>
-              {description && <p className="text-sm text-muted-foreground">{description}</p>}
+              <h2 className="text-lg font-semibold">{scriptName || title}</h2>
+              {(scriptDescription || description) && (
+                <p className="text-sm text-muted-foreground">{scriptDescription || description}</p>
+              )}
             </div>
           </div>
 
@@ -605,7 +593,6 @@ export function ScriptTerminalModal({
             )}
           </div>
 
-          {/* Resize bar - visible en tablet y escritorio */}
           {!isMobile && (
             <div
               ref={resizeBarRef}
@@ -622,7 +609,6 @@ export function ScriptTerminalModal({
             </div>
           )}
 
-          {/* Mobile/Tablet button toolbar */}
           {(isMobile || isTablet) && (
             <div className="flex items-center justify-center gap-1.5 px-1 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <Button
@@ -653,7 +639,7 @@ export function ScriptTerminalModal({
                 onPointerDown={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  sendCommand("\x1b[A")
+                  sendCommand("\x1bOA")
                 }}
                 variant="outline"
                 size="sm"
@@ -665,7 +651,7 @@ export function ScriptTerminalModal({
                 onPointerDown={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  sendCommand("\x1b[B")
+                  sendCommand("\x1bOB")
                 }}
                 variant="outline"
                 size="sm"
@@ -677,7 +663,7 @@ export function ScriptTerminalModal({
                 onPointerDown={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  sendCommand("\x1b[D")
+                  sendCommand("\x1bOD")
                 }}
                 variant="outline"
                 size="sm"
@@ -689,7 +675,7 @@ export function ScriptTerminalModal({
                 onPointerDown={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  sendCommand("\x1b[C")
+                  sendCommand("\x1bOC")
                 }}
                 variant="outline"
                 size="sm"
@@ -724,7 +710,6 @@ export function ScriptTerminalModal({
             </div>
           )}
 
-          {/* Footer with connection status and close button */}
           <div className="flex items-center justify-between px-4 py-3 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center gap-3">
               <Activity className="h-5 w-5 text-blue-500" />
