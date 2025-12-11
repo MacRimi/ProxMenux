@@ -58,6 +58,8 @@ export function ScriptTerminalModal({
   const [currentInteraction, setCurrentInteraction] = useState<WebInteraction | null>(null)
   const [interactionInput, setInteractionInput] = useState("")
   const checkConnectionInterval = useRef<NodeJS.Timeout | null>(null)
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const reconnectAttemptsRef = useRef(0)
   const [isMobile, setIsMobile] = useState(false)
   const [isTablet, setIsTablet] = useState(false)
 
@@ -69,10 +71,102 @@ export function ScriptTerminalModal({
   const resizeBarRef = useRef<HTMLDivElement>(null)
   const modalHeightRef = useRef(600) // Ref para mantener el valor actualizado
 
-  // Debug visual para tablets
-  const [debugInfo, setDebugInfo] = useState<string[]>([])
-
   const terminalContainerRef = useRef<HTMLDivElement>(null)
+
+  const attemptReconnect = useCallback(() => {
+    if (!isOpen || isComplete || reconnectAttemptsRef.current >= 3) {
+      return
+    }
+
+    reconnectAttemptsRef.current++
+    setConnectionStatus("connecting")
+
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+    }
+
+    reconnectTimeoutRef.current = setTimeout(() => {
+      if (wsRef.current?.readyState !== WebSocket.OPEN && termRef.current) {
+        // Cerrar conexión anterior si existe
+        if (wsRef.current) {
+          wsRef.current.close()
+        }
+
+        // Crear nueva conexión
+        const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
+        const ws = new WebSocket(wsUrl)
+        wsRef.current = ws
+
+        ws.onopen = () => {
+          setConnectionStatus("online")
+          reconnectAttemptsRef.current = 0
+
+          // Reiniciar el script
+          const initMessage = {
+            script_path: scriptPath,
+            params: {
+              EXECUTION_MODE: "web",
+            },
+          }
+          ws.send(JSON.stringify(initMessage))
+
+          // Redimensionar terminal
+          setTimeout(() => {
+            if (fitAddonRef.current && termRef.current && ws.readyState === WebSocket.OPEN) {
+              const cols = termRef.current.cols
+              const rows = termRef.current.rows
+              ws.send(JSON.stringify({ type: "resize", cols, rows }))
+            }
+          }, 100)
+        }
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data)
+            if (msg.type === "web_interaction" && msg.interaction) {
+              setIsWaitingNextInteraction(false)
+              if (waitingTimeoutRef.current) {
+                clearTimeout(waitingTimeoutRef.current)
+              }
+              setCurrentInteraction({
+                type: msg.interaction.type,
+                id: msg.interaction.id,
+                title: msg.interaction.title || "",
+                message: msg.interaction.message || "",
+                options: msg.interaction.options,
+                default: msg.interaction.default,
+              })
+              return
+            }
+            if (msg.type === "error") {
+              termRef.current?.writeln(`\x1b[31m${msg.message}\x1b[0m`)
+              return
+            }
+          } catch {}
+          termRef.current?.write(event.data)
+          setIsWaitingNextInteraction(false)
+          if (waitingTimeoutRef.current) {
+            clearTimeout(waitingTimeoutRef.current)
+          }
+        }
+
+        ws.onerror = () => {
+          setConnectionStatus("offline")
+        }
+
+        ws.onclose = (event) => {
+          setConnectionStatus("offline")
+          if (!isComplete && reconnectAttemptsRef.current < 3) {
+            // Intentar reconectar después de 2 segundos
+            reconnectTimeoutRef.current = setTimeout(attemptReconnect, 2000)
+          } else {
+            setIsComplete(true)
+            setExitCode(event.code === 1000 ? 0 : 1)
+          }
+        }
+      }
+    }, 1000)
+  }, [isOpen, isComplete, scriptPath])
 
   const sendKey = useCallback((key: string) => {
     if (!termRef.current) return
@@ -293,6 +387,9 @@ export function ScriptTerminalModal({
       if (waitingTimeoutRef.current) {
         clearTimeout(waitingTimeoutRef.current)
       }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+      }
       if (wsRef.current) {
         wsRef.current.close()
         wsRef.current = null
@@ -303,6 +400,7 @@ export function ScriptTerminalModal({
       }
 
       sessionIdRef.current = Math.random().toString(36).substring(2, 8)
+      reconnectAttemptsRef.current = 0
       setIsComplete(false)
       setExitCode(null)
       setInteractionInput("")
@@ -326,10 +424,32 @@ export function ScriptTerminalModal({
     const handleResize = () => updateDeviceType()
     window.addEventListener("resize", handleResize)
 
+    // Detectar cuando la app vuelve a estar visible (desbloqueo de pantalla)
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isOpen) {
+        // La pantalla se desbloqueó, verificar conexión
+        if (wsRef.current?.readyState !== WebSocket.OPEN && !isComplete) {
+          attemptReconnect()
+        }
+      }
+    }
+
+    // Detectar cuando la app vuelve desde background
+    const handleFocus = () => {
+      if (isOpen && wsRef.current?.readyState !== WebSocket.OPEN && !isComplete) {
+        attemptReconnect()
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("focus", handleFocus)
+
     return () => {
       window.removeEventListener("resize", handleResize)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("focus", handleFocus)
     }
-  }, [])
+  }, [isOpen, isComplete, attemptReconnect])
 
   const getScriptWebSocketUrl = (sid: string): string => {
     if (typeof window === "undefined") {
@@ -394,80 +514,54 @@ export function ScriptTerminalModal({
     e.preventDefault()
     e.stopPropagation()
 
-    const debugMsg = `[${new Date().toLocaleTimeString()}] Resize start - Type: ${e.type}, isMobile: ${isMobile}, isTablet: ${isTablet}`
-    console.log(debugMsg)
-    setDebugInfo(prev => [...prev.slice(-4), debugMsg])
-    
     setIsResizing(true)
     
-    // Detectar si es touch o mouse
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
     const startY = clientY
     const startHeight = modalHeight
 
-    const debugMsg2 = `Start Y: ${startY}, Start height: ${startHeight}`
-    console.log(debugMsg2)
-    setDebugInfo(prev => [...prev.slice(-4), debugMsg2])
-
-    let moveCount = 0
-
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
-      moveEvent.preventDefault()
-      moveEvent.stopPropagation()
-      
       const currentY = "touches" in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
       const deltaY = currentY - startY
-      const newHeight = Math.max(300, Math.min(window.innerHeight - 100, startHeight + deltaY))
+      const newHeight = Math.max(300, Math.min(window.innerHeight - 50, startHeight + deltaY))
 
-      moveCount++
-      if (moveCount % 5 === 0) {
-        console.log(`Move #${moveCount} - currentY: ${currentY}, deltaY: ${deltaY}, newHeight: ${newHeight}`)
-      }
-
-      // Actualizar tanto el state como el ref
+      // Actualizar directamente sin requestAnimationFrame para mayor fluidez
       modalHeightRef.current = newHeight
       setModalHeight(newHeight)
-
-      if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
-        setTimeout(() => {
-          if (fitAddonRef.current && termRef.current) {
-            fitAddonRef.current.fit()
-            wsRef.current?.send(
-              JSON.stringify({
-                type: "resize",
-                cols: termRef.current.cols,
-                rows: termRef.current.rows,
-              }),
-            )
-          }
-        }, 10)
-      }
     }
 
     const handleEnd = () => {
-      // Usar el ref que tiene el valor actualizado
       const finalHeight = modalHeightRef.current
-      const debugMsg3 = `Resize end - Final height: ${finalHeight}, Total moves: ${moveCount}`
-      console.log(debugMsg3)
-      setDebugInfo(prev => [...prev.slice(-4), debugMsg3])
-      
       setIsResizing(false)
       
-      document.removeEventListener("mousemove", handleMove as any, false)
-      document.removeEventListener("mouseup", handleEnd, false)
-      document.removeEventListener("touchmove", handleMove as any, false)
-      document.removeEventListener("touchend", handleEnd, false)
-      document.removeEventListener("touchcancel", handleEnd, false)
+      document.removeEventListener("mousemove", handleMove as any)
+      document.removeEventListener("mouseup", handleEnd)
+      document.removeEventListener("touchmove", handleMove as any)
+      document.removeEventListener("touchend", handleEnd)
+      document.removeEventListener("touchcancel", handleEnd)
 
-      // Guardar usando el valor del ref
       localStorage.setItem("scriptModalHeight", finalHeight.toString())
+
+      // Ajustar terminal al final del resize
+      if (fitAddonRef.current && termRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+        setTimeout(() => {
+          fitAddonRef.current?.fit()
+          wsRef.current?.send(
+            JSON.stringify({
+              type: "resize",
+              cols: termRef.current.cols,
+              rows: termRef.current.rows,
+            }),
+          )
+        }, 100)
+      }
     }
 
-    document.addEventListener("mousemove", handleMove as any, false)
-    document.addEventListener("mouseup", handleEnd, false)
-    document.addEventListener("touchmove", handleMove as any, { passive: false, capture: false })
-    document.addEventListener("touchend", handleEnd, false)
-    document.addEventListener("touchcancel", handleEnd, false)
+    document.addEventListener("mousemove", handleMove as any)
+    document.addEventListener("mouseup", handleEnd)
+    document.addEventListener("touchmove", handleMove as any, { passive: false })
+    document.addEventListener("touchend", handleEnd)
+    document.addEventListener("touchcancel", handleEnd)
   }
 
   const sendCommand = (command: string) => {
@@ -497,15 +591,6 @@ export function ScriptTerminalModal({
               {description && <p className="text-sm text-muted-foreground">{description}</p>}
             </div>
           </div>
-
-          {/* Debug panel - solo visible en tablets */}
-          {isTablet && debugInfo.length > 0 && (
-            <div className="bg-yellow-900/50 border-b border-yellow-700 p-2 text-xs font-mono text-yellow-200 max-h-20 overflow-y-auto">
-              {debugInfo.map((info, i) => (
-                <div key={i}>{info}</div>
-              ))}
-            </div>
-          )}
 
           <div className="overflow-hidden relative flex-1">
             <div ref={terminalContainerRef} className="w-full h-full" />
