@@ -1029,6 +1029,18 @@
     }
   },
   {
+    "name": "DiscoPanel",
+    "slug": "discopanel",
+    "desc": "The Minecraft Server Manager That *Actually* Works\nBuilt by someone who was done with bloated panels, endless menus, and tools that break the moment you need them most.\nSpin up servers in minutes, configure your proxy without headaches, and link your own DNS name effortlessly.\nFast setup, clean controls, zero nonsense\u2014just a manager that gets out of your way and lets you play.",
+    "script": "ct/discopanel.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/discopanel.sh",
+    "categories": [
+      24
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Dispatcharr",
     "slug": "dispatcharr",
     "desc": "Dispatcharr is an open-source powerhouse for managing IPTV streams and EPG data with elegance and control. Born from necessity and built with passion, it started as a personal project by OkinawaBoss and evolved with contributions from legends like dekzter, SergeantPanda and Bucatini.",
