@@ -482,7 +482,7 @@ export function ScriptTerminalModal({
         <DialogContent
           className="max-w-7xl p-0 flex flex-col gap-0 overflow-hidden"
           style={{
-            height: isMobile || isTablet ? "80vh" : `${modalHeight}px`,
+            height: isMobile ? "80vh" : `${modalHeight}px`,
             maxHeight: "none",
           }}
           onInteractOutside={(e) => e.preventDefault()}
