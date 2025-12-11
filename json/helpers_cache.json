@@ -3807,7 +3807,8 @@
     ],
     "notes": [
       "Show Login Credentials, type `cat ~/paperless-ngx.creds` in the LXC console",
-      "Script installs English as default OCR language. To install additional languages, use `apt-get install tesseract-ocr-[lang]`, where [lang] is the language code (e.g. `apt-get install tesseract-ocr-deu`)."
+      "Script installs English as default OCR language. To install additional languages, use `apt-get install tesseract-ocr-[lang]`, where [lang] is the language code (e.g. `apt-get install tesseract-ocr-deu`).",
+      "Paperless-NGX use uv, so all calls need to start with `uv run` f.e. `uv run python3 manage.py document_exporter $path` instead `python3 manage.py`"
     ],
     "type": "ct"
   },
@@ -4924,6 +4925,22 @@
     ],
     "notes": [],
     "type": "ct"
+  },
+  {
+    "name": "Speedtest-Tracker",
+    "slug": "speedtest-tracker",
+    "desc": "Speedtest Tracker is a self-hosted application that runs scheduled speed tests using the Ookla Speedtest CLI and saves the results to a database for historical tracking and visualization.",
+    "script": "ct/speedtest-tracker.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/speedtest-tracker.sh",
+    "categories": [
+      4
+    ],
+    "notes": [],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin@example.com",
+      "password": "password"
+    }
   },
   {
     "name": "Splunk Enterprise",
