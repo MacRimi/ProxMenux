@@ -36,7 +36,7 @@ export default function Hero() {
           <div className="flex items-center">
             <div className="w-40 h-40 lg:w-48 lg:h-48 xl:w-56 xl:h-56 relative">
               <Image
-                src="/images/design-mode/logo.png"
+                src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logo.png"
                 alt="ProxMenux Logo"
                 fill
                 className="object-contain"
@@ -68,3 +68,4 @@ export default function Hero() {
     </div>
   )
 }
+

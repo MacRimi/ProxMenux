@@ -49,7 +49,7 @@ export default function LinuxVMContent() {
       </div>
 
       <ImageWithCaption
-        src="/images/design-mode/menu_linux.png"
+        src="https://macrimi.github.io/ProxMenux/vm/menu_linux.png"
         alt="Linux VM Menu"
         caption="Linux VM Creation Menu in ProxMenux"
       />
@@ -351,7 +351,7 @@ export default function LinuxVMContent() {
 
               <div className="mt-4">
                 <ImageWithCaption
-                  src="/images/design-mode/distro_linux.png"
+                  src="https://macrimi.github.io/ProxMenux/vm/distro_linux.png"
                   alt="Linux Distribution Selection"
                   caption="Linux Distribution Selection in ProxMenux"
                 />
@@ -411,7 +411,7 @@ export default function LinuxVMContent() {
 
               <div className="mt-4">
                 <ImageWithCaption
-                  src="/images/design-mode/local-store.png"
+                  src="https://macrimi.github.io/ProxMenux/vm/local-store.png"
                   alt="Local ISO Selection Menu"
                   caption="Local ISO Selection Menu in ProxMenux"
                 />

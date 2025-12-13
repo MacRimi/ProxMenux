@@ -29,14 +29,14 @@ export default function DiskPassthroughVM() {
       <h2 className="text-2xl font-semibold mt-8 mb-4">Implementation Steps</h2>
       <Steps>
         <Steps.Step title="Disk Selection">
-          <img src="/images/design-mode/disk-selection.png" alt="Disk Selection Menu" className="mt-4 rounded shadow-lg" />
+          <img src="https://macrimi.github.io/ProxMenux/disk/disk-selection.png" alt="Disk Selection Menu" className="mt-4 rounded shadow-lg" />
           <p>The script scans the system and displays a list of available physical disks, excluding the system disk.</p>
         </Steps.Step>
         <Steps.Step title="VM Selection">
           <p>The user selects the virtual machine (VM) to which the disk(s) will be assigned.</p>
         </Steps.Step>
         <Steps.Step title="Disk Assignment">
-          <img src="/images/design-mode/disk-assigment.png" alt="Disk Assigment Menu" className="mt-4 rounded shadow-lg" />
+          <img src="https://macrimi.github.io/ProxMenux/disk/disk-assigment.png" alt="Disk Assigment Menu" className="mt-4 rounded shadow-lg" />
           <p>The script performs the following actions:</p>
           <ul className="list-disc pl-6 space-y-1 mt-2">
             <li>Ensures the selected disk is not in use by another VM.</li>

@@ -244,7 +244,7 @@ systemctl enable --now pve-ha-lrm pve-ha-crm corosync
       <div>
         <p className="font-semibold text-center">ProxMenux</p>
         <img
-          src="/images/design-mode/proxmenux.png"
+          src="https://macrimi.github.io/ProxMenux/fastfetch/proxmenux.png"
           alt="ProxMenux Logo"
           className="rounded shadow-lg"
         />
@@ -252,7 +252,7 @@ systemctl enable --now pve-ha-lrm pve-ha-crm corosync
       <div>
         <p className="font-semibold text-center">Proxmox</p>
         <img
-          src="/images/design-mode/proxmox.png"
+          src="https://macrimi.github.io/ProxMenux/fastfetch/proxmox.png"
           alt="Proxmox Logo"
           className="rounded shadow-lg"
         />
@@ -260,7 +260,7 @@ systemctl enable --now pve-ha-lrm pve-ha-crm corosync
       <div>
         <p className="font-semibold text-center">Helper-Scripts</p>
         <img
-          src="/images/design-mode/helper-scripts.png"
+          src="https://macrimi.github.io/ProxMenux/fastfetch/helper-scripts.png"
           alt="Helper-Scripts Logo"
           className="rounded shadow-lg"
         />
@@ -268,7 +268,7 @@ systemctl enable --now pve-ha-lrm pve-ha-crm corosync
       <div>
         <p className="font-semibold text-center">Home-Labs-Club</p>
         <img
-          src="/images/design-mode/home-labs-club.png"
+          src="https://macrimi.github.io/ProxMenux/fastfetch/home-labs-club.png"
           alt="Home-Labs-Club Logo"
           className="rounded shadow-lg"
         />
@@ -276,7 +276,7 @@ systemctl enable --now pve-ha-lrm pve-ha-crm corosync
       <div>
         <p className="font-semibold text-center">Proxmology</p>
         <img
-          src="/images/design-mode/proxmology.png"
+          src="https://macrimi.github.io/ProxMenux/fastfetch/proxmology.png"
           alt="Proxmology Logo"
           className="rounded shadow-lg"
         />
@@ -336,7 +336,7 @@ echo "clear && fastfetch" >> ~/.bashrc
 
       <div className="mb-6 flex justify-center">
         <img
-          src="/images/design-mode/figurine.png"
+          src="https://macrimi.github.io/ProxMenux/figurine/figurine.png"
           alt="Figurine Example Output"
           className="rounded-md shadow-lg border border-gray-200"
           style={{ maxWidth: "100%" }}
@@ -384,3 +384,4 @@ chmod +x "/etc/profile.d/figurine.sh"
     </div>
   )
 }
+

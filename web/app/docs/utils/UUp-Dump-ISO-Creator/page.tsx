@@ -76,7 +76,7 @@ export default function UUPDumpISOCreatorPage() {
       </div>
 
       <ImageWithCaption
-        src="/images/design-mode/uup-dump-iso-creator.png"
+        src="https://macrimi.github.io/ProxMenux/utils/uup-dump-iso-creator.png"
         alt="UUP Dump ISO Creator"
         caption="UUP Dump ISO Creator in ProxMenux"
       />
@@ -240,7 +240,7 @@ export default function UUPDumpISOCreatorPage() {
               ) and select the Windows version you want to download.
             </p>
             <ImageWithCaption
-              src="/images/design-mode/step-1-select-version-windows.png"
+              src="https://macrimi.github.io/ProxMenux/iso-creator/step-1-select-version-windows.png"
               alt="Select Windows Version"
               caption="UUP Dump main page for selecting Windows version"
             />
@@ -258,7 +258,7 @@ export default function UUPDumpISOCreatorPage() {
               Preview builds, or specific versions.
             </p>
             <ImageWithCaption
-              src="/images/design-mode/step-2-select-version-windows.png"
+              src="https://macrimi.github.io/ProxMenux/iso-creator/step-2-select-version-windows.png"
               alt="Select Specific Build"
               caption="Selection of the specific Windows build"
             />
@@ -275,7 +275,7 @@ export default function UUPDumpISOCreatorPage() {
               Choose the language for the Windows image. You can select any language available for that specific build.
             </p>
             <ImageWithCaption
-              src="/images/design-mode/step-3-select-version-windows.png"
+              src="https://macrimi.github.io/ProxMenux/iso-creator/step-3-select-version-windows.png"
               alt="Select Language"
               caption="Selection of the language for the Windows image"
             />
@@ -293,7 +293,7 @@ export default function UUPDumpISOCreatorPage() {
               (Home, Pro, Enterprise, etc.).
             </p>
             <ImageWithCaption
-              src="/images/design-mode/step-4-select-version-windows.png"
+              src="https://macrimi.github.io/ProxMenux/iso-creator/step-4-select-version-windows.png"
               alt="Select Editions"
               caption="Selection of Windows editions to include"
             />
@@ -313,7 +313,7 @@ export default function UUPDumpISOCreatorPage() {
               <code className="bg-gray-100 px-1 py-0.5 rounded">edition</code>.
             </p>
             <ImageWithCaption
-              src="/images/design-mode/step-5-select-version-windows.png"
+              src="https://macrimi.github.io/ProxMenux/iso-creator/step-5-select-version-windows.png"
               alt="Get Download URL"
               caption="Final page with the URL containing the necessary parameters"
             />
@@ -341,7 +341,7 @@ export default function UUPDumpISOCreatorPage() {
               that the URL contains all the necessary parameters.
             </p>
             <ImageWithCaption
-              src="/images/design-mode/add-url-iso-creator.png"
+              src="https://macrimi.github.io/ProxMenux/iso-creator/add-url-iso-creator.png"
               alt="Paste UUP Dump URL"
               caption="Window for pasting the UUP Dump URL"
             />
@@ -356,7 +356,7 @@ export default function UUPDumpISOCreatorPage() {
             </h3>
             <p className="mb-4">Access the Utilities section in ProxMenux and select "UUP Dump ISO Creator".</p>
             <ImageWithCaption
-              src="/images/design-mode/start-uupdump-iso-creator.png"
+              src="https://macrimi.github.io/ProxMenux/iso-creator/start-uupdump-iso-creator.png"
               alt="Start UUP Dump ISO Creator"
               caption="Starting the UUP Dump ISO Creator script in ProxMenux"
             />
@@ -374,7 +374,7 @@ export default function UUPDumpISOCreatorPage() {
               ISO image. The ISO will be immediately available for use in creating virtual machines in Proxmox.
             </p>
             <ImageWithCaption
-              src="/images/design-mode/end-uupdump-iso-creator.png"
+              src="https://macrimi.github.io/ProxMenux/iso-creator/end-uupdump-iso-creator.png"
               alt="Process Completion"
               caption="Successful completion message of the ISO creation process"
             />

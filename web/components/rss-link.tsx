@@ -6,7 +6,7 @@ import { useState } from "react"
 
 export default function RSSLink() {
   const [copied, setCopied] = useState(false)
-  const rssUrl = "https://proxmenux.com/rss.xml"
+  const rssUrl = "https://macrimi.github.io/ProxMenux/rss.xml"
 
   const copyToClipboard = async () => {
     try {

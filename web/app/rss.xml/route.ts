@@ -10,24 +10,25 @@ interface ChangelogEntry {
   title: string
 }
 
+// Function to clean and format markdown content for RSS
 function formatContentForRSS(content: string): string {
   return (
     content
-      // Convert ### headers to <h3> tags
-      .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-      // Convert ** bold ** to <strong> tags
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      // Convert code blocks to <pre><code> tags
+      // Convert ### headers to bold text
+      .replace(/^### (.+)$/gm, "**$1**")
+      // Convert ** bold ** to simple bold
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      // Clean code blocks - remove ``` and format nicely
       .replace(/```[\s\S]*?```/g, (match) => {
         const code = match.replace(/```/g, "").trim()
-        return `<pre><code>${code}</code></pre>`
+        return `\n${code}\n`
       })
-      // Convert - bullet points to <ul><li> tags
-      .replace(/^- (.+)$/gm, "<li>$1</li>")
-      // Wrap consecutive <li> tags in <ul>
-      .replace(/(<li>.*?<\/li>\s*)+/g, (match) => `<ul>${match}</ul>`)
-      // Convert double newlines to <br><br> for paragraphs
-      .replace(/\n\n/g, "<br><br>")
+      // Convert - bullet points to •
+      .replace(/^- /gm, "• ")
+      // Clean up multiple newlines
+      .replace(/\n{3,}/g, "\n\n")
+      // Remove backslashes used for line breaks
+      .replace(/\\\s*$/gm, "")
       // Clean up extra spaces
       .replace(/\s+/g, " ")
       .trim()
@@ -74,7 +75,7 @@ async function parseChangelog(): Promise<ChangelogEntry[]> {
           currentEntry = {
             version,
             date,
-            url: `https://proxmenux.com/changelog#${version}`,
+            url: `https://macrimi.github.io/ProxMenux/changelog#${version}`,
             title: `ProxMenux ${version}`,
           }
         } else if (dateMatch) {
@@ -82,7 +83,7 @@ async function parseChangelog(): Promise<ChangelogEntry[]> {
           currentEntry = {
             version: date,
             date,
-            url: `https://proxmenux.com/changelog#${date}`,
+            url: `https://macrimi.github.io/ProxMenux/changelog#${date}`,
             title: `ProxMenux Update ${date}`,
           }
         }
@@ -114,13 +115,13 @@ async function parseChangelog(): Promise<ChangelogEntry[]> {
 
 export async function GET() {
   const entries = await parseChangelog()
-  const siteUrl = "https://proxmenux.com"
+  const siteUrl = "https://macrimi.github.io/ProxMenux"
 
   const rssXml = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>ProxMenux Changelog</title>
-    <description>Latest updates and changes in ProxMenux - An Interactive Menu for Proxmox VE Management</description>
+    <description>Latest updates and changes in ProxMenux</description>
     <link>${siteUrl}/changelog</link>
     <atom:link href="${siteUrl}/rss.xml" rel="self" type="application/rss+xml"/>
     <language>en-US</language>
@@ -133,7 +134,7 @@ export async function GET() {
         (entry) => `
     <item>
       <title>${entry.title}</title>
-      <description><![CDATA[${entry.content}]]></description>
+      <description><![CDATA[${entry.content.length > 1000 ? entry.content.substring(0, 1000) + "..." : entry.content}]]></description>
       <link>${entry.url}</link>
       <guid isPermaLink="true">${entry.url}</guid>
       <pubDate>${new Date(entry.date).toUTCString()}</pubDate>

@@ -97,7 +97,7 @@ export default function HelpAndInfoPage() {
       </div>
 
       <ImageWithCaption
-        src="/images/design-mode/help-info-menu.png"
+        src="https://macrimi.github.io/ProxMenux/help/help-info-menu.png"
         alt="Help and Info Menu"
         caption="Help and Info Menu"
       />

@@ -8,7 +8,7 @@ export default function IntroductionPage() {
       {/* Logo + Title Section */}
       <div className="flex items-start mb-6">
         <Image 
-          src="/images/design-mode/logo.png" 
+          src="https://macrimi.github.io/ProxMenux/logo.png" 
           alt="ProxMenux Logo" 
           width={80} 
           height={80} 

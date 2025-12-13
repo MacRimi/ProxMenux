@@ -468,7 +468,7 @@ export default function OtherNASSystemsPage() {
                 <h4 className="font-medium mb-2">Shell Interface</h4>
                 <div className="border rounded-md overflow-hidden">
                   <Image
-                    src="/images/design-mode/truenas-scale-shell.png"
+                    src="https://macrimi.github.io/ProxMenux/vm/truenas/truenas-scale-shell.png"
                     alt="TrueNAS SCALE Shell Interface"
                     width={600}
                     height={400}
@@ -480,7 +480,7 @@ export default function OtherNASSystemsPage() {
                 <h4 className="font-medium mb-2">Web Interface</h4>
                 <div className="border rounded-md overflow-hidden">
                   <Image
-                    src="/images/design-mode/truenas-scale-web.png"
+                    src="https://macrimi.github.io/ProxMenux/vm/truenas/truenas-scale-web.png"
                     alt="TrueNAS SCALE Web Interface"
                     width={600}
                     height={400}
@@ -510,7 +510,7 @@ export default function OtherNASSystemsPage() {
                 <h4 className="font-medium mb-2">Shell Interface</h4>
                 <div className="border rounded-md overflow-hidden">
                   <Image
-                    src="/images/design-mode/truenas-core-shell.png"
+                    src="https://macrimi.github.io/ProxMenux/vm/truenas/truenas-core-shell.png"
                     alt="TrueNAS CORE Shell Interface"
                     width={600}
                     height={400}
@@ -522,7 +522,7 @@ export default function OtherNASSystemsPage() {
                 <h4 className="font-medium mb-2">Web Interface</h4>
                 <div className="border rounded-md overflow-hidden">
                   <Image
-                    src="/images/design-mode/truenas-core-web.png"
+                    src="https://macrimi.github.io/ProxMenux/vm/truenas/truenas-core-web.png"
                     alt="TrueNAS CORE Web Interface"
                     width={600}
                     height={400}
@@ -552,7 +552,7 @@ export default function OtherNASSystemsPage() {
                 <h4 className="font-medium mb-2">Shell Interface</h4>
                 <div className="border rounded-md overflow-hidden">
                   <Image
-                    src="/images/design-mode/openmediavault-shell.png"
+                    src="https://macrimi.github.io/ProxMenux/vm/openmediavault/openmediavault-shell.png"
                     alt="OpenMediaVault Shell Interface"
                     width={600}
                     height={400}
@@ -564,7 +564,7 @@ export default function OtherNASSystemsPage() {
                 <h4 className="font-medium mb-2">Web Interface</h4>
                 <div className="border rounded-md overflow-hidden">
                   <Image
-                    src="/images/design-mode/openmediavault-web.png"
+                    src="https://macrimi.github.io/ProxMenux/vm/openmediavault/openmediavault-web.png"
                     alt="OpenMediaVault Web Interface"
                     width={600}
                     height={400}
@@ -594,7 +594,7 @@ export default function OtherNASSystemsPage() {
                 <h4 className="font-medium mb-2">Shell Interface</h4>
                 <div className="border rounded-md overflow-hidden">
                   <Image
-                    src="/images/design-mode/rockstor-shell.png"
+                    src="https://macrimi.github.io/ProxMenux/vm/rockstor/rockstor-shell.png"
                     alt="Rockstor Shell Interface"
                     width={600}
                     height={400}
@@ -606,7 +606,7 @@ export default function OtherNASSystemsPage() {
                 <h4 className="font-medium mb-2">Web Interface</h4>
                 <div className="border rounded-md overflow-hidden">
                   <Image
-                    src="/images/design-mode/rockstor-web.png"
+                    src="https://macrimi.github.io/ProxMenux/vm/rockstor/rockstor-web.png"
                     alt="Rockstor Web Interface"
                     width={600}
                     height={400}

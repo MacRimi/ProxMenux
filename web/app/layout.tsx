@@ -22,16 +22,16 @@ export const metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(`https://proxmenux.com`),
+  metadataBase: new URL(`https://macrimi.github.io/ProxMenux/`),
   openGraph: {
     title: "ProxMenux",
     description:
       "A menu-driven script for Proxmox VE management, designed to simplify and streamline the execution of commands and tasks.",
-    url: "https://proxmenux.com",
+    url: "https://macrimi.github.io/ProxMenux/",
     siteName: "ProxMenux",
     images: [
       {
-        url: "https://proxmenux.com/main.png",
+        url: "https://macrimi.github.io/ProxMenux/main.png",
         width: 1363,
         height: 735,
         alt: "ProxMenux",
@@ -45,14 +45,14 @@ export const metadata = {
     title: "ProxMenux",
     description:
       "A menu-driven script for Proxmox VE management, designed to simplify and streamline the execution of commands and tasks.",
-    images: ["https://proxmenux.com/main.png"],
+    images: ["https://macrimi.github.io/ProxMenux/main.png"],
   },
   icons: {
     icon: [
-      { url: "https://proxmenux.com/favicon.ico", sizes: "any" },
-      { url: "https://proxmenux.com/icon.svg", type: "image/svg+xml" },
+      { url: "https://macrimi.github.io/ProxMenux/favicon.ico", sizes: "any" },
+      { url: "https://macrimi.github.io/ProxMenux/icon.svg", type: "image/svg+xml" },
     ],
-    apple: [{ url: "https://proxmenux.com/apple-touch-icon.png", sizes: "180x180" } as const],
+    apple: [{ url: "https://macrimi.github.io/ProxMenux/apple-touch-icon.png", sizes: "180x180" } as const],
   },
 }
 
