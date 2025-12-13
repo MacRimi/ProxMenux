@@ -89,6 +89,22 @@
     "type": "ct"
   },
   {
+    "name": "AdGuardHome-Sync",
+    "slug": "adguardhome-sync",
+    "desc": "Synchronize AdGuardHome config to one or multiple replica instances. Syncs General Settings, Filters, Rewrites, Services, Clients, DNS Config, DHCP Config and Theme.",
+    "script": "tools/addon/adguardhome-sync.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/adguardhome-sync.sh",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "Edit /opt/adguardhome-sync/adguardhome-sync.yaml to configure your AdGuardHome instances",
+      "Origin = Primary instance, Replicas = Instances to sync to",
+      "Update with: update_adguardhome-sync"
+    ],
+    "type": "addon"
+  },
+  {
     "name": "AdventureLog",
     "slug": "adventurelog",
     "desc": "Adventure Log is an app designed to track outdoor activities and personal achievements, allowing users to log their adventures with photos, notes, and location data. It focuses on enhancing outdoor experiences by preserving memories and sharing them with others.",
@@ -813,7 +829,7 @@
     "script": "ct/coolify.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/coolify.sh",
     "categories": [
-      6
+      3
     ],
     "notes": [
       "Initial setup will be done via the web interface on first access.",
@@ -1124,7 +1140,7 @@
     "script": "ct/dokploy.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/dokploy.sh",
     "categories": [
-      6
+      3
     ],
     "notes": [
       "Initial setup will be done via the web interface on first access.",
