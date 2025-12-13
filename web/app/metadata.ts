@@ -1,11 +1,9 @@
-import type { Metadata } from 'next'
+import type { Metadata } from "next"
 
-
-
-const description = "A menu-driven script for Proxmox VE management, designed to simplify and streamline the execution of commands and tasks."
+const description =
+  "A menu-driven script for Proxmox VE management, designed to simplify and streamline the execution of commands and tasks."
 
 export const metadata: Metadata = {
-
   title: "ProxMenux",
   description,
   generator: "Next.js",
@@ -20,11 +18,11 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(`https://macrimi.github.io/ProxMenux/`),
+  metadataBase: new URL(`https://proxmenux.com`),
   openGraph: {
     title: "ProxMenux",
     description,
-    url: `https://macrimi.github.io/ProxMenux/`,
+    url: `https://proxmenux.com`,
     siteName: "ProxMenux",
     images: [
       {

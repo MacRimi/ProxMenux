@@ -164,7 +164,7 @@ export default function SystemNASPage() {
       </div>
 
       <ImageWithCaption
-        src="https://macrimi.github.io/ProxMenux/vm/system-nas-menu.png"
+        src="/images/design-mode/system-nas-menu.png"
         alt="System NAS Menu"
         caption="System NAS Menu"
       />

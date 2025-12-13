@@ -63,7 +63,7 @@ export default function BasicSettingsPage() {
       
       <div className="mb-6">
         <img
-          src="https://macrimi.github.io/ProxMenux/basic/menu_utilities.png"
+          src="/images/design-mode/menu_utilities.png"
           alt="System Utilities Selection Menu"
           className="rounded shadow-lg border border-gray-200"
         />
@@ -83,7 +83,7 @@ export default function BasicSettingsPage() {
         <p className="mt-2">Example usage:</p>
         <code className="block bg-gray-100 p-2 rounded">dialog --title "Hello" --msgbox "Hello, World!" 10 20</code>
         <img
-          src="https://macrimi.github.io/ProxMenux/basic/dialog.png"
+          src="/images/design-mode/dialog.png"
           alt="Dialog Example"
           className="mt-2 rounded shadow-lg"
         />
@@ -103,7 +103,7 @@ export default function BasicSettingsPage() {
         <p className="mt-2">To start htop, simply type:</p>
         <code className="block bg-gray-100 p-2 rounded">htop</code>
         <img
-          src="https://macrimi.github.io/ProxMenux/basic/htop.png"
+          src="/images/design-mode/htop.png"
           alt="htop Example"
           className="mt-2 rounded shadow-lg"
         />
@@ -113,7 +113,7 @@ export default function BasicSettingsPage() {
         <p className="mt-2">To start btop, type:</p>
         <code className="block bg-gray-100 p-2 rounded">btop</code>
         <img
-          src="https://macrimi.github.io/ProxMenux/basic/btop.png"
+          src="/images/design-mode/btop.png"
           alt="btop Example"
           className="mt-2 rounded shadow-lg"
         />
@@ -123,7 +123,7 @@ export default function BasicSettingsPage() {
         <p className="mt-2">To start iftop (requires root):</p>
         <code className="block bg-gray-100 p-2 rounded">iftop</code>
         <img
-          src="https://macrimi.github.io/ProxMenux/basic/iftop.png"
+          src="/images/design-mode/iftop.png"
           alt="iftop Example"
           className="mt-2 rounded shadow-lg"
         />
@@ -133,7 +133,7 @@ export default function BasicSettingsPage() {
         <p className="mt-2">To start iotop (requires root):</p>
         <code className="block bg-gray-100 p-2 rounded">siotop</code>
         <img
-          src="https://macrimi.github.io/ProxMenux/basic/iotop.png"
+          src="/images/design-mode/iotop.png"
           alt="iotop Example"
           className="mt-2 rounded shadow-lg"
         />
@@ -155,7 +155,7 @@ export default function BasicSettingsPage() {
         <p className="mt-2">To start iptraf-ng:</p>
         <code className="block bg-gray-100 p-2 rounded">iptraf-ng</code>
         <img
-          src="https://macrimi.github.io/ProxMenux/basic/iptraf-ng.png"
+          src="/images/design-mode/iptraf-ng.png"
           alt="iptraf-ng Example"
           className="mt-2 rounded shadow-lg"
         />
@@ -212,7 +212,7 @@ export default function BasicSettingsPage() {
           </tbody>
         </table>
         <img
-          src="https://macrimi.github.io/ProxMenux/basic/tmux.png"
+          src="/images/design-mode/tmux.png"
           alt="tmux Example"
           className="mt-2 rounded shadow-lg"
         />
@@ -383,4 +383,3 @@ sudo apt-get install -y zfsutils-linux proxmox-backup-restore-image chrony
     </div>
   )
 }
-

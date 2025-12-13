@@ -20,13 +20,7 @@ export default function Navbar() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center space-x-2">
-            <Image
-              src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logo.png"
-              alt="ProxMenux Logo"
-              width={32}
-              height={32}
-              className="w-8 h-8"
-            />
+            <Image src="/images/design-mode/logo.png" alt="ProxMenux Logo" width={32} height={32} className="w-8 h-8" />
             <span className="text-xl font-bold">ProxMenux</span>
           </Link>
 
@@ -46,7 +40,7 @@ export default function Navbar() {
 
             {/* RSS Feed Link */}
             <Link
-              href="https://macrimi.github.io/ProxMenux/rss.xml"
+              href="https://proxmenux.com/rss.xml"
               className="flex items-center space-x-2 transition-colors hover:text-primary text-orange-600 hover:text-orange-700"
               target="_blank"
               rel="noopener noreferrer"
@@ -81,7 +75,7 @@ export default function Navbar() {
 
             {/* RSS Feed Link - Mobile */}
             <Link
-              href="https://macrimi.github.io/ProxMenux/rss.xml"
+              href="https://proxmenux.com/rss.xml"
               className="flex items-center space-x-2 py-2 transition-colors hover:text-primary text-orange-600 hover:text-orange-700"
               onClick={() => setIsMenuOpen(false)}
               target="_blank"

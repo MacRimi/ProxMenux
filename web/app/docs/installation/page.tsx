@@ -46,7 +46,7 @@ export default function InstallationPage() {
       <h2 className="text-xl font-semibold mt-6 mb-2">Installation Progress</h2>
       <p className="mb-2">The installation process will look like this:</p>
       <div className="w-full mb-4">
-        <Image src="https://macrimi.github.io/ProxMenux/install/install.png" alt="ProxMenux Installation" width={800} height={400} className="rounded shadow-lg" />
+        <Image src="/images/design-mode/install.png" alt="ProxMenux Installation" width={800} height={400} className="rounded shadow-lg" />
       </div>
 
       <h2 className="text-xl font-semibold mt-6 mb-2">How to Use</h2>

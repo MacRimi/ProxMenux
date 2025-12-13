@@ -241,7 +241,7 @@ export default function Page() {
         <p>You can upload custom loaders from the local storage options:</p>
 
         <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/add_loader.png" 
+                src="/images/design-mode/add_loader.png" 
                 alt="Add Custom Loader" 
                 caption="Add Custom Loader"
               />
@@ -345,7 +345,7 @@ export default function Page() {
                 </p>
 
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_0_1.png"
+                src="/images/design-mode/arc_1_0_1.png"
                 alt="Arc Loader Web Interface"
                 caption="Arc Loader Web Interface"
               />
@@ -355,7 +355,7 @@ export default function Page() {
                 </p>
 
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_1_1.png"
+                src="/images/design-mode/arc_1_1_1.png"
                 alt="Arc Loader Terminal Interface"
                 caption="Arc Loader Terminal Interface"
               />
@@ -372,7 +372,7 @@ export default function Page() {
               </p>
 
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_0_2.png"
+                src="/images/design-mode/rr_2_0_2.png"
                 alt="RR Command Example"
                 caption="RR Loader Web Interface"
               />
@@ -382,7 +382,7 @@ export default function Page() {
                 </p>
 
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_1_1.png"
+                src="/images/design-mode/rr_2_1_1.png"
                 alt="RR Loader Interface"
                 caption="RR Loader Terminal Interface"
               />     
@@ -399,7 +399,7 @@ export default function Page() {
               </p>
 
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_0_1.png"
+                src="/images/design-mode/tinycore_3_0_1.png"
                 alt="TinyCore Loader Interface"
                 caption="TinyCore Loader Web Interface"
               />
@@ -410,7 +410,7 @@ export default function Page() {
                 </p>
 
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_1_1.png"
+                src="/images/design-mode/tinycore_3_1_1.png"
                 alt="TinyCore Loader Interface"
                 caption="TinyCore Loader Terminal Interface"
               />
@@ -433,7 +433,7 @@ export default function Page() {
           {activeLoader === "arc" && (
             <div className="flex flex-col space-y-8">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_2_1.png"
+                src="/images/design-mode/arc_1_2_1.png"
                 alt="Arc Model Selection"
                 caption="Arc Model Selection"
               />
@@ -443,7 +443,7 @@ export default function Page() {
           {activeLoader === "rr" && (
             <div className="flex flex-col space-y-8">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_2_1.png"
+                src="/images/design-mode/rr_2_2_1.png"
                 alt="RR Model Selection"
                 caption="RR Model Selection"
               />
@@ -453,7 +453,7 @@ export default function Page() {
           {activeLoader === "tinycore" && (
             <div className="flex flex-col space-y-8">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_2_1.png"
+                src="/images/design-mode/tinycore_3_2_1.png"
                 alt="TinyCore Model Selection"
                 caption="TinyCore Model Selection"
               />
@@ -476,12 +476,12 @@ export default function Page() {
           {activeLoader === "arc" && (
             <div className="flex flex-col space-y-16">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_3_1.png"
+                src="/images/design-mode/arc_1_3_1.png"
                 alt="Arc Version Selection - Step 1"
                 caption="Arc Version Selection - Step 1"
               />
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_3_2.png"
+                src="/images/design-mode/arc_1_3_2.png"
                 alt="Arc Version Selection - Step 2"
                 caption="Arc Version Selection - Step 2"
               />
@@ -491,17 +491,17 @@ export default function Page() {
           {activeLoader === "rr" && (
             <div className="flex flex-col space-y-16">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_1.png"
+                src="/images/design-mode/rr_2_3_1.png"
                 alt="RR Version Selection - Step 1"
                 caption="RR Version Selection - Step 1"
               />
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_2.png"
+                src="/images/design-mode/rr_2_3_2.png"
                 alt="RR Version Selection - Step 2"
                 caption="RR Version Selection - Step 2"
               />
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_3.png"
+                src="/images/design-mode/rr_2_3_3.png"
                 alt="RR Version Selection - Step 3"
                 caption="RR Version Selection - Step 3"
               />
@@ -511,12 +511,12 @@ export default function Page() {
           {activeLoader === "tinycore" && (
             <div className="flex flex-col space-y-16">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_3_1.png"
+                src="/images/design-mode/tinycore_3_3_1.png"
                 alt="TinyCore Version Selection - Step 1"
                 caption="TinyCore Version Selection - Step 1"
               />
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_3_2.png"
+                src="/images/design-mode/tinycore_3_3_2.png"
                 alt="TinyCore Version Selection - Step 2"
                 caption="TinyCore Version Selection - Step 2"
               />
@@ -541,7 +541,7 @@ export default function Page() {
                 automatically reboot once the process is complete.
               </p>
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_1.png"
+                src="/images/design-mode/arc_1_4_1.png"
                 alt="Arc Auto Configuration"
                 caption="Arc Auto Configuration"
               />
@@ -550,22 +550,22 @@ export default function Page() {
                 the loader:
               </p>
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_2.png"
+                src="/images/design-mode/arc_1_4_2.png"
                 alt="Arc Manual Configuration"
                 caption="Arc Manual Configuration"
               />
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_3.png"
+                src="/images/design-mode/arc_1_4_3.png"
                 alt="Arc SN/Mac Configuration"
                 caption="Arc SN/Mac Configuration"
               />
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_4.png"
+                src="/images/design-mode/arc_1_4_4.png"
                 alt="Arc Sata Portmap"
                 caption="Arc Sata Portmap (use the recommended option)"
               />
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_5.png"
+                src="/images/design-mode/arc_1_4_5.png"
                 alt="Arc Addons Selection"
                 caption="Arc Addons Selection"
               />
@@ -575,17 +575,17 @@ export default function Page() {
           {activeLoader === "rr" && (
             <div className="flex flex-col space-y-8">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_1.png"
+                src="/images/design-mode/rr_2_4_1.png"
                 alt="RR Addon Step 1"
                 caption="RR Addon Step 1"
               />
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_2.png"
+                src="/images/design-mode/rr_2_4_2.png"
                 alt="RR Addon Step 2"
                 caption="RR Addon Step 2 - Press to add addons"
               />
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_3.png"
+                src="/images/design-mode/rr_2_4_3.png"
                 alt="RR Addon Step 3"
                 caption="RR Addon Step 3 - Select the one you want by clicking on it. If you want to add more, repeat the process from images 2.4.2 and 2.4.3"
               />
@@ -595,22 +595,22 @@ export default function Page() {
           {activeLoader === "tinycore" && (
             <div className="flex flex-col space-y-8">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_1.png"
+                src="/images/design-mode/tinycore_3_4_1.png"
                 alt="TinyCore SN Configuration"
                 caption="TinyCore SN Configuration"
               />
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_2.png"
+                src="/images/design-mode/tinycore_3_4_2.png"
                 alt="TinyCore Random Option"
                 caption="TinyCore Random Option - The random option is recommended"
               />
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_3.png"
+                src="/images/design-mode/tinycore_3_4_3.png"
                 alt="TinyCore MAC Configuration"
                 caption="TinyCore MAC Configuration"
               />
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_4.png"
+                src="/images/design-mode/tinycore_3_4_4.png"
                 alt="TinyCore VM MAC"
                 caption="TinyCore VM MAC - Choose to use your VM's MAC or a random one"
               />
@@ -634,7 +634,7 @@ export default function Page() {
           {activeLoader === "arc" && (
             <div className="flex flex-col space-y-8">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_5_1.png"
+                src="/images/design-mode/arc_1_5_1.png"
                 alt="Arc Build Loader"
                 caption="Arc Build Loader"
               />
@@ -644,7 +644,7 @@ export default function Page() {
           {activeLoader === "rr" && (
             <div className="flex flex-col space-y-8">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_5_1.png"
+                src="/images/design-mode/rr_2_5_1.png"
                 alt="RR Build Loader"
                 caption="RR Build Loader"
               />
@@ -654,7 +654,7 @@ export default function Page() {
           {activeLoader === "tinycore" && (
             <div className="flex flex-col space-y-8">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_5_1.png"
+                src="/images/design-mode/tinycore_3_5_1.png"
                 alt="TinyCore Build Loader"
                 caption="TinyCore Build Loader"
               />
@@ -677,7 +677,7 @@ export default function Page() {
           {activeLoader === "arc" && (
             <div className="flex flex-col space-y-8">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_6_1.png"
+                src="/images/design-mode/arc_1_6_1.png"
                 alt="Arc Boot Loader"
                 caption="Arc Boot Loader"
               />
@@ -687,7 +687,7 @@ export default function Page() {
           {activeLoader === "rr" && (
             <div className="flex flex-col space-y-8">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_6_1.png"
+                src="/images/design-mode/rr_2_6_1.png"
                 alt="RR Boot Loader"
                 caption="RR Boot Loader"
               />
@@ -697,7 +697,7 @@ export default function Page() {
           {activeLoader === "tinycore" && (
             <div className="flex flex-col space-y-8">
               <ImageWithCaption
-                src="https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_6_1.png"
+                src="/images/design-mode/tinycore_3_6_1.png"
                 alt="TinyCore Boot Loader"
                 caption="TinyCore Boot Loader"
               />
@@ -719,7 +719,7 @@ export default function Page() {
         <p className="mb-6">Follow the on-screen steps to complete the DSM installation.</p>
         <div className="flex flex-col space-y-8">
           <ImageWithCaption
-            src="https://macrimi.github.io/ProxMenux/vm/synology/install_DSM.png"
+            src="/images/design-mode/install_DSM.png"
             alt="DSM Setup"
             caption="DSM Setup Screen"
           />
@@ -729,7 +729,7 @@ export default function Page() {
           is nearing completion.
         </p>
           <ImageWithCaption
-            src="https://macrimi.github.io/ProxMenux/vm/synology/finish_install_DSM.png"
+            src="/images/design-mode/finish_install_DSM.png"
             alt="Installation Complete"
             caption="Installation Complete"
           />
@@ -833,4 +833,3 @@ function StepNumber({ number }: { number: number }) {
     </div>
   )
 }
-

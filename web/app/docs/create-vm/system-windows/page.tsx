@@ -76,7 +76,7 @@ export default function WindowsVMPage() {
       </div>
 
       <ImageWithCaption
-        src="https://macrimi.github.io/ProxMenux/vm/menu_windows.png"
+        src="/images/design-mode/menu_windows.png"
         alt="Windows VM Menu"
         caption="Windows VM Creation Menu in ProxMenux"
       />
@@ -412,7 +412,7 @@ export default function WindowsVMPage() {
 
               <div className="mt-4">
                 <ImageWithCaption
-                  src="https://macrimi.github.io/ProxMenux/vm/local-store-windows.png"
+                  src="/images/design-mode/local-store-windows.png"
                   alt="Local ISO Selection Menu"
                   caption="Local ISO Selection Menu in ProxMenux"
                 />
@@ -492,7 +492,7 @@ export default function WindowsVMPage() {
               During Windows installation, if no disks are shown on the “Where do you want to install Windows?” screen, it means the required storage drivers for your selected disk interface (such as SCSI or VirtIO) are not available. You'll need to load them manually.
             </p>
             <ImageWithCaption
-              src="https://macrimi.github.io/ProxMenux/vm/windows/virtio-step-1.png"
+              src="/images/design-mode/virtio-step-1.png"
               alt="Windows installation - No disks shown"
               caption="Windows installation screen with no disks available"
             />
@@ -505,7 +505,7 @@ export default function WindowsVMPage() {
               Click the “Load driver” button to browse the mounted VirtIO ISO. This will allow you to load the necessary storage drivers so Windows can detect the virtual disk.
             </p>
             <ImageWithCaption
-              src="https://macrimi.github.io/ProxMenux/vm/windows/virtio-step-2.png"
+              src="/images/design-mode/virtio-step-2.png"
               alt="Windows installation - Load driver button"
               caption="Click 'Load driver' to browse for VirtIO drivers"
             />
@@ -519,7 +519,7 @@ export default function WindowsVMPage() {
               For example, the <code className="bg-gray-100 px-1 py-0.5 rounded">viostor</code> folder contains storage drivers, and you'll find subfolders organized by version (e.g., Windows 10, 11, Server).
             </p>
             <ImageWithCaption
-              src="https://macrimi.github.io/ProxMenux/vm/windows/virtio-step-3.png"
+              src="/images/design-mode/virtio-step-3.png"
               alt="Windows installation - Browse for driver"
               caption="Browse to the appropriate driver folder on the VirtIO ISO"
             />
@@ -532,7 +532,7 @@ export default function WindowsVMPage() {
               After selecting the folder, Windows will list the available drivers. Choose the appropriate one — usually “Red Hat VirtIO SCSI controller” — and click “Next” to proceed with the installation.
             </p>
             <ImageWithCaption
-              src="https://macrimi.github.io/ProxMenux/vm/windows/virtio-step-4.png"
+              src="/images/design-mode/virtio-step-4.png"
               alt="Windows installation - Select driver"
               caption="Select the appropriate VirtIO driver for your disk interface"
             />
@@ -545,7 +545,7 @@ export default function WindowsVMPage() {
               <strong>Pro Tip:</strong> If you selected <strong>VirtIO</strong> as the network interface, Windows will not recognize it by default. To enable internet access during installation, load the VirtIO network driver from the ISO by browsing to the <code className="bg-gray-100 px-1 py-0.5 rounded">NetKVM</code> folder and selecting the correct subfolder for your Windows version.
             </p>
             <ImageWithCaption
-              src="https://macrimi.github.io/ProxMenux/vm/windows/virtio-step-5.png"
+              src="/images/design-mode/virtio-step-5.png"
               alt="Windows installation - Network drivers"
               caption="Select the appropriate VirtIO network driver to enable internet access"
             />

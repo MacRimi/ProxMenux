@@ -22,7 +22,7 @@ export default function Footer() {
               className="hover:opacity-90 transition-opacity flex items-center"
             >
               <Image
-                src="https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/kofi.png"
+                src="/images/design-mode/kofi.png"
                 alt="Support me on Ko-fi"
                 width={140}
                 height={40}
@@ -68,4 +68,3 @@ export default function Footer() {
     </footer>
   )
 }
-

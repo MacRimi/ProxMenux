@@ -32,4 +32,3 @@ const Steps: React.FC<StepsProps> & { Step: typeof Step } = ({ children }) => (
 Steps.Step = Step
 
 export { Steps }
-

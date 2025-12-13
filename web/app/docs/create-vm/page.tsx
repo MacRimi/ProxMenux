@@ -84,7 +84,7 @@ export default function VirtualMachinesPage() {
       </div>
 
       <ImageWithCaption
-        src="https://macrimi.github.io/ProxMenux/vm/vm-creation-menu.png"
+        src="/images/design-mode/vm-creation-menu.png"
         alt="Virtual Machines Creation Menu"
         caption="Virtual Machines Creation Menu"
       />

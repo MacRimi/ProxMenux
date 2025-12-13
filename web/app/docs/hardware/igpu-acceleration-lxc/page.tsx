@@ -31,7 +31,7 @@ export default function IGPUAccelerationLXC() {
       <Steps>
         <Steps.Step title="Select an LXC Container">
           <p>You will be presented with a list of your LXC containers to choose from.</p>
-          <Image src="https://macrimi.github.io/ProxMenux/igpu/select-container.png" alt="Select LXC Container" width={800} height={400} className="rounded shadow-lg" />
+          <Image src="/images/design-mode/select-container.png" alt="Select LXC Container" width={800} height={400} className="rounded shadow-lg" />
         </Steps.Step>
         <Steps.Step title="Modify Container Configuration">
           <p>The script applies the following changes to your container:</p>
