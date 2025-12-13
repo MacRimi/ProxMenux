@@ -2552,6 +2552,24 @@
     }
   },
   {
+    "name": "InvoiceNinja",
+    "slug": "invoiceninja",
+    "desc": "Invoice Ninja is a free, open-source invoicing, quotes, expenses and time-tracking application for freelancers and businesses. Features include recurring invoices, online payments, client portal, and multi-company support.",
+    "script": "ct/invoiceninja.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/invoiceninja.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/invoiceninja.sh",
+    "os": "debian",
+    "categories": [
+      3
+    ],
+    "notes": [
+      "First visit http://IP:8080/setup to complete the initial configuration",
+      "Database credentials are stored in ~/invoiceninja.creds",
+      "Configure SMTP settings in /opt/invoiceninja/.env for email functionality"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "ioBroker",
     "slug": "iobroker",
     "desc": "ioBroker is an open-source platform for building and managing smart home automation systems. It provides a centralized control and management interface for connected devices, sensors, and other IoT devices. ioBroker integrates with a wide range of popular smart home systems, devices, and services, making it easy to automate tasks and processes, monitor and control devices, and collect and analyze data from a variety of sources. With its flexible architecture and easy-to-use interface, ioBroker is designed to make it simple for users to build and customize their own smart home automation systems, regardless of their technical background or experience.",
@@ -6851,6 +6869,22 @@
       12
     ],
     "notes": [],
+    "type": "ct"
+  },
+  {
+    "name": "Wallabag",
+    "slug": "wallabag",
+    "desc": "Wallabag is a self-hosted read-it-later application. Save web articles to read them later, offline, in a clean and distraction-free interface. Features tagging, full-text search, and browser/mobile app integrations.",
+    "script": "ct/wallabag.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/wallabag.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/wallabag.sh",
+    "os": "debian",
+    "categories": [
+      12
+    ],
+    "notes": [
+      "Database credentials are stored in ~/wallabag.creds"
+    ],
     "type": "ct"
   },
   {
