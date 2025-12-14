@@ -13,20 +13,20 @@ interface ChangelogEntry {
 function formatContentForRSS(content: string): string {
   return (
     content
+      .replace(/https:\/\/macrimi\.github\.io\/ProxMenux/g, "https://proxmenux.com")
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
       .replace(/!\[([^\]]*)\]$$([^)]+)$$/g, (match, alt, url) => {
         // Convert relative URLs to absolute
         let absoluteUrl = url
         if (url.startsWith("/")) {
           absoluteUrl = `https://proxmenux.com${url}`
-        } else if (url.startsWith("http://") || url.startsWith("https://")) {
-          // Already absolute, but replace old GitHub URLs with new domain
-          absoluteUrl = url.replace("https://macrimi.github.io/ProxMenux", "https://proxmenux.com")
-        } else {
+        } else if (!url.startsWith("http://") && !url.startsWith("https://")) {
           // Relative path, make it absolute
           absoluteUrl = `https://proxmenux.com/${url}`
         }
-        return `<img src="${absoluteUrl}" alt="${alt}" style="max-width: 100%; height: auto;" />`
+        return `<img src="${absoluteUrl}" alt="${alt}" style="max-width: 100%; height: auto; display: block; margin: 1em 0;" />`
       })
+      // Convert markdown links to HTML
       .replace(/\[([^\]]+)\]$$([^)]+)$$/g, '<a href="$2">$1</a>')
       // Convert ### headers to <h3> tags
       .replace(/^### (.+)$/gm, "<h3>$1</h3>")
@@ -37,8 +37,7 @@ function formatContentForRSS(content: string): string {
         const code = match.replace(/```/g, "").trim()
         return `<pre><code>${code}</code></pre>`
       })
-      .replace(/`([^`]+)`/g, "<code>$1</code>")
-      // Convert - bullet points to <ul><li> tags
+      // Convert - bullet points to <li> tags
       .replace(/^- (.+)$/gm, "<li>$1</li>")
       // Wrap consecutive <li> tags in <ul>
       .replace(/(<li>.*?<\/li>\s*)+/g, (match) => `<ul>${match}</ul>`)
