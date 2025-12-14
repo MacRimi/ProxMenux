@@ -46,7 +46,7 @@ export default function Navbar() {
 
             {/* RSS Feed Link */}
             <Link
-              href="https://macrimi.github.io/ProxMenux/rss.xml"
+              href="https://proxmenux.com/rss.xml"
               className="flex items-center space-x-2 transition-colors hover:text-primary text-orange-600 hover:text-orange-700"
               target="_blank"
               rel="noopener noreferrer"
@@ -81,7 +81,7 @@ export default function Navbar() {
 
             {/* RSS Feed Link - Mobile */}
             <Link
-              href="https://macrimi.github.io/ProxMenux/rss.xml"
+              href="https://proxmenux.com/rss.xml"
               className="flex items-center space-x-2 py-2 transition-colors hover:text-primary text-orange-600 hover:text-orange-700"
               onClick={() => setIsMenuOpen(false)}
               target="_blank"
