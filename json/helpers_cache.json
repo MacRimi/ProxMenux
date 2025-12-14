@@ -95,7 +95,7 @@
     "script": "tools/addon/adguardhome-sync.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/adguardhome-sync.sh",
     "categories": [
-      9
+      5
     ],
     "notes": [
       "Edit /opt/adguardhome-sync/adguardhome-sync.yaml to configure your AdGuardHome instances",
@@ -1642,7 +1642,7 @@
     "script": "ct/glance.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/glance.sh",
     "categories": [
-      9
+      10
     ],
     "notes": [],
     "type": "ct"
