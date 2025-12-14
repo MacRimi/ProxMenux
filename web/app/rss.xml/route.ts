@@ -10,39 +10,42 @@ interface ChangelogEntry {
   title: string
 }
 
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
 function formatContentForRSS(content: string): string {
   return (
     content
       .replace(/https:\/\/macrimi\.github\.io\/ProxMenux/g, "https://proxmenux.com")
       .replace(/`([^`]+)`/g, "<code>$1</code>")
-      .replace(/!\[([^\]]*)\]$$([^)]+)$$/g, (match, alt, url) => {
-        // Convert relative URLs to absolute
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
         let absoluteUrl = url
         if (url.startsWith("/")) {
           absoluteUrl = `https://proxmenux.com${url}`
         } else if (!url.startsWith("http://") && !url.startsWith("https://")) {
-          // Relative path, make it absolute
           absoluteUrl = `https://proxmenux.com/${url}`
         }
-        return `<img src="${absoluteUrl}" alt="${alt}" style="max-width: 100%; height: auto; display: block; margin: 1em 0;" />`
+        return `<div style="margin: 1.5em 0; text-align: center;">
+          <img src="${absoluteUrl}" alt="${alt}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
+        </div>`
       })
-      // Convert markdown links to HTML
-      .replace(/\[([^\]]+)\]$$([^)]+)$$/g, '<a href="$2">$1</a>')
-      // Convert ### headers to <h3> tags
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
       .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-      // Convert ** bold ** to <strong> tags
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      // Convert code blocks to <pre><code> tags
       .replace(/```[\s\S]*?```/g, (match) => {
         const code = match.replace(/```/g, "").trim()
         return `<pre><code>${code}</code></pre>`
       })
-      // Convert - bullet points to <li> tags
       .replace(/^- (.+)$/gm, "<li>$1</li>")
-      // Wrap consecutive <li> tags in <ul>
       .replace(/(<li>.*?<\/li>\s*)+/g, (match) => `<ul>${match}</ul>`)
-      .replace(/\n/g, "<br>")
-      // Clean up extra spaces
+      .replace(/^---$/gm, '<hr style="border: none; border-top: 2px solid #eee; margin: 2em 0;" />')
+      .replace(/\n/g, "<br/>")
       .replace(/\s+/g, " ")
       .trim()
   )
@@ -59,20 +62,15 @@ async function parseChangelog(): Promise<ChangelogEntry[]> {
     const fileContents = fs.readFileSync(changelogPath, "utf8")
     const entries: ChangelogEntry[] = []
 
-    // Split by ## headers (both versions and dates)
     const lines = fileContents.split("\n")
     let currentEntry: Partial<ChangelogEntry> | null = null
     let contentLines: string[] = []
 
     for (const line of lines) {
-      // Check for version header: ## [1.1.1] - 2025-03-21
       const versionMatch = line.match(/^##\s+\[([^\]]+)\]\s*-\s*(\d{4}-\d{2}-\d{2})/)
-
-      // Check for date-only header: ## 2025-05-13
       const dateMatch = line.match(/^##\s+(\d{4}-\d{2}-\d{2})$/)
 
       if (versionMatch || dateMatch) {
-        // Save previous entry if exists
         if (currentEntry && contentLines.length > 0) {
           const rawContent = contentLines.join("\n").trim()
           currentEntry.content = formatContentForRSS(rawContent)
@@ -81,7 +79,6 @@ async function parseChangelog(): Promise<ChangelogEntry[]> {
           }
         }
 
-        // Start new entry
         if (versionMatch) {
           const version = versionMatch[1]
           const date = versionMatch[2]
@@ -103,14 +100,12 @@ async function parseChangelog(): Promise<ChangelogEntry[]> {
 
         contentLines = []
       } else if (currentEntry && line.trim()) {
-        // Add content lines (skip empty lines at the beginning)
         if (contentLines.length > 0 || line.trim() !== "") {
           contentLines.push(line)
         }
       }
     }
 
-    // Don't forget the last entry
     if (currentEntry && contentLines.length > 0) {
       const rawContent = contentLines.join("\n").trim()
       currentEntry.content = formatContentForRSS(rawContent)
@@ -119,7 +114,7 @@ async function parseChangelog(): Promise<ChangelogEntry[]> {
       }
     }
 
-    return entries.slice(0, 20) // Latest 20 entries
+    return entries.slice(0, 20)
   } catch (error) {
     console.error("Error parsing changelog:", error)
     return []
@@ -146,8 +141,9 @@ export async function GET() {
       .map(
         (entry) => `
     <item>
-      <title>${entry.title}</title>
-      <description><![CDATA[${entry.content}]]></description>
+      <title>${escapeXml(entry.title)}</title>
+      <description>${escapeXml(entry.content.replace(/<[^>]*>/g, '').substring(0, 200))}...</description>
+      <content:encoded><![CDATA[${entry.content}]]></content:encoded>
       <link>${entry.url}</link>
       <guid isPermaLink="true">${entry.url}</guid>
       <pubDate>${new Date(entry.date).toUTCString()}</pubDate>
