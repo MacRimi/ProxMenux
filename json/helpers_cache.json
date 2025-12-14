@@ -125,7 +125,7 @@
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/adguardhome-sync.sh",
     "os": "generic",
     "categories": [
-      9
+      5
     ],
     "notes": [
       "Edit /opt/adguardhome-sync/adguardhome-sync.yaml to configure your AdGuardHome instances",
@@ -1998,7 +1998,7 @@
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/glance.sh",
     "os": "debian",
     "categories": [
-      9
+      10
     ],
     "notes": [],
     "type": "ct"
