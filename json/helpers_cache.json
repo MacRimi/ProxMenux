@@ -2905,6 +2905,28 @@
     }
   },
   {
+    "name": "Koel",
+    "slug": "koel",
+    "desc": "Koel is a simple web-based personal audio streaming service written in Vue and Laravel. It supports multiple users, audio visualization, smart playlists, YouTube integration, and Last.fm scrobbling.",
+    "script": "ct/koel.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/koel.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/koel.sh",
+    "os": "debian",
+    "categories": [
+      13
+    ],
+    "notes": [
+      "Media files should be placed in /opt/koel_media",
+      "Database credentials are stored in ~/koel.creds",
+      "Music library is scanned hourly via cron job"
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin@koel.dev",
+      "password": "KoelIsCool"
+    }
+  },
+  {
     "name": "Koillection",
     "slug": "koillection",
     "desc": "Koillection is a self-hosted collection manager created to keep track of physical (mostly) collections of any kind like books, DVDs, stamps, games... Koillection is meant to be used for any kind of collections and doesn't come with pre-built metadata download. But you can tailor your own HTML scraper, or you can add your own metadata freely.",
