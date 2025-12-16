@@ -3200,21 +3200,6 @@
     "type": "addon"
   },
   {
-    "name": "NetVisor",
-    "slug": "netvisor",
-    "desc": "Automatically discover and visually document network infrastructure",
-    "script": "ct/netvisor.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/netvisor.sh",
-    "categories": [
-      9
-    ],
-    "notes": [
-      "To configure the integrated daemon after install is complete, either use the `Create Daemon` menu in the UI, or run `/root/configure_daemon.sh` for automatic configuration",
-      "The integrated daemon config is located at `/root/.config/daemon/config.json`"
-    ],
-    "type": "ct"
-  },
-  {
     "name": "Nextcloud",
     "slug": "nextcloud-vm",
     "desc": "TurnKey Nextcloud is an open-source file sharing server and collaboration platform that can store your personal content, like documents and pictures, in a centralized location.",
@@ -4778,6 +4763,21 @@
       "Execute within the Proxmox shell"
     ],
     "type": "pve"
+  },
+  {
+    "name": "Scanopy",
+    "slug": "scanopy",
+    "desc": "Automatically discover and visually document network infrastructure",
+    "script": "ct/scanopy.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/scanopy.sh",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "To configure the integrated daemon after install is complete, either use the `Create Daemon` menu in the UI, or run `/root/configure_daemon.sh` for automatic configuration",
+      "The integrated daemon config is located at `/root/.config/daemon/config.json`"
+    ],
+    "type": "ct"
   },
   {
     "name": "Scraparr",
