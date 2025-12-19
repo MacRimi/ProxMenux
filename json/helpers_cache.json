@@ -5392,6 +5392,20 @@
     }
   },
   {
+    "name": "qbittorrent Exporter",
+    "slug": "qbittorrent-exporter",
+    "desc": "A fast and lightweight prometheus exporter for qBittorrent ",
+    "script": "tools/addon/qbittorrent-exporter.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/qbittorrent-exporter.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/qbittorrent-exporter.sh",
+    "os": "generic",
+    "categories": [
+      9
+    ],
+    "notes": [],
+    "type": "addon"
+  },
+  {
     "name": "Qdrant",
     "slug": "qdrant",
     "desc": "Qdrant is a vector search engine and vector database that allows you to store, search, and manage high-dimensional vectors efficiently.",
