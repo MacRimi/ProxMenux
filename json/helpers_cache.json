@@ -4491,6 +4491,18 @@
     "type": "ct"
   },
   {
+    "name": "qbittorrent Exporter",
+    "slug": "qbittorrent-exporter",
+    "desc": "A fast and lightweight prometheus exporter for qBittorrent ",
+    "script": "tools/addon/qbittorrent-exporter.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/qbittorrent-exporter.sh",
+    "categories": [
+      9
+    ],
+    "notes": [],
+    "type": "addon"
+  },
+  {
     "name": "qBittorrent",
     "slug": "qbittorrent",
     "desc": "qBittorrent offers a user-friendly interface that allows users to search for and download torrent files easily. It also supports magnet links, which allow users to start downloading files without the need for a torrent file.",
