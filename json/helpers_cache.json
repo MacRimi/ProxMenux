@@ -864,7 +864,8 @@
       3
     ],
     "notes": [
-      "The file `/etc/sysconfig/CosmosCloud` is optional. If you need custom settings, you can create it yourself."
+      "The file `/etc/sysconfig/CosmosCloud` is optional. If you need custom settings, you can create it yourself.",
+      "Requires FUSE support for mergerfs functionality. FUSE is enabled by default during installation."
     ],
     "type": "ct"
   },
