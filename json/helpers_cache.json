@@ -2135,7 +2135,7 @@
     "script": "ct/invoiceninja.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/invoiceninja.sh",
     "categories": [
-      3
+      25
     ],
     "notes": [
       "First visit http://IP:8080/setup to complete the initial configuration",
