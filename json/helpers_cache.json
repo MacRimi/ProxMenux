@@ -4956,7 +4956,9 @@
     "categories": [
       8
     ],
-    "notes": [],
+    "notes": [
+      "Type `/opt/pocketbase/pocketbase superuser create YOUREMAIL PASSWORD` to create your superuser account."
+    ],
     "type": "ct"
   },
   {
