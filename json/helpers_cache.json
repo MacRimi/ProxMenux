@@ -6154,7 +6154,7 @@
     "script": "ct/zot-registry.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/zot-registry.sh",
     "categories": [
-      13
+      3
     ],
     "notes": [],
     "type": "ct"
