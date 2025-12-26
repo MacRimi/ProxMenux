@@ -5702,7 +5702,7 @@
     "script": "ct/valkey.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/valkey.sh",
     "categories": [
-      9
+      8
     ],
     "notes": [
       "Show Login Credentials, type `cat ~/valkey.creds` in the LXC console"
