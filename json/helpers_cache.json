@@ -7412,7 +7412,7 @@
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/zoraxy.sh",
     "os": "debian",
     "categories": [
-      4
+      21
     ],
     "notes": [],
     "type": "ct"
