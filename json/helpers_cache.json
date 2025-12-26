@@ -6142,7 +6142,7 @@
     "script": "ct/zoraxy.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/zoraxy.sh",
     "categories": [
-      4
+      21
     ],
     "notes": [],
     "type": "ct"
