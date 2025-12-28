@@ -3844,6 +3844,20 @@
     "type": "addon"
   },
   {
+    "name": "Nextcloud Exporter",
+    "slug": "nextcloud-exporter",
+    "desc": "Prometheus exporter for Nextcloud servers. ",
+    "script": "tools/addon/nextcloud-exporter.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/nextcloud-exporter.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/nextcloud-exporter.sh",
+    "os": "generic",
+    "categories": [
+      9
+    ],
+    "notes": [],
+    "type": "addon"
+  },
+  {
     "name": "Nextcloud",
     "slug": "nextcloud-vm",
     "desc": "TurnKey Nextcloud is an open-source file sharing server and collaboration platform that can store your personal content, like documents and pictures, in a centralized location.",
