@@ -3319,6 +3319,24 @@
     "type": "ct"
   },
   {
+    "name": "Mail-Archiver",
+    "slug": "mail-archiver",
+    "desc": "Mail-Archiver is a web application for archiving, searching, and exporting emails from multiple accounts. Featuring folder sync, attachment support, mailbox migration and a dashboard.",
+    "script": "ct/mail-archiver.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/mail-archiver.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/mail-archiver.sh",
+    "os": "debian",
+    "categories": [
+      7
+    ],
+    "notes": [],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": "secure123!"
+    }
+  },
+  {
     "name": "Manage My Damn Life",
     "slug": "managemydamnlife",
     "desc": "Manage My Damn Life (MMDL) is a self-hosted front end for managing your CalDAV tasks and calendars.",
