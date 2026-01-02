@@ -2052,7 +2052,7 @@
       "Please be aware that Immich releases are pinned to specific versions until compatibility has been confirmed by the Community Scripts maintainers; as a result, the version installed by the helper script may not be the most current version of Immich",
       "During installation, you will be prompted with the option to install Intel OpenVINO for hardware-accelerated machine-learning. If you opt in, increase your LXC RAM after installation, as OpenVINO is memory-intensive",
       "HW-accelerated video transcoding is supported, but must be enabled in Immich Settings",
-      "To change upload location, edit 'IMMICH_MEDIA_LOCATION' in `/opt/immich/.env`, and create the symlink 'upload' in /opt/immich/app & /opt/immich/app/machine-learning to your new upload location",
+      "To change upload location, edit 'IMMICH_MEDIA_LOCATION' in `/opt/immich/.env`, retarget the symlink 'upload' in /opt/immich/app and /opt/immich/app/machine-learning to your new upload location, copy the default upload location `/opt/immich/upload` and its contents to the new upload location, confirm that the new upload location and its contents are owned by `immich:immich`, and restart the Immich server. See `https://github.com/community-scripts/ProxmoxVE/discussions/5075` for more information.",
       "Logs: `/var/log/immich`"
     ],
     "type": "ct"
