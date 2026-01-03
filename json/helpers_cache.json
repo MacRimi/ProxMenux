@@ -2125,7 +2125,7 @@
     ],
     "notes": [
       "First visit http://IP:8080/setup to complete the initial configuration",
-      "Database credentials are stored in ~/invoiceninja.creds",
+      "Database credentials are stored in `~/invoiceninja.creds`. Use them in the above initial configuration step.",
       "Configure SMTP settings in /opt/invoiceninja/.env for email functionality"
     ],
     "type": "ct"
@@ -5983,7 +5983,7 @@
       4
     ],
     "notes": [
-      "Wireguard and WGDashboard are not the same. More info: `https://docs.wgdashboard.dev/what-is-wireguard-what-is-wgdashboard.html`",
+      "Wireguard and WGDashboard are not the same. More info: `https://wgdashboard.dev/`",
       "WGDashboard installation is optional."
     ],
     "type": "ct",
