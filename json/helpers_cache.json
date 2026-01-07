@@ -6069,6 +6069,22 @@
     "type": "ct"
   },
   {
+    "name": "Sportarr",
+    "slug": "sportarr",
+    "desc": "Sportarr is an automated media management application for all sports. It works similar to Sonarr and Radarr but specifically designed for combat sports, basketball, football, hockey, motorsports, and hundreds of other sports worldwide.",
+    "script": "ct/sportarr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/sportarr.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/sportarr.sh",
+    "os": "debian",
+    "categories": [
+      14
+    ],
+    "notes": [
+      "The resources assigned to LXC are considered baseline. Please adjust to match your workload."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "SQL Server 2022",
     "slug": "sqlserver2022",
     "desc": "Script to automatically set up a SQL Server 2022 installation.",
