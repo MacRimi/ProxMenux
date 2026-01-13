@@ -1707,6 +1707,20 @@
     "type": "ct"
   },
   {
+    "name": "Fladder",
+    "slug": "fladder",
+    "desc": "Fladder is a simple Jellyfin frontend built on top of Flutter. It provides a modern interface to stream and sync content locally, manage libraries, support multiple profiles, and offers direct, transcode and offline playback with media segments skipping.",
+    "script": "ct/fladder.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/fladder.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/fladder.sh",
+    "os": "debian",
+    "categories": [
+      13
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "FlareSolverr",
     "slug": "flaresolverr",
     "desc": "FlareSolverr is a proxy server to bypass Cloudflare and DDoS-GUARD protection.",
@@ -2569,6 +2583,22 @@
       "username": "admin",
       "password": "`cat /etc/inventree/admin_password.txt`"
     }
+  },
+  {
+    "name": "Investbrain",
+    "slug": "investbrain",
+    "desc": "Investbrain is a smart open-source investment tracker that helps you manage, track, and make informed decisions about your investments.",
+    "script": "ct/investbrain.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/investbrain.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/investbrain.sh",
+    "os": "debian",
+    "categories": [
+      23
+    ],
+    "notes": [
+      "Database credentials: `cat ~/investbrain.creds`"
+    ],
+    "type": "ct"
   },
   {
     "name": "InvoiceNinja",
