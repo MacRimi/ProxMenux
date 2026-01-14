@@ -2553,6 +2553,20 @@
     "type": "ct"
   },
   {
+    "name": "Kutt",
+    "slug": "kutt",
+    "desc": "Kutt is a modern URL shortener with support for custom domains. Create and edit links, view statistics, manage users, and more.",
+    "script": "ct/kutt.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/kutt.sh",
+    "categories": [
+      21
+    ],
+    "notes": [
+      "Kutt needs so be served with an SSL certificate for its login to work. During install, you will be prompted to choose if you want to have Caddy installed for SSL termination or if you want to use your own reverse proxy (in that case point your reverse porxy to port 3000)."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "LazyLibrarian",
     "slug": "lazylibrarian",
     "desc": "LazyLibrarian is a SickBeard, CouchPotato, Headphones-like application for ebooks, audiobooks and magazines.",
