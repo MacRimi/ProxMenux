@@ -4630,6 +4630,18 @@
     "type": "ct"
   },
   {
+    "name": "Qui",
+    "slug": "qui",
+    "desc": "Qui is a modern, self-hosted web interface for managing multiple qBittorrent instances with support for 10k+ torrents. It provides a clean and responsive interface for monitoring and controlling your qBittorrent downloads across multiple servers.",
+    "script": "ct/qui.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/qui.sh",
+    "categories": [
+      7
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "RabbitMQ",
     "slug": "rabbitmq",
     "desc": "RabbitMQ is a robust messaging broker widely used for message queuing, streaming, and decoupling services. It supports multiple messaging protocols, ensures reliable message delivery, and offers features like routing, clustering, and federation. RabbitMQ is suitable for various use cases, including microservices communication, real-time data processing, and IoT applications.",
