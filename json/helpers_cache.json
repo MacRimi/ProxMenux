@@ -4636,7 +4636,7 @@
     "script": "ct/qui.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/qui.sh",
     "categories": [
-      7
+      11
     ],
     "notes": [],
     "type": "ct"
