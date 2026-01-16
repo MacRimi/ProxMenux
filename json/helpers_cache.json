@@ -1735,6 +1735,20 @@
     "type": "ct"
   },
   {
+    "name": "Flatnotes",
+    "slug": "flatnotes",
+    "desc": "A self-hosted, database-less note-taking web app that utilises a flat folder of markdown files for storage.",
+    "script": "ct/flatnotes.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/flatnotes.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/flatnotes.sh",
+    "os": "debian",
+    "categories": [
+      12
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "FlowiseAI",
     "slug": "flowiseai",
     "desc": "FlowiseAI is an open source low-code tool for developers to build customized LLM orchestration flow & AI agents",
@@ -6862,6 +6876,20 @@
     "notes": [
       "For non-AVX CPUs, MongoDB 4.4 is installed. Please note this is a legacy solution that may present security risks and could become unsupported in future updates."
     ],
+    "type": "ct"
+  },
+  {
+    "name": "Unifi OS Server",
+    "slug": "unifi-os-server",
+    "desc": "Unifi OS Server is the operating system that powers Ubiquiti's UniFi line of network devices. It provides a centralized platform for managing and monitoring UniFi access points, switches, and security gateways, offering features such as network configuration, device provisioning, and performance analytics.",
+    "script": "ct/unifi-os-server.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/unifi-os-server.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/unifi-os-server.sh",
+    "os": "debian",
+    "categories": [
+      4
+    ],
+    "notes": [],
     "type": "ct"
   },
   {
