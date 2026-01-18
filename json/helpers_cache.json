@@ -6494,6 +6494,28 @@
     "type": "ct"
   },
   {
+    "name": "ThingsBoard",
+    "slug": "thingsboard",
+    "desc": "ThingsBoard is an open-source IoT platform for data collection, processing, visualization, and device management. It enables device connectivity via industry standard IoT protocols - MQTT, CoAP and HTTP and supports both cloud and on-premises deployments.",
+    "script": "ct/thingsboard.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/thingsboard.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/thingsboard.sh",
+    "os": "debian",
+    "categories": [
+      7
+    ],
+    "notes": [
+      "Please allow up to 90 seconds for the Web UI to start",
+      "Additional demo accounts: tenant@thingsboard.org / tenant and customer@thingsboard.org / customer",
+      "Change passwords for all accounts in the account profile page after first login"
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "sysadmin@thingsboard.org",
+      "password": "sysadmin"
+    }
+  },
+  {
     "name": "Threadfin",
     "slug": "threadfin",
     "desc": "Threadfin is a M3U proxy for Kernel, Plex, Jellyfin, or Emby, based on xTeVe.",
