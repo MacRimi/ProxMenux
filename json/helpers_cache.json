@@ -1033,7 +1033,8 @@
       11
     ],
     "notes": [
-      "Execute within the Proxmox shell or in LXC"
+      "Execute within the Proxmox shell or in LXC",
+      "Update with: update_copyparty"
     ],
     "type": "addon"
   },
@@ -2318,8 +2319,7 @@
       4
     ],
     "notes": [
-      "Default credentials: `cat /root/hev.creds`",
-      "Config stored at `/etc/hev-socks5-server/main.yml`"
+      "Default credentials: `cat /root/hev.creds`"
     ],
     "type": "ct"
   },
@@ -6117,7 +6117,7 @@
     "script": "ct/splunk-enterprise.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/splunk-enterprise.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/splunk-enterprise.sh",
-    "os": "ubuntu",
+    "os": "debian",
     "categories": [
       9
     ],
