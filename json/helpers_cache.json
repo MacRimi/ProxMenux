@@ -4095,22 +4095,6 @@
     }
   },
   {
-    "name": "phpIPAM",
-    "slug": "phpipam",
-    "desc": "phpipam is an open-source web IP address management application (IPAM). Its goal is to provide light, modern and useful IP address management.",
-    "script": "ct/phpipam.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/phpipam.sh",
-    "categories": [
-      4
-    ],
-    "notes": [],
-    "type": "ct",
-    "default_credentials": {
-      "username": "Admin",
-      "password": "ipamadmin"
-    }
-  },
-  {
     "name": "PhpMyAdmin",
     "slug": "phpmyadmin",
     "desc": "phpMyAdmin is a free software tool written in PHP, intended to handle the administration of MySQL over the Web. phpMyAdmin supports a wide range of operations on MySQL and MariaDB. Frequently used operations (managing databases, tables, columns, relations, indexes, users, permissions, etc) can be performed via the user interface, while you still have the ability to directly execute any SQL statement.",
