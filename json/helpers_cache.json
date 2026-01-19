@@ -2213,20 +2213,6 @@
     }
   },
   {
-    "name": "iVentoy",
-    "slug": "iventoy",
-    "desc": "iVentoy is an upgraded PXE server that allows simultaneous OS booting and installation on multiple machines via network. It is user-friendly, requiring only the placement of ISO files in a designated folder and selecting PXE boot on the client machine. iVentoy supports x86 Legacy BIOS, IA32 UEFI, x86_64 UEFI, and ARM64 UEFI modes. It is compatible with over 110 OS types, including Windows, WinPE, Linux, and VMware.",
-    "script": "ct/iventoy.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/iventoy.sh",
-    "categories": [
-      2
-    ],
-    "notes": [
-      "Container must be privileged."
-    ],
-    "type": "ct"
-  },
-  {
     "name": "Jackett",
     "slug": "jackett",
     "desc": "Jackett supports a wide range of trackers, including popular ones like The Pirate Bay, RARBG, and Torrentz2, as well as many private trackers. It can be integrated with several BitTorrent clients, including qBittorrent, Deluge, and uTorrent, among others.",
@@ -5394,6 +5380,18 @@
     "notes": [
       "Make sure to configure an output for the telegraf config and start the service with `systemctl start telegraf`."
     ],
+    "type": "ct"
+  },
+  {
+    "name": "Termix",
+    "slug": "termix",
+    "desc": "Termix is an open-source, self-hosted server management platform with SSH terminal access, SSH tunneling, remote file management, Docker management, and multi-platform support.",
+    "script": "ct/termix.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/termix.sh",
+    "categories": [
+      6
+    ],
+    "notes": [],
     "type": "ct"
   },
   {
