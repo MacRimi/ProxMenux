@@ -849,7 +849,8 @@
       11
     ],
     "notes": [
-      "Execute within the Proxmox shell or in LXC"
+      "Execute within the Proxmox shell or in LXC",
+      "Update with: update_copyparty"
     ],
     "type": "addon"
   },
@@ -1906,8 +1907,7 @@
       4
     ],
     "notes": [
-      "Default credentials: `cat /root/hev.creds`",
-      "Config stored at `/etc/hev-socks5-server/main.yml`"
+      "Default credentials: `cat /root/hev.creds`"
     ],
     "type": "ct"
   },
