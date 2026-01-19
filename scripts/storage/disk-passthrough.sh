@@ -6,8 +6,8 @@
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
 # License     : (CC BY-NC 4.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
-# Version     : 1.0
-# Last Updated: 28/01/2025
+# Version     : 1.1
+# Last Updated: 03/01/2026
 # ==========================================================
 # Description:
 # This script allows users to assign physical disks to existing
@@ -20,6 +20,7 @@
 # - Ensures that disks are not already assigned to active VMs.
 # - Warns about disk sharing between multiple VMs to avoid data corruption.
 # - Configures the selected disks for the VM and verifies the assignment.
+# - Uses /dev/disk/by-id/ persistent paths for disk assignment when available.
 #
 # The goal of this script is to simplify the process of assigning
 # physical disks to Proxmox VMs, reducing manual configurations
@@ -47,6 +48,23 @@ get_disk_info() {
     MODEL=$(lsblk -dn -o MODEL "$disk" | xargs)
     SIZE=$(lsblk -dn -o SIZE "$disk" | xargs)
     echo "$MODEL" "$SIZE"
+}
+
+get_preferred_disk_path() {
+    local disk=$1
+    local real_path=$(readlink -f "$disk")
+    local candidates=()
+    for symlink in /dev/disk/by-id/*; do
+        if [[ "$(readlink -f "$symlink")" == "$real_path" ]]; then
+            candidates+=("$symlink")
+        fi
+    done
+    if [ ${#candidates[@]} -eq 0 ]; then
+        echo "$disk"
+        return
+    fi
+    # Sort by length, shortest first (prefer model-based over UUID)
+    printf '%s\n' "${candidates[@]}" | awk '{print length, $0}' | sort -n | head -1 | cut -d' ' -f2-
 }
 
 
@@ -209,7 +227,8 @@ while read -r DISK; do
     fi
 
 
-    if qm config "$VMID" | grep -vE '^\s*#|^description:' | grep -q "$DISK"; then
+    PREFERRED_DISK=$(get_preferred_disk_path "$DISK")
+    if qm config "$VMID" | grep -vE '^\s*#|^description:' | grep -E -q "($DISK|$PREFERRED_DISK)"; then
         SHOW_DISK=false
     fi
 
@@ -287,14 +306,15 @@ msg_info "$(translate "Processing selected disks...")"
 for DISK in $SELECTED; do
     DISK=$(echo "$DISK" | tr -d '"')
     DISK_INFO=$(get_disk_info "$DISK")
+    PREFERRED_DISK=$(get_preferred_disk_path "$DISK")
 
     ASSIGNED_TO=""
     RUNNING_VMS=""
     RUNNING_CTS=""
 
-  
+
     while read -r VM_ID VM_NAME; do
-        if [[ "$VM_ID" =~ ^[0-9]+$ ]] && qm config "$VM_ID" | grep -q "$DISK"; then
+        if [[ "$VM_ID" =~ ^[0-9]+$ ]] && qm config "$VM_ID" | grep -E -q "($DISK|$PREFERRED_DISK)"; then
             ASSIGNED_TO+="VM $VM_ID $VM_NAME\n"
             VM_STATUS=$(qm status "$VM_ID" | awk '{print $2}')
             if [ "$VM_STATUS" == "running" ]; then
@@ -305,7 +325,7 @@ for DISK in $SELECTED; do
 
 
     while read -r CT_ID CT_NAME; do
-        if [[ "$CT_ID" =~ ^[0-9]+$ ]] && pct config "$CT_ID" | grep -q "$DISK"; then
+        if [[ "$CT_ID" =~ ^[0-9]+$ ]] && pct config "$CT_ID" | grep -E -q "($DISK|$PREFERRED_DISK)"; then
             ASSIGNED_TO+="CT $CT_ID $CT_NAME\n"
             CT_STATUS=$(pct status "$CT_ID" | awk '{print $2}')
             if [ "$CT_STATUS" == "running" ]; then
@@ -334,7 +354,7 @@ for DISK in $SELECTED; do
         ((INDEX++))
     done
 
-    RESULT=$(qm set "$VMID" -${INTERFACE}${INDEX} "$DISK" 2>&1)
+    RESULT=$(qm set "$VMID" -${INTERFACE}${INDEX} "$PREFERRED_DISK" 2>&1)
 
     if [ $? -eq 0 ]; then
         MESSAGE="$(translate "The disk") $DISK_INFO $(translate "has been successfully added to VM") $VMID."
