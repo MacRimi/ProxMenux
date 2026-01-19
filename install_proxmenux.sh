@@ -7,7 +7,7 @@
 # Contributors : cod378
 # Subproject   : ProxMenux Monitor (System Health & Web Dashboard)
 # Copyright    : (c) 2024-2025 MacRimi
-# License      : (CC BY-NC 4.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License      : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
 # Version      : 1.4
 # Last Updated : 12/11/2025
 # ==========================================================
