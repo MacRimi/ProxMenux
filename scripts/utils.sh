@@ -113,6 +113,16 @@ cleanup() {
     fi
 }
 
+stop_spinner() {
+    if [ -n "$SPINNER_PID" ] && ps -p $SPINNER_PID > /dev/null 2>&1; then
+        kill $SPINNER_PID > /dev/null 2>&1
+        wait $SPINNER_PID 2>/dev/null
+    fi
+    printf "\r\033[K"  
+    printf "\e[?25h"   
+    SPINNER_PID=""
+}
+
 # Display trnaslate message with spinner
 msg_lang() {
     local msg="$1"
