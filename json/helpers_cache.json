@@ -6172,6 +6172,18 @@
     }
   },
   {
+    "name": "Yubal",
+    "slug": "yubal",
+    "desc": "YouTube Music album downloader with Spotify metadata auto-tagging.",
+    "script": "ct/yubal.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/yubal.sh",
+    "categories": [
+      13
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "YunoHost",
     "slug": "yunohost",
     "desc": "YunoHost is an operating system aiming for the simplest administration of a server, and therefore democratize self-hosting, while making sure it stays reliable, secure, ethical and lightweight.",
