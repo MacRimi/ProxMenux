@@ -3301,6 +3301,38 @@
     }
   },
   {
+    "name": "Loki",
+    "slug": "loki",
+    "desc": "Grafana Loki is a set of open source components that can be composed into a fully featured logging stack. A small index and highly compressed chunks simplifies the operation and significantly lowers the cost of Loki.",
+    "script": "ct/alpine-loki.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/alpine-loki.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/alpine-loki.sh",
+    "os": "alpine",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "Promtail can be optionally installed during setup to collect and ship logs to Loki."
+    ],
+    "type": "ct"
+  },
+  {
+    "name": "Loki",
+    "slug": "loki",
+    "desc": "Grafana Loki is a set of open source components that can be composed into a fully featured logging stack. A small index and highly compressed chunks simplifies the operation and significantly lowers the cost of Loki.",
+    "script": "ct/loki.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/loki.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/loki.sh",
+    "os": "debian",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "Promtail can be optionally installed during setup to collect and ship logs to Loki."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "LubeLogger",
     "slug": "lubelogger",
     "desc": "Web-Based Vehicle Maintenance and Fuel Mileage Tracker",
