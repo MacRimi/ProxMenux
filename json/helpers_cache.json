@@ -988,6 +988,24 @@
     "type": "ct"
   },
   {
+    "name": "Dawarich",
+    "slug": "dawarich",
+    "desc": "Dawarich is a self-hosted alternative to Google Timeline (Google Maps Location History). It allows you to import your location history from Google Maps Timeline and Owntracks, view it on a map, and analyze your location data with statistics and visualizations.",
+    "script": "ct/dawarich.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/dawarich.sh",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "Default credentials: demo@dawarich.app / password - Change after first login!"
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "demo@dawarich.app",
+      "password": "password"
+    }
+  },
+  {
     "name": "Debian 13",
     "slug": "debian-13-vm",
     "desc": "Debian 13 (Trixie) Linux is a distribution that emphasizes free software. It supports many hardware platforms",
