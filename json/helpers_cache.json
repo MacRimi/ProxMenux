@@ -5497,6 +5497,18 @@
     "type": "ct"
   },
   {
+    "name": "Tracearr",
+    "slug": "tracearr",
+    "desc": "Tracearr is a streaming access manager for Plex, Jellyfin and Emby servers. It answers the question every server owner eventually asks: \"Who's actually using my server, and are they sharing their login?\"",
+    "script": "ct/tracearr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/tracearr.sh",
+    "categories": [
+      14
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Tracktor",
     "slug": "tracktor",
     "desc": "Tracktor is an open-source web application for comprehensive vehicle management.\nEasily track fuel consumption, maintenance, insurance, and regulatory documents for all your vehicles in one place.",
