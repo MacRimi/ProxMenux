@@ -3479,6 +3479,22 @@
     "type": "ct"
   },
   {
+    "name": "Manyfold",
+    "slug": "manyfold",
+    "desc": "Manyfold is an open source, self-hosted web application for managing a collection of 3d models, particularly focused on 3d printing.",
+    "script": "ct/manyfold.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/manyfold.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/manyfold.sh",
+    "os": "debian",
+    "categories": [
+      24
+    ],
+    "notes": [
+      "Setup library on first connection in /opt/manyfold/data"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Mariadb",
     "slug": "mariadb",
     "desc": "MariaDB is a fork of the popular MySQL database management system that is developed and maintained by the open-source community. It is also commercially supported, offering enterprise-level features and support for organizations that require them. MariaDB aims to maintain high compatibility with MySQL, ensuring a drop-in replacement capability.",
