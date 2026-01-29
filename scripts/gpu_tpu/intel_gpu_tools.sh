@@ -147,8 +147,7 @@ main() {
     available_version=$(apt-cache policy intel-gpu-tools 2>/dev/null | grep 'Candidate:' | awk '{print $2}')
     
     if [[ -n "$available_version" && "$available_version" != "$INTEL_GPU_TOOLS_VERSION" ]]; then
-      msg_info2 "$(translate 'A newer version is available:') $available_version"
-      msg_info "$(translate 'Updating intel-gpu-tools...')"
+      msg_ok "$(translate 'A newer version is available:') $available_version"
       
       if apt-get install -y intel-gpu-tools >>"$LOG_FILE" 2>&1; then
         INTEL_GPU_TOOLS_VERSION="$available_version"
