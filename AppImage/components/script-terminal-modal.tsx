@@ -641,13 +641,13 @@ export function ScriptTerminalModal({
               ref={resizeBarRef}
               onMouseDown={handleResizeStart}
               onTouchStart={handleResizeStart}
-              className={`h-2 w-full cursor-row-resize transition-colors flex items-center justify-center group relative ${
+              className={`h-4 w-full cursor-row-resize transition-colors flex items-center justify-center group relative ${
                 isResizing ? "bg-blue-500" : "bg-zinc-800 hover:bg-blue-600"
               }`}
               style={{ touchAction: "none" }}
             >
               <GripHorizontal
-                className={`h-4 w-4 transition-colors pointer-events-none ${
+                className={`h-5 w-5 transition-colors pointer-events-none ${
                   isResizing ? "text-white" : "text-zinc-600 group-hover:text-white"
                 }`}
               />

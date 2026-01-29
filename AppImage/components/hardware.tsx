@@ -4,20 +4,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import {
-  Cpu,
-  HardDrive,
-  Thermometer,
-  Zap,
-  Loader2,
-  CpuIcon,
-  Cpu as Gpu,
-  Network,
-  MemoryStick,
-  PowerIcon,
-  FanIcon,
-  Battery,
-} from "lucide-react"
+import { Cpu, HardDrive, Thermometer, Zap, Loader2, CpuIcon, Cpu as Gpu, Network, MemoryStick, PowerIcon, FanIcon, Battery } from "lucide-react"
 import { Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import useSWR from "swr"
@@ -241,6 +228,7 @@ export default function Hardware() {
   const [selectedUPS, setSelectedUPS] = useState<any>(null)
   const [showNvidiaInstaller, setShowNvidiaInstaller] = useState(false)
   const [installingNvidiaDriver, setInstallingNvidiaDriver] = useState(false)
+  const [showAmdInstaller, setShowAmdInstaller] = useState(false)
 
   const fetcher = async (url: string) => {
     const data = await fetchApi(url)
@@ -260,6 +248,11 @@ export default function Hardware() {
   const handleInstallNvidiaDriver = () => {
     console.log("[v0] Opening NVIDIA installer terminal")
     setShowNvidiaInstaller(true)
+  }
+
+  const handleInstallAmdTools = () => {
+    console.log("[v0] Opening AMD GPU tools installer terminal")
+    setShowAmdInstaller(true)
   }
 
   useEffect(() => {
@@ -1107,6 +1100,17 @@ export default function Hardware() {
                             <>
                               <Download className="mr-2 h-4 w-4" />
                               Install NVIDIA Drivers
+                            </>
+                          </Button>
+                        )}
+                        {(selectedGPU.vendor.toLowerCase().includes("amd") || selectedGPU.vendor.toLowerCase().includes("ati")) && (
+                          <Button
+                            onClick={handleInstallAmdTools}
+                            className="w-full bg-red-600 hover:bg-red-700 text-white"
+                          >
+                            <>
+                              <Download className="mr-2 h-4 w-4" />
+                              Install AMD GPU Tools
                             </>
                           </Button>
                         )}
@@ -2051,6 +2055,20 @@ export default function Hardware() {
         }}
         title="NVIDIA Driver Installation"
         description="Installing NVIDIA proprietary drivers for GPU monitoring..."
+      />
+      <ScriptTerminalModal
+        open={showAmdInstaller}
+        onClose={() => {
+          setShowAmdInstaller(false)
+          mutateHardware()
+        }}
+        scriptPath="/usr/local/share/proxmenux/scripts/gpu_tpu/amd_gpu_tools.sh"
+        scriptName="amd_gpu_tools"
+        params={{
+          EXECUTION_MODE: "web",
+        }}
+        title="AMD GPU Tools Installation"
+        description="Installing amdgpu_top for AMD GPU monitoring..."
       />
     </div>
   )
