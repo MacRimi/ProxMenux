@@ -894,7 +894,8 @@
       4
     ],
     "notes": [
-      "With an option to configure cloudflared as a DNS-over-HTTPS (DoH) proxy"
+      "After install, run: cloudflared tunnel login && cloudflared tunnel create <NAME>",
+      "Or create tunnel via Cloudflare Zero Trust Dashboard"
     ],
     "type": "ct"
   },
@@ -2749,7 +2750,8 @@
     "notes": [
       "With Privileged/Unprivileged Hardware Acceleration Support",
       "FFmpeg path: /usr/lib/jellyfin-ffmpeg/ffmpeg",
-      "For NVIDIA graphics cards, you'll need to install the same drivers in the container that you did on the host. In the container, run the driver installation script and add the CLI arg --no-kernel-module"
+      "For NVIDIA graphics cards, you'll need to install the same drivers in the container that you did on the host. In the container, run the driver installation script and add the CLI arg --no-kernel-module",
+      "Log rotation is configured in /etc/logrotate.d/jellyfin. To reduce verbosity, change MinimumLevel in /etc/jellyfin/logging.json to Warning or Error (disables fail2ban auth logging)."
     ],
     "type": "ct"
   },
@@ -7130,6 +7132,23 @@
     "name": "Valkey",
     "slug": "valkey",
     "desc": "Valkey is an open source (BSD) high-performance key/value datastore that supports a variety of workloads such as caching, message queues, and can act as a primary database. The project is backed by the Linux Foundation, ensuring it will remain open source forever.",
+    "script": "ct/alpine-valkey.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/alpine-valkey.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/alpine-valkey.sh",
+    "os": "alpine",
+    "categories": [
+      8
+    ],
+    "notes": [
+      "Show Login Credentials, type `cat ~/valkey.creds` in the LXC console",
+      "Alpines Valkey package is compiled without TLS support. For TLS, use the Debian-based valkey script instead."
+    ],
+    "type": "ct"
+  },
+  {
+    "name": "Valkey",
+    "slug": "valkey",
+    "desc": "Valkey is an open source (BSD) high-performance key/value datastore that supports a variety of workloads such as caching, message queues, and can act as a primary database. The project is backed by the Linux Foundation, ensuring it will remain open source forever.",
     "script": "ct/valkey.sh",
     "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/valkey.sh",
     "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/valkey.sh",
@@ -7138,7 +7157,8 @@
       8
     ],
     "notes": [
-      "Show Login Credentials, type `cat ~/valkey.creds` in the LXC console"
+      "Show Login Credentials, type `cat ~/valkey.creds` in the LXC console",
+      "Alpines Valkey package is compiled without TLS support. For TLS, use the Debian-based valkey script instead."
     ],
     "type": "ct"
   },
