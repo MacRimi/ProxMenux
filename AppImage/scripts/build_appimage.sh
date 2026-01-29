@@ -89,16 +89,6 @@ cp "$SCRIPT_DIR/flask_terminal_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || ech
 cp "$SCRIPT_DIR/hardware_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  hardware_monitor.py not found"
 cp "$SCRIPT_DIR/proxmox_storage_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  proxmox_storage_monitor.py not found"
 cp "$SCRIPT_DIR/flask_script_runner.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_script_runner.py not found"
-cp "$SCRIPT_DIR/system_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  system_monitor.py not found"
-cp "$SCRIPT_DIR/flask_system_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_system_routes.py not found"
-cp "$SCRIPT_DIR/storage_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  storage_monitor.py not found"
-cp "$SCRIPT_DIR/flask_storage_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_storage_routes.py not found"
-cp "$SCRIPT_DIR/network_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  network_monitor.py not found"
-cp "$SCRIPT_DIR/flask_network_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_network_routes.py not found"
-cp "$SCRIPT_DIR/vm_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  vm_monitor.py not found"
-cp "$SCRIPT_DIR/flask_vm_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_vm_routes.py not found"
-cp "$SCRIPT_DIR/flask_hardware_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_hardware_routes.py not found"
-cp "$SCRIPT_DIR/flask_script_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_script_routes.py not found"
 
 echo "📋 Adding translation support..."
 cat > "$APP_DIR/usr/bin/translate_cli.py" << 'PYEOF'
