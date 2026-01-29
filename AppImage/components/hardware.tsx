@@ -229,6 +229,7 @@ export default function Hardware() {
   const [showNvidiaInstaller, setShowNvidiaInstaller] = useState(false)
   const [installingNvidiaDriver, setInstallingNvidiaDriver] = useState(false)
   const [showAmdInstaller, setShowAmdInstaller] = useState(false)
+  const [showIntelInstaller, setShowIntelInstaller] = useState(false)
 
   const fetcher = async (url: string) => {
     const data = await fetchApi(url)
@@ -253,6 +254,11 @@ export default function Hardware() {
   const handleInstallAmdTools = () => {
     console.log("[v0] Opening AMD GPU tools installer terminal")
     setShowAmdInstaller(true)
+  }
+
+  const handleInstallIntelTools = () => {
+    console.log("[v0] Opening Intel GPU tools installer terminal")
+    setShowIntelInstaller(true)
   }
 
   useEffect(() => {
@@ -1111,6 +1117,17 @@ export default function Hardware() {
                             <>
                               <Download className="mr-2 h-4 w-4" />
                               Install AMD GPU Tools
+                            </>
+                          </Button>
+                        )}
+                        {selectedGPU.vendor.toLowerCase().includes("intel") && (
+                          <Button
+                            onClick={handleInstallIntelTools}
+                            className="w-full bg-sky-600 hover:bg-sky-700 text-white"
+                          >
+                            <>
+                              <Download className="mr-2 h-4 w-4" />
+                              Install Intel GPU Tools
                             </>
                           </Button>
                         )}
@@ -2067,9 +2084,23 @@ export default function Hardware() {
         params={{
           EXECUTION_MODE: "web",
         }}
-        title="AMD GPU Tools Installation"
-        description="Installing amdgpu_top for AMD GPU monitoring..."
-      />
-    </div>
+title="AMD GPU Tools Installation"
+  description="Installing amdgpu_top for AMD GPU monitoring..."
+  />
+  <ScriptTerminalModal
+  open={showIntelInstaller}
+  onClose={() => {
+  setShowIntelInstaller(false)
+  mutateHardware()
+  }}
+  scriptPath="/usr/local/share/proxmenux/scripts/gpu_tpu/intel_gpu_tools.sh"
+  scriptName="intel_gpu_tools"
+  params={{
+  EXECUTION_MODE: "web",
+  }}
+  title="Intel GPU Tools Installation"
+  description="Installing intel-gpu-tools for Intel GPU monitoring..."
+  />
+  </div>
   )
 }
