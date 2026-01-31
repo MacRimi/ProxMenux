@@ -1681,15 +1681,29 @@ def get_smart_data(disk_name):
             pass
         
         # Temperature-based health (only if we have a valid temperature)
+        # Thresholds differ by disk type to avoid false warnings
         if smart_data['health'] == 'healthy' and smart_data['temperature'] > 0:
-            if smart_data['temperature'] >= 70:
-                smart_data['health'] = 'critical'
-                # print(f"[v0] Health: CRITICAL (temperature {smart_data['temperature']}°C)")
-                pass
-            elif smart_data['temperature'] >= 60:
-                smart_data['health'] = 'warning'
-                # print(f"[v0] Health: WARNING (temperature {smart_data['temperature']}°C)")
-                pass
+            temp = smart_data['temperature']
+            
+            # Determine disk type for temperature thresholds
+            if disk_name.startswith('nvme'):
+                # NVMe: warning >80°C, critical >85°C (NVMe runs hotter)
+                if temp > 85:
+                    smart_data['health'] = 'critical'
+                elif temp > 80:
+                    smart_data['health'] = 'warning'
+            elif smart_data['rotation_rate'] == 0:
+                # SSD (non-NVMe): warning >70°C, critical >75°C
+                if temp > 75:
+                    smart_data['health'] = 'critical'
+                elif temp > 70:
+                    smart_data['health'] = 'warning'
+            else:
+                # HDD: warning >60°C, critical >65°C
+                if temp > 65:
+                    smart_data['health'] = 'critical'
+                elif temp > 60:
+                    smart_data['health'] = 'warning'
 
         # CHANGE: Use -1 to indicate HDD with unknown RPM instead of inventing 7200 RPM
         # Fallback: Check kernel's rotational flag if smartctl didn't provide rotation_rate
