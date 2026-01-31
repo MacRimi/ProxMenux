@@ -94,9 +94,19 @@ export function LxcTerminalModal({
 
   // Initialize terminal
   useEffect(() => {
-    if (!isOpen || !terminalContainerRef.current) return
+    if (!isOpen) return
+
+    // Small delay to ensure Dialog content is rendered
+    const initTimeout = setTimeout(() => {
+      if (!terminalContainerRef.current) {
+        console.log("[v0] Terminal container not ready")
+        return
+      }
+      initTerminal()
+    }, 100)
 
     const initTerminal = async () => {
+      console.log("[v0] Initializing LXC terminal for vmid:", vmid)
       const [TerminalClass, FitAddonClass] = await Promise.all([
         import("xterm").then((mod) => mod.Terminal),
         import("xterm-addon-fit").then((mod) => mod.FitAddon),
@@ -152,10 +162,12 @@ export function LxcTerminalModal({
 
       // Connect WebSocket
       const wsUrl = getWebSocketUrl()
+      console.log("[v0] LXC Terminal connecting to:", wsUrl)
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
 
       ws.onopen = () => {
+        console.log("[v0] LXC Terminal WebSocket connected")
         setConnectionStatus("online")
 
         // Start heartbeat ping
@@ -195,12 +207,14 @@ export function LxcTerminalModal({
         term.write(event.data)
       }
 
-      ws.onerror = () => {
+      ws.onerror = (error) => {
+        console.log("[v0] LXC Terminal WebSocket error:", error)
         setConnectionStatus("offline")
         term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
       }
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
+        console.log("[v0] LXC Terminal WebSocket closed:", event.code, event.reason)
         setConnectionStatus("offline")
         if (pingIntervalRef.current) {
           clearInterval(pingIntervalRef.current)
@@ -215,9 +229,8 @@ export function LxcTerminalModal({
       })
     }
 
-    initTerminal()
-
     return () => {
+      clearTimeout(initTimeout)
       if (pingIntervalRef.current) {
         clearInterval(pingIntervalRef.current)
       }
