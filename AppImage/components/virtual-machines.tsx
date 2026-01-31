@@ -8,9 +8,10 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, Terminal } from 'lucide-react'
 import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
+import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
@@ -256,6 +257,9 @@ export function VirtualMachines() {
   const [vmDetails, setVMDetails] = useState<VMDetails | null>(null)
   const [controlLoading, setControlLoading] = useState(false)
   const [detailsLoading, setDetailsLoading] = useState(false)
+  const [terminalOpen, setTerminalOpen] = useState(false)
+  const [terminalVmid, setTerminalVmid] = useState<number | null>(null)
+  const [terminalVmName, setTerminalVmName] = useState<string>("")
   const [vmConfigs, setVmConfigs] = useState<Record<number, string>>({})
   const [currentView, setCurrentView] = useState<"main" | "metrics">("main")
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(false)
@@ -380,7 +384,14 @@ export function VirtualMachines() {
     }
   }
 
-  const handleDownloadLogs = async (vmid: number, vmName: string) => {
+  // Open terminal for LXC container
+  const openLxcTerminal = (vmid: number, vmName: string) => {
+    setTerminalVmid(vmid)
+    setTerminalVmName(vmName)
+    setTerminalOpen(true)
+  }
+  
+const handleDownloadLogs = async (vmid: number, vmName: string) => {
     try {
       const data = await fetchApi(`/api/vms/${vmid}/logs`)
 
@@ -1762,6 +1773,18 @@ export function VirtualMachines() {
               </div>
 
               <div className="border-t border-border bg-background px-6 py-4 mt-auto">
+                {/* Terminal button for LXC containers - only when running */}
+                {selectedVM?.type === "lxc" && selectedVM?.status === "running" && (
+                  <div className="mb-3">
+                    <Button
+                      className="w-full bg-zinc-700 hover:bg-zinc-600 text-white"
+                      onClick={() => selectedVM && openLxcTerminal(selectedVM.vmid, selectedVM.name)}
+                    >
+                      <Terminal className="h-4 w-4 mr-2" />
+                      Open Terminal
+                    </Button>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <Button
                     className="w-full bg-green-600 hover:bg-green-700 text-white"
@@ -1810,6 +1833,20 @@ export function VirtualMachines() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* LXC Terminal Modal */}
+      {terminalVmid !== null && (
+        <LxcTerminalModal
+          open={terminalOpen}
+          onClose={() => {
+            setTerminalOpen(false)
+            setTerminalVmid(null)
+            setTerminalVmName("")
+          }}
+          vmid={terminalVmid}
+          vmName={terminalVmName}
+        />
+      )}
     </div>
   )
 }
