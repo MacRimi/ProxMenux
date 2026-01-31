@@ -78,6 +78,10 @@ export function NodeMetricsCharts() {
     memory: { memoryTotal: true, memoryUsed: true, memoryZfsArc: true, memoryFree: true },
   })
 
+  // Check if ZFS ARC or Free memory have any non-zero values to decide if we should show them
+  const hasZfsArc = data.some(d => d.memoryZfsArc > 0)
+  const hasMemoryFree = data.some(d => d.memoryFree > 0)
+
   useEffect(() => {
     console.log("[v0] NodeMetricsCharts component mounted")
     fetchMetrics()
@@ -194,6 +198,11 @@ export function NodeMetricsCharts() {
     return (
       <div className="flex justify-center gap-4 pb-2 flex-wrap">
         {payload.map((entry: any, index: number) => {
+          // For memory chart, hide ZFS ARC and Free from legend if they have no data
+          if (chartType === "memory") {
+            if (entry.dataKey === "memoryZfsArc" && !hasZfsArc) return null
+            if (entry.dataKey === "memoryFree" && !hasMemoryFree) return null
+          }
           const isVisible = visibleLines[chartType][entry.dataKey as keyof (typeof visibleLines)[typeof chartType]]
           return (
             <div
@@ -428,26 +437,32 @@ export function NodeMetricsCharts() {
                   name="Used"
                   hide={!visibleLines.memory.memoryUsed}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="memoryZfsArc"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  fill="#f59e0b"
-                  fillOpacity={0.3}
-                  name="ZFS ARC"
-                  hide={!visibleLines.memory.memoryZfsArc}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="memoryFree"
-                  stroke="#06b6d4"
-                  strokeWidth={2}
-                  fill="#06b6d4"
-                  fillOpacity={0.3}
-                  name="Available"
-                  hide={!visibleLines.memory.memoryFree}
-                />
+                {/* Only show ZFS ARC if there's data */}
+                {hasZfsArc && (
+                  <Area
+                    type="monotone"
+                    dataKey="memoryZfsArc"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    fill="#f59e0b"
+                    fillOpacity={0.3}
+                    name="ZFS ARC"
+                    hide={!visibleLines.memory.memoryZfsArc}
+                  />
+                )}
+                {/* Only show Free memory if there's data */}
+                {hasMemoryFree && (
+                  <Area
+                    type="monotone"
+                    dataKey="memoryFree"
+                    stroke="#06b6d4"
+                    strokeWidth={2}
+                    fill="#06b6d4"
+                    fillOpacity={0.3}
+                    name="Free"
+                    hide={!visibleLines.memory.memoryFree}
+                  />
+                )}
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
