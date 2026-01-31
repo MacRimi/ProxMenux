@@ -236,19 +236,34 @@ export function LxcTerminalModal({
           outputBufferRef.current += event.data
           
           // Detect when we're inside the LXC container
-          // Look for shell prompt pattern after pct enter command
-          const afterPctEnter = outputBufferRef.current.split(`pct enter ${vmid}`).pop() || ""
-          if (afterPctEnter.includes("@") && (afterPctEnter.includes("$") || afterPctEnter.includes("#") || afterPctEnter.includes(":~") || afterPctEnter.includes(":/#"))) {
-            // Successfully inside LXC
-            isInsideLxcRef.current = true
+          // The LXC prompt will NOT contain "constructor" (the host name)
+          // It will be something like "root@plex:/#" or "user@containername:~$"
+          const buffer = outputBufferRef.current
+          
+          // Look for a prompt that:
+          // 1. Comes after pct enter command
+          // 2. Has @ followed by container name (not host name)
+          // 3. Ends with # or $
+          const pctEnterMatch = buffer.match(/pct enter \d+\r?\n/)
+          if (pctEnterMatch) {
+            const afterPctEnter = buffer.substring(buffer.indexOf(pctEnterMatch[0]) + pctEnterMatch[0].length)
             
-            // Extract content after pct enter (skip command echo line)
-            const newlineIndex = afterPctEnter.indexOf('\n')
-            if (newlineIndex !== -1) {
-              const lxcContent = afterPctEnter.substring(newlineIndex + 1)
-              term.write(lxcContent)
+            // Find the LXC prompt - it should be a line ending with :~# :~$ :/# or similar
+            // and NOT containing the host name "constructor"
+            const lxcPromptMatch = afterPctEnter.match(/\r?\n?([^\r\n]*@(?!constructor)[^\r\n]*[#$]\s*)$/)
+            
+            if (lxcPromptMatch) {
+              // Successfully inside LXC - only show from the LXC prompt onwards
+              isInsideLxcRef.current = true
+              
+              // Find where the LXC prompt line starts
+              const promptStart = afterPctEnter.lastIndexOf(lxcPromptMatch[1])
+              if (promptStart !== -1) {
+                // Only show the LXC prompt itself
+                term.write(lxcPromptMatch[1])
+              }
+              return
             }
-            return
           }
         } else {
           // Already inside LXC, write directly
