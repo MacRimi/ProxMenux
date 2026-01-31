@@ -246,6 +246,24 @@
     "type": "ct"
   },
   {
+    "name": "Ampache",
+    "slug": "ampache",
+    "desc": "Ampache is a web-based audio streaming application and file manager that allows you to access your music & videos from anywhere. It features a powerful music catalog, multiple user support, transcoding, streaming, and more.",
+    "script": "ct/ampache.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/ampache.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/ampache.sh",
+    "os": "debian",
+    "categories": [
+      13
+    ],
+    "notes": [
+      "Complete the web-based setup at http://IP/install.php",
+      "Database credentials are stored in `~/ampache.creds` - use only the MySQL username and password from this file",
+      "During installation, only check 'Create Tables' - leave 'Create Database' and 'Create Database User' unchecked"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Apache-Cassandra",
     "slug": "apache-cassandra",
     "desc": "Apache-Cassandra is an open source NoSQL distributed database trusted by thousands of companies for scalability and high availability without compromising performance.",
@@ -3113,6 +3131,22 @@
     ],
     "notes": [
       "Kutt needs so be served with an SSL certificate for its login to work. During install, you will be prompted to choose if you want to have Caddy installed for SSL termination or if you want to use your own reverse proxy (in that case point your reverse porxy to port 3000)."
+    ],
+    "type": "ct"
+  },
+  {
+    "name": "LanguageTool",
+    "slug": "languagetool",
+    "desc": "LanguageTool is an Open Source proofreading software for English, Spanish, French, German, Portuguese, Polish, Dutch, and more than 20 other languages. It finds many errors that a simple spell checker cannot detect.",
+    "script": "ct/languagetool.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/languagetool.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/languagetool.sh",
+    "os": "debian",
+    "categories": [
+      0
+    ],
+    "notes": [
+      "API is available at `http://<LXC_IP>:8081/v2`."
     ],
     "type": "ct"
   },
