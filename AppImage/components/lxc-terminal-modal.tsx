@@ -24,9 +24,9 @@ interface LxcTerminalModalProps {
   vmName: string
 }
 
-function getWebSocketUrl(): string {
+function getWebSocketUrl(vmid: number): string {
   if (typeof window === "undefined") {
-    return "ws://localhost:8008/ws/terminal"
+    return `ws://localhost:8008/ws/terminal/lxc/${vmid}`
   }
 
   const { protocol, hostname, port } = window.location
@@ -34,9 +34,9 @@ function getWebSocketUrl(): string {
   const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
 
   if (isStandardPort) {
-    return `${wsProtocol}//${hostname}/ws/terminal`
+    return `${wsProtocol}//${hostname}/ws/terminal/lxc/${vmid}`
   } else {
-    return `${wsProtocol}//${hostname}:${API_PORT}/ws/terminal`
+    return `${wsProtocol}//${hostname}:${API_PORT}/ws/terminal/lxc/${vmid}`
   }
 }
 
@@ -98,15 +98,11 @@ export function LxcTerminalModal({
 
     // Small delay to ensure Dialog content is rendered
     const initTimeout = setTimeout(() => {
-      if (!terminalContainerRef.current) {
-        console.log("[v0] Terminal container not ready")
-        return
-      }
+      if (!terminalContainerRef.current) return
       initTerminal()
     }, 100)
 
     const initTerminal = async () => {
-      console.log("[v0] Initializing LXC terminal for vmid:", vmid)
       const [TerminalClass, FitAddonClass] = await Promise.all([
         import("xterm").then((mod) => mod.Terminal),
         import("xterm-addon-fit").then((mod) => mod.FitAddon),
@@ -160,14 +156,12 @@ export function LxcTerminalModal({
       termRef.current = term
       fitAddonRef.current = fitAddon
 
-      // Connect WebSocket
-      const wsUrl = getWebSocketUrl()
-      console.log("[v0] LXC Terminal connecting to:", wsUrl)
+      // Connect WebSocket - direct connection to LXC container
+      const wsUrl = getWebSocketUrl(vmid)
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
 
       ws.onopen = () => {
-        console.log("[v0] LXC Terminal WebSocket connected")
         setConnectionStatus("online")
 
         // Start heartbeat ping
@@ -181,22 +175,13 @@ export function LxcTerminalModal({
           }
         }, 25000)
 
-        // Sync terminal size first
+        // Sync terminal size
         fitAddon.fit()
         ws.send(JSON.stringify({
           type: "resize",
           cols: term.cols,
           rows: term.rows,
         }))
-
-        // Auto-execute pct enter command after terminal is ready
-        // Wait for shell prompt to appear before sending command
-        setTimeout(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            // Send the command as plain text like user would type
-            ws.send(`pct enter ${vmid}\r`)
-          }
-        }, 800)
       }
 
       ws.onmessage = (event) => {
@@ -207,14 +192,12 @@ export function LxcTerminalModal({
         term.write(event.data)
       }
 
-      ws.onerror = (error) => {
-        console.log("[v0] LXC Terminal WebSocket error:", error)
+      ws.onerror = () => {
         setConnectionStatus("offline")
         term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
       }
 
-      ws.onclose = (event) => {
-        console.log("[v0] LXC Terminal WebSocket closed:", event.code, event.reason)
+      ws.onclose = () => {
         setConnectionStatus("offline")
         if (pingIntervalRef.current) {
           clearInterval(pingIntervalRef.current)
@@ -397,13 +380,13 @@ export function LxcTerminalModal({
 
         {/* Mobile/Tablet control buttons */}
         {showMobileControls && (
-          <div className="px-3 py-2 bg-zinc-900 border-t border-zinc-800">
-            <div className="flex items-center justify-center gap-2 flex-wrap">
+          <div className="px-2 py-2 bg-zinc-900 border-t border-zinc-800">
+            <div className="flex items-center justify-center gap-1.5">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={sendEsc}
-                className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-300"
+                className="h-8 px-2 text-xs bg-zinc-800 border-zinc-700 text-zinc-300"
               >
                 ESC
               </Button>
@@ -411,7 +394,7 @@ export function LxcTerminalModal({
                 variant="outline"
                 size="sm"
                 onClick={sendTab}
-                className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-300"
+                className="h-8 px-2 text-xs bg-zinc-800 border-zinc-700 text-zinc-300"
               >
                 TAB
               </Button>
@@ -419,7 +402,7 @@ export function LxcTerminalModal({
                 variant="outline"
                 size="sm"
                 onClick={sendArrowUp}
-                className="h-9 w-9 p-0 bg-zinc-800 border-zinc-700"
+                className="h-8 w-8 p-0 bg-zinc-800 border-zinc-700"
               >
                 <ArrowUp className="h-4 w-4" />
               </Button>
@@ -427,7 +410,7 @@ export function LxcTerminalModal({
                 variant="outline"
                 size="sm"
                 onClick={sendArrowDown}
-                className="h-9 w-9 p-0 bg-zinc-800 border-zinc-700"
+                className="h-8 w-8 p-0 bg-zinc-800 border-zinc-700"
               >
                 <ArrowDown className="h-4 w-4" />
               </Button>
@@ -435,7 +418,7 @@ export function LxcTerminalModal({
                 variant="outline"
                 size="sm"
                 onClick={sendArrowLeft}
-                className="h-9 w-9 p-0 bg-zinc-800 border-zinc-700"
+                className="h-8 w-8 p-0 bg-zinc-800 border-zinc-700"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -443,7 +426,7 @@ export function LxcTerminalModal({
                 variant="outline"
                 size="sm"
                 onClick={sendArrowRight}
-                className="h-9 w-9 p-0 bg-zinc-800 border-zinc-700"
+                className="h-8 w-8 p-0 bg-zinc-800 border-zinc-700"
               >
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -451,7 +434,7 @@ export function LxcTerminalModal({
                 variant="outline"
                 size="sm"
                 onClick={sendEnter}
-                className="h-9 px-3 bg-blue-600/20 border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
+                className="h-8 px-2 text-xs bg-blue-600/20 border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
               >
                 <CornerDownLeft className="h-4 w-4 mr-1" />
                 Enter
@@ -460,7 +443,7 @@ export function LxcTerminalModal({
                 variant="outline"
                 size="sm"
                 onClick={handleCtrlPress}
-                className={`h-9 px-3 ${ctrlPressed 
+                className={`h-8 px-2 text-xs ${ctrlPressed 
                   ? "bg-yellow-600/30 border-yellow-600/50 text-yellow-400" 
                   : "bg-zinc-800 border-zinc-700 text-zinc-300"}`}
               >

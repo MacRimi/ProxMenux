@@ -250,6 +250,123 @@ def terminal_websocket(ws):
         if session_id in active_sessions:
             del active_sessions[session_id]
 
+@sock.route('/ws/terminal/lxc/<int:vmid>')
+def lxc_terminal_websocket(ws, vmid):
+    """WebSocket endpoint for direct LXC container terminal sessions"""
+    
+    # Create pseudo-terminal
+    master_fd, slave_fd = pty.openpty()
+    
+    # Start pct enter directly to connect to the LXC container
+    shell_process = subprocess.Popen(
+        ['/usr/bin/pct', 'enter', str(vmid)],
+        stdin=slave_fd,
+        stdout=slave_fd,
+        stderr=slave_fd,
+        preexec_fn=os.setsid,
+        cwd='/',
+        env=dict(os.environ, TERM='xterm-256color')
+    )
+    
+    session_id = id(ws)
+    active_sessions[session_id] = {
+        'process': shell_process,
+        'master_fd': master_fd,
+        'vmid': vmid
+    }
+    
+    # Set non-blocking mode for master_fd
+    flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
+    fcntl.fcntl(master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+    
+    # Set initial terminal size
+    set_winsize(master_fd, 30, 120)
+    
+    # Start thread to read PTY output and forward to WebSocket
+    output_thread = threading.Thread(
+        target=read_and_forward_output,
+        args=(master_fd, ws),
+        daemon=True
+    )
+    output_thread.start()
+    
+    try:
+        while True:
+            data = ws.receive(timeout=None)
+            
+            if data is None:
+                break
+
+            handled = False
+
+            if isinstance(data, str):
+                try:
+                    msg = json.loads(data)
+                except Exception:
+                    msg = None
+
+                if isinstance(msg, dict):
+                    msg_type = msg.get('type')
+                    
+                    if msg_type == 'ping':
+                        try:
+                            ws.send(json.dumps({'type': 'pong'}))
+                        except:
+                            pass
+                        handled = True
+                    
+                    elif msg_type == 'resize':
+                        cols = int(msg.get('cols', 120))
+                        rows = int(msg.get('rows', 30))
+                        set_winsize(master_fd, rows, cols)
+                        handled = True
+
+            if handled:
+                continue
+
+            if isinstance(data, str) and data.startswith('\x1b[8;'):
+                try:
+                    parts = data[4:-1].split(';')
+                    rows, cols = int(parts[0]), int(parts[1])
+                    set_winsize(master_fd, rows, cols)
+                    continue
+                except Exception:
+                    pass
+            
+            try:
+                os.write(master_fd, data.encode('utf-8'))
+            except OSError as e:
+                print(f"Error writing to LXC PTY: {e}")
+                break
+            
+            if shell_process.poll() is not None:
+                break
+                
+    except Exception as e:
+        print(f"LXC terminal session error: {e}")
+    finally:
+        try:
+            shell_process.terminate()
+            shell_process.wait(timeout=1)
+        except:
+            try:
+                shell_process.kill()
+            except:
+                pass
+        
+        try:
+            os.close(master_fd)
+        except:
+            pass
+        
+        try:
+            os.close(slave_fd)
+        except:
+            pass
+        
+        if session_id in active_sessions:
+            del active_sessions[session_id]
+
 @sock.route('/ws/script/<session_id>')
 def script_websocket(ws, session_id):
     """WebSocket endpoint for executing scripts with hybrid web mode"""
