@@ -12,7 +12,6 @@ import {
   ArrowRight,
   CornerDownLeft,
   GripHorizontal,
-  X,
 } from "lucide-react"
 import "xterm/css/xterm.css"
 import { API_PORT } from "@/lib/api-config"
@@ -24,9 +23,9 @@ interface LxcTerminalModalProps {
   vmName: string
 }
 
-function getWebSocketUrl(vmid: number): string {
+function getWebSocketUrl(): string {
   if (typeof window === "undefined") {
-    return `ws://localhost:8008/ws/terminal/lxc/${vmid}`
+    return "ws://localhost:8008/ws/terminal"
   }
 
   const { protocol, hostname, port } = window.location
@@ -34,9 +33,9 @@ function getWebSocketUrl(vmid: number): string {
   const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
 
   if (isStandardPort) {
-    return `${wsProtocol}//${hostname}/ws/terminal/lxc/${vmid}`
+    return `${wsProtocol}//${hostname}/ws/terminal`
   } else {
-    return `${wsProtocol}//${hostname}:${API_PORT}/ws/terminal/lxc/${vmid}`
+    return `${wsProtocol}//${hostname}:${API_PORT}/ws/terminal`
   }
 }
 
@@ -55,11 +54,20 @@ export function LxcTerminalModal({
   const [connectionStatus, setConnectionStatus] = useState<"connecting" | "online" | "offline">("connecting")
   const [isMobile, setIsMobile] = useState(false)
   const [isTablet, setIsTablet] = useState(false)
+  const isInsideLxcRef = useRef(false)
+  const outputBufferRef = useRef<string>("")
 
   const [modalHeight, setModalHeight] = useState(500)
   const [isResizing, setIsResizing] = useState(false)
   const resizeBarRef = useRef<HTMLDivElement>(null)
   const modalHeightRef = useRef(500)
+
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [loginUsername, setLoginUsername] = useState("")
+  const [loginPassword, setLoginPassword] = useState("")
+  const [loginError, setLoginError] = useState("")
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const waitingForPasswordRef = useRef(false)
 
   // Detect mobile/tablet
   useEffect(() => {
@@ -89,6 +97,8 @@ export function LxcTerminalModal({
         termRef.current = null
       }
       setConnectionStatus("connecting")
+      isInsideLxcRef.current = false
+      outputBufferRef.current = ""
     }
   }, [isOpen])
 
@@ -156,10 +166,14 @@ export function LxcTerminalModal({
       termRef.current = term
       fitAddonRef.current = fitAddon
 
-      // Connect WebSocket - direct connection to LXC container
-      const wsUrl = getWebSocketUrl(vmid)
+      // Connect WebSocket to host terminal
+      const wsUrl = getWebSocketUrl()
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
+      
+      // Reset state for new connection
+      isInsideLxcRef.current = false
+      outputBufferRef.current = ""
 
       ws.onopen = () => {
         setConnectionStatus("online")
@@ -182,14 +196,13 @@ export function LxcTerminalModal({
           cols: term.cols,
           rows: term.rows,
         }))
-      }
-
-      ws.onmessage = (event) => {
-        // Filter out pong responses
-        if (event.data === '{"type": "pong"}' || event.data === '{"type":"pong"}') {
-          return
-        }
-        term.write(event.data)
+        
+        // Auto-execute pct enter after connection is ready
+        setTimeout(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(`pct enter ${vmid}\r`)
+          }
+        }, 300)
       }
 
       ws.onerror = () => {
@@ -210,6 +223,38 @@ export function LxcTerminalModal({
           ws.send(data)
         }
       })
+      
+      ws.onmessage = (event) => {
+        // Filter out pong responses
+        if (event.data === '{"type": "pong"}' || event.data === '{"type":"pong"}') {
+          return
+        }
+        
+        // Buffer output until we detect we're inside the LXC
+        // pct enter always enters directly without login prompt when run as root
+        if (!isInsideLxcRef.current) {
+          outputBufferRef.current += event.data
+          
+          // Detect when we're inside the LXC container
+          // Look for shell prompt pattern after pct enter command
+          const afterPctEnter = outputBufferRef.current.split(`pct enter ${vmid}`).pop() || ""
+          if (afterPctEnter.includes("@") && (afterPctEnter.includes("$") || afterPctEnter.includes("#") || afterPctEnter.includes(":~") || afterPctEnter.includes(":/#"))) {
+            // Successfully inside LXC
+            isInsideLxcRef.current = true
+            
+            // Extract content after pct enter (skip command echo line)
+            const newlineIndex = afterPctEnter.indexOf('\n')
+            if (newlineIndex !== -1) {
+              const lxcContent = afterPctEnter.substring(newlineIndex + 1)
+              term.write(lxcContent)
+            }
+            return
+          }
+        } else {
+          // Already inside LXC, write directly
+          term.write(event.data)
+        }
+      }
     }
 
     return () => {
