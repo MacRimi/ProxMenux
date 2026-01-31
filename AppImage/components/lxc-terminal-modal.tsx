@@ -342,31 +342,9 @@ export function LxcTerminalModal({
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
-          <div className="flex items-center gap-3">
-            <DialogTitle className="text-sm font-medium text-white">
-              Terminal: {vmName} (ID: {vmid})
-            </DialogTitle>
-            <div className="flex items-center gap-1.5">
-              <Activity
-                className={`h-3.5 w-3.5 ${
-                  connectionStatus === "online"
-                    ? "text-green-500"
-                    : connectionStatus === "connecting"
-                      ? "text-yellow-500 animate-pulse"
-                      : "text-red-500"
-                }`}
-              />
-              <span className="text-xs text-zinc-400 capitalize">{connectionStatus}</span>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="h-7 w-7 p-0 text-zinc-400 hover:text-white hover:bg-zinc-800"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <DialogTitle className="text-sm font-medium text-white">
+            Terminal: {vmName} (ID: {vmid})
+          </DialogTitle>
         </div>
 
         {/* Terminal container */}
@@ -452,6 +430,30 @@ export function LxcTerminalModal({
             </div>
           </div>
         )}
+
+        {/* Status bar at bottom */}
+        <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-t border-zinc-800">
+          <div className="flex items-center gap-3">
+            <Activity className="h-5 w-5 text-blue-500" />
+            <div
+              className={`w-2 h-2 rounded-full ${
+                connectionStatus === "online"
+                  ? "bg-green-500"
+                  : connectionStatus === "connecting"
+                    ? "bg-yellow-500 animate-pulse"
+                    : "bg-red-500"
+              }`}
+            />
+            <span className="text-xs text-zinc-400 capitalize">{connectionStatus}</span>
+          </div>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="bg-red-600/20 hover:bg-red-600/30 border-red-600/50 text-red-400"
+          >
+            Close
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   )

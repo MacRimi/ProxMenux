@@ -258,8 +258,9 @@ def lxc_terminal_websocket(ws, vmid):
     master_fd, slave_fd = pty.openpty()
     
     # Start pct enter directly to connect to the LXC container
+    # pct is located in /usr/sbin on Proxmox VE
     shell_process = subprocess.Popen(
-        ['/usr/bin/pct', 'enter', str(vmid)],
+        ['/usr/sbin/pct', 'enter', str(vmid)],
         stdin=slave_fd,
         stdout=slave_fd,
         stderr=slave_fd,

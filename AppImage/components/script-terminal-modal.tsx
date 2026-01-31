@@ -787,7 +787,7 @@ export function ScriptTerminalModal({
             <Button
               onClick={handleCloseModal}
               variant="outline"
-              className="bg-red-600 hover:bg-red-700 border-red-500 text-white"
+              className="bg-red-600/20 hover:bg-red-600/30 border-red-600/50 text-red-400"
             >
               Close
             </Button>

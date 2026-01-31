@@ -755,7 +755,7 @@ const handleClose = () => {
             variant="outline"
             size="sm"
             disabled={terminals.length >= 4}
-            className="h-8 gap-2 bg-green-600 hover:bg-green-700 border-green-500 text-white disabled:opacity-50"
+            className="h-8 gap-2 bg-green-600/20 hover:bg-green-600/30 border-green-600/50 text-green-400 disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">New</span>
@@ -765,7 +765,7 @@ const handleClose = () => {
             variant="outline"
             size="sm"
             disabled={!activeTerminal?.isConnected}
-            className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 border-blue-500 text-white disabled:opacity-50"
+            className="h-8 gap-2 bg-blue-600/20 hover:bg-blue-600/30 border-blue-600/50 text-blue-400 disabled:opacity-50"
           >
             <Search className="h-4 w-4" />
             <span className="hidden sm:inline">Search</span>
@@ -775,7 +775,7 @@ const handleClose = () => {
             variant="outline"
             size="sm"
             disabled={!activeTerminal?.isConnected}
-            className="h-8 gap-2 bg-yellow-600 hover:bg-yellow-700 border-yellow-500 text-white disabled:opacity-50"
+            className="h-8 gap-2 bg-yellow-600/20 hover:bg-yellow-600/30 border-yellow-600/50 text-yellow-400 disabled:opacity-50"
           >
             <Trash2 className="h-4 w-4" />
             <span className="hidden sm:inline">Clear</span>
@@ -784,7 +784,7 @@ const handleClose = () => {
             onClick={handleClose}
             variant="outline"
             size="sm"
-            className="h-8 gap-2 bg-red-600 hover:bg-red-700 border-red-500 text-white"
+            className="h-8 gap-2 bg-red-600/20 hover:bg-red-600/30 border-red-600/50 text-red-400"
           >
             <X className="h-4 w-4" />
             <span className="hidden sm:inline">Close</span>
