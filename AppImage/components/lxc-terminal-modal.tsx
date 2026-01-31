@@ -54,16 +54,20 @@ export function LxcTerminalModal({
   const [connectionStatus, setConnectionStatus] = useState<"connecting" | "online" | "offline">("connecting")
   const [isMobile, setIsMobile] = useState(false)
   const [isTablet, setIsTablet] = useState(false)
-  
-  // Track host prompt to detect when user exits LXC
-  const hostPromptRef = useRef<string>("")
-  const insideLxcRef = useRef(false)
+  const isInsideLxcRef = useRef(false)
   const outputBufferRef = useRef<string>("")
 
   const [modalHeight, setModalHeight] = useState(500)
   const [isResizing, setIsResizing] = useState(false)
   const resizeBarRef = useRef<HTMLDivElement>(null)
   const modalHeightRef = useRef(500)
+
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [loginUsername, setLoginUsername] = useState("")
+  const [loginPassword, setLoginPassword] = useState("")
+  const [loginError, setLoginError] = useState("")
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const waitingForPasswordRef = useRef(false)
 
   // Detect mobile/tablet
   useEffect(() => {
@@ -93,8 +97,7 @@ export function LxcTerminalModal({
         termRef.current = null
       }
       setConnectionStatus("connecting")
-      hostPromptRef.current = ""
-      insideLxcRef.current = false
+      isInsideLxcRef.current = false
       outputBufferRef.current = ""
     }
   }, [isOpen])
@@ -227,53 +230,45 @@ export function LxcTerminalModal({
           return
         }
         
-        const data = event.data
-        
-        // Buffer output until we're inside the LXC
-        if (!insideLxcRef.current) {
-          outputBufferRef.current += data
+        // Buffer output until we detect we're inside the LXC
+        // pct enter always enters directly without login prompt when run as root
+        if (!isInsideLxcRef.current) {
+          outputBufferRef.current += event.data
           
-          // Capture host prompt (pattern like "root@hostname" or "[user@hostname")
-          if (!hostPromptRef.current) {
-            const hostMatch = outputBufferRef.current.match(/\[?(\w+@[\w-]+)/)
-            if (hostMatch) {
-              hostPromptRef.current = hostMatch[1]
-            }
-          }
+          // Detect when we're inside the LXC container
+          // The LXC prompt will NOT contain "constructor" (the host name)
+          // It will be something like "root@plex:/#" or "user@containername:~$"
+          const buffer = outputBufferRef.current
           
-          // Detect when we're inside the LXC
-          // Look for a prompt that is different from the host prompt after pct enter
-          if (hostPromptRef.current && outputBufferRef.current.includes(`pct enter ${vmid}`)) {
-            const hostName = hostPromptRef.current.split('@')[1]
-            // Look for a new prompt line that doesn't contain the host name
-            const lines = outputBufferRef.current.split('\n')
-            for (let i = lines.length - 1; i >= 0; i--) {
-              const line = lines[i]
-              // Check if this line has a prompt (@) but NOT the host name
-              if (line.includes('@') && !line.includes(hostName) && (line.includes('#') || line.includes('$'))) {
-                // Found LXC prompt - we're inside
-                insideLxcRef.current = true
-                // Only show from this prompt onwards
-                term.write(line)
-                break
+          // Look for a prompt that:
+          // 1. Comes after pct enter command
+          // 2. Has @ followed by container name (not host name)
+          // 3. Ends with # or $
+          const pctEnterMatch = buffer.match(/pct enter \d+\r?\n/)
+          if (pctEnterMatch) {
+            const afterPctEnter = buffer.substring(buffer.indexOf(pctEnterMatch[0]) + pctEnterMatch[0].length)
+            
+            // Find the LXC prompt - it should be a line ending with :~# :~$ :/# or similar
+            // and NOT containing the host name "constructor"
+            const lxcPromptMatch = afterPctEnter.match(/\r?\n?([^\r\n]*@(?!constructor)[^\r\n]*[#$]\s*)$/)
+            
+            if (lxcPromptMatch) {
+              // Successfully inside LXC - only show from the LXC prompt onwards
+              isInsideLxcRef.current = true
+              
+              // Find where the LXC prompt line starts
+              const promptStart = afterPctEnter.lastIndexOf(lxcPromptMatch[1])
+              if (promptStart !== -1) {
+                // Only show the LXC prompt itself
+                term.write(lxcPromptMatch[1])
               }
+              return
             }
           }
-          return
+        } else {
+          // Already inside LXC, write directly
+          term.write(event.data)
         }
-        
-        // Already inside LXC - write directly
-        // But check if user exited (host prompt appears again)
-        if (hostPromptRef.current && data.includes(hostPromptRef.current)) {
-          // User exited LXC, close modal after short delay
-          term.write(data)
-          setTimeout(() => {
-            onClose()
-          }, 500)
-          return
-        }
-        
-        term.write(data)
       }
     }
 
