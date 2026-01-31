@@ -163,8 +163,6 @@ main() {
       msg_ok "$(translate 'intel-gpu-tools is up to date')"
     fi
   else
-    msg_info2 "$(translate 'intel-gpu-tools is not installed')"
-    msg_info "$(translate 'Starting installation...')"
     
     # Ensure repositories are configured
     if type ensure_repositories &>/dev/null; then
