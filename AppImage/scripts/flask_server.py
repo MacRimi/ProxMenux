@@ -398,13 +398,17 @@ def get_intel_gpu_processes_from_text():
     try:
         # print(f"[v0] Executing intel_gpu_top (text mode) to capture processes...", flush=True)
         pass
-        process = subprocess.Popen(
-            ['intel_gpu_top'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1
-        )
+        try:
+            process = subprocess.Popen(
+                ['intel_gpu_top'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1
+            )
+        except FileNotFoundError:
+            # intel_gpu_top no está instalado, retornar lista vacía
+            return []
         
         # Wait 2 seconds for intel_gpu_top to collect data
         time.sleep(2)
@@ -2608,7 +2612,6 @@ def identify_temperature_sensor(sensor_name, adapter, chip_name=None):
         core_num = re.search(r'(\d+)', sensor_name)
         return f"CPU Core {core_num.group(1)}" if core_num else "CPU Core"
 
-    # <CHANGE> DDR5 Memory temperature sensors (SPD5118)
     if "spd5118" in chip_lower or ("smbus" in adapter_lower and "temp1" in sensor_lower):
         # Try to identify which DIMM slot
         # Example: spd5118-i2c-0-50 -> i2c bus 0, address 0x50 (DIMM A1)
@@ -2678,7 +2681,7 @@ def identify_fan(sensor_name, adapter, chip_name=None):
     """Identify what a fan sensor corresponds to, using hardware_monitor for GPU detection"""
     sensor_lower = sensor_name.lower()
     adapter_lower = adapter.lower() if adapter else ""
-    chip_lower = chip_name.lower() if chip_name else ""  # <CHANGE> Add chip name
+    chip_lower = chip_name.lower() if chip_name else ""  # Add chip name
 
     # GPU fans - Check both adapter and chip name for GPU drivers
     if "pci adapter" in adapter_lower or "pci adapter" in chip_lower or any(gpu_driver in adapter_lower + chip_lower for gpu_driver in ["nouveau", "amdgpu", "radeon", "i915"]):
@@ -4623,7 +4626,7 @@ def get_hardware_info():
                 result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
                     current_adapter = None
-                    current_chip = None  # <CHANGE> Add chip name tracking
+                    current_chip = None  # Add chip name tracking
                     fans = []
                     
                     for line in result.stdout.split('\n'):
@@ -4631,7 +4634,6 @@ def get_hardware_info():
                         if not line:
                             continue
                         
-                        # <CHANGE> Detect chip name (e.g., "nouveau-pci-0200")
                         # Chip names don't have ":" and are not indented
                         if not ':' in line and not line.startswith(' ') and not line.startswith('Adapter'):
                             current_chip = line
