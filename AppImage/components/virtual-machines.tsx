@@ -453,8 +453,16 @@ export function VirtualMachines() {
 
   const safeVMData = vmData || []
 
+  // Total allocated RAM for ALL VMs/LXCs (running + stopped)
   const totalAllocatedMemoryGB = useMemo(() => {
     return (safeVMData.reduce((sum, vm) => sum + (vm.maxmem || 0), 0) / 1024 ** 3).toFixed(1)
+  }, [safeVMData])
+
+  // Allocated RAM only for RUNNING VMs/LXCs (this is what actually matters for overcommit)
+  const runningAllocatedMemoryGB = useMemo(() => {
+    return (safeVMData
+      .filter((vm) => vm.status === "running")
+      .reduce((sum, vm) => sum + (vm.maxmem || 0), 0) / 1024 ** 3).toFixed(1)
   }, [safeVMData])
 
   const { data: systemData } = useSWR<{ memory_total: number; memory_used: number; memory_usage: number }>(
@@ -470,7 +478,9 @@ export function VirtualMachines() {
   const usedMemoryGB = systemData?.memory_used ?? null
   const memoryUsagePercent = systemData?.memory_usage ?? null
   const allocatedMemoryGB = Number.parseFloat(totalAllocatedMemoryGB)
-  const isMemoryOvercommit = physicalMemoryGB !== null && allocatedMemoryGB > physicalMemoryGB
+  const runningAllocatedGB = Number.parseFloat(runningAllocatedMemoryGB)
+  // Overcommit warning should be based on RUNNING VMs allocation, not total
+  const isMemoryOvercommit = physicalMemoryGB !== null && runningAllocatedGB > physicalMemoryGB
 
   const getMemoryUsageColor = (percent: number | null) => {
     if (percent === null) return "bg-blue-500"
@@ -758,13 +768,21 @@ export function VirtualMachines() {
               </div>
             )}
 
-            {/* Allocated RAM (configured) */}
+            {/* Allocated RAM (configured) - Split into Running and Total */}
             <div className="pt-3 border-t border-border">
-              {/* Layout para desktop (sin cambios) */}
+              {/* Layout para desktop */}
               <div className="hidden lg:flex items-center justify-between">
-                <div>
-                  <div className="text-lg font-semibold text-foreground">{totalAllocatedMemoryGB} GB</div>
-                  <div className="text-xs text-muted-foreground">Allocated RAM</div>
+                <div className="flex gap-6">
+                  {/* Running allocation - most important */}
+                  <div>
+                    <div className="text-lg font-semibold text-foreground">{runningAllocatedMemoryGB} GB</div>
+                    <div className="text-xs text-muted-foreground">Running Allocated</div>
+                  </div>
+                  {/* Total allocation */}
+                  <div>
+                    <div className="text-lg font-semibold text-muted-foreground">{totalAllocatedMemoryGB} GB</div>
+                    <div className="text-xs text-muted-foreground">Total Allocated</div>
+                  </div>
                 </div>
                 {physicalMemoryGB !== null && (
                   <div>
@@ -781,10 +799,20 @@ export function VirtualMachines() {
                 )}
               </div>
 
-              {/* Layout para móvil (44.0 GB solo, Allocated RAM en otra línea, badge en tercera línea) */}
-              <div className="lg:hidden space-y-1">
-                <div className="text-lg font-semibold text-foreground">{totalAllocatedMemoryGB} GB</div>
-                <div className="text-xs text-muted-foreground">Allocated RAM</div>
+              {/* Layout para movil */}
+              <div className="lg:hidden space-y-2">
+                <div className="flex gap-4">
+                  {/* Running allocation */}
+                  <div>
+                    <div className="text-lg font-semibold text-foreground">{runningAllocatedMemoryGB} GB</div>
+                    <div className="text-xs text-muted-foreground">Running</div>
+                  </div>
+                  {/* Total allocation */}
+                  <div>
+                    <div className="text-lg font-semibold text-muted-foreground">{totalAllocatedMemoryGB} GB</div>
+                    <div className="text-xs text-muted-foreground">Total</div>
+                  </div>
+                </div>
                 {physicalMemoryGB !== null && (
                   <div>
                     {isMemoryOvercommit ? (
