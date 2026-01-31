@@ -963,9 +963,9 @@ const handleClose = () => {
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs"
+            className="h-8 px-3 text-xs bg-blue-600/20 hover:bg-blue-600/30 border-blue-600/50 text-blue-400"
           >
-            ↵
+            ↵ Enter
           </Button>
           <Button
             onPointerDown={(e) => {
@@ -977,7 +977,7 @@ const handleClose = () => {
             size="sm"
             className="h-8 px-2 text-xs"
           >
-            CTRL+C
+            Ctrl
           </Button>
         </div>
       )}

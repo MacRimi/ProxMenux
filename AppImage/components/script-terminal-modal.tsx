@@ -736,9 +736,10 @@ export function ScriptTerminalModal({
                 }}
                 variant="outline"
                 size="sm"
-                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
+                className="h-8 px-2.5 text-xs bg-blue-600/20 hover:bg-blue-600/30 border-blue-600/50 text-blue-400"
               >
-                <CornerDownLeft className="h-4 w-4" />
+                <CornerDownLeft className="h-4 w-4 mr-1" />
+                Enter
               </Button>
               <Button
                 onPointerDown={(e) => {
@@ -750,7 +751,7 @@ export function ScriptTerminalModal({
                 size="sm"
                 className="h-8 px-2 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[65px]"
               >
-                CTRL+C
+                Ctrl
               </Button>
             </div>
           )}

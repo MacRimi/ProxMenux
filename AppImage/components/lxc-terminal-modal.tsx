@@ -169,7 +169,7 @@ export function LxcTerminalModal({
           }
         }, 25000)
 
-        // Sync terminal size
+        // Sync terminal size first
         fitAddon.fit()
         ws.send(JSON.stringify({
           type: "resize",
@@ -177,12 +177,14 @@ export function LxcTerminalModal({
           rows: term.rows,
         }))
 
-        // Auto-execute pct enter command after a brief delay
+        // Auto-execute pct enter command after terminal is ready
+        // Wait for shell prompt to appear before sending command
         setTimeout(() => {
           if (ws.readyState === WebSocket.OPEN) {
-            ws.send(`pct enter ${vmid}\n`)
+            // Send the command as plain text like user would type
+            ws.send(`pct enter ${vmid}\r`)
           }
-        }, 500)
+        }, 800)
       }
 
       ws.onmessage = (event) => {
@@ -287,13 +289,41 @@ export function LxcTerminalModal({
     }
   }, [])
 
-  const sendCtrlC = useCallback(() => sendKey("\x03"), [sendKey])
+  const sendEsc = useCallback(() => sendKey("\x1b"), [sendKey])
+  const sendTab = useCallback(() => sendKey("\t"), [sendKey])
   const sendArrowUp = useCallback(() => sendKey("\x1b[A"), [sendKey])
   const sendArrowDown = useCallback(() => sendKey("\x1b[B"), [sendKey])
   const sendArrowLeft = useCallback(() => sendKey("\x1b[D"), [sendKey])
   const sendArrowRight = useCallback(() => sendKey("\x1b[C"), [sendKey])
   const sendEnter = useCallback(() => sendKey("\r"), [sendKey])
-  const sendTab = useCallback(() => sendKey("\t"), [sendKey])
+  const sendCtrlC = useCallback(() => sendKey("\x03"), [sendKey]) // Ctrl+C
+  
+  // Ctrl key state - user presses Ctrl button, then types a letter
+  const [ctrlPressed, setCtrlPressed] = useState(false)
+  
+  const handleCtrlPress = useCallback(() => {
+    setCtrlPressed(true)
+    setTimeout(() => setCtrlPressed(false), 3000)
+  }, [])
+  
+  // Handle keyboard input when Ctrl is pressed
+  useEffect(() => {
+    if (!ctrlPressed || !isOpen) return
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.length === 1) {
+        e.preventDefault()
+        const code = e.key.toLowerCase().charCodeAt(0) - 96
+        if (code >= 1 && code <= 26) {
+          sendKey(String.fromCharCode(code))
+        }
+        setCtrlPressed(false)
+      }
+    }
+    
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [ctrlPressed, isOpen, sendKey])
 
   const showMobileControls = isMobile || isTablet
 
@@ -302,6 +332,7 @@ export function LxcTerminalModal({
       <DialogContent
         className="max-w-4xl w-[95vw] p-0 gap-0 bg-black border-border overflow-hidden flex flex-col"
         style={{ height: `${modalHeight}px` }}
+        hideClose
       >
         {/* Resize bar */}
         <div
@@ -358,10 +389,18 @@ export function LxcTerminalModal({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={sendCtrlC}
-                className="h-9 px-3 bg-red-600/20 border-red-600/50 text-red-400 hover:bg-red-600/30"
+                onClick={sendEsc}
+                className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-300"
               >
-                Ctrl+C
+                ESC
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={sendTab}
+                className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-300"
+              >
+                TAB
               </Button>
               <Button
                 variant="outline"
@@ -398,19 +437,21 @@ export function LxcTerminalModal({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={sendTab}
-                className="h-9 px-3 bg-zinc-800 border-zinc-700"
-              >
-                Tab
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
                 onClick={sendEnter}
                 className="h-9 px-3 bg-blue-600/20 border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
               >
                 <CornerDownLeft className="h-4 w-4 mr-1" />
                 Enter
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCtrlPress}
+                className={`h-9 px-3 ${ctrlPressed 
+                  ? "bg-yellow-600/30 border-yellow-600/50 text-yellow-400" 
+                  : "bg-zinc-800 border-zinc-700 text-zinc-300"}`}
+              >
+                {ctrlPressed ? "Ctrl+?" : "Ctrl"}
               </Button>
             </div>
           </div>
