@@ -181,11 +181,23 @@ def terminal_websocket(ws):
                 except Exception:
                     msg = None
 
-                if isinstance(msg, dict) and msg.get('type') == 'resize':
-                    cols = int(msg.get('cols', 120))
-                    rows = int(msg.get('rows', 30))
-                    set_winsize(master_fd, rows, cols)
-                    handled = True
+                if isinstance(msg, dict):
+                    msg_type = msg.get('type')
+                    
+                    # Handle ping messages (heartbeat to keep connection alive)
+                    if msg_type == 'ping':
+                        try:
+                            ws.send(json.dumps({'type': 'pong'}))
+                        except:
+                            pass
+                        handled = True
+                    
+                    # Handle resize messages
+                    elif msg_type == 'resize':
+                        cols = int(msg.get('cols', 120))
+                        rows = int(msg.get('rows', 30))
+                        set_winsize(master_fd, rows, cols)
+                        handled = True
 
             if handled:
                 # Control message processed, do not send to bash

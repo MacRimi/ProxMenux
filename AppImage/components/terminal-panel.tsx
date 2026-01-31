@@ -34,6 +34,7 @@ interface TerminalInstance {
   ws: WebSocket | null
   isConnected: boolean
   fitAddon: any // Added fitAddon to TerminalInstance
+  pingInterval?: ReturnType<typeof setInterval> | null // Heartbeat interval to keep connection alive
 }
 
 function getWebSocketUrl(): string {
@@ -131,6 +132,10 @@ const proxmoxCommands = [
   { cmd: "clear", desc: "Clear terminal screen" },
 ]
 
+function reconnectTerminal(id: string) {
+  // Implementation of reconnectTerminal function
+}
+
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([])
   const [activeTerminalId, setActiveTerminalId] = useState<string>("")
@@ -170,6 +175,29 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
       window.removeEventListener("resize", handleResize)
     }
   }, [])
+
+  // Handle page visibility change for automatic reconnection when user returns
+  // This is especially important for mobile/tablet devices (iPad) where switching apps
+  // puts the browser tab in background and may close WebSocket connections
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // When page becomes visible again, check all terminal connections
+        terminals.forEach((terminal) => {
+          if (terminal.ws && terminal.ws.readyState !== WebSocket.OPEN && terminal.term) {
+            // Terminal is disconnected, attempt to reconnect
+            reconnectTerminal(terminal.id)
+          }
+        })
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [terminals])
 
   const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
     // Bloquear solo en pantallas muy pequeñas (móviles)
@@ -273,6 +301,81 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     return () => clearTimeout(debounce)
   }, [searchQuery])
 
+  // Function to reconnect a terminal when connection is lost
+  // This is called when page visibility changes (user returns from another app)
+  const reconnectTerminal = async (terminalId: string) => {
+    const terminal = terminals.find(t => t.id === terminalId)
+    if (!terminal || !terminal.term) return
+    
+    // Show reconnecting message
+    terminal.term.writeln('\r\n\x1b[33m[INFO] Reconnecting...\x1b[0m')
+    
+    const wsUrl = websocketUrl || getWebSocketUrl()
+    const ws = new WebSocket(wsUrl)
+    
+    ws.onopen = () => {
+      // Clear any existing ping interval
+      if (terminal.pingInterval) {
+        clearInterval(terminal.pingInterval)
+      }
+      
+      // Start heartbeat ping every 25 seconds to keep connection alive
+      const pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ping' }))
+        } else {
+          clearInterval(pingInterval)
+        }
+      }, 25000)
+      
+      setTerminals((prev) =>
+        prev.map((t) => (t.id === terminalId ? { ...t, isConnected: true, ws, pingInterval } : t))
+      )
+      terminal.term.writeln('\r\n\x1b[32m[INFO] Reconnected successfully\x1b[0m')
+      
+      // Sync terminal size
+      if (terminal.fitAddon) {
+        try {
+          terminal.fitAddon.fit()
+          ws.send(JSON.stringify({
+            type: 'resize',
+            cols: terminal.term.cols,
+            rows: terminal.term.rows,
+          }))
+        } catch (err) {
+          console.warn('[Terminal] resize on reconnect failed:', err)
+        }
+      }
+    }
+    
+    ws.onmessage = (event) => {
+      terminal.term.write(event.data)
+    }
+    
+    ws.onerror = () => {
+      terminal.term.writeln('\r\n\x1b[31m[ERROR] Reconnection failed\x1b[0m')
+    }
+    
+    ws.onclose = () => {
+      setTerminals((prev) => prev.map((t) => {
+        if (t.id === terminalId) {
+          if (t.pingInterval) {
+            clearInterval(t.pingInterval)
+          }
+          return { ...t, isConnected: false, pingInterval: null }
+        }
+        return t
+      }))
+      terminal.term.writeln('\r\n\x1b[33m[INFO] Connection closed\x1b[0m')
+    }
+    
+    terminal.term.onData((data: string) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(data)
+      }
+    })
+  }
+
   const addNewTerminal = () => {
     if (terminals.length >= 4) return
 
@@ -286,6 +389,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         ws: null,
         isConnected: false,
         fitAddon: null, // Added fitAddon initialization
+        pingInterval: null, // Added pingInterval initialization
       },
     ])
     setActiveTerminalId(newId)
@@ -294,6 +398,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const closeTerminal = (id: string) => {
     const terminal = terminals.find((t) => t.id === id)
     if (terminal) {
+      // Clear heartbeat interval
+      if (terminal.pingInterval) {
+        clearInterval(terminal.pingInterval)
+      }
       if (terminal.ws) {
         terminal.ws.close()
       }
@@ -423,8 +531,18 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
 
     ws.onopen = () => {
+      // Start heartbeat ping every 25 seconds to keep connection alive
+      // This prevents disconnection when switching apps on mobile/tablet (iPad)
+      const pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ping' }))
+        } else {
+          clearInterval(pingInterval)
+        }
+      }, 25000)
+      
       setTerminals((prev) =>
-        prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: true, term, ws, fitAddon } : t)),
+        prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: true, term, ws, fitAddon, pingInterval } : t)),
       )
       syncSizeWithBackend()
     }
@@ -435,12 +553,28 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
     ws.onerror = (error) => {
       console.error("[v0] TerminalPanel: WebSocket error:", error)
-      setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: false } : t)))
+      setTerminals((prev) => prev.map((t) => {
+        if (t.id === terminal.id) {
+          if (t.pingInterval) {
+            clearInterval(t.pingInterval)
+          }
+          return { ...t, isConnected: false, pingInterval: null }
+        }
+        return t
+      }))
       term.writeln("\r\n\x1b[31m[ERROR] WebSocket connection error\x1b[0m")
     }
 
     ws.onclose = () => {
-      setTerminals((prev) => prev.map((t) => (t.id === terminal.id ? { ...t, isConnected: false } : t)))
+      setTerminals((prev) => prev.map((t) => {
+        if (t.id === terminal.id) {
+          if (t.pingInterval) {
+            clearInterval(t.pingInterval)
+          }
+          return { ...t, isConnected: false, pingInterval: null }
+        }
+        return t
+      }))
       term.writeln("\r\n\x1b[33m[INFO] Connection closed\x1b[0m")
     }
 
@@ -518,8 +652,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
   }
 
-  const handleClose = () => {
+const handleClose = () => {
     terminals.forEach((terminal) => {
+      // Clear heartbeat interval
+      if (terminal.pingInterval) clearInterval(terminal.pingInterval)
       if (terminal.ws) terminal.ws.close()
       if (terminal.term) terminal.term.dispose()
     })
