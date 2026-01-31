@@ -349,6 +349,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
     
     ws.onmessage = (event) => {
+      // Filter out pong responses from heartbeat - don't display in terminal
+      if (event.data === '{"type": "pong"}' || event.data === '{"type":"pong"}') {
+        return
+      }
       terminal.term.write(event.data)
     }
     
@@ -548,6 +552,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     }
 
     ws.onmessage = (event) => {
+      // Filter out pong responses from heartbeat - don't display in terminal
+      if (event.data === '{"type": "pong"}' || event.data === '{"type":"pong"}') {
+        return
+      }
       term.write(event.data)
     }
 
