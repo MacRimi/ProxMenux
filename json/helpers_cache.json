@@ -6076,6 +6076,22 @@
     "type": "ct"
   },
   {
+    "name": "Shelfmark",
+    "slug": "shelfmark",
+    "desc": "Shelfmark is a unified web interface for searching and aggregating books and audiobook downloads from multiple sources - all in one place.",
+    "script": "ct/shelfmark.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/shelfmark.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/shelfmark.sh",
+    "os": "debian",
+    "categories": [
+      13
+    ],
+    "notes": [
+      "The configuration at `/etc/shelfmark/.env` is for bootstrapping the initial install. Customize the configuration via the Shelfmark UI."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Shinobi NVR",
     "slug": "shinobi",
     "desc": "Shinobi is an open-source, self-hosted network video recording (NVR) software. It allows you to manage and monitor security cameras and record video footage. Shinobi can be run on various platforms including Linux, macOS, and Raspberry Pi, and offers features such as real-time streaming, motion detection, and email notifications.",
