@@ -15,7 +15,16 @@ import {
   AlignJustify,
   Grid2X2,
   GripHorizontal,
+  ChevronDown,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -967,18 +976,34 @@ const handleClose = () => {
           >
             ↵ Enter
           </Button>
-          <Button
-            onPointerDown={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              sendSequence("\x03", e)
-            }}
-            variant="outline"
-            size="sm"
-            className="h-8 px-2 text-xs"
-          >
-            Ctrl
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs gap-1 bg-transparent"
+              >
+                Ctrl
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Control Sequences</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => sendSequence("\x03")}>
+                <span className="font-mono text-xs mr-2">Ctrl+C</span>
+                <span className="text-muted-foreground text-xs">Cancel/Interrupt</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => sendSequence("\x18")}>
+                <span className="font-mono text-xs mr-2">Ctrl+X</span>
+                <span className="text-muted-foreground text-xs">Exit (nano)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => sendSequence("\x12")}>
+                <span className="font-mono text-xs mr-2">Ctrl+R</span>
+                <span className="text-muted-foreground text-xs">Search history</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
 

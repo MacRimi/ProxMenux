@@ -12,7 +12,16 @@ import {
   ArrowRight,
   CornerDownLeft,
   GripHorizontal,
+  ChevronDown,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
 import "xterm/css/xterm.css"
 import { API_PORT } from "@/lib/api-config"
 
@@ -62,12 +71,7 @@ export function LxcTerminalModal({
   const resizeBarRef = useRef<HTMLDivElement>(null)
   const modalHeightRef = useRef(500)
 
-  const [showLoginModal, setShowLoginModal] = useState(false)
-  const [loginUsername, setLoginUsername] = useState("")
-  const [loginPassword, setLoginPassword] = useState("")
-  const [loginError, setLoginError] = useState("")
-  const [isLoggingIn, setIsLoggingIn] = useState(false)
-  const waitingForPasswordRef = useRef(false)
+  
 
   // Detect mobile/tablet
   useEffect(() => {
@@ -171,9 +175,9 @@ export function LxcTerminalModal({
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
       
-      // Reset state for new connection
-      isInsideLxcRef.current = false
-      outputBufferRef.current = ""
+// Reset state for new connection
+  isInsideLxcRef.current = false
+  outputBufferRef.current = ""
 
       ws.onopen = () => {
         setConnectionStatus("online")
@@ -353,33 +357,6 @@ export function LxcTerminalModal({
   const sendArrowRight = useCallback(() => sendKey("\x1b[C"), [sendKey])
   const sendEnter = useCallback(() => sendKey("\r"), [sendKey])
   const sendCtrlC = useCallback(() => sendKey("\x03"), [sendKey]) // Ctrl+C
-  
-  // Ctrl key state - user presses Ctrl button, then types a letter
-  const [ctrlPressed, setCtrlPressed] = useState(false)
-  
-  const handleCtrlPress = useCallback(() => {
-    setCtrlPressed(true)
-    setTimeout(() => setCtrlPressed(false), 3000)
-  }, [])
-  
-  // Handle keyboard input when Ctrl is pressed
-  useEffect(() => {
-    if (!ctrlPressed || !isOpen) return
-    
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.length === 1) {
-        e.preventDefault()
-        const code = e.key.toLowerCase().charCodeAt(0) - 96
-        if (code >= 1 && code <= 26) {
-          sendKey(String.fromCharCode(code))
-        }
-        setCtrlPressed(false)
-      }
-    }
-    
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [ctrlPressed, isOpen, sendKey])
 
   const showMobileControls = isMobile || isTablet
 
@@ -477,16 +454,34 @@ export function LxcTerminalModal({
                 <CornerDownLeft className="h-4 w-4 mr-1" />
                 Enter
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCtrlPress}
-                className={`h-8 px-2 text-xs ${ctrlPressed 
-                  ? "bg-yellow-600/30 border-yellow-600/50 text-yellow-400" 
-                  : "bg-zinc-800 border-zinc-700 text-zinc-300"}`}
-              >
-                {ctrlPressed ? "Ctrl+?" : "Ctrl"}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2 text-xs bg-zinc-800 border-zinc-700 text-zinc-300 gap-1"
+                  >
+                    Ctrl
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">Control Sequences</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => sendKey("\x03")}>
+                    <span className="font-mono text-xs mr-2">Ctrl+C</span>
+                    <span className="text-muted-foreground text-xs">Cancel/Interrupt</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => sendKey("\x18")}>
+                    <span className="font-mono text-xs mr-2">Ctrl+X</span>
+                    <span className="text-muted-foreground text-xs">Exit (nano)</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => sendKey("\x12")}>
+                    <span className="font-mono text-xs mr-2">Ctrl+R</span>
+                    <span className="text-muted-foreground text-xs">Search history</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         )}

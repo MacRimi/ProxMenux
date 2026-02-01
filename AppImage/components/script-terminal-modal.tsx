@@ -15,7 +15,16 @@ import {
   ArrowRight,
   CornerDownLeft,
   GripHorizontal,
+  ChevronDown,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
 import "xterm/css/xterm.css"
 import { API_PORT } from "@/lib/api-config"
 
@@ -741,18 +750,34 @@ export function ScriptTerminalModal({
                 <CornerDownLeft className="h-4 w-4 mr-1" />
                 Enter
               </Button>
-              <Button
-                onPointerDown={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  sendCommand("\x03")
-                }}
-                variant="outline"
-                size="sm"
-                className="h-8 px-2 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[65px]"
-              >
-                Ctrl
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[65px] gap-1"
+                  >
+                    Ctrl
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">Control Sequences</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => sendCommand("\x03")}>
+                    <span className="font-mono text-xs mr-2">Ctrl+C</span>
+                    <span className="text-muted-foreground text-xs">Cancel/Interrupt</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => sendCommand("\x18")}>
+                    <span className="font-mono text-xs mr-2">Ctrl+X</span>
+                    <span className="text-muted-foreground text-xs">Exit (nano)</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => sendCommand("\x12")}>
+                    <span className="font-mono text-xs mr-2">Ctrl+R</span>
+                    <span className="text-muted-foreground text-xs">Search history</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
 
