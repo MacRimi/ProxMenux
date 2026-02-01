@@ -891,7 +891,7 @@ const handleClose = () => {
       )}
 
       {(isMobile || isTablet) && (
-        <div className="flex flex-wrap gap-1.5 justify-center items-center px-1 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
+        <div className="flex gap-1.5 justify-center items-center px-1 bg-zinc-900 text-sm rounded-b-md border-t border-zinc-700 py-1.5">
           <Button
             onPointerDown={(e) => {
               e.preventDefault()
@@ -972,7 +972,7 @@ const handleClose = () => {
             }}
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs bg-blue-600/20 hover:bg-blue-600/30 border-blue-600/50 text-blue-400"
+            className="h-8 px-2 text-xs bg-blue-600/20 hover:bg-blue-600/30 border-blue-600/50 text-blue-400"
           >
             ↵ Enter
           </Button>
