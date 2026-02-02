@@ -3004,6 +3004,20 @@
     }
   },
   {
+    "name": "KitchenOwl",
+    "slug": "kitchenowl",
+    "desc": "KitchenOwl is a smart self-hosted grocery list and recipe manager with real-time synchronization, recipe management, meal planning, and expense tracking.",
+    "script": "ct/kitchenowl.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/kitchenowl.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/kitchenowl.sh",
+    "os": "debian",
+    "categories": [
+      13
+    ],
+    "notes": [],
+    "type": "ct"
+  },
+  {
     "name": "Koel",
     "slug": "koel",
     "desc": "Koel is a simple web-based personal audio streaming service written in Vue and Laravel. It supports multiple users, audio visualization, smart playlists, YouTube integration, and Last.fm scrobbling.",
@@ -5930,6 +5944,38 @@
       "Check our configuration guide for help: `https://github.com/community-scripts/ProxmoxVE/discussions/2388`",
       "To set admin password on Debian, type `cd /var/lib/rustdesk-api && rustdesk-api reset-admin-pwd <yournewpasswordhere>` inside LXC.",
       "To see admin password on Alpine, type `cat ~/rustdesk.creds` inside LXC."
+    ],
+    "type": "ct"
+  },
+  {
+    "name": "RustyPaste",
+    "slug": "rustypaste",
+    "desc": "Rustypaste is a minimal file upload/pastebin service.",
+    "script": "ct/alpine-rustypaste.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/alpine-rustypaste.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/alpine-rustypaste.sh",
+    "os": "alpine",
+    "categories": [
+      11
+    ],
+    "notes": [
+      "When updating the script it will backup the whole project including all the uploaded files, make sure to extract it to a safe location or remove"
+    ],
+    "type": "ct"
+  },
+  {
+    "name": "RustyPaste",
+    "slug": "rustypaste",
+    "desc": "Rustypaste is a minimal file upload/pastebin service.",
+    "script": "ct/rustypaste.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/rustypaste.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/rustypaste.sh",
+    "os": "debian",
+    "categories": [
+      11
+    ],
+    "notes": [
+      "When updating the script it will backup the whole project including all the uploaded files, make sure to extract it to a safe location or remove"
     ],
     "type": "ct"
   },
