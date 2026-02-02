@@ -5539,6 +5539,201 @@ def api_backups():
             'total': 0
         })
 
+@app.route('/api/backup-storages', methods=['GET'])
+@require_auth
+def api_backup_storages():
+    """Get list of storages available for backups"""
+    try:
+        storages = []
+        
+        # Get all storages
+        result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'],
+                              capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            all_storages = json.loads(result.stdout)
+            
+            for storage in all_storages:
+                storage_id = storage.get('storage', '')
+                content = storage.get('content', '')
+                storage_type = storage.get('type', '')
+                
+                # Only include storages that support backup content
+                if 'backup' in content or storage_type == 'pbs':
+                    # Get storage status for space info
+                    try:
+                        status_result = subprocess.run(
+                            ['pvesh', 'get', f'/storage/{storage_id}/status', '--output-format', 'json'],
+                            capture_output=True, text=True, timeout=10
+                        )
+                        
+                        total = 0
+                        used = 0
+                        avail = 0
+                        
+                        if status_result.returncode == 0:
+                            status = json.loads(status_result.stdout)
+                            total = status.get('total', 0)
+                            used = status.get('used', 0)
+                            avail = status.get('avail', 0)
+                        
+                        storages.append({
+                            'storage': storage_id,
+                            'type': storage_type,
+                            'content': content,
+                            'total': total,
+                            'used': used,
+                            'avail': avail,
+                            'total_human': format_bytes(total),
+                            'used_human': format_bytes(used),
+                            'avail_human': format_bytes(avail)
+                        })
+                    except:
+                        storages.append({
+                            'storage': storage_id,
+                            'type': storage_type,
+                            'content': content,
+                            'total': 0,
+                            'used': 0,
+                            'avail': 0
+                        })
+        
+        return jsonify({'storages': storages})
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'storages': []})
+
+@app.route('/api/vms/<int:vmid>/backup', methods=['POST'])
+@require_auth
+def api_create_backup(vmid):
+    """Create a backup for a VM or LXC container"""
+    try:
+        data = request.get_json() or {}
+        storage = data.get('storage', 'local')
+        mode = data.get('mode', 'snapshot')  # snapshot, suspend, stop
+        compress = data.get('compress', 'zstd')  # none, lzo, gzip, zstd
+        
+        # Get node for this VM
+        node = None
+        
+        # Try to find VM in qemu
+        try:
+            result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'],
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                vms = json.loads(result.stdout)
+                for vm in vms:
+                    if vm.get('vmid') == vmid:
+                        node = vm.get('node')
+                        break
+        except:
+            pass
+        
+        if not node:
+            return jsonify({'error': 'VM not found'}), 404
+        
+        # Create backup using vzdump
+        cmd = [
+            'vzdump', str(vmid),
+            '--storage', storage,
+            '--mode', mode,
+            '--compress', compress,
+            '--node', node
+        ]
+        
+        # Run vzdump in background
+        result = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Backup started for VM {vmid}',
+            'storage': storage,
+            'mode': mode,
+            'compress': compress
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/vms/<int:vmid>/backups', methods=['GET'])
+@require_auth
+def api_vm_backups(vmid):
+    """Get list of backups for a specific VM/LXC"""
+    try:
+        backups = []
+        
+        # Get list of storage locations
+        result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'],
+                              capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            storages = json.loads(result.stdout)
+            
+            for storage in storages:
+                storage_id = storage.get('storage')
+                storage_type = storage.get('type')
+                content = storage.get('content', '')
+                
+                # Only check storages that can contain backups
+                if 'backup' in content or storage_type == 'pbs':
+                    try:
+                        content_result = subprocess.run(
+                            ['pvesh', 'get', f'/nodes/$(hostname)/storage/{storage_id}/content', '--output-format', 'json'],
+                            capture_output=True, text=True, timeout=15, shell=True
+                        )
+                        
+                        if content_result.returncode == 0:
+                            contents = json.loads(content_result.stdout)
+                            
+                            for item in contents:
+                                if item.get('content') == 'backup':
+                                    volid = item.get('volid', '')
+                                    
+                                    # Check if this backup belongs to the requested vmid
+                                    backup_vmid = None
+                                    backup_type = None
+                                    
+                                    if 'vzdump-qemu-' in volid:
+                                        backup_type = 'qemu'
+                                        try:
+                                            backup_vmid = int(volid.split('vzdump-qemu-')[1].split('-')[0])
+                                        except:
+                                            pass
+                                    elif 'vzdump-lxc-' in volid:
+                                        backup_type = 'lxc'
+                                        try:
+                                            backup_vmid = int(volid.split('vzdump-lxc-')[1].split('-')[0])
+                                        except:
+                                            pass
+                                    
+                                    if backup_vmid == vmid:
+                                        size = item.get('size', 0)
+                                        ctime = item.get('ctime', 0)
+                                        
+                                        backups.append({
+                                            'volid': volid,
+                                            'storage': storage_id,
+                                            'type': backup_type,
+                                            'size': size,
+                                            'size_human': format_bytes(size),
+                                            'timestamp': ctime,
+                                            'date': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M') if ctime else ''
+                                        })
+                    except:
+                        continue
+        
+        # Sort by timestamp (newest first)
+        backups.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return jsonify({
+            'backups': backups,
+            'vmid': vmid,
+            'total': len(backups)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'backups': [], 'total': 0})
+
 @app.route('/api/events', methods=['GET'])
 @require_auth
 def api_events():
