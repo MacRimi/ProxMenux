@@ -1239,13 +1239,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
               <div className="flex-1 overflow-hidden px-6 py-4">
                 {/* Mobile carousel container */}
-                <div className="sm:hidden relative">
+                <div className="sm:hidden relative overflow-hidden">
                   <div 
-                    className="flex transition-transform duration-300 ease-in-out"
-                    style={{ transform: `translateX(-${modalPage * 100}%)` }}
+                    className="flex transition-transform duration-300 ease-in-out w-[200%]"
+                    style={{ transform: `translateX(-${modalPage * 50}%)` }}
                   >
                     {/* Page 0: Main content */}
-                    <div className="w-full flex-shrink-0 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+                    <div className="w-1/2 flex-shrink-0 overflow-y-auto pr-2" style={{ maxHeight: 'calc(100vh - 280px)' }}>
                       <div className="space-y-6 pr-1">
                         {selectedVM && (
                           <>
@@ -1369,8 +1369,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     </div>
                     
                     {/* Page 1: Backups */}
-                    <div className="w-full flex-shrink-0 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
-                      <div className="space-y-4 pr-1">
+                    <div className="w-1/2 flex-shrink-0 overflow-y-auto pl-2" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+                      <div className="space-y-4">
                         <Card className="border border-border bg-card/50">
                           <CardContent className="p-4">
                             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Create Backup</h3>

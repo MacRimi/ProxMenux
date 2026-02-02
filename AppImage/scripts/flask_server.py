@@ -5546,6 +5546,10 @@ def api_backup_storages():
     try:
         storages = []
         
+        # Get current node name
+        node_result = subprocess.run(['hostname'], capture_output=True, text=True, timeout=5)
+        node = node_result.stdout.strip() if node_result.returncode == 0 else 'localhost'
+        
         # Get all storages
         result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'],
                               capture_output=True, text=True, timeout=10)
@@ -5560,10 +5564,10 @@ def api_backup_storages():
                 
                 # Only include storages that support backup content
                 if 'backup' in content or storage_type == 'pbs':
-                    # Get storage status for space info
+                    # Get storage status for space info - use correct path with node
                     try:
                         status_result = subprocess.run(
-                            ['pvesh', 'get', f'/storage/{storage_id}/status', '--output-format', 'json'],
+                            ['pvesh', 'get', f'/nodes/{node}/storage/{storage_id}/status', '--output-format', 'json'],
                             capture_output=True, text=True, timeout=10
                         )
                         
