@@ -5666,6 +5666,10 @@ def api_vm_backups(vmid):
     try:
         backups = []
         
+        # Get current node name
+        node_result = subprocess.run(['hostname'], capture_output=True, text=True, timeout=5)
+        node = node_result.stdout.strip() if node_result.returncode == 0 else 'localhost'
+        
         # Get list of storage locations
         result = subprocess.run(['pvesh', 'get', '/storage', '--output-format', 'json'],
                               capture_output=True, text=True, timeout=10)
@@ -5681,9 +5685,11 @@ def api_vm_backups(vmid):
                 # Only check storages that can contain backups
                 if 'backup' in content or storage_type == 'pbs':
                     try:
+                        # Use --vmid filter to get only backups for this VM
                         content_result = subprocess.run(
-                            ['pvesh', 'get', f'/nodes/$(hostname)/storage/{storage_id}/content', '--output-format', 'json'],
-                            capture_output=True, text=True, timeout=15, shell=True
+                            ['pvesh', 'get', f'/nodes/{node}/storage/{storage_id}/content', 
+                             '--vmid', str(vmid), '--output-format', 'json'],
+                            capture_output=True, text=True, timeout=30
                         )
                         
                         if content_result.returncode == 0:
@@ -5691,39 +5697,30 @@ def api_vm_backups(vmid):
                             
                             for item in contents:
                                 if item.get('content') == 'backup':
-                                    volid = item.get('volid', '')
+                                    # Get backup type from subtype field (PBS) or parse volid (local)
+                                    backup_type = item.get('subtype', '')
+                                    if not backup_type:
+                                        volid = item.get('volid', '')
+                                        if 'vzdump-qemu-' in volid:
+                                            backup_type = 'qemu'
+                                        elif 'vzdump-lxc-' in volid:
+                                            backup_type = 'lxc'
                                     
-                                    # Check if this backup belongs to the requested vmid
-                                    backup_vmid = None
-                                    backup_type = None
+                                    size = item.get('size', 0)
+                                    ctime = item.get('ctime', 0)
+                                    notes = item.get('notes', '')
                                     
-                                    if 'vzdump-qemu-' in volid:
-                                        backup_type = 'qemu'
-                                        try:
-                                            backup_vmid = int(volid.split('vzdump-qemu-')[1].split('-')[0])
-                                        except:
-                                            pass
-                                    elif 'vzdump-lxc-' in volid:
-                                        backup_type = 'lxc'
-                                        try:
-                                            backup_vmid = int(volid.split('vzdump-lxc-')[1].split('-')[0])
-                                        except:
-                                            pass
-                                    
-                                    if backup_vmid == vmid:
-                                        size = item.get('size', 0)
-                                        ctime = item.get('ctime', 0)
-                                        
-                                        backups.append({
-                                            'volid': volid,
-                                            'storage': storage_id,
-                                            'type': backup_type,
-                                            'size': size,
-                                            'size_human': format_bytes(size),
-                                            'timestamp': ctime,
-                                            'date': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M') if ctime else ''
-                                        })
-                    except:
+                                    backups.append({
+                                        'volid': item.get('volid', ''),
+                                        'storage': storage_id,
+                                        'type': backup_type,
+                                        'size': size,
+                                        'size_human': format_bytes(size),
+                                        'timestamp': ctime,
+                                        'date': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M') if ctime else '',
+                                        'notes': notes
+                                    })
+                    except Exception as e:
                         continue
         
         # Sort by timestamp (newest first)
