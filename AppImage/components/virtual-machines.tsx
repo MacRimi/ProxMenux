@@ -381,13 +381,16 @@ export function VirtualMachines() {
     setModalPage(0)
     setVmBackups([])
     setDetailsLoading(true)
+    setLoadingBackups(true)
     try {
-      const [details, storagesData] = await Promise.all([
+      const [details, storagesData, backupsData] = await Promise.all([
         fetchApi(`/api/vms/${vm.vmid}`),
-        fetchApi('/api/backup-storages')
+        fetchApi('/api/backup-storages'),
+        fetchApi(`/api/vms/${vm.vmid}/backups`)
       ])
       setVMDetails(details)
       setBackupStorages(storagesData.storages || [])
+      setVmBackups(backupsData.backups || [])
       if (storagesData.storages?.length > 0) {
         setSelectedBackupStorage(storagesData.storages[0].storage)
       }
@@ -395,6 +398,7 @@ export function VirtualMachines() {
       console.error("Error fetching VM details:", error)
     } finally {
       setDetailsLoading(false)
+      setLoadingBackups(false)
     }
   }
   
@@ -1239,14 +1243,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
               <div className="flex-1 overflow-hidden px-6 py-4">
                 {/* Mobile carousel container */}
-                <div className="sm:hidden flex flex-col h-full">
+                <div className="sm:hidden flex flex-col" style={{ height: 'calc(100vh - 320px)' }}>
                   <div className="flex-1 relative overflow-hidden">
                     <div 
-                      className="flex transition-transform duration-300 ease-in-out h-full"
-                      style={{ transform: `translateX(-${modalPage * 100}%)` }}
+                      className="flex transition-transform duration-300 ease-in-out"
+                      style={{ 
+                        transform: `translateX(-${modalPage * 50}%)`,
+                        width: '200%'
+                      }}
                     >
                       {/* Page 0: Main content */}
-                      <div className="w-full flex-shrink-0 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 320px)' }}>
+                      <div className="w-1/2 h-full overflow-y-auto pr-3">
                         <div className="space-y-6">
                         {selectedVM && (
                           <>
@@ -1370,7 +1377,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       </div>
                       
                       {/* Page 1: Backups */}
-                      <div className="w-full flex-shrink-0 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 320px)' }}>
+                      <div className="w-1/2 h-full overflow-y-auto pl-3">
                         <div className="space-y-4">
                           <Card className="border border-border bg-card/50">
                             <CardContent className="p-4">
@@ -1443,14 +1450,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   </div>
                   
                   {/* Mobile pagination dots */}
-                  <div className="flex justify-center gap-2 mt-4">
+                  <div className="flex justify-center gap-3 pt-4 pb-2">
                     <button
                       onClick={() => setModalPage(0)}
-                      className={`w-2.5 h-2.5 rounded-full transition-colors ${modalPage === 0 ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                      className={`w-3 h-3 rounded-full transition-colors ${modalPage === 0 ? 'bg-primary' : 'bg-zinc-500'}`}
                     />
                     <button
                       onClick={() => { setModalPage(1); if (selectedVM) fetchVmBackups(selectedVM.vmid); }}
-                      className={`w-2.5 h-2.5 rounded-full transition-colors ${modalPage === 1 ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                      className={`w-3 h-3 rounded-full transition-colors ${modalPage === 1 ? 'bg-primary' : 'bg-zinc-500'}`}
                     />
                   </div>
                 </div>
@@ -2141,18 +2148,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       No backups found
                                     </div>
                                   ) : (
-                                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                                      {vmBackups.slice(0, 5).map((backup, index) => (
+                                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                                      {vmBackups.map((backup, index) => (
                                         <div key={`desktop-backup-${backup.volid}-${index}`} className="flex justify-between items-center text-sm p-2 rounded bg-muted/30">
                                           <span>{backup.date}</span>
                                           <Badge variant="outline" className="text-xs">{backup.size_human}</Badge>
                                         </div>
                                       ))}
-                                      {vmBackups.length > 5 && (
-                                        <div className="text-xs text-muted-foreground text-center pt-1">
-                                          +{vmBackups.length - 5} more
-                                        </div>
-                                      )}
                                     </div>
                                   )}
                                 </div>
