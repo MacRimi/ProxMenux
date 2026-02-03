@@ -5650,19 +5650,36 @@ def api_create_backup(vmid):
             notes = notes.replace('{{vmid}}', str(vmid))
             notes = notes.replace('{{node}}', node or '')
         
-        # Build vzdump command directly (more reliable than pvesh for backups)
+        # Check if storage is PBS (Proxmox Backup Server)
+        is_pbs = False
+        try:
+            storage_result = subprocess.run(
+                ['pvesh', 'get', f'/storage/{storage}', '--output-format', 'json'],
+                capture_output=True, text=True, timeout=10
+            )
+            if storage_result.returncode == 0:
+                storage_info = json.loads(storage_result.stdout)
+                is_pbs = storage_info.get('type') == 'pbs'
+        except:
+            pass
+        
+        # Build pvesh command: pvesh create /nodes/<NODE>/vzdump --vmid <ID> --storage <STORAGE> --mode <MODE> [--compress <COMPRESS>]
         cmd = [
-            'vzdump', str(vmid),
+            'pvesh', 'create', f'/nodes/{node}/vzdump',
+            '--vmid', str(vmid),
             '--storage', storage,
-            '--mode', mode,
-            '--compress', compress
+            '--mode', mode
         ]
+        
+        # Only add --compress for non-PBS storage (PBS handles compression/deduplication internally)
+        if not is_pbs:
+            cmd.extend(['--compress', compress])
         
         # Add protected flag if enabled (use 1 for true)
         if protected:
             cmd.extend(['--protected', '1'])
         
-        # Add notes if provided (use --description for compatibility)
+        # Add notes if provided
         if notes:
             cmd.extend(['--notes-template', notes])
         
@@ -5670,16 +5687,16 @@ def api_create_backup(vmid):
         if pbs_change_detection and pbs_change_detection != 'default' and vm_type == 'lxc':
             cmd.extend(['--pbs-change-detection-mode', pbs_change_detection])
         
-        # Execute vzdump - it will create a Proxmox task automatically
-        # Run in background using shell
-        cmd_str = ' '.join(cmd)
-        subprocess.Popen(
-            cmd_str,
-            shell=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True
-        )
+        # Execute pvesh command - this creates a task in Proxmox
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        
+        if result.returncode != 0:
+            error_msg = result.stderr or result.stdout or 'Unknown error'
+            return jsonify({
+                'success': False,
+                'error': f'Backup failed: {error_msg}',
+                'command': ' '.join(cmd)
+            }), 500
         
         return jsonify({
             'success': True,
@@ -5688,7 +5705,8 @@ def api_create_backup(vmid):
             'mode': mode,
             'compress': compress,
             'protected': protected,
-            'notes': notes
+            'notes': notes,
+            'task': result.stdout.strip() if result.stdout else None
         })
         
     except Exception as e:
