@@ -5671,27 +5671,15 @@ def api_create_backup(vmid):
             cmd.extend(['--pbs-change-detection-mode', pbs_change_detection])
         
         # Execute vzdump - it will create a Proxmox task automatically
-        # Using Popen to not block and let vzdump manage the task
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            start_new_session=True  # Detach from parent process
+        # Run in background using shell
+        cmd_str = ' '.join(cmd)
+        subprocess.Popen(
+            cmd_str,
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True
         )
-        
-        # Give it a moment to start and check if it failed immediately
-        import time
-        time.sleep(0.5)
-        
-        # Check if process failed immediately
-        poll_result = process.poll()
-        if poll_result is not None and poll_result != 0:
-            _, stderr = process.communicate(timeout=5)
-            return jsonify({
-                'success': False,
-                'error': f'Backup failed to start: {stderr.decode() if stderr else "Unknown error"}',
-                'command': ' '.join(cmd)
-            }), 500
         
         return jsonify({
             'success': True,
@@ -5703,8 +5691,6 @@ def api_create_backup(vmid):
             'notes': notes
         })
         
-    except subprocess.TimeoutExpired:
-        return jsonify({'error': 'Backup command timed out'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
