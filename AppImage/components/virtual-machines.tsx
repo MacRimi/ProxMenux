@@ -8,7 +8,8 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, Terminal } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, Terminal, Archive, Plus, Loader2, Clock, Database } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
@@ -119,6 +120,29 @@ interface VMDetails extends VMData {
     docker_ips: string[]
     primary_ip: string
   }
+}
+
+interface BackupStorage {
+  storage: string
+  type: string
+  content: string
+  total: number
+  used: number
+  avail: number
+  total_human?: string
+  used_human?: string
+  avail_human?: string
+}
+
+interface VMBackup {
+  volid: string
+  storage: string
+  type: string
+  size: number
+  size_human: string
+  timestamp: number
+  date: string
+  notes?: string
 }
 
 const fetcher = async (url: string) => {
@@ -271,6 +295,13 @@ export function VirtualMachines() {
   const [ipsLoaded, setIpsLoaded] = useState(false)
   const [loadingIPs, setLoadingIPs] = useState(false)
   const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
+  
+  // Backup states
+  const [vmBackups, setVmBackups] = useState<VMBackup[]>([])
+  const [backupStorages, setBackupStorages] = useState<BackupStorage[]>([])
+  const [selectedBackupStorage, setSelectedBackupStorage] = useState<string>("")
+  const [loadingBackups, setLoadingBackups] = useState(false)
+  const [creatingBackup, setCreatingBackup] = useState(false)
 
   useEffect(() => {
     const fetchLXCIPs = async () => {
@@ -348,6 +379,11 @@ export function VirtualMachines() {
     setIsEditingNotes(false)
     setEditedNotes("")
     setDetailsLoading(true)
+    
+    // Load backups immediately (independent of config)
+    fetchBackupStorages()
+    fetchVmBackups(vm.vmid)
+    
     try {
       const details = await fetchApi(`/api/vms/${vm.vmid}`)
       setVMDetails(details)
@@ -364,6 +400,53 @@ export function VirtualMachines() {
 
   const handleBackToMain = () => {
     setCurrentView("main")
+  }
+
+  // Backup functions
+  const fetchBackupStorages = async () => {
+    try {
+      const response = await fetchApi("/api/backup-storages")
+      if (response.storages) {
+        setBackupStorages(response.storages)
+        if (response.storages.length > 0 && !selectedBackupStorage) {
+          setSelectedBackupStorage(response.storages[0].storage)
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching backup storages:", error)
+    }
+  }
+
+  const fetchVmBackups = async (vmid: number) => {
+    setLoadingBackups(true)
+    try {
+      const response = await fetchApi(`/api/vms/${vmid}/backups`)
+      if (response.backups) {
+        setVmBackups(response.backups)
+      }
+    } catch (error) {
+      console.error("Error fetching VM backups:", error)
+      setVmBackups([])
+    } finally {
+      setLoadingBackups(false)
+    }
+  }
+
+  const handleCreateBackup = async () => {
+    if (!selectedVM || !selectedBackupStorage) return
+    
+    setCreatingBackup(true)
+    try {
+      await fetchApi(`/api/vms/${selectedVM.vmid}/backup`, {
+        method: "POST",
+        body: JSON.stringify({ storage: selectedBackupStorage }),
+      })
+      setTimeout(() => fetchVmBackups(selectedVM.vmid), 2000)
+    } catch (error) {
+      console.error("Error creating backup:", error)
+    } finally {
+      setCreatingBackup(false)
+    }
   }
 
   const handleVMControl = async (vmid: number, action: string) => {
@@ -1144,8 +1227,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 </DialogTitle>
               </DialogHeader>
 
-              <div className="flex-1 overflow-y-auto px-6 py-4">
-                <div className="space-y-6">
+              <div className="flex-1 overflow-y-auto px-6 py-4" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+                <div className="space-y-4">
                   {selectedVM && (
                     <>
                       <div key={`metrics-${selectedVM.vmid}`}>
@@ -1235,6 +1318,91 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         </Card>
                       </div>
 
+                      {/* Backups Section */}
+                      <Card className="border border-border bg-card/50">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-md bg-amber-500/10">
+                                <Archive className="h-4 w-4 text-amber-500" />
+                              </div>
+                              <h3 className="text-sm font-semibold text-foreground">Backups</h3>
+                            </div>
+                          </div>
+                          
+                          {/* Create Backup Row */}
+                          <div className="flex items-center gap-2 mb-4">
+                            <Button 
+                              size="sm"
+                              className="h-9 bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
+                              onClick={handleCreateBackup}
+                              disabled={creatingBackup || !selectedBackupStorage}
+                            >
+                              {creatingBackup ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Plus className="h-4 w-4" />
+                              )}
+                              <span>Create Backup</span>
+                            </Button>
+                            <Select value={selectedBackupStorage} onValueChange={setSelectedBackupStorage}>
+                              <SelectTrigger className="flex-1 h-9">
+                                <SelectValue placeholder="Select storage" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {backupStorages.map((storage) => (
+                                  <SelectItem key={storage.storage} value={storage.storage}>
+                                    <span className="flex items-center gap-2">
+                                      <Database className="h-3.5 w-3.5 text-muted-foreground" />
+                                      {storage.storage} ({storage.avail_human} free)
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          {/* Divider */}
+                          <div className="border-t border-border/50 mb-4" />
+                          
+                          {/* Backup List */}
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs text-muted-foreground">Available backups</span>
+                            <Badge variant="secondary" className="text-xs h-5">{vmBackups.length}</Badge>
+                          </div>
+                          
+                          {loadingBackups ? (
+                            <div className="flex items-center justify-center py-6 text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              <span className="text-sm">Loading backups...</span>
+                            </div>
+                          ) : vmBackups.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                              <Archive className="h-8 w-8 mb-2 opacity-30" />
+                              <span className="text-sm">No backups found</span>
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5 max-h-[216px] overflow-y-auto">
+                              {vmBackups.map((backup, index) => (
+                                <div 
+                                  key={`backup-${backup.volid}-${index}`}
+                                  className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span className="text-sm text-foreground">{backup.date}</span>
+                                  </div>
+                                  <Badge variant="outline" className="text-xs font-mono">
+                                    {backup.size_human}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+
                       {detailsLoading ? (
                         <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
                       ) : vmDetails?.config ? (
@@ -1242,9 +1410,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           <Card className="border border-border bg-card/50" key={`config-${selectedVM.vmid}`}>
                             <CardContent className="p-4">
                               <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                                  Resources
-                                </h3>
+                                <div className="flex items-center gap-2">
+                                  <div className="p-1.5 rounded-md bg-blue-500/10">
+                                    <Cpu className="h-4 w-4 text-blue-500" />
+                                  </div>
+                                  <h3 className="text-sm font-semibold text-foreground">Resources</h3>
+                                </div>
                                 <div className="flex gap-2">
                                   <Button
                                     variant="outline"
