@@ -1547,90 +1547,90 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               </div>
                             </div>
                           </CardContent>
-</Card>
-  </div>
-  
-  {/* Desktop Backups Section - Always visible */}
-  <Card className="border border-border bg-card/50">
-    <CardContent className="p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Backups
-        </h3>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => selectedVM && fetchVmBackups(selectedVM.vmid)}
-          className="text-xs bg-transparent"
-        >
-          Refresh
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Create Backup */}
-        <div className="space-y-3">
-          <label className="text-xs text-muted-foreground block">Create New Backup</label>
-          <div className="flex gap-2">
-            <Select value={selectedBackupStorage} onValueChange={setSelectedBackupStorage}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Select storage" />
-              </SelectTrigger>
-              <SelectContent>
-                {backupStorages.map((storage) => (
-                  <SelectItem key={`desktop-storage-${storage.storage}`} value={storage.storage}>
-                    {storage.storage} ({storage.avail_human} free)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button 
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-              onClick={handleCreateBackup}
-              disabled={creatingBackup || !selectedBackupStorage}
-            >
-              {creatingBackup ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Archive className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </div>
-        
-        {/* Backup List */}
-        <div>
-          <label className="text-xs text-muted-foreground block mb-2">
-            Existing Backups ({vmBackups.length})
-          </label>
-          {loadingBackups ? (
-            <div className="text-center py-2 text-muted-foreground text-sm">
-              <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-              Loading...
-            </div>
-          ) : vmBackups.length === 0 ? (
-            <div className="text-center py-2 text-muted-foreground text-sm">
-              No backups found
-            </div>
-          ) : (
-            <div className="space-y-1 max-h-32 overflow-y-auto">
-              {vmBackups.map((backup, index) => (
-                <div key={`desktop-backup-top-${backup.volid}-${index}`} className="flex justify-between items-center text-sm p-2 rounded bg-muted/30">
-                  <span>{backup.date}</span>
-                  <Badge variant="outline" className="text-xs">{backup.size_human}</Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </CardContent>
-  </Card>
+                          </Card>
+                        </div>
 
-> {detailsLoading ? (
-  <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
-  ) : vmDetails?.config ? (
-  <>
+                        {/* Desktop Backups Section - Always visible */}
+                        <Card className="border border-border bg-card/50">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                                Backups
+                              </h3>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => selectedVM && fetchVmBackups(selectedVM.vmid)}
+                                className="text-xs bg-transparent"
+                              >
+                                Refresh
+                              </Button>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                              {/* Create Backup */}
+                              <div className="space-y-3">
+                                <label className="text-xs text-muted-foreground block">Create New Backup</label>
+                                <div className="flex gap-2">
+                                  <Select value={selectedBackupStorage} onValueChange={setSelectedBackupStorage}>
+                                    <SelectTrigger className="flex-1">
+                                      <SelectValue placeholder="Select storage" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {backupStorages.map((storage) => (
+                                        <SelectItem key={`desktop-storage-${storage.storage}`} value={storage.storage}>
+                                          {storage.storage} ({storage.avail_human} free)
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Button 
+                                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                                    onClick={handleCreateBackup}
+                                    disabled={creatingBackup || !selectedBackupStorage}
+                                  >
+                                    {creatingBackup ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Archive className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              {/* Backup List */}
+                              <div>
+                                <label className="text-xs text-muted-foreground block mb-2">
+                                  Existing Backups ({vmBackups.length})
+                                </label>
+                                {loadingBackups ? (
+                                  <div className="text-center py-2 text-muted-foreground text-sm">
+                                    <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                                    Loading...
+                                  </div>
+                                ) : vmBackups.length === 0 ? (
+                                  <div className="text-center py-2 text-muted-foreground text-sm">
+                                    No backups found
+                                  </div>
+                                ) : (
+                                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                                    {vmBackups.map((backup, index) => (
+                                      <div key={`desktop-backup-top-${backup.volid}-${index}`} className="flex justify-between items-center text-sm p-2 rounded bg-muted/30">
+                                        <span>{backup.date}</span>
+                                        <Badge variant="outline" className="text-xs">{backup.size_human}</Badge>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {detailsLoading ? (
+                            <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
+                          ) : vmDetails?.config ? (
+                            <>
                             <Card className="border border-border bg-card/50">
                               <CardContent className="p-4">
                                 <div className="flex items-center justify-between mb-4">
