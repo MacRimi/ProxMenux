@@ -5610,7 +5610,7 @@ def api_backup_storages():
 @app.route('/api/vms/<int:vmid>/backup', methods=['POST'])
 @require_auth
 def api_create_backup(vmid):
-    """Create a backup for a VM or LXC container"""
+    """Create a backup for a VM or LXC container using Proxmox API"""
     try:
         data = request.get_json() or {}
         storage = data.get('storage', 'local')
@@ -5650,21 +5650,23 @@ def api_create_backup(vmid):
             notes = notes.replace('{{vmid}}', str(vmid))
             notes = notes.replace('{{node}}', node or '')
         
-        # Create backup using vzdump
+        # Build pvesh command to create backup via Proxmox API
+        # This creates a vzdump task through the API which handles clustering properly
         cmd = [
-            'vzdump', str(vmid),
+            'pvesh', 'create', f'/nodes/{node}/vzdump',
+            '--vmid', str(vmid),
             '--storage', storage,
             '--mode', mode,
-            '--compress', compress,
-            '--node', node
+            '--compress', compress
         ]
         
-        # Add protected flag if enabled
+        # Add protected flag if enabled (use 1 for true)
         if protected:
             cmd.extend(['--protected', '1'])
         
-        # Add notification mode
+        # Add notification mode (mailnotification for older versions, notification-mode for newer)
         if notification and notification != 'auto':
+            # Try notification-mode first (newer Proxmox versions)
             cmd.extend(['--notification-mode', notification])
         
         # Add notes if provided
@@ -5672,23 +5674,34 @@ def api_create_backup(vmid):
             cmd.extend(['--notes-template', notes])
         
         # Add PBS change detection mode (only for LXC with PBS storage)
-        if pbs_change_detection and vm_type == 'lxc':
+        if pbs_change_detection and pbs_change_detection != 'default' and vm_type == 'lxc':
             cmd.extend(['--pbs-change-detection-mode', pbs_change_detection])
         
-        # Run vzdump in background
-        result = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Execute the backup command
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        
+        if result.returncode != 0:
+            error_msg = result.stderr or result.stdout or 'Unknown error'
+            return jsonify({
+                'success': False,
+                'error': f'Backup failed: {error_msg}',
+                'command': ' '.join(cmd)
+            }), 500
         
         return jsonify({
             'success': True,
-            'message': f'Backup started for VM {vmid}',
+            'message': f'Backup task started for {vm_type.upper()} {vmid}',
             'storage': storage,
             'mode': mode,
             'compress': compress,
             'protected': protected,
             'notification': notification,
-            'notes': notes
+            'notes': notes,
+            'task_output': result.stdout
         })
         
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Backup command timed out'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
