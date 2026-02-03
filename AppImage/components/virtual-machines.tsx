@@ -1248,7 +1248,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     {/* Page 0: Main content */}
                     <div 
                       className={`absolute inset-0 overflow-y-auto transition-opacity duration-300 ${modalPage === 0 ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
-                        <div className="space-y-6">
+                    >
+                      <div className="space-y-6">
                         {selectedVM && (
                           <>
                             <div key={`metrics-mobile-${selectedVM.vmid}`}>
@@ -1365,13 +1366,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 </CardContent>
                               </Card>
                             ) : null}
-                          </>
+</>
                         )}
-                        </div>
+                      </div>
                     </div>
                     
                     {/* Page 1: Backups */}
-                    <div 
+                    <div
                       className={`absolute inset-0 overflow-y-auto transition-opacity duration-300 ${modalPage === 1 ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
                     >
                       <div className="space-y-4">
