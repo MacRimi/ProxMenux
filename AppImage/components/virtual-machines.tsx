@@ -8,8 +8,9 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, Terminal, Archive, Loader2, ChevronLeft, ChevronRight, RefreshCw, Save } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, Terminal, Archive, Plus, Loader2, Clock, Database } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { ScrollArea } from "./ui/scroll-area"
 import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
@@ -122,16 +123,6 @@ interface VMDetails extends VMData {
   }
 }
 
-interface BackupInfo {
-  volid: string
-  storage: string
-  type: string
-  size: number
-  size_human: string
-  timestamp: number
-  date: string
-}
-
 interface BackupStorage {
   storage: string
   type: string
@@ -139,9 +130,20 @@ interface BackupStorage {
   total: number
   used: number
   avail: number
-  total_human: string
-  used_human: string
-  avail_human: string
+  total_human?: string
+  used_human?: string
+  avail_human?: string
+}
+
+interface VMBackup {
+  volid: string
+  storage: string
+  type: string
+  size: number
+  size_human: string
+  timestamp: number
+  date: string
+  notes?: string
 }
 
 const fetcher = async (url: string) => {
@@ -296,12 +298,12 @@ export function VirtualMachines() {
   const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
   
   // Backup states
-  const [modalPage, setModalPage] = useState<number>(0) // 0 = main, 1 = backups
-  const [vmBackups, setVmBackups] = useState<BackupInfo[]>([])
+  const [vmBackups, setVmBackups] = useState<VMBackup[]>([])
   const [backupStorages, setBackupStorages] = useState<BackupStorage[]>([])
+  const [selectedBackupStorage, setSelectedBackupStorage] = useState<string>("")
   const [loadingBackups, setLoadingBackups] = useState(false)
   const [creatingBackup, setCreatingBackup] = useState(false)
-  const [selectedBackupStorage, setSelectedBackupStorage] = useState<string>("")
+  const [modalPage, setModalPage] = useState(0)
 
   useEffect(() => {
     const fetchLXCIPs = async () => {
@@ -379,79 +381,19 @@ export function VirtualMachines() {
     setIsEditingNotes(false)
     setEditedNotes("")
     setModalPage(0)
-    setVmBackups([])
     setDetailsLoading(true)
-    setLoadingBackups(true)
+    
+    // Load backups and storages immediately (independent of config)
+    fetchBackupStorages()
+    fetchVmBackups(vm.vmid)
+    
     try {
-      const [details, storagesData, backupsData] = await Promise.all([
-        fetchApi(`/api/vms/${vm.vmid}`),
-        fetchApi('/api/backup-storages'),
-        fetchApi(`/api/vms/${vm.vmid}/backups`)
-      ])
+      const details = await fetchApi(`/api/vms/${vm.vmid}`)
       setVMDetails(details)
-      setBackupStorages(storagesData.storages || [])
-      setVmBackups(backupsData.backups || [])
-      if (storagesData.storages?.length > 0) {
-        setSelectedBackupStorage(storagesData.storages[0].storage)
-      }
     } catch (error) {
       console.error("Error fetching VM details:", error)
     } finally {
       setDetailsLoading(false)
-      setLoadingBackups(false)
-    }
-  }
-  
-  // Fetch backups for current VM
-  const fetchVmBackups = async (vmid: number) => {
-    setLoadingBackups(true)
-    try {
-      const [backupsData, storagesData] = await Promise.all([
-        fetchApi(`/api/vms/${vmid}/backups`),
-        fetchApi('/api/backup-storages')
-      ])
-      setVmBackups(backupsData.backups || [])
-      setBackupStorages(storagesData.storages || [])
-      if (storagesData.storages?.length > 0 && !selectedBackupStorage) {
-        setSelectedBackupStorage(storagesData.storages[0].storage)
-      }
-    } catch (error) {
-      console.error("Error fetching backups:", error)
-    } finally {
-      setLoadingBackups(false)
-    }
-  }
-  
-  // Create backup
-  const handleCreateBackup = async () => {
-    if (!selectedVM || !selectedBackupStorage) return
-    
-    setCreatingBackup(true)
-    try {
-      await fetchApi(`/api/vms/${selectedVM.vmid}/backup`, {
-        method: "POST",
-        body: JSON.stringify({
-          storage: selectedBackupStorage,
-          mode: "snapshot",
-          compress: "zstd"
-        }),
-      })
-      // Refresh backups list after a short delay
-      setTimeout(() => {
-        fetchVmBackups(selectedVM.vmid)
-      }, 2000)
-    } catch (error) {
-      console.error("Error creating backup:", error)
-    } finally {
-      setCreatingBackup(false)
-    }
-  }
-  
-  // Switch to backups page
-  const handleShowBackups = () => {
-    if (selectedVM) {
-      setModalPage(1)
-      fetchVmBackups(selectedVM.vmid)
     }
   }
 
@@ -461,6 +403,54 @@ export function VirtualMachines() {
 
   const handleBackToMain = () => {
     setCurrentView("main")
+  }
+
+  // Backup functions
+  const fetchBackupStorages = async () => {
+    try {
+      const response = await fetchApi("/api/backup-storages")
+      if (response.storages) {
+        setBackupStorages(response.storages)
+        if (response.storages.length > 0 && !selectedBackupStorage) {
+          setSelectedBackupStorage(response.storages[0].storage)
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching backup storages:", error)
+    }
+  }
+
+  const fetchVmBackups = async (vmid: number) => {
+    setLoadingBackups(true)
+    try {
+      const response = await fetchApi(`/api/vms/${vmid}/backups`)
+      if (response.backups) {
+        setVmBackups(response.backups)
+      }
+    } catch (error) {
+      console.error("Error fetching VM backups:", error)
+      setVmBackups([])
+    } finally {
+      setLoadingBackups(false)
+    }
+  }
+
+  const handleCreateBackup = async () => {
+    if (!selectedVM || !selectedBackupStorage) return
+    
+    setCreatingBackup(true)
+    try {
+      await fetchApi(`/api/vms/${selectedVM.vmid}/backup`, {
+        method: "POST",
+        body: JSON.stringify({ storage: selectedBackupStorage }),
+      })
+      // Refresh backups list after creation
+      setTimeout(() => fetchVmBackups(selectedVM.vmid), 2000)
+    } catch (error) {
+      console.error("Error creating backup:", error)
+    } finally {
+      setCreatingBackup(false)
+    }
   }
 
   const handleVMControl = async (vmid: number, action: string) => {
@@ -623,7 +613,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   }
 
   const isHTML = (str: string): boolean => {
-    const htmlRegex = new RegExp('<\\/?[a-z][\\s\\S]*>', 'i')
+    const htmlRegex = /<\/?[a-z][\s\S]*>/i
     return htmlRegex.test(str)
   }
 
@@ -1241,71 +1231,69 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 </DialogTitle>
               </DialogHeader>
 
-              <div className="flex-1 overflow-hidden px-6 py-4">
-                {/* Mobile carousel container */}
-                <div className="sm:hidden flex flex-col h-full">
+              <div className="flex-1 overflow-hidden">
+                {/* Mobile carousel */}
+                <div className="sm:hidden h-full flex flex-col">
                   <div className="flex-1 relative overflow-hidden">
                     {/* Page 0: Main content */}
                     <div 
-                      className={`absolute inset-0 overflow-y-auto transition-all duration-300 ${modalPage === 0 ? 'opacity-100 translate-x-0 z-10' : 'opacity-0 -translate-x-4 z-0 pointer-events-none'}`}
+                      className={`absolute inset-0 px-6 py-4 overflow-y-auto transition-all duration-300 ease-in-out ${
+                        modalPage === 0 
+                          ? 'opacity-100 translate-x-0' 
+                          : 'opacity-0 -translate-x-full pointer-events-none'
+                      }`}
                     >
-                        <div className="space-y-6">
+                      <div className="space-y-4">
                         {selectedVM && (
                           <>
-                            <div key={`metrics-mobile-${selectedVM.vmid}`}>
+                            <div key={`mobile-metrics-${selectedVM.vmid}`}>
                               <Card
                                 className="cursor-pointer rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 transition-colors group"
                                 onClick={handleMetricsClick}
                               >
                                 <CardContent className="p-4">
                                   <div className="grid grid-cols-2 gap-4">
+                                    {/* CPU */}
                                     <div>
                                       <div className="text-xs text-muted-foreground mb-2">CPU Usage</div>
                                       <div className={`text-base font-semibold mb-2 ${getUsageColor(selectedVM.cpu * 100)}`}>
                                         {(selectedVM.cpu * 100).toFixed(1)}%
                                       </div>
-                                      <Progress value={selectedVM.cpu * 100} className={`h-2 bg-background ${getModalProgressColor(selectedVM.cpu * 100)}`} />
+                                      <Progress value={selectedVM.cpu * 100} className="h-2" />
                                     </div>
+                                    {/* Memory */}
                                     <div>
                                       <div className="text-xs text-muted-foreground mb-2">Memory</div>
                                       <div className={`text-base font-semibold mb-2 ${getUsageColor((selectedVM.mem / selectedVM.maxmem) * 100)}`}>
                                         {(selectedVM.mem / 1024 ** 3).toFixed(1)} / {(selectedVM.maxmem / 1024 ** 3).toFixed(1)} GB
                                       </div>
-                                      <Progress value={(selectedVM.mem / selectedVM.maxmem) * 100} className={`h-2 bg-background ${getModalProgressColor((selectedVM.mem / selectedVM.maxmem) * 100)}`} />
+                                      <Progress value={(selectedVM.mem / selectedVM.maxmem) * 100} className="h-2" />
                                     </div>
+                                    {/* Disk */}
                                     <div>
                                       <div className="text-xs text-muted-foreground mb-2">Disk</div>
                                       <div className={`text-base font-semibold mb-2 ${getUsageColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`}>
                                         {(selectedVM.disk / 1024 ** 3).toFixed(1)} / {(selectedVM.maxdisk / 1024 ** 3).toFixed(1)} GB
                                       </div>
-                                      <Progress value={(selectedVM.disk / selectedVM.maxdisk) * 100} className={`h-2 bg-background ${getModalProgressColor((selectedVM.disk / selectedVM.maxdisk) * 100)}`} />
+                                      <Progress value={(selectedVM.disk / selectedVM.maxdisk) * 100} className="h-2" />
                                     </div>
+                                    {/* Disk I/O */}
                                     <div>
                                       <div className="text-xs text-muted-foreground mb-2">Disk I/O</div>
                                       <div className="space-y-1">
-                                        <div className="text-sm text-green-500 flex items-center gap-1">
-                                          <span>↓</span>
-                                          <span>{((selectedVM.diskread || 0) / 1024 ** 2).toFixed(2)} MB</span>
-                                        </div>
-                                        <div className="text-sm text-blue-500 flex items-center gap-1">
-                                          <span>↑</span>
-                                          <span>{((selectedVM.diskwrite || 0) / 1024 ** 2).toFixed(2)} MB</span>
-                                        </div>
+                                        <div className="text-sm text-green-500">↓ {((selectedVM.diskread || 0) / 1024 ** 2).toFixed(2)} MB</div>
+                                        <div className="text-sm text-blue-500">↑ {((selectedVM.diskwrite || 0) / 1024 ** 2).toFixed(2)} MB</div>
                                       </div>
                                     </div>
+                                    {/* Network I/O */}
                                     <div>
                                       <div className="text-xs text-muted-foreground mb-2">Network I/O</div>
                                       <div className="space-y-1">
-                                        <div className="text-sm text-green-500 flex items-center gap-1">
-                                          <span>↓</span>
-                                          <span>{formatNetworkTraffic(selectedVM.netin || 0, networkUnit)}</span>
-                                        </div>
-                                        <div className="text-sm text-blue-500 flex items-center gap-1">
-                                          <span>↑</span>
-                                          <span>{formatNetworkTraffic(selectedVM.netout || 0, networkUnit)}</span>
-                                        </div>
+                                        <div className="text-sm text-green-500">↓ {formatNetworkTraffic(selectedVM.netin || 0, networkUnit)}</div>
+                                        <div className="text-sm text-blue-500">↑ {formatNetworkTraffic(selectedVM.netout || 0, networkUnit)}</div>
                                       </div>
                                     </div>
+                                    {/* OS Icon */}
                                     <div className="flex items-center justify-center">
                                       {getOSIcon(vmDetails?.os_info, selectedVM.type)}
                                     </div>
@@ -1314,21 +1302,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               </Card>
                             </div>
 
-                            {detailsLoading ? (
-                              <div className="text-center py-8 text-muted-foreground">Loading configuration...</div>
-                            ) : vmDetails?.config ? (
+                            {/* Resources Section Mobile */}
+                            {vmDetails?.config && (
                               <Card className="border border-border bg-card/50">
                                 <CardContent className="p-4">
-                                  <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Resources</h3>
-                                    <div className="flex gap-2">
-                                      <Button variant="outline" size="sm" onClick={() => setShowNotes(!showNotes)} className="text-xs bg-black/5 dark:bg-white/5">
-                                        {showNotes ? <><ChevronUp className="h-3 w-3 mr-1" />Notes</> : <><ChevronDown className="h-3 w-3 mr-1" />Notes</>}
-                                      </Button>
-                                      <Button variant="outline" size="sm" onClick={() => setShowAdditionalInfo(!showAdditionalInfo)} className="text-xs bg-black/5 dark:bg-white/5">
-                                        {showAdditionalInfo ? <><ChevronUp className="h-3 w-3 mr-1" />Less</> : <><ChevronDown className="h-3 w-3 mr-1" />+ Info</>}
-                                      </Button>
+                                  <div className="flex items-center gap-2 mb-4">
+                                    <div className="p-1.5 rounded-md bg-blue-500/10">
+                                      <Cpu className="h-4 w-4 text-blue-500" />
                                     </div>
+                                    <h3 className="text-sm font-semibold text-foreground">Resources</h3>
                                   </div>
                                   <div className="grid grid-cols-3 gap-3">
                                     {vmDetails.config.cores && (
@@ -1343,134 +1325,153 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         <div className="font-semibold text-blue-500">{vmDetails.config.memory} MB</div>
                                       </div>
                                     )}
-                                    {vmDetails.config.swap && (
+                                    {vmDetails.config.swap !== undefined && (
                                       <div>
                                         <div className="text-xs text-muted-foreground mb-1">Swap</div>
                                         <div className="font-semibold text-foreground">{vmDetails.config.swap} MB</div>
                                       </div>
                                     )}
                                   </div>
-                                  {selectedVM?.type === "lxc" && vmDetails?.lxc_ip_info && (
+                                  {selectedVM?.type === "lxc" && vmDetails?.lxc_ip_info && vmDetails.lxc_ip_info.real_ips.length > 0 && (
                                     <div className="mt-4 pt-4 border-t border-border">
-                                      <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">IP Addresses</h4>
+                                      <h4 className="text-sm font-semibold text-muted-foreground mb-2">IP Addresses</h4>
                                       <div className="flex flex-wrap gap-2">
                                         {vmDetails.lxc_ip_info.real_ips.map((ip, index) => (
-                                          <Badge key={`mobile-real-ip-${ip}-${index}`} variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">{ip}</Badge>
-                                        ))}
-                                        {vmDetails.lxc_ip_info.docker_ips.map((ip, index) => (
-                                          <Badge key={`mobile-docker-ip-${ip}-${index}`} variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">{ip} (Bridge)</Badge>
+                                          <Badge key={`mobile-ip-${ip}-${index}`} variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                                            {ip}
+                                          </Badge>
                                         ))}
                                       </div>
                                     </div>
                                   )}
                                 </CardContent>
                               </Card>
-                            ) : null}
+                            )}
                           </>
                         )}
-                        </div>
+                      </div>
                     </div>
-                      
+
                     {/* Page 1: Backups */}
                     <div 
-                      className={`absolute inset-0 overflow-y-auto transition-all duration-300 ${modalPage === 1 ? 'opacity-100 translate-x-0 z-10' : 'opacity-0 translate-x-4 z-0 pointer-events-none'}`}
+                      className={`absolute inset-0 px-6 py-4 overflow-y-auto transition-all duration-300 ease-in-out ${
+                        modalPage === 1 
+                          ? 'opacity-100 translate-x-0' 
+                          : 'opacity-0 translate-x-full pointer-events-none'
+                      }`}
                     >
                       <div className="space-y-4">
-                          <Card className="border border-border bg-card/50">
-                            <CardContent className="p-4">
-                              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Create Backup</h3>
-                              <div className="space-y-3">
-                                <div>
-                                  <label className="text-xs text-muted-foreground mb-1 block">Storage</label>
-                                  <Select value={selectedBackupStorage} onValueChange={setSelectedBackupStorage}>
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder="Select storage" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {backupStorages.map((storage) => (
-                                        <SelectItem key={storage.storage} value={storage.storage}>
-                                          {storage.storage} ({storage.avail_human} free)
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <Button 
-                                  className="w-full bg-amber-600 hover:bg-amber-700 text-white"
-                                  onClick={handleCreateBackup}
-                                  disabled={creatingBackup || !selectedBackupStorage}
-                                >
-                                  {creatingBackup ? (
-                                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Creating...</>
-                                  ) : (
-                                    <><Archive className="h-4 w-4 mr-2" />Create Backup</>
-                                  )}
-                                </Button>
+                        <Card className="border border-border bg-card/50 h-full">
+                          <CardContent className="p-4">
+                            {/* Header */}
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="p-1.5 rounded-md bg-amber-500/10">
+                                <Archive className="h-4 w-4 text-amber-500" />
                               </div>
-                            </CardContent>
-                          </Card>
-                          
-                          <Card className="border border-border bg-card/50">
-                            <CardContent className="p-4">
-                              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-                                Backups ({vmBackups.length})
-                              </h3>
-                              {loadingBackups ? (
-                                <div className="text-center py-4 text-muted-foreground">
-                                  <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-                                  Loading backups...
-                                </div>
-                              ) : vmBackups.length === 0 ? (
-                                <div className="text-center py-4 text-muted-foreground text-sm">
-                                  No backups found
-                                </div>
-                              ) : (
-                                <div className="space-y-2">
-                                  {vmBackups.map((backup, index) => (
-                                    <div key={`backup-${backup.volid}-${index}`} className="p-3 rounded-lg bg-muted/50 border border-border">
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <div className="text-sm font-medium">{backup.date}</div>
-                                          <div className="text-xs text-muted-foreground">{backup.storage}</div>
-                                        </div>
-                                        <Badge variant="outline" className="text-xs">{backup.size_human}</Badge>
-                                      </div>
-                                    </div>
+                              <h3 className="text-sm font-semibold text-foreground">Backups</h3>
+                            </div>
+                            
+                            {/* Create Backup */}
+                            <div className="space-y-3 mb-4">
+                              <Select value={selectedBackupStorage} onValueChange={setSelectedBackupStorage}>
+                                <SelectTrigger className="w-full h-10">
+                                  <SelectValue placeholder="Select storage" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {backupStorages.map((storage) => (
+                                    <SelectItem key={`mobile-storage-${storage.storage}`} value={storage.storage}>
+                                      {storage.storage} ({storage.avail_human} free)
+                                    </SelectItem>
                                   ))}
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        </div>
+                                </SelectContent>
+                              </Select>
+                              <Button 
+                                className="w-full h-10 bg-amber-600 hover:bg-amber-700 text-white"
+                                onClick={handleCreateBackup}
+                                disabled={creatingBackup || !selectedBackupStorage}
+                              >
+                                {creatingBackup ? (
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                ) : (
+                                  <Plus className="h-4 w-4 mr-2" />
+                                )}
+                                Create Backup
+                              </Button>
+                            </div>
+                            
+                            {/* Divider */}
+                            <div className="border-t border-border/50 my-4" />
+                            
+                            {/* Backup List */}
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs text-muted-foreground">Available backups</span>
+                              <Badge variant="secondary" className="text-xs">{vmBackups.length}</Badge>
+                            </div>
+                            
+                            {loadingBackups ? (
+                              <div className="flex items-center justify-center py-8 text-muted-foreground">
+                                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                                <span>Loading...</span>
+                              </div>
+                            ) : vmBackups.length === 0 ? (
+                              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                                <Archive className="h-10 w-10 mb-2 opacity-30" />
+                                <span className="text-sm">No backups found</span>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {vmBackups.map((backup, index) => (
+                                  <div 
+                                    key={`mobile-backup-${backup.volid}-${index}`}
+                                    className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                                      <Clock className="h-4 w-4 text-muted-foreground" />
+                                      <span className="text-sm">{backup.date}</span>
+                                    </div>
+                                    <Badge variant="outline" className="text-xs font-mono">
+                                      {backup.size_human}
+                                    </Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Mobile pagination dots */}
-                  <div className="flex justify-center gap-4 py-3 border-t border-border/50">
+                  {/* Pagination dots */}
+                  <div className="flex justify-center items-center gap-3 py-3 border-t border-border/50">
                     <button
                       type="button"
                       onClick={() => setModalPage(0)}
-                      className={`w-3.5 h-3.5 rounded-full transition-all ${modalPage === 0 ? 'bg-primary scale-110' : 'bg-zinc-400 dark:bg-zinc-600'}`}
-                      aria-label="Page 1: Main info"
+                      className={`w-2.5 h-2.5 rounded-full transition-all ${
+                        modalPage === 0 ? 'bg-primary scale-110' : 'bg-muted-foreground/30'
+                      }`}
+                      aria-label="Main info"
                     />
                     <button
                       type="button"
-                      onClick={() => { setModalPage(1); if (selectedVM) fetchVmBackups(selectedVM.vmid); }}
-                      className={`w-3.5 h-3.5 rounded-full transition-all ${modalPage === 1 ? 'bg-primary scale-110' : 'bg-zinc-400 dark:bg-zinc-600'}`}
-                      aria-label="Page 2: Backups"
+                      onClick={() => setModalPage(1)}
+                      className={`w-2.5 h-2.5 rounded-full transition-all ${
+                        modalPage === 1 ? 'bg-primary scale-110' : 'bg-muted-foreground/30'
+                      }`}
+                      aria-label="Backups"
                     />
                   </div>
                 </div>
-                
-{/* Desktop layout */}
-                  <div className="hidden sm:block overflow-y-auto pr-2" style={{ maxHeight: 'calc(100vh - 280px)' }}>
-                    <div className="space-y-4">
+
+                {/* Desktop layout */}
+                <div className="hidden sm:block overflow-y-auto px-6 py-4" style={{ maxHeight: 'calc(100vh - 260px)' }}>
+                  <div className="space-y-4">
                     {selectedVM && (
                       <>
                         <div key={`metrics-${selectedVM.vmid}`}>
-                        <Card
-                          className="cursor-pointer rounded-lg border border-border bg-card hover:bg-black/5 dark:hover:bg-white/5 transition-colors group"
+                          <Card
+                          className="cursor-pointer rounded-lg border border-black/10 dark:border-white/10 sm:border-border max-sm:bg-black/5 max-sm:dark:bg-white/5 sm:bg-card sm:hover:bg-black/5 sm:dark:hover:bg-white/5 transition-colors group"
                           onClick={handleMetricsClick}
                         >
                           <CardContent className="p-4">
@@ -1557,103 +1558,90 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
                       {/* Backups Section - Always visible, loads independently */}
                       <Card className="border border-border bg-card/50">
-                        <CardContent className="p-5">
-                          <div className="flex items-center justify-between mb-5">
+                        <CardContent className="p-4">
+                          {/* Header */}
+                          <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
-                              <div className="p-2 rounded-lg bg-amber-500/10">
+                              <div className="p-1.5 rounded-md bg-amber-500/10">
                                 <Archive className="h-4 w-4 text-amber-500" />
                               </div>
-                              <h3 className="text-sm font-semibold text-foreground">
-                                Backups
-                              </h3>
+                              <h3 className="text-sm font-semibold text-foreground">Backups</h3>
                             </div>
-                            <Button
-                              variant="ghost"
+                          </div>
+                          
+                          {/* Create Backup Section */}
+                          <div className="flex items-center gap-2 mb-4">
+                            <Select value={selectedBackupStorage} onValueChange={setSelectedBackupStorage}>
+                              <SelectTrigger className="flex-1 h-9 text-sm">
+                                <SelectValue placeholder="Select storage" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {backupStorages.map((storage) => (
+                                  <SelectItem key={`backup-storage-${storage.storage}`} value={storage.storage}>
+                                    <span className="flex items-center gap-2">
+                                      <Database className="h-3.5 w-3.5 text-muted-foreground" />
+                                      {storage.storage}
+                                      <span className="text-xs text-muted-foreground">({storage.avail_human} free)</span>
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button 
                               size="sm"
-                              onClick={() => selectedVM && fetchVmBackups(selectedVM.vmid)}
-                              className="text-xs text-muted-foreground hover:text-foreground"
+                              className="h-9 bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
+                              onClick={handleCreateBackup}
+                              disabled={creatingBackup || !selectedBackupStorage}
                             >
-                              <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                              Refresh
+                              {creatingBackup ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <Plus className="h-4 w-4" />
+                                  <span className="hidden sm:inline">Create</span>
+                                </>
+                              )}
                             </Button>
                           </div>
                           
-                          {/* Create Backup - Top section */}
-                          <div className="mb-5">
-                            <label className="text-xs font-medium text-muted-foreground block mb-2">
-                              Create New Backup
-                            </label>
-                            <div className="flex gap-2">
-                              <Select value={selectedBackupStorage} onValueChange={setSelectedBackupStorage}>
-                                <SelectTrigger className="flex-1 h-10">
-                                  <SelectValue placeholder="Select storage" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {backupStorages.map((storage) => (
-                                    <SelectItem key={`backup-storage-${storage.storage}`} value={storage.storage}>
-                                      {storage.storage} ({storage.avail_human} free)
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <Button 
-                                className="bg-amber-600 hover:bg-amber-700 text-white h-10 px-4"
-                                onClick={handleCreateBackup}
-                                disabled={creatingBackup || !selectedBackupStorage}
-                              >
-                                {creatingBackup ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <Save className="h-4 w-4 mr-2" />
-                                    Backup
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                          
                           {/* Divider */}
-                          <div className="border-t border-border/50 my-4" />
+                          <div className="border-t border-border/50 my-3" />
                           
-                          {/* Backup List - Bottom section */}
-                          <div>
-                            <div className="flex items-center justify-between mb-3">
-                              <label className="text-xs font-medium text-muted-foreground">
-                                Existing Backups
-                              </label>
-                              <Badge variant="secondary" className="text-xs">
-                                {vmBackups.length} total
-                              </Badge>
-                            </div>
-                            {loadingBackups ? (
-                              <div className="text-center py-4 text-muted-foreground text-sm">
-                                <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-                                Loading backups...
-                              </div>
-                            ) : vmBackups.length === 0 ? (
-                              <div className="text-center py-4 text-muted-foreground text-sm bg-muted/20 rounded-lg">
-                                No backups found for this VM
-                              </div>
-                            ) : (
-                              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                                {vmBackups.map((backup, index) => (
-                                  <div 
-                                    key={`backup-item-${backup.volid}-${index}`} 
-                                    className="flex justify-between items-center text-sm p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                                      <span className="text-foreground">{backup.date}</span>
-                                    </div>
-                                    <Badge variant="outline" className="text-xs font-mono">
-                                      {backup.size_human}
-                                    </Badge>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                          {/* Backup List */}
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-muted-foreground">Available backups</span>
+                            <Badge variant="secondary" className="text-xs h-5">{vmBackups.length}</Badge>
                           </div>
+                          
+                          {loadingBackups ? (
+                            <div className="flex items-center justify-center py-6 text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              <span className="text-sm">Loading backups...</span>
+                            </div>
+                          ) : vmBackups.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                              <Archive className="h-8 w-8 mb-2 opacity-30" />
+                              <span className="text-sm">No backups found</span>
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
+                              {vmBackups.map((backup, index) => (
+                                <div 
+                                  key={`backup-${backup.volid}-${index}`}
+                                  className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span className="text-sm text-foreground">{backup.date}</span>
+                                  </div>
+                                  <Badge variant="outline" className="text-xs font-mono">
+                                    {backup.size_human}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
 
@@ -1664,9 +1652,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           <Card className="border border-border bg-card/50" key={`config-${selectedVM.vmid}`}>
                             <CardContent className="p-4">
                               <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                                  Resources
-                                </h3>
+                                <div className="flex items-center gap-2">
+                                  <div className="p-1.5 rounded-md bg-blue-500/10">
+                                    <Cpu className="h-4 w-4 text-blue-500" />
+                                  </div>
+                                  <h3 className="text-sm font-semibold text-foreground">Resources</h3>
+                                </div>
                                 <div className="flex gap-2">
                                   <Button
                                     variant="outline"
@@ -2189,9 +2180,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           </Card>
                         </>
                       ) : null}
-                      </>
-                    )}
-                  </div>
+                    </>
+                  )}
                 </div>
               </div>
 
