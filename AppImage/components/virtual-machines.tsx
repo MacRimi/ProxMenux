@@ -623,7 +623,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   }
 
   const isHTML = (str: string): boolean => {
-    const htmlRegex = /<\/?[a-z][\s\S]*>/i
+    const htmlRegex = new RegExp('<\\/?[a-z][\\s\\S]*>', 'i')
     return htmlRegex.test(str)
   }
 
