@@ -7,9 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, Terminal, Archive, Plus, Loader2, Clock, Database } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2 } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { Checkbox } from "./ui/checkbox"
+import { Textarea } from "./ui/textarea"
+import { Label } from "./ui/label"
 import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
@@ -302,6 +305,14 @@ export function VirtualMachines() {
   const [selectedBackupStorage, setSelectedBackupStorage] = useState<string>("")
   const [loadingBackups, setLoadingBackups] = useState(false)
   const [creatingBackup, setCreatingBackup] = useState(false)
+  
+  // Backup modal states
+  const [showBackupModal, setShowBackupModal] = useState(false)
+  const [backupMode, setBackupMode] = useState<string>("snapshot")
+  const [backupProtected, setBackupProtected] = useState(false)
+  const [backupNotification, setBackupNotification] = useState<string>("auto")
+  const [backupNotes, setBackupNotes] = useState<string>("{{guestname}}")
+  const [backupPbsChangeMode, setBackupPbsChangeMode] = useState<string>("default")
 
   useEffect(() => {
     const fetchLXCIPs = async () => {
@@ -432,14 +443,34 @@ export function VirtualMachines() {
     }
   }
 
+  const openBackupModal = () => {
+    // Reset modal to defaults
+    setBackupMode("snapshot")
+    setBackupProtected(false)
+    setBackupNotification("auto")
+    setBackupNotes("{{guestname}}")
+    setBackupPbsChangeMode("default")
+    setShowBackupModal(true)
+  }
+
   const handleCreateBackup = async () => {
     if (!selectedVM || !selectedBackupStorage) return
     
     setCreatingBackup(true)
+    setShowBackupModal(false)
+    
     try {
       await fetchApi(`/api/vms/${selectedVM.vmid}/backup`, {
         method: "POST",
-        body: JSON.stringify({ storage: selectedBackupStorage }),
+        body: JSON.stringify({ 
+          storage: selectedBackupStorage,
+          mode: backupMode,
+          compress: "zstd",
+          protected: backupProtected,
+          notification: backupNotification,
+          notes: backupNotes,
+          pbs_change_detection: backupPbsChangeMode
+        }),
       })
       setTimeout(() => fetchVmBackups(selectedVM.vmid), 2000)
     } catch (error) {
@@ -1335,7 +1366,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             <Button 
                               size="sm"
                               className="h-9 bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
-                              onClick={handleCreateBackup}
+                              onClick={openBackupModal}
                               disabled={creatingBackup || !selectedBackupStorage}
                             >
                               {creatingBackup ? (
@@ -1388,12 +1419,15 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   key={`backup-${backup.volid}-${index}`}
                                   className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+                                    <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                                     <span className="text-sm text-foreground">{backup.date}</span>
+                                    <Badge variant="outline" className="text-xs bg-muted/50 ml-auto flex-shrink-0">
+                                      {backup.storage}
+                                    </Badge>
                                   </div>
-                                  <Badge variant="outline" className="text-xs font-mono">
+                                  <Badge variant="outline" className="text-xs font-mono ml-2 flex-shrink-0">
                                     {backup.size_human}
                                   </Badge>
                                 </div>
@@ -2002,6 +2036,155 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               />
             )
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Backup Configuration Modal */}
+      <Dialog open={showBackupModal} onOpenChange={setShowBackupModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-500">
+              <Archive className="h-5 w-5" />
+              Backup {selectedVM?.type?.toUpperCase()} {selectedVM?.vmid} ({selectedVM?.name})
+            </DialogTitle>
+            <DialogDescription>
+              Configure backup options for this {selectedVM?.type === 'lxc' ? 'container' : 'virtual machine'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            {/* Storage & Mode Row */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm flex items-center gap-1.5">
+                  <Database className="h-3.5 w-3.5" />
+                  Storage
+                </Label>
+                <Select value={selectedBackupStorage} onValueChange={setSelectedBackupStorage}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select storage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {backupStorages.map((storage) => (
+                      <SelectItem key={`modal-storage-${storage.storage}`} value={storage.storage}>
+                        {storage.storage} ({storage.avail_human} free)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm flex items-center gap-1.5">
+                  <Settings2 className="h-3.5 w-3.5" />
+                  Mode
+                </Label>
+                <Select value={backupMode} onValueChange={setBackupMode}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="snapshot">Snapshot</SelectItem>
+                    <SelectItem value="suspend">Suspend</SelectItem>
+                    <SelectItem value="stop">Stop</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {/* Notification Row */}
+            <div className="space-y-2">
+              <Label className="text-sm flex items-center gap-1.5">
+                <Bell className="h-3.5 w-3.5" />
+                Notification
+              </Label>
+              <Select value={backupNotification} onValueChange={setBackupNotification}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Use global settings</SelectItem>
+                  <SelectItem value="always">Always notify</SelectItem>
+                  <SelectItem value="failure">Notify on failure</SelectItem>
+                  <SelectItem value="never">Never notify</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Protected Checkbox */}
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="backup-protected" 
+                checked={backupProtected}
+                onCheckedChange={(checked) => setBackupProtected(checked === true)}
+              />
+              <Label htmlFor="backup-protected" className="text-sm flex items-center gap-1.5 cursor-pointer">
+                <Shield className="h-3.5 w-3.5" />
+                Protected (prevent accidental deletion)
+              </Label>
+            </div>
+            
+            {/* PBS Change Detection Mode (only for LXC) */}
+            {selectedVM?.type === 'lxc' && (
+              <div className="space-y-2">
+                <Label className="text-sm flex items-center gap-1.5">
+                  <Settings2 className="h-3.5 w-3.5" />
+                  PBS change detection mode
+                  <span className="text-xs text-muted-foreground ml-1">(for PBS storage)</span>
+                </Label>
+                <Select value={backupPbsChangeMode} onValueChange={setBackupPbsChangeMode}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default</SelectItem>
+                    <SelectItem value="legacy">Legacy</SelectItem>
+                    <SelectItem value="data">Data</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label className="text-sm flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5" />
+                Notes
+              </Label>
+              <Textarea 
+                value={backupNotes}
+                onChange={(e) => setBackupNotes(e.target.value)}
+                placeholder="{{guestname}}"
+                className="min-h-[80px] resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                {'Variables: {{cluster}}, {{guestname}}, {{node}}, {{vmid}}'}
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBackupModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateBackup}
+              disabled={creatingBackup || !selectedBackupStorage}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {creatingBackup ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Archive className="h-4 w-4 mr-2" />
+                  Backup
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

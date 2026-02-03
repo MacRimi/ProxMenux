@@ -5616,11 +5616,17 @@ def api_create_backup(vmid):
         storage = data.get('storage', 'local')
         mode = data.get('mode', 'snapshot')  # snapshot, suspend, stop
         compress = data.get('compress', 'zstd')  # none, lzo, gzip, zstd
+        protected = data.get('protected', False)  # True/False
+        notification = data.get('notification', 'auto')  # always, failure, never, auto
+        notes = data.get('notes', '')  # Backup notes/description
+        pbs_change_detection = data.get('pbs_change_detection', None)  # default, legacy, data (for PBS + LXC)
         
-        # Get node for this VM
+        # Get node and VM type for this VM
         node = None
+        vm_type = None
+        vm_name = None
         
-        # Try to find VM in qemu
+        # Try to find VM in cluster resources
         try:
             result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'],
                                   capture_output=True, text=True, timeout=10)
@@ -5629,12 +5635,20 @@ def api_create_backup(vmid):
                 for vm in vms:
                     if vm.get('vmid') == vmid:
                         node = vm.get('node')
+                        vm_type = vm.get('type')  # 'qemu' or 'lxc'
+                        vm_name = vm.get('name', '')
                         break
         except:
             pass
         
         if not node:
             return jsonify({'error': 'VM not found'}), 404
+        
+        # Process notes template variables
+        if notes:
+            notes = notes.replace('{{guestname}}', vm_name or '')
+            notes = notes.replace('{{vmid}}', str(vmid))
+            notes = notes.replace('{{node}}', node or '')
         
         # Create backup using vzdump
         cmd = [
@@ -5645,6 +5659,22 @@ def api_create_backup(vmid):
             '--node', node
         ]
         
+        # Add protected flag if enabled
+        if protected:
+            cmd.extend(['--protected', '1'])
+        
+        # Add notification mode
+        if notification and notification != 'auto':
+            cmd.extend(['--notification-mode', notification])
+        
+        # Add notes if provided
+        if notes:
+            cmd.extend(['--notes-template', notes])
+        
+        # Add PBS change detection mode (only for LXC with PBS storage)
+        if pbs_change_detection and vm_type == 'lxc':
+            cmd.extend(['--pbs-change-detection-mode', pbs_change_detection])
+        
         # Run vzdump in background
         result = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
@@ -5653,7 +5683,10 @@ def api_create_backup(vmid):
             'message': f'Backup started for VM {vmid}',
             'storage': storage,
             'mode': mode,
-            'compress': compress
+            'compress': compress,
+            'protected': protected,
+            'notification': notification,
+            'notes': notes
         })
         
     except Exception as e:
