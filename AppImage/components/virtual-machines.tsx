@@ -224,6 +224,28 @@ const getUsageColor = (percent: number): string => {
   return "text-foreground"
 }
 
+// Generate consistent color for storage names
+const storageColors = [
+  { bg: "bg-blue-500/20", text: "text-blue-400", border: "border-blue-500/30" },
+  { bg: "bg-emerald-500/20", text: "text-emerald-400", border: "border-emerald-500/30" },
+  { bg: "bg-purple-500/20", text: "text-purple-400", border: "border-purple-500/30" },
+  { bg: "bg-amber-500/20", text: "text-amber-400", border: "border-amber-500/30" },
+  { bg: "bg-pink-500/20", text: "text-pink-400", border: "border-pink-500/30" },
+  { bg: "bg-cyan-500/20", text: "text-cyan-400", border: "border-cyan-500/30" },
+  { bg: "bg-rose-500/20", text: "text-rose-400", border: "border-rose-500/30" },
+  { bg: "bg-indigo-500/20", text: "text-indigo-400", border: "border-indigo-500/30" },
+]
+
+const getStorageColor = (storageName: string) => {
+  // Generate a consistent hash from storage name
+  let hash = 0
+  for (let i = 0; i < storageName.length; i++) {
+    hash = storageName.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const index = Math.abs(hash) % storageColors.length
+  return storageColors[index]
+}
+
 const getIconColor = (percent: number): string => {
   if (percent >= 95) return "text-red-500"
   if (percent >= 86) return "text-orange-500"
@@ -1423,7 +1445,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
                                     <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                                     <span className="text-sm text-foreground">{backup.date}</span>
-                                    <Badge variant="outline" className="text-xs bg-muted/50 ml-auto flex-shrink-0">
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`text-xs ml-auto flex-shrink-0 ${getStorageColor(backup.storage).bg} ${getStorageColor(backup.storage).text} ${getStorageColor(backup.storage).border}`}
+                                    >
                                       {backup.storage}
                                     </Badge>
                                   </div>

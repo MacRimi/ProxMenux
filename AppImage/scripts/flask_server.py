@@ -5650,11 +5650,9 @@ def api_create_backup(vmid):
             notes = notes.replace('{{vmid}}', str(vmid))
             notes = notes.replace('{{node}}', node or '')
         
-        # Build pvesh command to create backup via Proxmox API
-        # This creates a vzdump task through the API which handles clustering properly
+        # Build vzdump command directly (more reliable than pvesh for backups)
         cmd = [
-            'pvesh', 'create', f'/nodes/{node}/vzdump',
-            '--vmid', str(vmid),
+            'vzdump', str(vmid),
             '--storage', storage,
             '--mode', mode,
             '--compress', compress
@@ -5664,12 +5662,7 @@ def api_create_backup(vmid):
         if protected:
             cmd.extend(['--protected', '1'])
         
-        # Add notification mode (mailnotification for older versions, notification-mode for newer)
-        if notification and notification != 'auto':
-            # Try notification-mode first (newer Proxmox versions)
-            cmd.extend(['--notification-mode', notification])
-        
-        # Add notes if provided
+        # Add notes if provided (use --description for compatibility)
         if notes:
             cmd.extend(['--notes-template', notes])
         
@@ -5677,14 +5670,26 @@ def api_create_backup(vmid):
         if pbs_change_detection and pbs_change_detection != 'default' and vm_type == 'lxc':
             cmd.extend(['--pbs-change-detection-mode', pbs_change_detection])
         
-        # Execute the backup command
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        # Execute vzdump - it will create a Proxmox task automatically
+        # Using Popen to not block and let vzdump manage the task
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            start_new_session=True  # Detach from parent process
+        )
         
-        if result.returncode != 0:
-            error_msg = result.stderr or result.stdout or 'Unknown error'
+        # Give it a moment to start and check if it failed immediately
+        import time
+        time.sleep(0.5)
+        
+        # Check if process failed immediately
+        poll_result = process.poll()
+        if poll_result is not None and poll_result != 0:
+            _, stderr = process.communicate(timeout=5)
             return jsonify({
                 'success': False,
-                'error': f'Backup failed: {error_msg}',
+                'error': f'Backup failed to start: {stderr.decode() if stderr else "Unknown error"}',
                 'command': ' '.join(cmd)
             }), 500
         
@@ -5695,9 +5700,7 @@ def api_create_backup(vmid):
             'mode': mode,
             'compress': compress,
             'protected': protected,
-            'notification': notification,
-            'notes': notes,
-            'task_output': result.stdout
+            'notes': notes
         })
         
     except subprocess.TimeoutExpired:
