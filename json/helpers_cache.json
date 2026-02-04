@@ -2587,6 +2587,23 @@
     "type": "ct"
   },
   {
+    "name": "Immich Public Proxy",
+    "slug": "immich-public-proxy",
+    "desc": "Share your Immich photos and albums in a safe way without exposing your Immich instance to the public.",
+    "script": "tools/addon/immich-public-proxy.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/immich-public-proxy.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/addon/immich-public-proxy.sh",
+    "os": "generic",
+    "categories": [
+      21
+    ],
+    "notes": [
+      "Requires Node.js 24+",
+      "Update with: update_immich-public-proxy"
+    ],
+    "type": "addon"
+  },
+  {
     "name": "Infisical",
     "slug": "infisical",
     "desc": "Secrets, certificates, and access management on autopilot. All-in-one platform to securely manage application secrets, certificates, SSH keys, and configurations across your team and infrastructure.",
