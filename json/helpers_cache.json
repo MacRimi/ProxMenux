@@ -7478,6 +7478,26 @@
     }
   },
   {
+    "name": "Wealthfolio",
+    "slug": "wealthfolio",
+    "desc": "Wealthfolio is a beautiful, privacy-focused investment tracker with local data storage. Track your portfolio across multiple accounts and asset types with detailed performance analytics, goal planning, and multi-currency support.",
+    "script": "ct/wealthfolio.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/wealthfolio.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/wealthfolio.sh",
+    "os": "debian",
+    "categories": [
+      23
+    ],
+    "notes": [
+      "Login password is stored in ~/wealthfolio.creds"
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": null,
+      "password": "See ~/wealthfolio.creds"
+    }
+  },
+  {
     "name": "Web-Check",
     "slug": "web-check",
     "desc": "Get an insight into the inner-workings of a given website: uncover potential attack vectors, analyse server architecture, view security configurations, and learn what technologies a site is using.",
