@@ -6385,6 +6385,25 @@
     "type": "ct"
   },
   {
+    "name": "SQL Server 2025",
+    "slug": "sqlserver2025",
+    "desc": "Script to automatically set up a SQL Server 2025 installation with Ubuntu 24.04 support.",
+    "script": "ct/sqlserver2025.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/sqlserver2025.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/sqlserver2025.sh",
+    "os": "ubuntu",
+    "categories": [
+      8
+    ],
+    "notes": [
+      "If you choose not to run the installation setup, execute: `/opt/mssql/bin/mssql-conf setup` in LXC shell.",
+      "You can setup the admin account 'SA' during installation",
+      "Make sure you disable the SA account if you intend to use this in production!",
+      "Ubuntu 24.04 support requires SQL Server 2025 CU1 or later"
+    ],
+    "type": "ct"
+  },
+  {
     "name": "Stirling-PDF",
     "slug": "stirling-pdf",
     "desc": "Stirling-PDF is a powerful locally hosted web based PDF manipulation tool that allows you to perform various operations on PDF files, such as splitting merging, converting, reorganizing, adding images, rotating, compressing, and more.",
