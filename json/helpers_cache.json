@@ -4157,6 +4157,28 @@
     }
   },
   {
+    "name": "Nginx UI",
+    "slug": "nginx-ui",
+    "desc": "Nginx UI is a comprehensive web-based interface designed to simplify the management and configuration of Nginx servers. It provides features like online statistics, ChatGPT-powered config assistant, automatic Let's Encrypt certificates, and config file editing with syntax highlighting.",
+    "script": "ct/nginx-ui.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nginx-ui.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/nginx-ui.sh",
+    "os": "debian",
+    "categories": [
+      21
+    ],
+    "notes": [
+      "Nginx runs on ports 80/443, Nginx UI management interface on port 9000.",
+      "SSL certificates can be managed automatically with Let's Encrypt integration.",
+      "Initial Login data: `cat ~/nginx-ui.creds`"
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": null
+    }
+  },
+  {
     "name": "Nginx Proxy Manager",
     "slug": "nginxproxymanager",
     "desc": "Nginx Proxy Manager is a tool that provides a web-based interface to manage Nginx reverse proxies. It enables users to easily and securely expose their services to the internet by providing features such as HTTPS encryption, domain mapping, and access control. It eliminates the need for manual configuration of Nginx reverse proxies, making it easy for users to quickly and securely expose their services to the public.",
@@ -4535,6 +4557,32 @@
       "Data directory is: `/opt/openarchiver-data`. If you have a lot of email, you might consider mounting external storage to this directory."
     ],
     "type": "ct"
+  },
+  {
+    "name": "OpenCloud",
+    "slug": "opencloud",
+    "desc": "OpenCloud is the file sharing and collaboration solution of the Heinlein Group. Through intelligent file management and a strong open source community, files become valuable resources, effectively structured and usable in the long term. With flexible data rooms and intelligent access rights, teams can access and work together on data anytime, anywhere without barriers, but with a lot of productivity.",
+    "script": "ct/opencloud.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/opencloud.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/opencloud.sh",
+    "os": "debian",
+    "categories": [
+      11
+    ],
+    "notes": [
+      "Valid TLS certificates and fully-qualified domain names behind a reverse proxy (Caddy) for 3 services - OpenCloud, Collabora, and WOPI are **REQUIRED**",
+      "Forgot your admin password? Check `admin_password` in the 'idm' section in `/etc/opencloud/opencloud.yaml`",
+      "**Optional External Apps**: extract zip archives from App Store to `/etc/opencloud/assets/apps`",
+      "**Optional CalDAV and CardDAV**: requires separate Radicale install. Edit and rename `/opt/opencloud/proxy.yaml.bak` and change your Radicale config to use `http_x_remote_user` as the auth method",
+      "**Optional OpenID**: Authelia and PocketID supported. Uncomment relevant lines in `/opt/opencloud/opencloud.env` and consult OpenCloud GitHub discussions for configuration tips",
+      "**Optional Full-text Search with Apache Tika**: requires your own Tika LXC. See `https://community-scripts.github.io/ProxmoxVE/scripts?id=apache-tika`",
+      "**Relevant services**: `opencloud.service`, `opencloud-wopi.service`, `coolwsd.service`"
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": "randomly generated during the installation process"
+    }
   },
   {
     "name": "Opengist",
