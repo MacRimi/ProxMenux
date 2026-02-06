@@ -7212,6 +7212,33 @@
     "type": "ct"
   },
   {
+    "name": "PVE LXC Apps Updater",
+    "slug": "update-apps",
+    "desc": "This script updates community-scripts managed LXC containers on a Proxmox VE node. It detects the installed service, verifies available update scripts, and applies updates interactively or unattended. Optionally, containers can be backed up before the update process. If additional build resources (CPU/RAM) are required, the script adjusts container resources temporarily and restores them after the update. Containers requiring a reboot will be listed at the end of the process.",
+    "script": "tools/pve/update-apps.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/update-apps.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/tools/pve/update-apps.sh",
+    "os": "proxmox",
+    "categories": [
+      1
+    ],
+    "notes": [
+      "Execute within the Proxmox shell.",
+      "Full Guide can be found here: `https://github.com/community-scripts/ProxmoxVE/discussions/11532`",
+      "Only containers with `community-script` or `proxmox-helper-scripts` tags are listed for update.",
+      "Optionally performs a vzdump backup before updating containers.",
+      "If required, the script will temporarily increase container CPU/RAM resources for the build process and restore them after completion.",
+      "At the end of the update, containers requiring a reboot will be listed, and you may choose to reboot them directly.",
+      "Use `var_backup=yes|no` to enable/disable backup (skip prompt).",
+      "Use `var_backup_storage=<name>` to set backup storage location.",
+      "Use `var_container=all|all_running|all_stopped|101,102,...` to select containers.",
+      "Use `var_unattended=yes|no` to run updates without interaction.",
+      "Use `var_skip_confirm=yes` to skip initial confirmation dialog.",
+      "Use `var_auto_reboot=yes|no` to auto-reboot containers after update."
+    ],
+    "type": "pve"
+  },
+  {
     "name": "PVE LXC Updater",
     "slug": "update-lxcs",
     "desc": "This script has been created to simplify and speed up the process of updating the operating system running inside LXC containers across various Linux distributions, such as Ubuntu, Debian, Devuan, Alpine Linux, CentOS-Rocky-Alma, Fedora, and ArchLinux. It's designed to automatically skip templates and specific containers during the update, enhancing its convenience and usability.",
