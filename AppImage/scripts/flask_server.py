@@ -44,6 +44,7 @@ from flask_health_routes import health_bp  # noqa: E402
 from flask_auth_routes import auth_bp  # noqa: E402
 from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
 from jwt_middleware import require_auth  # noqa: E402
+import auth_manager  # noqa: E402
 
 # -------------------------------------------------------------------
 # Logging
