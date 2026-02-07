@@ -1400,6 +1400,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             </Button>
                           </div>
                           
+                          {/* Divider */}
+                          <div className="border-t border-border/50 mb-4" />
+                          
                           {/* Backup List */}
                           <div className="flex items-center justify-between mb-3">
                             <span className="text-xs text-muted-foreground">Available backups</span>

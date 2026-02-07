@@ -13,6 +13,12 @@ import {
   CornerDownLeft,
   GripHorizontal,
   ChevronDown,
+  Search,
+  Send,
+  Lightbulb,
+  Terminal,
+  Trash2,
+  X,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -22,8 +28,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
+import { DialogHeader, DialogDescription } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Dialog as SearchDialog, DialogContent as SearchDialogContent, DialogTitle as SearchDialogTitle } from "@/components/ui/dialog"
 import "xterm/css/xterm.css"
-import { API_PORT } from "@/lib/api-config"
+import { API_PORT, fetchApi } from "@/lib/api-config"
 
 interface LxcTerminalModalProps {
   open: boolean
@@ -31,6 +40,40 @@ interface LxcTerminalModalProps {
   vmid: number
   vmName: string
 }
+
+interface CheatSheetResult {
+  command: string
+  description: string
+  examples: string[]
+}
+
+const proxmoxCommands = [
+  { cmd: "ls -la", desc: "List all files with details" },
+  { cmd: "cd /path/to/dir", desc: "Change directory" },
+  { cmd: "cat filename", desc: "Display file contents" },
+  { cmd: "grep 'pattern' file", desc: "Search for pattern in file" },
+  { cmd: "find . -name 'file'", desc: "Find files by name" },
+  { cmd: "df -h", desc: "Show disk usage" },
+  { cmd: "du -sh *", desc: "Show directory sizes" },
+  { cmd: "free -h", desc: "Show memory usage" },
+  { cmd: "top", desc: "Show running processes" },
+  { cmd: "ps aux | grep process", desc: "Find running process" },
+  { cmd: "systemctl status service", desc: "Check service status" },
+  { cmd: "systemctl restart service", desc: "Restart a service" },
+  { cmd: "apt update && apt upgrade", desc: "Update packages" },
+  { cmd: "apt install package", desc: "Install package" },
+  { cmd: "tail -f /var/log/syslog", desc: "Follow log file" },
+  { cmd: "chmod 755 file", desc: "Change file permissions" },
+  { cmd: "chown user:group file", desc: "Change file owner" },
+  { cmd: "tar -xzf file.tar.gz", desc: "Extract tar.gz archive" },
+  { cmd: "docker ps", desc: "List running containers" },
+  { cmd: "docker images", desc: "List Docker images" },
+  { cmd: "ip addr show", desc: "Show IP addresses" },
+  { cmd: "ping host", desc: "Test network connectivity" },
+  { cmd: "curl -I url", desc: "Get HTTP headers" },
+  { cmd: "history", desc: "Show command history" },
+  { cmd: "clear", desc: "Clear terminal screen" },
+]
 
 function getWebSocketUrl(): string {
   if (typeof window === "undefined") {
@@ -70,6 +113,14 @@ export function LxcTerminalModal({
   const [isResizing, setIsResizing] = useState(false)
   const resizeBarRef = useRef<HTMLDivElement>(null)
   const modalHeightRef = useRef(500)
+
+  // Search state
+  const [searchModalOpen, setSearchModalOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filteredCommands, setFilteredCommands] = useState<Array<{ cmd: string; desc: string }>>(proxmoxCommands)
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<CheatSheetResult[]>([])
+  const [useOnline, setUseOnline] = useState(true)
 
   
 
@@ -358,6 +409,76 @@ export function LxcTerminalModal({
   const sendEnter = useCallback(() => sendKey("\r"), [sendKey])
   const sendCtrlC = useCallback(() => sendKey("\x03"), [sendKey]) // Ctrl+C
 
+  // Search effect - debounced search with cheat.sh
+  useEffect(() => {
+    const searchCheatSh = async (query: string) => {
+      if (!query.trim()) {
+        setSearchResults([])
+        setFilteredCommands(proxmoxCommands)
+        return
+      }
+
+      try {
+        setIsSearching(true)
+        const searchEndpoint = `/api/terminal/search-command?q=${encodeURIComponent(query)}`
+        const data = await fetchApi<{ success: boolean; examples: any[] }>(searchEndpoint, {
+          method: "GET",
+          signal: AbortSignal.timeout(10000),
+        })
+
+        if (!data.success || !data.examples || data.examples.length === 0) {
+          throw new Error("No examples found")
+        }
+
+        const formattedResults: CheatSheetResult[] = data.examples.map((example: any) => ({
+          command: example.command,
+          description: example.description || "",
+          examples: [example.command],
+        }))
+
+        setUseOnline(true)
+        setSearchResults(formattedResults)
+      } catch (error) {
+        const filtered = proxmoxCommands.filter(
+          (item) =>
+            item.cmd.toLowerCase().includes(query.toLowerCase()) ||
+            item.desc.toLowerCase().includes(query.toLowerCase()),
+        )
+        setFilteredCommands(filtered)
+        setSearchResults([])
+        setUseOnline(false)
+      } finally {
+        setIsSearching(false)
+      }
+    }
+
+    const debounce = setTimeout(() => {
+      if (searchQuery && searchQuery.length >= 2) {
+        searchCheatSh(searchQuery)
+      } else {
+        setSearchResults([])
+        setFilteredCommands(proxmoxCommands)
+      }
+    }, 800)
+
+    return () => clearTimeout(debounce)
+  }, [searchQuery])
+
+  const handleClear = useCallback(() => {
+    if (termRef.current) {
+      termRef.current.clear()
+    }
+  }, [])
+
+  const sendToTerminal = useCallback((command: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(command)
+      setTimeout(() => {
+        setSearchModalOpen(false)
+      }, 100)
+    }
+  }, [])
+
   const showMobileControls = isMobile || isTablet
 
   return (
@@ -382,6 +503,28 @@ export function LxcTerminalModal({
           <DialogTitle className="text-sm font-medium text-white">
             Terminal: {vmName} (ID: {vmid})
           </DialogTitle>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setSearchModalOpen(true)}
+              variant="outline"
+              size="sm"
+              disabled={connectionStatus !== "online"}
+              className="h-8 gap-2 bg-blue-600/20 hover:bg-blue-600/30 border-blue-600/50 text-blue-400 disabled:opacity-50"
+            >
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline">Search</span>
+            </Button>
+            <Button
+              onClick={handleClear}
+              variant="outline"
+              size="sm"
+              disabled={connectionStatus !== "online"}
+              className="h-8 gap-2 bg-yellow-600/20 hover:bg-yellow-600/30 border-yellow-600/50 text-yellow-400 disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Clear</span>
+            </Button>
+          </div>
         </div>
 
         {/* Terminal container */}
@@ -504,12 +647,185 @@ export function LxcTerminalModal({
           <Button
             onClick={onClose}
             variant="outline"
-            className="bg-red-600/20 hover:bg-red-600/30 border-red-600/50 text-red-400"
+            size="sm"
+            className="h-8 gap-2 bg-red-600/20 hover:bg-red-600/30 border-red-600/50 text-red-400"
           >
-            Close
+            <X className="h-4 w-4" />
+            <span className="hidden sm:inline">Close</span>
           </Button>
         </div>
       </DialogContent>
+
+      {/* Search Commands Modal */}
+      <SearchDialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
+        <SearchDialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-zinc-800">
+            <SearchDialogTitle className="text-xl font-semibold">Search Commands</SearchDialogTitle>
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2 h-2 rounded-full ${useOnline ? "bg-green-500" : "bg-red-500"}`}
+                title={useOnline ? "Online - Using cheat.sh API" : "Offline - Using local commands"}
+              />
+            </div>
+          </DialogHeader>
+
+          <DialogDescription className="sr-only">Search for Linux commands</DialogDescription>
+
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <Input
+                placeholder="Search commands... (e.g., tar, docker, systemctl)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-zinc-900 border-zinc-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-base"
+                autoCapitalize="none"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </div>
+
+            {isSearching && (
+              <div className="text-center py-4 text-zinc-400">
+                <div className="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent rounded-full mb-2" />
+                <p className="text-sm">Searching cheat.sh...</p>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-2 max-h-[50vh]">
+              {searchResults.length > 0 ? (
+                <>
+                  {searchResults.map((result, index) => (
+                    <div
+                      key={index}
+                      className="p-4 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:border-zinc-600 transition-colors"
+                    >
+                      {result.description && (
+                        <p className="text-xs text-zinc-400 mb-2 leading-relaxed"># {result.description}</p>
+                      )}
+                      <div
+                        onClick={() => sendToTerminal(result.command)}
+                        className="flex items-start justify-between gap-2 cursor-pointer group hover:bg-zinc-800/50 rounded p-2 -m-2"
+                      >
+                        <code className="text-sm text-blue-400 font-mono break-all flex-1">{result.command}</code>
+                        <Send className="h-4 w-4 text-zinc-600 group-hover:text-blue-400 flex-shrink-0 mt-0.5 transition-colors" />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="text-center py-2">
+                    <p className="text-xs text-zinc-500">
+                      <Lightbulb className="inline-block w-3 h-3 mr-1" />
+                      Powered by cheat.sh
+                    </p>
+                  </div>
+                </>
+              ) : filteredCommands.length > 0 && !useOnline ? (
+                filteredCommands.map((item, index) => (
+                  <div
+                    key={index}
+                    onClick={() => sendToTerminal(item.cmd)}
+                    className="p-3 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <code className="text-sm text-blue-400 font-mono break-all">{item.cmd}</code>
+                        <p className="text-xs text-zinc-400 mt-1">{item.desc}</p>
+                      </div>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          sendToTerminal(item.cmd)
+                        }}
+                        size="sm"
+                        variant="ghost"
+                        className="shrink-0 h-7 px-2 text-xs"
+                      >
+                        <Send className="h-3 w-3 mr-1" />
+                        Send
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : !isSearching && !searchQuery && !useOnline ? (
+                proxmoxCommands.map((item, index) => (
+                  <div
+                    key={index}
+                    onClick={() => sendToTerminal(item.cmd)}
+                    className="p-3 rounded-lg border border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 hover:border-blue-500 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <code className="text-sm text-blue-400 font-mono break-all">{item.cmd}</code>
+                        <p className="text-xs text-zinc-400 mt-1">{item.desc}</p>
+                      </div>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          sendToTerminal(item.cmd)
+                        }}
+                        size="sm"
+                        variant="ghost"
+                        className="shrink-0 h-7 px-2 text-xs"
+                      >
+                        <Send className="h-3 w-3 mr-1" />
+                        Send
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : !isSearching ? (
+                <div className="text-center py-12 space-y-4">
+                  {searchQuery ? (
+                    <>
+                      <Search className="w-12 h-12 text-zinc-600 mx-auto" />
+                      <div>
+                        <p className="text-zinc-400 font-medium">{"No results found for \""}{searchQuery}{"\""}</p>
+                        <p className="text-xs text-zinc-500 mt-1">Try a different command or check your spelling</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Terminal className="w-12 h-12 text-zinc-600 mx-auto" />
+                      <div>
+                        <p className="text-zinc-400 font-medium mb-2">Search for any command</p>
+                        <div className="text-sm text-zinc-500 space-y-1">
+                          <p>Try searching for:</p>
+                          <div className="flex flex-wrap justify-center gap-2 mt-2">
+                            {["tar", "grep", "docker", "systemctl", "curl"].map((cmd) => (
+                              <code
+                                key={cmd}
+                                onClick={() => setSearchQuery(cmd)}
+                                className="px-2 py-1 bg-zinc-800 rounded text-blue-400 cursor-pointer hover:bg-zinc-700"
+                              >
+                                {cmd}
+                              </code>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      {useOnline && (
+                        <div className="flex items-center justify-center gap-2 text-xs text-zinc-600 mt-4">
+                          <Lightbulb className="w-3 h-3" />
+                          <span>Powered by cheat.sh</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-3 h-3" />
+                <span>Tip: Search for any Linux command</span>
+              </div>
+              {useOnline && searchResults.length > 0 && <span className="text-zinc-600">Powered by cheat.sh</span>}
+            </div>
+          </div>
+        </SearchDialogContent>
+      </SearchDialog>
     </Dialog>
   )
 }
