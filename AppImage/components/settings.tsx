@@ -5,7 +5,7 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
-import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Wrench, Package, Key, Copy, Eye, EyeOff, Ruler, Trash2, RefreshCw, Clock } from 'lucide-react'
+import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Wrench, Package, Key, Copy, Eye, EyeOff, Ruler, Trash2, RefreshCw, Clock, ShieldCheck, Globe, FileKey, AlertTriangle } from 'lucide-react'
 import { APP_VERSION } from "./release-notes-modal"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
@@ -71,6 +71,19 @@ export function Settings() {
   const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null)
   const [tokenName, setTokenName] = useState("API Token")
 
+  // SSL/HTTPS state
+  const [sslEnabled, setSslEnabled] = useState(false)
+  const [sslSource, setSslSource] = useState<"none" | "proxmox" | "custom">("none")
+  const [sslCertPath, setSslCertPath] = useState("")
+  const [sslKeyPath, setSslKeyPath] = useState("")
+  const [proxmoxCertAvailable, setProxmoxCertAvailable] = useState(false)
+  const [proxmoxCertInfo, setProxmoxCertInfo] = useState<{subject?: string; expires?: string; issuer?: string; is_self_signed?: boolean} | null>(null)
+  const [loadingSsl, setLoadingSsl] = useState(true)
+  const [configuringSsl, setConfiguringSsl] = useState(false)
+  const [showCustomCertForm, setShowCustomCertForm] = useState(false)
+  const [customCertPath, setCustomCertPath] = useState("")
+  const [customKeyPath, setCustomKeyPath] = useState("")
+
   const [networkUnitSettings, setNetworkUnitSettings] = useState<"Bytes" | "Bits">("Bytes")
   const [loadingUnitSettings, setLoadingUnitSettings] = useState(true)
 
@@ -78,6 +91,7 @@ export function Settings() {
     checkAuthStatus()
     loadProxmenuxTools()
     loadApiTokens()
+    loadSslStatus(setSslEnabled, setSslSource, setSslCertPath, setSslKeyPath, setProxmoxCertAvailable, setProxmoxCertInfo, setLoadingSsl)
     getUnitsSettings()
   }, [])
 
@@ -459,6 +473,90 @@ export function Settings() {
     const networkUnit = getNetworkUnit()
     setNetworkUnitSettings(networkUnit)
     setLoadingUnitSettings(false)
+  }
+
+  const loadSslStatus = async () => {
+    try {
+      setLoadingSsl(true)
+      const data = await fetchApi("/api/ssl/status")
+      if (data.success) {
+        setSslEnabled(data.ssl_enabled || false)
+        setSslSource(data.source || "none")
+        setSslCertPath(data.cert_path || "")
+        setSslKeyPath(data.key_path || "")
+        setProxmoxCertAvailable(data.proxmox_available || false)
+        setProxmoxCertInfo(data.cert_info || null)
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setLoadingSsl(false)
+    }
+  }
+
+  const handleEnableSsl = async (source: "proxmox" | "custom", certPath?: string, keyPath?: string) => {
+    setConfiguringSsl(true)
+    setError("")
+    setSuccess("")
+
+    try {
+      const body: Record<string, string> = { source }
+      if (source === "custom" && certPath && keyPath) {
+        body.cert_path = certPath
+        body.key_path = keyPath
+      }
+
+      const data = await fetchApi("/api/ssl/configure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+
+      if (data.success) {
+        setSuccess(data.message || "SSL configured successfully. Restart the monitor service to apply.")
+        setSslEnabled(true)
+        setSslSource(source)
+        setShowCustomCertForm(false)
+        setCustomCertPath("")
+        setCustomKeyPath("")
+        loadSslStatus()
+      } else {
+        setError(data.message || "Failed to configure SSL")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to configure SSL")
+    } finally {
+      setConfiguringSsl(false)
+    }
+  }
+
+  const handleDisableSsl = async () => {
+    if (!confirm("Are you sure you want to disable HTTPS? The monitor will revert to HTTP after restart.")) {
+      return
+    }
+
+    setConfiguringSsl(true)
+    setError("")
+    setSuccess("")
+
+    try {
+      const data = await fetchApi("/api/ssl/disable", { method: "POST" })
+
+      if (data.success) {
+        setSuccess(data.message || "SSL disabled. Restart the monitor service to apply.")
+        setSslEnabled(false)
+        setSslSource("none")
+        setSslCertPath("")
+        setSslKeyPath("")
+        loadSslStatus()
+      } else {
+        setError(data.message || "Failed to disable SSL")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to disable SSL")
+    } finally {
+      setConfiguringSsl(false)
+    }
   }
 
   return (
@@ -1074,6 +1172,208 @@ export function Settings() {
           </CardContent>
         </Card>
       )}
+
+      {/* SSL/HTTPS Configuration */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-green-500" />
+            <CardTitle>SSL / HTTPS</CardTitle>
+          </div>
+          <CardDescription>
+            Serve ProxMenux Monitor over HTTPS using your Proxmox host certificate or a custom certificate
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loadingSsl ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full" />
+            </div>
+          ) : (
+            <>
+              {/* Current Status */}
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${sslEnabled ? "bg-green-500/10" : "bg-gray-500/10"}`}>
+                    <Globe className={`h-5 w-5 ${sslEnabled ? "text-green-500" : "text-gray-500"}`} />
+                  </div>
+                  <div>
+                    <p className="font-medium">
+                      {sslEnabled ? "HTTPS Enabled" : "HTTP (No SSL)"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {sslEnabled
+                        ? `Using ${sslSource === "proxmox" ? "Proxmox host" : "custom"} certificate`
+                        : "Monitor is served over unencrypted HTTP"}
+                    </p>
+                  </div>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${sslEnabled ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}`}>
+                  {sslEnabled ? "HTTPS" : "HTTP"}
+                </div>
+              </div>
+
+              {/* Active certificate info */}
+              {sslEnabled && (
+                <div className="space-y-2 p-3 bg-green-500/5 border border-green-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm font-medium text-green-500">
+                    <FileKey className="h-4 w-4" />
+                    Active Certificate
+                  </div>
+                  <div className="grid gap-1 text-sm text-muted-foreground">
+                    <p><span className="font-medium text-foreground">Cert:</span> <code className="text-xs">{sslCertPath}</code></p>
+                    <p><span className="font-medium text-foreground">Key:</span> <code className="text-xs">{sslKeyPath}</code></p>
+                  </div>
+                  <Button
+                    onClick={handleDisableSsl}
+                    variant="outline"
+                    size="sm"
+                    disabled={configuringSsl}
+                    className="mt-2 text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent"
+                  >
+                    {configuringSsl ? "Disabling..." : "Disable HTTPS"}
+                  </Button>
+                </div>
+              )}
+
+              {/* Proxmox certificate detection */}
+              {!sslEnabled && proxmoxCertAvailable && (
+                <div className="space-y-3 p-4 border border-border rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-green-500" />
+                    <h3 className="font-semibold text-sm">Proxmox Host Certificate Detected</h3>
+                  </div>
+
+                  {proxmoxCertInfo && (
+                    <div className="grid gap-1 text-sm text-muted-foreground bg-muted/50 p-3 rounded">
+                      {proxmoxCertInfo.subject && (
+                        <p><span className="font-medium text-foreground">Subject:</span> {proxmoxCertInfo.subject}</p>
+                      )}
+                      {proxmoxCertInfo.issuer && (
+                        <p><span className="font-medium text-foreground">Issuer:</span> {proxmoxCertInfo.issuer}</p>
+                      )}
+                      {proxmoxCertInfo.expires && (
+                        <p><span className="font-medium text-foreground">Expires:</span> {proxmoxCertInfo.expires}</p>
+                      )}
+                      {proxmoxCertInfo.is_self_signed && (
+                        <div className="flex items-center gap-1.5 mt-1 text-yellow-500">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          <span className="text-xs">Self-signed certificate (browsers will show a security warning)</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={() => handleEnableSsl("proxmox")}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    disabled={configuringSsl}
+                  >
+                    {configuringSsl ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                        Configuring...
+                      </div>
+                    ) : (
+                      <>
+                        <ShieldCheck className="h-4 w-4 mr-2" />
+                        Use Proxmox Certificate
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {!sslEnabled && !proxmoxCertAvailable && (
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-yellow-500">
+                    No Proxmox host certificate detected. You can configure a custom certificate below.
+                  </p>
+                </div>
+              )}
+
+              {/* Custom certificate option */}
+              {!sslEnabled && (
+                <div className="space-y-3">
+                  {!showCustomCertForm ? (
+                    <Button
+                      onClick={() => setShowCustomCertForm(true)}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <FileKey className="h-4 w-4 mr-2" />
+                      Use Custom Certificate
+                    </Button>
+                  ) : (
+                    <div className="space-y-4 border border-border rounded-lg p-4">
+                      <h3 className="font-semibold text-sm">Custom Certificate Paths</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Enter the absolute paths to your SSL certificate and private key files on the Proxmox server.
+                      </p>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="ssl-cert-path">Certificate Path (.pem / .crt)</Label>
+                        <Input
+                          id="ssl-cert-path"
+                          type="text"
+                          placeholder="/etc/ssl/certs/mydomain.pem"
+                          value={customCertPath}
+                          onChange={(e) => setCustomCertPath(e.target.value)}
+                          disabled={configuringSsl}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="ssl-key-path">Private Key Path (.key / .pem)</Label>
+                        <Input
+                          id="ssl-key-path"
+                          type="text"
+                          placeholder="/etc/ssl/private/mydomain.key"
+                          value={customKeyPath}
+                          onChange={(e) => setCustomKeyPath(e.target.value)}
+                          disabled={configuringSsl}
+                        />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleEnableSsl("custom", customCertPath, customKeyPath)}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                          disabled={configuringSsl || !customCertPath || !customKeyPath}
+                        >
+                          {configuringSsl ? "Configuring..." : "Enable HTTPS"}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowCustomCertForm(false)
+                            setCustomCertPath("")
+                            setCustomKeyPath("")
+                          }}
+                          variant="outline"
+                          className="flex-1"
+                          disabled={configuringSsl}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Info note about restart */}
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
+                <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-blue-500">
+                  Changes to SSL configuration require a monitor service restart to take effect.
+                  The service will automatically use HTTPS on port 8008 when enabled.
+                </p>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ProxMenux Optimizations */}
       <Card>

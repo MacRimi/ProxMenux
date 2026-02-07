@@ -6694,8 +6694,6 @@ def stream_script_logs(session_id):
 
 
 if __name__ == '__main__':
-    # API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics
-    
     import sys
     import logging
     
@@ -6703,11 +6701,25 @@ if __name__ == '__main__':
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
     
-    # Silence Flask CLI banner (removes "Serving Flask app", "Debug mode", "WARNING" messages)
+    # Silence Flask CLI banner
     cli = sys.modules['flask.cli']
     cli.show_server_banner = lambda *x: None
     
-    # Print only essential information
-    # print("API endpoints available at: /api/system, /api/system-info, /api/storage, /api/proxmox-storage, /api/network, /api/vms, /api/logs, /api/health, /api/hardware, /api/prometheus, /api/node/metrics")
+    # Check for SSL configuration
+    ssl_ctx = None
+    try:
+        ssl_ctx = auth_manager.get_ssl_context()
+        if ssl_ctx:
+            print(f"[ProxMenux] Starting with HTTPS (cert: {ssl_ctx[0]})")
+        else:
+            print("[ProxMenux] Starting with HTTP (no SSL configured)")
+    except Exception as e:
+        print(f"[ProxMenux] SSL config error, falling back to HTTP: {e}")
+        ssl_ctx = None
     
-    app.run(host='0.0.0.0', port=8008, debug=False)
+    try:
+        app.run(host='0.0.0.0', port=8008, debug=False, ssl_context=ssl_ctx)
+    except Exception as e:
+        if ssl_ctx:
+            print(f"[ProxMenux] SSL startup failed ({e}), falling back to HTTP")
+            app.run(host='0.0.0.0', port=8008, debug=False)

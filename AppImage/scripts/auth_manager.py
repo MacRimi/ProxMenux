@@ -571,6 +571,203 @@ def disable_totp(username, password):
         return False, "Failed to disable 2FA"
 
 
+# -------------------------------------------------------------------
+# SSL/HTTPS Certificate Management
+# -------------------------------------------------------------------
+
+SSL_CONFIG_FILE = Path(os.environ.get("PROXMENUX_SSL_CONFIG", "/etc/proxmenux/ssl_config.json"))
+
+# Default Proxmox certificate paths
+PROXMOX_CERT_PATH = "/etc/pve/local/pve-ssl.pem"
+PROXMOX_KEY_PATH = "/etc/pve/local/pve-ssl.key"
+
+
+def load_ssl_config():
+    """Load SSL configuration from file"""
+    if not SSL_CONFIG_FILE.exists():
+        return {
+            "enabled": False,
+            "cert_path": "",
+            "key_path": "",
+            "source": "none"  # "none", "proxmox", "custom"
+        }
+    
+    try:
+        with open(SSL_CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+            config.setdefault("enabled", False)
+            config.setdefault("cert_path", "")
+            config.setdefault("key_path", "")
+            config.setdefault("source", "none")
+            return config
+    except Exception:
+        return {
+            "enabled": False,
+            "cert_path": "",
+            "key_path": "",
+            "source": "none"
+        }
+
+
+def save_ssl_config(config):
+    """Save SSL configuration to file"""
+    try:
+        SSL_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(SSL_CONFIG_FILE, 'w') as f:
+            json.dump(config, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving SSL config: {e}")
+        return False
+
+
+def detect_proxmox_certificates():
+    """
+    Detect available Proxmox certificates.
+    Returns dict with detection results.
+    """
+    result = {
+        "proxmox_available": False,
+        "proxmox_cert": PROXMOX_CERT_PATH,
+        "proxmox_key": PROXMOX_KEY_PATH,
+        "cert_info": None
+    }
+    
+    if os.path.isfile(PROXMOX_CERT_PATH) and os.path.isfile(PROXMOX_KEY_PATH):
+        result["proxmox_available"] = True
+        
+        # Try to get certificate info
+        try:
+            import subprocess
+            cert_output = subprocess.run(
+                ["openssl", "x509", "-in", PROXMOX_CERT_PATH, "-noout", "-subject", "-enddate", "-issuer"],
+                capture_output=True, text=True, timeout=5
+            )
+            if cert_output.returncode == 0:
+                lines = cert_output.stdout.strip().split('\n')
+                info = {}
+                for line in lines:
+                    if line.startswith("subject="):
+                        info["subject"] = line.replace("subject=", "").strip()
+                    elif line.startswith("notAfter="):
+                        info["expires"] = line.replace("notAfter=", "").strip()
+                    elif line.startswith("issuer="):
+                        issuer = line.replace("issuer=", "").strip()
+                        info["issuer"] = issuer
+                        info["is_self_signed"] = info.get("subject", "") == issuer
+                result["cert_info"] = info
+        except Exception:
+            pass
+    
+    return result
+
+
+def validate_certificate_files(cert_path, key_path):
+    """
+    Validate that cert and key files exist and are readable.
+    Returns (valid: bool, message: str)
+    """
+    if not cert_path or not key_path:
+        return False, "Certificate and key paths are required"
+    
+    if not os.path.isfile(cert_path):
+        return False, f"Certificate file not found: {cert_path}"
+    
+    if not os.path.isfile(key_path):
+        return False, f"Key file not found: {key_path}"
+    
+    # Verify files are readable
+    try:
+        with open(cert_path, 'r') as f:
+            content = f.read(100)
+            if "BEGIN CERTIFICATE" not in content and "BEGIN TRUSTED CERTIFICATE" not in content:
+                return False, "Certificate file does not appear to be a valid PEM certificate"
+        
+        with open(key_path, 'r') as f:
+            content = f.read(100)
+            if "BEGIN" not in content or "KEY" not in content:
+                return False, "Key file does not appear to be a valid PEM key"
+    except PermissionError:
+        return False, "Cannot read certificate files. Check file permissions."
+    except Exception as e:
+        return False, f"Error reading certificate files: {str(e)}"
+    
+    # Verify cert and key match
+    try:
+        import subprocess
+        cert_mod = subprocess.run(
+            ["openssl", "x509", "-noout", "-modulus", "-in", cert_path],
+            capture_output=True, text=True, timeout=5
+        )
+        key_mod = subprocess.run(
+            ["openssl", "rsa", "-noout", "-modulus", "-in", key_path],
+            capture_output=True, text=True, timeout=5
+        )
+        if cert_mod.returncode == 0 and key_mod.returncode == 0:
+            if cert_mod.stdout.strip() != key_mod.stdout.strip():
+                return False, "Certificate and key do not match"
+    except Exception:
+        pass  # Non-critical, proceed anyway
+    
+    return True, "Certificate files are valid"
+
+
+def configure_ssl(cert_path, key_path, source="custom"):
+    """
+    Configure SSL with given certificate and key paths.
+    Returns (success: bool, message: str)
+    """
+    valid, message = validate_certificate_files(cert_path, key_path)
+    if not valid:
+        return False, message
+    
+    config = {
+        "enabled": True,
+        "cert_path": cert_path,
+        "key_path": key_path,
+        "source": source
+    }
+    
+    if save_ssl_config(config):
+        return True, "SSL configured successfully. Restart the monitor service to apply changes."
+    else:
+        return False, "Failed to save SSL configuration"
+
+
+def disable_ssl():
+    """Disable SSL and return to HTTP"""
+    config = {
+        "enabled": False,
+        "cert_path": "",
+        "key_path": "",
+        "source": "none"
+    }
+    
+    if save_ssl_config(config):
+        return True, "SSL disabled. Restart the monitor service to apply changes."
+    else:
+        return False, "Failed to save SSL configuration"
+
+
+def get_ssl_context():
+    """
+    Get SSL context for Flask if SSL is configured and enabled.
+    Returns tuple (cert_path, key_path) or None
+    """
+    config = load_ssl_config()
+    
+    if not config.get("enabled"):
+        return None
+    
+    cert_path = config.get("cert_path", "")
+    key_path = config.get("key_path", "")
+    
+    if cert_path and key_path and os.path.isfile(cert_path) and os.path.isfile(key_path):
+        return (cert_path, key_path)
+    
+    return None
+
+
 def authenticate(username, password, totp_token=None):
     """
     Authenticate a user with username, password, and optional TOTP

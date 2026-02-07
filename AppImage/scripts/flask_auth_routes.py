@@ -24,25 +24,89 @@ def auth_status():
         
         return jsonify(status)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
-@auth_bp.route('/api/auth/setup', methods=['POST'])
-def auth_setup():
-    """Set up authentication with username and password"""
+# -------------------------------------------------------------------
+# SSL/HTTPS Certificate Management
+# -------------------------------------------------------------------
+
+@auth_bp.route('/api/ssl/status', methods=['GET'])
+def ssl_status():
+    """Get current SSL configuration status and detect available certificates"""
     try:
-        data = request.json
-        username = data.get('username')
-        password = data.get('password')
+        config = auth_manager.load_ssl_config()
+        detection = auth_manager.detect_proxmox_certificates()
         
-        success, message = auth_manager.setup_auth(username, password)
+        return jsonify({
+            "success": True,
+            "ssl_enabled": config.get("enabled", False),
+            "source": config.get("source", "none"),
+            "cert_path": config.get("cert_path", ""),
+            "key_path": config.get("key_path", ""),
+            "proxmox_available": detection.get("proxmox_available", False),
+            "proxmox_cert": detection.get("proxmox_cert", ""),
+            "proxmox_key": detection.get("proxmox_key", ""),
+            "cert_info": detection.get("cert_info")
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/ssl/configure', methods=['POST'])
+def ssl_configure():
+    """Configure SSL with Proxmox or custom certificates"""
+    try:
+        data = request.json or {}
+        source = data.get("source", "proxmox")
+        
+        if source == "proxmox":
+            cert_path = auth_manager.PROXMOX_CERT_PATH
+            key_path = auth_manager.PROXMOX_KEY_PATH
+        elif source == "custom":
+            cert_path = data.get("cert_path", "")
+            key_path = data.get("key_path", "")
+        else:
+            return jsonify({"success": False, "message": "Invalid source. Use 'proxmox' or 'custom'."}), 400
+        
+        success, message = auth_manager.configure_ssl(cert_path, key_path, source)
         
         if success:
-            return jsonify({"success": True, "message": message})
+            return jsonify({"success": True, "message": message, "requires_restart": True})
         else:
             return jsonify({"success": False, "message": message}), 400
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/ssl/disable', methods=['POST'])
+def ssl_disable():
+    """Disable SSL and return to HTTP"""
+    try:
+        success, message = auth_manager.disable_ssl()
+        
+        if success:
+            return jsonify({"success": True, "message": message, "requires_restart": True})
+        else:
+            return jsonify({"success": False, "message": message}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/ssl/validate', methods=['POST'])
+def ssl_validate():
+    """Validate custom certificate and key file paths"""
+    try:
+        data = request.json or {}
+        cert_path = data.get("cert_path", "")
+        key_path = data.get("key_path", "")
+        
+        valid, message = auth_manager.validate_certificate_files(cert_path, key_path)
+        
+        return jsonify({"success": valid, "message": message})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
 
 
 @auth_bp.route('/api/auth/decline', methods=['POST'])
