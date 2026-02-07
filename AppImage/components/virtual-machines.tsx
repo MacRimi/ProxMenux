@@ -1387,7 +1387,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           <div className="flex items-center gap-2 mb-4">
                             <Button 
                               size="sm"
-                              className="h-9 bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
+                              className="h-9 bg-amber-600/20 border border-amber-600/50 text-amber-400 hover:bg-amber-600/30 gap-1.5"
                               onClick={openBackupModal}
                               disabled={creatingBackup || !selectedBackupStorage}
                             >
@@ -2007,7 +2007,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 {selectedVM?.type === "lxc" && selectedVM?.status === "running" && (
                   <div className="mb-3">
                     <Button
-                      className="w-full bg-zinc-700 hover:bg-zinc-600 text-white"
+                      className="w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30"
                       onClick={() => selectedVM && openLxcTerminal(selectedVM.vmid, selectedVM.name)}
                     >
                       <Terminal className="h-4 w-4 mr-2" />
@@ -2017,7 +2017,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <Button
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    className="w-full bg-green-600/20 border border-green-600/50 text-green-400 hover:bg-green-600/30"
                     disabled={selectedVM?.status === "running" || controlLoading}
                     onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "start")}
                   >
@@ -2025,7 +2025,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     Start
                   </Button>
                   <Button
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
                     disabled={selectedVM?.status !== "running" || controlLoading}
                     onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "shutdown")}
                   >
@@ -2033,7 +2033,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     Shutdown
                   </Button>
                   <Button
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    className="w-full bg-green-600/20 border border-green-600/50 text-green-400 hover:bg-green-600/30"
                     disabled={selectedVM?.status !== "running" || controlLoading}
                     onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "reboot")}
                   >
@@ -2041,7 +2041,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     Reboot
                   </Button>
                   <Button
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    className="w-full bg-red-600/20 border border-red-600/50 text-red-400 hover:bg-red-600/30"
                     disabled={selectedVM?.status !== "running" || controlLoading}
                     onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "stop")}
                   >
@@ -2188,14 +2188,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             </div>
           </div>
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowBackupModal(false)}>
+          <div className="flex items-center gap-3 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowBackupModal(false)}
+              className="flex-1 bg-zinc-800/50 border-zinc-700 text-zinc-300 hover:bg-zinc-700/50"
+            >
               Cancel
             </Button>
             <Button 
               onClick={handleCreateBackup}
               disabled={creatingBackup || !selectedBackupStorage}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              className="flex-1 bg-amber-600/20 border border-amber-600/50 text-amber-400 hover:bg-amber-600/30"
             >
               {creatingBackup ? (
                 <>
@@ -2209,7 +2213,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 </>
               )}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
