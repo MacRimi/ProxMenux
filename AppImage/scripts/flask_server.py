@@ -6698,9 +6698,19 @@ if __name__ == '__main__':
     import sys
     import logging
     
-    # Silence werkzeug logger
+    # Custom filter to suppress TLS handshake noise when running HTTP
+    # (browsers may cache HTTPS and keep sending TLS ClientHello to an HTTP server)
+    class TLSNoiseFilter(logging.Filter):
+        def filter(self, record):
+            msg = record.getMessage() if record else ""
+            if "Bad request version" in msg or "Bad request syntax" in msg:
+                return False
+            return True
+    
+    # Silence werkzeug logger and add TLS noise filter
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
+    log.addFilter(TLSNoiseFilter())
     
     # Silence Flask CLI banner
     cli = sys.modules['flask.cli']
