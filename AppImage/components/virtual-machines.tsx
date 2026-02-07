@@ -472,6 +472,10 @@ export function VirtualMachines() {
     setBackupNotification("auto")
     setBackupNotes("{{guestname}}")
     setBackupPbsChangeMode("default")
+    // Auto-select first storage if none selected
+    if (!selectedBackupStorage && backupStorages.length > 0) {
+      setSelectedBackupStorage(backupStorages[0].storage)
+    }
     setShowBackupModal(true)
   }
 
@@ -1381,42 +1385,20 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               </div>
                               <h3 className="text-sm font-semibold text-foreground">Backups</h3>
                             </div>
-                          </div>
-                          
-                          {/* Create Backup Row */}
-                          <div className="flex items-center gap-2 mb-4">
                             <Button 
                               size="sm"
-                              className="h-9 bg-amber-600/20 border border-amber-600/50 text-amber-400 hover:bg-amber-600/30 gap-1.5"
+                              className="h-7 text-xs bg-amber-600/20 border border-amber-600/50 text-amber-400 hover:bg-amber-600/30 gap-1"
                               onClick={openBackupModal}
-                              disabled={creatingBackup || !selectedBackupStorage}
+                              disabled={creatingBackup}
                             >
                               {creatingBackup ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader2 className="h-3 w-3 animate-spin" />
                               ) : (
-                                <Plus className="h-4 w-4" />
+                                <Plus className="h-3 w-3" />
                               )}
                               <span>Create Backup</span>
                             </Button>
-                            <Select value={selectedBackupStorage} onValueChange={setSelectedBackupStorage}>
-                              <SelectTrigger className="flex-1 h-9">
-                                <SelectValue placeholder="Select storage" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {backupStorages.map((storage) => (
-                                  <SelectItem key={storage.storage} value={storage.storage}>
-                                    <span className="flex items-center gap-2">
-                                      <Database className="h-3.5 w-3.5 text-muted-foreground" />
-                                      {storage.storage} ({storage.avail_human} free)
-                                    </span>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
                           </div>
-                          
-                          {/* Divider */}
-                          <div className="border-t border-border/50 mb-4" />
                           
                           {/* Backup List */}
                           <div className="flex items-center justify-between mb-3">
@@ -2033,7 +2015,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     Shutdown
                   </Button>
                   <Button
-                    className="w-full bg-green-600/20 border border-green-600/50 text-green-400 hover:bg-green-600/30"
+                    className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
                     disabled={selectedVM?.status !== "running" || controlLoading}
                     onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "reboot")}
                   >
