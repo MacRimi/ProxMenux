@@ -57,7 +57,9 @@ def load_auth_config():
         "configured": bool,
         "totp_enabled": bool,  # 2FA enabled flag
         "totp_secret": str,    # TOTP secret key
-        "backup_codes": list   # List of backup codes
+        "backup_codes": list,  # List of backup codes
+        "api_tokens": list,    # List of stored API token metadata
+        "revoked_tokens": list # List of revoked token hashes
     }
     """
     if not AUTH_CONFIG_FILE.exists():
@@ -69,7 +71,9 @@ def load_auth_config():
             "configured": False,
             "totp_enabled": False,
             "totp_secret": None,
-            "backup_codes": []
+            "backup_codes": [],
+            "api_tokens": [],
+            "revoked_tokens": []
         }
     
     try:
@@ -81,6 +85,8 @@ def load_auth_config():
             config.setdefault("totp_enabled", False)
             config.setdefault("totp_secret", None)
             config.setdefault("backup_codes", [])
+            config.setdefault("api_tokens", [])
+            config.setdefault("revoked_tokens", [])
             return config
     except Exception as e:
         print(f"Error loading auth config: {e}")
@@ -92,7 +98,9 @@ def load_auth_config():
             "configured": False,
             "totp_enabled": False,
             "totp_secret": None,
-            "backup_codes": []
+            "backup_codes": [],
+            "api_tokens": [],
+            "revoked_tokens": []
         }
 
 
@@ -141,11 +149,18 @@ def verify_token(token):
     """
     Verify a JWT token
     Returns username if valid, None otherwise
+    Also checks if the token has been revoked
     """
     if not JWT_AVAILABLE or not token:
         return None
     
     try:
+        # Check if the token has been revoked
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        config = load_auth_config()
+        if token_hash in config.get("revoked_tokens", []):
+            return None
+        
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload.get('username')
     except jwt.ExpiredSignatureError:
@@ -154,6 +169,88 @@ def verify_token(token):
     except jwt.InvalidTokenError as e:
         print(f"Invalid token: {e}")
         return None
+
+
+def store_api_token_metadata(token, token_name="API Token"):
+    """
+    Store API token metadata (hash, name, creation date) for listing and revocation.
+    The actual token is never stored - only a hash for identification.
+    """
+    config = load_auth_config()
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    token_id = token_hash[:16]
+    
+    token_entry = {
+        "id": token_id,
+        "name": token_name,
+        "token_hash": token_hash,
+        "token_prefix": token[:12] + "...",
+        "created_at": datetime.utcnow().isoformat() + "Z",
+        "expires_at": (datetime.utcnow() + timedelta(days=365)).isoformat() + "Z"
+    }
+    
+    config.setdefault("api_tokens", [])
+    config["api_tokens"].append(token_entry)
+    save_auth_config(config)
+    return token_entry
+
+
+def list_api_tokens():
+    """
+    List all stored API token metadata (no actual tokens are returned).
+    Returns list of token entries with id, name, prefix, creation and expiration dates.
+    """
+    config = load_auth_config()
+    tokens = config.get("api_tokens", [])
+    revoked = set(config.get("revoked_tokens", []))
+    
+    result = []
+    for t in tokens:
+        entry = {
+            "id": t.get("id"),
+            "name": t.get("name", "API Token"),
+            "token_prefix": t.get("token_prefix", "***"),
+            "created_at": t.get("created_at"),
+            "expires_at": t.get("expires_at"),
+            "revoked": t.get("token_hash") in revoked
+        }
+        result.append(entry)
+    return result
+
+
+def revoke_api_token(token_id):
+    """
+    Revoke an API token by its ID.
+    Adds the token hash to the revoked list so it fails verification.
+    Returns (success: bool, message: str)
+    """
+    config = load_auth_config()
+    tokens = config.get("api_tokens", [])
+    
+    target = None
+    for t in tokens:
+        if t.get("id") == token_id:
+            target = t
+            break
+    
+    if not target:
+        return False, "Token not found"
+    
+    token_hash = target.get("token_hash")
+    config.setdefault("revoked_tokens", [])
+    
+    if token_hash in config["revoked_tokens"]:
+        return False, "Token is already revoked"
+    
+    config["revoked_tokens"].append(token_hash)
+    
+    # Remove from the active tokens list
+    config["api_tokens"] = [t for t in tokens if t.get("id") != token_id]
+    
+    if save_auth_config(config):
+        return True, "Token revoked successfully"
+    else:
+        return False, "Failed to save configuration"
 
 
 def get_auth_status():
@@ -243,6 +340,8 @@ def disable_auth():
     config["totp_enabled"] = False
     config["totp_secret"] = None
     config["backup_codes"] = []
+    config["api_tokens"] = []
+    config["revoked_tokens"] = []
     
     if save_auth_config(config):
         return True, "Authentication disabled"

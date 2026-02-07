@@ -262,6 +262,9 @@ def generate_api_token():
                 'iat': datetime.datetime.utcnow()
             }, auth_manager.JWT_SECRET, algorithm='HS256')
             
+            # Store token metadata for listing and revocation
+            auth_manager.store_api_token_metadata(api_token, token_name)
+            
             return jsonify({
                 "success": True, 
                 "token": api_token,
@@ -276,3 +279,35 @@ def generate_api_token():
     except Exception as e:
         print(f"[ERROR] generate_api_token: {str(e)}")  # Log error for debugging
         return jsonify({"success": False, "message": f"Internal error: {str(e)}"}), 500
+
+
+@auth_bp.route('/api/auth/api-tokens', methods=['GET'])
+def list_api_tokens():
+    """List all generated API tokens (metadata only, no actual token values)"""
+    try:
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if not token or not auth_manager.verify_token(token):
+            return jsonify({"success": False, "message": "Unauthorized"}), 401
+        
+        tokens = auth_manager.list_api_tokens()
+        return jsonify({"success": True, "tokens": tokens})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/auth/api-tokens/<token_id>', methods=['DELETE'])
+def revoke_api_token_route(token_id):
+    """Revoke an API token by its ID"""
+    try:
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if not token or not auth_manager.verify_token(token):
+            return jsonify({"success": False, "message": "Unauthorized"}), 401
+        
+        success, message = auth_manager.revoke_api_token(token_id)
+        
+        if success:
+            return jsonify({"success": True, "message": message})
+        else:
+            return jsonify({"success": False, "message": message}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500

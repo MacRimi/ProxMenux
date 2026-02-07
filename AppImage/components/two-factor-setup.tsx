@@ -89,14 +89,34 @@ export function TwoFactorSetup({ open, onClose, onSuccess }: TwoFactorSetupProps
     }
   }
 
-  const copyToClipboard = (text: string, type: "secret" | "codes") => {
-    navigator.clipboard.writeText(text)
-    if (type === "secret") {
-      setCopiedSecret(true)
-      setTimeout(() => setCopiedSecret(false), 2000)
-    } else {
-      setCopiedCodes(true)
-      setTimeout(() => setCopiedCodes(false), 2000)
+  const copyToClipboard = async (text: string, type: "secret" | "codes") => {
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        await navigator.clipboard.writeText(text)
+      } else {
+        // Fallback for non-secure contexts (HTTP)
+        const textarea = document.createElement("textarea")
+        textarea.value = text
+        textarea.style.position = "fixed"
+        textarea.style.left = "-9999px"
+        textarea.style.top = "-9999px"
+        textarea.style.opacity = "0"
+        document.body.appendChild(textarea)
+        textarea.focus()
+        textarea.select()
+        document.execCommand("copy")
+        document.body.removeChild(textarea)
+      }
+
+      if (type === "secret") {
+        setCopiedSecret(true)
+        setTimeout(() => setCopiedSecret(false), 2000)
+      } else {
+        setCopiedCodes(true)
+        setTimeout(() => setCopiedCodes(false), 2000)
+      }
+    } catch {
+      console.error("Failed to copy to clipboard")
     }
   }
 

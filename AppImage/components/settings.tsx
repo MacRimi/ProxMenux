@@ -5,7 +5,7 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
-import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Wrench, Package, Key, Copy, Eye, EyeOff, Ruler } from 'lucide-react'
+import { Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Wrench, Package, Key, Copy, Eye, EyeOff, Ruler, Trash2, RefreshCw, Clock } from 'lucide-react'
 import { APP_VERSION } from "./release-notes-modal"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
@@ -16,6 +16,15 @@ interface ProxMenuxTool {
   key: string
   name: string
   enabled: boolean
+}
+
+interface ApiTokenEntry {
+  id: string
+  name: string
+  token_prefix: string
+  created_at: string
+  expires_at: string
+  revoked: boolean
 }
 
 export function Settings() {
@@ -56,13 +65,20 @@ export function Settings() {
   const [generatingToken, setGeneratingToken] = useState(false)
   const [tokenCopied, setTokenCopied] = useState(false)
 
+  // Token list state
+  const [existingTokens, setExistingTokens] = useState<ApiTokenEntry[]>([])
+  const [loadingTokens, setLoadingTokens] = useState(false)
+  const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null)
+  const [tokenName, setTokenName] = useState("API Token")
+
   const [networkUnitSettings, setNetworkUnitSettings] = useState<"Bytes" | "Bits">("Bytes")
   const [loadingUnitSettings, setLoadingUnitSettings] = useState(true)
 
   useEffect(() => {
     checkAuthStatus()
     loadProxmenuxTools()
-    getUnitsSettings() // Load units settings on mount
+    loadApiTokens()
+    getUnitsSettings()
   }, [])
 
   const checkAuthStatus = async () => {
@@ -293,6 +309,47 @@ export function Settings() {
     window.location.reload()
   }
 
+  const loadApiTokens = async () => {
+    try {
+      setLoadingTokens(true)
+      const data = await fetchApi("/api/auth/api-tokens")
+      if (data.success) {
+        setExistingTokens(data.tokens || [])
+      }
+    } catch {
+      // Silently fail - tokens section is optional
+    } finally {
+      setLoadingTokens(false)
+    }
+  }
+
+  const handleRevokeToken = async (tokenId: string) => {
+    if (!confirm("Are you sure you want to revoke this token? Any integration using it will stop working immediately.")) {
+      return
+    }
+
+    setRevokingTokenId(tokenId)
+    setError("")
+    setSuccess("")
+
+    try {
+      const data = await fetchApi(`/api/auth/api-tokens/${tokenId}`, {
+        method: "DELETE",
+      })
+
+      if (data.success) {
+        setSuccess("Token revoked successfully")
+        setExistingTokens((prev) => prev.filter((t) => t.id !== tokenId))
+      } else {
+        setError(data.message || "Failed to revoke token")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to revoke token")
+    } finally {
+      setRevokingTokenId(null)
+    }
+  }
+
   const handleGenerateApiToken = async () => {
     setError("")
     setSuccess("")
@@ -316,6 +373,7 @@ export function Settings() {
         body: JSON.stringify({
           password: tokenPassword,
           totp_token: totpEnabled ? tokenTotpCode : undefined,
+          token_name: tokenName || "API Token",
         }),
       })
 
@@ -333,6 +391,8 @@ export function Settings() {
       setSuccess("API token generated successfully! Make sure to copy it now as you won't be able to see it again.")
       setTokenPassword("")
       setTokenTotpCode("")
+      setTokenName("API Token")
+      loadApiTokens()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate API token. Please try again.")
     } finally {
@@ -340,10 +400,36 @@ export function Settings() {
     }
   }
 
-  const copyApiToken = () => {
-    navigator.clipboard.writeText(apiToken)
-    setTokenCopied(true)
-    setTimeout(() => setTokenCopied(false), 2000)
+  const copyToClipboard = async (text: string) => {
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        await navigator.clipboard.writeText(text)
+      } else {
+        // Fallback for non-secure contexts (HTTP on local network)
+        const textarea = document.createElement("textarea")
+        textarea.value = text
+        textarea.style.position = "fixed"
+        textarea.style.left = "-9999px"
+        textarea.style.top = "-9999px"
+        textarea.style.opacity = "0"
+        document.body.appendChild(textarea)
+        textarea.focus()
+        textarea.select()
+        document.execCommand("copy")
+        document.body.removeChild(textarea)
+      }
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const copyApiToken = async () => {
+    const ok = await copyToClipboard(apiToken)
+    if (ok) {
+      setTokenCopied(true)
+      setTimeout(() => setTokenCopied(false), 2000)
+    }
   }
 
   const toggleVersion = (version: string) => {
@@ -764,6 +850,22 @@ export function Settings() {
                 </p>
 
                 <div className="space-y-2">
+                  <Label htmlFor="token-name">Token Name</Label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="token-name"
+                      type="text"
+                      placeholder="e.g. Homepage, Home Assistant"
+                      value={tokenName}
+                      onChange={(e) => setTokenName(e.target.value)}
+                      className="pl-10"
+                      disabled={generatingToken}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="token-password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -811,6 +913,7 @@ export function Settings() {
                       setShowApiTokenSection(false)
                       setTokenPassword("")
                       setTokenTotpCode("")
+                      setTokenName("API Token")
                       setError("")
                     }}
                     variant="outline"
@@ -894,6 +997,78 @@ export function Settings() {
                 >
                   Done
                 </Button>
+              </div>
+            )}
+
+            {/* Existing Tokens List */}
+            {!loadingTokens && existingTokens.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-muted-foreground">Active Tokens</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={loadApiTokens}
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Refresh
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  {existingTokens.map((token) => (
+                    <div
+                      key={token.id}
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                          <Key className="h-4 w-4 text-blue-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{token.name}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <code className="font-mono">{token.token_prefix}</code>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {token.created_at
+                                ? new Date(token.created_at).toLocaleDateString()
+                                : "Unknown"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRevokeToken(token.id)}
+                        disabled={revokingTokenId === token.id}
+                        className="h-8 px-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0"
+                      >
+                        {revokingTokenId === token.id ? (
+                          <div className="animate-spin h-4 w-4 border-2 border-red-500 border-t-transparent rounded-full" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                        <span className="ml-1 text-xs hidden sm:inline">Revoke</span>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {loadingTokens && (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading tokens...</span>
+              </div>
+            )}
+
+            {!loadingTokens && existingTokens.length === 0 && !showApiTokenSection && !apiToken && (
+              <div className="text-center py-4 text-sm text-muted-foreground">
+                No API tokens created yet
               </div>
             )}
           </CardContent>
