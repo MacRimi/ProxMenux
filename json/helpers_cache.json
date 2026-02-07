@@ -4215,6 +4215,25 @@
     "type": "pve"
   },
   {
+    "name": "Nightscout",
+    "slug": "nightscout",
+    "desc": "Nightscout is an open source, DIY project that allows real time access to a CGM data via personal website, smartwatch watchers, or apps and widgets available for smartphones.",
+    "script": "ct/nightscout.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nightscout.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/nightscout.sh",
+    "os": "debian",
+    "categories": [
+      0
+    ],
+    "notes": [
+      "Nightscout requires configuring `my.env` with your Mongo connection string. API_SECRET has been generated and saved to `~/nightscout.creds`.",
+      "Edit `/opt/nightscout/my.env` to configure your CGM source (Dexcom/CareLink). Then run: `systemctl restart nightscout`",
+      "Official Configuration Guide: https://nightscout.github.io/nightscout/setup_variables/",
+      "Nightscout requires HTTPS for many features (security, tokens, PWA). Usage of a reverse proxy (e.g. Nginx Proxy Manager, Traefik, Caddy) is highly recommended."
+    ],
+    "type": "ct"
+  },
+  {
     "name": "NocoDB",
     "slug": "nocodb",
     "desc": "NocoDB is a document-oriented database management system. It uses the NoSQL (Not Only SQL) data model, which allows for more flexible and scalable data storage than traditional relational databases. NoCoDB stores data in JSON format, making it easier to manage and query complex data structures, and supports a range of data types, including strings, numbers, arrays, and objects. The software provides a web-based interface for managing and querying data, and includes features such as real-time data synchronization, auto-indexing, and full-text search. NoCoDB is designed to be scalable, and can be used for a range of applications, from small projects to large enterprise systems. The software is free and open-source, and is designed to be easy to use and integrate with other applications.",
