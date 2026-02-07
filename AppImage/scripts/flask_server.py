@@ -5153,12 +5153,10 @@ def api_logs():
         if since_days:
             try:
                 days = int(since_days)
-                cmd = ['journalctl', '--since', f'{days} days ago', '--output', 'json', '--no-pager']
-                # print(f"[API] Filtering logs since {days} days ago (no limit)")
-                pass
+                # Cap at 90 days to prevent excessive queries
+                days = min(days, 90)
+                cmd = ['journalctl', '--since', f'{days} days ago', '-n', '10000', '--output', 'json', '--no-pager']
             except ValueError:
-                # print(f"[API] Invalid since_days value: {since_days}")
-                pass
                 cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
         else:
             cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
@@ -5167,11 +5165,11 @@ def api_logs():
         if priority:
             cmd.extend(['-p', priority])
         
-        # Add service filter if specified
-        if service:
-            cmd.extend(['-u', service])
+        # Add service filter by SYSLOG_IDENTIFIER (not -u which filters by systemd unit)
+        # We filter after fetching since journalctl doesn't have a direct SYSLOG_IDENTIFIER flag
+        service_filter = service
         
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
         if result.returncode == 0:
             logs = []
@@ -5191,10 +5189,21 @@ def api_logs():
                         priority_num = str(log_entry.get('PRIORITY', '6'))
                         level = priority_map.get(priority_num, 'info')
                         
+                        # Use SYSLOG_IDENTIFIER as primary (matches Proxmox native GUI behavior)
+                        # Fall back to _SYSTEMD_UNIT only if SYSLOG_IDENTIFIER is missing
+                        syslog_id = log_entry.get('SYSLOG_IDENTIFIER', '')
+                        systemd_unit = log_entry.get('_SYSTEMD_UNIT', '')
+                        service_name = syslog_id or systemd_unit or 'system'
+                        
+                        # Apply service filter on the resolved service name
+                        if service_filter and service_name != service_filter:
+                            continue
+                        
                         logs.append({
                             'timestamp': timestamp,
                             'level': level,
-                            'service': log_entry.get('_SYSTEMD_UNIT', log_entry.get('SYSLOG_IDENTIFIER', 'system')),
+                            'service': service_name,
+                            'unit': systemd_unit,
                             'message': log_entry.get('MESSAGE', ''),
                             'source': 'journal',
                             'pid': log_entry.get('_PID', ''),
@@ -5210,8 +5219,6 @@ def api_logs():
                 'total': 0
             })
     except Exception as e:
-        # print(f"Error getting logs: {e}")
-        pass
         return jsonify({
             'error': f'Unable to access system logs: {str(e)}',
             'logs': [],
@@ -5230,8 +5237,7 @@ def api_logs_download():
         since_days = request.args.get('since_days', None)
         
         if since_days:
-            days = int(since_days)
-
+            days = min(int(since_days), 90)
             cmd = ['journalctl', '--since', f'{days} days ago', '--no-pager']
         else:
             cmd = ['journalctl', '--since', f'{hours} hours ago', '--no-pager']
@@ -5249,16 +5255,19 @@ def api_logs_download():
         if level != 'all':
             cmd.extend(['-p', level])
         
-        # Apply service filter
+        # Apply service filter using SYSLOG_IDENTIFIER grep
+        # Note: We use --grep to match the service name in the log output
+        # since journalctl doesn't have a direct SYSLOG_IDENTIFIER filter flag
         if service != 'all':
-            cmd.extend(['-u', service])
+            cmd.extend(['--grep', service])
         
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         
         if result.returncode == 0:
             import tempfile
+            time_desc = f"{since_days} days" if since_days else f"{hours}h"
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
-                f.write(f"ProxMenux Log ({log_type}, since {since_days if since_days else f'{hours}h'}) - Generated: {datetime.now().isoformat()}\n")
+                f.write(f"ProxMenux Log ({log_type}, since {time_desc}) - Generated: {datetime.now().isoformat()}\n")
                 f.write("=" * 80 + "\n\n")
                 f.write(result.stdout)
                 temp_path = f.name
@@ -5273,8 +5282,6 @@ def api_logs_download():
             return jsonify({'error': 'Failed to generate log file'}), 500
             
     except Exception as e:
-        # print(f"Error downloading logs: {e}")
-        pass
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/notifications', methods=['GET'])
@@ -5324,7 +5331,7 @@ def api_notifications():
                             notifications.append({
                                 'timestamp': timestamp,
                                 'type': notif_type,
-                                'service': log_entry.get('_SYSTEMD_UNIT', 'proxmox'),
+                                'service': log_entry.get('SYSLOG_IDENTIFIER', log_entry.get('_SYSTEMD_UNIT', 'proxmox')),
                                 'message': message,
                                 'source': 'journal'
                             })
@@ -5386,8 +5393,6 @@ def api_notifications():
         })
         
     except Exception as e:
-        # print(f"Error getting notifications: {e}")
-        pass
         return jsonify({
             'error': str(e),
             'notifications': [],
@@ -5431,7 +5436,7 @@ def api_notifications_download():
         if result.returncode == 0:
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
-                f.write(f"ProxMenux Log ({log_type}, since {since_days if since_days else f'{hours}h'}) - Generated: {datetime.now().isoformat()}\n")
+                f.write(f"ProxMenux Notification Log (around {timestamp}) - Generated: {datetime.now().isoformat()}\n")
                 f.write("=" * 80 + "\n\n")
                 f.write(result.stdout)
                 temp_path = f.name
@@ -5446,8 +5451,6 @@ def api_notifications_download():
             return jsonify({'error': 'Failed to generate log file'}), 500
             
     except Exception as e:
-        # print(f"Error downloading logs: {e}")
-        pass
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/backups', methods=['GET'])

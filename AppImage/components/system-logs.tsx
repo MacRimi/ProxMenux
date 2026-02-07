@@ -30,16 +30,6 @@ import {
 import { useState, useEffect, useMemo } from "react"
 import { API_PORT, fetchApi } from "@/lib/api-config"
 
-interface Log {
-  timestamp: string
-  level: string
-  service: string
-  message: string
-  source: string
-  pid?: string
-  hostname?: string
-}
-
 interface Backup {
   volid: string
   storage: string
@@ -76,6 +66,7 @@ interface SystemLog {
   timestamp: string
   level: string
   service: string
+  unit?: string
   message: string
   source: string
   pid?: string
@@ -86,6 +77,7 @@ interface CombinedLogEntry {
   timestamp: string
   level: string
   service: string
+  unit?: string
   message: string
   source: string
   pid?: string
@@ -108,111 +100,60 @@ export function SystemLogs() {
   const [serviceFilter, setServiceFilter] = useState("all")
   const [activeTab, setActiveTab] = useState("logs")
 
-  const [displayedLogsCount, setDisplayedLogsCount] = useState(50) // Increased from 500 to 50 for initial load, will use pagination
+  const [displayedLogsCount, setDisplayedLogsCount] = useState(100)
 
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null)
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null) // Added
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
   const [isLogModalOpen, setIsLogModalOpen] = useState(false)
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false)
-  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false) // Added
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  const [dateFilter, setDateFilter] = useState("1") // Changed from "now" to "1" to load 1 day by default
+  const [dateFilter, setDateFilter] = useState("1")
   const [customDays, setCustomDays] = useState("1")
+  const [refreshCounter, setRefreshCounter] = useState(0)
 
-  const getApiUrl = (endpoint: string) => {
-    if (typeof window !== "undefined") {
-      const { protocol, hostname, port } = window.location
-      const isStandardPort = port === "" || port === "80" || port === "443"
-
-      if (isStandardPort) {
-        return endpoint
-      } else {
-        return `${protocol}//${hostname}:${API_PORT}${endpoint}`
-      }
-    }
-    // This part might not be strictly necessary if only running client-side, but good for SSR safety
-    // In a real SSR scenario, you'd need to handle API_PORT differently
-    const protocol = typeof window !== "undefined" ? window.location.protocol : "http:" // Defaulting to http for SSR safety
-    const hostname = typeof window !== "undefined" ? window.location.hostname : "localhost" // Defaulting to localhost for SSR safety
-    return `${protocol}//${hostname}:${API_PORT}${endpoint}`
-  }
-
+  // Single unified useEffect for all data loading
+  // Fires on mount, when filters change, or when refresh is triggered
   useEffect(() => {
-    fetchAllData()
-  }, [])
-
-  // CHANGE: Simplified useEffect - always fetch logs with date filter (no more "now" option)
-  useEffect(() => {
-    console.log("[v0] Date filter changed:", dateFilter, "Custom days:", customDays)
-    setLoading(true)
-    fetchSystemLogs()
-      .then((newLogs) => {
-        console.log("[v0] Loaded logs for date filter:", dateFilter, "Count:", newLogs.length)
-        console.log("[v0] First log:", newLogs[0])
-        setLogs(newLogs)
-        setLoading(false)
-      })
-      .catch((err) => {
-        console.error("[v0] Error loading logs:", err)
-        setLoading(false)
-      })
-  }, [dateFilter, customDays])
-
-  useEffect(() => {
-    console.log("[v0] Level or service filter changed:", levelFilter, serviceFilter)
-    if (levelFilter !== "all" || serviceFilter !== "all") {
-      setLoading(true)
-      fetchSystemLogs()
-        .then((newLogs) => {
-          console.log(
-            "[v0] Loaded logs for filters - Level:",
-            levelFilter,
-            "Service:",
-            serviceFilter,
-            "Count:",
-            newLogs.length,
-          )
-          setLogs(newLogs)
-          setLoading(false)
-        })
-        .catch((err) => {
-          console.error("[v0] Error loading logs:", err)
-          setLoading(false)
-        })
-    } else {
-      // Only reload all data if we're on "now" and all filters are cleared
-      // This else block is now theoretically unreachable given the change above, but kept for safety
-      fetchAllData()
-    }
-  }, [levelFilter, serviceFilter])
-
-  const fetchAllData = async () => {
-    try {
+    let cancelled = false
+    const loadData = async () => {
       setLoading(true)
       setError(null)
-
-      const [logsRes, backupsRes, eventsRes, notificationsRes] = await Promise.all([
-        fetchSystemLogs(),
-        fetchApi("/api/backups"),
-        fetchApi("/api/events?limit=50"),
-        fetchApi("/api/notifications"),
-      ])
-
-      setLogs(logsRes)
-      setBackups(backupsRes.backups || [])
-      setEvents(eventsRes.events || [])
-      setNotifications(notificationsRes.notifications || [])
-    } catch (err) {
-      console.error("[v0] Error fetching system logs data:", err)
-      setError("Failed to connect to server")
-    } finally {
-      setLoading(false)
+      try {
+        const [logsRes, backupsRes, eventsRes, notificationsRes] = await Promise.all([
+          fetchSystemLogs(),
+          fetchApi("/api/backups"),
+          fetchApi("/api/events?limit=50"),
+          fetchApi("/api/notifications"),
+        ])
+        if (cancelled) return
+        setLogs(logsRes)
+        setBackups(backupsRes.backups || [])
+        setEvents(eventsRes.events || [])
+        setNotifications(notificationsRes.notifications || [])
+      } catch (err) {
+        if (cancelled) return
+        setError("Failed to connect to server")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
+    loadData()
+    return () => { cancelled = true }
+  }, [dateFilter, customDays, refreshCounter])
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setDisplayedLogsCount(100)
+  }, [searchTerm, levelFilter, serviceFilter, dateFilter, customDays])
+
+  const refreshData = () => {
+    setRefreshCounter((prev) => prev + 1)
   }
 
   const fetchSystemLogs = async (): Promise<SystemLog[]> => {
@@ -220,49 +161,21 @@ export function SystemLogs() {
       let apiUrl = "/api/logs"
       const params = new URLSearchParams()
 
-      // CHANGE: Always add since_days parameter (no more "now" option)
       const daysAgo = dateFilter === "custom" ? Number.parseInt(customDays) : Number.parseInt(dateFilter)
-      params.append("since_days", daysAgo.toString())
-      console.log("[v0] Fetching logs since_days:", daysAgo)
-
-      if (levelFilter !== "all") {
-        const priorityMap: Record<string, string> = {
-          error: "3", // 0-3: emerg, alert, crit, err
-          warning: "4", // 4: warning
-          info: "6", // 5-7: notice, info, debug
-        }
-        const priority = priorityMap[levelFilter]
-        if (priority) {
-          params.append("priority", priority)
-          console.log("[v0] Fetching logs with priority:", priority, "for level:", levelFilter)
-        }
-      }
-
-      if (serviceFilter !== "all") {
-        params.append("service", serviceFilter)
-        console.log("[v0] Fetching logs for service:", serviceFilter)
-      }
-
+      // Clamp days to valid range
+      const clampedDays = Math.max(1, Math.min(daysAgo || 1, 90))
+      params.append("since_days", clampedDays.toString())
       params.append("limit", "5000")
 
       if (params.toString()) {
         apiUrl += `?${params.toString()}`
       }
 
-      console.log("[v0] Making fetch request to:", apiUrl)
       const data = await fetchApi(apiUrl)
-      console.log("[v0] Received logs data, count:", data.logs?.length || 0)
-
       const logsArray = Array.isArray(data) ? data : data.logs || []
-      console.log("[v0] Returning logs array with length:", logsArray.length)
       return logsArray
-    } catch (error) {
-      console.error("[v0] Failed to fetch system logs:", error)
-      if (error instanceof Error && error.name === "TimeoutError") {
-        setError("Request timed out. Try selecting a more specific filter.")
-      } else {
-        setError("Failed to load logs. Please try again.")
-      }
+    } catch {
+      setError("Failed to load logs. Please try again.")
       return []
     }
   }
@@ -271,7 +184,6 @@ export function SystemLogs() {
     try {
       // Generate filename based on active filters
       const filters = []
-      // CHANGE: Always include days in filename (no more "now" option)
       const days = dateFilter === "custom" ? customDays : dateFilter
       filters.push(`${days}days`)
 
@@ -294,7 +206,7 @@ export function SystemLogs() {
         `Total Entries: ${filteredCombinedLogs.length.toLocaleString()}`,
         ``,
         `Filters Applied:`,
-        `- Date Range: ${dateFilter === "now" ? "Current logs" : dateFilter === "custom" ? `${customDays} days ago` : `${dateFilter} days ago`}`,
+        `- Date Range: ${dateFilter === "custom" ? `${customDays} days ago` : `${dateFilter} day(s) ago`}`,
         `- Level: ${levelFilter === "all" ? "All Levels" : levelFilter}`,
         `- Service: ${serviceFilter === "all" ? "All Services" : serviceFilter}`,
         `- Search: ${searchTerm || "None"}`,
@@ -368,8 +280,7 @@ export function SystemLogs() {
           window.URL.revokeObjectURL(url)
           document.body.removeChild(a)
           return
-        } catch (error) {
-          console.error("[v0] Failed to fetch task log from Proxmox:", error)
+        } catch {
           // Fall through to download notification message
         }
       }
@@ -397,8 +308,8 @@ export function SystemLogs() {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
-    } catch (err) {
-      console.error("[v0] Error downloading notification:", err)
+    } catch {
+      // Download failed silently
     }
   }
 
@@ -407,70 +318,11 @@ export function SystemLogs() {
     return String(value).toLowerCase()
   }
 
-  const memoizedLogs = useMemo(() => logs, [logs])
-  const memoizedEvents = useMemo(() => events, [events])
-  const memoizedBackups = useMemo(() => backups, [backups])
-  const memoizedNotifications = useMemo(() => notifications, [notifications])
-
-  const logsOnly: CombinedLogEntry[] = useMemo(
-    () =>
-      memoizedLogs
-        .map((log) => ({ ...log, isEvent: false, sortTimestamp: new Date(log.timestamp).getTime() }))
-        .sort((a, b) => b.sortTimestamp - a.sortTimestamp),
-    [memoizedLogs],
-  )
-
-  const eventsOnly: CombinedLogEntry[] = useMemo(
-    () =>
-      memoizedEvents
-        .map((event) => ({
-          timestamp: event.starttime,
-          level: event.level,
-          service: event.type,
-          message: `${event.type}${event.vmid ? ` (VM/CT ${event.vmid})` : ""} - ${event.status}`,
-          source: `Node: ${event.node} • User: ${event.user}`,
-          isEvent: true,
-          eventData: event,
-          sortTimestamp: new Date(event.starttime).getTime(),
-        }))
-        .sort((a, b) => b.sortTimestamp - a.sortTimestamp),
-    [memoizedEvents],
-  )
-
-  const filteredLogsOnly = logsOnly.filter((log) => {
-    const message = log.message || ""
-    const service = log.service || ""
-    const searchTermLower = safeToLowerCase(searchTerm)
-
-    const matchesSearch =
-      safeToLowerCase(message).includes(searchTermLower) || safeToLowerCase(service).includes(searchTermLower)
-    const matchesLevel = levelFilter === "all" || log.level === levelFilter
-    const matchesService = serviceFilter === "all" || log.service === serviceFilter
-
-    return matchesSearch && matchesLevel && matchesService
-  })
-
-  const filteredEventsOnly = eventsOnly.filter((event) => {
-    const message = event.message || ""
-    const service = event.service || ""
-    const searchTermLower = safeToLowerCase(searchTerm)
-
-    const matchesSearch =
-      safeToLowerCase(message).includes(searchTermLower) || safeToLowerCase(service).includes(searchTermLower)
-    const matchesLevel = levelFilter === "all" || event.level === levelFilter
-    const matchesService = serviceFilter === "all" || event.service === serviceFilter
-
-    return matchesSearch && matchesLevel && matchesService
-  })
-
-  const displayedLogsOnly = filteredLogsOnly.slice(0, displayedLogsCount)
-  const displayedEventsOnly = filteredEventsOnly.slice(0, displayedLogsCount)
-
   const combinedLogs: CombinedLogEntry[] = useMemo(
     () =>
       [
-        ...memoizedLogs.map((log) => ({ ...log, isEvent: false, sortTimestamp: new Date(log.timestamp).getTime() })),
-        ...memoizedEvents.map((event) => ({
+        ...logs.map((log) => ({ ...log, isEvent: false, sortTimestamp: new Date(log.timestamp).getTime() })),
+        ...events.map((event) => ({
           timestamp: event.starttime,
           level: event.level,
           service: event.type,
@@ -481,18 +333,20 @@ export function SystemLogs() {
           sortTimestamp: new Date(event.starttime).getTime(),
         })),
       ].sort((a, b) => b.sortTimestamp - a.sortTimestamp),
-    [memoizedLogs, memoizedEvents],
+    [logs, events],
   )
 
   const filteredCombinedLogs = useMemo(
     () =>
       combinedLogs.filter((log) => {
-        const message = log.message || ""
-        const service = log.service || ""
         const searchTermLower = safeToLowerCase(searchTerm)
 
-        const matchesSearch =
-          safeToLowerCase(message).includes(searchTermLower) || safeToLowerCase(service).includes(searchTermLower)
+        const matchesSearch = !searchTermLower ||
+          safeToLowerCase(log.message).includes(searchTermLower) ||
+          safeToLowerCase(log.service).includes(searchTermLower) ||
+          safeToLowerCase(log.pid).includes(searchTermLower) ||
+          safeToLowerCase(log.hostname).includes(searchTermLower) ||
+          safeToLowerCase(log.unit).includes(searchTermLower)
         const matchesLevel = levelFilter === "all" || log.level === levelFilter
         const matchesService = serviceFilter === "all" || log.service === serviceFilter
 
@@ -501,7 +355,6 @@ export function SystemLogs() {
     [combinedLogs, searchTerm, levelFilter, serviceFilter],
   )
 
-  // CHANGE: Re-assigning displayedLogs to use the filteredCombinedLogs
   const displayedLogs = filteredCombinedLogs.slice(0, displayedLogsCount)
   const hasMoreLogs = displayedLogsCount < filteredCombinedLogs.length
 
@@ -577,7 +430,6 @@ export function SystemLogs() {
     }
   }
 
-  // ADDED: New function for notification source colors
   const getNotificationSourceColor = (source: string) => {
     if (!source) return "bg-gray-500/10 text-gray-500 border-gray-500/20"
 
@@ -600,7 +452,10 @@ export function SystemLogs() {
     info: logs.filter((log) => ["info", "notice", "debug"].includes(log.level)).length,
   }
 
-  const uniqueServices = useMemo(() => [...new Set(memoizedLogs.map((log) => log.service))], [memoizedLogs])
+  const uniqueServices = useMemo(
+    () => [...new Set(logs.map((log) => log.service).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [logs],
+  )
 
   const getBackupType = (volid: string): "vm" | "lxc" => {
     if (volid.includes("/vm/") || volid.includes("vzdump-qemu")) {
@@ -770,7 +625,7 @@ export function SystemLogs() {
               <Activity className="h-5 w-5 mr-2" />
               System Logs & Events
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={fetchAllData} disabled={loading}>
+            <Button variant="outline" size="sm" onClick={refreshData} disabled={loading}>
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
@@ -875,7 +730,6 @@ export function SystemLogs() {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search logs & events..."
-                      // CHANGE: Renamed searchTerm to searchQuery
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 bg-background border-border"
@@ -928,8 +782,8 @@ export function SystemLogs() {
                     <SelectItem key="service-all" value="all">
                       All Services
                     </SelectItem>
-                    {uniqueServices.slice(0, 20).map((service, idx) => (
-                      <SelectItem key={`service-${service}-${idx}`} value={service}>
+                    {uniqueServices.map((service) => (
+                      <SelectItem key={`service-${service}`} value={service}>
                         {service}
                       </SelectItem>
                     ))}
@@ -990,6 +844,7 @@ export function SystemLogs() {
                           </div>
                           <div className="text-xs text-muted-foreground truncate break-all overflow-hidden">
                             {log.source}
+                            {log.unit && log.unit !== log.service && ` • Unit: ${log.unit}`}
                             {log.pid && ` • PID: ${log.pid}`}
                             {log.hostname && ` • Host: ${log.hostname}`}
                           </div>
@@ -1009,7 +864,7 @@ export function SystemLogs() {
                     <div className="flex justify-center pt-4">
                       <Button
                         variant="outline"
-                        onClick={() => setDisplayedLogsCount((prev) => prev + 500)}
+                        onClick={() => setDisplayedLogsCount((prev) => prev + 200)}
                         className="border-border"
                       >
                         <RefreshCw className="h-4 w-4 mr-2" />
@@ -1057,7 +912,7 @@ export function SystemLogs() {
 
               <ScrollArea className="h-[500px] w-full rounded-md border border-border">
                 <div className="space-y-2 p-4">
-                  {memoizedBackups.map((backup, index) => {
+                  {backups.map((backup, index) => {
                     const uniqueKey = `backup-${backup.volid.replace(/[/:]/g, "-")}-${backup.timestamp || index}`
 
                     return (
@@ -1114,7 +969,7 @@ export function SystemLogs() {
             <TabsContent value="notifications" className="space-y-4">
               <ScrollArea className="h-[600px] w-full rounded-md border border-border">
                 <div className="space-y-2 p-4">
-                  {memoizedNotifications.map((notification, index) => {
+                  {notifications.map((notification, index) => {
                     const timestampMs = new Date(notification.timestamp).getTime()
                     const uniqueKey = `notification-${timestampMs}-${notification.service?.substring(0, 10) || "unknown"}-${notification.source?.substring(0, 10) || "unknown"}-${index}`
 
@@ -1202,6 +1057,12 @@ export function SystemLogs() {
                   <div className="text-sm font-medium text-muted-foreground mb-1">Source</div>
                   <div className="text-sm text-foreground break-all overflow-hidden">{selectedLog.source}</div>
                 </div>
+                {selectedLog.unit && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-1">Systemd Unit</div>
+                    <div className="text-sm text-foreground font-mono break-all overflow-hidden">{selectedLog.unit}</div>
+                  </div>
+                )}
                 {selectedLog.pid && (
                   <div>
                     <div className="text-sm font-medium text-muted-foreground mb-1">Process ID</div>
