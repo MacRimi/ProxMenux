@@ -2459,10 +2459,10 @@ ${(report.sections && report.sections.length > 0) ? `
             Intrusion prevention system that bans IPs after repeated failed login attempts
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           {toolsLoading ? (
-            <div className="flex items-center justify-center py-6">
-              <div className="animate-spin h-6 w-6 border-3 border-red-500 border-t-transparent rounded-full" />
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin h-8 w-8 border-4 border-red-500 border-t-transparent rounded-full" />
             </div>
           ) : !fail2banInfo?.installed ? (
             /* --- NOT INSTALLED --- */
@@ -2508,50 +2508,53 @@ ${(report.sections && report.sections.length > 0) ? `
             </div>
           ) : (
             /* --- INSTALLED --- */
-            <div className="space-y-3">
+            <div className="space-y-4">
               {/* Status bar */}
-              <div className="flex items-center justify-between px-3 py-2.5 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${fail2banInfo.active ? "bg-green-500/10" : "bg-yellow-500/10"}`}>
-                    <Bug className={`h-4 w-4 ${fail2banInfo.active ? "text-green-500" : "text-yellow-500"}`} />
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${fail2banInfo.active ? "bg-green-500/10" : "bg-yellow-500/10"}`}>
+                    <Bug className={`h-5 w-5 ${fail2banInfo.active ? "text-green-500" : "text-yellow-500"}`} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Fail2Ban {fail2banInfo.version}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="font-medium">Fail2Ban {fail2banInfo.version}</p>
+                    <p className="text-sm text-muted-foreground">
                       {fail2banInfo.active ? "Service is running" : "Service is not running"}
                     </p>
                   </div>
                 </div>
-                <div className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${fail2banInfo.active ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"}`}>
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${fail2banInfo.active ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"}`}>
                   {fail2banInfo.active ? "Active" : "Inactive"}
                 </div>
               </div>
 
               {fail2banInfo.active && f2bDetails && (
                 <>
-                  {/* Summary stats */}
-                  <div className="grid gap-2 grid-cols-4">
-                    <div className="px-2 py-1.5 bg-muted/30 rounded-md border border-border text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Jails</p>
-                      <p className="text-lg font-bold">{f2bDetails.jails.length}</p>
+                  {/* Summary stats - inline */}
+                  <div className="flex items-center gap-4 flex-wrap px-3 py-2.5 bg-muted/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <span className="text-muted-foreground">Jails:</span>
+                      <span className="font-bold">{f2bDetails.jails.length}</span>
                     </div>
-                    <div className="px-2 py-1.5 bg-muted/30 rounded-md border border-border text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Banned</p>
-                      <p className={`text-lg font-bold ${f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0) > 0 ? "text-red-500" : "text-green-500"}`}>
+                    <div className="w-px h-4 bg-border" />
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <span className="text-muted-foreground">Banned IPs:</span>
+                      <span className={`font-bold ${f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0) > 0 ? "text-red-500" : "text-green-500"}`}>
                         {f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0)}
-                      </p>
+                      </span>
                     </div>
-                    <div className="px-2 py-1.5 bg-muted/30 rounded-md border border-border text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Bans</p>
-                      <p className="text-lg font-bold text-orange-500">
+                    <div className="w-px h-4 bg-border" />
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <span className="text-muted-foreground">Total Bans:</span>
+                      <span className="font-bold text-orange-500">
                         {f2bDetails.jails.reduce((a, j) => a + j.total_banned, 0)}
-                      </p>
+                      </span>
                     </div>
-                    <div className="px-2 py-1.5 bg-muted/30 rounded-md border border-border text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Failed</p>
-                      <p className="text-lg font-bold text-yellow-500">
+                    <div className="w-px h-4 bg-border" />
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <span className="text-muted-foreground">Failed Attempts:</span>
+                      <span className="font-bold text-yellow-500">
                         {f2bDetails.jails.reduce((a, j) => a + j.total_failed, 0)}
-                      </p>
+                      </span>
                     </div>
                   </div>
 
@@ -2569,10 +2572,10 @@ ${(report.sections && report.sections.length > 0) ? `
                     }
 
                     return (
-                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-md p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2">
-                            <AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-yellow-500">Missing protections detected</p>
                               <p className="text-xs text-yellow-400/80">
@@ -2600,41 +2603,41 @@ ${(report.sections && report.sections.length > 0) ? `
                   })()}
 
                   {/* Tab switcher */}
-                  <div className="flex gap-0 rounded-md border border-border overflow-hidden">
+                  <div className="flex gap-0 rounded-lg border border-border overflow-hidden">
                     <button
                       onClick={() => setF2bActiveTab("jails")}
-                      className={`flex-1 px-3 py-1.5 text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                      className={`flex-1 px-3 py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
                         f2bActiveTab === "jails"
                           ? "bg-red-500 text-white"
                           : "bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                       }`}
                     >
-                      <Shield className="h-3 w-3" />
+                      <Shield className="h-3.5 w-3.5" />
                       Jails & Banned IPs
                     </button>
                     <button
                       onClick={() => setF2bActiveTab("activity")}
-                      className={`flex-1 px-3 py-1.5 text-xs font-medium transition-all flex items-center justify-center gap-1.5 border-l border-border ${
+                      className={`flex-1 px-3 py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-1.5 border-l border-border ${
                         f2bActiveTab === "activity"
                           ? "bg-red-500 text-white"
                           : "bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                       }`}
                     >
-                      <Clock className="h-3 w-3" />
+                      <Clock className="h-3.5 w-3.5" />
                       Recent Activity
                     </button>
                   </div>
 
                   {/* JAILS TAB */}
                   {f2bActiveTab === "jails" && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {f2bDetails.jails.map((jail) => (
                         <div key={jail.name} className="border border-border rounded-lg overflow-hidden">
                           {/* Jail header */}
-                          <div className="flex items-center justify-between px-3 py-2 bg-muted/40">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${jail.currently_banned > 0 ? "bg-red-500 animate-pulse" : "bg-green-500"}`} />
-                              <span className="font-semibold text-xs">{jail.name}</span>
+                          <div className="flex items-center justify-between p-3 bg-muted/40">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-2.5 h-2.5 rounded-full ${jail.currently_banned > 0 ? "bg-red-500 animate-pulse" : "bg-green-500"}`} />
+                              <span className="font-semibold text-sm">{jail.name}</span>
                               <span className="text-[10px] text-muted-foreground">
                                 {jail.name === "sshd" ? "SSH Remote Access" :
                                  jail.name === "proxmox" ? "Proxmox UI :8006" :
@@ -2768,25 +2771,28 @@ ${(report.sections && report.sections.length > 0) ? `
                             <span>Window: <span className="text-foreground font-medium">{formatBanTime(jail.findtime)}</span></span>
                           </div>
 
-                          {/* Jail stats bar */}
-                          <div className="grid grid-cols-4 gap-px bg-border">
-                            <div className="px-2 py-1.5 bg-card text-center">
-                              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Banned</p>
-                              <p className={`text-sm font-bold ${jail.currently_banned > 0 ? "text-red-500" : "text-green-500"}`}>
+                          {/* Jail stats - inline */}
+                          <div className="flex items-center gap-4 flex-wrap px-3 py-2 border-t border-border">
+                            <div className="flex items-center gap-1.5 text-sm">
+                              <span className="text-muted-foreground">Banned:</span>
+                              <span className={`font-bold ${jail.currently_banned > 0 ? "text-red-500" : "text-green-500"}`}>
                                 {jail.currently_banned}
-                              </p>
+                              </span>
                             </div>
-                            <div className="px-2 py-1.5 bg-card text-center">
-                              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Total Bans</p>
-                              <p className="text-sm font-bold text-orange-500">{jail.total_banned}</p>
+                            <div className="w-px h-4 bg-border" />
+                            <div className="flex items-center gap-1.5 text-sm">
+                              <span className="text-muted-foreground">Total Bans:</span>
+                              <span className="font-bold text-orange-500">{jail.total_banned}</span>
                             </div>
-                            <div className="px-2 py-1.5 bg-card text-center">
-                              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Failed Now</p>
-                              <p className="text-sm font-bold text-yellow-500">{jail.currently_failed}</p>
+                            <div className="w-px h-4 bg-border" />
+                            <div className="flex items-center gap-1.5 text-sm">
+                              <span className="text-muted-foreground">Failed Now:</span>
+                              <span className="font-bold text-yellow-500">{jail.currently_failed}</span>
                             </div>
-                            <div className="px-2 py-1.5 bg-card text-center">
-                              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Total Failed</p>
-                              <p className="text-sm font-bold text-muted-foreground">{jail.total_failed}</p>
+                            <div className="w-px h-4 bg-border" />
+                            <div className="flex items-center gap-1.5 text-sm">
+                              <span className="text-muted-foreground">Total Failed:</span>
+                              <span className="font-bold text-muted-foreground">{jail.total_failed}</span>
                             </div>
                           </div>
 
@@ -2837,8 +2843,8 @@ ${(report.sections && report.sections.length > 0) ? `
                           )}
 
                           {jail.currently_banned === 0 && (
-                            <div className="px-3 py-1.5 border-t border-border text-center">
-                              <p className="text-[10px] text-muted-foreground">No IPs currently banned</p>
+                            <div className="px-3 py-2 border-t border-border text-center">
+                              <p className="text-xs text-muted-foreground">No IPs currently banned in this jail</p>
                             </div>
                           )}
                         </div>
