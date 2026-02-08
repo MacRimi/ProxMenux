@@ -9,7 +9,7 @@ import {
   Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Key, Copy, Eye, EyeOff,
   Trash2, RefreshCw, Clock, ShieldCheck, Globe, FileKey, AlertTriangle,
   Flame, Bug, Search, Download, Power, PowerOff, Plus, Minus, Activity, Settings, Ban,
-  FileText, Printer, Play, BarChart3, TriangleAlert,
+  FileText, Printer, Play, BarChart3, TriangleAlert, ChevronDown,
 } from "lucide-react"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
@@ -103,20 +103,27 @@ export function Security() {
   // Lynis audit state
   interface LynisWarning { test_id: string; severity: string; description: string; solution: string }
   interface LynisSuggestion { test_id: string; description: string; solution: string; details: string }
+  interface LynisCheck {
+    name: string; status: string; detail?: string
+  }
+  interface LynisSection {
+    name: string; checks: LynisCheck[]
+  }
   interface LynisReport {
     datetime_start: string; datetime_end: string; lynis_version: string
-    os_name: string; os_version: string; hostname: string
+    os_name: string; os_version: string; os_fullname: string; hostname: string
     hardening_index: number | null; tests_performed: number
     warnings: LynisWarning[]; suggestions: LynisSuggestion[]
     categories: Record<string, { score?: number }>
     installed_packages: number; kernel_version: string
     firewall_active: boolean; malware_scanner: boolean
+    sections: LynisSection[]
   }
   const [lynisAuditRunning, setLynisAuditRunning] = useState(false)
   const [lynisReport, setLynisReport] = useState<LynisReport | null>(null)
   const [lynisReportLoading, setLynisReportLoading] = useState(false)
   const [lynisShowReport, setLynisShowReport] = useState(false)
-  const [lynisActiveTab, setLynisActiveTab] = useState<"overview" | "warnings" | "suggestions">("overview")
+  const [lynisActiveTab, setLynisActiveTab] = useState<"overview" | "warnings" | "suggestions" | "checks">("overview")
 
   // Fail2Ban detailed state
   interface BannedIp {
@@ -984,7 +991,7 @@ export function Security() {
       <h3>System Hardening Assessment</h3>
       <p>
         This automated security audit was performed on host <strong>${report.hostname || "Unknown"}</strong>
-        running <strong>${report.os_name} ${report.os_version}</strong>.
+        running <strong>${report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "Unknown OS"}</strong>.
         A total of <strong>${report.tests_performed}</strong> tests were executed,
         resulting in <strong style="color:#dc2626;">${report.warnings.length} warning(s)</strong>
         and <strong style="color:#ca8a04;">${report.suggestions.length} suggestion(s)</strong> for improvement.
@@ -1003,7 +1010,7 @@ export function Security() {
     </div>
     <div class="info-card">
       <div class="info-label">Operating System</div>
-      <div class="info-value">${report.os_name} ${report.os_version}</div>
+      <div class="info-value">${report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "N/A"}</div>
     </div>
     <div class="info-card">
       <div class="info-label">Kernel</div>
@@ -1014,12 +1021,12 @@ export function Security() {
       <div class="info-value">${report.lynis_version || "N/A"}</div>
     </div>
     <div class="info-card">
-      <div class="info-label">Scan Started</div>
-      <div class="info-value">${report.datetime_start || "N/A"}</div>
+      <div class="info-label">Report Date</div>
+      <div class="info-value">${report.datetime_start ? report.datetime_start.replace("T", " ").substring(0, 16) : "N/A"}</div>
     </div>
     <div class="info-card">
-      <div class="info-label">Scan Ended</div>
-      <div class="info-value">${report.datetime_end || "N/A"}</div>
+      <div class="info-label">Tests Performed</div>
+      <div class="info-value">${report.tests_performed}</div>
     </div>
   </div>
 </div>
@@ -1029,15 +1036,15 @@ export function Security() {
   <div class="section-title">3. Security Posture Overview</div>
   <div class="status-grid">
     <div class="status-card">
-      <div class="status-value" style="color:${scoreColor};">${report.hardening_index ?? "N/A"}</div>
-      <div class="status-label">Hardening Score</div>
+      <div class="status-value" style="color:${scoreColor};">${report.hardening_index ?? "N/A"}<span style="font-size:12px;color:#64748b;">/100</span></div>
+      <div class="status-label">Hardening Score (${scoreLabel})</div>
     </div>
     <div class="status-card">
-      <div class="status-value" style="color:#dc2626;">${report.warnings.length}</div>
+      <div class="status-value" style="color:${report.warnings.length > 0 ? "#dc2626" : "#16a34a"};">${report.warnings.length}</div>
       <div class="status-label">Warnings</div>
     </div>
     <div class="status-card">
-      <div class="status-value" style="color:#ca8a04;">${report.suggestions.length}</div>
+      <div class="status-value" style="color:${report.suggestions.length > 0 ? "#ca8a04" : "#16a34a"};">${report.suggestions.length}</div>
       <div class="status-label">Suggestions</div>
     </div>
     <div class="status-card">
@@ -1045,7 +1052,7 @@ export function Security() {
       <div class="status-label">Tests Performed</div>
     </div>
   </div>
-  <div class="info-grid" style="grid-template-columns: repeat(4, 1fr);">
+  <div class="info-grid" style="grid-template-columns: repeat(3, 1fr);">
     <div class="info-card" style="text-align:center;">
       <div class="info-label">Firewall</div>
       <div class="info-value" style="color:${report.firewall_active ? "#16a34a" : "#dc2626"};">${report.firewall_active ? "Active" : "Inactive"}</div>
@@ -1055,12 +1062,8 @@ export function Security() {
       <div class="info-value" style="color:${report.malware_scanner ? "#16a34a" : "#ca8a04"};">${report.malware_scanner ? "Installed" : "Not Found"}</div>
     </div>
     <div class="info-card" style="text-align:center;">
-      <div class="info-label">Packages</div>
+      <div class="info-label">Installed Packages</div>
       <div class="info-value">${report.installed_packages || "N/A"}</div>
-    </div>
-    <div class="info-card" style="text-align:center;">
-      <div class="info-label">Score Rating</div>
-      <div class="info-value" style="color:${scoreColor};">${scoreLabel}</div>
     </div>
   </div>
 </div>
@@ -1100,6 +1103,43 @@ export function Security() {
       ${s.details ? `<div class="finding-details">${s.details}</div>` : ""}
     </div>`).join("")}
 </div>
+
+<!-- Detailed Checks -->
+${(report.sections && report.sections.length > 0) ? `
+<div class="section page-break">
+  <div class="section-title">6. Detailed Security Checks (${report.sections.length} categories)</div>
+  <p style="font-size:11px;color:#64748b;margin-bottom:16px;">Complete list of all security checks performed during the audit, organized by category.</p>
+  ${report.sections.map((section, sIdx) => `
+  <div style="margin-bottom:16px;page-break-inside:avoid;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 10px;background:#f1f5f9;border-radius:4px;">
+      <span style="font-size:10px;font-weight:700;color:#0891b2;background:#ecfeff;padding:2px 6px;border-radius:3px;">${sIdx + 1}</span>
+      <span style="font-size:12px;font-weight:700;color:#0f172a;">${section.name}</span>
+      <span style="font-size:10px;color:#94a3b8;margin-left:auto;">${section.checks.length} checks</span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <thead>
+        <tr style="background:#f8fafc;">
+          <th style="text-align:left;padding:4px 8px;font-size:10px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0;">Check</th>
+          <th style="text-align:right;padding:4px 8px;font-size:10px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0;width:120px;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${section.checks.map(check => {
+          const st = check.status.toUpperCase()
+          const isWarn = ["WARNING", "UNSAFE", "WEAK", "DIFFERENT", "DISABLED"].includes(st)
+          const isSugg = ["SUGGESTION", "PARTIALLY HARDENED", "MEDIUM", "NON DEFAULT"].includes(st)
+          const isOk = ["OK", "FOUND", "DONE", "ENABLED", "ACTIVE", "YES", "HARDENED", "PROTECTED"].includes(st)
+          const color = isWarn ? "#dc2626" : isSugg ? "#ca8a04" : isOk ? "#16a34a" : "#64748b"
+          const bg = isWarn ? "#fef2f2" : isSugg ? "#fefce8" : "transparent"
+          return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;">
+            <td style="padding:3px 8px;color:#1e293b;">${check.name}${check.detail ? ` <span style="color:#94a3b8;font-size:10px;">(${check.detail})</span>` : ""}</td>
+            <td style="padding:3px 8px;text-align:right;font-weight:700;color:${color};font-size:10px;">${check.status}</td>
+          </tr>`
+        }).join("")}
+      </tbody>
+    </table>
+  </div>`).join("")}
+</div>` : ""}
 
 <!-- Footer -->
 <div class="report-footer">
@@ -2900,89 +2940,60 @@ export function Security() {
                 <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
                   <p className="text-xs text-muted-foreground mb-1">Hardening Index</p>
                   <p className={`text-xl font-bold ${
-                    lynisInfo.hardening_index === null ? "text-muted-foreground" :
-                    lynisInfo.hardening_index >= 70 ? "text-green-500" :
-                    lynisInfo.hardening_index >= 50 ? "text-yellow-500" :
+                    (lynisReport?.hardening_index ?? lynisInfo.hardening_index) === null ? "text-muted-foreground" :
+                    (lynisReport?.hardening_index ?? lynisInfo.hardening_index ?? 0) >= 70 ? "text-green-500" :
+                    (lynisReport?.hardening_index ?? lynisInfo.hardening_index ?? 0) >= 50 ? "text-yellow-500" :
                     "text-red-500"
                   }`}>
-                    {lynisInfo.hardening_index !== null ? lynisInfo.hardening_index : "N/A"}
+                    {(lynisReport?.hardening_index ?? lynisInfo.hardening_index) !== null
+                      ? (lynisReport?.hardening_index ?? lynisInfo.hardening_index)
+                      : "N/A"}
                   </p>
                 </div>
                 <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
                   <p className="text-xs text-muted-foreground mb-1">Warnings</p>
                   <p className={`text-xl font-bold ${lynisReport && lynisReport.warnings.length > 0 ? "text-red-500" : "text-green-500"}`}>
-                    {lynisReport ? lynisReport.warnings.length : "N/A"}
+                    {lynisReport ? lynisReport.warnings.length : "-"}
                   </p>
                 </div>
                 <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
                   <p className="text-xs text-muted-foreground mb-1">Suggestions</p>
                   <p className={`text-xl font-bold ${lynisReport && lynisReport.suggestions.length > 0 ? "text-yellow-500" : "text-green-500"}`}>
-                    {lynisReport ? lynisReport.suggestions.length : "N/A"}
+                    {lynisReport ? lynisReport.suggestions.length : "-"}
                   </p>
                 </div>
               </div>
 
               {/* Hardening bar */}
-              {lynisInfo.hardening_index !== null && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Security Hardening Score</span>
-                    <span className={`font-bold ${
-                      lynisInfo.hardening_index >= 70 ? "text-green-500" :
-                      lynisInfo.hardening_index >= 50 ? "text-yellow-500" :
-                      "text-red-500"
-                    }`}>
-                      {lynisInfo.hardening_index}/100
-                    </span>
+              {(() => {
+                const score = lynisReport?.hardening_index ?? lynisInfo.hardening_index
+                if (score === null || score === undefined) return null
+                return (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Security Hardening Score</span>
+                      <span className={`font-bold ${
+                        score >= 70 ? "text-green-500" : score >= 50 ? "text-yellow-500" : "text-red-500"
+                      }`}>
+                        {score}/100
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-muted/50 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-1000 ${
+                          score >= 70 ? "bg-green-500" : score >= 50 ? "bg-yellow-500" : "bg-red-500"
+                        }`}
+                        style={{ width: `${score}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                      <span>Critical (0-49)</span>
+                      <span>Moderate (50-69)</span>
+                      <span>Good (70-100)</span>
+                    </div>
                   </div>
-                  <div className="w-full h-3 bg-muted/50 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-1000 ${
-                        lynisInfo.hardening_index >= 70 ? "bg-green-500" :
-                        lynisInfo.hardening_index >= 50 ? "bg-yellow-500" :
-                        "bg-red-500"
-                      }`}
-                      style={{ width: `${lynisInfo.hardening_index}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>Critical (0-49)</span>
-                    <span>Moderate (50-69)</span>
-                    <span>Good (70-100)</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Action buttons */}
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleRunLynisAudit}
-                  disabled={lynisAuditRunning}
-                  className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white"
-                >
-                  {lynisAuditRunning ? (
-                    <>
-                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                      Running Audit...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      Run Security Audit
-                    </>
-                  )}
-                </Button>
-                {lynisReport && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setLynisShowReport(!lynisShowReport)}
-                    className="bg-transparent border-cyan-500/30 text-cyan-500 hover:bg-cyan-500/10"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    {lynisShowReport ? "Hide Report" : "View Report"}
-                  </Button>
-                )}
-              </div>
+                )
+              })()}
 
               {/* Running indicator */}
               {lynisAuditRunning && (
@@ -2997,192 +3008,296 @@ export function Security() {
                 </div>
               )}
 
-              {/* Report viewer */}
-              {lynisShowReport && lynisReport && (
-                <div className="border border-border rounded-lg overflow-hidden">
-                  {/* Report header */}
-                  <div className="bg-muted/40 p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-cyan-500" />
-                      <span className="font-semibold text-sm">Audit Report</span>
-                      {lynisReport.datetime_start && (
-                        <span className="text-xs text-muted-foreground">
-                          - {lynisReport.datetime_start.replace("T", " ").substring(0, 16)}
-                        </span>
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        // Open print-friendly report in new window
-                        const printWindow = window.open("", "_blank")
-                        if (printWindow) {
-                          printWindow.document.write(generatePrintableReport(lynisReport))
-                          printWindow.document.close()
-                        }
-                      }}
-                      className="h-7 px-2.5 text-xs text-cyan-500 hover:text-cyan-400 hover:bg-cyan-500/10"
+              {/* Reports list */}
+              {lynisReport && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Audit Reports</p>
+
+                  {/* Report row - clickable to expand */}
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setLynisShowReport(!lynisShowReport)}
+                      className="w-full flex items-center justify-between p-3 bg-muted/20 hover:bg-muted/40 transition-colors text-left"
                     >
-                      <Printer className="h-3 w-3 mr-1" />
-                      Print / PDF
-                    </Button>
-                  </div>
-
-                  {/* System info strip */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border">
-                    <div className="p-2.5 bg-card text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase">Hostname</p>
-                      <p className="text-xs font-medium truncate">{lynisReport.hostname || "N/A"}</p>
-                    </div>
-                    <div className="p-2.5 bg-card text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase">OS</p>
-                      <p className="text-xs font-medium truncate">{lynisReport.os_name} {lynisReport.os_version}</p>
-                    </div>
-                    <div className="p-2.5 bg-card text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase">Kernel</p>
-                      <p className="text-xs font-medium truncate">{lynisReport.kernel_version || "N/A"}</p>
-                    </div>
-                    <div className="p-2.5 bg-card text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase">Tests</p>
-                      <p className="text-xs font-medium">{lynisReport.tests_performed}</p>
-                    </div>
-                  </div>
-
-                  {/* Report tabs */}
-                  <div className="flex gap-0 border-t border-border">
-                    {(["overview", "warnings", "suggestions"] as const).map((tab) => (
-                      <button
-                        key={tab}
-                        onClick={() => setLynisActiveTab(tab)}
-                        className={`flex-1 px-3 py-2 text-xs font-medium transition-all flex items-center justify-center gap-1.5 border-r last:border-r-0 border-border ${
-                          lynisActiveTab === tab
-                            ? "bg-cyan-500 text-white"
-                            : "bg-muted/20 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                        }`}
-                      >
-                        {tab === "overview" && <BarChart3 className="h-3 w-3" />}
-                        {tab === "warnings" && <TriangleAlert className="h-3 w-3" />}
-                        {tab === "suggestions" && <Info className="h-3 w-3" />}
-                        {tab === "overview" ? "Overview" : tab === "warnings" ? `Warnings (${lynisReport.warnings.length})` : `Suggestions (${lynisReport.suggestions.length})`}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Overview tab */}
-                  {lynisActiveTab === "overview" && (
-                    <div className="p-4 space-y-3">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <div className="p-3 rounded-lg border border-border bg-muted/20 text-center">
-                          <p className="text-[10px] text-muted-foreground uppercase mb-1">Packages</p>
-                          <p className="text-lg font-bold">{lynisReport.installed_packages || "N/A"}</p>
-                        </div>
-                        <div className="p-3 rounded-lg border border-border bg-muted/20 text-center">
-                          <p className="text-[10px] text-muted-foreground uppercase mb-1">Firewall</p>
-                          <p className={`text-lg font-bold ${lynisReport.firewall_active ? "text-green-500" : "text-red-500"}`}>
-                            {lynisReport.firewall_active ? "Active" : "Inactive"}
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-4 w-4 text-cyan-500 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium">
+                            Security Audit - {lynisReport.datetime_start
+                              ? lynisReport.datetime_start.replace("T", " ").substring(0, 16)
+                              : lynisInfo.last_scan?.replace("T", " ").substring(0, 16) || "Unknown date"}
                           </p>
-                        </div>
-                        <div className="p-3 rounded-lg border border-border bg-muted/20 text-center">
-                          <p className="text-[10px] text-muted-foreground uppercase mb-1">Malware Scanner</p>
-                          <p className={`text-lg font-bold ${lynisReport.malware_scanner ? "text-green-500" : "text-yellow-500"}`}>
-                            {lynisReport.malware_scanner ? "Installed" : "Not Found"}
+                          <p className="text-[11px] text-muted-foreground">
+                            {lynisReport.hostname || "System"} - {lynisReport.tests_performed} tests - Score: {lynisReport.hardening_index ?? "N/A"}/100 - {lynisReport.warnings.length} warnings - {lynisReport.suggestions.length} suggestions
                           </p>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const printWindow = window.open("", "_blank")
+                            if (printWindow) {
+                              printWindow.document.write(generatePrintableReport(lynisReport))
+                              printWindow.document.close()
+                            }
+                          }}
+                          className="h-7 px-2 text-xs text-cyan-500 hover:text-cyan-400 hover:bg-cyan-500/10"
+                          title="Print / Save as PDF"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (confirm("Delete this audit report? The report file will be removed from the server.")) {
+                              fetchApi("/api/security/lynis/report", { method: "DELETE" })
+                                .then(() => {
+                                  setLynisReport(null)
+                                  setLynisShowReport(false)
+                                  setSuccess("Report deleted")
+                                  loadSecurityTools()
+                                })
+                                .catch(() => setError("Failed to delete report"))
+                            }
+                          }}
+                          className="h-7 px-2 text-xs text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                          title="Delete report"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${lynisShowReport ? "rotate-180" : ""}`} />
+                      </div>
+                    </button>
 
-                      {/* Security checklist */}
-                      <div className="space-y-1.5">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Status</p>
-                        {[
-                          { label: "Firewall", ok: lynisReport.firewall_active },
-                          { label: "Malware Scanner", ok: lynisReport.malware_scanner },
-                          { label: "No Critical Warnings", ok: lynisReport.warnings.length === 0 },
-                          { label: "Hardening Score >= 70", ok: (lynisReport.hardening_index || 0) >= 70 },
-                        ].map((item) => (
-                          <div key={item.label} className="flex items-center gap-2 px-3 py-1.5 rounded bg-muted/20">
-                            <div className={`w-2 h-2 rounded-full ${item.ok ? "bg-green-500" : "bg-red-500"}`} />
-                            <span className="text-xs">{item.label}</span>
-                            <span className={`ml-auto text-[10px] font-bold ${item.ok ? "text-green-500" : "text-red-500"}`}>
-                              {item.ok ? "PASS" : "FAIL"}
-                            </span>
+                    {/* Expanded report details */}
+                    {lynisShowReport && (
+                      <div className="border-t border-border">
+                        {/* System info strip */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border">
+                          <div className="p-2.5 bg-card text-center">
+                            <p className="text-[10px] text-muted-foreground uppercase">Hostname</p>
+                            <p className="text-xs font-medium truncate">{lynisReport.hostname || "N/A"}</p>
                           </div>
-                        ))}
+                          <div className="p-2.5 bg-card text-center">
+                            <p className="text-[10px] text-muted-foreground uppercase">OS</p>
+                            <p className="text-xs font-medium truncate">{lynisReport.os_fullname || `${lynisReport.os_name} ${lynisReport.os_version}`.trim() || "N/A"}</p>
+                          </div>
+                          <div className="p-2.5 bg-card text-center">
+                            <p className="text-[10px] text-muted-foreground uppercase">Kernel</p>
+                            <p className="text-xs font-medium truncate">{lynisReport.kernel_version || "N/A"}</p>
+                          </div>
+                          <div className="p-2.5 bg-card text-center">
+                            <p className="text-[10px] text-muted-foreground uppercase">Tests</p>
+                            <p className="text-xs font-medium">{lynisReport.tests_performed}</p>
+                          </div>
+                        </div>
+
+                        {/* Report tabs */}
+                        <div className="flex gap-0 border-t border-border">
+                          {(["overview", "checks", "warnings", "suggestions"] as const).map((tab) => (
+                            <button
+                              key={tab}
+                              onClick={() => setLynisActiveTab(tab)}
+                              className={`flex-1 px-3 py-2 text-xs font-medium transition-all flex items-center justify-center gap-1.5 border-r last:border-r-0 border-border ${
+                                lynisActiveTab === tab
+                                  ? "bg-cyan-500 text-white"
+                                  : "bg-muted/20 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                              }`}
+                            >
+                              {tab === "overview" && <BarChart3 className="h-3 w-3" />}
+                              {tab === "checks" && <Search className="h-3 w-3" />}
+                              {tab === "warnings" && <TriangleAlert className="h-3 w-3" />}
+                              {tab === "suggestions" && <Info className="h-3 w-3" />}
+                              {tab === "overview" ? "Overview"
+                                : tab === "checks" ? `Checks (${lynisReport.sections?.length || 0})`
+                                : tab === "warnings" ? `Warnings (${lynisReport.warnings.length})`
+                                : `Suggestions (${lynisReport.suggestions.length})`}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Overview tab */}
+                        {lynisActiveTab === "overview" && (
+                          <div className="p-4 space-y-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              <div className="p-3 rounded-lg border border-border bg-muted/20 text-center">
+                                <p className="text-[10px] text-muted-foreground uppercase mb-1">Packages</p>
+                                <p className="text-lg font-bold">{lynisReport.installed_packages || "N/A"}</p>
+                              </div>
+                              <div className="p-3 rounded-lg border border-border bg-muted/20 text-center">
+                                <p className="text-[10px] text-muted-foreground uppercase mb-1">Firewall</p>
+                                <p className={`text-lg font-bold ${lynisReport.firewall_active ? "text-green-500" : "text-red-500"}`}>
+                                  {lynisReport.firewall_active ? "Active" : "Inactive"}
+                                </p>
+                              </div>
+                              <div className="p-3 rounded-lg border border-border bg-muted/20 text-center">
+                                <p className="text-[10px] text-muted-foreground uppercase mb-1">Malware Scanner</p>
+                                <p className={`text-lg font-bold ${lynisReport.malware_scanner ? "text-green-500" : "text-yellow-500"}`}>
+                                  {lynisReport.malware_scanner ? "Installed" : "Not Found"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Security checklist */}
+                            <div className="space-y-1.5">
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Status</p>
+                              {[
+                                { label: "Firewall", ok: lynisReport.firewall_active },
+                                { label: "Malware Scanner", ok: lynisReport.malware_scanner },
+                                { label: "No Critical Warnings", ok: lynisReport.warnings.length === 0 },
+                                { label: "Hardening Score >= 70", ok: (lynisReport.hardening_index || 0) >= 70 },
+                              ].map((item) => (
+                                <div key={item.label} className="flex items-center gap-2 px-3 py-1.5 rounded bg-muted/20">
+                                  <div className={`w-2 h-2 rounded-full ${item.ok ? "bg-green-500" : "bg-red-500"}`} />
+                                  <span className="text-xs">{item.label}</span>
+                                  <span className={`ml-auto text-[10px] font-bold ${item.ok ? "text-green-500" : "text-red-500"}`}>
+                                    {item.ok ? "PASS" : "FAIL"}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Checks tab */}
+                        {lynisActiveTab === "checks" && (
+                          <div className="max-h-[500px] overflow-y-auto">
+                            {(!lynisReport.sections || lynisReport.sections.length === 0) ? (
+                              <div className="p-6 text-center text-sm text-muted-foreground">
+                                No check details available. Run an audit to generate detailed results.
+                              </div>
+                            ) : (
+                              <div className="divide-y divide-border">
+                                {lynisReport.sections.map((section, sIdx) => (
+                                  <div key={sIdx}>
+                                    <div className="px-3 py-2 bg-muted/30 flex items-center gap-2">
+                                      <span className="text-[10px] font-bold text-cyan-500 bg-cyan-500/10 px-1.5 py-0.5 rounded">{sIdx + 1}</span>
+                                      <span className="text-xs font-semibold">{section.name}</span>
+                                      <span className="text-[10px] text-muted-foreground ml-auto">{section.checks.length} checks</span>
+                                    </div>
+                                    <div className="divide-y divide-border/50">
+                                      {section.checks.map((check, cIdx) => {
+                                        const st = check.status.toUpperCase()
+                                        const isOk = ["OK", "FOUND", "DONE", "ENABLED", "ACTIVE", "YES", "HARDENED", "PROTECTED", "NONE", "NOT FOUND", "NOT RUNNING", "NOT ACTIVE", "NOT ENABLED", "DEFAULT", "NO"].includes(st)
+                                        const isWarn = ["WARNING", "UNSAFE", "WEAK", "DIFFERENT", "DISABLED"].includes(st)
+                                        const isSugg = ["SUGGESTION", "PARTIALLY HARDENED", "MEDIUM", "NON DEFAULT"].includes(st)
+                                        const dotColor = isWarn ? "bg-red-500" : isSugg ? "bg-yellow-500" : isOk ? "bg-green-500" : "bg-muted-foreground"
+                                        const textColor = isWarn ? "text-red-500" : isSugg ? "text-yellow-500" : isOk ? "text-green-500" : "text-muted-foreground"
+                                        return (
+                                          <div key={cIdx} className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/10">
+                                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColor}`} />
+                                            <span className="text-[11px] flex-1 min-w-0 truncate">{check.name}</span>
+                                            {check.detail && <span className="text-[10px] text-muted-foreground/70 truncate max-w-[150px]">{check.detail}</span>}
+                                            <span className={`text-[10px] font-bold flex-shrink-0 ${textColor}`}>{check.status}</span>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Warnings tab */}
+                        {lynisActiveTab === "warnings" && (
+                          <div className="max-h-96 overflow-y-auto">
+                            {lynisReport.warnings.length === 0 ? (
+                              <div className="p-6 text-center text-sm text-muted-foreground">
+                                No warnings found. Your system is well configured.
+                              </div>
+                            ) : (
+                              <div className="divide-y divide-border">
+                                {lynisReport.warnings.map((w, idx) => (
+                                  <div key={idx} className="p-3 hover:bg-muted/20 transition-colors">
+                                    <div className="flex items-start gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-1.5" />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                          <code className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 font-mono">{w.test_id}</code>
+                                          {w.severity && (
+                                            <span className="text-[10px] text-red-400">{w.severity}</span>
+                                          )}
+                                        </div>
+                                        <p className="text-sm text-foreground">{w.description}</p>
+                                        {w.solution && (
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            Solution: {w.solution}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Suggestions tab */}
+                        {lynisActiveTab === "suggestions" && (
+                          <div className="max-h-96 overflow-y-auto">
+                            {lynisReport.suggestions.length === 0 ? (
+                              <div className="p-6 text-center text-sm text-muted-foreground">
+                                No suggestions. System is fully hardened.
+                              </div>
+                            ) : (
+                              <div className="divide-y divide-border">
+                                {lynisReport.suggestions.map((s, idx) => (
+                                  <div key={idx} className="p-3 hover:bg-muted/20 transition-colors">
+                                    <div className="flex items-start gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0 mt-1.5" />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                          <code className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 font-mono">{s.test_id}</code>
+                                        </div>
+                                        <p className="text-sm text-foreground">{s.description}</p>
+                                        {s.solution && (
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            Solution: {s.solution}
+                                          </p>
+                                        )}
+                                        {s.details && (
+                                          <p className="text-[10px] text-muted-foreground/70 mt-0.5 font-mono">{s.details}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Warnings tab */}
-                  {lynisActiveTab === "warnings" && (
-                    <div className="max-h-96 overflow-y-auto">
-                      {lynisReport.warnings.length === 0 ? (
-                        <div className="p-6 text-center text-sm text-muted-foreground">
-                          No warnings found. Your system is well configured.
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-border">
-                          {lynisReport.warnings.map((w, idx) => (
-                            <div key={idx} className="p-3 hover:bg-muted/20 transition-colors">
-                              <div className="flex items-start gap-2">
-                                <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-1.5" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-0.5">
-                                    <code className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 font-mono">{w.test_id}</code>
-                                    {w.severity && (
-                                      <span className="text-[10px] text-red-400">{w.severity}</span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-foreground">{w.description}</p>
-                                  {w.solution && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Solution: {w.solution}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Suggestions tab */}
-                  {lynisActiveTab === "suggestions" && (
-                    <div className="max-h-96 overflow-y-auto">
-                      {lynisReport.suggestions.length === 0 ? (
-                        <div className="p-6 text-center text-sm text-muted-foreground">
-                          No suggestions. System is fully hardened.
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-border">
-                          {lynisReport.suggestions.map((s, idx) => (
-                            <div key={idx} className="p-3 hover:bg-muted/20 transition-colors">
-                              <div className="flex items-start gap-2">
-                                <div className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0 mt-1.5" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-0.5">
-                                    <code className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 font-mono">{s.test_id}</code>
-                                  </div>
-                                  <p className="text-sm text-foreground">{s.description}</p>
-                                  {s.solution && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Solution: {s.solution}
-                                    </p>
-                                  )}
-                                  {s.details && (
-                                    <p className="text-[10px] text-muted-foreground/70 mt-0.5 font-mono">{s.details}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
+
+              {/* Run audit button - at the bottom */}
+              <Button
+                onClick={handleRunLynisAudit}
+                disabled={lynisAuditRunning}
+                className="w-full bg-cyan-600 hover:bg-cyan-700 text-white"
+              >
+                {lynisAuditRunning ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                    Running Audit...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Run Security Audit
+                  </>
+                )}
+              </Button>
             </div>
           )}
         </CardContent>

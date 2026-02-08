@@ -1042,21 +1042,27 @@ def _detect_lynis():
         if rc == 0:
             info["version"] = out.strip()
 
-        # Check for last scan report
-        report_file = "/var/log/lynis-report.dat"
-        if os.path.isfile(report_file):
-            try:
-                with open(report_file, 'r') as f:
-                    for line in f:
-                        if line.startswith("report_datetime_start="):
-                            info["last_scan"] = line.split("=", 1)[1].strip()
-                        elif line.startswith("hardening_index="):
-                            try:
-                                info["hardening_index"] = int(line.split("=", 1)[1].strip())
-                            except ValueError:
-                                pass
-            except Exception:
-                pass
+        # Check for last scan report - use full parser for accurate data
+        report = parse_lynis_report()
+        if report:
+            info["last_scan"] = report.get("datetime_start", None)
+            info["hardening_index"] = report.get("hardening_index", None)
+        else:
+            # Fallback: quick read of report.dat
+            report_file = "/var/log/lynis-report.dat"
+            if os.path.isfile(report_file):
+                try:
+                    with open(report_file, 'r') as f:
+                        for line in f:
+                            if line.startswith("report_datetime_start="):
+                                info["last_scan"] = line.split("=", 1)[1].strip()
+                            elif line.startswith("hardening_index="):
+                                try:
+                                    info["hardening_index"] = int(line.split("=", 1)[1].strip())
+                                except ValueError:
+                                    pass
+                except Exception:
+                    pass
 
     return info
 
@@ -1098,6 +1104,13 @@ def run_lynis_audit():
                 [lynis_cmd, "audit", "system", "--no-colors", "--quick"],
                 timeout=600
             )
+            # Save stdout output for section parsing
+            if out:
+                try:
+                    with open("/var/log/lynis-output.log", "w") as fout:
+                        fout.write(out)
+                except Exception:
+                    pass
             if rc == 0:
                 _lynis_audit_progress = "completed"
             else:
@@ -1123,6 +1136,7 @@ def get_lynis_audit_status():
 def parse_lynis_report():
     """
     Parse /var/log/lynis-report.dat into structured report data.
+    Also enriches with data from lynis.log when report.dat is sparse.
     Returns a dict with all audit findings.
     """
     report_file = "/var/log/lynis-report.dat"
@@ -1135,6 +1149,7 @@ def parse_lynis_report():
         "lynis_version": "",
         "os_name": "",
         "os_version": "",
+        "os_fullname": "",
         "hostname": "",
         "hardening_index": None,
         "tests_performed": 0,
@@ -1147,11 +1162,16 @@ def parse_lynis_report():
         "malware_scanner": False,
     }
 
+    # Collect all raw key-value pairs first for flexible matching
+    raw_data = {}
+    warnings_raw = []
+    suggestions_raw = []
+
     try:
         with open(report_file, 'r') as f:
             for line in f:
                 line = line.strip()
-                if not line or line.startswith("#"):
+                if not line or line.startswith("#") or line.startswith("["):
                     continue
 
                 if "=" not in line:
@@ -1161,73 +1181,212 @@ def parse_lynis_report():
                 key = key.strip()
                 value = value.strip()
 
-                if key == "report_datetime_start":
-                    report["datetime_start"] = value
-                elif key == "report_datetime_end":
-                    report["datetime_end"] = value
-                elif key == "lynis_version":
-                    report["lynis_version"] = value
-                elif key == "os_name":
-                    report["os_name"] = value
-                elif key == "os_version":
-                    report["os_version"] = value
-                elif key == "hostname":
-                    report["hostname"] = value
-                elif key == "hardening_index":
-                    try:
-                        report["hardening_index"] = int(value)
-                    except ValueError:
-                        pass
-                elif key == "tests_performed":
-                    try:
-                        report["tests_performed"] = int(value)
-                    except ValueError:
-                        pass
-                elif key == "installed_packages":
-                    try:
-                        report["installed_packages"] = int(value)
-                    except ValueError:
-                        pass
-                elif key == "linux_kernel_version":
-                    report["kernel_version"] = value
-                elif key == "firewall_active":
-                    report["firewall_active"] = value == "1"
-                elif key == "malware_scanner_installed":
-                    report["malware_scanner"] = value == "1"
-
-                # Warnings: warning[]=TEST_ID|severity|description|solution
-                elif key == "warning[]":
-                    parts = value.split("|")
-                    if len(parts) >= 3:
-                        report["warnings"].append({
-                            "test_id": parts[0].strip(),
-                            "severity": parts[1].strip() if len(parts) > 1 else "",
-                            "description": parts[2].strip() if len(parts) > 2 else "",
-                            "solution": parts[3].strip() if len(parts) > 3 else "",
-                        })
-
-                # Suggestions: suggestion[]=TEST_ID|description|solution|details
+                if key == "warning[]":
+                    warnings_raw.append(value)
                 elif key == "suggestion[]":
-                    parts = value.split("|")
-                    if len(parts) >= 2:
-                        report["suggestions"].append({
-                            "test_id": parts[0].strip(),
-                            "description": parts[1].strip() if len(parts) > 1 else "",
-                            "solution": parts[2].strip() if len(parts) > 2 else "",
-                            "details": parts[3].strip() if len(parts) > 3 else "",
-                        })
-
-                # Category results
-                elif key.endswith("_score"):
-                    cat_name = key.replace("_score", "")
-                    try:
-                        if cat_name not in report["categories"]:
-                            report["categories"][cat_name] = {}
-                        report["categories"][cat_name]["score"] = int(value)
-                    except ValueError:
-                        pass
-
+                    suggestions_raw.append(value)
+                else:
+                    # Last value wins (some keys appear multiple times)
+                    raw_data[key] = value
     except Exception:
         return None
+
+    # Map known fields (Lynis uses varied naming across versions)
+    report["datetime_start"] = raw_data.get("report_datetime_start", "")
+    report["datetime_end"] = raw_data.get("report_datetime_end", "")
+    report["lynis_version"] = raw_data.get("lynis_version", "")
+    report["hostname"] = raw_data.get("hostname", "")
+
+    # OS name - try multiple fields
+    report["os_name"] = (raw_data.get("os_name", "") or
+                         raw_data.get("os", "") or
+                         raw_data.get("os_fullname", ""))
+    report["os_version"] = (raw_data.get("os_version", "") or
+                            raw_data.get("os_version_id", ""))
+    report["os_fullname"] = raw_data.get("os_fullname", "")
+
+    # Kernel - try multiple field names
+    report["kernel_version"] = (raw_data.get("os_kernel_version_full", "") or
+                                raw_data.get("os_kernel_version", "") or
+                                raw_data.get("linux_kernel_version", "") or
+                                raw_data.get("linux_version", "") or
+                                raw_data.get("os_kernelversion_full", "") or
+                                raw_data.get("os_kernelversion", ""))
+
+    # Hardening index
+    for k in ["hardening_index", "hpindex", "hp_index"]:
+        if k in raw_data:
+            try:
+                report["hardening_index"] = int(raw_data[k])
+                break
+            except ValueError:
+                pass
+
+    # Tests performed
+    for k in ["tests_performed", "ctests_performed", "total_tests"]:
+        if k in raw_data:
+            try:
+                val = int(raw_data[k])
+                if val > report["tests_performed"]:
+                    report["tests_performed"] = val
+            except ValueError:
+                pass
+
+    # Installed packages
+    for k in ["installed_packages", "installed_packages_array"]:
+        if k in raw_data:
+            try:
+                report["installed_packages"] = int(raw_data[k])
+            except ValueError:
+                # Might be a string like "package1,package2" - count them
+                pkgs = raw_data[k]
+                if pkgs:
+                    report["installed_packages"] = len(pkgs.split(","))
+
+    # Firewall
+    for k in ["firewall_active", "firewall_installed"]:
+        if k in raw_data and raw_data[k] in ("1", "true", "yes"):
+            report["firewall_active"] = True
+            break
+
+    # Malware scanner
+    for k in ["malware_scanner_installed", "malware_scanner"]:
+        if k in raw_data and raw_data[k] in ("1", "true", "yes"):
+            report["malware_scanner"] = True
+            break
+
+    # Parse warnings
+    for w in warnings_raw:
+        parts = w.split("|")
+        if len(parts) >= 2:
+            report["warnings"].append({
+                "test_id": parts[0].strip() if len(parts) > 0 else "",
+                "severity": parts[1].strip() if len(parts) > 1 else "",
+                "description": parts[2].strip() if len(parts) > 2 else parts[1].strip(),
+                "solution": parts[3].strip() if len(parts) > 3 else "",
+            })
+
+    # Parse suggestions
+    for s in suggestions_raw:
+        parts = s.split("|")
+        if len(parts) >= 2:
+            report["suggestions"].append({
+                "test_id": parts[0].strip() if len(parts) > 0 else "",
+                "description": parts[1].strip() if len(parts) > 1 else "",
+                "solution": parts[2].strip() if len(parts) > 2 else "",
+                "details": parts[3].strip() if len(parts) > 3 else "",
+            })
+
+    # Parse lynis-output.log (stdout) for section checks, fallback to lynis.log
+    report["sections"] = []
+    # Prefer the stdout output which has clean formatted sections
+    output_file = "/var/log/lynis-output.log"
+    log_file = output_file if os.path.isfile(output_file) else "/var/log/lynis.log"
+    if os.path.isfile(log_file):
+        try:
+            import re
+            with open(log_file, 'r') as f:
+                log_lines = f.readlines()
+
+            current_section = None
+            current_checks = []
+
+            for line in log_lines:
+                line = line.rstrip('\n')
+                stripped = line.strip()
+
+                # Detect section headers: "[+] Boot and services"
+                section_match = re.match(r'^\[\+\]\s+(.+)', stripped)
+                if section_match:
+                    # Save previous section
+                    if current_section and current_checks:
+                        report["sections"].append({
+                            "name": current_section,
+                            "checks": current_checks,
+                        })
+                    current_section = section_match.group(1).strip()
+                    current_checks = []
+                    continue
+
+                # Skip separator lines, empty, banner lines
+                if stripped.startswith('---') or not stripped:
+                    continue
+                if stripped.startswith('===') or stripped.startswith('#'):
+                    current_section = None  # Stop parsing after results summary
+                    continue
+
+                # Detect any line with [ STATUS ] pattern (covers -, File:, Directory:, etc.)
+                check_match = re.match(
+                    r'^[\s]*[-*]?\s*(.+?)\s{2,}\[\s*(.+?)\s*\]\s*$', stripped
+                )
+                if check_match and current_section:
+                    check_name = check_match.group(1).strip()
+                    check_status = check_match.group(2).strip()
+                    # Skip noise lines
+                    if check_name and not check_name.startswith('..') and len(check_name) > 2:
+                        current_checks.append({
+                            "name": check_name,
+                            "status": check_status,
+                        })
+                    continue
+
+                # Detect sub-results: "      Result: found 35 running services"
+                result_match = re.match(r'^[\s]+Result:\s+(.+)', stripped)
+                if result_match and current_section and current_checks:
+                    current_checks[-1]["detail"] = result_match.group(1).strip()
+                    continue
+
+                # Fallback data extraction
+                if not report["hardening_index"] and "Hardening index" in stripped:
+                    m = re.search(r'Hardening index\s*:\s*\[?(\d+)\]?', stripped)
+                    if m:
+                        report["hardening_index"] = int(m.group(1))
+                if report["tests_performed"] == 0 and "Tests performed" in stripped:
+                    m = re.search(r'Tests performed\s*:\s*(\d+)', stripped)
+                    if m:
+                        report["tests_performed"] = int(m.group(1))
+                if not report["kernel_version"] and "Kernel version" in stripped:
+                    m = re.search(r'Kernel version\s*:\s*(.+)', stripped)
+                    if m:
+                        report["kernel_version"] = m.group(1).strip()
+                if not report["hostname"] and "Hostname" in stripped and ":" in stripped:
+                    m = re.search(r'Hostname\s*:\s*(.+)', stripped)
+                    if m:
+                        val = m.group(1).strip()
+                        if val and val != "N/A":
+                            report["hostname"] = val
+
+            # Save last section
+            if current_section and current_checks:
+                report["sections"].append({
+                    "name": current_section,
+                    "checks": current_checks,
+                })
+
+            # Filter out sections with no meaningful checks
+            report["sections"] = [
+                s for s in report["sections"]
+                if len(s["checks"]) > 0
+            ]
+
+        except Exception:
+            report["sections"] = []
+
+    # Fallback: get kernel from uname if still empty
+    if not report["kernel_version"]:
+        try:
+            rc, out, _ = _run_cmd(["uname", "-r"])
+            if rc == 0 and out.strip():
+                report["kernel_version"] = out.strip()
+        except Exception:
+            pass
+
+    # Fallback: get hostname from system
+    if not report["hostname"]:
+        try:
+            import socket
+            report["hostname"] = socket.gethostname()
+        except Exception:
+            pass
 
     return report

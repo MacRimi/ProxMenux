@@ -255,6 +255,26 @@ def lynis_report():
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+@security_bp.route('/api/security/lynis/report', methods=['DELETE'])
+def lynis_report_delete():
+    """Delete Lynis audit report files"""
+    if not security_manager:
+        return jsonify({"success": False, "message": "Security manager not available"}), 500
+    try:
+        import os
+        deleted = []
+        for f in ["/var/log/lynis-report.dat", "/var/log/lynis.log", "/var/log/lynis-output.log"]:
+            if os.path.isfile(f):
+                os.remove(f)
+                deleted.append(f)
+        if deleted:
+            return jsonify({"success": True, "message": f"Deleted: {', '.join(deleted)}"})
+        else:
+            return jsonify({"success": False, "message": "No report files found to delete"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
 # -------------------------------------------------------------------
 # Security Tools Detection
 # -------------------------------------------------------------------
