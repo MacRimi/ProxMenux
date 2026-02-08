@@ -875,28 +875,28 @@ export function Security() {
 <title>Security Audit Report - ${report.hostname || "ProxMenux"}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b; background: #fff; font-size: 12px; line-height: 1.5; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fff; font-size: 13px; line-height: 1.5; }
 
-  @page { margin: 12mm 12mm 16mm 12mm; size: A4; }
+  @page { margin: 15mm 15mm 20mm 15mm; size: A4; }
   @media print {
     .no-print { display: none !important; }
     .page-break { page-break-before: always; }
-    body { font-size: 10.5px; }
-    .section { margin-bottom: 14px; }
+    body { font-size: 11px; }
+    .section { margin-bottom: 16px; }
   }
   @media screen {
-    body { max-width: 780px; margin: 0 auto; padding: 16px 20px; padding-top: 60px; }
+    body { max-width: 800px; margin: 0 auto; padding: 20px 24px; padding-top: 60px; }
   }
 
   /* Top bar for screen only */
   .top-bar {
     position: fixed; top: 0; left: 0; right: 0; background: #0f172a; color: #e2e8f0;
-    padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; z-index: 100;
-    font-size: 12px;
+    padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; z-index: 100;
+    font-size: 13px;
   }
   .top-bar button {
-    background: #06b6d4; color: #fff; border: none; padding: 6px 16px; border-radius: 5px;
-    font-size: 12px; font-weight: 600; cursor: pointer;
+    background: #06b6d4; color: #fff; border: none; padding: 8px 20px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
   }
   .top-bar button:hover { background: #0891b2; }
   @media print { .top-bar { display: none; } body { padding-top: 0; } }
@@ -904,105 +904,105 @@ export function Security() {
   /* Header */
   .rpt-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 0; border-bottom: 2px solid #0f172a; margin-bottom: 18px;
+    padding: 18px 0; border-bottom: 3px solid #0f172a; margin-bottom: 22px;
   }
-  .rpt-header-left { display: flex; align-items: center; gap: 12px; }
-  .rpt-header-left img { height: 36px; width: auto; }
-  .rpt-header-left h1 { font-size: 18px; font-weight: 700; color: #0f172a; }
-  .rpt-header-left p { font-size: 10px; color: #64748b; }
-  .rpt-header-right { text-align: right; font-size: 10px; color: #64748b; line-height: 1.6; }
-  .rpt-header-right .rid { font-family: monospace; font-size: 9px; color: #94a3b8; }
+  .rpt-header-left { display: flex; align-items: center; gap: 14px; }
+  .rpt-header-left img { height: 44px; width: auto; }
+  .rpt-header-left h1 { font-size: 22px; font-weight: 700; color: #0f172a; }
+  .rpt-header-left p { font-size: 11px; color: #64748b; }
+  .rpt-header-right { text-align: right; font-size: 11px; color: #64748b; line-height: 1.6; }
+  .rpt-header-right .rid { font-family: monospace; font-size: 10px; color: #94a3b8; }
 
   /* Sections */
-  .section { margin-bottom: 18px; }
+  .section { margin-bottom: 22px; }
   .section-title {
-    font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase;
-    letter-spacing: 0.06em; padding-bottom: 4px; border-bottom: 2px solid #e2e8f0; margin-bottom: 10px;
+    font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase;
+    letter-spacing: 0.05em; padding-bottom: 5px; border-bottom: 2px solid #e2e8f0; margin-bottom: 12px;
   }
 
   /* Executive summary */
   .exec-box {
-    display: flex; align-items: center; gap: 20px; padding: 16px;
-    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 24px; padding: 20px;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px;
   }
   .score-ring {
-    width: 80px; height: 80px; border-radius: 50%; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; border: 3px solid; flex-shrink: 0;
+    width: 96px; height: 96px; border-radius: 50%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; border: 4px solid; flex-shrink: 0;
   }
-  .score-num { font-size: 26px; font-weight: 800; line-height: 1; }
-  .score-lbl { font-size: 8px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .score-num { font-size: 32px; font-weight: 800; line-height: 1; }
+  .score-lbl { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
   .exec-text { flex: 1; }
-  .exec-text h3 { font-size: 14px; margin-bottom: 3px; }
-  .exec-text p { font-size: 11px; color: #64748b; line-height: 1.5; }
+  .exec-text h3 { font-size: 16px; margin-bottom: 4px; }
+  .exec-text p { font-size: 12px; color: #64748b; line-height: 1.5; }
 
   /* Score bar */
-  .score-bar-wrap { margin: 8px 0 4px; }
-  .score-bar-bg { height: 8px; background: #e2e8f0; border-radius: 4px; position: relative; overflow: hidden; }
-  .score-bar-fill { height: 100%; border-radius: 4px; }
-  .score-bar-labels { display: flex; justify-content: space-between; font-size: 8px; color: #94a3b8; margin-top: 2px; }
+  .score-bar-wrap { margin: 10px 0 6px; }
+  .score-bar-bg { height: 10px; background: #e2e8f0; border-radius: 5px; position: relative; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 5px; }
+  .score-bar-labels { display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8; margin-top: 3px; }
 
   /* Grids */
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 6px; }
-  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 6px; }
-  .card { padding: 8px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; }
-  .card-label { font-size: 9px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1px; }
-  .card-value { font-size: 12px; font-weight: 600; color: #0f172a; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .card { padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
+  .card-label { font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+  .card-value { font-size: 13px; font-weight: 600; color: #0f172a; }
   .card-c { text-align: center; }
-  .card-c .card-value { font-size: 18px; font-weight: 800; }
-  .card-c .card-label { margin-top: 2px; margin-bottom: 0; }
-  .card-sub { font-size: 8px; color: #64748b; margin-top: 1px; }
+  .card-c .card-value { font-size: 20px; font-weight: 800; }
+  .card-c .card-label { margin-top: 3px; margin-bottom: 0; }
+  .card-sub { font-size: 9px; color: #64748b; margin-top: 2px; }
   .card-sub.pve { color: #0891b2; }
 
   /* Findings */
-  .finding { padding: 8px 10px; margin-bottom: 4px; border-left: 3px solid; border-radius: 0 4px 4px 0; page-break-inside: avoid; }
+  .finding { padding: 10px 12px; margin-bottom: 6px; border-left: 4px solid; border-radius: 0 4px 4px 0; page-break-inside: avoid; }
   .f-warn { border-color: #dc2626; background: #fef2f2; }
   .f-sugg { border-color: #ca8a04; background: #fefce8; }
-  .f-pve { border-color: #06b6d4; background: #ecfeff; opacity: 0.8; }
-  .f-hdr { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
-  .f-num { font-size: 9px; color: #94a3b8; font-weight: 700; }
-  .f-id { font-family: 'Courier New', monospace; font-size: 9px; background: #e2e8f0; padding: 1px 5px; border-radius: 2px; font-weight: 600; }
+  .f-pve { border-color: #06b6d4; background: #ecfeff; opacity: 0.85; }
+  .f-hdr { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .f-num { font-size: 10px; color: #94a3b8; font-weight: 700; }
+  .f-id { font-family: 'Courier New', monospace; font-size: 10px; background: #e2e8f0; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
   .f-id.pve { background: #ecfeff; color: #0891b2; }
-  .f-tag { font-size: 8px; padding: 1px 5px; border-radius: 3px; font-weight: 600; }
+  .f-tag { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
   .f-tag-pve { background: #ecfeff; color: #0891b2; }
   .f-tag-low { background: #fefce8; color: #a16207; }
   .f-tag-sev { color: #dc2626; font-weight: 700; text-transform: uppercase; }
-  .f-desc { font-size: 11px; color: #1e293b; }
-  .f-ctx { font-size: 9px; color: #0891b2; margin-top: 2px; }
+  .f-desc { font-size: 12px; color: #1e293b; }
+  .f-ctx { font-size: 10px; color: #0891b2; margin-top: 3px; }
   .f-ctx strong { font-weight: 700; }
-  .f-sol { font-size: 10px; color: #64748b; margin-top: 2px; }
+  .f-sol { font-size: 11px; color: #64748b; margin-top: 3px; }
   .f-sol strong { color: #475569; }
-  .f-det { font-size: 9px; font-family: 'Courier New', monospace; color: #94a3b8; margin-top: 1px; }
+  .f-det { font-size: 10px; font-family: 'Courier New', monospace; color: #94a3b8; margin-top: 2px; }
 
   /* Category tables */
-  .cat-head { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: #f1f5f9; border-radius: 3px; margin-bottom: 4px; }
-  .cat-num { font-size: 9px; font-weight: 700; color: #0891b2; background: #ecfeff; padding: 1px 5px; border-radius: 2px; }
-  .cat-name { font-size: 11px; font-weight: 700; color: #0f172a; }
-  .cat-cnt { font-size: 9px; color: #94a3b8; margin-left: auto; }
-  .chk-tbl { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px; }
-  .chk-tbl th { text-align: left; padding: 3px 6px; font-size: 9px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
-  .chk-tbl th:last-child { text-align: right; width: 100px; }
-  .chk-tbl td { padding: 2px 6px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
-  .chk-tbl td:last-child { text-align: right; font-weight: 700; font-size: 9px; }
+  .cat-head { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #f1f5f9; border-radius: 4px; margin-bottom: 6px; }
+  .cat-num { font-size: 10px; font-weight: 700; color: #0891b2; background: #ecfeff; padding: 2px 6px; border-radius: 3px; }
+  .cat-name { font-size: 12px; font-weight: 700; color: #0f172a; }
+  .cat-cnt { font-size: 10px; color: #94a3b8; margin-left: auto; }
+  .chk-tbl { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 14px; }
+  .chk-tbl th { text-align: left; padding: 4px 8px; font-size: 10px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+  .chk-tbl th:last-child { text-align: right; width: 120px; }
+  .chk-tbl td { padding: 3px 8px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+  .chk-tbl td:last-child { text-align: right; font-weight: 700; font-size: 10px; }
   .chk-tbl tr.warn { background: #fef2f2; }
   .chk-tbl tr.sugg { background: #fefce8; }
-  .chk-det { color: #94a3b8; font-size: 9px; }
+  .chk-det { color: #94a3b8; font-size: 10px; }
 
   /* Footer */
   .rpt-footer {
-    margin-top: 24px; padding-top: 8px; border-top: 1px solid #e2e8f0;
-    display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8;
+    margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0;
+    display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;
   }
 </style>
 </head>
 <body>
 
 <div class="top-bar no-print">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <strong style="font-size:13px;">ProxMenux Security Report</strong>
-    <span style="opacity:0.6;">Press Ctrl+P or use the button to save as PDF</span>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <strong>ProxMenux Security Audit Report</strong>
+    <span style="font-size:11px;opacity:0.7;">Use Print / Save as PDF to download</span>
   </div>
-  <button onclick="window.print()">Save as PDF</button>
+  <button onclick="window.print()">Print / Save as PDF</button>
 </div>
 
 <!-- Header -->
@@ -1041,7 +1041,7 @@ export function Security() {
       </p>
       ${hasAdjustment ? `
       <div class="score-bar-wrap">
-        <div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:2px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;">
           <span style="color:#64748b;">Lynis raw: ${rawScore}/100</span>
           <span style="color:${scoreColor};font-weight:700;">PVE adjusted: ${displayScore}/100</span>
         </div>
@@ -1110,9 +1110,9 @@ export function Security() {
 <!-- Warnings -->
 <div class="section page-break">
   <div class="section-title">4. Warnings (${report.warnings.length}${(report.proxmox_expected_warnings ?? 0) > 0 ? ` - ${actionableWarnings} actionable` : ""})</div>
-  <p style="font-size:10px;color:#64748b;margin-bottom:8px;">Issues that require attention and may represent security vulnerabilities.</p>
+  <p style="font-size:11px;color:#64748b;margin-bottom:10px;">Issues that require attention and may represent security vulnerabilities.</p>
   ${report.warnings.length === 0 ?
-    '<div style="padding:12px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:5px;border:1px solid #bbf7d0;font-size:11px;">No warnings detected.</div>' :
+    '<div style="padding:16px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">No warnings detected. System appears to be well-configured.</div>' :
     report.warnings.map((w, i) => `
     <div class="finding ${w.proxmox_expected ? 'f-pve' : 'f-warn'}">
       <div class="f-hdr">
@@ -1131,9 +1131,9 @@ export function Security() {
 <!-- Suggestions -->
 <div class="section page-break">
   <div class="section-title">5. Suggestions (${report.suggestions.length}${(report.proxmox_expected_suggestions ?? 0) > 0 ? ` - ${actionableSuggestions} actionable` : ""})</div>
-  <p style="font-size:10px;color:#64748b;margin-bottom:8px;">Recommended improvements to strengthen security.${(report.proxmox_expected_suggestions ?? 0) > 0 ? ` <span style="color:#0891b2;">${report.proxmox_expected_suggestions} are expected in Proxmox VE.</span>` : ""}</p>
+  <p style="font-size:11px;color:#64748b;margin-bottom:10px;">Recommended improvements to strengthen your system's security posture.${(report.proxmox_expected_suggestions ?? 0) > 0 ? ` <span style="color:#0891b2;">${report.proxmox_expected_suggestions} items are expected behavior in Proxmox VE.</span>` : ""}</p>
   ${report.suggestions.length === 0 ?
-    '<div style="padding:12px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:5px;border:1px solid #bbf7d0;font-size:11px;">No suggestions. Fully hardened.</div>' :
+    '<div style="padding:16px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">No suggestions. System is fully hardened.</div>' :
     report.suggestions.map((s, i) => `
     <div class="finding ${s.proxmox_expected ? 'f-pve' : 'f-sugg'}">
       <div class="f-hdr">
@@ -1153,7 +1153,7 @@ export function Security() {
 ${(report.sections && report.sections.length > 0) ? `
 <div class="section page-break">
   <div class="section-title">6. Detailed Security Checks (${report.sections.length} categories)</div>
-  <p style="font-size:10px;color:#64748b;margin-bottom:10px;">All security checks performed, organized by category.</p>
+  <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Complete list of all security checks performed during the audit, organized by category.</p>
   ${report.sections.map((section, sIdx) => `
   <div style="margin-bottom:10px;page-break-inside:avoid;">
     <div class="cat-head">
@@ -3152,26 +3152,10 @@ ${(report.sections && report.sections.length > 0) ? `
                           onClick={(e) => {
                             e.stopPropagation()
                             const html = generatePrintableReport(lynisReport)
+                            // Use Blob URL to open preview in new tab (Safari-safe, no document.write)
                             const blob = new Blob([html], { type: "text/html;charset=utf-8" })
                             const url = URL.createObjectURL(blob)
-                            // Use a hidden iframe for Safari compatibility
-                            let iframe = document.getElementById("pmx-print-frame") as HTMLIFrameElement | null
-                            if (iframe) iframe.remove()
-                            iframe = document.createElement("iframe")
-                            iframe.id = "pmx-print-frame"
-                            iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:none;opacity:0;pointer-events:none;"
-                            document.body.appendChild(iframe)
-                            iframe.src = url
-                            iframe.onload = () => {
-                              setTimeout(() => {
-                                try {
-                                  iframe?.contentWindow?.print()
-                                } catch {
-                                  // Fallback: open in new tab
-                                  window.open(url, "_blank")
-                                }
-                              }, 300)
-                            }
+                            window.open(url, "_blank")
                           }}
                           className="h-7 gap-1.5 px-2.5 text-xs border-cyan-500/30 text-cyan-500 hover:text-cyan-400 hover:bg-cyan-500/10"
                           title="Print / Save as PDF"
