@@ -101,8 +101,8 @@ export function Security() {
   const [showLynisInstaller, setShowLynisInstaller] = useState(false)
 
   // Lynis audit state
-  interface LynisWarning { test_id: string; severity: string; description: string; solution: string }
-  interface LynisSuggestion { test_id: string; description: string; solution: string; details: string }
+  interface LynisWarning { test_id: string; severity: string; description: string; solution: string; proxmox_context?: string; proxmox_expected?: boolean; proxmox_severity?: string }
+  interface LynisSuggestion { test_id: string; description: string; solution: string; details: string; proxmox_context?: string; proxmox_expected?: boolean; proxmox_severity?: string }
   interface LynisCheck {
     name: string; status: string; detail?: string
   }
@@ -118,6 +118,10 @@ export function Security() {
     installed_packages: number; kernel_version: string
     firewall_active: boolean; malware_scanner: boolean
     sections: LynisSection[]
+    proxmox_adjusted_score?: number
+    proxmox_expected_warnings?: number
+    proxmox_expected_suggestions?: number
+    proxmox_context_applied?: boolean
   }
   const [lynisAuditRunning, setLynisAuditRunning] = useState(false)
   const [lynisReport, setLynisReport] = useState<LynisReport | null>(null)
@@ -845,13 +849,17 @@ export function Security() {
   }
 
   const generatePrintableReport = (report: LynisReport) => {
-    const scoreColor = report.hardening_index === null ? "#888"
-      : report.hardening_index >= 70 ? "#16a34a"
-      : report.hardening_index >= 50 ? "#ca8a04"
+    const adjScore = report.proxmox_adjusted_score ?? report.hardening_index
+    const rawScore = report.hardening_index
+    const displayScore = adjScore ?? rawScore
+    const hasAdjustment = adjScore != null && rawScore != null && adjScore !== rawScore
+    const scoreColor = displayScore === null ? "#888"
+      : displayScore >= 70 ? "#16a34a"
+      : displayScore >= 50 ? "#ca8a04"
       : "#dc2626"
-    const scoreLabel = report.hardening_index === null ? "N/A"
-      : report.hardening_index >= 70 ? "GOOD"
-      : report.hardening_index >= 50 ? "MODERATE"
+    const scoreLabel = displayScore === null ? "N/A"
+      : displayScore >= 70 ? "GOOD"
+      : displayScore >= 50 ? "MODERATE"
       : "CRITICAL"
     const now = new Date().toLocaleString()
     const logoUrl = `${window.location.origin}/images/proxmenux-logo.png`
@@ -984,14 +992,14 @@ export function Security() {
   <div class="section-title">1. Executive Summary</div>
   <div class="score-section">
     <div class="score-circle" style="border-color: ${scoreColor}; color: ${scoreColor};">
-      <div class="score-number">${report.hardening_index ?? "N/A"}</div>
+      <div class="score-number">${displayScore ?? "N/A"}</div>
       <div class="score-label">${scoreLabel}</div>
     </div>
     <div class="score-details">
-      <h3>System Hardening Assessment</h3>
+      <h3>System Hardening Assessment${hasAdjustment ? " (Proxmox Adjusted)" : ""}</h3>
       <p>
         This automated security audit was performed on host <strong>${report.hostname || "Unknown"}</strong>
-        running <strong>${report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "Unknown OS"}</strong>.
+        running <strong>${report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "Unknown OS"}</strong> (Proxmox VE).
         A total of <strong>${report.tests_performed}</strong> tests were executed,
         resulting in <strong style="color:#dc2626;">${report.warnings.length} warning(s)</strong>
         and <strong style="color:#ca8a04;">${report.suggestions.length} suggestion(s)</strong> for improvement.
@@ -1036,16 +1044,16 @@ export function Security() {
   <div class="section-title">3. Security Posture Overview</div>
   <div class="status-grid">
     <div class="status-card">
-      <div class="status-value" style="color:${scoreColor};">${report.hardening_index ?? "N/A"}<span style="font-size:12px;color:#64748b;">/100</span></div>
-      <div class="status-label">Hardening Score (${scoreLabel})</div>
+      <div class="status-value" style="color:${scoreColor};">${displayScore ?? "N/A"}<span style="font-size:12px;color:#64748b;">/100</span></div>
+      <div class="status-label">Hardening Score - PVE Adjusted (${scoreLabel})${hasAdjustment ? `<br><span style="font-size:10px;color:#64748b;">Lynis raw: ${rawScore}/100</span>` : ""}</div>
     </div>
     <div class="status-card">
-      <div class="status-value" style="color:${report.warnings.length > 0 ? "#dc2626" : "#16a34a"};">${report.warnings.length}</div>
-      <div class="status-label">Warnings</div>
+      <div class="status-value" style="color:${(report.warnings.length - (report.proxmox_expected_warnings ?? 0)) > 0 ? "#dc2626" : "#16a34a"};">${report.warnings.length - (report.proxmox_expected_warnings ?? 0)}</div>
+      <div class="status-label">Actionable Warnings${(report.proxmox_expected_warnings ?? 0) > 0 ? `<br><span style="font-size:10px;color:#22d3ee;">+${report.proxmox_expected_warnings} PVE expected</span>` : ""}</div>
     </div>
     <div class="status-card">
-      <div class="status-value" style="color:${report.suggestions.length > 0 ? "#ca8a04" : "#16a34a"};">${report.suggestions.length}</div>
-      <div class="status-label">Suggestions</div>
+      <div class="status-value" style="color:${(report.suggestions.length - (report.proxmox_expected_suggestions ?? 0)) > 0 ? "#ca8a04" : "#16a34a"};">${report.suggestions.length - (report.proxmox_expected_suggestions ?? 0)}</div>
+      <div class="status-label">Actionable Suggestions${(report.proxmox_expected_suggestions ?? 0) > 0 ? `<br><span style="font-size:10px;color:#22d3ee;">+${report.proxmox_expected_suggestions} PVE expected</span>` : ""}</div>
     </div>
     <div class="status-card">
       <div class="status-value">${report.tests_performed}</div>
@@ -1075,13 +1083,16 @@ export function Security() {
   ${report.warnings.length === 0 ?
     '<div style="padding:16px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">No warnings detected. System appears to be well-configured.</div>' :
     report.warnings.map((w, i) => `
-    <div class="finding finding-warning">
+    <div class="finding finding-warning" style="${w.proxmox_expected ? 'opacity:0.7;border-left-color:#22d3ee;' : ''}">
       <div class="finding-header">
         <span style="font-size:10px;color:#94a3b8;font-weight:700;">#${i + 1}</span>
-        <span class="finding-id">${w.test_id}</span>
-        ${w.severity ? `<span class="finding-severity">${w.severity}</span>` : ""}
+        <span class="finding-id" ${w.proxmox_expected ? 'style="background:#083344;color:#22d3ee;"' : ''}>${w.test_id}</span>
+        ${w.proxmox_expected ? '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:#083344;color:#22d3ee;">PVE Expected</span>' : ''}
+        ${!w.proxmox_expected && w.proxmox_severity === "low" ? '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:#fefce8;color:#ca8a04;">Low Risk</span>' : ''}
+        ${!w.proxmox_expected && !w.proxmox_severity && w.severity ? `<span class="finding-severity">${w.severity}</span>` : ""}
       </div>
       <div class="finding-desc">${w.description}</div>
+      ${w.proxmox_context ? `<div style="font-size:10px;color:#22d3ee;margin-top:4px;"><strong>Proxmox:</strong> ${w.proxmox_context}</div>` : ""}
       ${w.solution ? `<div class="finding-solution"><strong>Recommendation:</strong> ${w.solution}</div>` : ""}
     </div>`).join("")}
 </div>
@@ -1089,16 +1100,19 @@ export function Security() {
 <!-- Suggestions -->
 <div class="section page-break">
   <div class="section-title">5. Suggestions (${report.suggestions.length})</div>
-  <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Recommended improvements to strengthen your system's security posture.</p>
+  <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Recommended improvements to strengthen your system's security posture.${(report.proxmox_expected_suggestions ?? 0) > 0 ? ` <span style="color:#22d3ee;">${report.proxmox_expected_suggestions} items are expected behavior in Proxmox VE.</span>` : ""}</p>
   ${report.suggestions.length === 0 ?
     '<div style="padding:16px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">No suggestions. System is fully hardened.</div>' :
     report.suggestions.map((s, i) => `
-    <div class="finding finding-suggestion">
+    <div class="finding finding-suggestion" style="${s.proxmox_expected ? 'opacity:0.7;border-left-color:#22d3ee;' : ''}">
       <div class="finding-header">
         <span style="font-size:10px;color:#94a3b8;font-weight:700;">#${i + 1}</span>
-        <span class="finding-id">${s.test_id}</span>
+        <span class="finding-id" ${s.proxmox_expected ? 'style="background:#083344;color:#22d3ee;"' : ''}>${s.test_id}</span>
+        ${s.proxmox_expected ? '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:#083344;color:#22d3ee;">PVE Expected</span>' : ''}
+        ${!s.proxmox_expected && s.proxmox_severity === "low" ? '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:#f8fafc;color:#64748b;">Low Priority</span>' : ''}
       </div>
       <div class="finding-desc">${s.description}</div>
+      ${s.proxmox_context ? `<div style="font-size:10px;color:#22d3ee;margin-top:4px;"><strong>Proxmox:</strong> ${s.proxmox_context}</div>` : ""}
       ${s.solution ? `<div class="finding-solution"><strong>Recommendation:</strong> ${s.solution}</div>` : ""}
       ${s.details ? `<div class="finding-details">${s.details}</div>` : ""}
     </div>`).join("")}
@@ -2939,58 +2953,125 @@ ${(report.sections && report.sections.length > 0) ? `
                 </div>
                 <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
                   <p className="text-xs text-muted-foreground mb-1">Hardening Index</p>
-                  <p className={`text-xl font-bold ${
-                    (lynisReport?.hardening_index ?? lynisInfo.hardening_index) === null ? "text-muted-foreground" :
-                    (lynisReport?.hardening_index ?? lynisInfo.hardening_index ?? 0) >= 70 ? "text-green-500" :
-                    (lynisReport?.hardening_index ?? lynisInfo.hardening_index ?? 0) >= 50 ? "text-yellow-500" :
-                    "text-red-500"
-                  }`}>
-                    {(lynisReport?.hardening_index ?? lynisInfo.hardening_index) !== null
-                      ? (lynisReport?.hardening_index ?? lynisInfo.hardening_index)
-                      : "N/A"}
-                  </p>
+                  {(() => {
+                    const rawScore = lynisReport?.hardening_index ?? lynisInfo.hardening_index
+                    const adjScore = lynisReport?.proxmox_adjusted_score
+                    const displayScore = adjScore ?? rawScore
+                    const scoreColorClass = displayScore === null || displayScore === undefined ? "text-muted-foreground" :
+                      displayScore >= 70 ? "text-green-500" :
+                      displayScore >= 50 ? "text-yellow-500" : "text-red-500"
+                    return (
+                      <div>
+                        <p className={`text-xl font-bold ${scoreColorClass}`}>
+                          {displayScore !== null && displayScore !== undefined ? displayScore : "N/A"}
+                        </p>
+                        {adjScore != null && rawScore != null && adjScore !== rawScore && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            Lynis: {rawScore} | PVE: {adjScore}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
                 <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
                   <p className="text-xs text-muted-foreground mb-1">Warnings</p>
-                  <p className={`text-xl font-bold ${lynisReport && lynisReport.warnings.length > 0 ? "text-red-500" : "text-green-500"}`}>
-                    {lynisReport ? lynisReport.warnings.length : "-"}
-                  </p>
+                  {(() => {
+                    if (!lynisReport) return <p className="text-xl font-bold text-muted-foreground">-</p>
+                    const total = lynisReport.warnings.length
+                    const expected = lynisReport.proxmox_expected_warnings ?? 0
+                    const real = total - expected
+                    return (
+                      <div>
+                        <p className={`text-xl font-bold ${real > 0 ? "text-red-500" : total > 0 ? "text-yellow-500" : "text-green-500"}`}>
+                          {real > 0 ? real : total}
+                        </p>
+                        {expected > 0 && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            +{expected} PVE expected
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
                 <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
                   <p className="text-xs text-muted-foreground mb-1">Suggestions</p>
-                  <p className={`text-xl font-bold ${lynisReport && lynisReport.suggestions.length > 0 ? "text-yellow-500" : "text-green-500"}`}>
-                    {lynisReport ? lynisReport.suggestions.length : "-"}
-                  </p>
+                  {(() => {
+                    if (!lynisReport) return <p className="text-xl font-bold text-muted-foreground">-</p>
+                    const total = lynisReport.suggestions.length
+                    const expected = lynisReport.proxmox_expected_suggestions ?? 0
+                    const real = total - expected
+                    return (
+                      <div>
+                        <p className={`text-xl font-bold ${real > 0 ? "text-yellow-500" : "text-green-500"}`}>
+                          {real > 0 ? real : total}
+                        </p>
+                        {expected > 0 && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            +{expected} PVE expected
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
 
               {/* Hardening bar */}
               {(() => {
-                const score = lynisReport?.hardening_index ?? lynisInfo.hardening_index
-                if (score === null || score === undefined) return null
+                const rawScore = lynisReport?.hardening_index ?? lynisInfo.hardening_index
+                const adjScore = lynisReport?.proxmox_adjusted_score
+                if (rawScore === null || rawScore === undefined) return null
+                const displayScore = adjScore ?? rawScore
+                const hasAdjustment = adjScore != null && adjScore !== rawScore
                 return (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Security Hardening Score</span>
+                      <span className="text-muted-foreground">
+                        Security Hardening Score {hasAdjustment && <span className="text-cyan-400/70">(Proxmox Adjusted)</span>}
+                      </span>
                       <span className={`font-bold ${
-                        score >= 70 ? "text-green-500" : score >= 50 ? "text-yellow-500" : "text-red-500"
+                        displayScore >= 70 ? "text-green-500" : displayScore >= 50 ? "text-yellow-500" : "text-red-500"
                       }`}>
-                        {score}/100
+                        {displayScore}/100
                       </span>
                     </div>
-                    <div className="w-full h-3 bg-muted/50 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-1000 ${
-                          score >= 70 ? "bg-green-500" : score >= 50 ? "bg-yellow-500" : "bg-red-500"
-                        }`}
-                        style={{ width: `${score}%` }}
-                      />
-                    </div>
+                    {hasAdjustment ? (
+                      <div className="relative w-full h-3 bg-muted/50 rounded-full overflow-hidden">
+                        {/* Raw score bar (dimmed) */}
+                        <div
+                          className="absolute inset-y-0 left-0 rounded-full bg-yellow-500/30"
+                          style={{ width: `${rawScore}%` }}
+                        />
+                        {/* Adjusted score bar */}
+                        <div
+                          className={`absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ${
+                            displayScore >= 70 ? "bg-green-500" : displayScore >= 50 ? "bg-yellow-500" : "bg-red-500"
+                          }`}
+                          style={{ width: `${displayScore}%` }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-full h-3 bg-muted/50 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-1000 ${
+                            displayScore >= 70 ? "bg-green-500" : displayScore >= 50 ? "bg-yellow-500" : "bg-red-500"
+                          }`}
+                          style={{ width: `${displayScore}%` }}
+                        />
+                      </div>
+                    )}
                     <div className="flex justify-between text-[10px] text-muted-foreground">
                       <span>Critical (0-49)</span>
                       <span>Moderate (50-69)</span>
                       <span>Good (70-100)</span>
                     </div>
+                    {hasAdjustment && (
+                      <p className="text-[10px] text-cyan-400/70 text-center">
+                        Lynis raw score: {rawScore}/100 | {(lynisReport?.proxmox_expected_warnings ?? 0) + (lynisReport?.proxmox_expected_suggestions ?? 0)} findings are expected in Proxmox VE
+                      </p>
+                    )}
                   </div>
                 )
               })()}
@@ -3028,7 +3109,7 @@ ${(report.sections && report.sections.length > 0) ? `
                               : lynisInfo.last_scan?.replace("T", " ").substring(0, 16) || "Unknown date"}
                           </p>
                           <p className="text-[11px] text-muted-foreground">
-                            {lynisReport.hostname || "System"} - {lynisReport.tests_performed} tests - Score: {lynisReport.hardening_index ?? "N/A"}/100 - {lynisReport.warnings.length} warnings - {lynisReport.suggestions.length} suggestions
+                            {lynisReport.hostname || "System"} - {lynisReport.tests_performed} tests - PVE Score: {lynisReport.proxmox_adjusted_score ?? lynisReport.hardening_index ?? "N/A"}/100 - {lynisReport.warnings.length - (lynisReport.proxmox_expected_warnings ?? 0)} warnings - {lynisReport.suggestions.length - (lynisReport.proxmox_expected_suggestions ?? 0)} suggestions
                           </p>
                         </div>
                       </div>
@@ -3146,7 +3227,10 @@ ${(report.sections && report.sections.length > 0) ? `
                             {/* Security checklist */}
                             <div className="space-y-1.5">
                               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Status</p>
-                              {[
+                              {(() => {
+                                const adjScore = lynisReport.proxmox_adjusted_score ?? lynisReport.hardening_index ?? 0
+                                const realWarnings = lynisReport.warnings.length - (lynisReport.proxmox_expected_warnings ?? 0)
+                                return [
                                 {
                                   label: "Firewall",
                                   ok: lynisReport.firewall_active,
@@ -3162,17 +3246,17 @@ ${(report.sections && report.sections.length > 0) ? `
                                 },
                                 {
                                   label: "Warnings",
-                                  ok: lynisReport.warnings.length === 0,
-                                  passText: "None",
-                                  failText: `${lynisReport.warnings.length} found`,
-                                  isWarning: lynisReport.warnings.length > 0 && lynisReport.warnings.length <= 10,
+                                  ok: realWarnings <= 0,
+                                  passText: lynisReport.warnings.length === 0 ? "None" : `${lynisReport.warnings.length} (all PVE expected)`,
+                                  failText: `${realWarnings} actionable` + (lynisReport.proxmox_expected_warnings ? ` + ${lynisReport.proxmox_expected_warnings} PVE` : ""),
+                                  isWarning: realWarnings > 0 && realWarnings <= 5,
                                 },
                                 {
-                                  label: "Hardening Score",
-                                  ok: (lynisReport.hardening_index || 0) >= 70,
-                                  passText: `${lynisReport.hardening_index || 0}/100`,
-                                  failText: `${lynisReport.hardening_index || 0}/100 (< 70)`,
-                                  isWarning: (lynisReport.hardening_index || 0) >= 50,
+                                  label: "Hardening Score (PVE)",
+                                  ok: adjScore >= 70,
+                                  passText: `${adjScore}/100`,
+                                  failText: `${adjScore}/100 (< 70)`,
+                                  isWarning: adjScore >= 50,
                                 },
                               ].map((item) => {
                                 const color = item.ok ? "green" : item.isWarning ? "yellow" : "red"
@@ -3184,7 +3268,8 @@ ${(report.sections && report.sections.length > 0) ? `
                                     {item.ok ? item.passText : item.failText}
                                   </span>
                                 </div>
-                              )})}
+                              )})
+                              })()}
                             </div>
                           </div>
                         )}
@@ -3240,17 +3325,33 @@ ${(report.sections && report.sections.length > 0) ? `
                             ) : (
                               <div className="divide-y divide-border">
                                 {lynisReport.warnings.map((w, idx) => (
-                                  <div key={idx} className="p-3 hover:bg-muted/20 transition-colors">
+                                  <div key={idx} className={`p-3 hover:bg-muted/20 transition-colors ${w.proxmox_expected ? "opacity-60" : ""}`}>
                                     <div className="flex items-start gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-1.5" />
+                                      <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${
+                                        w.proxmox_expected ? "bg-cyan-500" :
+                                        w.proxmox_severity === "low" ? "bg-yellow-500" : "bg-red-500"
+                                      }`} />
                                       <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-0.5">
-                                          <code className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 font-mono">{w.test_id}</code>
-                                          {w.severity && (
+                                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                          <code className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                                            w.proxmox_expected ? "bg-cyan-500/10 text-cyan-400" : "bg-red-500/10 text-red-500"
+                                          }`}>{w.test_id}</code>
+                                          {w.proxmox_expected && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">PVE Expected</span>
+                                          )}
+                                          {!w.proxmox_expected && w.proxmox_severity === "low" && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500">Low Risk</span>
+                                          )}
+                                          {!w.proxmox_expected && !w.proxmox_severity && w.severity && (
                                             <span className="text-[10px] text-red-400">{w.severity}</span>
                                           )}
                                         </div>
                                         <p className="text-sm text-foreground">{w.description}</p>
+                                        {w.proxmox_context && (
+                                          <p className="text-xs text-cyan-400/70 mt-1 flex items-start gap-1">
+                                            <span className="shrink-0">Proxmox:</span> {w.proxmox_context}
+                                          </p>
+                                        )}
                                         {w.solution && (
                                           <p className="text-xs text-muted-foreground mt-1">
                                             Solution: {w.solution}
@@ -3275,14 +3376,30 @@ ${(report.sections && report.sections.length > 0) ? `
                             ) : (
                               <div className="divide-y divide-border">
                                 {lynisReport.suggestions.map((s, idx) => (
-                                  <div key={idx} className="p-3 hover:bg-muted/20 transition-colors">
+                                  <div key={idx} className={`p-3 hover:bg-muted/20 transition-colors ${s.proxmox_expected ? "opacity-60" : ""}`}>
                                     <div className="flex items-start gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0 mt-1.5" />
+                                      <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${
+                                        s.proxmox_expected ? "bg-cyan-500" :
+                                        s.proxmox_severity === "low" ? "bg-muted-foreground" : "bg-yellow-500"
+                                      }`} />
                                       <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-0.5">
-                                          <code className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 font-mono">{s.test_id}</code>
+                                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                          <code className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                                            s.proxmox_expected ? "bg-cyan-500/10 text-cyan-400" : "bg-yellow-500/10 text-yellow-500"
+                                          }`}>{s.test_id}</code>
+                                          {s.proxmox_expected && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">PVE Expected</span>
+                                          )}
+                                          {!s.proxmox_expected && s.proxmox_severity === "low" && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Low Priority</span>
+                                          )}
                                         </div>
                                         <p className="text-sm text-foreground">{s.description}</p>
+                                        {s.proxmox_context && (
+                                          <p className="text-xs text-cyan-400/70 mt-1 flex items-start gap-1">
+                                            <span className="shrink-0">Proxmox:</span> {s.proxmox_context}
+                                          </p>
+                                        )}
                                         {s.solution && (
                                           <p className="text-xs text-muted-foreground mt-1">
                                             Solution: {s.solution}

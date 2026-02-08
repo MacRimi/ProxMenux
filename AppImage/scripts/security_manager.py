@@ -1673,4 +1673,185 @@ def parse_lynis_report():
         except Exception:
             pass
 
+    # ── Proxmox Context: classify warnings/suggestions ────────────────
+    # Proxmox VE is a hypervisor with specific requirements that cause
+    # Lynis to flag items that are normal/expected in this environment.
+    # We classify each finding and calculate an adjusted score.
+
+    PVE_WARNING_CONTEXT = {
+        "FIRE-4512": {
+            "reason": "Proxmox uses pve-firewall which manages iptables/nftables rules dynamically. Direct iptables rules are not used.",
+            "expected": True,
+        },
+        "NETW-3015": {
+            "reason": "Network bridges (vmbr*) operate in promiscuous mode by design to forward traffic between VMs/containers.",
+            "expected": True,
+        },
+        "MAIL-8818": {
+            "reason": "Postfix is used by Proxmox for system notifications. The SMTP banner can be customized but is low risk on an internal server.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "NETW-2705": {
+            "reason": "Single DNS server is common in home/lab environments. Add a secondary DNS in /etc/resolv.conf if possible.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "PKGS-7392": {
+            "reason": "Package updates should be applied regularly. Check if the 'vulnerable' packages are Proxmox-specific packages pending a PVE update.",
+            "expected": False,
+        },
+    }
+
+    PVE_SUGGESTION_CONTEXT = {
+        "BOOT-5122": {
+            "reason": "GRUB password is recommended for physical servers but less critical for headless/remote Proxmox nodes.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "BOOT-5264": {
+            "reason": "Many Proxmox core services (pve-*, corosync, spiceproxy, etc.) run without systemd hardening. This is by design as they need broad system access.",
+            "expected": True,
+        },
+        "KRNL-5788": {
+            "reason": "Proxmox uses its own kernel (pve-kernel) which may not place vmlinuz in the standard location.",
+            "expected": True,
+        },
+        "AUTH-9282": {
+            "reason": "Proxmox system accounts (www-data, backup, etc.) don't use password expiry. Only applies to interactive user accounts.",
+            "expected": True,
+        },
+        "AUTH-9284": {
+            "reason": "Locked system accounts are normal in Proxmox (daemon, nobody, etc.).",
+            "expected": True,
+        },
+        "USB-1000": {
+            "reason": "USB passthrough to VMs may require USB drivers. Disable only if USB passthrough is not needed.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "STRG-1846": {
+            "reason": "FireWire is typically not used in modern servers. Safe to disable.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "NETW-3200": {
+            "reason": "Protocols dccp, sctp, rds, tipc are typically not needed. Can be disabled via modprobe blacklist.",
+            "expected": False,
+        },
+        "SSH-7408": {
+            "reason": "SSH hardening is recommended but PermitRootLogin is required for Proxmox API/CLI management. Other SSH settings can be tuned.",
+            "expected": False,
+        },
+        "FILE-6310": {
+            "reason": "Separate partitions for /home and /var are best practice but Proxmox typically uses a simple partition layout with LVM-thin for VM storage.",
+            "expected": True,
+        },
+        "KRNL-6000": {
+            "reason": "Some sysctl values differ because Proxmox needs IP forwarding, bridge-nf-call, and relaxed kernel settings for VM/container networking.",
+            "expected": True,
+        },
+        "HRDN-7230": {
+            "reason": "A malware scanner (rkhunter, ClamAV) is recommended but optional for a dedicated hypervisor.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "HRDN-7222": {
+            "reason": "Restricting compiler access is good practice on production servers. Less critical on a hypervisor where only root has access.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "FINT-4350": {
+            "reason": "File integrity monitoring (AIDE, Tripwire) is recommended for production but optional for home/lab environments.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "ACCT-9622": {
+            "reason": "Process accounting is useful for forensics but not required for a hypervisor.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "ACCT-9626": {
+            "reason": "Sysstat is useful for performance monitoring but not a security requirement.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "ACCT-9628": {
+            "reason": "Auditd provides detailed audit logging. Recommended for production, optional for home/lab.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "TOOL-5002": {
+            "reason": "Automation tools (Ansible, Puppet) are useful for multi-node clusters but not required for single-node setups.",
+            "expected": True,
+        },
+        "LOGG-2154": {
+            "reason": "External logging is recommended for production but optional for single-node environments.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "BANN-7126": {
+            "reason": "Legal banners in /etc/issue are recommended for compliance but not a security risk.",
+            "expected": False,
+            "severity_override": "low",
+        },
+        "BANN-7130": {
+            "reason": "Legal banners in /etc/issue.net are recommended for compliance but not a security risk.",
+            "expected": False,
+            "severity_override": "low",
+        },
+    }
+
+    # Apply Proxmox context to warnings
+    pve_expected_warnings = 0
+    for w in report["warnings"]:
+        tid = w.get("test_id", "")
+        ctx = PVE_WARNING_CONTEXT.get(tid)
+        if ctx:
+            w["proxmox_context"] = ctx["reason"]
+            w["proxmox_expected"] = ctx.get("expected", False)
+            if ctx.get("severity_override"):
+                w["proxmox_severity"] = ctx["severity_override"]
+            if ctx.get("expected", False):
+                pve_expected_warnings += 1
+        else:
+            w["proxmox_context"] = ""
+            w["proxmox_expected"] = False
+
+    # Apply Proxmox context to suggestions
+    pve_expected_suggestions = 0
+    for s in report["suggestions"]:
+        tid = s.get("test_id", "")
+        ctx = PVE_SUGGESTION_CONTEXT.get(tid)
+        if ctx:
+            s["proxmox_context"] = ctx["reason"]
+            s["proxmox_expected"] = ctx.get("expected", False)
+            if ctx.get("severity_override"):
+                s["proxmox_severity"] = ctx["severity_override"]
+            if ctx.get("expected", False):
+                pve_expected_suggestions += 1
+        else:
+            s["proxmox_context"] = ""
+            s["proxmox_expected"] = False
+
+    # Calculate Proxmox-adjusted score
+    # Lynis score is based on total tests and findings.
+    # We boost the score proportionally to the expected items.
+    raw_score = report["hardening_index"] or 0
+    total_findings = len(report["warnings"]) + len(report["suggestions"])
+    expected_findings = pve_expected_warnings + pve_expected_suggestions
+    if total_findings > 0 and raw_score > 0:
+        # Each finding roughly reduces the score. Expected findings should
+        # not penalize. We estimate the boost proportionally.
+        penalty_per_finding = (100 - raw_score) / max(total_findings, 1)
+        boost = int(penalty_per_finding * expected_findings * 0.8)
+        adjusted_score = min(100, raw_score + boost)
+    else:
+        adjusted_score = raw_score
+
+    report["proxmox_adjusted_score"] = adjusted_score
+    report["proxmox_expected_warnings"] = pve_expected_warnings
+    report["proxmox_expected_suggestions"] = pve_expected_suggestions
+    report["proxmox_context_applied"] = True
+
     return report
