@@ -864,6 +864,10 @@ export function Security() {
     const now = new Date().toLocaleString()
     const logoUrl = `${window.location.origin}/images/proxmenux-logo.png`
 
+    const actionableWarnings = report.warnings.length - (report.proxmox_expected_warnings ?? 0)
+    const actionableSuggestions = report.suggestions.length - (report.proxmox_expected_suggestions ?? 0)
+    const totalExpected = (report.proxmox_expected_warnings ?? 0) + (report.proxmox_expected_suggestions ?? 0)
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -871,250 +875,277 @@ export function Security() {
 <title>Security Audit Report - ${report.hostname || "ProxMenux"}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a2e; background: #fff; font-size: 13px; line-height: 1.5; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b; background: #fff; font-size: 12px; line-height: 1.5; }
 
-  /* Page setup for print */
-  @page { margin: 15mm 15mm 20mm 15mm; size: A4; }
+  @page { margin: 12mm 12mm 16mm 12mm; size: A4; }
   @media print {
     .no-print { display: none !important; }
     .page-break { page-break-before: always; }
-    body { font-size: 11px; }
+    body { font-size: 10.5px; }
+    .section { margin-bottom: 14px; }
   }
+  @media screen {
+    body { max-width: 780px; margin: 0 auto; padding: 16px 20px; padding-top: 60px; }
+  }
+
+  /* Top bar for screen only */
+  .top-bar {
+    position: fixed; top: 0; left: 0; right: 0; background: #0f172a; color: #e2e8f0;
+    padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; z-index: 100;
+    font-size: 12px;
+  }
+  .top-bar button {
+    background: #06b6d4; color: #fff; border: none; padding: 6px 16px; border-radius: 5px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .top-bar button:hover { background: #0891b2; }
+  @media print { .top-bar { display: none; } body { padding-top: 0; } }
 
   /* Header */
-  .report-header {
+  .rpt-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 0; border-bottom: 3px solid #0f172a; margin-bottom: 24px;
+    padding: 14px 0; border-bottom: 2px solid #0f172a; margin-bottom: 18px;
   }
-  .report-header-left { display: flex; align-items: center; gap: 16px; }
-  .report-header-left img { height: 48px; width: auto; }
-  .report-header-left h1 { font-size: 22px; font-weight: 700; color: #0f172a; }
-  .report-header-left p { font-size: 11px; color: #64748b; }
-  .report-header-right { text-align: right; font-size: 11px; color: #64748b; }
-  .report-header-right .report-id { font-family: monospace; font-size: 10px; color: #94a3b8; }
+  .rpt-header-left { display: flex; align-items: center; gap: 12px; }
+  .rpt-header-left img { height: 36px; width: auto; }
+  .rpt-header-left h1 { font-size: 18px; font-weight: 700; color: #0f172a; }
+  .rpt-header-left p { font-size: 10px; color: #64748b; }
+  .rpt-header-right { text-align: right; font-size: 10px; color: #64748b; line-height: 1.6; }
+  .rpt-header-right .rid { font-family: monospace; font-size: 9px; color: #94a3b8; }
 
   /* Sections */
-  .section { margin-bottom: 24px; page-break-inside: avoid; }
+  .section { margin-bottom: 18px; }
   .section-title {
-    font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase;
-    letter-spacing: 0.05em; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; margin-bottom: 12px;
+    font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase;
+    letter-spacing: 0.06em; padding-bottom: 4px; border-bottom: 2px solid #e2e8f0; margin-bottom: 10px;
   }
 
-  /* Score box */
-  .score-section { display: flex; align-items: center; gap: 24px; padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 24px; }
-  .score-circle {
-    width: 100px; height: 100px; border-radius: 50%; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; border: 4px solid; flex-shrink: 0;
+  /* Executive summary */
+  .exec-box {
+    display: flex; align-items: center; gap: 20px; padding: 16px;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 12px;
   }
-  .score-number { font-size: 32px; font-weight: 800; line-height: 1; }
-  .score-label { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-  .score-details { flex: 1; }
-  .score-details h3 { font-size: 16px; margin-bottom: 4px; }
-  .score-details p { font-size: 12px; color: #64748b; }
+  .score-ring {
+    width: 80px; height: 80px; border-radius: 50%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; border: 3px solid; flex-shrink: 0;
+  }
+  .score-num { font-size: 26px; font-weight: 800; line-height: 1; }
+  .score-lbl { font-size: 8px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .exec-text { flex: 1; }
+  .exec-text h3 { font-size: 14px; margin-bottom: 3px; }
+  .exec-text p { font-size: 11px; color: #64748b; line-height: 1.5; }
 
-  /* Info grid */
-  .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
-  .info-card { padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
-  .info-label { font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
-  .info-value { font-size: 13px; font-weight: 600; color: #0f172a; }
+  /* Score bar */
+  .score-bar-wrap { margin: 8px 0 4px; }
+  .score-bar-bg { height: 8px; background: #e2e8f0; border-radius: 4px; position: relative; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 4px; }
+  .score-bar-labels { display: flex; justify-content: space-between; font-size: 8px; color: #94a3b8; margin-top: 2px; }
 
-  /* Status grid */
-  .status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
-  .status-card { padding: 12px; text-align: center; border-radius: 6px; border: 1px solid #e2e8f0; }
-  .status-value { font-size: 20px; font-weight: 800; }
-  .status-label { font-size: 10px; color: #64748b; text-transform: uppercase; margin-top: 2px; }
+  /* Grids */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+  .card { padding: 8px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; }
+  .card-label { font-size: 9px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1px; }
+  .card-value { font-size: 12px; font-weight: 600; color: #0f172a; }
+  .card-c { text-align: center; }
+  .card-c .card-value { font-size: 18px; font-weight: 800; }
+  .card-c .card-label { margin-top: 2px; margin-bottom: 0; }
+  .card-sub { font-size: 8px; color: #64748b; margin-top: 1px; }
+  .card-sub.pve { color: #0891b2; }
 
   /* Findings */
-  .finding { padding: 10px 12px; margin-bottom: 6px; border-left: 4px solid; border-radius: 0 4px 4px 0; background: #fafafa; }
-  .finding-warning { border-color: #dc2626; background: #fef2f2; }
-  .finding-suggestion { border-color: #ca8a04; background: #fefce8; }
-  .finding-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  .finding-id { font-family: 'Courier New', monospace; font-size: 10px; background: #e2e8f0; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
-  .finding-severity { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #dc2626; }
-  .finding-desc { font-size: 12px; color: #1e293b; }
-  .finding-solution { font-size: 11px; color: #64748b; margin-top: 3px; }
-  .finding-solution strong { color: #475569; }
-  .finding-details { font-size: 10px; font-family: 'Courier New', monospace; color: #94a3b8; margin-top: 2px; }
+  .finding { padding: 8px 10px; margin-bottom: 4px; border-left: 3px solid; border-radius: 0 4px 4px 0; page-break-inside: avoid; }
+  .f-warn { border-color: #dc2626; background: #fef2f2; }
+  .f-sugg { border-color: #ca8a04; background: #fefce8; }
+  .f-pve { border-color: #06b6d4; background: #ecfeff; opacity: 0.8; }
+  .f-hdr { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
+  .f-num { font-size: 9px; color: #94a3b8; font-weight: 700; }
+  .f-id { font-family: 'Courier New', monospace; font-size: 9px; background: #e2e8f0; padding: 1px 5px; border-radius: 2px; font-weight: 600; }
+  .f-id.pve { background: #ecfeff; color: #0891b2; }
+  .f-tag { font-size: 8px; padding: 1px 5px; border-radius: 3px; font-weight: 600; }
+  .f-tag-pve { background: #ecfeff; color: #0891b2; }
+  .f-tag-low { background: #fefce8; color: #a16207; }
+  .f-tag-sev { color: #dc2626; font-weight: 700; text-transform: uppercase; }
+  .f-desc { font-size: 11px; color: #1e293b; }
+  .f-ctx { font-size: 9px; color: #0891b2; margin-top: 2px; }
+  .f-ctx strong { font-weight: 700; }
+  .f-sol { font-size: 10px; color: #64748b; margin-top: 2px; }
+  .f-sol strong { color: #475569; }
+  .f-det { font-size: 9px; font-family: 'Courier New', monospace; color: #94a3b8; margin-top: 1px; }
 
-  /* Table of contents summary */
-  .summary-bar { display: flex; gap: 16px; margin-bottom: 16px; }
-  .summary-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-  .summary-dot { width: 10px; height: 10px; border-radius: 50%; }
+  /* Category tables */
+  .cat-head { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: #f1f5f9; border-radius: 3px; margin-bottom: 4px; }
+  .cat-num { font-size: 9px; font-weight: 700; color: #0891b2; background: #ecfeff; padding: 1px 5px; border-radius: 2px; }
+  .cat-name { font-size: 11px; font-weight: 700; color: #0f172a; }
+  .cat-cnt { font-size: 9px; color: #94a3b8; margin-left: auto; }
+  .chk-tbl { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px; }
+  .chk-tbl th { text-align: left; padding: 3px 6px; font-size: 9px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+  .chk-tbl th:last-child { text-align: right; width: 100px; }
+  .chk-tbl td { padding: 2px 6px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+  .chk-tbl td:last-child { text-align: right; font-weight: 700; font-size: 9px; }
+  .chk-tbl tr.warn { background: #fef2f2; }
+  .chk-tbl tr.sugg { background: #fefce8; }
+  .chk-det { color: #94a3b8; font-size: 9px; }
 
   /* Footer */
-  .report-footer {
-    margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0;
-    display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;
+  .rpt-footer {
+    margin-top: 24px; padding-top: 8px; border-top: 1px solid #e2e8f0;
+    display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8;
   }
-
-  /* Print button */
-  .print-bar {
-    position: fixed; top: 0; left: 0; right: 0; background: #0f172a; color: #fff;
-    padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; z-index: 100;
-  }
-  .print-bar button {
-    background: #06b6d4; color: #fff; border: none; padding: 8px 20px; border-radius: 6px;
-    font-size: 13px; font-weight: 600; cursor: pointer;
-  }
-  .print-bar button:hover { background: #0891b2; }
-  @media print { .print-bar { display: none; } body { padding-top: 0; } }
-  @media screen { body { padding-top: 56px; max-width: 800px; margin: 0 auto; padding-left: 24px; padding-right: 24px; } }
 </style>
 </head>
 <body>
 
-<div class="print-bar no-print">
-  <div style="display:flex;align-items:center;gap:12px;">
-    <strong>ProxMenux Security Audit Report</strong>
-    <span style="font-size:11px;opacity:0.7;">Use Print / Save as PDF to download</span>
+<div class="top-bar no-print">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <strong style="font-size:13px;">ProxMenux Security Report</strong>
+    <span style="opacity:0.6;">Press Ctrl+P or use the button to save as PDF</span>
   </div>
-  <button onclick="window.print()">Print / Save as PDF</button>
+  <button onclick="window.print()">Save as PDF</button>
 </div>
 
-<!-- Report Header -->
-<div class="report-header">
-  <div class="report-header-left">
+<!-- Header -->
+<div class="rpt-header">
+  <div class="rpt-header-left">
     <img src="${logoUrl}" alt="ProxMenux" onerror="this.style.display='none'" />
     <div>
       <h1>Security Audit Report</h1>
       <p>ProxMenux Monitor - Lynis System Audit</p>
     </div>
   </div>
-  <div class="report-header-right">
-    <div><strong>Report Date:</strong> ${now}</div>
+  <div class="rpt-header-right">
+    <div><strong>Date:</strong> ${now}</div>
     <div><strong>Auditor:</strong> Lynis ${report.lynis_version || ""}</div>
-    <div class="report-id">ID: PMXA-${Date.now().toString(36).toUpperCase()}</div>
+    <div class="rid">ID: PMXA-${Date.now().toString(36).toUpperCase()}</div>
   </div>
 </div>
 
-<!-- Executive Summary -->
+<!-- 1. Executive Summary -->
 <div class="section">
   <div class="section-title">1. Executive Summary</div>
-  <div class="score-section">
-    <div class="score-circle" style="border-color: ${scoreColor}; color: ${scoreColor};">
-      <div class="score-number">${displayScore ?? "N/A"}</div>
-      <div class="score-label">${scoreLabel}</div>
+  <div class="exec-box">
+    <div class="score-ring" style="border-color:${scoreColor};color:${scoreColor};">
+      <div class="score-num">${displayScore ?? "N/A"}</div>
+      <div class="score-lbl">${scoreLabel}</div>
     </div>
-    <div class="score-details">
+    <div class="exec-text">
       <h3>System Hardening Assessment${hasAdjustment ? " (Proxmox Adjusted)" : ""}</h3>
       <p>
-        This automated security audit was performed on host <strong>${report.hostname || "Unknown"}</strong>
+        Audit of <strong>${report.hostname || "Unknown"}</strong>
         running <strong>${report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "Unknown OS"}</strong> (Proxmox VE).
-        A total of <strong>${report.tests_performed}</strong> tests were executed,
-        resulting in <strong style="color:#dc2626;">${report.warnings.length} warning(s)</strong>
-        and <strong style="color:#ca8a04;">${report.suggestions.length} suggestion(s)</strong> for improvement.
+        ${report.tests_performed} tests executed.
+        ${actionableWarnings > 0 ? `<strong style="color:#dc2626;">${actionableWarnings} actionable warning(s)</strong>` : '<strong style="color:#16a34a;">No actionable warnings</strong>'}
+        and <strong style="color:${actionableSuggestions > 0 ? '#ca8a04' : '#16a34a'};">${actionableSuggestions} actionable suggestion(s)</strong>.
+        ${totalExpected > 0 ? `<span style="color:#0891b2;">${totalExpected} findings are expected behavior in Proxmox VE.</span>` : ""}
       </p>
+      ${hasAdjustment ? `
+      <div class="score-bar-wrap">
+        <div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:2px;">
+          <span style="color:#64748b;">Lynis raw: ${rawScore}/100</span>
+          <span style="color:${scoreColor};font-weight:700;">PVE adjusted: ${displayScore}/100</span>
+        </div>
+        <div class="score-bar-bg">
+          <div class="score-bar-fill" style="width:${displayScore}%;background:${scoreColor};"></div>
+        </div>
+        <div class="score-bar-labels"><span>0 - Critical</span><span>50 - Moderate</span><span>70 - Good</span><span>100</span></div>
+      </div>` : ""}
     </div>
   </div>
 </div>
 
-<!-- System Information -->
+<!-- 2. System Information -->
 <div class="section">
   <div class="section-title">2. System Information</div>
-  <div class="info-grid">
-    <div class="info-card">
-      <div class="info-label">Hostname</div>
-      <div class="info-value">${report.hostname || "N/A"}</div>
-    </div>
-    <div class="info-card">
-      <div class="info-label">Operating System</div>
-      <div class="info-value">${report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "N/A"}</div>
-    </div>
-    <div class="info-card">
-      <div class="info-label">Kernel</div>
-      <div class="info-value">${report.kernel_version || "N/A"}</div>
-    </div>
-    <div class="info-card">
-      <div class="info-label">Lynis Version</div>
-      <div class="info-value">${report.lynis_version || "N/A"}</div>
-    </div>
-    <div class="info-card">
-      <div class="info-label">Report Date</div>
-      <div class="info-value">${report.datetime_start ? report.datetime_start.replace("T", " ").substring(0, 16) : "N/A"}</div>
-    </div>
-    <div class="info-card">
-      <div class="info-label">Tests Performed</div>
-      <div class="info-value">${report.tests_performed}</div>
-    </div>
+  <div class="grid-3">
+    <div class="card"><div class="card-label">Hostname</div><div class="card-value">${report.hostname || "N/A"}</div></div>
+    <div class="card"><div class="card-label">Operating System</div><div class="card-value">${report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "N/A"}</div></div>
+    <div class="card"><div class="card-label">Kernel</div><div class="card-value">${report.kernel_version || "N/A"}</div></div>
+    <div class="card"><div class="card-label">Lynis Version</div><div class="card-value">${report.lynis_version || "N/A"}</div></div>
+    <div class="card"><div class="card-label">Report Date</div><div class="card-value">${report.datetime_start ? report.datetime_start.replace("T", " ").substring(0, 16) : "N/A"}</div></div>
+    <div class="card"><div class="card-label">Tests Performed</div><div class="card-value">${report.tests_performed}</div></div>
   </div>
 </div>
 
-<!-- Quick Status -->
+<!-- 3. Security Posture -->
 <div class="section">
   <div class="section-title">3. Security Posture Overview</div>
-  <div class="status-grid">
-    <div class="status-card">
-      <div class="status-value" style="color:${scoreColor};">${displayScore ?? "N/A"}<span style="font-size:12px;color:#64748b;">/100</span></div>
-      <div class="status-label">Hardening Score - PVE Adjusted (${scoreLabel})${hasAdjustment ? `<br><span style="font-size:10px;color:#64748b;">Lynis raw: ${rawScore}/100</span>` : ""}</div>
+  <div class="grid-4">
+    <div class="card card-c">
+      <div class="card-value" style="color:${scoreColor};">${displayScore ?? "N/A"}<span style="font-size:10px;color:#64748b;">/100</span></div>
+      <div class="card-label">PVE Score (${scoreLabel})</div>
+      ${hasAdjustment ? `<div class="card-sub">Lynis raw: ${rawScore}</div>` : ""}
     </div>
-    <div class="status-card">
-      <div class="status-value" style="color:${(report.warnings.length - (report.proxmox_expected_warnings ?? 0)) > 0 ? "#dc2626" : "#16a34a"};">${report.warnings.length - (report.proxmox_expected_warnings ?? 0)}</div>
-      <div class="status-label">Actionable Warnings${(report.proxmox_expected_warnings ?? 0) > 0 ? `<br><span style="font-size:10px;color:#22d3ee;">+${report.proxmox_expected_warnings} PVE expected</span>` : ""}</div>
+    <div class="card card-c">
+      <div class="card-value" style="color:${actionableWarnings > 0 ? "#dc2626" : "#16a34a"};">${actionableWarnings}</div>
+      <div class="card-label">Actionable Warnings</div>
+      ${(report.proxmox_expected_warnings ?? 0) > 0 ? `<div class="card-sub pve">+${report.proxmox_expected_warnings} PVE expected</div>` : ""}
     </div>
-    <div class="status-card">
-      <div class="status-value" style="color:${(report.suggestions.length - (report.proxmox_expected_suggestions ?? 0)) > 0 ? "#ca8a04" : "#16a34a"};">${report.suggestions.length - (report.proxmox_expected_suggestions ?? 0)}</div>
-      <div class="status-label">Actionable Suggestions${(report.proxmox_expected_suggestions ?? 0) > 0 ? `<br><span style="font-size:10px;color:#22d3ee;">+${report.proxmox_expected_suggestions} PVE expected</span>` : ""}</div>
+    <div class="card card-c">
+      <div class="card-value" style="color:${actionableSuggestions > 0 ? "#ca8a04" : "#16a34a"};">${actionableSuggestions}</div>
+      <div class="card-label">Actionable Suggestions</div>
+      ${(report.proxmox_expected_suggestions ?? 0) > 0 ? `<div class="card-sub pve">+${report.proxmox_expected_suggestions} PVE expected</div>` : ""}
     </div>
-    <div class="status-card">
-      <div class="status-value">${report.tests_performed}</div>
-      <div class="status-label">Tests Performed</div>
+    <div class="card card-c">
+      <div class="card-value">${report.tests_performed}</div>
+      <div class="card-label">Tests Performed</div>
     </div>
   </div>
-  <div class="info-grid" style="grid-template-columns: repeat(3, 1fr);">
-    <div class="info-card" style="text-align:center;">
-      <div class="info-label">Firewall</div>
-      <div class="info-value" style="color:${report.firewall_active ? "#16a34a" : "#dc2626"};">${report.firewall_active ? "Active" : "Inactive"}</div>
+  <div class="grid-3">
+    <div class="card card-c">
+      <div class="card-label">Firewall</div>
+      <div class="card-value" style="color:${report.firewall_active ? "#16a34a" : "#dc2626"};font-size:13px;">${report.firewall_active ? "Active" : "Inactive"}</div>
     </div>
-    <div class="info-card" style="text-align:center;">
-      <div class="info-label">Malware Scanner</div>
-      <div class="info-value" style="color:${report.malware_scanner ? "#16a34a" : "#ca8a04"};">${report.malware_scanner ? "Installed" : "Not Found"}</div>
+    <div class="card card-c">
+      <div class="card-label">Malware Scanner</div>
+      <div class="card-value" style="color:${report.malware_scanner ? "#16a34a" : "#ca8a04"};font-size:13px;">${report.malware_scanner ? "Installed" : "Not Found"}</div>
     </div>
-    <div class="info-card" style="text-align:center;">
-      <div class="info-label">Installed Packages</div>
-      <div class="info-value">${report.installed_packages || "N/A"}</div>
+    <div class="card card-c">
+      <div class="card-label">Installed Packages</div>
+      <div class="card-value" style="font-size:13px;">${report.installed_packages || "N/A"}</div>
     </div>
   </div>
 </div>
 
 <!-- Warnings -->
 <div class="section page-break">
-  <div class="section-title">4. Warnings (${report.warnings.length})</div>
-  <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Issues that require immediate attention and may represent security vulnerabilities.</p>
+  <div class="section-title">4. Warnings (${report.warnings.length}${(report.proxmox_expected_warnings ?? 0) > 0 ? ` - ${actionableWarnings} actionable` : ""})</div>
+  <p style="font-size:10px;color:#64748b;margin-bottom:8px;">Issues that require attention and may represent security vulnerabilities.</p>
   ${report.warnings.length === 0 ?
-    '<div style="padding:16px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">No warnings detected. System appears to be well-configured.</div>' :
+    '<div style="padding:12px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:5px;border:1px solid #bbf7d0;font-size:11px;">No warnings detected.</div>' :
     report.warnings.map((w, i) => `
-    <div class="finding finding-warning" style="${w.proxmox_expected ? 'opacity:0.7;border-left-color:#22d3ee;' : ''}">
-      <div class="finding-header">
-        <span style="font-size:10px;color:#94a3b8;font-weight:700;">#${i + 1}</span>
-        <span class="finding-id" ${w.proxmox_expected ? 'style="background:#083344;color:#22d3ee;"' : ''}>${w.test_id}</span>
-        ${w.proxmox_expected ? '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:#083344;color:#22d3ee;">PVE Expected</span>' : ''}
-        ${!w.proxmox_expected && w.proxmox_severity === "low" ? '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:#fefce8;color:#ca8a04;">Low Risk</span>' : ''}
-        ${!w.proxmox_expected && !w.proxmox_severity && w.severity ? `<span class="finding-severity">${w.severity}</span>` : ""}
+    <div class="finding ${w.proxmox_expected ? 'f-pve' : 'f-warn'}">
+      <div class="f-hdr">
+        <span class="f-num">#${i + 1}</span>
+        <span class="f-id${w.proxmox_expected ? ' pve' : ''}">${w.test_id}</span>
+        ${w.proxmox_expected ? '<span class="f-tag f-tag-pve">PVE Expected</span>' : ''}
+        ${!w.proxmox_expected && w.proxmox_severity === "low" ? '<span class="f-tag f-tag-low">Low Risk</span>' : ''}
+        ${!w.proxmox_expected && !w.proxmox_severity && w.severity ? `<span class="f-tag f-tag-sev">${w.severity}</span>` : ""}
       </div>
-      <div class="finding-desc">${w.description}</div>
-      ${w.proxmox_context ? `<div style="font-size:10px;color:#22d3ee;margin-top:4px;"><strong>Proxmox:</strong> ${w.proxmox_context}</div>` : ""}
-      ${w.solution ? `<div class="finding-solution"><strong>Recommendation:</strong> ${w.solution}</div>` : ""}
+      <div class="f-desc">${w.description}</div>
+      ${w.proxmox_context ? `<div class="f-ctx"><strong>Proxmox:</strong> ${w.proxmox_context}</div>` : ""}
+      ${w.solution ? `<div class="f-sol"><strong>Recommendation:</strong> ${w.solution}</div>` : ""}
     </div>`).join("")}
 </div>
 
 <!-- Suggestions -->
 <div class="section page-break">
-  <div class="section-title">5. Suggestions (${report.suggestions.length})</div>
-  <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Recommended improvements to strengthen your system's security posture.${(report.proxmox_expected_suggestions ?? 0) > 0 ? ` <span style="color:#22d3ee;">${report.proxmox_expected_suggestions} items are expected behavior in Proxmox VE.</span>` : ""}</p>
+  <div class="section-title">5. Suggestions (${report.suggestions.length}${(report.proxmox_expected_suggestions ?? 0) > 0 ? ` - ${actionableSuggestions} actionable` : ""})</div>
+  <p style="font-size:10px;color:#64748b;margin-bottom:8px;">Recommended improvements to strengthen security.${(report.proxmox_expected_suggestions ?? 0) > 0 ? ` <span style="color:#0891b2;">${report.proxmox_expected_suggestions} are expected in Proxmox VE.</span>` : ""}</p>
   ${report.suggestions.length === 0 ?
-    '<div style="padding:16px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">No suggestions. System is fully hardened.</div>' :
+    '<div style="padding:12px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:5px;border:1px solid #bbf7d0;font-size:11px;">No suggestions. Fully hardened.</div>' :
     report.suggestions.map((s, i) => `
-    <div class="finding finding-suggestion" style="${s.proxmox_expected ? 'opacity:0.7;border-left-color:#22d3ee;' : ''}">
-      <div class="finding-header">
-        <span style="font-size:10px;color:#94a3b8;font-weight:700;">#${i + 1}</span>
-        <span class="finding-id" ${s.proxmox_expected ? 'style="background:#083344;color:#22d3ee;"' : ''}>${s.test_id}</span>
-        ${s.proxmox_expected ? '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:#083344;color:#22d3ee;">PVE Expected</span>' : ''}
-        ${!s.proxmox_expected && s.proxmox_severity === "low" ? '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:#f8fafc;color:#64748b;">Low Priority</span>' : ''}
+    <div class="finding ${s.proxmox_expected ? 'f-pve' : 'f-sugg'}">
+      <div class="f-hdr">
+        <span class="f-num">#${i + 1}</span>
+        <span class="f-id${s.proxmox_expected ? ' pve' : ''}">${s.test_id}</span>
+        ${s.proxmox_expected ? '<span class="f-tag f-tag-pve">PVE Expected</span>' : ''}
+        ${!s.proxmox_expected && s.proxmox_severity === "low" ? '<span class="f-tag f-tag-low">Low Priority</span>' : ''}
       </div>
-      <div class="finding-desc">${s.description}</div>
-      ${s.proxmox_context ? `<div style="font-size:10px;color:#22d3ee;margin-top:4px;"><strong>Proxmox:</strong> ${s.proxmox_context}</div>` : ""}
-      ${s.solution ? `<div class="finding-solution"><strong>Recommendation:</strong> ${s.solution}</div>` : ""}
-      ${s.details ? `<div class="finding-details">${s.details}</div>` : ""}
+      <div class="f-desc">${s.description}</div>
+      ${s.proxmox_context ? `<div class="f-ctx"><strong>Proxmox:</strong> ${s.proxmox_context}</div>` : ""}
+      ${s.solution ? `<div class="f-sol"><strong>Recommendation:</strong> ${s.solution}</div>` : ""}
+      ${s.details ? `<div class="f-det">${s.details}</div>` : ""}
     </div>`).join("")}
 </div>
 
@@ -1122,21 +1153,16 @@ export function Security() {
 ${(report.sections && report.sections.length > 0) ? `
 <div class="section page-break">
   <div class="section-title">6. Detailed Security Checks (${report.sections.length} categories)</div>
-  <p style="font-size:11px;color:#64748b;margin-bottom:16px;">Complete list of all security checks performed during the audit, organized by category.</p>
+  <p style="font-size:10px;color:#64748b;margin-bottom:10px;">All security checks performed, organized by category.</p>
   ${report.sections.map((section, sIdx) => `
-  <div style="margin-bottom:16px;page-break-inside:avoid;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 10px;background:#f1f5f9;border-radius:4px;">
-      <span style="font-size:10px;font-weight:700;color:#0891b2;background:#ecfeff;padding:2px 6px;border-radius:3px;">${sIdx + 1}</span>
-      <span style="font-size:12px;font-weight:700;color:#0f172a;">${section.name}</span>
-      <span style="font-size:10px;color:#94a3b8;margin-left:auto;">${section.checks.length} checks</span>
+  <div style="margin-bottom:10px;page-break-inside:avoid;">
+    <div class="cat-head">
+      <span class="cat-num">${sIdx + 1}</span>
+      <span class="cat-name">${section.name}</span>
+      <span class="cat-cnt">${section.checks.length} checks</span>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:11px;">
-      <thead>
-        <tr style="background:#f8fafc;">
-          <th style="text-align:left;padding:4px 8px;font-size:10px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0;">Check</th>
-          <th style="text-align:right;padding:4px 8px;font-size:10px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0;width:120px;">Status</th>
-        </tr>
-      </thead>
+    <table class="chk-tbl">
+      <thead><tr><th>Check</th><th>Status</th></tr></thead>
       <tbody>
         ${section.checks.map(check => {
           const st = check.status.toUpperCase()
@@ -1144,10 +1170,10 @@ ${(report.sections && report.sections.length > 0) ? `
           const isSugg = ["SUGGESTION", "PARTIALLY HARDENED", "MEDIUM", "NON DEFAULT"].includes(st)
           const isOk = ["OK", "FOUND", "DONE", "ENABLED", "ACTIVE", "YES", "HARDENED", "PROTECTED"].includes(st)
           const color = isWarn ? "#dc2626" : isSugg ? "#ca8a04" : isOk ? "#16a34a" : "#64748b"
-          const bg = isWarn ? "#fef2f2" : isSugg ? "#fefce8" : "transparent"
-          return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;">
-            <td style="padding:3px 8px;color:#1e293b;">${check.name}${check.detail ? ` <span style="color:#94a3b8;font-size:10px;">(${check.detail})</span>` : ""}</td>
-            <td style="padding:3px 8px;text-align:right;font-weight:700;color:${color};font-size:10px;">${check.status}</td>
+          const cls = isWarn ? ' class="warn"' : isSugg ? ' class="sugg"' : ""
+          return `<tr${cls}>
+            <td>${check.name}${check.detail ? ` <span class="chk-det">(${check.detail})</span>` : ""}</td>
+            <td style="color:${color};">${check.status}</td>
           </tr>`
         }).join("")}
       </tbody>
@@ -1156,10 +1182,10 @@ ${(report.sections && report.sections.length > 0) ? `
 </div>` : ""}
 
 <!-- Footer -->
-<div class="report-footer">
-  <div>Generated by ProxMenux Monitor using Lynis ${report.lynis_version || ""}</div>
-  <div>Report Date: ${now}</div>
-  <div style="font-style:italic;">Confidential - For authorized personnel only</div>
+<div class="rpt-footer">
+  <div>Generated by ProxMenux Monitor / Lynis ${report.lynis_version || ""}</div>
+  <div>${now}</div>
+  <div style="font-style:italic;">Confidential</div>
 </div>
 
 </body>
@@ -2433,10 +2459,10 @@ ${(report.sections && report.sections.length > 0) ? `
             Intrusion prevention system that bans IPs after repeated failed login attempts
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {toolsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin h-8 w-8 border-4 border-red-500 border-t-transparent rounded-full" />
+            <div className="flex items-center justify-center py-6">
+              <div className="animate-spin h-6 w-6 border-3 border-red-500 border-t-transparent rounded-full" />
             </div>
           ) : !fail2banInfo?.installed ? (
             /* --- NOT INSTALLED --- */
@@ -2482,21 +2508,21 @@ ${(report.sections && report.sections.length > 0) ? `
             </div>
           ) : (
             /* --- INSTALLED --- */
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Status bar */}
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${fail2banInfo.active ? "bg-green-500/10" : "bg-yellow-500/10"}`}>
-                    <Bug className={`h-5 w-5 ${fail2banInfo.active ? "text-green-500" : "text-yellow-500"}`} />
+              <div className="flex items-center justify-between px-3 py-2.5 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${fail2banInfo.active ? "bg-green-500/10" : "bg-yellow-500/10"}`}>
+                    <Bug className={`h-4 w-4 ${fail2banInfo.active ? "text-green-500" : "text-yellow-500"}`} />
                   </div>
                   <div>
-                    <p className="font-medium">Fail2Ban {fail2banInfo.version}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm font-medium">Fail2Ban {fail2banInfo.version}</p>
+                    <p className="text-xs text-muted-foreground">
                       {fail2banInfo.active ? "Service is running" : "Service is not running"}
                     </p>
                   </div>
                 </div>
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${fail2banInfo.active ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"}`}>
+                <div className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${fail2banInfo.active ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"}`}>
                   {fail2banInfo.active ? "Active" : "Inactive"}
                 </div>
               </div>
@@ -2504,26 +2530,26 @@ ${(report.sections && report.sections.length > 0) ? `
               {fail2banInfo.active && f2bDetails && (
                 <>
                   {/* Summary stats */}
-                  <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-                    <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
-                      <p className="text-xs text-muted-foreground mb-1">Jails</p>
-                      <p className="text-xl font-bold">{f2bDetails.jails.length}</p>
+                  <div className="grid gap-2 grid-cols-4">
+                    <div className="px-2 py-1.5 bg-muted/30 rounded-md border border-border text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Jails</p>
+                      <p className="text-lg font-bold">{f2bDetails.jails.length}</p>
                     </div>
-                    <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
-                      <p className="text-xs text-muted-foreground mb-1">Banned IPs</p>
-                      <p className={`text-xl font-bold ${f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0) > 0 ? "text-red-500" : "text-green-500"}`}>
+                    <div className="px-2 py-1.5 bg-muted/30 rounded-md border border-border text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Banned</p>
+                      <p className={`text-lg font-bold ${f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0) > 0 ? "text-red-500" : "text-green-500"}`}>
                         {f2bDetails.jails.reduce((a, j) => a + j.currently_banned, 0)}
                       </p>
                     </div>
-                    <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
-                      <p className="text-xs text-muted-foreground mb-1">Total Bans</p>
-                      <p className="text-xl font-bold text-orange-500">
+                    <div className="px-2 py-1.5 bg-muted/30 rounded-md border border-border text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Bans</p>
+                      <p className="text-lg font-bold text-orange-500">
                         {f2bDetails.jails.reduce((a, j) => a + j.total_banned, 0)}
                       </p>
                     </div>
-                    <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
-                      <p className="text-xs text-muted-foreground mb-1">Failed Attempts</p>
-                      <p className="text-xl font-bold text-yellow-500">
+                    <div className="px-2 py-1.5 bg-muted/30 rounded-md border border-border text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Failed</p>
+                      <p className="text-lg font-bold text-yellow-500">
                         {f2bDetails.jails.reduce((a, j) => a + j.total_failed, 0)}
                       </p>
                     </div>
@@ -2543,10 +2569,10 @@ ${(report.sections && report.sections.length > 0) ? `
                     }
 
                     return (
-                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3">
-                            <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-md p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" />
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-yellow-500">Missing protections detected</p>
                               <p className="text-xs text-yellow-400/80">
@@ -2573,42 +2599,42 @@ ${(report.sections && report.sections.length > 0) ? `
                     )
                   })()}
 
-                  {/* Tab switcher - redesigned with border on inactive */}
-                  <div className="flex gap-0 rounded-lg border border-border overflow-hidden">
+                  {/* Tab switcher */}
+                  <div className="flex gap-0 rounded-md border border-border overflow-hidden">
                     <button
                       onClick={() => setF2bActiveTab("jails")}
-                      className={`flex-1 px-3 py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+                      className={`flex-1 px-3 py-1.5 text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
                         f2bActiveTab === "jails"
                           ? "bg-red-500 text-white"
                           : "bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                       }`}
                     >
-                      <Shield className="h-3.5 w-3.5" />
+                      <Shield className="h-3 w-3" />
                       Jails & Banned IPs
                     </button>
                     <button
                       onClick={() => setF2bActiveTab("activity")}
-                      className={`flex-1 px-3 py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-1.5 border-l border-border ${
+                      className={`flex-1 px-3 py-1.5 text-xs font-medium transition-all flex items-center justify-center gap-1.5 border-l border-border ${
                         f2bActiveTab === "activity"
                           ? "bg-red-500 text-white"
                           : "bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                       }`}
                     >
-                      <Clock className="h-3.5 w-3.5" />
+                      <Clock className="h-3 w-3" />
                       Recent Activity
                     </button>
                   </div>
 
                   {/* JAILS TAB */}
                   {f2bActiveTab === "jails" && (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {f2bDetails.jails.map((jail) => (
                         <div key={jail.name} className="border border-border rounded-lg overflow-hidden">
                           {/* Jail header */}
-                          <div className="flex items-center justify-between p-3 bg-muted/40">
-                            <div className="flex items-center gap-2.5">
-                              <div className={`w-2.5 h-2.5 rounded-full ${jail.currently_banned > 0 ? "bg-red-500 animate-pulse" : "bg-green-500"}`} />
-                              <span className="font-semibold text-sm">{jail.name}</span>
+                          <div className="flex items-center justify-between px-3 py-2 bg-muted/40">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${jail.currently_banned > 0 ? "bg-red-500 animate-pulse" : "bg-green-500"}`} />
+                              <span className="font-semibold text-xs">{jail.name}</span>
                               <span className="text-[10px] text-muted-foreground">
                                 {jail.name === "sshd" ? "SSH Remote Access" :
                                  jail.name === "proxmox" ? "Proxmox UI :8006" :
@@ -2744,23 +2770,23 @@ ${(report.sections && report.sections.length > 0) ? `
 
                           {/* Jail stats bar */}
                           <div className="grid grid-cols-4 gap-px bg-border">
-                            <div className="p-2.5 bg-card text-center">
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Banned</p>
-                              <p className={`text-lg font-bold ${jail.currently_banned > 0 ? "text-red-500" : "text-green-500"}`}>
+                            <div className="px-2 py-1.5 bg-card text-center">
+                              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Banned</p>
+                              <p className={`text-sm font-bold ${jail.currently_banned > 0 ? "text-red-500" : "text-green-500"}`}>
                                 {jail.currently_banned}
                               </p>
                             </div>
-                            <div className="p-2.5 bg-card text-center">
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Bans</p>
-                              <p className="text-lg font-bold text-orange-500">{jail.total_banned}</p>
+                            <div className="px-2 py-1.5 bg-card text-center">
+                              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Total Bans</p>
+                              <p className="text-sm font-bold text-orange-500">{jail.total_banned}</p>
                             </div>
-                            <div className="p-2.5 bg-card text-center">
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Failed Now</p>
-                              <p className="text-lg font-bold text-yellow-500">{jail.currently_failed}</p>
+                            <div className="px-2 py-1.5 bg-card text-center">
+                              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Failed Now</p>
+                              <p className="text-sm font-bold text-yellow-500">{jail.currently_failed}</p>
                             </div>
-                            <div className="p-2.5 bg-card text-center">
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Failed</p>
-                              <p className="text-lg font-bold text-muted-foreground">{jail.total_failed}</p>
+                            <div className="px-2 py-1.5 bg-card text-center">
+                              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Total Failed</p>
+                              <p className="text-sm font-bold text-muted-foreground">{jail.total_failed}</p>
                             </div>
                           </div>
 
@@ -2811,8 +2837,8 @@ ${(report.sections && report.sections.length > 0) ? `
                           )}
 
                           {jail.currently_banned === 0 && (
-                            <div className="px-3 py-3 border-t border-border text-center">
-                              <p className="text-xs text-muted-foreground">No IPs currently banned in this jail</p>
+                            <div className="px-3 py-1.5 border-t border-border text-center">
+                              <p className="text-[10px] text-muted-foreground">No IPs currently banned</p>
                             </div>
                           )}
                         </div>
@@ -3115,20 +3141,37 @@ ${(report.sections && report.sections.length > 0) ? `
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation()
-                            const printWindow = window.open("", "_blank")
-                            if (printWindow) {
-                              printWindow.document.write(generatePrintableReport(lynisReport))
-                              printWindow.document.close()
+                            const html = generatePrintableReport(lynisReport)
+                            const blob = new Blob([html], { type: "text/html;charset=utf-8" })
+                            const url = URL.createObjectURL(blob)
+                            // Use a hidden iframe for Safari compatibility
+                            let iframe = document.getElementById("pmx-print-frame") as HTMLIFrameElement | null
+                            if (iframe) iframe.remove()
+                            iframe = document.createElement("iframe")
+                            iframe.id = "pmx-print-frame"
+                            iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:none;opacity:0;pointer-events:none;"
+                            document.body.appendChild(iframe)
+                            iframe.src = url
+                            iframe.onload = () => {
+                              setTimeout(() => {
+                                try {
+                                  iframe?.contentWindow?.print()
+                                } catch {
+                                  // Fallback: open in new tab
+                                  window.open(url, "_blank")
+                                }
+                              }, 300)
                             }
                           }}
-                          className="h-7 px-2 text-xs text-cyan-500 hover:text-cyan-400 hover:bg-cyan-500/10"
+                          className="h-7 gap-1.5 px-2.5 text-xs border-cyan-500/30 text-cyan-500 hover:text-cyan-400 hover:bg-cyan-500/10"
                           title="Print / Save as PDF"
                         >
                           <Printer className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">PDF</span>
                         </Button>
                         <Button
                           variant="ghost"
