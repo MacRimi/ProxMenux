@@ -612,6 +612,26 @@
     "type": "ct"
   },
   {
+    "name": "Bichon",
+    "slug": "bichon",
+    "desc": "Bichon is an open-source email archiving system that synchronizes emails from IMAP servers, indexes them for full-text search, and provides a REST API for programmatic access. Unlike email clients, Bichon is designed for archiving and searching rather than sending/receiving emails. It runs as a standalone server application that continuously synchronizes configured email accounts and maintains a searchable local archive.",
+    "script": "ct/bichon.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/bichon.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/bichon.sh",
+    "os": "debian",
+    "categories": [
+      7
+    ],
+    "notes": [
+      "The Disk space initially allocated by the script is only a placeholder, as we can't know how much space you will ever need. You should increase it to match your workload."
+    ],
+    "type": "ct",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin@bichon"
+    }
+  },
+  {
     "name": "Bitmagnet",
     "slug": "bitmagnet",
     "desc": "A self-hosted BitTorrent indexer, DHT crawler, content classifier and torrent search engine with web UI, GraphQL API and Servarr stack integration.",
@@ -818,6 +838,24 @@
     ],
     "notes": [
       "WARNING: Installation sources scripts outside of Community Scripts repo. Please check the source before installing."
+    ],
+    "type": "ct"
+  },
+  {
+    "name": "Checkmate",
+    "slug": "checkmate",
+    "desc": "Checkmate is an open source uptime and infrastructure monitoring application that helps you track the availability and performance of your services.",
+    "script": "ct/checkmate.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/checkmate.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/checkmate.sh",
+    "os": "debian",
+    "categories": [
+      9
+    ],
+    "notes": [
+      "Create your admin account on first login via the web interface.",
+      "Server API runs on port 52345, Client UI on port 5173.",
+      "For PageSpeed monitoring, add a Google PageSpeed API key to the server .env file."
     ],
     "type": "ct"
   },
