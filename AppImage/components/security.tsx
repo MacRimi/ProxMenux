@@ -3147,19 +3147,44 @@ ${(report.sections && report.sections.length > 0) ? `
                             <div className="space-y-1.5">
                               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Status</p>
                               {[
-                                { label: "Firewall", ok: lynisReport.firewall_active },
-                                { label: "Malware Scanner", ok: lynisReport.malware_scanner },
-                                { label: "No Critical Warnings", ok: lynisReport.warnings.length === 0 },
-                                { label: "Hardening Score >= 70", ok: (lynisReport.hardening_index || 0) >= 70 },
-                              ].map((item) => (
+                                {
+                                  label: "Firewall",
+                                  ok: lynisReport.firewall_active,
+                                  passText: "Active",
+                                  failText: "Inactive",
+                                },
+                                {
+                                  label: "Malware Scanner",
+                                  ok: lynisReport.malware_scanner,
+                                  passText: "Installed",
+                                  failText: "Not Installed",
+                                  isWarning: true,
+                                },
+                                {
+                                  label: "Warnings",
+                                  ok: lynisReport.warnings.length === 0,
+                                  passText: "None",
+                                  failText: `${lynisReport.warnings.length} found`,
+                                  isWarning: lynisReport.warnings.length > 0 && lynisReport.warnings.length <= 10,
+                                },
+                                {
+                                  label: "Hardening Score",
+                                  ok: (lynisReport.hardening_index || 0) >= 70,
+                                  passText: `${lynisReport.hardening_index || 0}/100`,
+                                  failText: `${lynisReport.hardening_index || 0}/100 (< 70)`,
+                                  isWarning: (lynisReport.hardening_index || 0) >= 50,
+                                },
+                              ].map((item) => {
+                                const color = item.ok ? "green" : item.isWarning ? "yellow" : "red"
+                                return (
                                 <div key={item.label} className="flex items-center gap-2 px-3 py-1.5 rounded bg-muted/20">
-                                  <div className={`w-2 h-2 rounded-full ${item.ok ? "bg-green-500" : "bg-red-500"}`} />
+                                  <div className={`w-2 h-2 rounded-full ${color === "green" ? "bg-green-500" : color === "yellow" ? "bg-yellow-500" : "bg-red-500"}`} />
                                   <span className="text-xs">{item.label}</span>
-                                  <span className={`ml-auto text-[10px] font-bold ${item.ok ? "text-green-500" : "text-red-500"}`}>
-                                    {item.ok ? "PASS" : "FAIL"}
+                                  <span className={`ml-auto text-[10px] font-bold ${color === "green" ? "text-green-500" : color === "yellow" ? "text-yellow-500" : "text-red-500"}`}>
+                                    {item.ok ? item.passText : item.failText}
                                   </span>
                                 </div>
-                              ))}
+                              )})}
                             </div>
                           </div>
                         )}

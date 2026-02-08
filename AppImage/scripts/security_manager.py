@@ -1100,18 +1100,70 @@ def run_lynis_audit():
             if os.path.isfile(report_file):
                 os.remove(report_file)
 
-            rc, out, err = _run_cmd(
-                [lynis_cmd, "audit", "system", "--no-colors", "--quick"],
-                timeout=600
+            # Capture full formatted output. Lynis suppresses its nice
+            # formatted output ([+] sections) when stdout is not a tty.
+            # Use 'script' to simulate a terminal so Lynis outputs everything.
+            output_log = "/var/log/lynis-output.log"
+            rc = -1
+            out = ""
+            err = ""
+
+            # Method 1: Use 'script -qc' (simulates tty)
+            try:
+                script_cmd = [
+                    "script", "-qec",
+                    f"{lynis_cmd} audit system --no-colors --quick",
+                    output_log
+                ]
+                result = subprocess.run(
+                    script_cmd,
+                    capture_output=True, text=True, timeout=600,
+                    env={**os.environ, "TERM": "dumb"}
+                )
+                rc = result.returncode
+                out = result.stdout.strip()
+                err = result.stderr.strip()
+            except Exception:
+                pass
+
+            # If script failed or output file is too small, try direct method
+            output_ok = (
+                os.path.isfile(output_log)
+                and os.path.getsize(output_log) > 500
             )
-            # Save stdout output for section parsing
-            if out:
+            if not output_ok:
                 try:
-                    with open("/var/log/lynis-output.log", "w") as fout:
-                        fout.write(out)
+                    rc, out, err = _run_cmd(
+                        [lynis_cmd, "audit", "system", "--no-colors", "--quick"],
+                        timeout=600
+                    )
+                    if out:
+                        with open(output_log, "w") as fout:
+                            fout.write(out)
                 except Exception:
                     pass
-            if rc == 0:
+
+            # Clean ANSI escape codes and control chars from output file
+            if os.path.isfile(output_log):
+                try:
+                    import re as _re
+                    with open(output_log, 'r', errors='replace') as fout:
+                        raw = fout.read()
+                    cleaned = _re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', raw)
+                    cleaned = _re.sub(r'\x1b\([A-Z]', '', cleaned)
+                    cleaned = cleaned.replace('\r', '')
+                    # Remove 'Script started/done' lines added by script cmd
+                    lines = cleaned.splitlines()
+                    lines = [l for l in lines if not l.startswith('Script started') and not l.startswith('Script done')]
+                    cleaned = '\n'.join(lines)
+                    with open(output_log, 'w') as fout:
+                        fout.write(cleaned)
+                except Exception:
+                    pass
+
+            # Lynis returns the hardening index as exit code (e.g. 65)
+            # Any non-negative code means the audit ran successfully
+            if rc >= 0:
                 _lynis_audit_progress = "completed"
             else:
                 _lynis_audit_progress = f"error: {err[:200] if err else 'unknown error'}"
@@ -1140,7 +1192,9 @@ def parse_lynis_report():
     Returns a dict with all audit findings.
     """
     report_file = "/var/log/lynis-report.dat"
-    if not os.path.isfile(report_file):
+    output_file = "/var/log/lynis-output.log"
+    # Need at least one data source
+    if not os.path.isfile(report_file) and not os.path.isfile(output_file):
         return None
 
     report = {
@@ -1167,29 +1221,30 @@ def parse_lynis_report():
     warnings_raw = []
     suggestions_raw = []
 
-    try:
-        with open(report_file, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#") or line.startswith("["):
-                    continue
+    if os.path.isfile(report_file):
+        try:
+            with open(report_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#") or line.startswith("["):
+                        continue
 
-                if "=" not in line:
-                    continue
+                    if "=" not in line:
+                        continue
 
-                key, _, value = line.partition("=")
-                key = key.strip()
-                value = value.strip()
+                    key, _, value = line.partition("=")
+                    key = key.strip()
+                    value = value.strip()
 
-                if key == "warning[]":
-                    warnings_raw.append(value)
-                elif key == "suggestion[]":
-                    suggestions_raw.append(value)
-                else:
-                    # Last value wins (some keys appear multiple times)
-                    raw_data[key] = value
-    except Exception:
-        return None
+                    if key == "warning[]":
+                        warnings_raw.append(value)
+                    elif key == "suggestion[]":
+                        suggestions_raw.append(value)
+                    else:
+                        # Last value wins (some keys appear multiple times)
+                        raw_data[key] = value
+        except Exception:
+            pass  # Continue with output.log data
 
     # Map known fields (Lynis uses varied naming across versions)
     report["datetime_start"] = raw_data.get("report_datetime_start", "")
@@ -1331,30 +1386,52 @@ def parse_lynis_report():
                     continue
 
                 # Detect sub-results: "      Result: found 35 running services"
-                result_match = re.match(r'^[\s]+Result:\s+(.+)', stripped)
-                if result_match and current_section and current_checks:
-                    current_checks[-1]["detail"] = result_match.group(1).strip()
+                # After strip(), line becomes "Result: ..." (no leading spaces)
+                if stripped.startswith("Result:") and current_section and current_checks:
+                    detail = stripped[7:].strip()
+                    if detail:
+                        current_checks[-1]["detail"] = detail
                     continue
 
-                # Fallback data extraction
-                if not report["hardening_index"] and "Hardening index" in stripped:
-                    m = re.search(r'Hardening index\s*:\s*\[?(\d+)\]?', stripped)
-                    if m:
-                        report["hardening_index"] = int(m.group(1))
-                if report["tests_performed"] == 0 and "Tests performed" in stripped:
-                    m = re.search(r'Tests performed\s*:\s*(\d+)', stripped)
-                    if m:
-                        report["tests_performed"] = int(m.group(1))
-                if not report["kernel_version"] and "Kernel version" in stripped:
-                    m = re.search(r'Kernel version\s*:\s*(.+)', stripped)
-                    if m:
-                        report["kernel_version"] = m.group(1).strip()
-                if not report["hostname"] and "Hostname" in stripped and ":" in stripped:
-                    m = re.search(r'Hostname\s*:\s*(.+)', stripped)
-                    if m:
-                        val = m.group(1).strip()
-                        if val and val != "N/A":
-                            report["hostname"] = val
+                # Extract key data from the info block and summary
+                # Format: "Key:           value" or "Key : value"
+                if ":" in stripped:
+                    if not report["hardening_index"] and "Hardening index" in stripped:
+                        m = re.search(r'Hardening index\s*:\s*(\d+)', stripped)
+                        if m:
+                            report["hardening_index"] = int(m.group(1))
+                    elif report["tests_performed"] == 0 and "Tests performed" in stripped:
+                        m = re.search(r'Tests performed\s*:\s*(\d+)', stripped)
+                        if m:
+                            report["tests_performed"] = int(m.group(1))
+                    elif not report["kernel_version"] and "Kernel version" in stripped:
+                        m = re.search(r'Kernel version\s*:\s*(.+)', stripped)
+                        if m:
+                            report["kernel_version"] = m.group(1).strip()
+                    elif not report["hostname"] and stripped.startswith("Hostname"):
+                        m = re.search(r'Hostname\s*:\s*(.+)', stripped)
+                        if m:
+                            val = m.group(1).strip()
+                            if val and val != "N/A":
+                                report["hostname"] = val
+                    elif not report["os_name"] and "Operating system name" in stripped:
+                        m = re.search(r'Operating system name\s*:\s*(.+)', stripped)
+                        if m:
+                            report["os_name"] = m.group(1).strip()
+                    elif not report["os_version"] and "Operating system version" in stripped:
+                        m = re.search(r'Operating system version\s*:\s*(.+)', stripped)
+                        if m:
+                            report["os_version"] = m.group(1).strip()
+                    elif not report["os_fullname"] and "Operating system:" in stripped:
+                        m = re.search(r'Operating system\s*:\s*(.+)', stripped)
+                        if m:
+                            report["os_fullname"] = m.group(1).strip()
+                    elif not report["lynis_version"] and "Program version" in stripped:
+                        m = re.search(r'Program version\s*:\s*(.+)', stripped)
+                        if m:
+                            report["lynis_version"] = m.group(1).strip()
+                    elif not report["datetime_start"] and "report_datetime_start" in stripped:
+                        pass  # already from .dat
 
             # Save last section
             if current_section and current_checks:
@@ -1414,101 +1491,122 @@ def parse_lynis_report():
             if report["malware_scanner"]:
                 break
 
-    # Extract warnings/suggestions from stdout if report.dat had none
-    # The stdout format is:
-    #   Warnings (5):
-    #     ! Warning text [TEST-ID]
-    #   Suggestions (42):
-    #     * Suggestion text [TEST-ID]
-    # Also extract "Software components" section for firewall/malware status
-    _need_warnings = len(report["warnings"]) == 0
-    _need_suggestions = len(report["suggestions"]) == 0
-    if _need_warnings or _need_suggestions:
-        output_file = "/var/log/lynis-output.log"
-        _log = output_file if os.path.isfile(output_file) else "/var/log/lynis.log"
-        if os.path.isfile(_log):
-            try:
-                import re
-                with open(_log, 'r') as f:
-                    stdout_lines = f.readlines()
+    # Always parse lynis-output.log for warnings, suggestions, software
+    # components. The report.dat is often sparse/empty on many systems.
+    output_file = "/var/log/lynis-output.log"
+    _log = output_file if os.path.isfile(output_file) else "/var/log/lynis.log"
+    if os.path.isfile(_log):
+        try:
+            import re
+            with open(_log, 'r') as f:
+                stdout_lines = f.readlines()
 
-                in_warnings = False
-                in_suggestions = False
-                in_software = False
-                stdout_warnings = []
-                stdout_suggestions = []
+            in_warnings = False
+            in_suggestions = False
+            in_software = False
+            stdout_warnings = []
+            stdout_suggestions = []
+            last_suggestion = None
 
-                for sline in stdout_lines:
-                    sline = sline.rstrip('\n')
-                    sstripped = sline.strip()
+            for sline in stdout_lines:
+                sline = sline.rstrip('\n')
+                sstripped = sline.strip()
 
-                    # Detect "Warnings (N):" header
-                    if re.match(r'^Warnings\s*\(\d+\)\s*:', sstripped):
-                        in_warnings = True
-                        in_suggestions = False
-                        in_software = False
-                        continue
-                    # Detect "Suggestions (N):" header
-                    if re.match(r'^Suggestions\s*\(\d+\)\s*:', sstripped):
-                        in_suggestions = True
-                        in_warnings = False
-                        in_software = False
-                        continue
-                    # Detect "Software components:" section
-                    if "Software components:" in sstripped:
-                        in_software = True
-                        in_warnings = False
-                        in_suggestions = False
-                        continue
-                    # End of sections on major separators
-                    if sstripped.startswith('==='):
-                        in_warnings = False
-                        in_suggestions = False
-                        in_software = False
-                        continue
+                # Detect "Warnings (N):" header
+                if re.match(r'^Warnings\s*\(\d+\)\s*:', sstripped):
+                    in_warnings = True
+                    in_suggestions = False
+                    in_software = False
+                    last_suggestion = None
+                    continue
+                # Detect "Suggestions (N):" header
+                if re.match(r'^Suggestions\s*\(\d+\)\s*:', sstripped):
+                    in_suggestions = True
+                    in_warnings = False
+                    in_software = False
+                    last_suggestion = None
+                    continue
+                # Detect "Software components:" section
+                if "Software components:" in sstripped:
+                    in_software = True
+                    in_warnings = False
+                    in_suggestions = False
+                    last_suggestion = None
+                    continue
+                # End of sections on major separators
+                if sstripped.startswith('==='):
+                    in_warnings = False
+                    in_suggestions = False
+                    in_software = False
+                    last_suggestion = None
+                    continue
 
-                    # Parse "Software components" for firewall/malware
-                    # Format: "- Firewall               [V]" or "[X]"
-                    if in_software:
-                        sw_match = re.match(r'^-\s+(.+?)\s+\[([VX])\]', sstripped)
-                        if sw_match:
-                            sw_name = sw_match.group(1).strip().lower()
-                            sw_status = sw_match.group(2)
-                            if "firewall" in sw_name and sw_status == "V":
-                                report["firewall_active"] = True
-                            if "malware" in sw_name and sw_status == "V":
-                                report["malware_scanner"] = True
+                # Parse "Software components" for firewall/malware
+                # Format: "- Firewall               [V]" or "[X]"
+                if in_software:
+                    sw_match = re.match(r'^-\s+(.+?)\s+\[([VX])\]', sstripped)
+                    if sw_match:
+                        sw_name = sw_match.group(1).strip().lower()
+                        sw_status = sw_match.group(2)
+                        if "firewall" in sw_name and sw_status == "V":
+                            report["firewall_active"] = True
+                        if "malware" in sw_name and sw_status == "V":
+                            report["malware_scanner"] = True
 
-                    # Parse warning lines: "! Warning text [TEST-ID]"
-                    if in_warnings and sstripped.startswith('!'):
-                        wm = re.match(r'^!\s+(.+?)\s*\[([A-Z0-9_-]+)\]\s*$', sstripped)
-                        if wm:
-                            stdout_warnings.append({
-                                "test_id": wm.group(2),
-                                "severity": "Warning",
-                                "description": wm.group(1).strip(),
-                                "solution": "",
-                            })
+                # Parse warning lines: "! Warning text [TEST-ID]"
+                if in_warnings and sstripped.startswith('!'):
+                    wm = re.match(r'^!\s+(.+?)\s+\[([A-Z0-9_-]+)\]', sstripped)
+                    if wm:
+                        stdout_warnings.append({
+                            "test_id": wm.group(2),
+                            "severity": "Warning",
+                            "description": wm.group(1).strip(),
+                            "solution": "",
+                        })
 
-                    # Parse suggestion lines: "* Suggestion text [TEST-ID]"
-                    if in_suggestions and sstripped.startswith('*'):
-                        sm = re.match(r'^\*\s+(.+?)\s*\[([A-Z0-9_-]+)\]\s*$', sstripped)
+                # Parse suggestion lines: "* Suggestion text [TEST-ID]"
+                if in_suggestions:
+                    if sstripped.startswith('*'):
+                        sm = re.match(r'^\*\s+(.+?)\s+\[([A-Z0-9_-]+)\]', sstripped)
                         if sm:
-                            stdout_suggestions.append({
+                            last_suggestion = {
                                 "test_id": sm.group(2),
                                 "description": sm.group(1).strip(),
                                 "solution": "",
                                 "details": "",
-                            })
+                            }
+                            stdout_suggestions.append(last_suggestion)
+                    elif last_suggestion and sstripped.startswith('- Details'):
+                        dm = re.match(r'^-\s*Details\s*:\s*(.+)', sstripped)
+                        if dm:
+                            last_suggestion["details"] = dm.group(1).strip()
+                    elif last_suggestion and sstripped.startswith('- Solution'):
+                        sm2 = re.match(r'^-\s*Solution\s*:\s*(.+)', sstripped)
+                        if sm2:
+                            last_suggestion["solution"] = sm2.group(1).strip()
 
-                # Use stdout warnings/suggestions if report.dat had none
-                if _need_warnings and stdout_warnings:
-                    report["warnings"] = stdout_warnings
-                if _need_suggestions and stdout_suggestions:
-                    report["suggestions"] = stdout_suggestions
+            # Use stdout data if report.dat had none
+            if len(report["warnings"]) == 0 and stdout_warnings:
+                report["warnings"] = stdout_warnings
+            if len(report["suggestions"]) == 0 and stdout_suggestions:
+                report["suggestions"] = stdout_suggestions
 
-            except Exception:
-                pass
+        except Exception:
+            pass
+
+    # Fallback: datetime from file modification time
+    if not report["datetime_start"]:
+        for fpath in ["/var/log/lynis-output.log", "/var/log/lynis-report.dat"]:
+            if os.path.isfile(fpath):
+                try:
+                    import time
+                    mtime = os.path.getmtime(fpath)
+                    report["datetime_start"] = time.strftime(
+                        "%Y-%m-%d %H:%M", time.localtime(mtime)
+                    )
+                    break
+                except Exception:
+                    pass
 
     # Fallback: get kernel from uname if still empty
     if not report["kernel_version"]:
