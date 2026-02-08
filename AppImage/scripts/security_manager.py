@@ -1372,6 +1372,144 @@ def parse_lynis_report():
         except Exception:
             report["sections"] = []
 
+    # Post-processing: extract firewall/malware status from parsed sections
+    # This catches cases where report.dat doesn't have firewall_active but the
+    # stdout shows "Checking host based firewall [ ACTIVE ]"
+    if not report["firewall_active"] and report["sections"]:
+        for section in report["sections"]:
+            section_lower = section["name"].lower()
+            if "firewall" in section_lower:
+                for check in section["checks"]:
+                    name_lower = check["name"].lower()
+                    status_upper = check["status"].upper()
+                    if "host based firewall" in name_lower or "checking host" in name_lower:
+                        if status_upper in ("ACTIVE", "ENABLED", "FOUND", "OK"):
+                            report["firewall_active"] = True
+                            break
+                    if "iptables" in name_lower and status_upper in ("ACTIVE", "FOUND", "OK"):
+                        report["firewall_active"] = True
+                        break
+                if report["firewall_active"]:
+                    break
+
+    # Also check pve-firewall directly (Proxmox uses its own firewall service)
+    if not report["firewall_active"]:
+        try:
+            rc, out, _ = _run_cmd(["systemctl", "is-active", "pve-firewall"])
+            if rc == 0 and out.strip() == "active":
+                report["firewall_active"] = True
+        except Exception:
+            pass
+
+    # Extract malware scanner status from sections
+    if not report["malware_scanner"] and report["sections"]:
+        for section in report["sections"]:
+            for check in section["checks"]:
+                name_lower = check["name"].lower()
+                status_upper = check["status"].upper()
+                if any(x in name_lower for x in ["malware", "clamav", "rkhunter", "chkrootkit"]):
+                    if status_upper in ("FOUND", "INSTALLED", "OK"):
+                        report["malware_scanner"] = True
+                        break
+            if report["malware_scanner"]:
+                break
+
+    # Extract warnings/suggestions from stdout if report.dat had none
+    # The stdout format is:
+    #   Warnings (5):
+    #     ! Warning text [TEST-ID]
+    #   Suggestions (42):
+    #     * Suggestion text [TEST-ID]
+    # Also extract "Software components" section for firewall/malware status
+    _need_warnings = len(report["warnings"]) == 0
+    _need_suggestions = len(report["suggestions"]) == 0
+    if _need_warnings or _need_suggestions:
+        output_file = "/var/log/lynis-output.log"
+        _log = output_file if os.path.isfile(output_file) else "/var/log/lynis.log"
+        if os.path.isfile(_log):
+            try:
+                import re
+                with open(_log, 'r') as f:
+                    stdout_lines = f.readlines()
+
+                in_warnings = False
+                in_suggestions = False
+                in_software = False
+                stdout_warnings = []
+                stdout_suggestions = []
+
+                for sline in stdout_lines:
+                    sline = sline.rstrip('\n')
+                    sstripped = sline.strip()
+
+                    # Detect "Warnings (N):" header
+                    if re.match(r'^Warnings\s*\(\d+\)\s*:', sstripped):
+                        in_warnings = True
+                        in_suggestions = False
+                        in_software = False
+                        continue
+                    # Detect "Suggestions (N):" header
+                    if re.match(r'^Suggestions\s*\(\d+\)\s*:', sstripped):
+                        in_suggestions = True
+                        in_warnings = False
+                        in_software = False
+                        continue
+                    # Detect "Software components:" section
+                    if "Software components:" in sstripped:
+                        in_software = True
+                        in_warnings = False
+                        in_suggestions = False
+                        continue
+                    # End of sections on major separators
+                    if sstripped.startswith('==='):
+                        in_warnings = False
+                        in_suggestions = False
+                        in_software = False
+                        continue
+
+                    # Parse "Software components" for firewall/malware
+                    # Format: "- Firewall               [V]" or "[X]"
+                    if in_software:
+                        sw_match = re.match(r'^-\s+(.+?)\s+\[([VX])\]', sstripped)
+                        if sw_match:
+                            sw_name = sw_match.group(1).strip().lower()
+                            sw_status = sw_match.group(2)
+                            if "firewall" in sw_name and sw_status == "V":
+                                report["firewall_active"] = True
+                            if "malware" in sw_name and sw_status == "V":
+                                report["malware_scanner"] = True
+
+                    # Parse warning lines: "! Warning text [TEST-ID]"
+                    if in_warnings and sstripped.startswith('!'):
+                        wm = re.match(r'^!\s+(.+?)\s*\[([A-Z0-9_-]+)\]\s*$', sstripped)
+                        if wm:
+                            stdout_warnings.append({
+                                "test_id": wm.group(2),
+                                "severity": "Warning",
+                                "description": wm.group(1).strip(),
+                                "solution": "",
+                            })
+
+                    # Parse suggestion lines: "* Suggestion text [TEST-ID]"
+                    if in_suggestions and sstripped.startswith('*'):
+                        sm = re.match(r'^\*\s+(.+?)\s*\[([A-Z0-9_-]+)\]\s*$', sstripped)
+                        if sm:
+                            stdout_suggestions.append({
+                                "test_id": sm.group(2),
+                                "description": sm.group(1).strip(),
+                                "solution": "",
+                                "details": "",
+                            })
+
+                # Use stdout warnings/suggestions if report.dat had none
+                if _need_warnings and stdout_warnings:
+                    report["warnings"] = stdout_warnings
+                if _need_suggestions and stdout_suggestions:
+                    report["suggestions"] = stdout_suggestions
+
+            except Exception:
+                pass
+
     # Fallback: get kernel from uname if still empty
     if not report["kernel_version"]:
         try:
@@ -1386,6 +1524,18 @@ def parse_lynis_report():
         try:
             import socket
             report["hostname"] = socket.gethostname()
+        except Exception:
+            pass
+
+    # Fallback: get installed packages count
+    if report["installed_packages"] == 0:
+        try:
+            rc, out, _ = _run_cmd(["dpkg", "-l"])
+            if rc == 0 and out:
+                # Count lines that start with "ii " (installed packages)
+                count = sum(1 for l in out.splitlines() if l.startswith("ii "))
+                if count > 0:
+                    report["installed_packages"] = count
         except Exception:
             pass
 
