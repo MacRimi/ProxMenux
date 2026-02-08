@@ -768,6 +768,102 @@ def _persist_jail_config(jail_name, maxretry=None, bantime=None, findtime=None):
         pass  # Best effort persistence
 
 
+def apply_missing_jails():
+    """
+    Check for missing Fail2Ban jails (proxmox, proxmenux) and create them.
+    Returns (success, message, applied_jails).
+    """
+    applied = []
+    errors = []
+
+    # Check which jails are currently active
+    rc, out, _ = _run_cmd(["fail2ban-client", "status"])
+    if rc != 0:
+        return False, "Cannot communicate with fail2ban-client", []
+
+    current_jails = []
+    for line in out.splitlines():
+        if "Jail list:" in line:
+            jails_str = line.split(":", 1)[1].strip()
+            current_jails = [j.strip().lower() for j in jails_str.split(",") if j.strip()]
+
+    # --- Proxmox jail (port 8006) ---
+    if "proxmox" not in current_jails:
+        try:
+            # Create filter
+            filter_content = """[Definition]
+failregex = pvedaemon\\[.*authentication failure; rhost=<HOST> user=.* msg=.*
+ignoreregex =
+"""
+            with open("/etc/fail2ban/filter.d/proxmox.conf", "w") as f:
+                f.write(filter_content)
+
+            # Create jail
+            jail_content = """[proxmox]
+enabled = true
+port = 8006
+filter = proxmox
+logpath = /var/log/daemon.log
+maxretry = 3
+bantime = 3600
+findtime = 600
+"""
+            with open("/etc/fail2ban/jail.d/proxmox.conf", "w") as f:
+                f.write(jail_content)
+
+            applied.append("proxmox")
+        except Exception as e:
+            errors.append(f"proxmox: {str(e)}")
+
+    # --- ProxMenux Monitor jail (port 8008 + reverse proxy) ---
+    if "proxmenux" not in current_jails:
+        try:
+            # Create filter
+            filter_content = """[Definition]
+failregex = proxmenux-auth: authentication failure; rhost=<HOST> user=.*
+ignoreregex =
+"""
+            with open("/etc/fail2ban/filter.d/proxmenux.conf", "w") as f:
+                f.write(filter_content)
+
+            # Create jail
+            jail_content = """[proxmenux]
+enabled = true
+port = 8008,http,https
+filter = proxmenux
+logpath = /var/log/proxmenux-auth.log
+maxretry = 3
+bantime = 3600
+findtime = 600
+"""
+            with open("/etc/fail2ban/jail.d/proxmenux.conf", "w") as f:
+                f.write(jail_content)
+
+            # Ensure log file exists
+            if not os.path.isfile("/var/log/proxmenux-auth.log"):
+                with open("/var/log/proxmenux-auth.log", "w") as f:
+                    pass
+                os.chmod("/var/log/proxmenux-auth.log", 0o640)
+
+            applied.append("proxmenux")
+        except Exception as e:
+            errors.append(f"proxmenux: {str(e)}")
+
+    if not applied and not errors:
+        return True, "All jails are already configured", []
+
+    if applied:
+        # Restart fail2ban to load new jails
+        _run_cmd(["systemctl", "restart", "fail2ban"])
+        import time
+        time.sleep(2)
+
+    if errors:
+        return False, "Errors: " + "; ".join(errors), applied
+
+    return True, f"Applied jails: {', '.join(applied)}", applied
+
+
 def unban_ip(jail_name, ip_address):
     """
     Unban a specific IP from a Fail2Ban jail.

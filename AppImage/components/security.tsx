@@ -133,6 +133,7 @@ export function Security() {
     maxretry: "", bantime: "", findtime: "", permanent: false,
   })
   const [f2bSavingConfig, setF2bSavingConfig] = useState(false)
+  const [f2bApplyingJails, setF2bApplyingJails] = useState(false)
 
   // SSL/HTTPS state
   const [sslEnabled, setSslEnabled] = useState(false)
@@ -239,6 +240,29 @@ export function Security() {
       setError(err instanceof Error ? err.message : "Failed to unban IP")
     } finally {
       setF2bUnbanning(null)
+    }
+  }
+
+  const handleApplyMissingJails = async () => {
+    setF2bApplyingJails(true)
+    setError("")
+    setSuccess("")
+    try {
+      const data = await fetchApi("/api/security/fail2ban/apply-jails", {
+        method: "POST",
+      })
+      if (data.success) {
+        setSuccess(data.message || "Missing jails applied successfully")
+        // Reload to see the new jails
+        await loadFail2banDetails()
+        loadSecurityTools()
+      } else {
+        setError(data.message || "Failed to apply missing jails")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to apply missing jails")
+    } finally {
+      setF2bApplyingJails(false)
     }
   }
 
@@ -2098,6 +2122,50 @@ export function Security() {
                     </div>
                   </div>
 
+                  {/* Missing jails warning */}
+                  {(() => {
+                    const expectedJails = ["sshd", "proxmox", "proxmenux"]
+                    const currentNames = f2bDetails.jails.map(j => j.name.toLowerCase())
+                    const missing = expectedJails.filter(j => !currentNames.includes(j))
+                    if (missing.length === 0) return null
+
+                    const jailLabels: Record<string, string> = {
+                      sshd: "SSH (sshd)",
+                      proxmox: "Proxmox UI (port 8006)",
+                      proxmenux: "ProxMenux Monitor (port 8008)",
+                    }
+
+                    return (
+                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-yellow-500">Missing protections detected</p>
+                              <p className="text-xs text-yellow-400/80">
+                                The following jails are not configured:{" "}
+                                {missing.map(j => jailLabels[j] || j).join(", ")}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            disabled={f2bApplyingJails}
+                            onClick={handleApplyMissingJails}
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white flex-shrink-0"
+                          >
+                            {f2bApplyingJails ? (
+                              <div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full mr-1.5" />
+                            ) : (
+                              <Shield className="h-3.5 w-3.5 mr-1.5" />
+                            )}
+                            Apply Missing Jails
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })()}
+
                   {/* Tab switcher - redesigned with border on inactive */}
                   <div className="flex gap-0 rounded-lg border border-border overflow-hidden">
                     <button
@@ -2134,6 +2202,12 @@ export function Security() {
                             <div className="flex items-center gap-2.5">
                               <div className={`w-2.5 h-2.5 rounded-full ${jail.currently_banned > 0 ? "bg-red-500 animate-pulse" : "bg-green-500"}`} />
                               <span className="font-semibold text-sm">{jail.name}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {jail.name === "sshd" ? "SSH Remote Access" :
+                                 jail.name === "proxmox" ? "Proxmox UI :8006" :
+                                 jail.name === "proxmenux" ? "ProxMenux Monitor :8008" :
+                                 ""}
+                              </span>
                               {parseInt(jail.bantime, 10) === -1 && (
                                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-500">PERMANENT BAN</span>
                               )}

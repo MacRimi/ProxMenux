@@ -188,6 +188,18 @@ def fail2ban_jail_config():
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+@security_bp.route('/api/security/fail2ban/apply-jails', methods=['POST'])
+def fail2ban_apply_jails():
+    """Apply missing Fail2Ban jails (proxmox, proxmenux)"""
+    if not security_manager:
+        return jsonify({"success": False, "message": "Security manager not available"}), 500
+    try:
+        success, message, applied = security_manager.apply_missing_jails()
+        return jsonify({"success": success, "message": message, "applied": applied})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
 @security_bp.route('/api/security/fail2ban/activity', methods=['GET'])
 def fail2ban_activity():
     """Get recent Fail2Ban log activity"""
