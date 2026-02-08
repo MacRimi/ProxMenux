@@ -59,6 +59,53 @@ def firewall_disable():
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+@security_bp.route('/api/security/firewall/rules', methods=['POST'])
+def firewall_add_rule():
+    """Add a custom firewall rule"""
+    if not security_manager:
+        return jsonify({"success": False, "message": "Security manager not available"}), 500
+    try:
+        data = request.json or {}
+        success, message = security_manager.add_firewall_rule(
+            direction=data.get("direction", "IN"),
+            action=data.get("action", "ACCEPT"),
+            protocol=data.get("protocol", "tcp"),
+            dport=data.get("dport", ""),
+            sport=data.get("sport", ""),
+            source=data.get("source", ""),
+            dest=data.get("dest", ""),
+            iface=data.get("iface", ""),
+            comment=data.get("comment", ""),
+            level=data.get("level", "host"),
+        )
+        if success:
+            return jsonify({"success": True, "message": message})
+        else:
+            return jsonify({"success": False, "message": message}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@security_bp.route('/api/security/firewall/rules', methods=['DELETE'])
+def firewall_delete_rule():
+    """Delete a firewall rule by index"""
+    if not security_manager:
+        return jsonify({"success": False, "message": "Security manager not available"}), 500
+    try:
+        data = request.json or {}
+        rule_index = data.get("rule_index")
+        level = data.get("level", "host")
+        if rule_index is None:
+            return jsonify({"success": False, "message": "rule_index is required"}), 400
+        success, message = security_manager.delete_firewall_rule(int(rule_index), level)
+        if success:
+            return jsonify({"success": True, "message": message})
+        else:
+            return jsonify({"success": False, "message": message}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
 @security_bp.route('/api/security/firewall/monitor-port', methods=['POST'])
 def firewall_add_monitor_port():
     """Add firewall rule to allow port 8008 for ProxMenux Monitor"""

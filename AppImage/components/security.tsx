@@ -69,10 +69,24 @@ export function Security() {
     cluster_fw_enabled: boolean
     host_fw_enabled: boolean
     rules_count: number
-    rules: Array<{ raw: string; direction?: string; action?: string; dport?: string; p?: string; source_file?: string; section?: string }>
+    rules: Array<{ raw: string; direction?: string; action?: string; dport?: string; p?: string; source?: string; source_file?: string; section?: string; rule_index: number }>
     monitor_port_open: boolean
   } | null>(null)
   const [firewallAction, setFirewallAction] = useState(false)
+  const [showAddRule, setShowAddRule] = useState(false)
+  const [newRule, setNewRule] = useState({
+    direction: "IN",
+    action: "ACCEPT",
+    protocol: "tcp",
+    dport: "",
+    sport: "",
+    source: "",
+    iface: "",
+    comment: "",
+    level: "host",
+  })
+  const [addingRule, setAddingRule] = useState(false)
+  const [deletingRuleIdx, setDeletingRuleIdx] = useState<number | null>(null)
 
   // Security Tools state
   const [toolsLoading, setToolsLoading] = useState(true)
@@ -233,6 +247,58 @@ export function Security() {
     if (s < 3600) return `${Math.floor(s / 60)}m`
     if (s < 86400) return `${Math.floor(s / 3600)}h`
     return `${Math.floor(s / 86400)}d`
+  }
+
+  const handleAddRule = async () => {
+    if (!newRule.dport && !newRule.source) {
+      setError("Please specify at least a destination port or source address")
+      return
+    }
+    setAddingRule(true)
+    setError("")
+    setSuccess("")
+    try {
+      const data = await fetchApi("/api/security/firewall/rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newRule),
+      })
+      if (data.success) {
+        setSuccess(data.message || "Rule added successfully")
+        setShowAddRule(false)
+        setNewRule({ direction: "IN", action: "ACCEPT", protocol: "tcp", dport: "", sport: "", source: "", iface: "", comment: "", level: "host" })
+        loadFirewallStatus()
+      } else {
+        setError(data.message || "Failed to add rule")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add rule")
+    } finally {
+      setAddingRule(false)
+    }
+  }
+
+  const handleDeleteRule = async (ruleIndex: number, level: string) => {
+    setDeletingRuleIdx(ruleIndex)
+    setError("")
+    setSuccess("")
+    try {
+      const data = await fetchApi("/api/security/firewall/rules", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rule_index: ruleIndex, level }),
+      })
+      if (data.success) {
+        setSuccess(data.message || "Rule deleted")
+        loadFirewallStatus()
+      } else {
+        setError(data.message || "Failed to delete rule")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete rule")
+    } finally {
+      setDeletingRuleIdx(null)
+    }
   }
 
   const handleFirewallToggle = async (level: "host" | "cluster", enable: boolean) => {
@@ -1485,12 +1551,25 @@ export function Security() {
       {/* Proxmox Firewall */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Flame className="h-5 w-5 text-orange-500" />
-            <CardTitle>Proxmox Firewall</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Flame className="h-5 w-5 text-orange-500" />
+              <CardTitle>Proxmox Firewall</CardTitle>
+            </div>
+            {firewallData?.pve_firewall_installed && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={loadFirewallStatus}
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Refresh
+              </Button>
+            )}
           </div>
           <CardDescription>
-            Manage the Proxmox VE built-in firewall at cluster and host level
+            Manage the Proxmox VE built-in firewall: enable/disable, configure rules, and protect your services
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1521,7 +1600,7 @@ export function Security() {
                     <div>
                       <p className="font-medium text-sm">Cluster Firewall</p>
                       <p className="text-xs text-muted-foreground">
-                        {firewallData.cluster_fw_enabled ? "Active" : "Disabled"}
+                        {firewallData.cluster_fw_enabled ? "Active - Required for host rules to work" : "Disabled - Must be enabled first"}
                       </p>
                     </div>
                   </div>
@@ -1552,7 +1631,7 @@ export function Security() {
                     <div>
                       <p className="font-medium text-sm">Host Firewall</p>
                       <p className="text-xs text-muted-foreground">
-                        {firewallData.host_fw_enabled ? "Active" : "Disabled"}
+                        {firewallData.host_fw_enabled ? "Active - Rules are being enforced" : "Disabled"}
                       </p>
                     </div>
                   </div>
@@ -1575,90 +1654,268 @@ export function Security() {
                 </div>
               </div>
 
-              {/* ProxMenux Monitor Port 8008 */}
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${firewallData.monitor_port_open ? "bg-green-500/10" : "bg-yellow-500/10"}`}>
-                    <Activity className={`h-5 w-5 ${firewallData.monitor_port_open ? "text-green-500" : "text-yellow-500"}`} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">ProxMenux Monitor Port (8008/TCP)</p>
-                    <p className="text-xs text-muted-foreground">
-                      {firewallData.monitor_port_open
-                        ? "Port 8008 is allowed in the firewall"
-                        : "Port 8008 is not configured in the firewall"}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={firewallAction}
-                  onClick={() => handleMonitorPortToggle(!firewallData.monitor_port_open)}
-                  className={firewallData.monitor_port_open
-                    ? "text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent"
-                    : "text-green-500 border-green-500/30 hover:bg-green-500/10 bg-transparent"
-                  }
-                >
-                  {firewallData.monitor_port_open ? (
-                    <><Minus className="h-3.5 w-3.5 mr-1" /> Remove Rule</>
-                  ) : (
-                    <><Plus className="h-3.5 w-3.5 mr-1" /> Add Rule</>
-                  )}
-                </Button>
-              </div>
-
-              {!firewallData.monitor_port_open && (firewallData.cluster_fw_enabled || firewallData.host_fw_enabled) && (
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 flex items-start gap-2">
-                  <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-yellow-500">
-                    The firewall is active but port 8008 is not allowed. ProxMenux Monitor may be inaccessible from other devices. Add the rule above to fix this.
+              {!firewallData.cluster_fw_enabled && (
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
+                  <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-500">
+                    The Cluster Firewall must be enabled for any host-level firewall rules to take effect. Enable it first, then configure your host rules.
                   </p>
                 </div>
               )}
 
-              {/* Active Rules */}
-              {firewallData.rules.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-muted-foreground">
-                      Active Rules ({firewallData.rules_count})
-                    </h3>
+              {/* Quick Presets */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-muted-foreground">Quick Access Rules</h3>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {/* Monitor Port 8008 */}
+                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-2.5 h-2.5 rounded-full ${firewallData.monitor_port_open ? "bg-green-500" : "bg-yellow-500"}`} />
+                      <div>
+                        <p className="text-sm font-medium">ProxMenux Monitor</p>
+                        <p className="text-xs text-muted-foreground">Port 8008/TCP</p>
+                      </div>
+                    </div>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      onClick={loadFirewallStatus}
-                      className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                      disabled={firewallAction}
+                      onClick={() => handleMonitorPortToggle(!firewallData.monitor_port_open)}
+                      className={`h-7 text-xs ${firewallData.monitor_port_open
+                        ? "text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent"
+                        : "text-green-500 border-green-500/30 hover:bg-green-500/10 bg-transparent"
+                      }`}
                     >
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                      Refresh
+                      {firewallData.monitor_port_open ? "Remove" : "Allow"}
                     </Button>
                   </div>
-                  <div className="max-h-48 overflow-y-auto space-y-1">
-                    {firewallData.rules.map((rule, idx) => (
-                      <div key={idx} className="flex items-center gap-2 p-2 bg-muted/30 rounded text-xs font-mono">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                          rule.action === "ACCEPT" ? "bg-green-500/10 text-green-500" :
-                          rule.action === "DROP" ? "bg-red-500/10 text-red-500" :
-                          "bg-gray-500/10 text-gray-500"
-                        }`}>
-                          {rule.action || "?"}
-                        </span>
-                        <span className="text-muted-foreground">{rule.direction || "IN"}</span>
-                        {rule.p && <span className="text-blue-400">{rule.p}</span>}
-                        {rule.dport && <span className="text-foreground">:{rule.dport}</span>}
-                        <span className="text-muted-foreground/60 ml-auto">{rule.source_file}</span>
+
+                  {/* Proxmox Web UI hint */}
+                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                      <div>
+                        <p className="text-sm font-medium">Proxmox Web UI</p>
+                        <p className="text-xs text-muted-foreground">Port 8006/TCP (always allowed)</p>
                       </div>
-                    ))}
+                    </div>
+                    <span className="text-xs text-muted-foreground px-2 py-1 bg-muted/50 rounded">Built-in</span>
                   </div>
                 </div>
-              )}
 
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
-                <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-blue-500">
-                  For advanced firewall configuration (IP sets, security groups, per-VM rules), use the Proxmox web interface at port 8006.
-                </p>
+                {!firewallData.monitor_port_open && (firewallData.cluster_fw_enabled || firewallData.host_fw_enabled) && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 flex items-start gap-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-yellow-500">
+                      The firewall is active but port 8008 is not allowed. ProxMenux Monitor may be inaccessible from other devices.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Firewall Rules */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-muted-foreground">
+                    Firewall Rules ({firewallData.rules_count})
+                  </h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddRule(!showAddRule)}
+                    className="h-7 text-xs text-orange-500 border-orange-500/30 hover:bg-orange-500/10 bg-transparent"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Rule
+                  </Button>
+                </div>
+
+                {/* Add Rule Form */}
+                {showAddRule && (
+                  <div className="border border-orange-500/30 rounded-lg p-4 bg-orange-500/5 space-y-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Plus className="h-4 w-4 text-orange-500" />
+                      <p className="text-sm font-semibold text-orange-500">New Firewall Rule</p>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Direction</Label>
+                        <select
+                          value={newRule.direction}
+                          onChange={(e) => setNewRule({...newRule, direction: e.target.value})}
+                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
+                        >
+                          <option value="IN">IN (incoming)</option>
+                          <option value="OUT">OUT (outgoing)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Action</Label>
+                        <select
+                          value={newRule.action}
+                          onChange={(e) => setNewRule({...newRule, action: e.target.value})}
+                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
+                        >
+                          <option value="ACCEPT">ACCEPT (allow)</option>
+                          <option value="DROP">DROP (block silently)</option>
+                          <option value="REJECT">REJECT (block with response)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Protocol</Label>
+                        <select
+                          value={newRule.protocol}
+                          onChange={(e) => setNewRule({...newRule, protocol: e.target.value})}
+                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
+                        >
+                          <option value="tcp">TCP</option>
+                          <option value="udp">UDP</option>
+                          <option value="icmp">ICMP (ping)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Destination Port</Label>
+                        <Input
+                          placeholder="e.g. 80, 443, 8000:9000"
+                          value={newRule.dport}
+                          onChange={(e) => setNewRule({...newRule, dport: e.target.value})}
+                          className="h-9 text-sm"
+                        />
+                        <p className="text-[10px] text-muted-foreground">Single port, comma-separated, or range (8000:9000)</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Source Address (optional)</Label>
+                        <Input
+                          placeholder="e.g. 192.168.1.0/24"
+                          value={newRule.source}
+                          onChange={(e) => setNewRule({...newRule, source: e.target.value})}
+                          className="h-9 text-sm"
+                        />
+                        <p className="text-[10px] text-muted-foreground">IP, CIDR, or leave empty for any source</p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Interface (optional)</Label>
+                        <Input
+                          placeholder="e.g. vmbr0"
+                          value={newRule.iface}
+                          onChange={(e) => setNewRule({...newRule, iface: e.target.value})}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Apply to</Label>
+                        <select
+                          value={newRule.level}
+                          onChange={(e) => setNewRule({...newRule, level: e.target.value})}
+                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
+                        >
+                          <option value="host">Host firewall (this node)</option>
+                          <option value="cluster">Cluster firewall (all nodes)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Comment (optional)</Label>
+                      <Input
+                        placeholder="e.g. Allow web traffic"
+                        value={newRule.comment}
+                        onChange={(e) => setNewRule({...newRule, comment: e.target.value})}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAddRule(false)}
+                        className="text-muted-foreground"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={addingRule}
+                        onClick={handleAddRule}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {addingRule ? (
+                          <div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full mr-1" />
+                        ) : (
+                          <Plus className="h-3.5 w-3.5 mr-1" />
+                        )}
+                        Add Rule
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Rules List */}
+                {firewallData.rules.length > 0 ? (
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    {/* Table header */}
+                    <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto] gap-2 p-2.5 bg-muted/50 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      <span className="w-14">Action</span>
+                      <span>Direction</span>
+                      <span className="w-12">Proto</span>
+                      <span className="w-20">Port</span>
+                      <span className="w-28 hidden sm:block">Source</span>
+                      <span className="w-14">Level</span>
+                      <span className="w-8" />
+                    </div>
+
+                    <div className="divide-y divide-border max-h-64 overflow-y-auto">
+                      {firewallData.rules.map((rule, idx) => (
+                        <div key={idx} className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto] gap-2 p-2.5 items-center hover:bg-muted/20 transition-colors">
+                          <span className={`w-14 px-1.5 py-0.5 rounded text-[10px] font-bold text-center ${
+                            rule.action === "ACCEPT" ? "bg-green-500/10 text-green-500" :
+                            rule.action === "DROP" ? "bg-red-500/10 text-red-500" :
+                            rule.action === "REJECT" ? "bg-orange-500/10 text-orange-500" :
+                            "bg-gray-500/10 text-gray-500"
+                          }`}>
+                            {rule.action || "?"}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-mono">{rule.direction || "IN"}</span>
+                          <span className="w-12 text-xs text-blue-400 font-mono">{rule.p || "-"}</span>
+                          <span className="w-20 text-xs text-foreground font-mono">{rule.dport || "-"}</span>
+                          <span className="w-28 text-xs text-muted-foreground font-mono hidden sm:block truncate">{rule.source || "any"}</span>
+                          <span className={`w-14 text-[10px] px-1.5 py-0.5 rounded text-center ${
+                            rule.source_file === "cluster" ? "bg-blue-500/10 text-blue-400" : "bg-purple-500/10 text-purple-400"
+                          }`}>
+                            {rule.source_file}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteRule(rule.rule_index, rule.source_file)}
+                            disabled={deletingRuleIdx === rule.rule_index}
+                            className="w-8 h-7 p-0 text-red-500/50 hover:text-red-500 hover:bg-red-500/10"
+                          >
+                            {deletingRuleIdx === rule.rule_index ? (
+                              <div className="animate-spin h-3 w-3 border-2 border-red-500 border-t-transparent rounded-full" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-6 border border-dashed border-border rounded-lg">
+                    <Shield className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No firewall rules configured yet</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">Click "Add Rule" above to create your first rule</p>
+                  </div>
+                )}
               </div>
             </>
           )}
