@@ -213,6 +213,49 @@ def fail2ban_activity():
 
 
 # -------------------------------------------------------------------
+# Lynis Audit
+# -------------------------------------------------------------------
+
+@security_bp.route('/api/security/lynis/run', methods=['POST'])
+def lynis_run_audit():
+    """Start a Lynis audit (runs in background)"""
+    if not security_manager:
+        return jsonify({"success": False, "message": "Security manager not available"}), 500
+    try:
+        success, message = security_manager.run_lynis_audit()
+        return jsonify({"success": success, "message": message})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@security_bp.route('/api/security/lynis/status', methods=['GET'])
+def lynis_audit_status():
+    """Get Lynis audit running status"""
+    if not security_manager:
+        return jsonify({"success": False, "message": "Security manager not available"}), 500
+    try:
+        status = security_manager.get_lynis_audit_status()
+        return jsonify({"success": True, **status})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@security_bp.route('/api/security/lynis/report', methods=['GET'])
+def lynis_report():
+    """Get parsed Lynis audit report"""
+    if not security_manager:
+        return jsonify({"success": False, "message": "Security manager not available"}), 500
+    try:
+        report = security_manager.parse_lynis_report()
+        if report:
+            return jsonify({"success": True, "report": report})
+        else:
+            return jsonify({"success": False, "message": "No report available. Run an audit first."})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+# -------------------------------------------------------------------
 # Security Tools Detection
 # -------------------------------------------------------------------
 

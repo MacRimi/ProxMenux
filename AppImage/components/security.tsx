@@ -9,6 +9,7 @@ import {
   Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Key, Copy, Eye, EyeOff,
   Trash2, RefreshCw, Clock, ShieldCheck, Globe, FileKey, AlertTriangle,
   Flame, Bug, Search, Download, Power, PowerOff, Plus, Minus, Activity, Settings, Ban,
+  FileText, Printer, Play, BarChart3, TriangleAlert,
 } from "lucide-react"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
@@ -98,6 +99,24 @@ export function Security() {
   } | null>(null)
   const [showFail2banInstaller, setShowFail2banInstaller] = useState(false)
   const [showLynisInstaller, setShowLynisInstaller] = useState(false)
+
+  // Lynis audit state
+  interface LynisWarning { test_id: string; severity: string; description: string; solution: string }
+  interface LynisSuggestion { test_id: string; description: string; solution: string; details: string }
+  interface LynisReport {
+    datetime_start: string; datetime_end: string; lynis_version: string
+    os_name: string; os_version: string; hostname: string
+    hardening_index: number | null; tests_performed: number
+    warnings: LynisWarning[]; suggestions: LynisSuggestion[]
+    categories: Record<string, { score?: number }>
+    installed_packages: number; kernel_version: string
+    firewall_active: boolean; malware_scanner: boolean
+  }
+  const [lynisAuditRunning, setLynisAuditRunning] = useState(false)
+  const [lynisReport, setLynisReport] = useState<LynisReport | null>(null)
+  const [lynisReportLoading, setLynisReportLoading] = useState(false)
+  const [lynisShowReport, setLynisShowReport] = useState(false)
+  const [lynisActiveTab, setLynisActiveTab] = useState<"overview" | "warnings" | "suggestions">("overview")
 
   // Fail2Ban detailed state
   interface BannedIp {
@@ -265,6 +284,65 @@ export function Security() {
       setF2bApplyingJails(false)
     }
   }
+
+  // --- Lynis audit handlers ---
+  const handleRunLynisAudit = async () => {
+    setLynisAuditRunning(true)
+    setError("")
+    setSuccess("")
+    try {
+      const data = await fetchApi("/api/security/lynis/run", { method: "POST" })
+      if (data.success) {
+        // Poll for completion
+        const pollInterval = setInterval(async () => {
+          try {
+            const status = await fetchApi("/api/security/lynis/status")
+            if (!status.running) {
+              clearInterval(pollInterval)
+              setLynisAuditRunning(false)
+              if (status.progress === "completed") {
+                setSuccess("Security audit completed successfully")
+                loadSecurityTools()
+                loadLynisReport()
+              } else {
+                setError(status.progress || "Audit failed")
+              }
+            }
+          } catch {
+            clearInterval(pollInterval)
+            setLynisAuditRunning(false)
+          }
+        }, 3000)
+      } else {
+        setError(data.message || "Failed to start audit")
+        setLynisAuditRunning(false)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start audit")
+      setLynisAuditRunning(false)
+    }
+  }
+
+  const loadLynisReport = async () => {
+    setLynisReportLoading(true)
+    try {
+      const data = await fetchApi("/api/security/lynis/report")
+      if (data.success && data.report) {
+        setLynisReport(data.report)
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLynisReportLoading(false)
+    }
+  }
+
+  // Load report on mount if lynis is installed
+  useEffect(() => {
+    if (lynisInfo?.installed && lynisInfo?.last_scan) {
+      loadLynisReport()
+    }
+  }, [lynisInfo?.installed, lynisInfo?.last_scan])
 
   const openJailConfig = (jail: JailDetail) => {
     const bt = parseInt(jail.bantime, 10)
@@ -757,6 +835,281 @@ export function Security() {
       setTokenCopied(true)
       setTimeout(() => setTokenCopied(false), 2000)
     }
+  }
+
+  const generatePrintableReport = (report: LynisReport) => {
+    const scoreColor = report.hardening_index === null ? "#888"
+      : report.hardening_index >= 70 ? "#16a34a"
+      : report.hardening_index >= 50 ? "#ca8a04"
+      : "#dc2626"
+    const scoreLabel = report.hardening_index === null ? "N/A"
+      : report.hardening_index >= 70 ? "GOOD"
+      : report.hardening_index >= 50 ? "MODERATE"
+      : "CRITICAL"
+    const now = new Date().toLocaleString()
+    const logoUrl = `${window.location.origin}/images/proxmenux-logo.png`
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Security Audit Report - ${report.hostname || "ProxMenux"}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a2e; background: #fff; font-size: 13px; line-height: 1.5; }
+
+  /* Page setup for print */
+  @page { margin: 15mm 15mm 20mm 15mm; size: A4; }
+  @media print {
+    .no-print { display: none !important; }
+    .page-break { page-break-before: always; }
+    body { font-size: 11px; }
+  }
+
+  /* Header */
+  .report-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 0; border-bottom: 3px solid #0f172a; margin-bottom: 24px;
+  }
+  .report-header-left { display: flex; align-items: center; gap: 16px; }
+  .report-header-left img { height: 48px; width: auto; }
+  .report-header-left h1 { font-size: 22px; font-weight: 700; color: #0f172a; }
+  .report-header-left p { font-size: 11px; color: #64748b; }
+  .report-header-right { text-align: right; font-size: 11px; color: #64748b; }
+  .report-header-right .report-id { font-family: monospace; font-size: 10px; color: #94a3b8; }
+
+  /* Sections */
+  .section { margin-bottom: 24px; page-break-inside: avoid; }
+  .section-title {
+    font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase;
+    letter-spacing: 0.05em; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; margin-bottom: 12px;
+  }
+
+  /* Score box */
+  .score-section { display: flex; align-items: center; gap: 24px; padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 24px; }
+  .score-circle {
+    width: 100px; height: 100px; border-radius: 50%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; border: 4px solid; flex-shrink: 0;
+  }
+  .score-number { font-size: 32px; font-weight: 800; line-height: 1; }
+  .score-label { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .score-details { flex: 1; }
+  .score-details h3 { font-size: 16px; margin-bottom: 4px; }
+  .score-details p { font-size: 12px; color: #64748b; }
+
+  /* Info grid */
+  .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+  .info-card { padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
+  .info-label { font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+  .info-value { font-size: 13px; font-weight: 600; color: #0f172a; }
+
+  /* Status grid */
+  .status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+  .status-card { padding: 12px; text-align: center; border-radius: 6px; border: 1px solid #e2e8f0; }
+  .status-value { font-size: 20px; font-weight: 800; }
+  .status-label { font-size: 10px; color: #64748b; text-transform: uppercase; margin-top: 2px; }
+
+  /* Findings */
+  .finding { padding: 10px 12px; margin-bottom: 6px; border-left: 4px solid; border-radius: 0 4px 4px 0; background: #fafafa; }
+  .finding-warning { border-color: #dc2626; background: #fef2f2; }
+  .finding-suggestion { border-color: #ca8a04; background: #fefce8; }
+  .finding-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .finding-id { font-family: 'Courier New', monospace; font-size: 10px; background: #e2e8f0; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+  .finding-severity { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #dc2626; }
+  .finding-desc { font-size: 12px; color: #1e293b; }
+  .finding-solution { font-size: 11px; color: #64748b; margin-top: 3px; }
+  .finding-solution strong { color: #475569; }
+  .finding-details { font-size: 10px; font-family: 'Courier New', monospace; color: #94a3b8; margin-top: 2px; }
+
+  /* Table of contents summary */
+  .summary-bar { display: flex; gap: 16px; margin-bottom: 16px; }
+  .summary-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .summary-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Footer */
+  .report-footer {
+    margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0;
+    display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;
+  }
+
+  /* Print button */
+  .print-bar {
+    position: fixed; top: 0; left: 0; right: 0; background: #0f172a; color: #fff;
+    padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; z-index: 100;
+  }
+  .print-bar button {
+    background: #06b6d4; color: #fff; border: none; padding: 8px 20px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .print-bar button:hover { background: #0891b2; }
+  @media print { .print-bar { display: none; } body { padding-top: 0; } }
+  @media screen { body { padding-top: 56px; max-width: 800px; margin: 0 auto; padding-left: 24px; padding-right: 24px; } }
+</style>
+</head>
+<body>
+
+<div class="print-bar no-print">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <strong>ProxMenux Security Audit Report</strong>
+    <span style="font-size:11px;opacity:0.7;">Use Print / Save as PDF to download</span>
+  </div>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="report-header-left">
+    <img src="${logoUrl}" alt="ProxMenux" onerror="this.style.display='none'" />
+    <div>
+      <h1>Security Audit Report</h1>
+      <p>ProxMenux Monitor - Lynis System Audit</p>
+    </div>
+  </div>
+  <div class="report-header-right">
+    <div><strong>Report Date:</strong> ${now}</div>
+    <div><strong>Auditor:</strong> Lynis ${report.lynis_version || ""}</div>
+    <div class="report-id">ID: PMXA-${Date.now().toString(36).toUpperCase()}</div>
+  </div>
+</div>
+
+<!-- Executive Summary -->
+<div class="section">
+  <div class="section-title">1. Executive Summary</div>
+  <div class="score-section">
+    <div class="score-circle" style="border-color: ${scoreColor}; color: ${scoreColor};">
+      <div class="score-number">${report.hardening_index ?? "N/A"}</div>
+      <div class="score-label">${scoreLabel}</div>
+    </div>
+    <div class="score-details">
+      <h3>System Hardening Assessment</h3>
+      <p>
+        This automated security audit was performed on host <strong>${report.hostname || "Unknown"}</strong>
+        running <strong>${report.os_name} ${report.os_version}</strong>.
+        A total of <strong>${report.tests_performed}</strong> tests were executed,
+        resulting in <strong style="color:#dc2626;">${report.warnings.length} warning(s)</strong>
+        and <strong style="color:#ca8a04;">${report.suggestions.length} suggestion(s)</strong> for improvement.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- System Information -->
+<div class="section">
+  <div class="section-title">2. System Information</div>
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-label">Hostname</div>
+      <div class="info-value">${report.hostname || "N/A"}</div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Operating System</div>
+      <div class="info-value">${report.os_name} ${report.os_version}</div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Kernel</div>
+      <div class="info-value">${report.kernel_version || "N/A"}</div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Lynis Version</div>
+      <div class="info-value">${report.lynis_version || "N/A"}</div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Scan Started</div>
+      <div class="info-value">${report.datetime_start || "N/A"}</div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Scan Ended</div>
+      <div class="info-value">${report.datetime_end || "N/A"}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Status -->
+<div class="section">
+  <div class="section-title">3. Security Posture Overview</div>
+  <div class="status-grid">
+    <div class="status-card">
+      <div class="status-value" style="color:${scoreColor};">${report.hardening_index ?? "N/A"}</div>
+      <div class="status-label">Hardening Score</div>
+    </div>
+    <div class="status-card">
+      <div class="status-value" style="color:#dc2626;">${report.warnings.length}</div>
+      <div class="status-label">Warnings</div>
+    </div>
+    <div class="status-card">
+      <div class="status-value" style="color:#ca8a04;">${report.suggestions.length}</div>
+      <div class="status-label">Suggestions</div>
+    </div>
+    <div class="status-card">
+      <div class="status-value">${report.tests_performed}</div>
+      <div class="status-label">Tests Performed</div>
+    </div>
+  </div>
+  <div class="info-grid" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="info-card" style="text-align:center;">
+      <div class="info-label">Firewall</div>
+      <div class="info-value" style="color:${report.firewall_active ? "#16a34a" : "#dc2626"};">${report.firewall_active ? "Active" : "Inactive"}</div>
+    </div>
+    <div class="info-card" style="text-align:center;">
+      <div class="info-label">Malware Scanner</div>
+      <div class="info-value" style="color:${report.malware_scanner ? "#16a34a" : "#ca8a04"};">${report.malware_scanner ? "Installed" : "Not Found"}</div>
+    </div>
+    <div class="info-card" style="text-align:center;">
+      <div class="info-label">Packages</div>
+      <div class="info-value">${report.installed_packages || "N/A"}</div>
+    </div>
+    <div class="info-card" style="text-align:center;">
+      <div class="info-label">Score Rating</div>
+      <div class="info-value" style="color:${scoreColor};">${scoreLabel}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Warnings -->
+<div class="section page-break">
+  <div class="section-title">4. Warnings (${report.warnings.length})</div>
+  <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Issues that require immediate attention and may represent security vulnerabilities.</p>
+  ${report.warnings.length === 0 ?
+    '<div style="padding:16px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">No warnings detected. System appears to be well-configured.</div>' :
+    report.warnings.map((w, i) => `
+    <div class="finding finding-warning">
+      <div class="finding-header">
+        <span style="font-size:10px;color:#94a3b8;font-weight:700;">#${i + 1}</span>
+        <span class="finding-id">${w.test_id}</span>
+        ${w.severity ? `<span class="finding-severity">${w.severity}</span>` : ""}
+      </div>
+      <div class="finding-desc">${w.description}</div>
+      ${w.solution ? `<div class="finding-solution"><strong>Recommendation:</strong> ${w.solution}</div>` : ""}
+    </div>`).join("")}
+</div>
+
+<!-- Suggestions -->
+<div class="section page-break">
+  <div class="section-title">5. Suggestions (${report.suggestions.length})</div>
+  <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Recommended improvements to strengthen your system's security posture.</p>
+  ${report.suggestions.length === 0 ?
+    '<div style="padding:16px;text-align:center;color:#16a34a;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">No suggestions. System is fully hardened.</div>' :
+    report.suggestions.map((s, i) => `
+    <div class="finding finding-suggestion">
+      <div class="finding-header">
+        <span style="font-size:10px;color:#94a3b8;font-weight:700;">#${i + 1}</span>
+        <span class="finding-id">${s.test_id}</span>
+      </div>
+      <div class="finding-desc">${s.description}</div>
+      ${s.solution ? `<div class="finding-solution"><strong>Recommendation:</strong> ${s.solution}</div>` : ""}
+      ${s.details ? `<div class="finding-details">${s.details}</div>` : ""}
+    </div>`).join("")}
+</div>
+
+<!-- Footer -->
+<div class="report-footer">
+  <div>Generated by ProxMenux Monitor using Lynis ${report.lynis_version || ""}</div>
+  <div>Report Date: ${now}</div>
+  <div style="font-style:italic;">Confidential - For authorized personnel only</div>
+</div>
+
+</body>
+</html>`
   }
 
   const loadSslStatus = async () => {
@@ -2520,7 +2873,7 @@ export function Security() {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Status */}
+              {/* Status bar */}
               <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
@@ -2536,33 +2889,300 @@ export function Security() {
                 </div>
               </div>
 
-              {/* Last Scan Info */}
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="p-3 bg-muted/30 rounded-lg border border-border">
+              {/* Summary stats */}
+              <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+                <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
                   <p className="text-xs text-muted-foreground mb-1">Last Scan</p>
                   <p className="text-sm font-medium">
-                    {lynisInfo.last_scan || "No scan performed yet"}
+                    {lynisInfo.last_scan ? lynisInfo.last_scan.replace("T", " ").substring(0, 16) : "Never"}
                   </p>
                 </div>
-                <div className="p-3 bg-muted/30 rounded-lg border border-border">
+                <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
                   <p className="text-xs text-muted-foreground mb-1">Hardening Index</p>
-                  <p className={`text-lg font-bold ${
+                  <p className={`text-xl font-bold ${
                     lynisInfo.hardening_index === null ? "text-muted-foreground" :
                     lynisInfo.hardening_index >= 70 ? "text-green-500" :
                     lynisInfo.hardening_index >= 50 ? "text-yellow-500" :
                     "text-red-500"
                   }`}>
-                    {lynisInfo.hardening_index !== null ? `${lynisInfo.hardening_index}/100` : "N/A"}
+                    {lynisInfo.hardening_index !== null ? lynisInfo.hardening_index : "N/A"}
+                  </p>
+                </div>
+                <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Warnings</p>
+                  <p className={`text-xl font-bold ${lynisReport && lynisReport.warnings.length > 0 ? "text-red-500" : "text-green-500"}`}>
+                    {lynisReport ? lynisReport.warnings.length : "N/A"}
+                  </p>
+                </div>
+                <div className="p-3 bg-muted/30 rounded-lg border border-border text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Suggestions</p>
+                  <p className={`text-xl font-bold ${lynisReport && lynisReport.suggestions.length > 0 ? "text-yellow-500" : "text-green-500"}`}>
+                    {lynisReport ? lynisReport.suggestions.length : "N/A"}
                   </p>
                 </div>
               </div>
 
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-2">
-                <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-blue-500">
-                  Run audits from the Proxmox terminal with: <code className="text-xs bg-blue-500/10 px-1.5 py-0.5 rounded">lynis audit system</code>
-                </p>
+              {/* Hardening bar */}
+              {lynisInfo.hardening_index !== null && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Security Hardening Score</span>
+                    <span className={`font-bold ${
+                      lynisInfo.hardening_index >= 70 ? "text-green-500" :
+                      lynisInfo.hardening_index >= 50 ? "text-yellow-500" :
+                      "text-red-500"
+                    }`}>
+                      {lynisInfo.hardening_index}/100
+                    </span>
+                  </div>
+                  <div className="w-full h-3 bg-muted/50 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-1000 ${
+                        lynisInfo.hardening_index >= 70 ? "bg-green-500" :
+                        lynisInfo.hardening_index >= 50 ? "bg-yellow-500" :
+                        "bg-red-500"
+                      }`}
+                      style={{ width: `${lynisInfo.hardening_index}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>Critical (0-49)</span>
+                    <span>Moderate (50-69)</span>
+                    <span>Good (70-100)</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleRunLynisAudit}
+                  disabled={lynisAuditRunning}
+                  className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white"
+                >
+                  {lynisAuditRunning ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                      Running Audit...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Run Security Audit
+                    </>
+                  )}
+                </Button>
+                {lynisReport && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setLynisShowReport(!lynisShowReport)}
+                    className="bg-transparent border-cyan-500/30 text-cyan-500 hover:bg-cyan-500/10"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    {lynisShowReport ? "Hide Report" : "View Report"}
+                  </Button>
+                )}
               </div>
+
+              {/* Running indicator */}
+              {lynisAuditRunning && (
+                <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="animate-spin h-5 w-5 border-2 border-cyan-500 border-t-transparent rounded-full" />
+                    <div>
+                      <p className="text-sm font-medium text-cyan-500">Security audit in progress...</p>
+                      <p className="text-xs text-cyan-400/70">This may take 2-5 minutes. Lynis is scanning your system for vulnerabilities, misconfigurations, and hardening opportunities.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Report viewer */}
+              {lynisShowReport && lynisReport && (
+                <div className="border border-border rounded-lg overflow-hidden">
+                  {/* Report header */}
+                  <div className="bg-muted/40 p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-cyan-500" />
+                      <span className="font-semibold text-sm">Audit Report</span>
+                      {lynisReport.datetime_start && (
+                        <span className="text-xs text-muted-foreground">
+                          - {lynisReport.datetime_start.replace("T", " ").substring(0, 16)}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        // Open print-friendly report in new window
+                        const printWindow = window.open("", "_blank")
+                        if (printWindow) {
+                          printWindow.document.write(generatePrintableReport(lynisReport))
+                          printWindow.document.close()
+                        }
+                      }}
+                      className="h-7 px-2.5 text-xs text-cyan-500 hover:text-cyan-400 hover:bg-cyan-500/10"
+                    >
+                      <Printer className="h-3 w-3 mr-1" />
+                      Print / PDF
+                    </Button>
+                  </div>
+
+                  {/* System info strip */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border">
+                    <div className="p-2.5 bg-card text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase">Hostname</p>
+                      <p className="text-xs font-medium truncate">{lynisReport.hostname || "N/A"}</p>
+                    </div>
+                    <div className="p-2.5 bg-card text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase">OS</p>
+                      <p className="text-xs font-medium truncate">{lynisReport.os_name} {lynisReport.os_version}</p>
+                    </div>
+                    <div className="p-2.5 bg-card text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase">Kernel</p>
+                      <p className="text-xs font-medium truncate">{lynisReport.kernel_version || "N/A"}</p>
+                    </div>
+                    <div className="p-2.5 bg-card text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase">Tests</p>
+                      <p className="text-xs font-medium">{lynisReport.tests_performed}</p>
+                    </div>
+                  </div>
+
+                  {/* Report tabs */}
+                  <div className="flex gap-0 border-t border-border">
+                    {(["overview", "warnings", "suggestions"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setLynisActiveTab(tab)}
+                        className={`flex-1 px-3 py-2 text-xs font-medium transition-all flex items-center justify-center gap-1.5 border-r last:border-r-0 border-border ${
+                          lynisActiveTab === tab
+                            ? "bg-cyan-500 text-white"
+                            : "bg-muted/20 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                        }`}
+                      >
+                        {tab === "overview" && <BarChart3 className="h-3 w-3" />}
+                        {tab === "warnings" && <TriangleAlert className="h-3 w-3" />}
+                        {tab === "suggestions" && <Info className="h-3 w-3" />}
+                        {tab === "overview" ? "Overview" : tab === "warnings" ? `Warnings (${lynisReport.warnings.length})` : `Suggestions (${lynisReport.suggestions.length})`}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Overview tab */}
+                  {lynisActiveTab === "overview" && (
+                    <div className="p-4 space-y-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div className="p-3 rounded-lg border border-border bg-muted/20 text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase mb-1">Packages</p>
+                          <p className="text-lg font-bold">{lynisReport.installed_packages || "N/A"}</p>
+                        </div>
+                        <div className="p-3 rounded-lg border border-border bg-muted/20 text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase mb-1">Firewall</p>
+                          <p className={`text-lg font-bold ${lynisReport.firewall_active ? "text-green-500" : "text-red-500"}`}>
+                            {lynisReport.firewall_active ? "Active" : "Inactive"}
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-lg border border-border bg-muted/20 text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase mb-1">Malware Scanner</p>
+                          <p className={`text-lg font-bold ${lynisReport.malware_scanner ? "text-green-500" : "text-yellow-500"}`}>
+                            {lynisReport.malware_scanner ? "Installed" : "Not Found"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Security checklist */}
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Status</p>
+                        {[
+                          { label: "Firewall", ok: lynisReport.firewall_active },
+                          { label: "Malware Scanner", ok: lynisReport.malware_scanner },
+                          { label: "No Critical Warnings", ok: lynisReport.warnings.length === 0 },
+                          { label: "Hardening Score >= 70", ok: (lynisReport.hardening_index || 0) >= 70 },
+                        ].map((item) => (
+                          <div key={item.label} className="flex items-center gap-2 px-3 py-1.5 rounded bg-muted/20">
+                            <div className={`w-2 h-2 rounded-full ${item.ok ? "bg-green-500" : "bg-red-500"}`} />
+                            <span className="text-xs">{item.label}</span>
+                            <span className={`ml-auto text-[10px] font-bold ${item.ok ? "text-green-500" : "text-red-500"}`}>
+                              {item.ok ? "PASS" : "FAIL"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Warnings tab */}
+                  {lynisActiveTab === "warnings" && (
+                    <div className="max-h-96 overflow-y-auto">
+                      {lynisReport.warnings.length === 0 ? (
+                        <div className="p-6 text-center text-sm text-muted-foreground">
+                          No warnings found. Your system is well configured.
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-border">
+                          {lynisReport.warnings.map((w, idx) => (
+                            <div key={idx} className="p-3 hover:bg-muted/20 transition-colors">
+                              <div className="flex items-start gap-2">
+                                <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-1.5" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-0.5">
+                                    <code className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 font-mono">{w.test_id}</code>
+                                    {w.severity && (
+                                      <span className="text-[10px] text-red-400">{w.severity}</span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-foreground">{w.description}</p>
+                                  {w.solution && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Solution: {w.solution}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Suggestions tab */}
+                  {lynisActiveTab === "suggestions" && (
+                    <div className="max-h-96 overflow-y-auto">
+                      {lynisReport.suggestions.length === 0 ? (
+                        <div className="p-6 text-center text-sm text-muted-foreground">
+                          No suggestions. System is fully hardened.
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-border">
+                          {lynisReport.suggestions.map((s, idx) => (
+                            <div key={idx} className="p-3 hover:bg-muted/20 transition-colors">
+                              <div className="flex items-start gap-2">
+                                <div className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0 mt-1.5" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-0.5">
+                                    <code className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 font-mono">{s.test_id}</code>
+                                  </div>
+                                  <p className="text-sm text-foreground">{s.description}</p>
+                                  {s.solution && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Solution: {s.solution}
+                                    </p>
+                                  )}
+                                  {s.details && (
+                                    <p className="text-[10px] text-muted-foreground/70 mt-0.5 font-mono">{s.details}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </CardContent>

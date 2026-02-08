@@ -1017,6 +1017,14 @@ def _detect_fail2ban():
     return info
 
 
+def _find_lynis_cmd():
+    """Find the lynis binary path"""
+    for path in ["/usr/local/bin/lynis", "/opt/lynis/lynis", "/usr/bin/lynis"]:
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return None
+
+
 def _detect_lynis():
     """Detect Lynis installation and status"""
     info = {
@@ -1026,12 +1034,7 @@ def _detect_lynis():
         "hardening_index": None,
     }
 
-    # Check both locations
-    lynis_cmd = None
-    for path in ["/usr/local/bin/lynis", "/opt/lynis/lynis", "/usr/bin/lynis"]:
-        if os.path.isfile(path) and os.access(path, os.X_OK):
-            lynis_cmd = path
-            break
+    lynis_cmd = _find_lynis_cmd()
 
     if lynis_cmd:
         info["installed"] = True
@@ -1056,3 +1059,175 @@ def _detect_lynis():
                 pass
 
     return info
+
+
+# Track running audit
+_lynis_audit_running = False
+_lynis_audit_progress = ""
+
+
+def run_lynis_audit():
+    """
+    Run lynis audit system in the background.
+    Returns (success, message).
+    """
+    global _lynis_audit_running, _lynis_audit_progress
+
+    if _lynis_audit_running:
+        return False, "An audit is already running"
+
+    lynis_cmd = _find_lynis_cmd()
+    if not lynis_cmd:
+        return False, "Lynis is not installed"
+
+    _lynis_audit_running = True
+    _lynis_audit_progress = "starting"
+
+    import threading
+
+    def _run_audit():
+        global _lynis_audit_running, _lynis_audit_progress
+        try:
+            _lynis_audit_progress = "running"
+            # Remove old report so lynis creates a fresh one
+            report_file = "/var/log/lynis-report.dat"
+            if os.path.isfile(report_file):
+                os.remove(report_file)
+
+            rc, out, err = _run_cmd(
+                [lynis_cmd, "audit", "system", "--no-colors", "--quick"],
+                timeout=600
+            )
+            if rc == 0:
+                _lynis_audit_progress = "completed"
+            else:
+                _lynis_audit_progress = f"error: {err[:200] if err else 'unknown error'}"
+        except Exception as e:
+            _lynis_audit_progress = f"error: {str(e)}"
+        finally:
+            _lynis_audit_running = False
+
+    t = threading.Thread(target=_run_audit, daemon=True)
+    t.start()
+    return True, "Audit started"
+
+
+def get_lynis_audit_status():
+    """Get current audit status"""
+    return {
+        "running": _lynis_audit_running,
+        "progress": _lynis_audit_progress,
+    }
+
+
+def parse_lynis_report():
+    """
+    Parse /var/log/lynis-report.dat into structured report data.
+    Returns a dict with all audit findings.
+    """
+    report_file = "/var/log/lynis-report.dat"
+    if not os.path.isfile(report_file):
+        return None
+
+    report = {
+        "datetime_start": "",
+        "datetime_end": "",
+        "lynis_version": "",
+        "os_name": "",
+        "os_version": "",
+        "hostname": "",
+        "hardening_index": None,
+        "tests_performed": 0,
+        "warnings": [],
+        "suggestions": [],
+        "categories": {},
+        "installed_packages": 0,
+        "kernel_version": "",
+        "firewall_active": False,
+        "malware_scanner": False,
+    }
+
+    try:
+        with open(report_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+
+                if "=" not in line:
+                    continue
+
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip()
+
+                if key == "report_datetime_start":
+                    report["datetime_start"] = value
+                elif key == "report_datetime_end":
+                    report["datetime_end"] = value
+                elif key == "lynis_version":
+                    report["lynis_version"] = value
+                elif key == "os_name":
+                    report["os_name"] = value
+                elif key == "os_version":
+                    report["os_version"] = value
+                elif key == "hostname":
+                    report["hostname"] = value
+                elif key == "hardening_index":
+                    try:
+                        report["hardening_index"] = int(value)
+                    except ValueError:
+                        pass
+                elif key == "tests_performed":
+                    try:
+                        report["tests_performed"] = int(value)
+                    except ValueError:
+                        pass
+                elif key == "installed_packages":
+                    try:
+                        report["installed_packages"] = int(value)
+                    except ValueError:
+                        pass
+                elif key == "linux_kernel_version":
+                    report["kernel_version"] = value
+                elif key == "firewall_active":
+                    report["firewall_active"] = value == "1"
+                elif key == "malware_scanner_installed":
+                    report["malware_scanner"] = value == "1"
+
+                # Warnings: warning[]=TEST_ID|severity|description|solution
+                elif key == "warning[]":
+                    parts = value.split("|")
+                    if len(parts) >= 3:
+                        report["warnings"].append({
+                            "test_id": parts[0].strip(),
+                            "severity": parts[1].strip() if len(parts) > 1 else "",
+                            "description": parts[2].strip() if len(parts) > 2 else "",
+                            "solution": parts[3].strip() if len(parts) > 3 else "",
+                        })
+
+                # Suggestions: suggestion[]=TEST_ID|description|solution|details
+                elif key == "suggestion[]":
+                    parts = value.split("|")
+                    if len(parts) >= 2:
+                        report["suggestions"].append({
+                            "test_id": parts[0].strip(),
+                            "description": parts[1].strip() if len(parts) > 1 else "",
+                            "solution": parts[2].strip() if len(parts) > 2 else "",
+                            "details": parts[3].strip() if len(parts) > 3 else "",
+                        })
+
+                # Category results
+                elif key.endswith("_score"):
+                    cat_name = key.replace("_score", "")
+                    try:
+                        if cat_name not in report["categories"]:
+                            report["categories"][cat_name] = {}
+                        report["categories"][cat_name]["score"] = int(value)
+                    except ValueError:
+                        pass
+
+    except Exception:
+        return None
+
+    return report
