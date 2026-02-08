@@ -1143,18 +1143,33 @@ def run_lynis_audit():
                 except Exception:
                     pass
 
-            # Clean ANSI escape codes and control chars from output file
+            # Clean ALL ANSI/terminal escape codes and control chars from output
             if os.path.isfile(output_log):
                 try:
                     import re as _re
                     with open(output_log, 'r', errors='replace') as fout:
                         raw = fout.read()
-                    cleaned = _re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', raw)
-                    cleaned = _re.sub(r'\x1b\([A-Z]', '', cleaned)
+                    # Remove ALL ANSI escape sequences comprehensively:
+                    # CSI sequences: \x1b[ ... (letter)  e.g. \x1b[0m, \x1b[?25h
+                    cleaned = _re.sub(r'\x1b\[[\x20-\x3f]*[\x40-\x7e]', '', raw)
+                    # OSC sequences: \x1b] ... \x07 or \x1b\\
+                    cleaned = _re.sub(r'\x1b\].*?(?:\x07|\x1b\\)', '', cleaned)
+                    # Other escape sequences: \x1b followed by one char
+                    cleaned = _re.sub(r'\x1b[\x20-\x7e]', '', cleaned)
+                    # Remove remaining control characters except \n and \t
+                    cleaned = _re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', cleaned)
+                    # Remove carriage returns
                     cleaned = cleaned.replace('\r', '')
                     # Remove 'Script started/done' lines added by script cmd
                     lines = cleaned.splitlines()
-                    lines = [l for l in lines if not l.startswith('Script started') and not l.startswith('Script done')]
+                    lines = [l for l in lines
+                             if not l.strip().startswith('Script started')
+                             and not l.strip().startswith('Script done')]
+                    # Remove empty lines at start/end
+                    while lines and not lines[0].strip():
+                        lines.pop(0)
+                    while lines and not lines[-1].strip():
+                        lines.pop()
                     cleaned = '\n'.join(lines)
                     with open(output_log, 'w') as fout:
                         fout.write(cleaned)
@@ -1351,17 +1366,21 @@ def parse_lynis_report():
                 stripped = line.strip()
 
                 # Detect section headers: "[+] Boot and services"
-                section_match = re.match(r'^\[\+\]\s+(.+)', stripped)
-                if section_match:
-                    # Save previous section
-                    if current_section and current_checks:
-                        report["sections"].append({
-                            "name": current_section,
-                            "checks": current_checks,
-                        })
-                    current_section = section_match.group(1).strip()
-                    current_checks = []
-                    continue
+                # Use 'in' check first for speed, then regex for extraction
+                if '[+]' in stripped:
+                    section_match = re.search(r'\[\+\]\s+(.+)', stripped)
+                    if section_match:
+                        # Save previous section
+                        if current_section and current_checks:
+                            report["sections"].append({
+                                "name": current_section,
+                                "checks": current_checks,
+                            })
+                        current_section = section_match.group(1).strip()
+                        # Remove trailing dashes from names like "Boot and services ------"
+                        current_section = re.sub(r'\s*-+\s*$', '', current_section)
+                        current_checks = []
+                        continue
 
                 # Skip separator lines, empty, banner lines
                 if stripped.startswith('---') or not stripped:
@@ -1371,14 +1390,22 @@ def parse_lynis_report():
                     continue
 
                 # Detect any line with [ STATUS ] pattern (covers -, File:, Directory:, etc.)
-                check_match = re.match(
-                    r'^[\s]*[-*]?\s*(.+?)\s{2,}\[\s*(.+?)\s*\]\s*$', stripped
-                )
-                if check_match and current_section:
-                    check_name = check_match.group(1).strip()
-                    check_status = check_match.group(2).strip()
-                    # Skip noise lines
-                    if check_name and not check_name.startswith('..') and len(check_name) > 2:
+                # After ANSI cleaning, cursor-positioning sequences are removed so
+                # there may be only 1 space between the name and [ STATUS ].
+                # Strategy: find the LAST occurrence of [ ... ] on the line.
+                bracket_match = re.search(r'\[\s*([A-Za-z0-9_ /.:!-]+?)\s*\]\s*$', stripped)
+                if bracket_match and current_section:
+                    # Everything before the bracket is the check name
+                    bracket_start = bracket_match.start()
+                    check_name = stripped[:bracket_start].strip()
+                    check_status = bracket_match.group(1).strip()
+                    # Remove leading - or * from name
+                    check_name = re.sub(r'^[-*]+\s*', '', check_name).strip()
+                    # Skip noise lines (too short, dots-only, plugin progress)
+                    if (check_name
+                            and not check_name.startswith('..')
+                            and len(check_name) > 2
+                            and check_name not in ('..', '...', '....')):
                         current_checks.append({
                             "name": check_name,
                             "status": check_status,
@@ -1446,8 +1473,17 @@ def parse_lynis_report():
                 if len(s["checks"]) > 0
             ]
 
-        except Exception:
+            # Store debug info about parsing
+            report["_parse_debug"] = {
+                "source": log_file,
+                "total_lines": len(log_lines),
+                "sections_found": len(report["sections"]),
+                "section_names": [s["name"] for s in report["sections"]],
+            }
+
+        except Exception as e:
             report["sections"] = []
+            report["_parse_debug"] = {"error": str(e)}
 
     # Post-processing: extract firewall/malware status from parsed sections
     # This catches cases where report.dat doesn't have firewall_active but the
