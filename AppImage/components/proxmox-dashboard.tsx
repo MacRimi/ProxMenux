@@ -11,6 +11,7 @@ import { VirtualMachines } from "./virtual-machines"
 import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { Settings } from "./settings"
+import { Security } from "./security"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
 import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
@@ -31,6 +32,7 @@ import {
   FileText,
   SettingsIcon,
   Terminal,
+  ShieldCheck,
 } from "lucide-react"
 import Image from "next/image"
 import { ThemeToggle } from "./theme-toggle"
@@ -265,8 +267,10 @@ export function ProxmoxDashboard() {
         return "Terminal"
       case "logs":
         return "System Logs"
-      case "settings":
-        return "Settings"
+  case "security":
+  return "Security"
+  case "settings":
+  return "Settings"
       default:
         return "Navigation Menu"
     }
@@ -416,7 +420,7 @@ export function ProxmoxDashboard() {
       >
         <div className="container mx-auto px-4 md:px-6 pt-4 md:pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
-            <TabsList className="hidden md:grid w-full grid-cols-8 bg-card border border-border">
+            <TabsList className="hidden md:grid w-full grid-cols-9 bg-card border border-border">
               <TabsTrigger
                 value="overview"
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
@@ -458,6 +462,12 @@ export function ProxmoxDashboard() {
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
               >
                 Terminal
+              </TabsTrigger>
+              <TabsTrigger
+                value="security"
+                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+              >
+                Security
               </TabsTrigger>
               <TabsTrigger
                 value="settings"
@@ -591,6 +601,21 @@ export function ProxmoxDashboard() {
                   <Button
                     variant="ghost"
                     onClick={() => {
+                      setActiveTab("security")
+                      setMobileMenuOpen(false)
+                    }}
+                    className={`w-full justify-start gap-3 ${
+                      activeTab === "security"
+                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                        : ""
+                    }`}
+                  >
+                    <ShieldCheck className="h-5 w-5" />
+                    <span>Security</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
                       setActiveTab("settings")
                       setMobileMenuOpen(false)
                     }}
@@ -638,6 +663,10 @@ export function ProxmoxDashboard() {
 
           <TabsContent value="terminal" className="mt-0">
             <TerminalPanel key={`terminal-${componentKey}`} />
+          </TabsContent>
+
+          <TabsContent value="security" className="space-y-4 md:space-y-6 mt-0">
+            <Security key={`security-${componentKey}`} />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4 md:space-y-6 mt-0">

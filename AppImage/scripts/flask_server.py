@@ -43,6 +43,7 @@ from flask_terminal_routes import terminal_bp, init_terminal_routes  # noqa: E40
 from flask_health_routes import health_bp  # noqa: E402
 from flask_auth_routes import auth_bp  # noqa: E402
 from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
+from flask_security_routes import security_bp  # noqa: E402
 from jwt_middleware import require_auth  # noqa: E402
 import auth_manager  # noqa: E402
 
@@ -116,6 +117,7 @@ CORS(app)  # Enable CORS for Next.js frontend
 app.register_blueprint(auth_bp)
 app.register_blueprint(health_bp)
 app.register_blueprint(proxmenux_bp)
+app.register_blueprint(security_bp)
 
 # Initialize terminal / WebSocket routes
 init_terminal_routes(app)
