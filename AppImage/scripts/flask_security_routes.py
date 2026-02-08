@@ -164,6 +164,30 @@ def fail2ban_unban():
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+@security_bp.route('/api/security/fail2ban/jail/config', methods=['PUT'])
+def fail2ban_jail_config():
+    """Update jail configuration (maxretry, bantime, findtime)"""
+    if not security_manager:
+        return jsonify({"success": False, "message": "Security manager not available"}), 500
+    try:
+        data = request.json or {}
+        jail = data.get("jail", "")
+        if not jail:
+            return jsonify({"success": False, "message": "Jail name is required"}), 400
+        success, message = security_manager.update_jail_config(
+            jail,
+            maxretry=data.get("maxretry"),
+            bantime=data.get("bantime"),
+            findtime=data.get("findtime"),
+        )
+        if success:
+            return jsonify({"success": True, "message": message})
+        else:
+            return jsonify({"success": False, "message": message}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
 @security_bp.route('/api/security/fail2ban/activity', methods=['GET'])
 def fail2ban_activity():
     """Get recent Fail2Ban log activity"""

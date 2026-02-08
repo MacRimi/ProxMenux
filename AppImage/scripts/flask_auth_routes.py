@@ -3,10 +3,30 @@ Flask Authentication Routes
 Provides REST API endpoints for authentication management
 """
 
+import logging
 from flask import Blueprint, jsonify, request
 import auth_manager
 import jwt
 import datetime
+
+# Dedicated logger for auth failures (Fail2Ban reads this)
+auth_logger = logging.getLogger("proxmenux-auth")
+_auth_handler = logging.FileHandler("/var/log/proxmenux-auth.log")
+_auth_handler.setFormatter(logging.Formatter("%(asctime)s proxmenux-auth: %(message)s"))
+auth_logger.addHandler(_auth_handler)
+auth_logger.setLevel(logging.WARNING)
+
+
+def _get_client_ip():
+    """Get the real client IP, supporting reverse proxies (X-Forwarded-For, X-Real-IP)"""
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        # First IP in the chain is the real client
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("X-Real-IP", "")
+    if real_ip:
+        return real_ip.strip()
+    return request.remote_addr or "unknown"
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -139,6 +159,12 @@ def auth_login():
         elif requires_totp:
             return jsonify({"success": False, "requires_totp": True, "message": message}), 200
         else:
+            # Log failed auth for Fail2Ban detection
+            client_ip = _get_client_ip()
+            auth_logger.warning(
+                "authentication failure; rhost=%s user=%s",
+                client_ip, username or "unknown"
+            )
             return jsonify({"success": False, "message": message}), 401
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500

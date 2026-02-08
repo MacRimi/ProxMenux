@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import {
   Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Key, Copy, Eye, EyeOff,
   Trash2, RefreshCw, Clock, ShieldCheck, Globe, FileKey, AlertTriangle,
-  Flame, Bug, Search, Download, Power, PowerOff, Plus, Minus, Activity,
+  Flame, Bug, Search, Download, Power, PowerOff, Plus, Minus, Activity, Settings, Ban,
 } from "lucide-react"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
@@ -100,13 +100,17 @@ export function Security() {
   const [showLynisInstaller, setShowLynisInstaller] = useState(false)
 
   // Fail2Ban detailed state
+  interface BannedIp {
+    ip: string
+    type: "local" | "external" | "unknown"
+  }
   interface JailDetail {
     name: string
     currently_failed: number
     total_failed: number
     currently_banned: number
     total_banned: number
-    banned_ips: string[]
+    banned_ips: BannedIp[]
     findtime: string
     bantime: string
     maxretry: string
@@ -124,6 +128,11 @@ export function Security() {
   const [f2bDetailsLoading, setF2bDetailsLoading] = useState(false)
   const [f2bUnbanning, setF2bUnbanning] = useState<string | null>(null)
   const [f2bActiveTab, setF2bActiveTab] = useState<"jails" | "activity">("jails")
+  const [f2bEditingJail, setF2bEditingJail] = useState<string | null>(null)
+  const [f2bJailConfig, setF2bJailConfig] = useState<{maxretry: string; bantime: string; findtime: string; permanent: boolean}>({
+    maxretry: "", bantime: "", findtime: "", permanent: false,
+  })
+  const [f2bSavingConfig, setF2bSavingConfig] = useState(false)
 
   // SSL/HTTPS state
   const [sslEnabled, setSslEnabled] = useState(false)
@@ -233,6 +242,52 @@ export function Security() {
     }
   }
 
+  const openJailConfig = (jail: JailDetail) => {
+    const bt = parseInt(jail.bantime, 10)
+    const isPermanent = bt === -1
+    setF2bEditingJail(jail.name)
+    setF2bJailConfig({
+      maxretry: jail.maxretry,
+      bantime: isPermanent ? "" : jail.bantime,
+      findtime: jail.findtime,
+      permanent: isPermanent,
+    })
+  }
+
+  const handleSaveJailConfig = async () => {
+    if (!f2bEditingJail) return
+    setF2bSavingConfig(true)
+    setError("")
+    setSuccess("")
+    try {
+      const payload: Record<string, string | number> = { jail: f2bEditingJail }
+      if (f2bJailConfig.maxretry) payload.maxretry = parseInt(f2bJailConfig.maxretry, 10)
+      if (f2bJailConfig.permanent) {
+        payload.bantime = -1
+      } else if (f2bJailConfig.bantime) {
+        payload.bantime = parseInt(f2bJailConfig.bantime, 10)
+      }
+      if (f2bJailConfig.findtime) payload.findtime = parseInt(f2bJailConfig.findtime, 10)
+
+      const data = await fetchApi("/api/security/fail2ban/jail/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (data.success) {
+        setSuccess(data.message || "Jail configuration updated")
+        setF2bEditingJail(null)
+        loadFail2banDetails()
+      } else {
+        setError(data.message || "Failed to update jail config")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update jail config")
+    } finally {
+      setF2bSavingConfig(false)
+    }
+  }
+
   // Load fail2ban details when basic info shows it's installed and active
   useEffect(() => {
     if (fail2banInfo?.installed && fail2banInfo?.active) {
@@ -242,6 +297,7 @@ export function Security() {
 
   const formatBanTime = (seconds: string) => {
     const s = parseInt(seconds, 10)
+    if (s === -1) return "Permanent"
     if (isNaN(s) || s <= 0) return seconds
     if (s < 60) return `${s}s`
     if (s < 3600) return `${Math.floor(s / 60)}m`
@@ -1961,7 +2017,7 @@ export function Security() {
                   </div>
                   <div>
                     <p className="font-medium">Fail2Ban Not Installed</p>
-                    <p className="text-sm text-muted-foreground">Protect SSH and Proxmox web interface from brute force attacks</p>
+                    <p className="text-sm text-muted-foreground">Protect SSH, Proxmox web interface, and ProxMenux Monitor from brute force attacks</p>
                   </div>
                 </div>
                 <div className="px-3 py-1 rounded-full text-sm font-medium bg-gray-500/10 text-gray-500">
@@ -1977,8 +2033,10 @@ export function Security() {
                     <ul className="list-disc list-inside space-y-1 text-blue-300">
                       <li>SSH protection (max 2 retries, 9h ban)</li>
                       <li>Proxmox web interface protection (port 8006, max 3 retries, 1h ban)</li>
+                      <li>ProxMenux Monitor protection (port 8008 + reverse proxy, max 3 retries, 1h ban)</li>
                       <li>Global settings with nftables backend</li>
                     </ul>
+                    <p className="text-xs text-blue-300/70 mt-1">All settings can be customized after installation. You can change retries, ban time, or set permanent bans.</p>
                   </div>
                 </div>
               </div>
@@ -2040,28 +2098,28 @@ export function Security() {
                     </div>
                   </div>
 
-                  {/* Tab switcher */}
-                  <div className="flex gap-1 p-1 bg-muted/30 rounded-lg">
+                  {/* Tab switcher - redesigned with border on inactive */}
+                  <div className="flex gap-0 rounded-lg border border-border overflow-hidden">
                     <button
                       onClick={() => setF2bActiveTab("jails")}
-                      className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                      className={`flex-1 px-3 py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
                         f2bActiveTab === "jails"
-                          ? "bg-red-500 text-white shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
+                          ? "bg-red-500 text-white"
+                          : "bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                       }`}
                     >
-                      <Shield className="h-3.5 w-3.5 inline mr-1.5" />
+                      <Shield className="h-3.5 w-3.5" />
                       Jails & Banned IPs
                     </button>
                     <button
                       onClick={() => setF2bActiveTab("activity")}
-                      className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                      className={`flex-1 px-3 py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-1.5 border-l border-border ${
                         f2bActiveTab === "activity"
-                          ? "bg-red-500 text-white shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
+                          ? "bg-red-500 text-white"
+                          : "bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                       }`}
                     >
-                      <Clock className="h-3.5 w-3.5 inline mr-1.5" />
+                      <Clock className="h-3.5 w-3.5" />
                       Recent Activity
                     </button>
                   </div>
@@ -2076,18 +2134,131 @@ export function Security() {
                             <div className="flex items-center gap-2.5">
                               <div className={`w-2.5 h-2.5 rounded-full ${jail.currently_banned > 0 ? "bg-red-500 animate-pulse" : "bg-green-500"}`} />
                               <span className="font-semibold text-sm">{jail.name}</span>
+                              {parseInt(jail.bantime, 10) === -1 && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-500">PERMANENT BAN</span>
+                              )}
                             </div>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                              <span title="Max retries before ban">
-                                Retries: <span className="text-foreground font-medium">{jail.maxretry}</span>
-                              </span>
-                              <span title="Ban duration">
-                                Ban: <span className="text-foreground font-medium">{formatBanTime(jail.bantime)}</span>
-                              </span>
-                              <span title="Time window for counting failures">
-                                Window: <span className="text-foreground font-medium">{formatBanTime(jail.findtime)}</span>
-                              </span>
+                            <div className="flex items-center gap-2">
+                              <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground mr-2">
+                                <span title="Max retries before ban">
+                                  Retries: <span className="text-foreground font-medium">{jail.maxretry}</span>
+                                </span>
+                                <span title="Ban duration">
+                                  Ban: <span className="text-foreground font-medium">{parseInt(jail.bantime, 10) === -1 ? "Permanent" : formatBanTime(jail.bantime)}</span>
+                                </span>
+                                <span title="Time window for counting failures">
+                                  Window: <span className="text-foreground font-medium">{formatBanTime(jail.findtime)}</span>
+                                </span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => f2bEditingJail === jail.name ? setF2bEditingJail(null) : openJailConfig(jail)}
+                                className={`h-7 w-7 p-0 ${f2bEditingJail === jail.name ? "text-red-500 bg-red-500/10" : "text-muted-foreground hover:text-foreground"}`}
+                                title="Configure jail settings"
+                              >
+                                <Settings className="h-3.5 w-3.5" />
+                              </Button>
                             </div>
+                          </div>
+
+                          {/* Jail config editor */}
+                          {f2bEditingJail === jail.name && (
+                            <div className="border-t border-border bg-muted/20 p-4 space-y-4">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Settings className="h-4 w-4 text-red-500" />
+                                <p className="text-sm font-semibold text-red-500">Configure {jail.name}</p>
+                              </div>
+
+                              <div className="grid gap-3 sm:grid-cols-3">
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs text-muted-foreground">Max Retries</Label>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    value={f2bJailConfig.maxretry}
+                                    onChange={(e) => setF2bJailConfig({...f2bJailConfig, maxretry: e.target.value})}
+                                    className="h-9 text-sm"
+                                    placeholder="e.g. 3"
+                                  />
+                                  <p className="text-[10px] text-muted-foreground">Failed attempts before ban</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs text-muted-foreground">Ban Time (seconds)</Label>
+                                  <Input
+                                    type="number"
+                                    min="60"
+                                    value={f2bJailConfig.permanent ? "" : f2bJailConfig.bantime}
+                                    onChange={(e) => setF2bJailConfig({...f2bJailConfig, bantime: e.target.value, permanent: false})}
+                                    className="h-9 text-sm"
+                                    placeholder={f2bJailConfig.permanent ? "Permanent" : "e.g. 3600 = 1h"}
+                                    disabled={f2bJailConfig.permanent}
+                                  />
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <input
+                                      type="checkbox"
+                                      id={`permanent-${jail.name}`}
+                                      checked={f2bJailConfig.permanent}
+                                      onChange={(e) => setF2bJailConfig({...f2bJailConfig, permanent: e.target.checked, bantime: ""})}
+                                      className="rounded border-border"
+                                    />
+                                    <label htmlFor={`permanent-${jail.name}`} className="text-[10px] text-red-500 font-medium cursor-pointer">
+                                      Permanent ban (never expires)
+                                    </label>
+                                  </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs text-muted-foreground">Find Time (seconds)</Label>
+                                  <Input
+                                    type="number"
+                                    min="60"
+                                    value={f2bJailConfig.findtime}
+                                    onChange={(e) => setF2bJailConfig({...f2bJailConfig, findtime: e.target.value})}
+                                    className="h-9 text-sm"
+                                    placeholder="e.g. 600 = 10m"
+                                  />
+                                  <p className="text-[10px] text-muted-foreground">Time window for counting retries</p>
+                                </div>
+                              </div>
+
+                              <div className="bg-blue-500/10 border border-blue-500/20 rounded p-2.5 flex items-start gap-2">
+                                <Info className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                                <p className="text-[11px] text-blue-400">
+                                  Common values: 600s = 10min, 3600s = 1h, 32400s = 9h, 86400s = 24h. Set ban to permanent if you want blocked IPs to stay blocked until you manually unban them.
+                                </p>
+                              </div>
+
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setF2bEditingJail(null)}
+                                  className="text-muted-foreground"
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  disabled={f2bSavingConfig}
+                                  onClick={handleSaveJailConfig}
+                                  className="bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                  {f2bSavingConfig ? (
+                                    <div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full mr-1" />
+                                  ) : (
+                                    <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                                  )}
+                                  Save Configuration
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Mobile config summary (visible only on small screens) */}
+                          <div className="sm:hidden flex items-center justify-around p-2 bg-muted/20 border-t border-border text-xs text-muted-foreground">
+                            <span>Retries: <span className="text-foreground font-medium">{jail.maxretry}</span></span>
+                            <span>Ban: <span className="text-foreground font-medium">{parseInt(jail.bantime, 10) === -1 ? "Perm" : formatBanTime(jail.bantime)}</span></span>
+                            <span>Window: <span className="text-foreground font-medium">{formatBanTime(jail.findtime)}</span></span>
                           </div>
 
                           {/* Jail stats bar */}
@@ -2120,20 +2291,29 @@ export function Security() {
                                   Banned IPs ({jail.banned_ips.length})
                                 </p>
                                 <div className="space-y-1.5">
-                                  {jail.banned_ips.map((ip) => (
-                                    <div key={ip} className="flex items-center justify-between px-3 py-2 bg-card rounded-md border border-red-500/20">
+                                  {jail.banned_ips.map((entry) => (
+                                    <div key={entry.ip} className="flex items-center justify-between px-3 py-2 bg-card rounded-md border border-red-500/20">
                                       <div className="flex items-center gap-2.5">
                                         <div className="w-2 h-2 rounded-full bg-red-500" />
-                                        <code className="text-sm font-mono">{ip}</code>
+                                        <code className="text-sm font-mono">{entry.ip}</code>
+                                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                                          entry.type === "local"
+                                            ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                                            : entry.type === "external"
+                                            ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                                            : "bg-gray-500/10 text-gray-400 border border-gray-500/20"
+                                        }`}>
+                                          {entry.type === "local" ? "LAN" : entry.type === "external" ? "External" : "Unknown"}
+                                        </span>
                                       </div>
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => handleUnbanIp(jail.name, ip)}
-                                        disabled={f2bUnbanning === `${jail.name}:${ip}`}
+                                        onClick={() => handleUnbanIp(jail.name, entry.ip)}
+                                        disabled={f2bUnbanning === `${jail.name}:${entry.ip}`}
                                         className="h-7 px-2.5 text-xs text-green-500 hover:text-green-400 hover:bg-green-500/10"
                                       >
-                                        {f2bUnbanning === `${jail.name}:${ip}` ? (
+                                        {f2bUnbanning === `${jail.name}:${entry.ip}` ? (
                                           <div className="animate-spin h-3 w-3 border-2 border-green-500 border-t-transparent rounded-full" />
                                         ) : (
                                           <>

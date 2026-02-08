@@ -591,7 +591,10 @@ def get_fail2ban_details():
                 elif "Banned IP list:" in line:
                     ips_str = line.split(":", 1)[1].strip()
                     if ips_str:
-                        jail_info["banned_ips"] = [ip.strip() for ip in ips_str.split() if ip.strip()]
+                        raw_ips = [ip.strip() for ip in ips_str.split() if ip.strip()]
+                        jail_info["banned_ips"] = [
+                            {"ip": ip, "type": classify_ip(ip)} for ip in raw_ips
+                        ]
 
         # Get jail config values
         for key in ["findtime", "bantime", "maxretry"]:
@@ -602,6 +605,167 @@ def get_fail2ban_details():
         result["jails"].append(jail_info)
 
     return result
+
+
+def classify_ip(ip_address):
+    """
+    Classify an IP address as 'local' or 'external'.
+    Local: 10.x.x.x, 172.16-31.x.x, 192.168.x.x, 127.x.x.x, fd00::/8, fe80::/10, ::1
+    """
+    if not ip_address:
+        return "unknown"
+
+    ip = ip_address.strip()
+
+    # IPv4 private ranges
+    if ip.startswith("10.") or ip.startswith("127.") or ip.startswith("192.168."):
+        return "local"
+    if ip.startswith("172."):
+        try:
+            second_octet = int(ip.split(".")[1])
+            if 16 <= second_octet <= 31:
+                return "local"
+        except (ValueError, IndexError):
+            pass
+
+    # IPv6 private/link-local
+    ip_lower = ip.lower()
+    if ip_lower == "::1" or ip_lower.startswith("fd") or ip_lower.startswith("fe80"):
+        return "local"
+
+    return "external"
+
+
+def update_jail_config(jail_name, maxretry=None, bantime=None, findtime=None):
+    """
+    Update Fail2Ban jail configuration (maxretry, bantime, findtime).
+    Uses fail2ban-client set commands for live changes, and also writes
+    to the jail.local file for persistence.
+
+    bantime = -1 means permanent ban.
+    Returns (success, message)
+    """
+    if not jail_name:
+        return False, "Jail name is required"
+
+    changes = []
+    errors = []
+
+    # Apply live changes via fail2ban-client
+    if maxretry is not None:
+        try:
+            val = int(maxretry)
+            if val < 1:
+                return False, "Max retries must be at least 1"
+            rc, _, err = _run_cmd(["fail2ban-client", "set", jail_name, "maxretry", str(val)])
+            if rc == 0:
+                changes.append(f"maxretry={val}")
+            else:
+                errors.append(f"maxretry: {err}")
+        except ValueError:
+            errors.append("maxretry must be a number")
+
+    if bantime is not None:
+        try:
+            val = int(bantime)
+            # -1 = permanent, otherwise must be positive
+            if val < -1 or val == 0:
+                return False, "Ban time must be positive seconds or -1 for permanent"
+            rc, _, err = _run_cmd(["fail2ban-client", "set", jail_name, "bantime", str(val)])
+            if rc == 0:
+                changes.append(f"bantime={val}")
+            else:
+                errors.append(f"bantime: {err}")
+        except ValueError:
+            errors.append("bantime must be a number")
+
+    if findtime is not None:
+        try:
+            val = int(findtime)
+            if val < 1:
+                return False, "Find time must be positive"
+            rc, _, err = _run_cmd(["fail2ban-client", "set", jail_name, "findtime", str(val)])
+            if rc == 0:
+                changes.append(f"findtime={val}")
+            else:
+                errors.append(f"findtime: {err}")
+        except ValueError:
+            errors.append("findtime must be a number")
+
+    # Also persist to jail.local so changes survive restart
+    if changes:
+        _persist_jail_config(jail_name, maxretry, bantime, findtime)
+
+    if errors:
+        return False, "Errors: " + "; ".join(errors)
+
+    if changes:
+        return True, f"Jail '{jail_name}' updated: {', '.join(changes)}"
+
+    return False, "No changes specified"
+
+
+def _persist_jail_config(jail_name, maxretry=None, bantime=None, findtime=None):
+    """
+    Write jail config changes to /etc/fail2ban/jail.local for persistence.
+    """
+    jail_local = "/etc/fail2ban/jail.local"
+
+    try:
+        content = ""
+        if os.path.isfile(jail_local):
+            with open(jail_local, 'r') as f:
+                content = f.read()
+
+        lines = content.splitlines() if content else []
+
+        # Find or create the jail section
+        jail_section = f"[{jail_name}]"
+        section_start = -1
+        section_end = len(lines)
+
+        for i, line in enumerate(lines):
+            if line.strip() == jail_section:
+                section_start = i
+            elif section_start >= 0 and line.strip().startswith("[") and i > section_start:
+                section_end = i
+                break
+
+        # Build settings to update
+        settings = {}
+        if maxretry is not None:
+            settings["maxretry"] = str(int(maxretry))
+        if bantime is not None:
+            settings["bantime"] = str(int(bantime))
+        if findtime is not None:
+            settings["findtime"] = str(int(findtime))
+
+        if section_start >= 0:
+            # Update existing section
+            for key, val in settings.items():
+                found = False
+                for i in range(section_start + 1, section_end):
+                    stripped = lines[i].strip()
+                    if stripped.startswith(f"{key}") and "=" in stripped:
+                        lines[i] = f"{key} = {val}"
+                        found = True
+                        break
+                if not found:
+                    lines.insert(section_start + 1, f"{key} = {val}")
+                    section_end += 1
+        else:
+            # Create new section
+            if lines and lines[-1].strip():
+                lines.append("")
+            lines.append(jail_section)
+            for key, val in settings.items():
+                lines.append(f"{key} = {val}")
+
+        with open(jail_local, 'w') as f:
+            f.write("\n".join(lines) + "\n")
+
+    except Exception:
+        pass  # Best effort persistence
 
 
 def unban_ip(jail_name, ip_address):
