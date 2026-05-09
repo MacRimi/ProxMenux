@@ -92,19 +92,28 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
     if (!response.ok) {
       if (response.status === 401) {
         // Token is missing, expired, or signed under a previous JWT_SECRET
-        // (audit Tier 4 #22 rotates per-install). Drop the stale token and
-        // bounce the user to login — the previous behavior just threw and
-        // left the dashboard stuck on a blank state. Audit Tier 2 residual.
+        // (rotated per-install). Drop the stale token and force a single
+        // reload so the page-level auth gate (`app/page.tsx`) can render
+        // <Login> instead of cascading 401s from every authenticated
+        // component on mount. The sessionStorage flag is essential: a
+        // page like Hardware/Storage fires 10-20 SWR fetches in parallel,
+        // and without dedup each of them would race to reload the tab —
+        // observed in the wild as ~180 "Invalid token" log lines per
+        // second from a single browser running an upgraded Monitor.
         if (typeof window !== "undefined") {
           try {
             localStorage.removeItem("proxmenux-auth-token")
           } catch {
             // localStorage might be unavailable in private browsing — ignore.
           }
-          // Avoid redirect loops if we're already on the auth page.
-          const path = window.location.pathname
-          if (!path.startsWith("/auth") && !path.startsWith("/login")) {
-            window.location.assign("/")
+          try {
+            if (!sessionStorage.getItem("proxmenux-auth-401-handled")) {
+              sessionStorage.setItem("proxmenux-auth-401-handled", "1")
+              window.location.reload()
+            }
+          } catch {
+            // sessionStorage unavailable — fall back to a plain reload.
+            window.location.reload()
           }
         }
         throw new Error(`Unauthorized: ${endpoint}`)

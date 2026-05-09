@@ -29,17 +29,38 @@ export default function Home() {
       const response = await fetch(getApiUrl("/api/auth/status"), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
-      
+
+      // 401 here means the token is present but invalid — typically signed
+      // under a previous jwt_secret (rotated on AppImage upgrade or fresh
+      // install). If we let this fall into the catch below, the dashboard
+      // would render and every authenticated component would fire its own
+      // 401 in parallel, flooding the backend logs and looping reloads.
+      // Drop the dead token and force the Login screen instead.
+      if (response.status === 401) {
+        try {
+          localStorage.removeItem("proxmenux-auth-token")
+        } catch {
+          // private browsing — best-effort
+        }
+        setAuthStatus({
+          loading: false,
+          authEnabled: true,
+          authConfigured: true,
+          authenticated: false,
+        })
+        return
+      }
+
       // Check if response is valid JSON before parsing
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)
       }
-      
+
       const contentType = response.headers.get("content-type")
       if (!contentType || !contentType.includes("application/json")) {
         throw new Error("Response is not JSON")
       }
-      
+
       const data = await response.json()
 
       const authenticated = data.auth_enabled ? data.authenticated : true

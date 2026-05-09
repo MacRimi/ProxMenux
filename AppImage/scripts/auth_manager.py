@@ -14,6 +14,8 @@ import hashlib
 import hmac
 import secrets
 import base64
+import threading
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -341,6 +343,40 @@ def verify_token_full(token):
         return None, None
 
 
+_AUTH_LOG_RATE = {'last_ts': 0.0, 'suppressed': 0, 'last_msg': ''}
+_AUTH_LOG_LOCK = threading.Lock()
+
+
+def _log_auth_failure_throttled(msg):
+    """Log a JWT verification failure at most once every 30 seconds.
+
+    A browser whose token was invalidated by a jwt_secret rotation can
+    fire dozens of authenticated requests per page load (SWR fetches +
+    WebSocket reconnects); without throttling this floods the journal
+    with hundreds of identical 'Invalid token: Signature verification
+    failed' lines per second and stalls journald. We keep the first
+    occurrence verbatim and emit one summary line every 30s with the
+    suppressed count, so the operator still has visibility of the
+    issue without the cascade.
+    """
+    now = time.time()
+    with _AUTH_LOG_LOCK:
+        elapsed = now - _AUTH_LOG_RATE['last_ts']
+        if elapsed >= 30:
+            if _AUTH_LOG_RATE['suppressed']:
+                print(f"[auth] {_AUTH_LOG_RATE['last_msg']} "
+                      f"(+{_AUTH_LOG_RATE['suppressed']} more in last "
+                      f"{int(elapsed)}s)")
+            else:
+                print(f"[auth] {msg}")
+            _AUTH_LOG_RATE['last_ts'] = now
+            _AUTH_LOG_RATE['suppressed'] = 0
+            _AUTH_LOG_RATE['last_msg'] = msg
+        else:
+            _AUTH_LOG_RATE['suppressed'] += 1
+            _AUTH_LOG_RATE['last_msg'] = msg
+
+
 def verify_token(token):
     """
     Verify a JWT token
@@ -376,10 +412,10 @@ def verify_token(token):
             payload = jwt.decode(token, _get_jwt_secret(), algorithms=[JWT_ALGORITHM])
         return payload.get('username')
     except jwt.ExpiredSignatureError:
-        print("Token has expired")
+        _log_auth_failure_throttled("Token has expired")
         return None
     except jwt.InvalidTokenError as e:
-        print(f"Invalid token: {e}")
+        _log_auth_failure_throttled(f"Invalid token: {e}")
         return None
 
 

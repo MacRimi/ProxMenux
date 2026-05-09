@@ -76,6 +76,11 @@ export function Login({ onLogin }: LoginProps) {
       }
 
       localStorage.setItem("proxmenux-auth-token", data.token)
+      try {
+        sessionStorage.removeItem("proxmenux-auth-401-handled")
+      } catch {
+        // ignore
+      }
 
       if (rememberMe) {
         localStorage.setItem("proxmenux-saved-username", username)
