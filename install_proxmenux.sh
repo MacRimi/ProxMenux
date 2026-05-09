@@ -51,6 +51,7 @@ MENU_SCRIPT="menu"
 VENV_PATH="/opt/googletrans-env"
 
 MONITOR_INSTALL_DIR="$BASE_DIR"
+MONITOR_RUNTIME_DIR="$BASE_DIR/monitor-app"
 MONITOR_SERVICE_FILE="/etc/systemd/system/proxmenux-monitor.service"
 MONITOR_PORT=8008
 
@@ -582,6 +583,52 @@ get_appimage_version() {
     echo "$version"
 }
 
+# ── AppImage runtime extraction ────────────────────────────
+# Extract the AppImage's squashfs to a stable directory and run AppRun
+# directly. Avoids the FUSE mount under /tmp/.mount_ProxMe<random>, which
+# trips Wazuh rule 521 / rkhunter "Possible kernel level rootkit" alerts
+# (issue #101) — those scanners flag any directory that appears in
+# readdir() but is hidden from lstat(), which is exactly what AppImage's
+# FUSE mount layer looks like to them. Running from a plain extracted
+# directory has the same files but no FUSE indirection, so the false
+# positive disappears.
+extract_appimage_to_runtime_dir() {
+    local appimage_path="$1"
+    local target_runtime_dir="$2"
+    local tmp_extract_dir
+    tmp_extract_dir=$(mktemp -d /tmp/proxmenux-extract.XXXXXX) || return 1
+
+    msg_info "Extracting AppImage runtime to ${target_runtime_dir}..."
+
+    if ! ( cd "$tmp_extract_dir" && "$appimage_path" --appimage-extract >/dev/null 2>&1 ); then
+        msg_error "Failed to extract AppImage."
+        rm -rf "$tmp_extract_dir"
+        return 1
+    fi
+
+    if [ ! -x "$tmp_extract_dir/squashfs-root/AppRun" ]; then
+        msg_error "Extracted AppImage missing AppRun."
+        rm -rf "$tmp_extract_dir"
+        return 1
+    fi
+
+    rm -rf "${target_runtime_dir}.new"
+    mv "$tmp_extract_dir/squashfs-root" "${target_runtime_dir}.new"
+    rm -rf "$tmp_extract_dir"
+
+    if [ -d "$target_runtime_dir" ]; then
+        rm -rf "${target_runtime_dir}.old"
+        mv "$target_runtime_dir" "${target_runtime_dir}.old"
+    fi
+    mv "${target_runtime_dir}.new" "$target_runtime_dir"
+    rm -rf "${target_runtime_dir}.old"
+
+    rm -f "$appimage_path"
+
+    msg_ok "AppImage runtime extracted (no FUSE mount; bypasses Wazuh rule 521)."
+    return 0
+}
+
 install_proxmenux_monitor() {
     local appimage_source=$(detect_latest_appimage)
     
@@ -625,7 +672,12 @@ install_proxmenux_monitor() {
     local target_path="$MONITOR_INSTALL_DIR/ProxMenux-Monitor.AppImage"
     cp "$appimage_source" "$target_path"
     chmod +x "$target_path"
-    
+
+    if ! extract_appimage_to_runtime_dir "$target_path" "$MONITOR_RUNTIME_DIR"; then
+        update_config "proxmenux_monitor" "extract_failed"
+        return 1
+    fi
+
     msg_ok "ProxMenux Monitor v$appimage_version installed."
     
     if [ "$service_exists" = false ]; then
@@ -649,8 +701,8 @@ install_proxmenux_monitor() {
 
 create_monitor_service() {
     msg_info "Creating ProxMenux Monitor service..."
-    
-    local exec_path="$MONITOR_INSTALL_DIR/ProxMenux-Monitor.AppImage"
+
+    local exec_path="$MONITOR_RUNTIME_DIR/AppRun"
     
     if [ -f "$TEMP_DIR/systemd/proxmenux-monitor.service" ]; then
         sed "s|ExecStart=.*|ExecStart=$exec_path|g" \
