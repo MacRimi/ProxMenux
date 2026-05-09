@@ -4,11 +4,23 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : MIT
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version     : 1.0
 # ==========================================================
 # Description:
-# Adds external Samba/CIFS shares as Proxmox storage (pvesm).
-# Proxmox manages the mount natively — no fstab entries needed.
+# Registers external Samba (SMB / CIFS) shares as Proxmox
+# storage via pvesm add cifs. Credentials are stored encrypted
+# in /etc/pve/priv/storage/<id>.pw — no fstab entries needed.
+#
+# Features:
+# - Auto-discover Samba servers on the local subnet
+#   (nmap on ports 139/445 + nmblookup for NetBIOS names).
+# - Guest or username/password authentication.
+# - Share listing via smbclient -L (filtered to Disk shares).
+# - Content-type checklist (no rootdir — Proxmox does not
+#   support LXC rootfs on CIFS).
+# - View, remove and connectivity-test for existing storages.
 # ==========================================================
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"

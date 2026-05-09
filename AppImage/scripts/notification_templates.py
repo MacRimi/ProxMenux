@@ -976,6 +976,169 @@ TEMPLATES = {
         'group': 'updates',
         'default_enabled': True,
     },
+
+    # ── Remote mount health (Sprint 13) ──
+    # `mount_stale` is the high-severity case — the mount looks
+    # present in /proc/mounts but every access blocks/ESTALEs, and
+    # writes silently land on the underlying directory of the host
+    # (or the container's rootfs in the LXC variant), eventually
+    # filling the disk. The body includes the source so the operator
+    # can match against /etc/fstab without ssh, and the LXC fields
+    # surface inside-container scope when present (Sprint 13.27).
+    # Variables ``lxc_id`` / ``lxc_name`` resolve to empty strings on
+    # host mounts thanks to the SafeDict in render_template — the
+    # surrounding text is phrased so an empty value reads naturally.
+    'mount_stale': {
+        'title': '{hostname}: stale remote mount {mount_target}',
+        'body': (
+            'Remote mount {mount_target} ({fstype}) from {mount_source} is stale{lxc_scope}.\n'
+            'Stat timed out or returned an error: {error}\n\n'
+            'Apps writing to this path will silently land on the underlying filesystem '
+            'and may fill the disk. Remount or fix connectivity ASAP.'
+        ),
+        'label': 'Remote mount stale',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+    'mount_readonly': {
+        'title': '{hostname}: remote mount {mount_target} is read-only',
+        'body': (
+            'Remote mount {mount_target} ({fstype}) from {mount_source} is mounted '
+            'read-only{lxc_scope}. Writes will fail. If this was unintentional, remount with rw.'
+        ),
+        'label': 'Remote mount read-only',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+
+    # Sprint 13.30: per-LXC rootfs filling up.
+    # Catches the classic "CT runs out of disk and stops booting"
+    # before it actually happens — fires at 85% (WARNING) and 95%
+    # (CRITICAL), same thresholds as the host disk check. Body
+    # includes both percentage and the absolute MB so the operator
+    # can decide between "expand the rootfs" and "free up logs".
+    'lxc_disk_low': {
+        'title': '{hostname}: CT {vmid} rootfs at {usage_percent}%',
+        'body': (
+            'CT {vmid} ({name}) rootfs is at {usage_percent}% '
+            '({disk_bytes} / {maxdisk_bytes}).\n\n'
+            'A full LXC rootfs prevents the container from booting cleanly. '
+            'Either expand the rootfs (pct resize {vmid} rootfs +1G) or free '
+            'space inside the container.'
+        ),
+        'label': 'LXC rootfs near full',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+
+    # ── Phase 3 capacity events (Sprint 14.5) ─────────────────────────
+    # Three new events that complete the storage-monitoring picture.
+    # Each fires at the user-configured warning/critical thresholds
+    # (defaults 85/95). Wording mentions both the percentage and a
+    # path/identifier so the operator can act without opening the
+    # dashboard first.
+
+    'lxc_mount_low': {
+        'title': '{hostname}: CT {vmid} mount {mount} at {usage_percent}%',
+        'body': (
+            'Mount {mount} inside CT {vmid} ({name}) is at {usage_percent}% used.\n'
+            'Filesystem type: {fstype}\n\n'
+            'A full mount inside a container often blocks the application '
+            'silently — writes either fail or, worse, land on the rootfs '
+            'and trigger the rootfs alert next. Free up space on the mount '
+            'or expand it.'
+        ),
+        'label': 'LXC mount near full',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+
+    'pve_storage_full': {
+        'title': '{hostname}: PVE storage {storage_name} at {usage_percent}%',
+        'body': (
+            'Proxmox storage "{storage_name}" (type: {storage_type}) is at '
+            '{usage_percent}% used.\n\n'
+            'Once full, no new VM/CT can be provisioned and existing guests '
+            'may fail to write. Move/delete unused volumes or expand the '
+            'underlying pool/LV/RBD image.'
+        ),
+        'label': 'PVE storage near full',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+
+    'zfs_pool_full': {
+        'title': '{hostname}: ZFS pool {pool_name} at {usage_percent}%',
+        'body': (
+            'ZFS pool "{pool_name}" is at {usage_percent}% capacity.\n\n'
+            'ZFS performance and write reliability degrade sharply above '
+            '~80% capacity (CoW needs free space for new blocks). Free up '
+            'snapshots, prune old datasets, or add more vdevs to the pool.'
+        ),
+        'label': 'ZFS pool near full',
+        'group': 'storage',
+        'default_enabled': True,
+    },
+
+    # ── Post-install function updates (Sprint 12D) ──
+    # Fired once per *changed* set of available post-install function
+    # updates. The body lists each tool with its before/after version so
+    # the operator sees exactly what's about to change without opening
+    # the Monitor.
+    'post_install_update': {
+        'title': '{hostname}: {count} ProxMenux optimization update(s) available',
+        'body': (
+            '{count} optimization update(s) detected on this host.\n\n'
+            'Tools:\n{tool_list}\n\n'
+            'How to apply:\n'
+            '  • ProxMenux Monitor → Settings → ProxMenux Optimizations\n'
+            '  • Or run the post-install menu (option 2) → "Apply available updates"'
+        ),
+        'label': 'ProxMenux optimization updates available',
+        'group': 'updates',
+        'default_enabled': True,
+    },
+
+    # Sprint 14.6: Secure Gateway / OCI app updates. Fired when a
+    # ProxMenux-managed LXC (currently the Tailscale gateway, but
+    # designed to extend to future OCI apps) has package upgrades
+    # pending. The user applies the update with one click in the
+    # Monitor — no shell access required. {package_count} + the
+    # bullet list make sure the operator sees exactly what's moving
+    # without opening the dashboard first.
+    'secure_gateway_update_available': {
+        'title': '{hostname}: {app_name} update available — v{latest_version}',
+        'body': (
+            '{app_name} (managed by ProxMenux) has {package_count} package update(s) '
+            'pending in its container.\n'
+            'Current Tailscale: v{current_version}  →  Latest: v{latest_version}\n\n'
+            'Open ProxMenux Monitor > Settings > Secure Gateway and click '
+            '"Update" to apply.\n\n'
+            'Packages:\n{package_list}'
+        ),
+        'label': 'Secure Gateway update available',
+        'group': 'updates',
+        'default_enabled': True,
+    },
+
+    # Sprint 14.7: host-side NVIDIA driver. Unlike the Tailscale flow,
+    # there's no in-dashboard "Apply update" button — installing an
+    'nvidia_driver_update_available': {
+        'title': '{hostname}: NVIDIA driver update available — v{latest_version}',
+        'body': (
+            'A newer NVIDIA driver compatible with kernel {kernel} is available.\n'
+            'Currently installed: v{current_version}\n'
+            'Latest available:    v{latest_version}\n\n'
+            '{upgrade_reason}\n\n'
+            'To reinstall:\n'
+            '  • From the ProxMenux post-install menu: {menu_label}\n\n'
+            'Reinstalling rebuilds the DKMS module against the running kernel and '
+            'requires a reboot to load the new driver.'
+        ),
+        'label': 'NVIDIA driver update available',
+        'group': 'updates',
+        'default_enabled': True,
+    },
     
     # ── Burst aggregation summaries (hidden -- auto-generated by BurstAggregator) ──
     # These inherit enabled state from their parent event type at dispatch time.
@@ -1057,11 +1220,21 @@ EVENT_GROUPS = {
 # ─── Template Renderer ───────────────────────────────────────────
 
 def _get_hostname() -> str:
-    """Get short hostname for message titles."""
+    """Get hostname for message titles.
+
+    Honors the user-configured Display Name (notification settings `hostname` key) and
+    falls back to the system FQDN. The hostname is NOT truncated at the first dot —
+    multi-node deployments need the full FQDN to disambiguate which host emitted the
+    notification. Resolution is delegated to `notification_manager._resolve_display_hostname`.
+    """
     try:
-        return socket.gethostname().split('.')[0]
+        from notification_manager import _resolve_display_hostname
+        return _resolve_display_hostname()
     except Exception:
-        return 'proxmox'
+        try:
+            return socket.gethostname()
+        except Exception:
+            return 'proxmox'
 
 
 def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -1114,9 +1287,18 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     if not variables.get('important_list', '').strip():
         variables['important_list'] = 'none'
     
+    # `format_map` with a SafeDict avoids the KeyError → "show raw template
+    # with `{placeholder}` literal" failure mode. If a template gets a new
+    # field that nobody populated in `data`/`variables`, the user sees the
+    # field elided rather than the raw `{new_field}` string. Audit Tier 6.
+    class _SafeDict(dict):
+        def __missing__(self, key):
+            return ''
+
+    safe_vars = _SafeDict(variables)
     try:
-        title = template['title'].format(**variables)
-    except (KeyError, ValueError):
+        title = template['title'].format_map(safe_vars)
+    except (ValueError, IndexError):
         title = template['title']
     
     # ── PVE vzdump special formatting ──
@@ -1134,8 +1316,8 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             # Fallback to standard formatting if formatter fails
             try:
-                body_text = template['body'].format(**variables)
-            except (KeyError, ValueError):
+                body_text = template['body'].format_map(safe_vars)
+            except (ValueError, IndexError):
                 body_text = template['body']
     elif event_type in ('backup_complete', 'backup_fail') and pve_message:
         parsed = _parse_vzdump_message(pve_message)
@@ -1153,8 +1335,8 @@ def render_template(event_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
         body_text = pve_message.strip()[:1000]
     else:
         try:
-            body_text = template['body'].format(**variables)
-        except (KeyError, ValueError):
+            body_text = template['body'].format_map(safe_vars)
+        except (ValueError, IndexError):
             body_text = template['body']
     
     # Clean up: collapse runs of 3+ blank lines into 1, remove trailing whitespace
@@ -1297,6 +1479,13 @@ EVENT_EMOJI = {
     'disk_space_low':       '\U0001F4C9',         # chart decreasing
     'disk_io_error':        '\U0001F4A5',
     'storage_unavailable':  '\U0001F6AB',         # prohibited
+    # Sprint 13 — remote mount events
+    'mount_stale':          '\U0001F517',         # link (broken connection feel)
+    'mount_readonly':       '\U0001F512',         # lock
+    'lxc_disk_low':         '\U0001F4BE',         # floppy disk (near-full)
+    'lxc_mount_low':        '\U0001F4C2',         # 📂 folder near-full
+    'pve_storage_full':     '\U0001F4E6',         # 📦 package (running out)
+    'zfs_pool_full':        '\U0001F30A',         # 🌊 wave (pool is full)
     # Network
     'network_down':         '\U0001F50C',         # electric plug
     'network_latency':      '\U0001F422',         # turtle (slow)
@@ -1327,6 +1516,11 @@ EVENT_EMOJI = {
     'pve_update':           '\U0001F195',         # NEW
     'update_complete':      '\u2705',
     'proxmenux_update':     '\U0001F195',         # NEW
+    # Sprint 12D: post-install function updates use the sparkle icon to
+    # differentiate them visually from a full ProxMenux release update.
+    'post_install_update':  '✨',              # sparkles
+    'secure_gateway_update_available': '\U0001F510',  # 🔐 closed lock with key
+    'nvidia_driver_update_available':  '\U0001F3AE',  # 🎮 video game (GPU)
     # AI
     'ai_model_migrated':    '\U0001F504',         # arrows counterclockwise (refresh/update)
     # GPU / PCIe
@@ -1363,6 +1557,10 @@ FIELD_EMOJI = {
     'pve_count':    '\U0001F4E6',
     'kernel_count': '\u2699\uFE0F',
     'important_list': '\U0001F4CB',  # clipboard
+    'current_version': '\U0001F4E6',  # package \u2014 installed version
+    'latest_version': '\U0001F195',   # NEW button \u2014 upstream version
+    'kernel':       '\u2699\uFE0F',    # gear \u2014 running kernel
+    'menu_label':   '\U0001F4D6',      # open book \u2014 menu navigation hint
 }
 
 
@@ -1441,6 +1639,10 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
         'pending': '\u26A0\uFE0F',     # Warning
         'FAILED': '\u274C',            # Red X
         'PASSED': '\u2705',            # Green check
+        # Update / install bodies
+        'Tools:': '\U0001F6E0\uFE0F',  # hammer and wrench
+        'Packages:': '\U0001F4E6',     # package
+        'How to apply:': '\U0001F4A1', # Light bulb (tip)
     }
     
     # Build enriched body: prepend field emojis to recognizable lines
@@ -1485,6 +1687,9 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
                 'kernel_count': 'Kernel updates', 'important_list': 'Important packages',
                 'duration': 'Duration', 'severity': 'Previous severity',
                 'original_severity': 'Previous severity',
+                'current_version': 'Currently installed',
+                'latest_version': 'Latest available',
+                'menu_label': 'From the ProxMenux post-install menu',
             }
             if field_key in _LABEL_MAP:
                 label_variants.append(_LABEL_MAP[field_key])
@@ -1677,14 +1882,6 @@ BODY EMOJIS:
 🌐 IP  👤 user  🌡️ temp  🔥 CPU  💧 RAM  🎯 target  🔹 current  🟢 new  📌 item
 
 BLANK LINES: Insert between logical sections (VM entries, before summary, before packages block).
-
-═══ HOSTNAME RULE (CRITICAL) ═══
-The Title field contains the real hostname before the colon e.g.: 
-("constructor: VM started" → hostname is "constructor").
-("amd: VM started" → hostname is "amd").
-("pve01: VM started" → hostname is "pve01").
-("pve05: VM started" → hostname is "pve05").
-You MUST use this EXACT hostname in your output. NEVER use generic names like "server", "host", or "node".
 
 ═══ EXAMPLES (follow these formats) ═══
 
@@ -1910,18 +2107,21 @@ class AIEnhancer:
             title_content = title_match.group(1).strip()
             body_content = body_match.group(1).strip()
             
-            # Remove any "Original message/text" sections the AI might have added
-            # This cleanup is important because some models (especially Ollama) tend to
-            # include the original text alongside the translation
+            # Remove any "Original message/text" sections the AI might have added.
+            # Anchored at start-of-line (`(?:^|\n)\s*`) so legitimate prose
+            # like "we received the original message earlier" mid-paragraph
+            # is NOT truncated. Without the anchor, `.*` under DOTALL would
+            # eat everything from the first matching word to end-of-string.
+            # `\Z` matches end-of-string. Audit Tier 6 — `_parse_ai_response`.
             original_patterns = [
-                r'\n*-{3,}\n*Original message:.*',
-                r'\n*-{3,}\n*Original:.*',
-                r'\n*-{3,}\n*Source:.*',
-                r'\n*-{3,}\n*Mensaje original:.*',
-                r'\n*Original message:.*',
-                r'\n*Original text:.*',
-                r'\n*Mensaje original:.*',
-                r'\n*Texto original:.*',
+                r'(?:^|\n)\s*-{3,}\s*\n+\s*Original message:.*\Z',
+                r'(?:^|\n)\s*-{3,}\s*\n+\s*Original:.*\Z',
+                r'(?:^|\n)\s*-{3,}\s*\n+\s*Source:.*\Z',
+                r'(?:^|\n)\s*-{3,}\s*\n+\s*Mensaje original:.*\Z',
+                r'(?:^|\n)\s*Original message:.*\Z',
+                r'(?:^|\n)\s*Original text:.*\Z',
+                r'(?:^|\n)\s*Mensaje original:.*\Z',
+                r'(?:^|\n)\s*Texto original:.*\Z',
             ]
             for pattern in original_patterns:
                 body_content = re.sub(pattern, '', body_content, flags=re.DOTALL | re.IGNORECASE).strip()
@@ -1931,10 +2131,16 @@ class AIEnhancer:
                 'body': body_content if body_content else original_body
             }
         
-        # Fallback: if markers not found, use whole response as body
+        # No `[TITLE]`/`[BODY]` markers — DO NOT silently substitute the
+        # raw response for the body. Some providers return refusal
+        # boilerplate ("I can't help with that") or completely off-topic
+        # text when the prompt confuses them; using that as the
+        # notification body misleads the user. Treat it as a parse failure
+        # and fall back to the original template. Audit Tier 7 — `_parse_ai_response`
+        # swallowea respuestas sin marcadores.
         return {
             'title': original_title,
-            'body': response.strip()
+            'body': original_body,
         }
     
     def test_connection(self) -> Dict[str, Any]:
@@ -1978,13 +2184,39 @@ def format_with_ai(title: str, body: str, severity: str,
     return result.get('body', body)
 
 
+# LRU-style response cache for `format_with_ai_full`. A burst summary
+# (e.g. "5 segfaults in 90s") with the same title/body fires once per
+# channel + once per detail-level — without a cache that's N identical
+# AI calls back-to-back. 60s TTL covers the burst window without
+# letting a stale rewrite outlive the original event. Audit Tier 7 —
+# Sin response cache.
+import time as _time_ai_cache
+import hashlib as _hash_ai_cache
+import threading as _threading_ai_cache
+_AI_CACHE_LOCK = _threading_ai_cache.Lock()
+_AI_CACHE: Dict[str, tuple] = {}  # key → (ts, result_dict)
+_AI_CACHE_TTL = 60.0
+_AI_CACHE_MAX = 256
+
+
+def _ai_cache_key(title, body, ai_config, detail_level, use_emojis):
+    parts = [
+        title or '', '\x1f', body or '', '\x1f',
+        str(ai_config.get('ai_provider', '')), '\x1f',
+        str(ai_config.get('ai_model', '')), '\x1f',
+        str(ai_config.get('ai_language', '')), '\x1f',
+        detail_level, '\x1f', '1' if use_emojis else '0',
+    ]
+    return _hash_ai_cache.sha256(''.join(parts).encode('utf-8', 'replace')).hexdigest()
+
+
 def format_with_ai_full(title: str, body: str, severity: str,
                         ai_config: Dict[str, Any],
                         detail_level: str = 'standard',
                         journal_context: str = '',
                         use_emojis: bool = False) -> Dict[str, str]:
     """Format a message with AI enhancement/translation, returning both title and body.
-    
+
     Args:
         title: Notification title
         body: Notification body
@@ -1993,29 +2225,59 @@ def format_with_ai_full(title: str, body: str, severity: str,
         detail_level: Level of detail (brief, standard, detailed)
         journal_context: Optional journal log context
         use_emojis: Whether to include emojis (for push channels like Telegram/Discord)
-    
+
     Returns:
         Dict with 'title' and 'body' keys (translated/enhanced)
     """
     default_result = {'title': title, 'body': body}
-    
+
     # Check if AI is enabled
     ai_enabled = ai_config.get('ai_enabled')
     if isinstance(ai_enabled, str):
         ai_enabled = ai_enabled.lower() == 'true'
-    
+
     if not ai_enabled:
         return default_result
-    
+
+    # Per-severity gating: skip the AI rewrite when the event severity is
+    # below `ai_min_severity` (config). Useful to limit cost/latency to
+    # only the events that benefit from a rewrite. Default `info` keeps
+    # the previous behaviour of rewriting everything. Audit Tier 7 — sin
+    # per-event/per-severity AI gating.
+    _SEVERITY_RANK = {
+        'info': 0, 'INFO': 0, 'OK': 0,
+        'warning': 1, 'WARNING': 1, 'WARN': 1,
+        'error': 2, 'ERROR': 2,
+        'critical': 3, 'CRITICAL': 3,
+    }
+    min_sev = (ai_config.get('ai_min_severity') or 'info').lower()
+    if min_sev not in _SEVERITY_RANK:
+        min_sev = 'info'
+    event_rank = _SEVERITY_RANK.get(severity, _SEVERITY_RANK.get((severity or '').lower(), 0))
+    min_rank = _SEVERITY_RANK[min_sev]
+    if event_rank < min_rank:
+        return default_result
+
     # Check for API key (not required for Ollama)
     provider = ai_config.get('ai_provider', 'groq')
     if provider != 'ollama' and not ai_config.get('ai_api_key'):
         return default_result
-    
+
     # For Ollama, check URL is configured
     if provider == 'ollama' and not ai_config.get('ai_ollama_url'):
         return default_result
-    
+
+    # Cache lookup — same title/body/provider/model/lang/detail_level
+    # within 60s reuses the previous rewrite. journal_context is
+    # intentionally NOT part of the key (it changes per dispatch but
+    # the AI rewrite is dominated by title/body anyway).
+    cache_key = _ai_cache_key(title, body, ai_config, detail_level, use_emojis)
+    now = _time_ai_cache.monotonic()
+    with _AI_CACHE_LOCK:
+        cached = _AI_CACHE.get(cache_key)
+        if cached and now - cached[0] < _AI_CACHE_TTL:
+            return dict(cached[1])
+
     # Create enhancer and process
     enhancer = AIEnhancer(ai_config)
     enhanced = enhancer.enhance(
@@ -2041,7 +2303,15 @@ def format_with_ai_full(title: str, body: str, severity: str,
             result_body += "\n\n" + "-" * 40 + "\n"
             result_body += "Original message:\n"
             result_body += body
-        
-        return {'title': result_title, 'body': result_body}
-    
+
+        result = {'title': result_title, 'body': result_body}
+        with _AI_CACHE_LOCK:
+            # Bound the cache size — drop the oldest entry if we exceed
+            # the cap (we accept slight staleness over unbounded growth).
+            if len(_AI_CACHE) >= _AI_CACHE_MAX:
+                oldest = min(_AI_CACHE.items(), key=lambda kv: kv[1][0])[0]
+                _AI_CACHE.pop(oldest, None)
+            _AI_CACHE[cache_key] = (now, result)
+        return result
+
     return default_result

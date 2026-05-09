@@ -7,12 +7,17 @@ Executes bash scripts and provides real-time log streaming with interactive menu
 import os
 import sys
 import json
+import re
 import subprocess
 import threading
 import time
 from datetime import datetime
 from pathlib import Path
 import uuid
+
+# Allowed shape for interaction_id / session_id used as components of a file path.
+# Bounded length, no separators, no path traversal characters. See audit Tier 1 #11.
+_SAFE_ID_RE = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
 
 class ScriptRunner:
     """Manages script execution with real-time log streaming and menu interactions"""
@@ -186,13 +191,25 @@ class ScriptRunner:
         }
     
     def respond_to_interaction(self, session_id, interaction_id, value):
-        """Respond to a script interaction request"""
+        """Respond to a script interaction request.
+
+        Both `session_id` and `interaction_id` are interpolated into a /tmp/
+        file path, so they must be validated to prevent arbitrary file write
+        as root (audit Tier 1 #11). The session_id check via `active_sessions`
+        already constrains it, but we still validate the shape defensively in
+        case future code paths skip the dict lookup.
+        """
+        if not isinstance(session_id, str) or not _SAFE_ID_RE.match(session_id):
+            return {'success': False, 'error': 'Invalid session_id'}
+        if not isinstance(interaction_id, str) or not _SAFE_ID_RE.match(interaction_id):
+            return {'success': False, 'error': 'Invalid interaction_id'}
         if session_id not in self.active_sessions:
             return {'success': False, 'error': 'Session not found'}
-        
+
         session = self.active_sessions[session_id]
-        
-        # Write response to file that script is waiting for
+
+        # Write response to file that script is waiting for. Path components
+        # are pre-validated above; the f-string cannot produce a traversal.
         response_file = f"/tmp/nvidia_response_{interaction_id}.json"
         with open(response_file, 'w') as f:
             json.dump({
@@ -200,10 +217,10 @@ class ScriptRunner:
                 'value': value,
                 'timestamp': int(time.time())
             }, f)
-        
+
         # Clear pending interaction
         session['pending_interaction'] = None
-        
+
         return {'success': True}
     
     def stream_logs(self, session_id):

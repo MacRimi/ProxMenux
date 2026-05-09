@@ -20,29 +20,95 @@ from collections import deque
 from typing import Tuple, Optional, Dict, Any
 
 
+# Server-side defense-in-depth for user-supplied URLs in channel configs.
+# `notification_manager.validate_external_url` rejects RFC1918 / loopback,
+# but Gotify is commonly self-hosted on a LAN so we relax that — and only
+# reject well-known SSRF targets (cloud metadata + the local PVE API).
+# Audit Tier 6 — sin validación SSRF en URLs de webhooks/canales.
+_KNOWN_SSRF_TARGETS = {
+    '169.254.169.254',  # AWS/GCE/Azure metadata
+    'metadata.google.internal',
+    'metadata.aws.internal',
+}
+_BLOCKED_LOOPBACK_PORTS = {'8006', '8007'}  # PVE API HTTPS / HTTPS-alt
+
+
+def _validate_user_webhook_url(url: str) -> Tuple[bool, str]:
+    """Lightweight SSRF guard for Gotify-style channels.
+
+    Allows RFC1918 / loopback hosts (legit self-hosting), but rejects:
+      - schemes other than http(s)
+      - cloud-metadata IPs and well-known internal hostnames
+      - loopback paired with the PVE API ports — typical pivot target
+    """
+    if not isinstance(url, str) or not url:
+        return False, "URL is required"
+    try:
+        parsed = urllib.parse.urlparse(url.strip())
+    except ValueError:
+        return False, "URL is malformed"
+    if parsed.scheme not in ('http', 'https'):
+        return False, "Only http:// and https:// are accepted"
+    host = (parsed.hostname or '').lower()
+    if not host:
+        return False, "URL is missing a hostname"
+    if host in _KNOWN_SSRF_TARGETS:
+        return False, f"Host {host} is a known cloud-metadata endpoint"
+    port = parsed.port
+    if (host in ('localhost', '127.0.0.1', '::1')
+            and str(port or '') in _BLOCKED_LOOPBACK_PORTS):
+        return False, f"Cannot point at the local PVE API ({host}:{port})"
+    return True, ""
+
+
 # ─── Rate Limiter ────────────────────────────────────────────────
 
 class RateLimiter:
-    """Token-bucket rate limiter: max N messages per window."""
-    
+    """Token-bucket rate limiter: max N messages per window.
+
+    Thread-safe: `allow()` and `wait_time()` are called from the dispatch
+    thread plus channel test paths concurrently. Without the lock the deque
+    could throw IndexError on concurrent popleft / append, and the count
+    could go inconsistent. Audit Tier 6 (Notification stack — `RateLimiter.allow()`
+    no thread-safe).
+    """
+
     def __init__(self, max_calls: int = 30, window_seconds: int = 60):
+        import threading as _threading
         self.max_calls = max_calls
         self.window = window_seconds
         self._timestamps: deque = deque()
-    
+        self._lock = _threading.Lock()
+        # Counter of events dropped while over the rate limit. Surfaced via
+        # `consume_drop_count()` so the dispatch loop can periodically log
+        # "X events suppressed by rate-limit" instead of letting them
+        # disappear silently. Audit Tier 6 — `RateLimiter` descarta
+        # silenciosamente eventos sobre el límite.
+        self._dropped: int = 0
+
     def allow(self) -> bool:
         now = time.monotonic()
-        while self._timestamps and now - self._timestamps[0] > self.window:
-            self._timestamps.popleft()
-        if len(self._timestamps) >= self.max_calls:
-            return False
-        self._timestamps.append(now)
-        return True
-    
+        with self._lock:
+            while self._timestamps and now - self._timestamps[0] > self.window:
+                self._timestamps.popleft()
+            if len(self._timestamps) >= self.max_calls:
+                self._dropped += 1
+                return False
+            self._timestamps.append(now)
+            return True
+
+    def consume_drop_count(self) -> int:
+        """Return the number of drops since the last call and reset to 0."""
+        with self._lock:
+            n = self._dropped
+            self._dropped = 0
+            return n
+
     def wait_time(self) -> float:
-        if not self._timestamps:
-            return 0.0
-        return max(0.0, self.window - (time.monotonic() - self._timestamps[0]))
+        with self._lock:
+            if not self._timestamps:
+                return 0.0
+            return max(0.0, self.window - (time.monotonic() - self._timestamps[0]))
 
 
 # ─── Base Channel ────────────────────────────────────────────────
@@ -96,6 +162,16 @@ class NotificationChannel(ABC):
         """Wrap a send function with rate limiting and retry logic."""
         if not self._rate_limiter.allow():
             wait = self._rate_limiter.wait_time()
+            # Surface the cumulative drop count every ~10 events so the
+            # operator notices that they're losing notifications. Calling
+            # consume_drop_count() resets the counter so the next bucket
+            # of drops gets its own summary.
+            try:
+                dropped = self._rate_limiter.consume_drop_count()
+                if dropped >= 10:
+                    print(f"[{self.__class__.__name__}] Rate-limit suppressed {dropped} events in the last window")
+            except Exception:
+                pass
             return {
                 'success': False,
                 'error': f'Rate limited. Retry in {wait:.0f}s',
@@ -274,8 +350,9 @@ class GotifyChannel(NotificationChannel):
             return False, 'Server URL is required'
         if not self.app_token:
             return False, 'Application token is required'
-        if not self.server_url.startswith(('http://', 'https://')):
-            return False, 'Server URL must start with http:// or https://'
+        ok, err = _validate_user_webhook_url(self.server_url)
+        if not ok:
+            return False, f'Invalid Gotify URL: {err}'
         return True, ''
     
     def send(self, title: str, message: str, severity: str = 'INFO',
@@ -333,11 +410,29 @@ class DiscordChannel(NotificationChannel):
         super().__init__()
         self.webhook_url = webhook_url.strip()
     
+    _DISCORD_HOSTS = {
+        'discord.com', 'discordapp.com',
+        'ptb.discord.com', 'canary.discord.com',
+    }
+
     def validate_config(self) -> Tuple[bool, str]:
         if not self.webhook_url:
             return False, 'Webhook URL is required'
-        if 'discord.com/api/webhooks/' not in self.webhook_url:
+        # Substring match (`'discord.com/api/webhooks/' in url`) accepted
+        # crafted URLs like `http://attacker.example/proxy?u=https://discord.com/api/webhooks/...`.
+        # Parse properly: require https + exact discord hostname + the
+        # /api/webhooks/<id>/<token> path.
+        try:
+            from urllib.parse import urlparse as _urlparse
+            parsed = _urlparse(self.webhook_url)
+        except Exception:
             return False, 'Invalid Discord webhook URL'
+        if parsed.scheme != 'https':
+            return False, 'Discord webhook must use https://'
+        if (parsed.hostname or '').lower() not in self._DISCORD_HOSTS:
+            return False, 'Invalid Discord webhook URL (host must be discord.com)'
+        if not parsed.path.startswith('/api/webhooks/'):
+            return False, 'Invalid Discord webhook URL (path must be /api/webhooks/...)'
         return True, ''
     
     def send(self, title: str, message: str, severity: str = 'INFO',
@@ -439,6 +534,15 @@ class EmailChannel(NotificationChannel):
             import os
             if not os.path.exists('/usr/sbin/sendmail'):
                 return False, 'No SMTP host configured and /usr/sbin/sendmail not found'
+        # Reject configurations that would send credentials in cleartext over
+        # the network. Loopback (`localhost` / `127.0.0.1`) and the local-only
+        # sendmail path are exempt — those don't traverse a wire that an
+        # attacker could sniff. Audit Tier 6 (Notification stack — SMTP TLS).
+        host_lower = (self.host or '').lower()
+        is_local = host_lower in ('', 'localhost', 'localhost.localdomain', '127.0.0.1', '::1')
+        if (self.tls_mode == 'none' and self.username and self.password and not is_local):
+            return False, ('SMTP TLS is disabled but credentials would travel over plain '
+                           'text. Use STARTTLS or SSL/TLS, or remove the username/password.')
         return True, ''
     
     def send(self, title: str, message: str, severity: str = 'INFO',
@@ -851,8 +955,10 @@ class EmailChannel(NotificationChannel):
         return rows
     
     def test(self) -> Tuple[bool, str]:
-        import socket as _socket
-        hostname = _socket.gethostname().split('.')[0]
+        # Lazy import to avoid a circular dependency with notification_manager,
+        # which already imports from this module at load time.
+        from notification_manager import _resolve_display_hostname
+        hostname = _resolve_display_hostname()
         result = self.send(
             'ProxMenux Test Notification',
             'This is a test notification from ProxMenux Monitor.\n'

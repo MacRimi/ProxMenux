@@ -4,15 +4,27 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : MIT
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version     : 1.0
 # ==========================================================
 # Description:
-# Adds bind mounts from Proxmox host directories into LXC
-# containers using pct set -mpX (Proxmox native).
+# Bind-mounts a host directory into an LXC container using
+# Proxmox's native pct set -mpN syntax. Handles the permission
+# quirks of unprivileged containers on the host side — never
+# modifies anything inside the container.
 #
-# SAFE DESIGN: This script NEVER modifies permissions, ownership,
-# or ACLs on the host or inside the container. All existing
-# configurations are preserved as-is.
+# Features:
+# - Unified host-directory picker (mounted CIFS/NFS shares,
+#   fstab-inactive entries, /mnt/* local dirs, /mnt/pve/*
+#   Proxmox storages, manual entry).
+# - Active fix per source type:
+#     - CIFS  → offer remount with uid=0,gid=0,file_mode=0777
+#     - NFS   → offer chmod 1777 + setfacl on the share
+#     - Local → offer chmod o+rwx + ACL (unprivileged only)
+# - Auto-detects privileged vs unprivileged containers.
+# - View / remove existing mp* entries.
+# - Optional CT restart at end with mount-point smoke test.
 # ==========================================================
 
 BASE_DIR="/usr/local/share/proxmenux"

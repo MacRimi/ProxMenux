@@ -1,11 +1,33 @@
 #!/bin/bash
-# ProxMenux - Universal GPU/iGPU Passthrough to LXC
-# ==================================================
+# ==========================================================
+# ProxMenux - GPU / iGPU Passthrough to LXC
+# ==========================================================
 # Author      : MacRimi
-# License     : MIT
+# Copyright   : (c) 2024 MacRimi
+# License     : GPL-3.0
 # Version     : 1.0
 # Last Updated: 01/04/2026
-# ==================================================
+# ==========================================================
+# Description:
+# Shares a physical GPU (Intel iGPU, AMD or NVIDIA) with an
+# LXC container on Proxmox VE. Unlike VM passthrough, the
+# host keeps using the GPU — containers access it through
+# device nodes, not via VFIO binding.
+#
+# Features:
+#  - Multi-vendor detection (Intel / AMD / NVIDIA)
+#  - Multi-GPU selection via checklist
+#  - Switch Mode: detects GPU bound to vfio-pci (VM) and
+#    offers to free it before LXC passthrough
+#  - SR-IOV check (blocks unsupported configurations)
+#  - Automatic dev-node enumeration (DRI, KFD, NVIDIA)
+#  - GID alignment (video / render) between host and CT
+#  - Distro-aware driver install inside the container
+#    (Alpine / Arch / Debian-Ubuntu / NVIDIA .run fallback)
+#  - NVIDIA userspace version matched to host driver
+#  - Container memory bump during NVIDIA install (restored)
+#  - Optional GPU guard hookscript integration
+# ==========================================================
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
@@ -814,7 +836,7 @@ _get_iommu_group_ids() {
     local dev dev_class
     dev=$(basename "$dev_path")
     dev_class=$(cat "/sys/bus/pci/devices/${dev}/class" 2>/dev/null)
-    [[ "$dev_class" == "0x0604" || "$dev_class" == "0x0600" ]] && continue
+    [[ "$dev_class" == 0x0604* || "$dev_class" == 0x0600* ]] && continue
     local vid did
     vid=$(cat "/sys/bus/pci/devices/${dev}/vendor" 2>/dev/null | sed 's/0x//')
     did=$(cat "/sys/bus/pci/devices/${dev}/device" 2>/dev/null | sed 's/0x//')

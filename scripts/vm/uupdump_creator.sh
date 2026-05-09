@@ -5,24 +5,26 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 07/05/2025
 # ==========================================================
 # Description:
-# This script is part of the ProxMenux tools for Proxmox VE.
-# It allows downloading and converting official Windows ISO images 
-# from UUP Dump using a shared link (with ID, pack, and edition).
+# Downloads and converts an official Windows ISO from UUP Dump
+# using a shared link that carries the build parameters (id,
+# pack, edition). The resulting ISO is placed in the Proxmox
+# ISO storage and becomes immediately available to the VM
+# creator.
 #
-# Key features:
-# - Automatically installs and verifies required dependencies (aria2c, cabextract, wimlib-imagex…)
-# - Downloads the selected Windows edition from UUP Dump using aria2
-# - Converts the downloaded files into a bootable ISO
-# - Stores the resulting ISO in the default template path (/var/lib/vz/template/iso)
-# - Provides a graphical prompt via whiptail for user-friendly usage
-#
-# This tool simplifies the creation of official Windows ISOs
-# for use in virtual machines within Proxmox VE.
+# Features:
+# - Auto-installs dependencies (aria2, cabextract, wimtools,
+#   genisoimage, chntpw, curl).
+# - Downloads the UUP Dump converter and all UUP payload files
+#   in parallel with aria2.
+# - Builds a bootable ISO via the upstream convert.sh.
+# - Auto-detects the Proxmox ISO storage directory and falls
+#   back to /var/lib/vz/template/iso.
+# - Interactive prompts via whiptail / dialog.
 # ==========================================================
 
 BASE_DIR="/usr/local/share/proxmenux"

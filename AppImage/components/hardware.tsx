@@ -258,7 +258,6 @@ export default function Hardware() {
 
   useEffect(() => {
     if (hardwareData?.storage_devices) {
-      console.log("[v0] Storage devices data from backend:", hardwareData.storage_devices)
       hardwareData.storage_devices.forEach((device) => {
         if (device.name.startsWith("nvme")) {
           console.log(`[v0] NVMe device ${device.name}:`, {
@@ -271,6 +270,50 @@ export default function Hardware() {
       })
     }
   }, [hardwareData])
+
+  const [managedInstalls, setManagedInstalls] = useState<Array<{
+    id: string
+    type: string
+    name?: string
+    current_version?: string | null
+    menu_label?: string | null
+    update_check?: {
+      available: boolean
+      latest?: string | null
+      last_check?: string | null
+      error?: string | null
+    } | null
+  }>>([])
+  useEffect(() => {
+    let cancelled = false
+    fetchApi<{ success: boolean; items: any[] }>("/api/managed-installs")
+      .then((res) => {
+        if (cancelled) return
+        if (res?.success && Array.isArray(res.items)) {
+          setManagedInstalls(res.items)
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+  const nvidiaInstall = managedInstalls.find((it) => it.type === "nvidia_xfree86")
+
+  const formatLastChecked = (iso?: string | null): string => {
+    if (!iso) return "never"
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return "unknown"
+    const now = Date.now()
+    const ageMs = now - d.getTime()
+    const sameDay = new Date(now).toDateString() === d.toDateString()
+    const yesterday = new Date(now - 86_400_000).toDateString() === d.toDateString()
+    const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    if (sameDay) return time
+    if (yesterday) return `yesterday ${time}`
+    if (ageMs < 7 * 86_400_000) {
+      return d.toLocaleDateString([], { weekday: "short" }) + " " + time
+    }
+    return d.toLocaleDateString([], { month: "short", day: "numeric" })
+  }
 
   const [selectedGPU, setSelectedGPU] = useState<GPU | null>(null)
   const [realtimeGPUData, setRealtimeGPUData] = useState<any>(null)
@@ -381,17 +424,14 @@ export default function Hardware() {
   }
 
   const handleInstallNvidiaDriver = () => {
-    console.log("[v0] Opening NVIDIA installer terminal")
     setShowNvidiaInstaller(true)
   }
 
   const handleInstallAmdTools = () => {
-    console.log("[v0] Opening AMD GPU tools installer terminal")
     setShowAmdInstaller(true)
   }
 
   const handleInstallIntelTools = () => {
-    console.log("[v0] Opening Intel GPU tools installer terminal")
     setShowIntelInstaller(true)
   }
 
@@ -935,7 +975,37 @@ return (
                         <span className="font-mono text-xs">{gpu.pci_kernel_module}</span>
                       </div>
                     )}
+
                   </div>
+
+                  {gpu.vendor?.toLowerCase().includes("nvidia") &&
+                    nvidiaInstall?.current_version &&
+                    nvidiaInstall.update_check?.last_check && (
+                      <div className="pt-2 mt-2 border-t border-border">
+                        {nvidiaInstall.update_check.available ? (
+                          <>
+                            <div className="text-xs text-muted-foreground">
+                              Last checked: {formatLastChecked(nvidiaInstall.update_check.last_check)} ·{" "}
+                              <span className="text-purple-400 font-medium">
+                                NVIDIA driver v{nvidiaInstall.update_check.latest} available
+                              </span>
+                            </div>
+                            {nvidiaInstall.menu_label && (
+                              <div className="text-[11px] text-muted-foreground mt-1">
+                                Reinstall via ProxMenux post-install: {nvidiaInstall.menu_label}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-xs text-muted-foreground">
+                            Last checked: {formatLastChecked(nvidiaInstall.update_check.last_check)}
+                            {` · NVIDIA driver v${nvidiaInstall.current_version}`}
+                            {" · "}
+                            <span className="text-green-500/80">No updates available</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
 {/* GPU Switch Mode Indicator */}
   {getGpuSwitchMode(gpu) !== "unknown" && (
@@ -2848,7 +2918,6 @@ return (
           mutateStatic()
         }}
         onComplete={(success) => {
-          console.log("[v0] NVIDIA installation completed:", success ? "success" : "failed")
           if (success) {
             mutateStatic()
           }

@@ -83,21 +83,16 @@ export function NodeMetricsCharts() {
   const hasMemoryFree = data.some(d => d.memoryFree > 0)
 
   useEffect(() => {
-    console.log("[v0] NodeMetricsCharts component mounted")
     fetchMetrics()
   }, [timeframe])
 
   const fetchMetrics = async () => {
-    console.log("[v0] fetchMetrics called with timeframe:", timeframe)
     setLoading(true)
     setError(null)
 
     try {
       const result = await fetchApi<any>(`/api/node/metrics?timeframe=${timeframe}`)
 
-      console.log("[v0] Node metrics result:", result)
-      console.log("[v0] Result keys:", Object.keys(result))
-      console.log("[v0] Data array length:", result.data?.length || 0)
 
       if (!result.data || !Array.isArray(result.data)) {
         console.error("[v0] Invalid data format - data is not an array:", result)
@@ -111,13 +106,7 @@ export function NodeMetricsCharts() {
         return
       }
 
-      console.log("[v0] First data point sample:", result.data[0])
-      console.log("[v0] First data point loadavg field:", result.data[0]?.loadavg)
-      console.log("[v0] loadavg type:", typeof result.data[0]?.loadavg)
-      console.log("[v0] loadavg is array:", Array.isArray(result.data[0]?.loadavg))
       if (result.data[0]?.loadavg) {
-        console.log("[v0] loadavg length:", result.data[0].loadavg.length)
-        console.log("[v0] loadavg[0]:", result.data[0].loadavg[0])
       }
 
       const transformedData = result.data.map((item: any) => {
@@ -175,7 +164,6 @@ export function NodeMetricsCharts() {
       console.error("[v0] Error stack:", err.stack)
       setError(err.message || "Error loading metrics")
     } finally {
-      console.log("[v0] fetchMetrics finally block - setting loading to false")
       setLoading(false)
     }
   }
@@ -220,10 +208,8 @@ export function NodeMetricsCharts() {
     )
   }
 
-  console.log("[v0] Render state - loading:", loading, "error:", error, "data length:", data.length)
 
   if (loading) {
-    console.log("[v0] Rendering loading state")
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-card border-border">
@@ -245,7 +231,6 @@ export function NodeMetricsCharts() {
   }
 
   if (error) {
-    console.log("[v0] Rendering error state:", error)
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-card border-border">
@@ -269,7 +254,6 @@ export function NodeMetricsCharts() {
   }
 
   if (data.length === 0) {
-    console.log("[v0] Rendering no data state")
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-card border-border">
@@ -290,7 +274,6 @@ export function NodeMetricsCharts() {
     )
   }
 
-  console.log("[v0] Rendering charts with", data.length, "data points")
 
   return (
     <div className="space-y-6">

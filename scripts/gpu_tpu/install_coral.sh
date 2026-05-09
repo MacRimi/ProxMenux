@@ -1,34 +1,35 @@
 #!/bin/bash
+# ==========================================================
 # ProxMenux - Coral TPU Installer (unified: PCIe/M.2 + USB)
-# =========================================================
+# ==========================================================
 # Author      : MacRimi
-# License     : MIT
-# Version     : 2.0 (unified PCIe+USB; auto-detect; feranick fork; libedgetpu runtime)
+# Copyright   : (c) 2024 MacRimi
+# License     : GPL-3.0
+# Version     : 2.0
 # Last Updated: 17/04/2026
-# =========================================================
+# ==========================================================
+# Description:
+# Single entry point for every Coral variant. At startup the
+# script detects what Coral hardware is present on the host
+# and installs only what is actually needed.
 #
-# One entry point for every Coral variant. At startup the script detects
-# what Coral hardware is present on the host and installs only what is
-# actually needed:
-#
-#   • Coral M.2 / Mini-PCIe (vendor 1ac1 on PCIe)
-#       → build and install `gasket` + `apex` kernel modules via DKMS
-#         (feranick/gasket-driver fork; google as fallback with patches)
-#       → create apex group + udev rules
-#       → reboot required to load the fresh kernel module
-#
-#   • Coral USB Accelerator (USB IDs 1a6e:089a / 18d1:9302)
-#       → add the Google Coral APT repository (signed-by keyring)
-#       → install libedgetpu1-std (Edge TPU runtime)
-#       → udev rules come with the package
-#       → no reboot required
-#
-#   • Both present → both paths are run in sequence
-#   • Neither present → informative dialog and clean exit
-#
-# The script is idempotent: reruns on already-configured hosts skip work
-# that is already done and recover from broken gasket-dkms package state
-# (typical after a kernel upgrade on PVE 9).
+# Features:
+#  - Auto-detection of M.2 / Mini-PCIe (vendor 1ac1) and
+#    USB (1a6e:089a / 18d1:9302) Accelerators in one pass
+#  - PCIe path: builds gasket + apex kernel modules via DKMS
+#    using feranick/gasket-driver fork (actively maintained),
+#    google/gasket-driver as fallback with kernel patches
+#  - Kernel-aware patches applied only when needed
+#    (no_llseek → noop_llseek on 6.5+, MODULE_IMPORT_NS
+#    string form on 6.13+)
+#  - apex system group + udev rules for /dev/apex_* nodes
+#  - USB path: Google Coral APT repo (signed-by keyring) +
+#    libedgetpu1-std runtime (udev rules ship with package)
+#  - Both variants present → both paths run in sequence
+#  - Idempotent: reruns skip work already done, recovers
+#    from broken gasket-dkms state after PVE 9 kernel upgrades
+#  - Reboot prompted only when the PCIe path ran
+# ==========================================================
 
 # Guarantee a valid working directory before anything else. When the user
 # re-runs the installer from a previous /tmp/gasket-driver/... path that our

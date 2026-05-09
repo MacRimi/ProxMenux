@@ -12,6 +12,7 @@ import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { Settings } from "./settings"
 import { Security } from "./security"
+import { About } from "./about"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
 import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
@@ -530,7 +531,10 @@ export function ProxmoxDashboard() {
       >
         <div className="container mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
-            <TabsList className="hidden lg:grid w-full grid-cols-9 bg-card border border-border">
+            {/* Issue #191: 10 tabs after adding About. The grid wraps via
+                Tabs primitives so the extra column doesn't push the
+                triggers off-screen on common laptop widths. */}
+            <TabsList className="hidden lg:grid w-full grid-cols-10 bg-card border border-border">
               <TabsTrigger
                 value="overview"
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
@@ -584,6 +588,12 @@ export function ProxmoxDashboard() {
                 className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
               >
                 Settings
+              </TabsTrigger>
+              <TabsTrigger
+                value="about"
+                className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:rounded-md"
+              >
+                About
               </TabsTrigger>
             </TabsList>
 
@@ -738,6 +748,21 @@ export function ProxmoxDashboard() {
                     <SettingsIcon className="h-5 w-5" />
                     <span>Settings</span>
                   </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setActiveTab("about")
+                      setMobileMenuOpen(false)
+                    }}
+                    className={`w-full justify-start gap-3 ${
+                      activeTab === "about"
+                        ? "bg-blue-500/10 text-blue-500 border-l-4 border-blue-500 rounded-l-none"
+                        : ""
+                    }`}
+                  >
+                    <Info className="h-5 w-5" />
+                    <span>About</span>
+                  </Button>
                 </div>
               </SheetContent>
             </Sheet>
@@ -781,6 +806,10 @@ export function ProxmoxDashboard() {
 
           <TabsContent value="settings" className="space-y-4 md:space-y-6 mt-0">
             <Settings />
+          </TabsContent>
+
+          <TabsContent value="about" className="space-y-4 md:space-y-6 mt-0">
+            <About />
           </TabsContent>
         </Tabs>
 

@@ -9,6 +9,8 @@ from flask_sock import Sock
 import subprocess
 import os
 import pty
+import re
+import secrets
 import select
 import struct
 import fcntl
@@ -20,6 +22,86 @@ import json
 import tempfile
 import base64
 
+from jwt_middleware import require_auth
+
+# Allowed shape for interaction_id used as a file path component when writing
+# the response file. Bounded length, no separators, no path traversal. See
+# audit Tier 1 #11.
+_SAFE_ID_RE = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
+
+# ─── WebSocket auth ticket pattern ───────────────────────────────────────
+#
+# The WebSocket browser API does not allow custom request headers, so we
+# cannot send `Authorization: Bearer <jwt>` on the handshake. Instead the
+# client first POSTs to /api/terminal/ticket (which DOES require the JWT) to
+# receive a single-use, short-lived ticket. The ticket is then passed as a
+# `?ticket=...` query string when opening the WebSocket. The handshake
+# atomically consumes the ticket — if the ticket is missing, expired, or
+# already used, the WS is closed immediately.
+#
+# Tickets live in an in-memory dict guarded by a lock. TTL is intentionally
+# short (5 s) — the client should issue and use the ticket immediately.
+# See audit Tier 1 #2 + #17d.
+
+_TERMINAL_TICKETS = {}     # ticket (str) -> created_at_ts (float)
+_TICKETS_LOCK = threading.Lock()
+_TICKET_TTL = 5            # seconds
+_TICKET_MAX_INFLIGHT = 256 # sanity cap to keep memory bounded
+
+
+def _issue_terminal_ticket():
+    """Issue a fresh ticket and prune expired entries while holding the lock."""
+    now = time.time()
+    cutoff = now - _TICKET_TTL
+    ticket = secrets.token_urlsafe(32)
+    with _TICKETS_LOCK:
+        # Prune expired tickets first.
+        if _TERMINAL_TICKETS:
+            for k in [k for k, v in _TERMINAL_TICKETS.items() if v < cutoff]:
+                _TERMINAL_TICKETS.pop(k, None)
+        # Hard cap as a defense against accidental leaks.
+        if len(_TERMINAL_TICKETS) >= _TICKET_MAX_INFLIGHT:
+            # Drop the oldest to make room (FIFO-ish; dict preserves insertion order).
+            try:
+                oldest = next(iter(_TERMINAL_TICKETS))
+                _TERMINAL_TICKETS.pop(oldest, None)
+            except StopIteration:
+                pass
+        _TERMINAL_TICKETS[ticket] = now
+    return ticket
+
+
+def _consume_terminal_ticket(ticket):
+    """Validate and atomically consume a ticket. Returns True iff valid + fresh."""
+    if not ticket or not isinstance(ticket, str):
+        return False
+    now = time.time()
+    with _TICKETS_LOCK:
+        ts = _TERMINAL_TICKETS.pop(ticket, None)
+    if ts is None:
+        return False
+    return (now - ts) <= _TICKET_TTL
+
+
+def _ws_auth_check():
+    """Return True iff the current WebSocket handshake is authorized to proceed.
+
+    When auth is enabled and not declined, require a single-use ticket in the
+    `ticket` query parameter. When auth is disabled (fresh install or user
+    explicitly skipped setup), allow the handshake to proceed unauthenticated
+    — same semantics as the @require_auth decorator on REST routes.
+    """
+    try:
+        from auth_manager import load_auth_config
+        config = load_auth_config()
+        if not config.get("enabled", False) or config.get("declined", False):
+            return True
+    except Exception:
+        # If auth status can't be loaded (DB error / missing module), fail
+        # closed — better to refuse a terminal than to grant root unauth.
+        return False
+    return _consume_terminal_ticket(request.args.get('ticket', ''))
+
 terminal_bp = Blueprint('terminal', __name__)
 sock = Sock()
 
@@ -30,6 +112,24 @@ active_sessions = {}
 def terminal_health():
     """Health check for terminal service"""
     return {'success': True, 'active_sessions': len(active_sessions)}
+
+
+@terminal_bp.route('/api/terminal/ticket', methods=['POST'])
+@require_auth
+def issue_terminal_ticket_route():
+    """Issue a single-use, short-lived ticket for opening a terminal WebSocket.
+
+    The browser WebSocket API doesn't support custom request headers, so the
+    Bearer token we use for REST calls cannot be sent on the handshake. The
+    client POSTs here (with the Bearer token), receives a one-shot ticket,
+    and immediately opens the WS appending `?ticket=<value>`. See audit
+    Tier 1 #17d.
+    """
+    return jsonify({
+        'success': True,
+        'ticket': _issue_terminal_ticket(),
+        'ttl_seconds': _TICKET_TTL,
+    })
 
 @terminal_bp.route('/api/terminal/search-command', methods=['GET'])
 def search_command():
@@ -127,19 +227,52 @@ def read_and_forward_output(master_fd, ws):
 @sock.route('/ws/terminal')
 def terminal_websocket(ws):
     """WebSocket endpoint for terminal sessions"""
-    
+
+    # Validate the single-use auth ticket BEFORE opening any pty / spawning bash.
+    # If the ticket is missing or invalid (and auth is enabled), refuse the
+    # handshake — otherwise this endpoint is a root shell available to anyone
+    # who can reach the port. See audit Tier 1 #2.
+    if not _ws_auth_check():
+        try:
+            ws.send(json.dumps({"type": "error", "message": "Unauthorized"}))
+        except Exception:
+            pass
+        try:
+            ws.close()
+        except Exception:
+            pass
+        return
+
     # Create pseudo-terminal
     master_fd, slave_fd = pty.openpty()
-    
-    # Start bash process
+
+    # Start bash process. Issue #182:
+    # - `-li` (login + interactive) so /etc/profile + ~/.bash_profile +
+    #   ~/.profile + ~/.bashrc all run — without this, Starship / atuin /
+    #   ble.sh / nerd font configurations never load.
+    # - PS1 was hardcoded in env, which overrode the user's ~/.bashrc
+    #   PS1 every time. Drop it so the user's prompt wins.
+    # - COLORTERM=truecolor unlocks 24-bit (true color) rendering in
+    #   xterm.js, required by Nerd Fonts / Starship icons.
+    # - LANG/LC_ALL UTF-8 fallback so non-ASCII glyphs (Nerd Font icons,
+    #   accented hostnames) render correctly even on systems where the
+    #   user's profile didn't already set a locale.
+    _term_env = os.environ.copy()
+    _term_env.setdefault('TERM', 'xterm-256color')
+    _term_env.setdefault('COLORTERM', 'truecolor')
+    _term_env.setdefault('LANG', 'C.UTF-8')
+    _term_env.setdefault('LC_ALL', 'C.UTF-8')
+    _term_env.pop('PS1', None)
+    _home = _term_env.get('HOME') or os.path.expanduser('~') or '/root'
+
     shell_process = subprocess.Popen(
-        ['/bin/bash', '-i'],
+        ['/bin/bash', '-li'],
         stdin=slave_fd,
         stdout=slave_fd,
         stderr=slave_fd,
         preexec_fn=os.setsid,
-        cwd='/',
-        env=dict(os.environ, TERM='xterm-256color', PS1='\\u@\\h:\\w\\$ ')
+        cwd=_home,
+        env=_term_env,
     )
     
     session_id = id(ws)
@@ -253,30 +386,68 @@ def terminal_websocket(ws):
 @sock.route('/ws/script/<session_id>')
 def script_websocket(ws, session_id):
     """WebSocket endpoint for executing scripts with hybrid web mode"""
-    
+
+    # Auth gate first — see /ws/terminal for the rationale. Without this an
+    # unauth attacker who can craft an `init_data` payload pointing at any
+    # bash script gets remote code execution as root. See audit Tier 1 #2.
+    if not _ws_auth_check():
+        try:
+            ws.send('{"type": "error", "message": "Unauthorized"}\r\n')
+        except Exception:
+            pass
+        try:
+            ws.close()
+        except Exception:
+            pass
+        return
+
+    # Limit script execution to a known directory. The previous code accepted
+    # any absolute path and ran it as root via `bash <path>`. See audit Tier 1 #3.
+    BASE_SCRIPTS_DIR = '/usr/local/share/proxmenux/scripts'
+    try:
+        _SCRIPTS_DIR_REAL = os.path.realpath(BASE_SCRIPTS_DIR)
+    except (OSError, ValueError):
+        _SCRIPTS_DIR_REAL = BASE_SCRIPTS_DIR
+
     try:
         init_data = ws.receive(timeout=10)
-        
+
         if not init_data:
             error_msg = '{"type": "error", "message": "No script data received"}\r\n'
             ws.send(error_msg)
             return
-            
+
         script_data = json.loads(init_data)
-        
+
         script_path = script_data.get('script_path')
         params = script_data.get('params', {})
-        
-        if not script_path:
+
+        if not script_path or not isinstance(script_path, str):
             error_msg = '{"type": "error", "message": "No script_path provided"}\r\n'
             ws.send(error_msg)
             return
-        
-        if not os.path.exists(script_path):
-            error_msg = f'{{"type": "error", "message": "Script not found: {script_path}"}}\r\n'
+
+        # Confine script_path to BASE_SCRIPTS_DIR. realpath collapses `..`
+        # and resolves symlinks; commonpath catches both `/some/other/dir`
+        # and `/usr/local/share/proxmenux/scripts-evil` (which a startswith
+        # check would miss).
+        try:
+            real_script = os.path.realpath(script_path)
+            if os.path.commonpath([real_script, _SCRIPTS_DIR_REAL]) != _SCRIPTS_DIR_REAL:
+                ws.send('{"type": "error", "message": "Script path is outside the allowed directory"}\r\n')
+                return
+        except (OSError, ValueError):
+            ws.send('{"type": "error", "message": "Invalid script path"}\r\n')
+            return
+
+        if not os.path.exists(real_script):
+            error_msg = '{"type": "error", "message": "Script not found"}\r\n'
             ws.send(error_msg)
             return
-            
+        # Use the resolved path for execution downstream so a symlink swap
+        # between this check and Popen() cannot redirect us elsewhere.
+        script_path = real_script
+
     except Exception as e:
         error_msg = f'{{"type": "error", "message": "Invalid init data: {str(e)}"}}\r\n'
         ws.send(error_msg)
@@ -417,13 +588,22 @@ def script_websocket(ws, session_id):
                 if msg.get('type') == 'interaction_response':
                     interaction_id = msg.get('id')
                     value = msg.get('value')
-                    
-                    # Write response to the file the script is waiting for
+
+                    # interaction_id is interpolated into a /tmp/ filename; if
+                    # the client supplies traversal characters they could write
+                    # arbitrary files as root (e.g. poison /etc/proxmenux/auth.json).
+                    # Reject anything that doesn't match the safe-id shape.
+                    if not isinstance(interaction_id, str) or not _SAFE_ID_RE.match(interaction_id):
+                        continue
+                    if not isinstance(value, str):
+                        continue
+
+                    # Write response to the file the script is waiting for.
                     response_file = f"/tmp/proxmenux_response_{interaction_id}"
-                    
+
                     with open(response_file, 'w') as f:
                         f.write(value)
-                    
+
                     continue
                 
                 # Handle resize

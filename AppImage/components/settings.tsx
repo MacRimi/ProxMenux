@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
-import { Wrench, Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy } from "lucide-react"
+import { Wrench, Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy, Sparkles, ArrowUpCircle } from "lucide-react"
 import { NotificationSettings } from "./notification-settings"
+import { HealthThresholds } from "./health-thresholds"
+import { ScriptTerminalModal } from "./script-terminal-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Switch } from "./ui/switch"
 import { Input } from "./ui/input"
@@ -190,6 +192,21 @@ interface ProxMenuxTool {
   name: string
   enabled: boolean
   version?: string
+  // Sprint 12B: post-install function update fields. The version above is
+  // what the user has installed; available_version is what the on-disk
+  // post-install script declares. has_update is set when the latter is
+  // higher than the former. update_source_certain is false for legacy
+  // tools that lack a recorded source — the UI must let the user pick
+  // auto vs custom before re-running. `function` is the bash function
+  // name the wrapper script should invoke for the chosen source.
+  available_version?: string
+  description?: string
+  source?: string  // "auto" | "custom" | ""
+  function?: string
+  function_auto?: string
+  function_custom?: string
+  has_update?: boolean
+  update_source_certain?: boolean
   has_source?: boolean
   deprecated?: boolean
 }
@@ -222,21 +239,40 @@ interface NetworkInterface {
 
 export function Settings() {
   const [proxmenuxTools, setProxmenuxTools] = useState<ProxMenuxTool[]>([])
+  const [updatesAvailableCount, setUpdatesAvailableCount] = useState(0)
   const [loadingTools, setLoadingTools] = useState(true)
+  // Sprint 12B: multi-select modal state. Tracks which tools the user
+  // has marked for batch update + the open/closed state of the dialog.
+  const [updateModalOpen, setUpdateModalOpen] = useState(false)
+  const [selectedUpdates, setSelectedUpdates] = useState<Set<string>>(new Set())
+  // Sprint 12B: script terminal modal — running one or many post-install
+  // function updates. `params` is what gets handed to flask_script_runner
+  // (becomes env vars for update_post_install_function.sh).
+  const [updateTerminal, setUpdateTerminal] = useState<{
+    open: boolean
+    title: string
+    description: string
+    params: Record<string, string>
+  } | null>(null)
   const [networkUnitSettings, setNetworkUnitSettings] = useState<"Bytes" | "Bits">("Bytes")
   const [loadingUnitSettings, setLoadingUnitSettings] = useState(true)
-  // Code viewer modal state
+  // Code viewer modal state. `version` is the version the user has
+  // installed (read from installed_tools.json); `availableVersion` is
+  // what the on-disk script declares — they differ when an update is
+  // pending. Sprint 12B v2 tweak: the header now shows both so the user
+  // can see at a glance what they have and what they'd get.
   const [codeModal, setCodeModal] = useState<{
     open: boolean
     loading: boolean
     toolName: string
     version: string
+    availableVersion: string
     functionName: string
     source: string
     script: string
     error: string
     deprecated: boolean
-  }>({ open: false, loading: false, toolName: '', version: '', functionName: '', source: '', script: '', error: '', deprecated: false })
+  }>({ open: false, loading: false, toolName: '', version: '', availableVersion: '', functionName: '', source: '', script: '', error: '', deprecated: false })
   const [codeCopied, setCodeCopied] = useState(false)
   
   // Health Monitor suppression settings
@@ -258,12 +294,52 @@ export function Settings() {
   const [loadingInterfaces, setLoadingInterfaces] = useState(true)
   const [savingInterface, setSavingInterface] = useState<string | null>(null)
 
+  // Sprint 13 / issue #195: snippets storage selector. The bash helper
+  // resolves it on first GPU passthrough and saves to config.json; this
+  // card surfaces the same setting so the user can see/change it from
+  // the Monitor without touching JSON or running bash interactively.
+  const [snippetsStorage, setSnippetsStorage] = useState<string>("")
+  const [snippetsCandidates, setSnippetsCandidates] = useState<Array<{ name: string; type: string; active: boolean }>>([])
+  const [snippetsSaving, setSnippetsSaving] = useState(false)
+
+  const loadSnippetsStorage = async () => {
+    try {
+      const data = await fetchApi("/api/proxmenux/snippets-storage")
+      if (data.success) {
+        setSnippetsStorage(data.selected || "")
+        setSnippetsCandidates(data.candidates || [])
+      }
+    } catch (err) {
+      console.error("Failed to load snippets storage candidates:", err)
+    }
+  }
+
+  const saveSnippetsStorage = async (storage: string) => {
+    if (!storage || storage === snippetsStorage) return
+    setSnippetsSaving(true)
+    try {
+      const data = await fetchApi("/api/proxmenux/snippets-storage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storage }),
+      })
+      if (data.success) {
+        setSnippetsStorage(storage)
+      }
+    } catch (err) {
+      console.error("Failed to save snippets storage:", err)
+    } finally {
+      setSnippetsSaving(false)
+    }
+  }
+
   useEffect(() => {
   loadProxmenuxTools()
   getUnitsSettings()
   loadHealthSettings()
   loadRemoteStorages()
   loadNetworkInterfaces()
+  loadSnippetsStorage()
   }, [])
 
   const loadProxmenuxTools = async () => {
@@ -271,6 +347,9 @@ export function Settings() {
       const data = await fetchApi("/api/proxmenux/installed-tools")
       if (data.success) {
         setProxmenuxTools(data.installed_tools || [])
+        // Sprint 12B: backend computes the count, no need to derive it
+        // from has_update on every render.
+        setUpdatesAvailableCount(data.updates_available_count || 0)
       }
     } catch (err) {
       console.error("Failed to load ProxMenux tools:", err)
@@ -279,8 +358,92 @@ export function Settings() {
     }
   }
 
+  // Sprint 12B: launch the script terminal for one or many post-install
+  // function updates. `entries` is a list of (source, function, key)
+  // triples joined into the FUNCTIONS_BATCH env var the wrapper script
+  // understands. After the terminal closes we reload the tools list so
+  // the freshly-applied versions are reflected in the cards.
+  const runPostInstallUpdates = (entries: Array<{ source: string; function: string; key: string; name: string }>) => {
+    if (entries.length === 0) return
+    const batch = entries.map(e => `${e.source}:${e.function}:${e.key}`).join("\n")
+    const title = entries.length === 1
+      ? `Update: ${entries[0].name}`
+      : `Update ${entries.length} optimizations`
+    const description = entries.length === 1
+      ? `Re-running ${entries[0].function} from the ${entries[0].source} flow.`
+      : `Re-running ${entries.length} post-install functions in sequence.`
+    setUpdateTerminal({
+      open: true,
+      title,
+      description,
+      params: {
+        EXECUTION_MODE: "web",
+        FUNCTIONS_BATCH: batch,
+      },
+    })
+  }
+
+  const closeUpdateTerminal = async () => {
+    setUpdateTerminal(null)
+    // Sprint 12B v2: force the server-side rescan FIRST, then refetch
+    // the tools list. The previous order (fetch + scan in parallel)
+    // raced — the fetch returned the stale cache before the scan had a
+    // chance to update it, so the badge and the purple cards stuck
+    // around until the user hit refresh. Backend's _ensure_fresh_cache
+    // also auto-rescans on file mtime change, but we keep the explicit
+    // POST here as a belt-and-braces signal that an update just landed.
+    try {
+      await fetchApi("/api/updates/post-install/scan", { method: "POST" })
+    } catch {
+      // Auto-refresh on the next read path will still pick up the
+      // change via _ensure_fresh_cache — this catch is just to keep
+      // the close flow non-blocking on transient errors.
+    }
+    loadProxmenuxTools()
+  }
+
+  // Sprint 12B v2: click on a tool's update icon → run the update
+  // straight away. If the tool's source is recorded (modern entries) we
+  // re-run that flow; otherwise (legacy bool entries from before Sprint
+  // 12A) we default to `auto`. Per user feedback the previous "pick
+  // auto/custom" picker was confusing — the system already knows the
+  // available version, and updating doesn't need to ask which flavour
+  // to install in. The user can always re-install via the
+  // customizable post-install flow if they want different parameters.
+  const handleSingleToolUpdate = (tool: ProxMenuxTool) => {
+    if (!tool.has_update) return
+    const source = tool.source || "auto"
+    runPostInstallUpdates([{
+      source,
+      function: deriveFunctionName(tool, source),
+      key: tool.key,
+      name: tool.name,
+    }])
+  }
+
+  // Backend exposes both function_auto and function_custom per tool so
+  // that legacy bool entries (where the user picks the source at update
+  // time) can route to the correct function in the chosen flow.
+  // When the source is recorded, `function` is already correct.
+  const deriveFunctionName = (tool: ProxMenuxTool, source: string): string => {
+    if (source === "auto") return tool.function_auto || tool.function || ""
+    if (source === "custom") return tool.function_custom || tool.function || ""
+    return tool.function || ""
+  }
+
   const viewToolSource = async (tool: ProxMenuxTool) => {
-    setCodeModal({ open: true, loading: true, toolName: tool.name, version: tool.version || '1.0', functionName: '', source: '', script: '', error: '', deprecated: !!tool.deprecated })
+    setCodeModal({
+      open: true,
+      loading: true,
+      toolName: tool.name,
+      version: tool.version || '1.0',
+      availableVersion: tool.available_version || tool.version || '1.0',
+      functionName: '',
+      source: '',
+      script: '',
+      error: '',
+      deprecated: !!tool.deprecated,
+    })
     try {
       const data = await fetchApi(`/api/proxmenux/tool-source/${tool.key}`)
       if (data.success) {
@@ -819,13 +982,14 @@ export function Settings() {
                 {remoteStorages.map((storage) => {
                   const isExcluded = storage.exclude_health || storage.exclude_notifications
                   const isSaving = savingStorage === storage.name
-                  const isOffline = storage.status === 'error' || storage.total === 0
-                  
+                  const isNamespaceRestricted = storage.status === 'namespace_restricted'
+                  const isOffline = !isNamespaceRestricted && (storage.status === 'error' || storage.total === 0)
+
                   return (
                     <div key={storage.name} className="grid grid-cols-[1fr_auto_auto] gap-4 py-3 items-center">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${
-                          isOffline ? 'bg-red-500' : 'bg-green-500'
+                          isOffline ? 'bg-red-500' : isNamespaceRestricted ? 'bg-blue-400' : 'bg-green-500'
                         }`} />
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
@@ -836,6 +1000,9 @@ export function Settings() {
                           </div>
                           {isOffline && (
                             <p className="text-[11px] text-red-400 mt-0.5">Offline or unavailable</p>
+                          )}
+                          {isNamespaceRestricted && (
+                            <p className="text-[11px] text-blue-400 mt-0.5">Reachable; datastore size hidden by ACL</p>
                           )}
                         </div>
                       </div>
@@ -1023,8 +1190,63 @@ export function Settings() {
         </CardContent>
       </Card>
 
+      {/* Health Monitor Thresholds — placed above Notifications because the
+          values configured here drive what triggers the notifications below. */}
+      <HealthThresholds />
+
       {/* Notification Settings */}
       <NotificationSettings />
+
+      {/* Issue #195: snippets storage selector. Only renders when more
+          than one storage advertises content=snippets — on a typical
+          standalone host with just `local` there's nothing to choose,
+          so showing an empty selector would be noise. */}
+      {snippetsCandidates.length > 1 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-cyan-500" />
+              <CardTitle>Snippets storage</CardTitle>
+            </div>
+            <CardDescription>
+              Where ProxMenux installs hookscripts (e.g. the GPU passthrough guard for VMs/LXCs).
+              Pick a shared storage in cluster setups so VMs and LXCs migrate cleanly between nodes —
+              <code className="mx-1">local</code>
+              is node-specific and breaks migration.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
+              <Select value={snippetsStorage || ""} onValueChange={saveSnippetsStorage} disabled={snippetsSaving}>
+                <SelectTrigger className="w-full md:w-72">
+                  <SelectValue placeholder="Pick a storage…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {snippetsCandidates.map(c => (
+                    <SelectItem key={c.name} value={c.name} disabled={!c.active}>
+                      {c.name}
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {c.type}{!c.active && " · inactive"}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {snippetsSaving && (
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Saving…
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Existing VMs/LXCs already configured with the previous storage keep working.
+              Only new GPU passthrough operations (or running &quot;sync hookscripts&quot; on the host)
+              will use the new selection.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ProxMenux Optimizations */}
       <Card>
@@ -1050,21 +1272,59 @@ export function Settings() {
             <div className="space-y-2">
               <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
                 <span className="text-sm font-medium text-muted-foreground">Installed Tools</span>
-                <span className="text-sm font-semibold text-orange-500">{proxmenuxTools.length} active</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-orange-500">{proxmenuxTools.length} active</span>
+                  {/* Sprint 12B: count badge that doubles as the trigger
+                      for the multi-select update modal. Only shown when
+                      at least one tool has an available update. */}
+                  {updatesAvailableCount > 0 && (
+                    <button
+                      onClick={() => {
+                        // Sprint 12B v2: pre-select every available
+                        // update. The user clicks the badge already
+                        // intending to apply them — defaulting to all
+                        // saves a tick when the common case is "update
+                        // everything".
+                        const initial = new Set<string>(
+                          proxmenuxTools.filter(t => t.has_update).map(t => t.key)
+                        )
+                        setSelectedUpdates(initial)
+                        setUpdateModalOpen(true)
+                      }}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-purple-300 bg-purple-500/15 border border-purple-500/40 hover:bg-purple-500/25 transition-colors rounded-full px-3 py-1"
+                      title="View available updates"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {updatesAvailableCount} {updatesAvailableCount === 1 ? 'update' : 'updates'}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {proxmenuxTools.map((tool) => {
                   const clickable = !!tool.has_source
                   const isDeprecated = !!tool.deprecated
+                  // Sprint 12B: the card turns purple-tinted when an
+                  // update is available — replaces the normal muted
+                  // styling so the user sees at a glance which tools
+                  // need attention. Click on the body still opens the
+                  // source viewer; the small ArrowUpCircle on the right
+                  // is the dedicated update trigger.
+                  const hasUpdate = !!tool.has_update
+                  const baseClasses = hasUpdate
+                    ? 'border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 hover:border-purple-500/60'
+                    : 'bg-muted/50 border-border hover:bg-muted hover:border-orange-500/40'
                   return (
                     <div
                       key={tool.key}
                       onClick={clickable ? () => viewToolSource(tool) : undefined}
-                      className={`flex items-center justify-between gap-2 p-3 bg-muted/50 rounded-lg border border-border transition-colors ${clickable ? 'hover:bg-muted hover:border-orange-500/40 cursor-pointer' : ''}`}
+                      className={`flex items-center justify-between gap-2 p-3 rounded-lg border transition-colors ${baseClasses} ${clickable ? 'cursor-pointer' : ''}`}
                       title={clickable ? (isDeprecated ? 'Legacy optimization — click to view source' : 'Click to view source code') : undefined}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isDeprecated ? 'bg-amber-500' : 'bg-green-500'}`} />
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                          hasUpdate ? 'bg-purple-400' : (isDeprecated ? 'bg-amber-500' : 'bg-green-500')
+                        }`} />
                         <span className="text-sm font-medium truncate">{tool.name}</span>
                         {isDeprecated && (
                           <span className="text-[9px] uppercase tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded flex-shrink-0">
@@ -1072,7 +1332,24 @@ export function Settings() {
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono flex-shrink-0">v{tool.version || '1.0'}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {hasUpdate ? (
+                          <>
+                            <span className="text-[10px] text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono">
+                              v{tool.version || '1.0'} → v{tool.available_version || '?'}
+                            </span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleSingleToolUpdate(tool) }}
+                              className="text-purple-300 hover:text-purple-200 transition-colors"
+                              title={`Update ${tool.name} to v${tool.available_version}`}
+                            >
+                              <ArrowUpCircle className="h-4 w-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">v{tool.version || '1.0'}</span>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
@@ -1106,7 +1383,17 @@ export function Settings() {
                   <p className="text-xs text-muted-foreground">
                     {codeModal.functionName && <span className="font-mono">{codeModal.functionName}()</span>}
                     {codeModal.script && <span> — {codeModal.script}</span>}
-                    {codeModal.version && <span className="ml-2 bg-muted px-1.5 py-0.5 rounded font-mono">v{codeModal.version}</span>}
+                    {/* Sprint 12B v2: when an update is pending the user
+                        sees `v1.0 → v1.1` so the source viewer matches
+                        the badge in the card. When no update, just the
+                        single installed version. */}
+                    {codeModal.version && codeModal.availableVersion && codeModal.availableVersion !== codeModal.version ? (
+                      <span className="ml-2 bg-purple-500/15 text-purple-300 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono">
+                        v{codeModal.version} → v{codeModal.availableVersion}
+                      </span>
+                    ) : codeModal.version ? (
+                      <span className="ml-2 bg-muted px-1.5 py-0.5 rounded font-mono">v{codeModal.version}</span>
+                    ) : null}
                   </p>
                 </div>
               </div>
@@ -1150,6 +1437,132 @@ export function Settings() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Sprint 12B: multi-select Update modal — opened from the
+          "X updates" badge in the Optimizations card header. The user
+          ticks the tools they want to update, hits Update Selected,
+          and the wrapper script runs them all in one terminal session. */}
+      {updateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setUpdateModalOpen(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-3">
+                <Sparkles className="h-5 w-5 text-purple-400" />
+                <div>
+                  <h3 className="text-sm font-semibold">Available updates</h3>
+                  <p className="text-xs text-muted-foreground">
+                    {updatesAvailableCount} {updatesAvailableCount === 1 ? 'optimization' : 'optimizations'} can be updated to a newer version.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setUpdateModalOpen(false)}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4 space-y-2">
+              {/* Sprint 12B v2: every row is selectable. Legacy bool
+                  entries (no recorded source) default to the auto flow
+                  on update — the previous "pick source first" path
+                  required an extra click for what is in practice always
+                  the same answer. */}
+              {proxmenuxTools.filter(t => t.has_update).map(tool => {
+                const isSelected = selectedUpdates.has(tool.key)
+                return (
+                  <label
+                    key={tool.key}
+                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      isSelected
+                        ? 'border-purple-500/50 bg-purple-500/10'
+                        : 'border-border bg-muted/40 hover:bg-muted/60'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const next = new Set(selectedUpdates)
+                        if (e.target.checked) next.add(tool.key); else next.delete(tool.key)
+                        setSelectedUpdates(next)
+                      }}
+                      className="mt-1 h-4 w-4 accent-purple-500 cursor-pointer"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium">{tool.name}</span>
+                        <span className="text-[10px] text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono">
+                          v{tool.version || '1.0'} → v{tool.available_version || '?'}
+                        </span>
+                      </div>
+                      {tool.description && (
+                        <p className="text-xs text-muted-foreground mt-1 leading-snug">{tool.description}</p>
+                      )}
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+
+            <div className="flex items-center justify-between p-4 border-t border-border">
+              <span className="text-xs text-muted-foreground">
+                {selectedUpdates.size} of {updatesAvailableCount} selected
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setUpdateModalOpen(false)}
+                  className="px-4 py-1.5 text-xs rounded-md bg-muted hover:bg-muted/80 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={selectedUpdates.size === 0}
+                  onClick={() => {
+                    const entries = proxmenuxTools
+                      .filter(t => selectedUpdates.has(t.key))
+                      .map(t => ({
+                        source: t.source || 'auto',
+                        function: deriveFunctionName(t, t.source || 'auto'),
+                        key: t.key,
+                        name: t.name,
+                      }))
+                      .filter(e => !!e.function)
+                    setUpdateModalOpen(false)
+                    setSelectedUpdates(new Set())
+                    runPostInstallUpdates(entries)
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-md bg-purple-500 hover:bg-purple-600 text-white transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
+                >
+                  <ArrowUpCircle className="h-3.5 w-3.5" />
+                  Update selected
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sprint 12B: terminal that runs the update_post_install_function.sh
+          wrapper. The wrapper sources the chosen flow script and invokes
+          one or many functions in sequence (FUNCTIONS_BATCH). On close
+          we refresh the tools list so the new versions show up. */}
+      {updateTerminal?.open && (
+        <ScriptTerminalModal
+          open={updateTerminal.open}
+          onClose={closeUpdateTerminal}
+          scriptPath="/usr/local/share/proxmenux/scripts/post_install/update_post_install_function.sh"
+          scriptName="update_post_install_function"
+          title={updateTerminal.title}
+          description={updateTerminal.description}
+          params={updateTerminal.params}
+        />
       )}
     </div>
   )

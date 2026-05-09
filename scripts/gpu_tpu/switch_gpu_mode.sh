@@ -8,6 +8,35 @@
 # Version     : 1.0
 # Last Updated: 05/04/2026
 # ==========================================================
+# Description:
+# Moves an already-assigned GPU between the two modes it can
+# live in on a Proxmox host:
+#   - VM mode  (bound to vfio-pci, exclusive to one VM)
+#   - LXC mode (bound to the native driver, shared with CTs)
+#
+# Detects the current mode of each selected GPU and applies
+# the host-side changes needed to switch (vfio.conf,
+# blacklist.conf, /etc/modules, initramfs). Also handles the
+# VM/LXC side so the switch doesn't leave dangling config
+# pointing at a GPU the workload can no longer access.
+#
+# Features:
+#  - Multi-GPU selection (uniform current mode enforced)
+#  - SR-IOV guard (blocks VF / active-PF passthrough)
+#  - Blocked-ID policy list (e.g. Intel Arc A770)
+#  - IOMMU-group aware ID collection (sweeps siblings)
+#  - Conflict policy per affected VM/LXC
+#    (keep + disable onboot  OR  remove from config)
+#  - Orphan audio cascade: when a GPU leaves a VM, offer
+#    to remove companion audio hostpci entries and clean
+#    vfio.conf if no other VM still uses those IDs
+#  - Precise BDF regex for hostpci removal
+#    (no substring collision between unrelated GPUs)
+#  - NVIDIA stack sanitize/restore (udev, module-load,
+#    hard-blacklist) depending on target mode
+#  - Rebuilds initramfs only if host config actually changed
+#  - Reboot prompt at the end
+# ==========================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_SCRIPTS_LOCAL="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -28,15 +57,24 @@ screen_capture="/tmp/proxmenux_gpu_switch_mode_screen_$$.txt"
 if [[ -f "$UTILS_FILE" ]]; then
   source "$UTILS_FILE"
 fi
+# Both helper libraries are required for the SR-IOV guard and the audio
+# orphan cascade to work. Surface a loud warning if neither path resolves
+# — the previous behaviour evaluated `declare -F` later and silently
+# disabled the validations, leaving the user thinking they were
+# protected. Audit Tier 6 — `switch_gpu_mode.sh` silent helper loss.
 if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh"
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh"
+else
+  msg_warn "$(translate 'pci_passthrough_helpers.sh missing — SR-IOV / orphan-audio guards will be skipped')"
 fi
 if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh"
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh"
+else
+  msg_warn "$(translate 'gpu_hook_guard_helpers.sh missing — VM hookscript guard will be skipped')"
 fi
 
 load_language
@@ -130,7 +168,7 @@ _get_iommu_group_ids() {
     local dev dev_class vid did
     dev=$(basename "$dev_path")
     dev_class=$(cat "/sys/bus/pci/devices/${dev}/class" 2>/dev/null)
-    [[ "$dev_class" == "0x0604" || "$dev_class" == "0x0600" ]] && continue
+    [[ "$dev_class" == 0x0604* || "$dev_class" == 0x0600* ]] && continue
     vid=$(cat "/sys/bus/pci/devices/${dev}/vendor" 2>/dev/null | sed 's/0x//')
     did=$(cat "/sys/bus/pci/devices/${dev}/device" 2>/dev/null | sed 's/0x//')
     [[ -n "$vid" && -n "$did" ]] && echo "${vid}:${did}"
@@ -978,8 +1016,21 @@ apply_vm_action_for_lxc_mode() {
       # switch-back) or it steals host audio unnecessarily. Enumerate
       # orphan audio hostpci entries and ask the user what to do.
       if declare -F _vm_list_orphan_audio_hostpci >/dev/null 2>&1; then
-        local _orphan_audio
-        _orphan_audio=$(_vm_list_orphan_audio_hostpci "$vmid" "${SELECTED_PCI_SLOTS[0]}")
+        # Concatenate orphan-audio entries across ALL selected GPUs.
+        # The previous code only checked `SELECTED_PCI_SLOTS[0]`, so when
+        # the user switched 2 dGPUs at once and each had its own audio
+        # companion, the second GPU's audio was left dangling in the VM
+        # config. Audit Tier 6 — orphan audio solo del primer slot.
+        local _orphan_audio=""
+        local _slot
+        for _slot in "${SELECTED_PCI_SLOTS[@]}"; do
+          local _piece
+          _piece=$(_vm_list_orphan_audio_hostpci "$vmid" "$_slot")
+          if [[ -n "$_piece" ]]; then
+            [[ -n "$_orphan_audio" ]] && _orphan_audio+=$'\n'
+            _orphan_audio+="$_piece"
+          fi
+        done
         if [[ -n "$_orphan_audio" ]]; then
           local -a _orph_items=()
           local _line _o_idx _o_bdf _o_name
@@ -1111,6 +1162,15 @@ switch_to_vm_mode() {
     msg_ok "$(translate 'IOMMU is already active on this system')" | tee -a "$screen_capture"
   elif grep -qE 'intel_iommu=on|amd_iommu=on' /etc/kernel/cmdline 2>/dev/null || \
        grep -qE 'intel_iommu=on|amd_iommu=on' /etc/default/grub 2>/dev/null; then
+    # Cross-check that IOMMU is *actually* active in the running kernel.
+    # The kernel parameter alone doesn't guarantee functional IOMMU —
+    # if the BIOS toggle is off, /sys/kernel/iommu_groups/ is empty even
+    # though intel_iommu=on is in cmdline. Without this gate we'd write
+    # vfio.conf and after reboot the GPU never gets claimed by VFIO.
+    # Audit Tier 6 — IOMMU check optimista.
+    if ! find /sys/kernel/iommu_groups -mindepth 1 -maxdepth 1 -name '[0-9]*' 2>/dev/null | grep -q .; then
+      msg_warn "$(translate 'intel_iommu/amd_iommu is set in cmdline but no IOMMU groups exist — IOMMU appears disabled in BIOS. Enable VT-d / AMD-Vi in firmware before continuing.')"
+    fi
     _register_iommu_tool
     HOST_CONFIG_CHANGED=true
     msg_ok "$(translate 'IOMMU already configured in kernel parameters')" | tee -a "$screen_capture"

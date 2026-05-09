@@ -17,11 +17,47 @@ Version: 1.1
 import sqlite3
 import json
 import os
+import re
+import subprocess
 import threading
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from pathlib import Path
+
+# `re` and `subprocess` are used in the SMART AUTO-RESOLVE block of
+# `_cleanup_old_errors_impl` (qm/pct status calls + error_key parsing). They
+# were not imported, so the entire auto-resolve loop hit NameError every 5
+# minutes and got silently swallowed by the surrounding `except Exception:
+# pass`. Audit Tier 5 (Health stack — imports faltantes).
+
+import re as _re_disk_base
+
+
+def disk_base_name(name):
+    """Strip a partition suffix from a block device name, namespace-aware.
+
+    The naive `re.sub(r'\\d+$', '', name)` was wrong for NVMe and MMC:
+    - sda1         → sda          (correct)
+    - nvme0n1      → nvme0n1      (already a base — its `n1` is the
+                                   namespace, NOT a partition)
+    - nvme0n1p1    → nvme0n1      (strip `pN` suffix)
+    - mmcblk0p1    → mmcblk0
+    - loop0p1      → loop0
+    Audit Tier 7 — NVMe partitions regex.
+    """
+    if not isinstance(name, str) or not name:
+        return name
+    # Strip leading /dev/ if present so callers can pass either form.
+    bare = name[len('/dev/'):] if name.startswith('/dev/') else name
+    m = _re_disk_base.match(r'^(nvme\d+n\d+|mmcblk\d+|loop\d+)(?:p\d+)?$', bare)
+    if m:
+        return m.group(1)
+    m = _re_disk_base.match(r'^([a-z]+)\d+$', bare)
+    if m:
+        return m.group(1)
+    return bare
+
 
 class HealthPersistence:
     """Manages persistent health error tracking"""
@@ -31,10 +67,16 @@ class HealthPersistence:
     DEFAULT_SUPPRESSION_HOURS = 24
     
     # Mapping from error categories to settings keys
+    # `cpu` (cpu_usage in health_monitor.py:879/892) and `disk` (disk_space in
+    # health_monitor.py:1240) were missing. Without them the per-category
+    # suppression durations configured in the UI silently fall back to the
+    # 24h default for those error types.
     CATEGORY_SETTING_MAP = {
         'temperature': 'suppress_cpu',
+        'cpu': 'suppress_cpu',
         'memory': 'suppress_memory',
         'storage': 'suppress_storage',
+        'disk': 'suppress_storage',
         'disks': 'suppress_disks',
         'network': 'suppress_network',
         'vms': 'suppress_vms',
@@ -169,6 +211,23 @@ class HealthPersistence:
                 count INTEGER DEFAULT 1
             )
         ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS digest_pending (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                channel TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                event_group TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                ts INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                body TEXT NOT NULL
+            )
+        ''')
+        cursor.execute(
+            'CREATE INDEX IF NOT EXISTS idx_digest_pending_channel '
+            'ON digest_pending(channel, ts)'
+        )
         
         # Migration: add missing columns to errors table for existing DBs
         cursor.execute("PRAGMA table_info(errors)")
@@ -341,8 +400,11 @@ class HealthPersistence:
         # ─── Startup migration: clean stale errors from previous bug ───
         # Previous versions had a bug where journal-based errors were
         # re-processed every cycle, causing infinite notification loops.
-        # On upgrade, clean up any stale errors that are stuck in the
-        # active state from the old buggy behavior.
+        # The cleanup wipes any stale entries left over from that buggy
+        # behaviour, but it must run **only once per upgrade**, not on every
+        # restart. Otherwise a real, ongoing failure (a disk dying for two+
+        # hours while the host is rebooted) loses its `first_seen` history
+        # and looks "new" again on the next boot. Audit Tier 5 — Health stack.
         #
         # IMPORTANT: Only cleans the `errors` table (health monitor state).
         # The `disk_observations` table is a PERMANENT historical record
@@ -351,27 +413,44 @@ class HealthPersistence:
         #
         # Covers: disk I/O (smart_*, disk_*), VM/CT (vm_*, ct_*, vmct_*),
         # and log errors (log_*) — all journal-sourced categories.
+        _STARTUP_CLEANUP_VERSION = '1'
         try:
             cursor = conn.cursor()
-            cutoff = (datetime.now() - timedelta(hours=2)).isoformat()
-            cursor.execute('''
-                DELETE FROM errors
-                WHERE (   error_key LIKE 'smart_%'
-                       OR error_key LIKE 'disk_%'
-                       OR error_key LIKE 'vm_%'
-                       OR error_key LIKE 'ct_%'
-                       OR error_key LIKE 'vmct_%'
-                       OR error_key LIKE 'log_%'
-                      )
-                  AND resolved_at IS NULL
-                  AND acknowledged = 0
-                  AND last_seen < ?
-            ''', (cutoff,))
-            cleaned_errors = cursor.rowcount
+            cursor.execute(
+                'SELECT setting_value FROM user_settings WHERE setting_key = ?',
+                ('startup_cleanup_version',)
+            )
+            row = cursor.fetchone()
+            already_run = row and row[0] == _STARTUP_CLEANUP_VERSION
 
-            if cleaned_errors > 0:
+            if not already_run:
+                cutoff = (datetime.now() - timedelta(hours=2)).isoformat()
+                cursor.execute('''
+                    DELETE FROM errors
+                    WHERE (   error_key LIKE 'smart_%'
+                           OR error_key LIKE 'disk_%'
+                           OR error_key LIKE 'vm_%'
+                           OR error_key LIKE 'ct_%'
+                           OR error_key LIKE 'vmct_%'
+                           OR error_key LIKE 'log_%'
+                          )
+                      AND resolved_at IS NULL
+                      AND acknowledged = 0
+                      AND last_seen < ?
+                ''', (cutoff,))
+                cleaned_errors = cursor.rowcount
+
+                cursor.execute('''
+                    INSERT OR REPLACE INTO user_settings
+                        (setting_key, setting_value, updated_at)
+                    VALUES (?, ?, ?)
+                ''', ('startup_cleanup_version', _STARTUP_CLEANUP_VERSION,
+                      datetime.now().isoformat()))
+
                 conn.commit()
-                print(f"[HealthPersistence] Startup cleanup: removed {cleaned_errors} stale error(s) from health monitor")
+                if cleaned_errors > 0:
+                    print(f"[HealthPersistence] One-time startup cleanup (v{_STARTUP_CLEANUP_VERSION}): "
+                          f"removed {cleaned_errors} stale error(s) from health monitor")
         except Exception as e:
             print(f"[HealthPersistence] Startup cleanup warning: {e}")
 
@@ -404,7 +483,7 @@ class HealthPersistence:
             disk_match = re.search(r'(?:smart_|disk_fs_|disk_|io_error_)(?:/dev/)?([a-z]{2,4}[a-z0-9]*)', error_key)
             if disk_match:
                 disk_name = disk_match.group(1)
-                base_disk = re.sub(r'\d+$', '', disk_name) if disk_name[-1].isdigit() else disk_name
+                base_disk = disk_base_name(disk_name)
                 if not os.path.exists(f'/dev/{disk_name}') and not os.path.exists(f'/dev/{base_disk}'):
                     return {'type': 'skipped', 'needs_notification': False,
                             'reason': f'Disk /dev/{disk_name} no longer exists'}
@@ -417,7 +496,7 @@ class HealthPersistence:
 
             cursor.execute('''
                 SELECT id, acknowledged, resolved_at, category, severity, first_seen,
-                       notification_sent, suppression_hours
+                       notification_sent, suppression_hours, acknowledged_at
                 FROM errors WHERE error_key = ?
             ''', (error_key,))
             existing = cursor.fetchone()
@@ -425,7 +504,8 @@ class HealthPersistence:
             event_info = {'type': 'updated', 'needs_notification': False}
 
             if existing:
-                err_id, ack, resolved_at, old_cat, old_severity, first_seen, notif_sent, stored_suppression = existing
+                (err_id, ack, resolved_at, old_cat, old_severity, first_seen,
+                 notif_sent, stored_suppression, acknowledged_at) = existing
 
                 if ack == 1:
                     # SAFETY OVERRIDE: Critical CPU temperature ALWAYS re-triggers
@@ -450,53 +530,49 @@ class HealthPersistence:
                     if sup_hours == -1:
                         return {'type': 'skipped_acknowledged', 'needs_notification': False}
 
-                    # Time-limited suppression
+                    # Time-limited suppression. Prefer `acknowledged_at` as the
+                    # reference time — that's what the user-dismiss path writes.
+                    # `_acknowledge_error_impl` does NOT touch `resolved_at`, so
+                    # falling through to the resolved_at-only check broke the
+                    # dismiss for ALL non-journal categories (vms, services,
+                    # cpu/memory, network, storage, security, updates): the
+                    # detector re-fires every 5 min and the suppression window
+                    # never starts. Audit Tier 5 (Health stack — `_record_error_impl`).
+                    ref_time_str = acknowledged_at or resolved_at
                     still_suppressed = False
-                    if resolved_at:
+                    if ref_time_str:
                         try:
-                            resolved_dt = datetime.fromisoformat(resolved_at)
-                            elapsed_hours = (datetime.now() - resolved_dt).total_seconds() / 3600
+                            ref_dt = datetime.fromisoformat(ref_time_str)
+                            elapsed_hours = (datetime.now() - ref_dt).total_seconds() / 3600
                             still_suppressed = elapsed_hours < sup_hours
                         except Exception:
                             pass
 
                     if still_suppressed:
                         return {'type': 'skipped_acknowledged', 'needs_notification': False}
-                    else:
-                        # Suppression expired.
-                        # Journal-sourced errors (logs AND disk I/O) should NOT
-                        # re-trigger after suppression.  The journal always contains
-                        # old messages, so re-creating the error causes an infinite
-                        # notification loop.  Delete the stale record instead.
-                        is_journal_error = (
-                            error_key.startswith('log_persistent_')
-                            or error_key.startswith('log_spike_')
-                            or error_key.startswith('log_cascade_')
-                            or error_key.startswith('log_critical_')
-                            or error_key.startswith('smart_')
-                            or error_key.startswith('disk_')
-                            or error_key.startswith('io_error_')
-                            or category == 'logs'
-                        )
-                        if is_journal_error:
-                            cursor.execute('DELETE FROM errors WHERE error_key = ?', (error_key,))
-                            conn.commit()
-                            return {'type': 'skipped_expired_journal', 'needs_notification': False}
 
-                        # For non-log errors (hardware, services, etc.),
-                        # re-triggering is correct -- the condition is real and still present.
-                        cursor.execute('DELETE FROM errors WHERE error_key = ?', (error_key,))
-                        cursor.execute('''
-                            INSERT INTO errors
-                            (error_key, category, severity, reason, details, first_seen, last_seen)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
-                        ''', (error_key, category, severity, reason, details_json, now, now))
-                        event_info = {'type': 'new', 'needs_notification': True}
-                        self._record_event(cursor, 'new', error_key,
-                                          {'severity': severity, 'reason': reason,
-                                           'note': 'Re-triggered after suppression expired'})
-                        conn.commit()
-                        return event_info
+                    # Suppression expired — re-trigger uniformly across categories.
+                    # Previous code special-cased journal-sourced errors (logs/smart/
+                    # disk/io_error) with a DELETE-without-INSERT workaround to dodge
+                    # an infinite-notification loop. That loop was a symptom of the
+                    # `acknowledged_at` bug fixed in Sprint 7.7 — without it,
+                    # suppression never actually started and every cycle re-triggered.
+                    # With suppression honoring acknowledged_at, the legitimate
+                    # behavior is: when the window expires AND the underlying
+                    # condition is still present in the journal, raise it once and
+                    # let the user re-dismiss if they want.
+                    cursor.execute('DELETE FROM errors WHERE error_key = ?', (error_key,))
+                    cursor.execute('''
+                        INSERT INTO errors
+                        (error_key, category, severity, reason, details, first_seen, last_seen)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ''', (error_key, category, severity, reason, details_json, now, now))
+                    event_info = {'type': 'new', 'needs_notification': True}
+                    self._record_event(cursor, 'new', error_key,
+                                      {'severity': severity, 'reason': reason,
+                                       'note': 'Re-triggered after suppression expired'})
+                    conn.commit()
+                    return event_info
 
                 # Not acknowledged - update existing active error
                 cursor.execute('''
@@ -647,12 +723,18 @@ class HealthPersistence:
         Remove/resolve a specific error immediately.
         Used when the condition that caused the error no longer exists
         (e.g., storage became available again, CPU temp recovered).
-        
+
         For acknowledged errors: if the condition resolved on its own,
         we delete the record entirely so it can re-trigger as a fresh
         event if the condition returns later.
+
+        Acquires `_db_lock` to serialize against concurrent record/cleanup
+        writes — without it, SQLite's WAL still serializes the actual write,
+        but read-modify-write sequences (the SELECT acknowledged + DELETE/UPDATE
+        pair below) could race with another thread mutating the same row in
+        between. Audit Tier 5 (Health stack — race conditions sin _db_lock).
         """
-        with self._db_connection() as conn:
+        with self._db_lock, self._db_connection() as conn:
             cursor = conn.cursor()
             now = datetime.now().isoformat()
 
@@ -793,9 +875,16 @@ class HealthPersistence:
                     'suppression_hours': sup_hours
                 })
 
-                # Cascade acknowledge: when dismissing a group check
+                # Cascade acknowledge: when dismissing a group check, also
+                # silence the individual children that compose it. Without
+                # this, dismissing the aggregate ("an avalanche of log errors")
+                # left the per-pattern children active and notifying separately.
+                # `log_error_cascade` and `log_error_spike` both group children
+                # of the form `log_critical_<hash>` (see _check_logs_with_persistence).
                 CASCADE_PREFIXES = {
                     'log_persistent_errors': 'log_persistent_',
+                    'log_error_cascade': 'log_critical_',
+                    'log_error_spike': 'log_critical_',
                 }
                 child_prefix = CASCADE_PREFIXES.get(error_key)
                 if child_prefix:
@@ -1098,8 +1187,12 @@ class HealthPersistence:
         # Clean up errors for resources that no longer exist (VMs/CTs deleted, disks removed)
         self._cleanup_stale_resources()
 
-        # Clean up disk observations for devices that no longer exist
-        self.cleanup_orphan_observations()
+        # NOTE: cleanup_orphan_observations() is deliberately NOT invoked here.
+        # Running it on the 5-minute auto-resolve cycle silently dismissed legitimate
+        # observations (ZFS pool errors, ATA host events, dm-* aliases) before the user
+        # could see them in the UI history, even though notifications were already sent.
+        # The cleanup is still available as an explicit user action via
+        # POST /api/health/cleanup-disconnected-disks (flask_health_routes.py).
     
     def _cleanup_stale_resources(self):
         """Resolve errors for resources that no longer exist.
@@ -1150,17 +1243,38 @@ class HealthPersistence:
         def get_cluster_status():
             nonlocal _cluster_status_cache
             if _cluster_status_cache is None:
+                # Primary signal: presence of `/etc/corosync/corosync.conf`.
+                # That file only exists on clustered nodes and is the same
+                # check `health_monitor._check_pve_services` uses for the
+                # corosync gate. Substring match on "Cluster information"
+                # was fragile against locale/translations and PVE upgrades
+                # renaming the header. Audit Tier 6 — `_cleanup_stale_resources::get_cluster_status`.
+                is_cluster = os.path.isfile('/etc/corosync/corosync.conf')
+                nodes_text = ''
                 try:
                     result = subprocess.run(
                         ['pvecm', 'status'],
                         capture_output=True, text=True, timeout=5
                     )
-                    _cluster_status_cache = {
-                        'is_cluster': result.returncode == 0 and 'Cluster information' in result.stdout,
-                        'nodes': result.stdout if result.returncode == 0 else ''
-                    }
+                    if result.returncode == 0:
+                        nodes_text = result.stdout
+                        # Confirm via any of multiple section markers that
+                        # appear on real cluster nodes, not just one.
+                        if not is_cluster:
+                            stdout_l = nodes_text.lower()
+                            is_cluster = any(
+                                marker in stdout_l
+                                for marker in ('cluster information',
+                                               'quorum information',
+                                               'membership information')
+                            )
                 except Exception:
-                    _cluster_status_cache = {'is_cluster': True, 'nodes': ''}  # Assume cluster on error
+                    # On error, fall back to corosync.conf signal alone.
+                    pass
+                _cluster_status_cache = {
+                    'is_cluster': is_cluster,
+                    'nodes': nodes_text,
+                }
             return _cluster_status_cache
         
         def get_network_interfaces():
@@ -1255,18 +1369,25 @@ class HealthPersistence:
             last_seen_hours = get_age_hours(last_seen)
             
             # === VM/CT ERRORS ===
-            # Check if VM/CT still exists (covers: vms/vmct categories, vm_*, ct_*, vmct_* error keys)
-            # Also check if the reason mentions a VM/CT that no longer exists
-            vmid_from_key = extract_vmid_from_text(error_key) if error_key else None
-            vmid_from_reason = extract_vmid_from_text(reason) if reason else None
-            vmid = vmid_from_key or vmid_from_reason
-            
-            if vmid and not check_vm_ct_cached(vmid):
-                # VM/CT doesn't exist - resolve regardless of category
+            # Only attempt VMID resolution when the error context is actually VM/CT-related.
+            # The loose regex patterns in extract_vmid_from_text (kvm/Failed to start/starting...failed)
+            # otherwise match any 3+ digit number in unrelated disk/network/service messages, and the
+            # if/elif chain below would short-circuit the legitimate category-specific check.
+            is_vm_ct_context = (
+                category in ('vms', 'vmct') or
+                (error_key and (error_key.startswith('vm_') or error_key.startswith('ct_') or error_key.startswith('vmct_')))
+            )
+            vmid = None
+            if is_vm_ct_context:
+                vmid_from_key = extract_vmid_from_text(error_key) if error_key else None
+                vmid_from_reason = extract_vmid_from_text(reason) if reason else None
+                vmid = vmid_from_key or vmid_from_reason
+
+            if is_vm_ct_context and vmid and not check_vm_ct_cached(vmid):
                 should_resolve = True
                 resolution_reason = f'VM/CT {vmid} deleted'
-            elif category in ('vms', 'vmct') or (error_key and (error_key.startswith('vm_') or error_key.startswith('ct_') or error_key.startswith('vmct_'))):
-                # VM/CT category but ID couldn't be extracted - resolve if stale
+            elif is_vm_ct_context:
+                # VM/CT context but ID couldn't be extracted - resolve if stale
                 if not vmid and last_seen_hours > 1:
                     should_resolve = True
                     resolution_reason = 'VM/CT error stale (>1h, ID not found)'
@@ -1291,7 +1412,7 @@ class HealthPersistence:
                         if disk_match:
                             disk_name = disk_match.group(1)
                             # Remove partition number for base device check
-                            base_disk = re.sub(r'\d+$', '', disk_name) if disk_name[-1].isdigit() else disk_name
+                            base_disk = disk_base_name(disk_name)
                             disk_path = f'/dev/{disk_name}'
                             base_path = f'/dev/{base_disk}'
                             if not os.path.exists(disk_path) and not os.path.exists(base_path):
@@ -1969,65 +2090,70 @@ class HealthPersistence:
         with self._db_lock:
             now = datetime.now().isoformat()
             try:
-                conn = self._get_conn()
-                cursor = conn.cursor()
-                
-                # Consolidate: if serial is known and an old entry exists with
-                # a different device_name (e.g. 'ata8' instead of 'sdh'),
-                # update that entry's device_name so observations carry over.
-                if serial:
-                    cursor.execute('''
-                        SELECT id, device_name FROM disk_registry
-                        WHERE serial = ? AND serial != '' AND device_name != ?
-                    ''', (serial, device_name))
-                    old_rows = cursor.fetchall()
-                    for old_id, old_dev in old_rows:
-                        # Only consolidate ATA names -> block device names
-                        if old_dev.startswith('ata') and not device_name.startswith('ata'):
-                            # Check if target (device_name, serial) already exists
-                            cursor.execute(
-                                'SELECT id FROM disk_registry WHERE device_name = ? AND serial = ?',
-                                (device_name, serial))
-                            existing = cursor.fetchone()
-                            if existing:
-                                # Merge: move observations from old -> existing, then delete old
+                # Use the context-managed connection so a fail in any cursor
+                # call below still releases the SQLite handle. The previous
+                # pattern only closed inside the success path, so a hardware
+                # error or a corrupted row left the connection orphaned with
+                # `timeout=30, busy_timeout=10000` — under load that
+                # serialised every other writer.
+                with self._db_connection() as conn:
+                    cursor = conn.cursor()
+
+                    # Consolidate: if serial is known and an old entry exists with
+                    # a different device_name (e.g. 'ata8' instead of 'sdh'),
+                    # update that entry's device_name so observations carry over.
+                    if serial:
+                        cursor.execute('''
+                            SELECT id, device_name FROM disk_registry
+                            WHERE serial = ? AND serial != '' AND device_name != ?
+                        ''', (serial, device_name))
+                        old_rows = cursor.fetchall()
+                        for old_id, old_dev in old_rows:
+                            # Only consolidate ATA names -> block device names
+                            if old_dev.startswith('ata') and not device_name.startswith('ata'):
+                                # Check if target (device_name, serial) already exists
                                 cursor.execute(
-                                    'UPDATE disk_observations SET disk_registry_id = ? WHERE disk_registry_id = ?',
-                                    (existing[0], old_id))
-                                cursor.execute('DELETE FROM disk_registry WHERE id = ?', (old_id,))
-                            else:
-                                # Rename the old entry to the real block device name
-                                cursor.execute(
-                                    'UPDATE disk_registry SET device_name = ?, model = COALESCE(?, model), '
-                                    'size_bytes = COALESCE(?, size_bytes), last_seen = ?, removed = 0 '
-                                    'WHERE id = ?',
-                                    (device_name, model, size_bytes, now, old_id))
-                
-                # If no serial provided, check if a record WITH serial already exists for this device
-                # This prevents creating duplicate entries (one with serial, one without)
-                effective_serial = serial or ''
-                if not serial:
+                                    'SELECT id FROM disk_registry WHERE device_name = ? AND serial = ?',
+                                    (device_name, serial))
+                                existing = cursor.fetchone()
+                                if existing:
+                                    # Merge: move observations from old -> existing, then delete old
+                                    cursor.execute(
+                                        'UPDATE disk_observations SET disk_registry_id = ? WHERE disk_registry_id = ?',
+                                        (existing[0], old_id))
+                                    cursor.execute('DELETE FROM disk_registry WHERE id = ?', (old_id,))
+                                else:
+                                    # Rename the old entry to the real block device name
+                                    cursor.execute(
+                                        'UPDATE disk_registry SET device_name = ?, model = COALESCE(?, model), '
+                                        'size_bytes = COALESCE(?, size_bytes), last_seen = ?, removed = 0 '
+                                        'WHERE id = ?',
+                                        (device_name, model, size_bytes, now, old_id))
+
+                    # If no serial provided, check if a record WITH serial already exists for this device
+                    # This prevents creating duplicate entries (one with serial, one without)
+                    effective_serial = serial or ''
+                    if not serial:
+                        cursor.execute('''
+                            SELECT serial FROM disk_registry
+                            WHERE device_name = ? AND serial != ''
+                            ORDER BY last_seen DESC LIMIT 1
+                        ''', (device_name,))
+                        existing = cursor.fetchone()
+                        if existing and existing[0]:
+                            effective_serial = existing[0]  # Use the existing serial
+
                     cursor.execute('''
-                        SELECT serial FROM disk_registry 
-                        WHERE device_name = ? AND serial != '' 
-                        ORDER BY last_seen DESC LIMIT 1
-                    ''', (device_name,))
-                    existing = cursor.fetchone()
-                    if existing and existing[0]:
-                        effective_serial = existing[0]  # Use the existing serial
-                
-                cursor.execute('''
-                    INSERT INTO disk_registry (device_name, serial, model, size_bytes, first_seen, last_seen, removed)
-                    VALUES (?, ?, ?, ?, ?, ?, 0)
-                    ON CONFLICT(device_name, serial) DO UPDATE SET
-                        model = COALESCE(excluded.model, model),
-                        size_bytes = COALESCE(excluded.size_bytes, size_bytes),
-                        last_seen = excluded.last_seen,
-                        removed = 0
-                ''', (device_name, effective_serial, model, size_bytes, now, now))
-                
-                conn.commit()
-                conn.close()
+                        INSERT INTO disk_registry (device_name, serial, model, size_bytes, first_seen, last_seen, removed)
+                        VALUES (?, ?, ?, ?, ?, ?, 0)
+                        ON CONFLICT(device_name, serial) DO UPDATE SET
+                            model = COALESCE(excluded.model, model),
+                            size_bytes = COALESCE(excluded.size_bytes, size_bytes),
+                            last_seen = excluded.last_seen,
+                            removed = 0
+                    ''', (device_name, effective_serial, model, size_bytes, now, now))
+
+                    conn.commit()
             except Exception as e:
                 print(f"[HealthPersistence] Error registering disk {device_name}: {e}")
 
@@ -2111,51 +2237,78 @@ class HealthPersistence:
                                  raw_message: str = '',
                                  severity: str = 'warning'):
         """Record or deduplicate a disk error observation.
-        
+
         error_type:  'smart_error', 'io_error', 'connection_error'
         error_signature: Normalized unique string for dedup (e.g. 'FailedReadSmartSelfTestLog')
+
+        Serialized via `_db_lock`: this method does PRAGMA introspection +
+        UPSERT in the same connection, and runs from journal/polling/webhook
+        threads concurrently. Without serialization the dedup UPSERT could
+        race with another thread's INSERT and produce duplicate rows in
+        `disk_observations` for the same (disk, type, signature). Audit
+        Tier 5 (Health stack — race conditions sin _db_lock).
         """
         now = datetime.now().isoformat()
         try:
-            conn = self._get_conn()
-            cursor = conn.cursor()
-            
-            # Auto-register the disk if not present
-            clean_dev = device_name.replace('/dev/', '')
-            self.register_disk(clean_dev, serial)
-            
-            disk_id = self._get_disk_registry_id(cursor, clean_dev, serial)
-            if not disk_id:
-                conn.close()
-                return
-            
-            # Detect column names for backward compatibility with older schemas
-            cursor.execute('PRAGMA table_info(disk_observations)')
-            columns = [col[1] for col in cursor.fetchall()]
-            
-            # Map to actual column names (old vs new schema)
-            type_col = 'error_type' if 'error_type' in columns else 'observation_type'
-            first_col = 'first_occurrence' if 'first_occurrence' in columns else 'first_seen'
-            last_col = 'last_occurrence' if 'last_occurrence' in columns else 'last_seen'
-            
-            # Upsert observation: if same (disk, type, signature), bump count + update last timestamp
-            # IMPORTANT: Do NOT reset dismissed — if the user dismissed this observation,
-            # re-detecting the same journal entry must not un-dismiss it.
-            cursor.execute(f'''
-                INSERT INTO disk_observations
-                    (disk_registry_id, {type_col}, error_signature, {first_col},
-                     {last_col}, occurrence_count, raw_message, severity, dismissed)
-                VALUES (?, ?, ?, ?, ?, 1, ?, ?, 0)
-                ON CONFLICT(disk_registry_id, {type_col}, error_signature) DO UPDATE SET
-                    {last_col} = excluded.{last_col},
-                    occurrence_count = occurrence_count + 1,
-                    severity = CASE WHEN excluded.severity = 'critical' THEN 'critical' ELSE severity END
-            ''', (disk_id, error_type, error_signature, now, now, raw_message, severity))
-            
-            conn.commit()
-            conn.close()
-            # Observation recorded - worst_health no longer updated (badge shows current SMART status)
-            
+            with self._db_lock:
+                self._record_disk_observation_locked(
+                    device_name, serial, error_type, error_signature,
+                    raw_message, severity, now,
+                )
+        except Exception as e:
+            print(f"[HealthPersistence] Error recording disk observation: {e}")
+            return
+        return
+
+    def _record_disk_observation_locked(self, device_name, serial, error_type,
+                                         error_signature, raw_message, severity, now):
+        """Inner body of `record_disk_observation`, called under _db_lock."""
+        # Use the context manager so a thrown exception inside any cursor
+        # call still releases the SQLite handle. Mirrors the fix on
+        # `register_disk` — both are hot-path writes from the dispatch loop.
+        try:
+            with self._db_connection() as conn:
+                cursor = conn.cursor()
+
+                # Auto-register the disk if not present
+                clean_dev = device_name.replace('/dev/', '')
+                self.register_disk(clean_dev, serial)
+
+                disk_id = self._get_disk_registry_id(cursor, clean_dev, serial)
+                if not disk_id:
+                    return
+
+                # Detect column names for backward compatibility with older schemas
+                cursor.execute('PRAGMA table_info(disk_observations)')
+                columns = [col[1] for col in cursor.fetchall()]
+
+                # Map to actual column names (old vs new schema)
+                type_col = 'error_type' if 'error_type' in columns else 'observation_type'
+                first_col = 'first_occurrence' if 'first_occurrence' in columns else 'first_seen'
+                last_col = 'last_occurrence' if 'last_occurrence' in columns else 'last_seen'
+
+                # Upsert observation: if same (disk, type, signature), bump count + update last timestamp.
+                # IMPORTANT: Do NOT reset dismissed — if the user dismissed this observation,
+                # re-detecting the same journal entry must not un-dismiss it. Also do not
+                # increment the occurrence_count on dismissed rows (audit Tier 5 — once
+                # the user has dismissed, we don't want the counter to keep growing for
+                # journal events that no longer interest them; this also stops the badge
+                # from drifting upward for dismissed conditions).
+                cursor.execute(f'''
+                    INSERT INTO disk_observations
+                        (disk_registry_id, {type_col}, error_signature, {first_col},
+                         {last_col}, occurrence_count, raw_message, severity, dismissed)
+                    VALUES (?, ?, ?, ?, ?, 1, ?, ?, 0)
+                    ON CONFLICT(disk_registry_id, {type_col}, error_signature) DO UPDATE SET
+                        {last_col} = excluded.{last_col},
+                        occurrence_count = occurrence_count + 1,
+                        severity = CASE WHEN excluded.severity = 'critical' THEN 'critical' ELSE severity END
+                    WHERE dismissed = 0
+                ''', (disk_id, error_type, error_signature, now, now, raw_message, severity))
+
+                conn.commit()
+                # Observation recorded - worst_health no longer updated (badge shows current SMART status)
+
         except Exception as e:
             print(f"[HealthPersistence] Error recording disk observation: {e}")
 
@@ -2247,19 +2400,27 @@ class HealthPersistence:
             return []
 
     def get_all_observed_devices(self) -> List[Dict[str, Any]]:
-        """Return a list of unique device_name + serial pairs that have observations."""
+        """Return a list of unique device_name + serial pairs that have observations.
+
+        `device_name` and `serial` live on `disk_registry`, not on
+        `disk_observations` — the original query referenced columns that
+        don't exist and silently returned `[]` because the OperationalError
+        was swallowed by the broad `except`. Joined to the registry so the
+        function actually works.
+        """
         try:
-            conn = self._get_conn()
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT DISTINCT device_name, serial
-                FROM disk_observations
-                WHERE dismissed = 0
-            ''')
-            rows = cursor.fetchall()
-            conn.close()
-            return [{'device_name': r[0], 'serial': r[1] or ''} for r in rows]
-        except Exception:
+            with self._db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT DISTINCT dr.device_name, dr.serial
+                    FROM disk_observations o
+                    JOIN disk_registry dr ON o.disk_registry_id = dr.id
+                    WHERE o.dismissed = 0
+                ''')
+                rows = cursor.fetchall()
+                return [{'device_name': r[0], 'serial': r[1] or ''} for r in rows]
+        except Exception as e:
+            print(f"[HealthPersistence] get_all_observed_devices failed: {e}")
             return []
     
     def get_disks_observation_counts(self) -> Dict[str, int]:
@@ -2373,41 +2534,56 @@ class HealthPersistence:
         except Exception as e:
             print(f"[HealthPersistence] Error marking removed disks: {e}")
 
+    # Logical (non-block) device-name prefixes used as observation keys for events that
+    # don't map to a /dev/<name> entry: ZFS pool names, ATA host identifiers (e.g. "ata8"
+    # from "ata8.00: exception ..." journal lines), device-mapper aliases, etc. These are
+    # never visible in /dev/ by design, so the original presence-based cleanup would
+    # always wrongly dismiss them. They are excluded from automatic cleanup; the user's
+    # explicit "clean up disconnected disks" action also skips them.
+    _LOGICAL_DEVICE_PREFIXES = ('zpool_', 'ata', 'dm-', 'nbd', 'loop', 'sr')
+
     def cleanup_orphan_observations(self):
         """
         Dismiss observations for devices that no longer exist in /dev/.
         Useful for cleaning up after USB drives or temporary devices are disconnected.
+
+        Observations whose `device_name` uses a logical (non-block) prefix are skipped —
+        ZFS pools, ATA hosts and dm-* aliases never appear under /dev/ by design and were
+        being silently dismissed by the previous version of this routine.
         """
         import os
         import re
         try:
             conn = self._get_conn()
             cursor = conn.cursor()
-            
+
             # Get all active (non-dismissed) observations with device info from disk_registry
             cursor.execute('''
-                SELECT do.id, dr.device_name, dr.serial 
+                SELECT do.id, dr.device_name, dr.serial
                 FROM disk_observations do
                 JOIN disk_registry dr ON do.disk_registry_id = dr.id
                 WHERE do.dismissed = 0
             ''')
             observations = cursor.fetchall()
-            
+
             dismissed_count = 0
             for obs_id, device_name, serial in observations:
+                # Skip non-block observations (ZFS pools, ATA hosts, dm-mapper, etc.)
+                if device_name and device_name.startswith(self._LOGICAL_DEVICE_PREFIXES):
+                    continue
                 # Check if device exists
                 dev_path = f'/dev/{device_name}'
                 # Also check base device (remove partition number)
-                base_dev = re.sub(r'\d+$', '', device_name)
+                base_dev = disk_base_name(device_name)
                 base_path = f'/dev/{base_dev}'
-                
+
                 if not os.path.exists(dev_path) and not os.path.exists(base_path):
                     cursor.execute('''
                         UPDATE disk_observations SET dismissed = 1
                         WHERE id = ?
                     ''', (obs_id,))
                     dismissed_count += 1
-            
+
             conn.commit()
             conn.close()
             if dismissed_count > 0:
@@ -2722,34 +2898,40 @@ class HealthPersistence:
     def _clear_notification_cooldown(self, error_key: str):
         """
         Clear notification cooldown from notification_last_sent for non-disk errors.
-        
+
         This coordinates with PollingCollector's 24h cooldown system.
         When any error is dismissed, we remove the corresponding cooldown entry
         so the error can be re-detected and re-notified after the suppression period expires.
-        
+
         The PollingCollector uses 'health_' prefix for all its fingerprints.
+        Audit Tier 5 (Health stack — `_clear_notification_cooldown` LIKE
+        overmatch): the previous implementation had a fallback
+        ``DELETE ... WHERE fingerprint LIKE '%<error_key>%'`` which broke as
+        soon as two errors shared a substring (e.g. ``vm_1`` matched ``vm_10``,
+        ``vm_100``, ``vm_1xyz``...). We drop that catch-all and rely on
+        deterministic exact matches.
         """
         try:
             conn = self._get_conn()
             cursor = conn.cursor()
-            
-            # PollingCollector uses 'health_' prefix
-            fp = f'health_{error_key}'
-            cursor.execute(
-                'DELETE FROM notification_last_sent WHERE fingerprint = ?',
-                (fp,)
+
+            # Match all the prefixes the PollingCollector uses for this key.
+            # Anchored to the start, no wildcards inside, so we can never
+            # over-match a different error.
+            fingerprints = (
+                error_key,
+                f'health_{error_key}',
             )
-            
-            # Also delete any fingerprints that match the error_key pattern
+            placeholders = ','.join('?' for _ in fingerprints)
             cursor.execute(
-                'DELETE FROM notification_last_sent WHERE fingerprint LIKE ?',
-                (f'%{error_key}%',)
+                f'DELETE FROM notification_last_sent WHERE fingerprint IN ({placeholders})',
+                fingerprints,
             )
-            
+
             deleted_count = cursor.rowcount
             conn.commit()
             conn.close()
-            
+
             if deleted_count > 0:
                 print(f"[HealthPersistence] Cleared notification cooldowns for {error_key}")
         except Exception as e:
@@ -2785,7 +2967,7 @@ class HealthPersistence:
                     return
             
             device = device_match.group(1)
-            base_device = re.sub(r'\d+$', '', device)  # sdh1 -> sdh
+            base_device = disk_base_name(device)  # sdh1 → sdh, nvme0n1p1 → nvme0n1
             
             # Build patterns to match in notification_last_sent
             # JournalWatcher uses: direct device name, diskio_, fs_, fs_serial_

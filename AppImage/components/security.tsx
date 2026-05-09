@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
@@ -10,7 +10,7 @@ import {
   Trash2, RefreshCw, Clock, ShieldCheck, Globe, FileKey, AlertTriangle,
   Flame, Bug, Search, Download, Power, PowerOff, Plus, Minus, Activity, Settings, Ban,
   FileText, Printer, Play, BarChart3, TriangleAlert, ChevronDown, ArrowDownLeft, ArrowUpRight,
-  ChevronRight, Network, Zap, Pencil, Check, X,
+  ChevronRight, Network, Zap, Pencil, Check, X, ExternalLink,
 } from "lucide-react"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
@@ -24,6 +24,37 @@ interface ApiTokenEntry {
   created_at: string
   expires_at: string
   revoked: boolean
+}
+
+// Replaces the previous `password.length < 6` check. Bumped the minimum
+// floor and require at least 3 of the 4 character categories so a brute-
+// force on the password hash isn't trivial. Also screens the few obvious
+// strings that real users still type. Server-side enforces the same floor
+// in auth_manager.setup_auth.
+const _OBVIOUS_PASSWORDS = new Set([
+  "password", "password1", "password123",
+  "12345678", "123456789", "1234567890",
+  "qwerty", "qwertyuiop", "letmein", "welcome",
+  "admin", "administrator", "root", "proxmox", "proxmenux",
+  "changeme", "abcdefgh",
+])
+function validatePasswordStrength(pw: string): string | null {
+  if (pw.length < 10) {
+    return "Password must be at least 10 characters"
+  }
+  const categories = [
+    /[a-z]/.test(pw),
+    /[A-Z]/.test(pw),
+    /\d/.test(pw),
+    /[^A-Za-z0-9]/.test(pw),
+  ].filter(Boolean).length
+  if (categories < 3) {
+    return "Password must mix at least 3 of: lowercase, uppercase, digits, symbols"
+  }
+  if (_OBVIOUS_PASSWORDS.has(pw.toLowerCase())) {
+    return "That password is in the common-passwords list — pick something else"
+  }
+  return null
 }
 
 export function Security() {
@@ -48,6 +79,7 @@ export function Security() {
   const [show2FASetup, setShow2FASetup] = useState(false)
   const [show2FADisable, setShow2FADisable] = useState(false)
   const [disable2FAPassword, setDisable2FAPassword] = useState("")
+  const [disable2FATotpCode, setDisable2FATotpCode] = useState("")
 
   // API Token state management
   const [showApiTokenSection, setShowApiTokenSection] = useState(false)
@@ -142,6 +174,17 @@ export function Security() {
   const [lynisReportLoading, setLynisReportLoading] = useState(false)
   const [lynisShowReport, setLynisShowReport] = useState(false)
   const [lynisActiveTab, setLynisActiveTab] = useState<"overview" | "warnings" | "suggestions" | "checks">("overview")
+  // Tracks the active Lynis poll so a component unmount mid-audit clears
+  // the setInterval. Without this the timer kept firing every 3s and
+  // calling setState on an unmounted component, which logs a React
+  // warning and leaks the closure.
+  const lynisPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  useEffect(() => () => {
+    if (lynisPollRef.current) {
+      clearInterval(lynisPollRef.current)
+      lynisPollRef.current = null
+    }
+  }, [])
 
   // Fail2Ban detailed state
   interface BannedIp {
@@ -217,8 +260,11 @@ export function Security() {
           monitor_port_open: data.monitor_port_open,
         })
       }
-    } catch {
-      // Silently fail
+    } catch (err) {
+      // Was a silent catch — left the user staring at "0 firewall rules" when
+      // the request 401'd or the backend was down. At minimum surface the
+      // failure in the browser console so devtools shows what went wrong.
+      console.error("[security] Failed to load firewall status:", err)
     } finally {
       setFirewallLoading(false)
     }
@@ -248,8 +294,8 @@ export function Security() {
         setFail2banInfo(data.tools.fail2ban || null)
         setLynisInfo(data.tools.lynis || null)
       }
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error("[security] Failed to load security tools (fail2ban/lynis):", err)
     } finally {
       setToolsLoading(false)
     }
@@ -382,12 +428,18 @@ export function Security() {
     try {
       const data = await fetchApi("/api/security/lynis/run", { method: "POST" })
       if (data.success) {
-        // Poll for completion
-        const pollInterval = setInterval(async () => {
+        // Poll for completion. Stash the interval id in a ref so the
+        // component unmount cleanup (above) can clear it if the user
+        // navigates away while the audit is still running.
+        if (lynisPollRef.current) clearInterval(lynisPollRef.current)
+        lynisPollRef.current = setInterval(async () => {
           try {
             const status = await fetchApi("/api/security/lynis/status")
             if (!status.running) {
-              clearInterval(pollInterval)
+              if (lynisPollRef.current) {
+                clearInterval(lynisPollRef.current)
+                lynisPollRef.current = null
+              }
               setLynisAuditRunning(false)
               if (status.progress === "completed") {
                 setSuccess("Security audit completed successfully")
@@ -398,7 +450,10 @@ export function Security() {
               }
             }
           } catch {
-            clearInterval(pollInterval)
+            if (lynisPollRef.current) {
+              clearInterval(lynisPollRef.current)
+              lynisPollRef.current = null
+            }
             setLynisAuditRunning(false)
           }
         }, 3000)
@@ -419,8 +474,8 @@ export function Security() {
       if (data.success && data.report) {
         setLynisReport(data.report)
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error("[security] Failed to load Lynis report:", err)
     } finally {
       setLynisReportLoading(false)
     }
@@ -670,8 +725,9 @@ export function Security() {
       return
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters")
+    const pwError = validatePasswordStrength(password)
+    if (pwError) {
+      setError(pwError)
       return
     }
 
@@ -768,8 +824,9 @@ export function Security() {
       return
     }
 
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters")
+    const pwError = validatePasswordStrength(newPassword)
+    if (pwError) {
+      setError(pwError)
       return
     }
 
@@ -818,6 +875,13 @@ export function Security() {
       setError("Please enter your password")
       return
     }
+    // Mirror backend hardening (auth_manager.disable_totp): turning 2FA off must
+    // require the second factor — otherwise an attacker who phished the password
+    // could strip the protection. Accepts a 6-digit TOTP code or a backup code.
+    if (!disable2FATotpCode) {
+      setError("Please enter your 2FA code (or a backup code)")
+      return
+    }
 
     setLoading(true)
 
@@ -829,7 +893,10 @@ export function Security() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ password: disable2FAPassword }),
+        body: JSON.stringify({
+          password: disable2FAPassword,
+          totp_code: disable2FATotpCode.trim(),
+        }),
       })
 
       const data = await response.json()
@@ -842,6 +909,7 @@ export function Security() {
       setTotpEnabled(false)
       setShow2FADisable(false)
       setDisable2FAPassword("")
+      setDisable2FATotpCode("")
       checkAuthStatus()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to disable 2FA")
@@ -863,8 +931,8 @@ export function Security() {
       if (data.success) {
         setExistingTokens(data.tokens || [])
       }
-    } catch {
-      // Silently fail - tokens section is optional
+    } catch (err) {
+      console.error("[security] Failed to load API tokens:", err)
     } finally {
       setLoadingTokens(false)
     }
@@ -987,6 +1055,22 @@ export function Security() {
   }
 
   const generatePrintableReport = (report: LynisReport) => {
+    // Escape user/server-controlled strings before they land in the printable
+    // HTML. Without this, any Lynis check name / description / solution that
+    // contained `<script>` or `<img onerror=...>` would execute in the admin's
+    // browser when the report is opened — a stored XSS path. Numbers, CSS
+    // colors and our static markup are safe; only dynamic strings are escaped.
+    // See audit Tier 2 #14.
+    const esc = (raw: unknown): string => {
+      const s = raw == null ? "" : String(raw)
+      return s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;")
+    }
+
     const adjScore = report.proxmox_adjusted_score ?? report.hardening_index
     const rawScore = report.hardening_index
     const displayScore = adjScore ?? rawScore
@@ -1011,7 +1095,7 @@ export function Security() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Security Audit Report - ${report.hostname || "ProxMenux"}</title>
+<title>Security Audit Report - ${esc(report.hostname || "ProxMenux")}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fff; font-size: 13px; line-height: 1.5; }
@@ -1206,8 +1290,8 @@ function pmxPrint(){
     </div>
   </div>
   <div class="rpt-header-right">
-    <div><strong>Date:</strong> ${now}</div>
-    <div><strong>Auditor:</strong> Lynis ${report.lynis_version || ""}</div>
+    <div><strong>Date:</strong> ${esc(now)}</div>
+    <div><strong>Auditor:</strong> Lynis ${esc(report.lynis_version || "")}</div>
     <div class="rid">ID: PMXA-${Date.now().toString(36).toUpperCase()}</div>
   </div>
 </div>
@@ -1223,8 +1307,8 @@ function pmxPrint(){
     <div class="exec-text">
       <h3>System Hardening Assessment${hasAdjustment ? " (Proxmox Adjusted)" : ""}</h3>
       <p>
-        Audit of <strong>${report.hostname || "Unknown"}</strong>
-        running <strong>${report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "Unknown OS"}</strong> (Proxmox VE).
+        Audit of <strong>${esc(report.hostname || "Unknown")}</strong>
+        running <strong>${esc(report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "Unknown OS")}</strong> (Proxmox VE).
         ${report.tests_performed} tests executed.
         ${actionableWarnings > 0 ? `<strong style="color:#dc2626;">${actionableWarnings} actionable warning(s)</strong>` : '<strong style="color:#16a34a;">No actionable warnings</strong>'}
         and <strong style="color:${actionableSuggestions > 0 ? '#ca8a04' : '#16a34a'};">${actionableSuggestions} actionable suggestion(s)</strong>.
@@ -1249,11 +1333,11 @@ function pmxPrint(){
 <div class="section">
   <div class="section-title">2. System Information</div>
   <div class="grid-3">
-    <div class="card"><div class="card-label">Hostname</div><div class="card-value">${report.hostname || "N/A"}</div></div>
-    <div class="card"><div class="card-label">Operating System</div><div class="card-value">${report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "N/A"}</div></div>
-    <div class="card"><div class="card-label">Kernel</div><div class="card-value">${report.kernel_version || "N/A"}</div></div>
-    <div class="card"><div class="card-label">Lynis Version</div><div class="card-value">${report.lynis_version || "N/A"}</div></div>
-    <div class="card"><div class="card-label">Report Date</div><div class="card-value">${report.datetime_start ? report.datetime_start.replace("T", " ").substring(0, 16) : "N/A"}</div></div>
+    <div class="card"><div class="card-label">Hostname</div><div class="card-value">${esc(report.hostname || "N/A")}</div></div>
+    <div class="card"><div class="card-label">Operating System</div><div class="card-value">${esc(report.os_fullname || `${report.os_name} ${report.os_version}`.trim() || "N/A")}</div></div>
+    <div class="card"><div class="card-label">Kernel</div><div class="card-value">${esc(report.kernel_version || "N/A")}</div></div>
+    <div class="card"><div class="card-label">Lynis Version</div><div class="card-value">${esc(report.lynis_version || "N/A")}</div></div>
+    <div class="card"><div class="card-label">Report Date</div><div class="card-value">${esc(report.datetime_start ? report.datetime_start.replace("T", " ").substring(0, 16) : "N/A")}</div></div>
     <div class="card"><div class="card-label">Tests Performed</div><div class="card-value">${report.tests_performed}</div></div>
   </div>
 </div>
@@ -1293,7 +1377,7 @@ function pmxPrint(){
     </div>
     <div class="card card-c">
       <div class="card-label">Installed Packages</div>
-      <div class="card-value" style="font-size:13px;">${report.installed_packages || "N/A"}</div>
+      <div class="card-value" style="font-size:13px;">${esc(report.installed_packages || "N/A")}</div>
     </div>
   </div>
 </div>
@@ -1308,14 +1392,14 @@ function pmxPrint(){
     <div class="finding ${w.proxmox_expected ? 'f-pve' : 'f-warn'}">
       <div class="f-hdr">
         <span class="f-num">#${i + 1}</span>
-        <span class="f-id${w.proxmox_expected ? ' pve' : ''}">${w.test_id}</span>
+        <span class="f-id${w.proxmox_expected ? ' pve' : ''}">${esc(w.test_id)}</span>
         ${w.proxmox_expected ? '<span class="f-tag f-tag-pve">PVE Expected</span>' : ''}
         ${!w.proxmox_expected && w.proxmox_severity === "low" ? '<span class="f-tag f-tag-low">Low Risk</span>' : ''}
-        ${!w.proxmox_expected && !w.proxmox_severity && w.severity ? `<span class="f-tag f-tag-sev">${w.severity}</span>` : ""}
+        ${!w.proxmox_expected && !w.proxmox_severity && w.severity ? `<span class="f-tag f-tag-sev">${esc(w.severity)}</span>` : ""}
       </div>
-      <div class="f-desc">${w.description}</div>
-      ${w.proxmox_context ? `<div class="f-ctx"><strong>Proxmox:</strong> ${w.proxmox_context}</div>` : ""}
-      ${w.solution ? `<div class="f-sol"><strong>Recommendation:</strong> ${w.solution}</div>` : ""}
+      <div class="f-desc">${esc(w.description)}</div>
+      ${w.proxmox_context ? `<div class="f-ctx"><strong>Proxmox:</strong> ${esc(w.proxmox_context)}</div>` : ""}
+      ${w.solution ? `<div class="f-sol"><strong>Recommendation:</strong> ${esc(w.solution)}</div>` : ""}
     </div>`).join("")}
 </div>
 
@@ -1329,14 +1413,14 @@ function pmxPrint(){
     <div class="finding ${s.proxmox_expected ? 'f-pve' : 'f-sugg'}">
       <div class="f-hdr">
         <span class="f-num">#${i + 1}</span>
-        <span class="f-id${s.proxmox_expected ? ' pve' : ''}">${s.test_id}</span>
+        <span class="f-id${s.proxmox_expected ? ' pve' : ''}">${esc(s.test_id)}</span>
         ${s.proxmox_expected ? '<span class="f-tag f-tag-pve">PVE Expected</span>' : ''}
         ${!s.proxmox_expected && s.proxmox_severity === "low" ? '<span class="f-tag f-tag-low">Low Priority</span>' : ''}
       </div>
-      <div class="f-desc">${s.description}</div>
-      ${s.proxmox_context ? `<div class="f-ctx"><strong>Proxmox:</strong> ${s.proxmox_context}</div>` : ""}
-      ${s.solution ? `<div class="f-sol"><strong>Recommendation:</strong> ${s.solution}</div>` : ""}
-      ${s.details ? `<div class="f-det">${s.details}</div>` : ""}
+      <div class="f-desc">${esc(s.description)}</div>
+      ${s.proxmox_context ? `<div class="f-ctx"><strong>Proxmox:</strong> ${esc(s.proxmox_context)}</div>` : ""}
+      ${s.solution ? `<div class="f-sol"><strong>Recommendation:</strong> ${esc(s.solution)}</div>` : ""}
+      ${s.details ? `<div class="f-det">${esc(s.details)}</div>` : ""}
     </div>`).join("")}
 </div>
 
@@ -1349,7 +1433,7 @@ ${(report.sections && report.sections.length > 0) ? `
   <div style="margin-bottom:10px;page-break-inside:avoid;">
     <div class="cat-head">
       <span class="cat-num">${sIdx + 1}</span>
-      <span class="cat-name">${section.name}</span>
+      <span class="cat-name">${esc(section.name)}</span>
       <span class="cat-cnt">${section.checks.length} checks</span>
     </div>
     <table class="chk-tbl">
@@ -1363,8 +1447,8 @@ ${(report.sections && report.sections.length > 0) ? `
           const color = isWarn ? "#dc2626" : isSugg ? "#ca8a04" : isOk ? "#16a34a" : "#64748b"
           const cls = isWarn ? ' class="warn"' : isSugg ? ' class="sugg"' : ""
           return `<tr${cls}>
-            <td>${check.name}${check.detail ? ` <span class="chk-det">(${check.detail})</span>` : ""}</td>
-            <td style="color:${color};">${check.status}</td>
+            <td>${esc(check.name)}${check.detail ? ` <span class="chk-det">(${esc(check.detail)})</span>` : ""}</td>
+            <td style="color:${color};">${esc(check.status)}</td>
           </tr>`
         }).join("")}
       </tbody>
@@ -1374,8 +1458,8 @@ ${(report.sections && report.sections.length > 0) ? `
 
 <!-- Footer -->
 <div class="rpt-footer">
-  <div>Generated by ProxMenux Monitor / Lynis ${report.lynis_version || ""}</div>
-  <div>${now}</div>
+  <div>Generated by ProxMenux Monitor / Lynis ${esc(report.lynis_version || "")}</div>
+  <div>${esc(now)}</div>
   <div style="font-style:italic;">Confidential</div>
 </div>
 
@@ -1395,8 +1479,8 @@ ${(report.sections && report.sections.length > 0) ? `
         setProxmoxCertAvailable(data.proxmox_available || false)
         setProxmoxCertInfo(data.cert_info || null)
       }
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error("[security] Failed to load SSL status:", err)
     } finally {
       setLoadingSsl(false)
     }
@@ -1770,7 +1854,9 @@ ${(report.sections && report.sections.length > 0) ? `
                   {show2FADisable && (
                     <div className="space-y-4 border border-border rounded-lg p-4">
                       <h3 className="font-semibold">Disable Two-Factor Authentication</h3>
-                      <p className="text-sm text-muted-foreground">Enter your password to confirm</p>
+                      <p className="text-sm text-muted-foreground">
+                        Enter your password and a current 2FA code (or one of your backup codes) to confirm.
+                      </p>
 
                       <div className="space-y-2">
                         <Label htmlFor="disable-2fa-password">Password</Label>
@@ -1788,6 +1874,20 @@ ${(report.sections && report.sections.length > 0) ? `
                         </div>
                       </div>
 
+                      <div className="space-y-2">
+                        <Label htmlFor="disable-2fa-totp">2FA code or backup code</Label>
+                        <Input
+                          id="disable-2fa-totp"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          placeholder="6-digit code or backup code"
+                          value={disable2FATotpCode}
+                          onChange={(e) => setDisable2FATotpCode(e.target.value)}
+                          disabled={loading}
+                        />
+                      </div>
+
                       <div className="flex gap-2">
                         <Button onClick={handleDisable2FA} variant="destructive" className="flex-1" disabled={loading}>
                           {loading ? "Disabling..." : "Disable 2FA"}
@@ -1796,6 +1896,7 @@ ${(report.sections && report.sections.length > 0) ? `
                           onClick={() => {
                             setShow2FADisable(false)
                             setDisable2FAPassword("")
+                            setDisable2FATotpCode("")
                             setError("")
                           }}
                           variant="outline"
@@ -2068,7 +2169,19 @@ ${(report.sections && report.sections.length > 0) ? `
                     <li>Tokens are valid for 1 year</li>
                     <li>Use them to access APIs from external services</li>
                     <li>{'Include in Authorization header: Bearer YOUR_TOKEN'}</li>
-                    <li>See README.md for complete integration examples</li>
+                    <li>
+                      See the{" "}
+                      <a
+                        href="https://proxmenux.com/docs/monitor/integrations"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-blue-200 hover:text-blue-100 underline underline-offset-2"
+                      >
+                        integrations guide
+                        <ExternalLink className="h-3 w-3" />
+                      </a>{" "}
+                      for complete examples
+                    </li>
                   </ul>
                 </div>
               </div>

@@ -17,6 +17,7 @@ import {
   ShieldCheck, Globe, ExternalLink, Loader2, CheckCircle, XCircle,
   Play, Square, RotateCw, Trash2, FileText, ChevronRight, ChevronDown,
   AlertTriangle, Info, Network, Eye, EyeOff, Settings, Wifi, Key,
+  ArrowUpCircle,
 } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 
@@ -80,6 +81,11 @@ export function SecureGatewaySetup() {
   const [loading, setLoading] = useState(true)
   const [runtimeAvailable, setRuntimeAvailable] = useState(false)
   const [runtimeInfo, setRuntimeInfo] = useState<{ runtime: string; version: string } | null>(null)
+  // Surface initial-data load failures. Wizard rendering depends on
+  // wizardSteps being populated; if loadInitialData throws, we previously
+  // ended up with `loading=false` and an empty wizard, which read as a
+  // broken UI. Keep the error message so we can show a retry button.
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [appStatus, setAppStatus] = useState<AppStatus>({ state: "not_installed", health: "unknown", uptime_seconds: 0, last_check: "" })
   const [configSchema, setConfigSchema] = useState<ConfigSchema | null>(null)
   const [wizardSteps, setWizardSteps] = useState<WizardStep[]>([])
@@ -114,6 +120,25 @@ export function SecureGatewaySetup() {
   const [newAuthKey, setNewAuthKey] = useState("")
   const [updateAuthKeyLoading, setUpdateAuthKeyLoading] = useState(false)
   const [updateAuthKeyError, setUpdateAuthKeyError] = useState("")
+
+  // Sprint 14.6: Tailscale / Alpine package update flow.
+  //   `updateInfo`: result of GET /api/oci/installed/<id>/update-check.
+  //                 `null` until the first probe lands.
+  //   `updateApplying`: true while POST /update is running. Long op
+  //                     (apk upgrade can take 1-3 min on slow links).
+  //   `updateError` / `updateResultMsg`: surfaced as a small banner
+  //                 so the user gets explicit feedback.
+  const [updateInfo, setUpdateInfo] = useState<{
+    available: boolean
+    current_version?: string | null
+    latest_version?: string | null
+    packages?: Array<{ name: string; current: string; latest: string }>
+    last_checked_iso?: string
+    error?: string | null
+  } | null>(null)
+  const [updateApplying, setUpdateApplying] = useState(false)
+  const [updateError, setUpdateError] = useState<string | null>(null)
+  const [updateResultMsg, setUpdateResultMsg] = useState<string | null>(null)
   
   // Password visibility
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set())
@@ -124,6 +149,7 @@ export function SecureGatewaySetup() {
 
   const loadInitialData = async () => {
     setLoading(true)
+    setLoadError(null)
     try {
       // Secure Gateway uses standard LXC, not OCI containers
       // So we don't require PVE 9.1+ - it works on any Proxmox version
@@ -181,6 +207,7 @@ export function SecureGatewaySetup() {
       }
     } catch (err) {
       console.error("Failed to load data:", err)
+      setLoadError(err instanceof Error ? err.message : "Failed to load wizard data")
     } finally {
       setLoading(false)
     }
@@ -191,13 +218,79 @@ export function SecureGatewaySetup() {
       const statusRes = await fetchApi("/api/oci/status/secure-gateway")
       if (statusRes.success) {
         setAppStatus(statusRes.status)
+        // Once we know the gateway is installed, kick off the update
+        // probe in the background. It hits the 24h-cached endpoint, so
+        // repeating this on every status reload is essentially free.
+        if (statusRes.status?.state && statusRes.status.state !== "not_installed") {
+          loadUpdateInfo()
+        }
       }
     } catch (err) {
       // Not installed is ok
     }
   }
 
+  // Pull the cached update-check from the backend. The server-side
+  // cache is 24h, so this is cheap to call on mount. After applying
+  // an update we pass `force=true` so the panel doesn't keep
+  // rendering the pre-update "available" state from a stale cache
+  // entry.
+  const loadUpdateInfo = async (force = false) => {
+    try {
+      const url = force
+        ? "/api/oci/installed/secure-gateway/update-check?force=1"
+        : "/api/oci/installed/secure-gateway/update-check"
+      const res: any = await fetchApi(url)
+      if (res?.success) {
+        setUpdateInfo({
+          available: !!res.available,
+          current_version: res.current_version,
+          latest_version: res.latest_version,
+          packages: res.packages,
+          last_checked_iso: res.last_checked_iso,
+          error: res.error || null,
+        })
+      }
+    } catch {
+      // Silent — the panel just won't show the update line.
+    }
+  }
+
+  const handleApplyUpdate = async () => {
+    setUpdateApplying(true)
+    setUpdateError(null)
+    setUpdateResultMsg(null)
+    try {
+      const res: any = await fetchApi("/api/oci/installed/secure-gateway/update", {
+        method: "POST",
+      })
+      if (res?.success) {
+        setUpdateResultMsg(res.message || "Update applied")
+        // Re-probe with force=true so the panel flips back to "No
+        // updates available" immediately, bypassing the 24h server
+        // cache which may still hold the pre-apply "available" entry.
+        await loadUpdateInfo(true)
+        // Status may briefly show "stopped" if tailscale was restarted —
+        // refresh that too so the action buttons render the right state.
+        await loadStatus()
+      } else {
+        setUpdateError(res?.message || "Update failed")
+      }
+    } catch (err) {
+      setUpdateError(err instanceof Error ? err.message : "Network error during update")
+    } finally {
+      setUpdateApplying(false)
+    }
+  }
+
   const handleDeploy = async () => {
+    // Concurrency guard. The button is also `disabled={deploying}`, but
+    // a screen reader, a fast double-tap on a high-latency link, or an
+    // automated test can fire two clicks before React re-renders the
+    // disabled state. The handler-level guard makes it impossible to
+    // submit a second deploy while one is still in flight. Audit Tier 6
+    // — `secure-gateway-setup.tsx` action buttons sin guard.
+    if (deploying) return
     setDeploying(true)
     setDeployError("")
     setDeployProgress("Preparing deployment...")
@@ -255,7 +348,13 @@ export function SecureGatewaySetup() {
       }
 
       setDeployProgress("Gateway deployed successfully!")
-      
+
+      // Wipe the Tailscale auth_key from React state so it's no longer
+      // reachable from a future XSS / state-inspection. The key only needs
+      // to live in memory for the duration of the deploy POST. Audit
+      // residual #11 — secure-gateway auth_key persistence.
+      setConfig((prev) => ({ ...prev, auth_key: "" }))
+
       // Wait and reload status, then show post-deploy info
       setTimeout(async () => {
         await loadStatus()
@@ -283,6 +382,7 @@ export function SecureGatewaySetup() {
   }
 
   const handleAction = async (action: "start" | "stop" | "restart") => {
+    if (actionLoading) return
     setActionLoading(action)
     try {
       const result = await fetchApi(`/api/oci/installed/secure-gateway/${action}`, {
@@ -304,9 +404,10 @@ export function SecureGatewaySetup() {
       return
     }
     
+    if (updateAuthKeyLoading) return
     setUpdateAuthKeyLoading(true)
     setUpdateAuthKeyError("")
-    
+
     try {
       const result = await fetchApi("/api/oci/installed/secure-gateway/update-auth-key", {
         method: "POST",
@@ -333,6 +434,7 @@ export function SecureGatewaySetup() {
   }
 
   const handleRemove = async () => {
+    if (actionLoading) return
     setActionLoading("remove")
     try {
       const result = await fetchApi("/api/oci/installed/secure-gateway?remove_data=false", {
@@ -368,6 +470,26 @@ export function SecureGatewaySetup() {
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m`
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`
     return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`
+  }
+
+  // Format an ISO timestamp as a friendly "HH:MM" / "yesterday HH:MM" /
+  // date-only string. Used in the Updates panel — the user wants to know
+  // "how stale is this number" without seeing the raw 2026-05-09T10:23Z.
+  const formatLastChecked = (iso?: string): string => {
+    if (!iso) return "never"
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return "unknown"
+    const now = Date.now()
+    const ageMs = now - d.getTime()
+    const sameDay = new Date(now).toDateString() === d.toDateString()
+    const yesterday = new Date(now - 86_400_000).toDateString() === d.toDateString()
+    const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    if (sameDay) return time
+    if (yesterday) return `yesterday ${time}`
+    if (ageMs < 7 * 86_400_000) {
+      return d.toLocaleDateString([], { weekday: "short" }) + " " + time
+    }
+    return d.toLocaleDateString([], { month: "short", day: "numeric" })
   }
 
   const renderField = (fieldName: string) => {
@@ -822,6 +944,30 @@ export function SecureGatewaySetup() {
     )
   }
 
+  // Initial data load failed — show the error and a retry button instead
+  // of an empty wizard. Without this, a transient network error or 401
+  // dropped the user into a wizard with zero steps and no signal.
+  if (loadError) {
+    return (
+      <Card className="border-border bg-card">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-cyan-500" />
+            <CardTitle className="text-base">Secure Gateway</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-red-500">Could not load setup data: {loadError}</p>
+            <Button size="sm" variant="outline" onClick={() => loadInitialData()}>
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   // Installed state
   if (appStatus.state !== "not_installed") {
     const isRunning = appStatus.state === "running"
@@ -927,6 +1073,68 @@ export function SecureGatewaySetup() {
                 Remove
               </Button>
             </div>
+
+            {/* Updates panel — only when we have a probe result. The
+                cached 24h backend means this stays cheap; the user
+                doesn't see anything during the very first load. */}
+            {updateInfo && !updateInfo.error && (
+              <div className="pt-2 border-t border-border space-y-2">
+                {updateInfo.available ? (
+                  <>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs text-muted-foreground">
+                        Last checked: {formatLastChecked(updateInfo.last_checked_iso)} ·{" "}
+                        <span className="text-purple-400 font-medium">
+                          Tailscale v{updateInfo.latest_version} available
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={handleApplyUpdate}
+                      disabled={updateApplying || actionLoading !== null}
+                      className="bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 hover:text-purple-200"
+                    >
+                      {updateApplying ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                      ) : (
+                        <ArrowUpCircle className="h-4 w-4 mr-1.5" />
+                      )}
+                      {updateApplying
+                        ? "Updating…"
+                        : `Update to v${updateInfo.latest_version}`}
+                    </Button>
+                    {updateInfo.packages && updateInfo.packages.length > 1 && (
+                      <div className="text-[11px] text-muted-foreground">
+                        +{updateInfo.packages.length - 1} other package
+                        {updateInfo.packages.length > 2 ? "s" : ""} pending in the container
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    Last checked: {formatLastChecked(updateInfo.last_checked_iso)}
+                    {updateInfo.current_version
+                      ? ` · Tailscale v${updateInfo.current_version}`
+                      : ""}
+                    {" · "}
+                    <span className="text-green-500/80">No updates available</span>
+                  </div>
+                )}
+                {updateError && (
+                  <div className="text-xs text-red-400 flex items-start gap-1.5">
+                    <XCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    {updateError}
+                  </div>
+                )}
+                {updateResultMsg && !updateError && (
+                  <div className="text-xs text-green-400 flex items-start gap-1.5">
+                    <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    {updateResultMsg}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Update Auth Key button */}
             <div className="pt-2 border-t border-border flex items-center justify-between">

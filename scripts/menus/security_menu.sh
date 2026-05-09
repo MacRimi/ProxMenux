@@ -1,11 +1,25 @@
 #!/bin/bash
+# ==========================================================
 # ProxMenux - Security Menu
-# ============================================
+# ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# ============================================
+# ==========================================================
+# Description:
+# Dispatcher for security tools shipped with ProxMenux. Loads the
+# selected installer/manager script and returns to the main menu
+# on cancel.
+#
+# Features:
+#   - Fail2Ban — intrusion prevention for SSH and the Proxmox /
+#     ProxMenux Monitor web interfaces, with auto-detected firewall
+#     backend (nftables / iptables).
+#   - Lynis    — security auditing tool installed from upstream
+#     GitHub (always latest), with run-audit and update actions.
+# ==========================================================
 
 SCRIPT_TITLE="Security Tools"
 

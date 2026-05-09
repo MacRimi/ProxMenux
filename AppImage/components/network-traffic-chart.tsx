@@ -110,7 +110,6 @@ export function NetworkTrafficChart({
         ? `/api/network/${interfaceName}/metrics?timeframe=${timeframe}`
         : `/api/node/metrics?timeframe=${timeframe}`
 
-      console.log("[v0] Fetching network metrics from:", apiPath)
 
       const result = await fetchApi<any>(apiPath)
 

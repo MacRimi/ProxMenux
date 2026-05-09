@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
-import { X, Sparkles, Thermometer, Terminal, Activity, HardDrive, Bell, Shield, Globe, Cpu, Zap } from "lucide-react"
+import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
-const APP_VERSION = "1.2.0" // Sync with AppImage/package.json
+const APP_VERSION = "1.2.1.1-beta" // Sync with AppImage/package.json
 
 interface ReleaseNote {
   date: string
@@ -18,6 +18,30 @@ interface ReleaseNote {
 }
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
+  "1.2.1.1-beta": {
+    date: "May 9, 2026",
+    changes: {
+      added: [
+        "Post-install function update detection - The Monitor now tracks installed ProxMenux optimizations (Log2Ram, Memory Settings, System Limits, Logrotate...) and notifies when a newer version of any of them is available, with one-click apply",
+        "Health Monitor Thresholds - Per-category warning and critical levels for CPU, memory, temperature, storage and more, configurable from Settings",
+        "NVIDIA driver update notifications - Kernel-aware detection of new compatible driver versions, surfaced in the Hardware tab and as notifications when a newer build is published upstream",
+        "Secure Gateway update flow - One-click Tailscale update from Settings with Last-checked / Installed / Latest indicators and notification when a new version is available",
+        "Helper-Scripts menu - Richer context and useful information for each entry, making it easier to know what every script does before running it",
+      ],
+      changed: [
+        "Disk temperature monitoring - Improved readings, smarter caching across SMART probes and a redesigned history modal that opens at 24h by default with min/avg/max statistics",
+        "VM and LXC modal - Expanded with additional information so a single panel covers the data you previously had to look up across multiple tabs",
+        "Page load - Faster first paint and lighter network usage on the Overview, Storage and Hardware tabs",
+        "Security improvements - Tighter authentication checks across notification, scripts and terminal endpoints, plus a more conservative default policy for new installs",
+      ],
+      fixed: [
+        "NVIDIA installer - The version menu now respects the running kernel compatibility window, only offering driver branches that won't fail to compile",
+        "NVIDIA installer on Alpine LXC - Container-side userspace install reworked so it succeeds on Alpine hosts, and free-space detection works reliably across all storage layouts",
+        "NVIDIA installer with NVENC patch - When the host has the NVENC patch applied, the version menu narrows to drivers supported by the patch so reinstalling never silently loses it",
+        "Webhook URL - PVE notification webhook now follows the active SSL state automatically, switching between http and https when you toggle HTTPS in the panel",
+      ],
+    },
+  },
   "1.1.2-beta": {
     date: "March 18, 2026",
     changes: {
@@ -82,36 +106,36 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <Thermometer className="h-5 w-5" />,
-    text: "Temperature & Latency Charts - Real-time visual monitoring with interactive historical graphs",
+    icon: <RefreshCw className="h-5 w-5" />,
+    text: "Post-install function update detection - The Monitor tracks installed ProxMenux optimizations and notifies when a newer version of any of them is available, with one-click apply",
   },
   {
-    icon: <Terminal className="h-5 w-5" />,
-    text: "WebSocket Terminal - Direct terminal access to Proxmox host and LXC containers from the browser",
-  },
-  {
-    icon: <Activity className="h-5 w-5" />,
-    text: "Enhanced Health Monitor - Configurable health monitoring with advanced settings and disk observations",
-  },
-  {
-    icon: <Bell className="h-5 w-5" />,
-    text: "AI-Enhanced Notifications - Intelligent message formatting with support for OpenAI, Groq, Anthropic and Ollama",
-  },
-  {
-    icon: <Shield className="h-5 w-5" />,
-    text: "Security Section - Comprehensive security configuration for both ProxMenux and Proxmox systems",
-  },
-  {
-    icon: <Globe className="h-5 w-5" />,
-    text: "VPN Integration - Easy Tailscale VPN installation and configuration for secure remote access",
+    icon: <Sliders className="h-5 w-5" />,
+    text: "Health Monitor Thresholds - Per-category warning and critical levels for CPU, memory, temperature, storage and more, fully configurable from Settings",
   },
   {
     icon: <Cpu className="h-5 w-5" />,
-    text: "GPU Drivers - Installation scripts for Intel, AMD and NVIDIA graphics drivers and utilities",
+    text: "NVIDIA driver update notifications - Kernel-aware detection of new compatible driver versions, surfaced in the Hardware tab and as notifications when a newer build is published",
+  },
+  {
+    icon: <Globe className="h-5 w-5" />,
+    text: "Secure Gateway update flow - One-click Tailscale update from Settings, with version indicators and notification when a new release is available",
+  },
+  {
+    icon: <Wrench className="h-5 w-5" />,
+    text: "Helper-Scripts menu - Richer context and useful information for each entry, so you know what every script does before running it",
+  },
+  {
+    icon: <Thermometer className="h-5 w-5" />,
+    text: "Improved disk temperature monitoring - Better readings, smarter caching across SMART probes and a redesigned history modal that opens at 24h by default",
+  },
+  {
+    icon: <Server className="h-5 w-5" />,
+    text: "VM and LXC modal expanded - Additional information consolidated into a single panel so you don't have to look it up across multiple tabs",
   },
   {
     icon: <Zap className="h-5 w-5" />,
-    text: "Performance Improvements - Optimized data fetching and reduced resource consumption",
+    text: "Faster page load and tighter security - Lighter network usage on the main tabs, plus stricter authentication checks across notification, scripts and terminal endpoints",
   },
 ]
 

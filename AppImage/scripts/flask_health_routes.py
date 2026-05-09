@@ -6,6 +6,14 @@ from flask import Blueprint, jsonify, request
 from health_monitor import health_monitor
 from health_persistence import health_persistence
 
+# Sprint 13: remote-mount monitor (NFS/CIFS/SMB) — separate module so a
+# missing helper doesn't crash the health blueprint.
+try:
+    import mount_monitor
+    MOUNT_MONITOR_AVAILABLE = True
+except ImportError:
+    MOUNT_MONITOR_AVAILABLE = False
+
 health_bp = Blueprint('health', __name__)
 
 @health_bp.route('/api/health/status', methods=['GET'])
@@ -598,3 +606,48 @@ def delete_interface_exclusion(interface_name):
             return jsonify({'error': 'Interface not found in exclusions'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@health_bp.route('/api/mounts', methods=['GET'])
+def get_remote_mounts():
+    """Sprint 13: list NFS/CIFS/SMB mounts on the host AND inside every
+    running LXC, with per-mount health (reachable / stale / read-only).
+
+    Returns:
+      ``mounts`` — host-level remote mounts (Sprint 13.11)
+      ``lxc_mounts`` — mounts inside running LXCs (Sprint 13.24)
+
+    Both lists share the same per-row shape; LXC entries add three
+    extra fields (lxc_id, lxc_name, lxc_pid). The frontend renders
+    them in two separate cards so the user immediately knows whether
+    the mount lives on the host or inside a container.
+    """
+    if not MOUNT_MONITOR_AVAILABLE:
+        return jsonify({
+            'mounts': [],
+            'lxc_mounts': [],
+            'available': False,
+        })
+
+    try:
+        mounts = mount_monitor.scan_remote_mounts()
+        # LXC scan is wrapped separately so a flaky `pct exec` doesn't
+        # blank the host list. The host scan is cheap and reliable;
+        # LXC scan can hit timeouts on stuck containers.
+        try:
+            lxc_mounts = mount_monitor.scan_lxc_mounts()
+        except Exception as lxc_err:
+            print(f"[flask_health_routes] LXC mount scan failed: {lxc_err}")
+            lxc_mounts = []
+        return jsonify({
+            'mounts': mounts,
+            'lxc_mounts': lxc_mounts,
+            'available': True,
+        })
+    except Exception as e:
+        return jsonify({
+            'mounts': [],
+            'lxc_mounts': [],
+            'available': True,
+            'error': str(e),
+        }), 500

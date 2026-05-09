@@ -1,27 +1,25 @@
 #!/usr/bin/env bash
 
 # ==========================================================
-# ProxMenuX - Virtual Machine Creator Script
+# ProxMenux - Windows ISO Selector
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 07/05/2025
 # ==========================================================
 # Description:
-# This script is part of the central ProxMenux VM creation module. It allows users
-# to create virtual machines (VMs) in Proxmox VE using either default or advanced
-# configurations, streamlining the deployment of Linux, Windows, and other systems.
+# Windows installation source selector for the ProxMenux VM
+# creator. Offers two paths to obtain the Windows ISO and then
+# hands over to the generic VM wizard for CPU, RAM, storage and
+# optional GPU passthrough.
 #
-# Key features:
-# - Supports both virtual disk creation and physical disk passthrough.
-# - Automates CPU, RAM, BIOS, network and storage configuration.
-# - Provides a user-friendly menu to select OS type, ISO image and disk interface.
-# - Automatically generates a detailed and styled HTML description for each VM.
-#
-# All operations are designed to simplify and accelerate VM creation in a 
-# consistent and maintainable way, using ProxMenux standards.
+# Features:
+# - Build an up-to-date Windows ISO via the UUP Dump creator.
+# - Pick a Windows ISO already present in /var/lib/vz/template/iso.
+# - Auto-detects the latest ISO created by UUP Dump.
+# - Exports ISO metadata (name, path, OS_TYPE) for the wizard.
 # ==========================================================
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"

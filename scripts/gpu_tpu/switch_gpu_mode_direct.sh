@@ -144,7 +144,7 @@ _get_iommu_group_ids() {
     local dev dev_class vid did
     dev=$(basename "$dev_path")
     dev_class=$(cat "/sys/bus/pci/devices/${dev}/class" 2>/dev/null)
-    [[ "$dev_class" == "0x0604" || "$dev_class" == "0x0600" ]] && continue
+    [[ "$dev_class" == 0x0604* || "$dev_class" == 0x0600* ]] && continue
     vid=$(cat "/sys/bus/pci/devices/${dev}/vendor" 2>/dev/null | sed 's/0x//')
     did=$(cat "/sys/bus/pci/devices/${dev}/device" 2>/dev/null | sed 's/0x//')
     [[ -n "$vid" && -n "$did" ]] && echo "${vid}:${did}"

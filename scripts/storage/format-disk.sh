@@ -714,14 +714,33 @@ main() {
 
     if [[ "$OPERATION_MODE" == "clean_sigs" ]]; then
         msg_info "$(translate "Removing filesystem signatures...")"
-        wipefs -af "$SELECTED_DISK" >/dev/null 2>&1 || true
+        # `|| true` swallowed real failures (busy device, ENOSPC writing
+        # the magic bytes) and the user got a green "Signatures removed"
+        # even when nothing was actually wiped. Capture the failure and
+        # continue but report it. Audit Tier 6 — `format-disk.sh` wipefs
+        # `|| true` silencia fallos.
+        local _wipefs_errs=0
+        local _wipefs_err_out
+        if ! _wipefs_err_out=$(wipefs -af "$SELECTED_DISK" 2>&1); then
+            _wipefs_errs=$((_wipefs_errs + 1))
+            msg_warn "$(translate "wipefs failed on") $SELECTED_DISK: $_wipefs_err_out"
+        fi
         local pname
         while read -r pname; do
             [[ -z "$pname" ]] && continue
             [[ "/dev/$pname" == "$SELECTED_DISK" ]] && continue
-            [[ -b "/dev/$pname" ]] && wipefs -af "/dev/$pname" >/dev/null 2>&1 || true
+            if [[ -b "/dev/$pname" ]]; then
+                if ! _wipefs_err_out=$(wipefs -af "/dev/$pname" 2>&1); then
+                    _wipefs_errs=$((_wipefs_errs + 1))
+                    msg_warn "$(translate "wipefs failed on") /dev/$pname: $_wipefs_err_out"
+                fi
+            fi
         done < <(lsblk -ln -o NAME "$SELECTED_DISK" 2>/dev/null | tail -n +2)
-        msg_ok "$(translate "Signatures removed. Partition table preserved.")"
+        if (( _wipefs_errs == 0 )); then
+            msg_ok "$(translate "Signatures removed. Partition table preserved.")"
+        else
+            msg_warn "$(translate "Some signatures could not be removed (see warnings above).")"
+        fi
         echo
         msg_success "$(translate "Disk is ready for VM passthrough.")"
         echo

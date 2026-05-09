@@ -28,7 +28,7 @@ import {
   Terminal,
 } from "lucide-react"
 import { useState, useEffect, useMemo } from "react"
-import { API_PORT, fetchApi } from "@/lib/api-config"
+import { API_PORT, fetchApi, getApiUrl, getAuthToken } from "@/lib/api-config"
 
 interface Backup {
   volid: string
@@ -242,9 +242,22 @@ export function SystemLogs() {
       const upid = extractUPID(notification.message)
 
       if (upid) {
-        // Try to fetch the complete task log from Proxmox
+        // Try to fetch the complete task log from Proxmox.
+        // We use a direct fetch (not fetchApi) because the response is
+        // text/plain — fetchApi assumes JSON and would throw on parse,
+        // landing in the silent catch below. Audit residual #fetchApi-text-arg.
         try {
-          const taskLog = await fetchApi(`/api/task-log/${encodeURIComponent(upid)}`, {}, "text")
+          const token = getAuthToken()
+          const headers: Record<string, string> = {}
+          if (token) headers["Authorization"] = `Bearer ${token}`
+          const resp = await fetch(getApiUrl(`/api/task-log/${encodeURIComponent(upid)}`), {
+            headers,
+            cache: "no-store",
+          })
+          if (!resp.ok) {
+            throw new Error(`task-log fetch failed: ${resp.status}`)
+          }
+          const taskLog = await resp.text()
 
           // Download the complete task log
           const blob = new Blob(
@@ -982,12 +995,12 @@ export function SystemLogs() {
                       >
                         <div className="flex-shrink-0 flex gap-2 flex-wrap">
                           <Badge variant="outline" className={getNotificationTypeColor(notification.type)}>
-                            {notification.type.toUpperCase()}
+                            {(notification.type || "unknown").toUpperCase()}
                           </Badge>
                           <Badge variant="outline" className={getNotificationSourceColor(notification.source)}>
                             {notification.source === "task-log" && <Activity className="h-3 w-3 mr-1" />}
                             {notification.source === "journal" && <FileText className="h-3 w-3 mr-1" />}
-                            {notification.source.toUpperCase()}
+                            {(notification.source || "unknown").toUpperCase()}
                           </Badge>
                         </div>
 
@@ -1232,7 +1245,7 @@ export function SystemLogs() {
                 <div>
                   <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-1.5">Type</div>
                   <Badge variant="outline" className={`${getNotificationTypeColor(selectedNotification.type)} text-xs`}>
-                    {selectedNotification.type.toUpperCase()}
+                    {(selectedNotification.type || "unknown").toUpperCase()}
                   </Badge>
                 </div>
                 <div>

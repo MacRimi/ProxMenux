@@ -16,7 +16,8 @@ import {
   AlertTriangle, Info, Settings2, Zap, Eye, EyeOff,
   Trash2, ChevronDown, ChevronUp, ChevronRight, TestTube2, Mail, Webhook,
   Copy, Server, Shield, ExternalLink, RefreshCw, Download, Upload,
-  Cloud, Brain, Globe, MessageSquareText, Sparkles, Pencil, Save, RotateCcw, Lightbulb
+  Cloud, Brain, Globe, MessageSquareText, Sparkles, Pencil, Save, RotateCcw, Lightbulb,
+  Moon, Newspaper
 } from "lucide-react"
 
 interface ChannelConfig {
@@ -37,6 +38,13 @@ interface ChannelConfig {
   from_address?: string
   to_addresses?: string
   subject_prefix?: string
+  // Quiet hours: skip below-CRITICAL events between [start, end) local time
+  quiet_enabled?: boolean
+  quiet_start?: string  // "HH:MM"
+  quiet_end?: string    // "HH:MM"
+  // Daily digest: buffer INFO events and ship one summary at digest_time
+  digest_enabled?: boolean
+  digest_time?: string  // "HH:MM"
 }
 
 interface EventTypeInfo {
@@ -95,6 +103,44 @@ interface HistoryEntry {
   sent_at: string
   success: boolean
   error_message: string | null
+}
+
+// Validation helpers for webhook/URL fields. The server still does the
+// authoritative validation (see notification_manager.validate_config). These
+// are defense-in-depth + immediate UX feedback so users notice typos / pasted
+// internal endpoints before they hit Save.
+const DISCORD_WEBHOOK_RE = /^https:\/\/(discord(app)?\.com|ptb\.discord\.com|canary\.discord\.com)\/api\/webhooks\/\d+\/[\w-]+$/
+
+function validateDiscordWebhook(url: string): { error?: string } {
+  if (!url) return {}
+  if (!DISCORD_WEBHOOK_RE.test(url.trim())) {
+    return { error: "Must be a Discord webhook URL (https://discord.com/api/webhooks/<id>/<token>)" }
+  }
+  return {}
+}
+
+function validateGotifyUrl(url: string): { error?: string; warning?: string } {
+  if (!url) return {}
+  let parsed: URL
+  try {
+    parsed = new URL(url.trim())
+  } catch {
+    return { error: "Not a valid URL" }
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return { error: `Unsupported scheme "${parsed.protocol}" — only http(s) is allowed` }
+  }
+  // Block the obvious SSRF target: the local PVE API. RFC1918 ranges remain
+  // allowed since self-hosted Gotify on a LAN is a normal deployment.
+  const host = parsed.hostname.toLowerCase()
+  const port = parsed.port
+  if ((host === "localhost" || host === "127.0.0.1" || host === "::1") && (port === "8006" || port === "8007")) {
+    return { error: "Cannot point at the local PVE API (localhost:8006/8007)" }
+  }
+  if (host === "169.254.169.254") {
+    return { error: "Link-local metadata IP is not a valid Gotify endpoint" }
+  }
+  return {}
 }
 
 const EVENT_CATEGORIES = [
@@ -276,6 +322,11 @@ export function NotificationSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  // Save errors used to be silently swallowed — the user thought their
+  // tokens / API keys were persisted when in fact the POST had failed.
+  // Surface the failure as a banner so the user can retry. Audit residual
+  // #notification-settings-handleSave-silent-fail.
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [testing, setTesting] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ channel: string; success: boolean; message: string } | null>(null)
   const [showHistory, setShowHistory] = useState(false)
@@ -409,6 +460,157 @@ export function NotificationSettings() {
         [channel]: { ...prev.channels[channel], [field]: value },
       },
     }))
+  }
+
+  const formatHHMM = (raw: string | undefined, fallback: string): string => {
+    const v = (raw || fallback).match(/^(\d{1,2}):(\d{2})$/)
+    if (!v) return fallback
+    const hh = String(Math.min(23, Math.max(0, parseInt(v[1], 10)))).padStart(2, "0")
+    const mm = String(Math.min(59, Math.max(0, parseInt(v[2], 10)))).padStart(2, "0")
+    return `${hh}:${mm}`
+  }
+
+  const inQuietWindow = (start: string, end: string): boolean => {
+    if (start === end) return false
+    const now = new Date()
+    const cur = now.getHours() * 60 + now.getMinutes()
+    const [sh, sm] = start.split(":").map((x) => parseInt(x, 10))
+    const [eh, em] = end.split(":").map((x) => parseInt(x, 10))
+    const s = sh * 60 + sm
+    const e = eh * 60 + em
+    return s < e ? cur >= s && cur < e : cur >= s || cur < e
+  }
+
+  const renderQuietHours = (chName: string) => {
+    const ch = config.channels[chName as keyof typeof config.channels] as ChannelConfig | undefined
+    const enabled = !!ch?.quiet_enabled
+    const start = formatHHMM(ch?.quiet_start, "22:00")
+    const end = formatHHMM(ch?.quiet_end, "06:00")
+    const sameTime = start === end
+    const live = enabled && !sameTime && inQuietWindow(start, end)
+    return (
+      <div className="space-y-2 pt-2 border-t border-border/50">
+        <div className="flex items-center justify-between py-1">
+          <div>
+            <Label className="text-xs font-medium flex items-center gap-1.5">
+              <Moon className="h-3.5 w-3.5 text-blue-400" />
+              Quiet hours
+            </Label>
+            <p className="text-[10px] text-muted-foreground">
+              During this window only CRITICAL events reach this channel.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            disabled={!editMode}
+            className={`relative w-9 h-[18px] shrink-0 rounded-full transition-colors ${
+              !editMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+            } ${enabled ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"}`}
+            onClick={() => { if (editMode) updateChannel(chName, "quiet_enabled", !enabled) }}
+          >
+            <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
+              enabled ? "translate-x-[18px]" : "translate-x-0"
+            }`} />
+          </button>
+        </div>
+        {enabled && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px] text-muted-foreground">From</Label>
+                <Input
+                  type="time"
+                  value={start}
+                  onChange={(e) => updateChannel(chName, "quiet_start", e.target.value)}
+                  disabled={!editMode}
+                  className="h-7 text-xs font-mono"
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Until</Label>
+                <Input
+                  type="time"
+                  value={end}
+                  onChange={(e) => updateChannel(chName, "quiet_end", e.target.value)}
+                  disabled={!editMode}
+                  className="h-7 text-xs font-mono"
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              {sameTime
+                ? "Set a different start and end time to activate."
+                : live
+                  ? `Active right now — only CRITICAL events pass until ${end}.`
+                  : `Inactive right now — will start at ${start}.`}
+            </p>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  const renderDailyDigest = (chName: string) => {
+    const ch = config.channels[chName as keyof typeof config.channels] as ChannelConfig | undefined
+    const enabled = !!ch?.digest_enabled
+    const time = formatHHMM(ch?.digest_time, "09:00")
+    let nextLabel = ""
+    if (enabled) {
+      const now = new Date()
+      const cur = now.getHours() * 60 + now.getMinutes()
+      const [hh, mm] = time.split(":").map((x) => parseInt(x, 10))
+      const target = hh * 60 + mm
+      const minsAway = target > cur ? target - cur : 24 * 60 - cur + target
+      const h = Math.floor(minsAway / 60)
+      const m = minsAway % 60
+      nextLabel = `Next digest in ${h}h ${m}m (at ${time}).`
+    }
+    return (
+      <div className="space-y-2 pt-2 border-t border-border/50">
+        <div className="flex items-center justify-between py-1">
+          <div>
+            <Label className="text-xs font-medium flex items-center gap-1.5">
+              <Newspaper className="h-3.5 w-3.5 text-violet-400" />
+              Daily digest of INFO events
+            </Label>
+            <p className="text-[10px] text-muted-foreground">
+              All INFO events (backups OK, updates available, etc.) accumulate during the day and arrive once at this time as a single summary. CRITICAL and WARNING are never delayed.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            disabled={!editMode}
+            className={`relative w-9 h-[18px] shrink-0 rounded-full transition-colors ${
+              !editMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+            } ${enabled ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"}`}
+            onClick={() => { if (editMode) updateChannel(chName, "digest_enabled", !enabled) }}
+          >
+            <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
+              enabled ? "translate-x-[18px]" : "translate-x-0"
+            }`} />
+          </button>
+        </div>
+        {enabled && (
+          <>
+            <div>
+              <Label className="text-[10px] text-muted-foreground">Send at</Label>
+              <Input
+                type="time"
+                value={time}
+                onChange={(e) => updateChannel(chName, "digest_time", e.target.value)}
+                disabled={!editMode}
+                className="h-7 text-xs font-mono"
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground">{nextLabel}</p>
+          </>
+        )}
+      </div>
+    )
   }
 
   /** Reusable 10+1 category block rendered inside each channel tab. */
@@ -621,11 +823,12 @@ export function NotificationSettings() {
 
   const handleSave = async () => {
     setSaving(true)
+    setSaveError(null)
     try {
       // If notifications are being disabled, clean up PVE webhook first
       const wasEnabled = originalConfig.enabled
       const isNowDisabled = !config.enabled
-      
+
       if (wasEnabled && isNowDisabled) {
         try {
           await fetchApi("/api/notifications/proxmox/cleanup-webhook", { method: "POST" })
@@ -633,7 +836,7 @@ export function NotificationSettings() {
           // Non-fatal: webhook cleanup failed but we still save settings
         }
       }
-      
+
       const payload = flattenConfig(config)
       await fetchApi("/api/notifications/settings", {
         method: "POST",
@@ -647,6 +850,8 @@ export function NotificationSettings() {
       loadStatus()
     } catch (err) {
       console.error("Failed to save notification settings:", err)
+      const msg = err instanceof Error ? err.message : "Failed to save notification settings"
+      setSaveError(msg)
     } finally {
       setSaving(false)
     }
@@ -977,6 +1182,14 @@ export function NotificationSettings() {
                 Saved
               </span>
             )}
+            {saveError && (
+              <span
+                className="flex items-center gap-1 text-xs text-red-500 max-w-[40ch] truncate"
+                title={saveError}
+              >
+                Save failed: {saveError}
+              </span>
+            )}
             {editMode ? (
               <>
                 <button
@@ -1180,6 +1393,8 @@ export function NotificationSettings() {
                         </button>
                       </div>
                       {renderChannelCategories("telegram")}
+                      {renderQuietHours("telegram")}
+                      {renderDailyDigest("telegram")}
                       {/* Send Test */}
                       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button
@@ -1224,6 +1439,12 @@ export function NotificationSettings() {
                           onChange={e => updateChannel("gotify", "url", e.target.value)}
                           disabled={!editMode}
                         />
+                        {(() => {
+                          const v = validateGotifyUrl(config.channels.gotify?.url || "")
+                          if (v.error) return <p className="text-[10px] text-red-500">{v.error}</p>
+                          if (v.warning) return <p className="text-[10px] text-yellow-500">{v.warning}</p>
+                          return null
+                        })()}
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[11px] text-muted-foreground">App Token</Label>
@@ -1266,6 +1487,8 @@ export function NotificationSettings() {
                         </button>
                       </div>
                       {renderChannelCategories("gotify")}
+                      {renderQuietHours("gotify")}
+                      {renderDailyDigest("gotify")}
                       {/* Send Test */}
                       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button
@@ -1319,6 +1542,10 @@ export function NotificationSettings() {
                             {showSecrets["dc_hook"] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                           </button>
                         </div>
+                        {(() => {
+                          const v = validateDiscordWebhook(config.channels.discord?.webhook_url || "")
+                          return v.error ? <p className="text-[10px] text-red-500">{v.error}</p> : null
+                        })()}
                       </div>
                       {/* Message format */}
                       <div className="flex items-center justify-between py-1">
@@ -1342,6 +1569,8 @@ export function NotificationSettings() {
                         </button>
                       </div>
                       {renderChannelCategories("discord")}
+                      {renderQuietHours("discord")}
+                      {renderDailyDigest("discord")}
                       {/* Send Test */}
                       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button
@@ -1485,6 +1714,8 @@ export function NotificationSettings() {
                         </p>
                       </div>
                       {renderChannelCategories("email")}
+                      {renderQuietHours("email")}
+                      {renderDailyDigest("email")}
                       {/* Send Test */}
                       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         <button

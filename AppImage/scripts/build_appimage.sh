@@ -16,16 +16,38 @@ APPIMAGE_NAME="ProxMenux-${VERSION}.AppImage"
 
 echo "🚀 Building ProxMenux Monitor AppImage v${VERSION} with hardware monitoring tools..."
 
+APPIMAGETOOL_CACHE="/var/cache/proxmenux-build/appimagetool"
+
+# Preserve a cached copy of appimagetool across builds. wget -q has bitten
+# us repeatedly when GitHub momentarily rate-limits or the runner has no
+# network — the result is a 0-byte file that passes the `[ -f ]` check on
+# the next run and breaks the build silently.
+if [ -f "$WORK_DIR/appimagetool" ] && [ -s "$WORK_DIR/appimagetool" ]; then
+    mkdir -p "$(dirname "$APPIMAGETOOL_CACHE")"
+    cp -f "$WORK_DIR/appimagetool" "$APPIMAGETOOL_CACHE"
+fi
+
 # Clean and create work directory
 rm -rf "$WORK_DIR"
 mkdir -p "$APP_DIR"
 mkdir -p "$DIST_DIR"
 
-# Download appimagetool if not exists
-if [ ! -f "$WORK_DIR/appimagetool" ]; then
-    echo "📥 Downloading appimagetool..."
-    wget -q "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" -O "$WORK_DIR/appimagetool"
+# Restore appimagetool from cache if available, otherwise download.
+if [ -s "$APPIMAGETOOL_CACHE" ]; then
+    echo "📦 Reusing cached appimagetool"
+    cp "$APPIMAGETOOL_CACHE" "$WORK_DIR/appimagetool"
     chmod +x "$WORK_DIR/appimagetool"
+fi
+if [ ! -s "$WORK_DIR/appimagetool" ]; then
+    echo "📥 Downloading appimagetool..."
+    wget --tries=3 --timeout=60 "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" -O "$WORK_DIR/appimagetool" || true
+    if [ ! -s "$WORK_DIR/appimagetool" ]; then
+        echo "❌ Failed to download appimagetool" >&2
+        exit 1
+    fi
+    chmod +x "$WORK_DIR/appimagetool"
+    mkdir -p "$(dirname "$APPIMAGETOOL_CACHE")"
+    cp -f "$WORK_DIR/appimagetool" "$APPIMAGETOOL_CACHE"
 fi
 
 # Create directory structure
@@ -42,10 +64,13 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
-# Install dependencies if node_modules doesn't exist
+# Install dependencies if node_modules doesn't exist.
+# `--legacy-peer-deps` is required because vaul@0.9.9 (and a few others) still
+# declare peer-deps for React ≤18 while we're on React 19; npm 7+ refuses by
+# default. The actual runtime works fine with React 19.
 if [ ! -d "node_modules" ]; then
     echo "📦 Installing dependencies..."
-    npm install
+    npm install --legacy-peer-deps
 fi
 
 echo "🏗️  Building Next.js static export..."
@@ -85,6 +110,12 @@ cp "$SCRIPT_DIR/health_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠�
 cp "$SCRIPT_DIR/health_persistence.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  health_persistence.py not found"
 cp "$SCRIPT_DIR/flask_health_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_health_routes.py not found"
 cp "$SCRIPT_DIR/flask_proxmenux_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_proxmenux_routes.py not found"
+cp "$SCRIPT_DIR/post_install_versions.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  post_install_versions.py not found"
+cp "$SCRIPT_DIR/mount_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  mount_monitor.py not found"
+cp "$SCRIPT_DIR/lxc_mount_points.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  lxc_mount_points.py not found"
+cp "$SCRIPT_DIR/disk_temperature_history.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  disk_temperature_history.py not found"
+cp "$SCRIPT_DIR/health_thresholds.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  health_thresholds.py not found"
+cp "$SCRIPT_DIR/managed_installs.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  managed_installs.py not found"
 cp "$SCRIPT_DIR/flask_terminal_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_terminal_routes.py not found"
 cp "$SCRIPT_DIR/hardware_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  hardware_monitor.py not found"
 cp "$SCRIPT_DIR/proxmox_storage_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  proxmox_storage_monitor.py not found"
@@ -429,7 +460,7 @@ dl_pkg "ipmitool.deb"        "ipmitool"                         || true
 dl_pkg "libfreeipmi17.deb"   "libfreeipmi17"                    || true
 dl_pkg "lm-sensors.deb"      "lm-sensors"                       || true
 dl_pkg "nut-client.deb"      "nut-client"                       || true
-dl_pkg "libupsclient.deb"    "libupsclient6" "libupsclient5" "libupsclient4" || true
+dl_pkg "libupsclient.deb"    "libupsclient6t64" "libupsclient6" "libupsclient5" "libupsclient4" || true
 
 echo "📦 Extracting .deb packages into AppDir..."
 extracted_count=0
@@ -476,15 +507,16 @@ if [ -x "$APP_DIR/usr/bin/upsc" ] && ldd "$APP_DIR/usr/bin/upsc" | grep -q 'not 
   missing="$(ldd "$APP_DIR/usr/bin/upsc" | awk '/not found/{print $1}' | tr -d ' ')"
   echo "   missing: $missing"
   case "$missing" in
-    libupsclient.so.6) need_pkg="libupsclient6" ;;
-    libupsclient.so.5) need_pkg="libupsclient5" ;;
-    libupsclient.so.4) need_pkg="libupsclient4" ;;
-    *) need_pkg="" ;;
+    # Debian 13+ ships the t64 transitional package — try it first.
+    libupsclient.so.6) need_pkgs="libupsclient6t64 libupsclient6" ;;
+    libupsclient.so.5) need_pkgs="libupsclient5" ;;
+    libupsclient.so.4) need_pkgs="libupsclient4" ;;
+    *) need_pkgs="" ;;
   esac
 
-  if [ -n "$need_pkg" ]; then
-    echo "   downloading: $need_pkg"
-    dl_pkg "libupsclient_autofix.deb" "$need_pkg" || true
+  if [ -n "$need_pkgs" ]; then
+    echo "   downloading: $need_pkgs"
+    dl_pkg "libupsclient_autofix.deb" $need_pkgs || true
     if [ -f "libupsclient_autofix.deb" ]; then
       dpkg-deb -x "libupsclient_autofix.deb" "$APP_DIR"
       echo "   re-checking ldd for upsc..."
@@ -494,7 +526,7 @@ if [ -x "$APP_DIR/usr/bin/upsc" ] && ldd "$APP_DIR/usr/bin/upsc" | grep -q 'not 
         exit 1
       fi
     else
-      echo "❌ could not download $need_pkg automatically"
+      echo "❌ could not download any of: $need_pkgs"
       exit 1
     fi
   else

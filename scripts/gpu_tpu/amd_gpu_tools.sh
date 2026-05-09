@@ -2,7 +2,7 @@
 # ProxMenux - AMD GPU Tools Installer
 # ============================================
 # Author      : MacRimi
-# License     : MIT
+# License     : GPL-3.0
 # Version     : 1.0
 # Last Updated: 29/01/2026
 # ============================================

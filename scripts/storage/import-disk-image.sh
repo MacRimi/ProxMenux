@@ -1,19 +1,19 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Import Disk Image to VM
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.3
-# Last Updated: 12/04/2026
 # ==========================================================
 # Description:
-# Imports disk images (.img, .qcow2, .vmdk, .raw) into Proxmox VE VMs.
-# Supports the default system ISO directory and custom paths.
-# All user decisions are collected in Phase 1 (dialogs) before
-# any operation is executed in Phase 2 (terminal output).
+# Imports disk images (.img, .qcow2, .vmdk, .raw) into
+# existing Proxmox VE VMs. Supports the default ISO directory
+# and custom paths; all user decisions are collected up-front
+# (Phase 1 dialogs) before any operation runs (Phase 2).
 # ==========================================================
 
 # Configuration ============================================
@@ -163,7 +163,13 @@ while IFS= read -r img; do
   IMAGE_OPTIONS+=("$img" "" "OFF")
 done <<< "$IMAGES"
 
+# `--separate-output` prints each selected tag on its own line with no
+# quoting, so we never need `eval` to split the output. The previous form
+# `eval "declare -a A=($SELECTED)"` would execute backticks / $(...) baked
+# into a filename — perfectly legal on ext4 — as shell commands. Audit
+# Tier 6 — `import-disk-image.sh` `eval` sobre salida del dialog.
 SELECTED_IMAGES_STR=$(dialog --backtitle "$BACKTITLE" \
+  --separate-output \
   --title "$(translate 'Select Disk Images')" \
   --checklist "$(translate 'Select one or more disk images to import:')" \
   $UI_MENU_H $UI_MENU_W $UI_MENU_LIST_H \
@@ -171,7 +177,10 @@ SELECTED_IMAGES_STR=$(dialog --backtitle "$BACKTITLE" \
   2>&1 >/dev/tty)
 [[ -z "$SELECTED_IMAGES_STR" ]] && exit 0
 
-eval "declare -a SELECTED_ARRAY=($SELECTED_IMAGES_STR)"
+declare -a SELECTED_ARRAY=()
+while IFS= read -r _img; do
+  [[ -n "$_img" ]] && SELECTED_ARRAY+=("$_img")
+done <<< "$SELECTED_IMAGES_STR"
 
 
 # ── Step 5: Per-image options ─────────────────────────────

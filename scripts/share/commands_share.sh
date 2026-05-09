@@ -1,13 +1,19 @@
 #!/bin/bash
 
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Storage & Share CLI Reference
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.6
-# Last Updated: 07/04/2026
+# ==========================================================
+# Description:
+# Reference of the manual CLI commands behind the Storage &
+# Share Manager flows (NFS / Samba / iSCSI client and server,
+# bind mounts, Proxmox storage registration). Used as the
+# Help & Info entry of the Storage & Share menu.
 # ==========================================================
 
 # Configuration ============================================

@@ -6,6 +6,7 @@ Flask blueprint for firewall management and security tool detection.
 """
 
 from flask import Blueprint, jsonify, request
+from jwt_middleware import require_auth
 
 security_bp = Blueprint('security', __name__)
 
@@ -20,6 +21,7 @@ except ImportError:
 # -------------------------------------------------------------------
 
 @security_bp.route('/api/security/firewall/status', methods=['GET'])
+@require_auth
 def firewall_status():
     """Get Proxmox firewall status, rules, and port 8008 status"""
     if not security_manager:
@@ -32,6 +34,7 @@ def firewall_status():
 
 
 @security_bp.route('/api/security/firewall/enable', methods=['POST'])
+@require_auth
 def firewall_enable():
     """Enable Proxmox firewall at host or cluster level"""
     if not security_manager:
@@ -46,6 +49,7 @@ def firewall_enable():
 
 
 @security_bp.route('/api/security/firewall/disable', methods=['POST'])
+@require_auth
 def firewall_disable():
     """Disable Proxmox firewall at host or cluster level"""
     if not security_manager:
@@ -60,6 +64,7 @@ def firewall_disable():
 
 
 @security_bp.route('/api/security/firewall/rules', methods=['POST'])
+@require_auth
 def firewall_add_rule():
     """Add a custom firewall rule"""
     if not security_manager:
@@ -87,6 +92,7 @@ def firewall_add_rule():
 
 
 @security_bp.route('/api/security/firewall/rules', methods=['DELETE'])
+@require_auth
 def firewall_delete_rule():
     """Delete a firewall rule by index"""
     if not security_manager:
@@ -107,6 +113,7 @@ def firewall_delete_rule():
 
 
 @security_bp.route('/api/security/firewall/rules/edit', methods=['PUT'])
+@require_auth
 def firewall_edit_rule():
     """Edit an existing firewall rule (delete old + insert new at same position)"""
     if not security_manager:
@@ -128,6 +135,7 @@ def firewall_edit_rule():
             dport=new_rule.get("dport", ""),
             sport=new_rule.get("sport", ""),
             source=new_rule.get("source", ""),
+            dest=new_rule.get("dest", ""),
             iface=new_rule.get("iface", ""),
             comment=new_rule.get("comment", ""),
         )
@@ -140,6 +148,7 @@ def firewall_edit_rule():
 
 
 @security_bp.route('/api/security/firewall/monitor-port', methods=['POST'])
+@require_auth
 def firewall_add_monitor_port():
     """Add firewall rule to allow port 8008 for ProxMenux Monitor"""
     if not security_manager:
@@ -152,6 +161,7 @@ def firewall_add_monitor_port():
 
 
 @security_bp.route('/api/security/firewall/monitor-port', methods=['DELETE'])
+@require_auth
 def firewall_remove_monitor_port():
     """Remove the ProxMenux Monitor port 8008 rule"""
     if not security_manager:
@@ -168,6 +178,7 @@ def firewall_remove_monitor_port():
 # -------------------------------------------------------------------
 
 @security_bp.route('/api/security/fail2ban/details', methods=['GET'])
+@require_auth
 def fail2ban_details():
     """Get detailed Fail2Ban info: per-jail banned IPs, stats, config"""
     if not security_manager:
@@ -180,6 +191,7 @@ def fail2ban_details():
 
 
 @security_bp.route('/api/security/fail2ban/unban', methods=['POST'])
+@require_auth
 def fail2ban_unban():
     """Unban a specific IP from a Fail2Ban jail"""
     if not security_manager:
@@ -198,6 +210,7 @@ def fail2ban_unban():
 
 
 @security_bp.route('/api/security/fail2ban/jail/config', methods=['PUT'])
+@require_auth
 def fail2ban_jail_config():
     """Update jail configuration (maxretry, bantime, findtime)"""
     if not security_manager:
@@ -222,6 +235,7 @@ def fail2ban_jail_config():
 
 
 @security_bp.route('/api/security/fail2ban/apply-jails', methods=['POST'])
+@require_auth
 def fail2ban_apply_jails():
     """Apply missing Fail2Ban jails (proxmox, proxmenux)"""
     if not security_manager:
@@ -234,6 +248,7 @@ def fail2ban_apply_jails():
 
 
 @security_bp.route('/api/security/fail2ban/activity', methods=['GET'])
+@require_auth
 def fail2ban_activity():
     """Get recent Fail2Ban log activity"""
     if not security_manager:
@@ -250,6 +265,7 @@ def fail2ban_activity():
 # -------------------------------------------------------------------
 
 @security_bp.route('/api/security/lynis/run', methods=['POST'])
+@require_auth
 def lynis_run_audit():
     """Start a Lynis audit (runs in background)"""
     if not security_manager:
@@ -262,6 +278,7 @@ def lynis_run_audit():
 
 
 @security_bp.route('/api/security/lynis/status', methods=['GET'])
+@require_auth
 def lynis_audit_status():
     """Get Lynis audit running status"""
     if not security_manager:
@@ -274,6 +291,7 @@ def lynis_audit_status():
 
 
 @security_bp.route('/api/security/lynis/report', methods=['GET'])
+@require_auth
 def lynis_report():
     """Get parsed Lynis audit report"""
     if not security_manager:
@@ -289,6 +307,7 @@ def lynis_report():
 
 
 @security_bp.route('/api/security/lynis/report', methods=['DELETE'])
+@require_auth
 def lynis_report_delete():
     """Delete Lynis audit report files"""
     if not security_manager:
@@ -313,6 +332,7 @@ def lynis_report_delete():
 # -------------------------------------------------------------------
 
 @security_bp.route('/api/security/fail2ban/uninstall', methods=['POST'])
+@require_auth
 def fail2ban_uninstall():
     """Uninstall Fail2Ban and clean up configuration"""
     if not security_manager:
@@ -325,6 +345,7 @@ def fail2ban_uninstall():
 
 
 @security_bp.route('/api/security/lynis/uninstall', methods=['POST'])
+@require_auth
 def lynis_uninstall():
     """Uninstall Lynis and clean up files"""
     if not security_manager:
@@ -341,6 +362,7 @@ def lynis_uninstall():
 # -------------------------------------------------------------------
 
 @security_bp.route('/api/security/tools', methods=['GET'])
+@require_auth
 def security_tools():
     """Detect installed security tools (Fail2Ban, Lynis, etc.)"""
     if not security_manager:

@@ -91,7 +91,22 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
 
     if (!response.ok) {
       if (response.status === 401) {
-        console.error("[v0] fetchApi: 401 UNAUTHORIZED -", endpoint, "- Token present:", !!token)
+        // Token is missing, expired, or signed under a previous JWT_SECRET
+        // (audit Tier 4 #22 rotates per-install). Drop the stale token and
+        // bounce the user to login — the previous behavior just threw and
+        // left the dashboard stuck on a blank state. Audit Tier 2 residual.
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.removeItem("proxmenux-auth-token")
+          } catch {
+            // localStorage might be unavailable in private browsing — ignore.
+          }
+          // Avoid redirect loops if we're already on the auth page.
+          const path = window.location.pathname
+          if (!path.startsWith("/auth") && !path.startsWith("/login")) {
+            window.location.assign("/")
+          }
+        }
         throw new Error(`Unauthorized: ${endpoint}`)
       }
       throw new Error(`API request failed: ${response.status} ${response.statusText}`)

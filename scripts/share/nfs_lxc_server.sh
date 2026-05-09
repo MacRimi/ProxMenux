@@ -1,15 +1,25 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux CT - NFS Manager for Proxmox LXC (Simple + Universal)
+# ProxMenux - NFS Server Manager for LXC
 # ==========================================================
-# Based on ProxMenux by MacRimi
+# Author      : MacRimi
+# Copyright   : (c) 2024 MacRimi
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version     : 1.0
 # ==========================================================
 # Description:
-# This script allows you to manage NFS shares inside Proxmox CTs:
-# - Create NFS exports with universal sharedfiles group
-# - View configured exports
-# - Delete existing exports
-# - Check NFS service status
+# Manages NFS exports from inside a Proxmox LXC container.
+# Requires a privileged container (the kernel NFS server module
+# needs capabilities that unprivileged CTs do not expose).
+#
+# Features:
+# - Install and configure nfs-kernel-server inside the CT.
+# - Create NFS exports for folders under /mnt.
+# - Set up a universal "sharedfiles" group (GID 101000) on the
+#   CT as a convention for cross-CT file sharing.
+# - List configured exports and check service status.
+# - Remove exports cleanly.
 # ==========================================================
 
 # Configuration
@@ -70,42 +80,55 @@ setup_universal_sharedfiles_group() {
     fi
     
 
-    msg_info "$(translate "Creating UID remapping for unprivileged container compatibility...")"
-    local remapped_count=0
-    
-    if [[ -n "$lxc_users" ]]; then
-        while IFS=: read -r username uid; do
-            if [[ -n "$uid" ]]; then
-                local remapped_uid=$((uid + 100000))
-                local remapped_username="remap_${uid}"
-                
-
-                if ! pct exec "$ctid" -- id "$remapped_username" >/dev/null 2>&1; then
-                    pct exec "$ctid" -- useradd -u "$remapped_uid" -g sharedfiles -s /bin/false -M "$remapped_username" 2>/dev/null || true
-                    msg_ok "$(translate "Created remapped user") $remapped_username (UID: $remapped_uid)"
-                    ((remapped_count++))
-                else
-
-                    pct exec "$ctid" -- usermod -g sharedfiles "$remapped_username" 2>/dev/null || true
-                fi
-            fi
-        done <<< "$lxc_users"
+    # `+ 100000` UID-shift only makes sense in unprivileged containers
+    # (UID 0 in CT == UID 100000 on host). `select_privileged_lxc` already
+    # gated the flow to privileged CTs above, so the shift is meaningless
+    # here and creates phantom `remap_NNNN` accounts that don't map to
+    # any real UID. Skip the loop in privileged context. Audit Tier 6 —
+    # UID-shift remapping en CTs privilegiados donde no aplica.
+    local _is_unpriv=0
+    if pct config "$ctid" 2>/dev/null | grep -qE '^unprivileged:\s*1'; then
+        _is_unpriv=1
     fi
-    
+    local remapped_count=0
 
-    local common_uids=(33 1000 1001 1002)  
-    for base_uid in "${common_uids[@]}"; do
-        local remapped_uid=$((base_uid + 100000))
-        local remapped_username="remap_${base_uid}"
-        
-        if ! pct exec "$ctid" -- id "$remapped_username" >/dev/null 2>&1; then
-            pct exec "$ctid" -- useradd -u "$remapped_uid" -g sharedfiles -s /bin/false -M "$remapped_username" 2>/dev/null || true
-            msg_ok "$(translate "Created common remapped user") $remapped_username (UID: $remapped_uid)"
-            ((remapped_count++))
+    if (( _is_unpriv == 1 )); then
+        msg_info "$(translate "Creating UID remapping for unprivileged container compatibility...")"
+
+        if [[ -n "$lxc_users" ]]; then
+            while IFS=: read -r username uid; do
+                if [[ -n "$uid" ]]; then
+                    local remapped_uid=$((uid + 100000))
+                    local remapped_username="remap_${uid}"
+
+                    if ! pct exec "$ctid" -- id "$remapped_username" >/dev/null 2>&1; then
+                        pct exec "$ctid" -- useradd -u "$remapped_uid" -g sharedfiles -s /bin/false -M "$remapped_username" 2>/dev/null || true
+                        msg_ok "$(translate "Created remapped user") $remapped_username (UID: $remapped_uid)"
+                        ((remapped_count++))
+                    else
+                        pct exec "$ctid" -- usermod -g sharedfiles "$remapped_username" 2>/dev/null || true
+                    fi
+                fi
+            done <<< "$lxc_users"
         fi
-    done
-    
-    msg_ok "$(translate "Universal sharedfiles group configured with") $remapped_count $(translate "remapped users")"
+
+
+        local common_uids=(33 1000 1001 1002)
+        for base_uid in "${common_uids[@]}"; do
+            local remapped_uid=$((base_uid + 100000))
+            local remapped_username="remap_${base_uid}"
+
+            if ! pct exec "$ctid" -- id "$remapped_username" >/dev/null 2>&1; then
+                pct exec "$ctid" -- useradd -u "$remapped_uid" -g sharedfiles -s /bin/false -M "$remapped_username" 2>/dev/null || true
+                msg_ok "$(translate "Created common remapped user") $remapped_username (UID: $remapped_uid)"
+                ((remapped_count++))
+            fi
+        done
+
+        msg_ok "$(translate "Universal sharedfiles group configured with") $remapped_count $(translate "remapped users")"
+    else
+        msg_ok "$(translate "Privileged container — UID-shift remapping skipped (not applicable)")"
+    fi
 }
 
 

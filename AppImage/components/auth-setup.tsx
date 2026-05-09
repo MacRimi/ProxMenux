@@ -58,24 +58,20 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
     setError("")
 
     try {
-      console.log("[v0] Skipping authentication setup...")
       const response = await fetch(getApiUrl("/api/auth/skip"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       })
 
       const data = await response.json()
-      console.log("[v0] Auth skip response:", data)
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to skip authentication")
       }
 
       if (data.auth_declined) {
-        console.log("[v0] Authentication skipped successfully - APIs should be accessible without token")
       }
 
-      console.log("[v0] Authentication skipped successfully")
       localStorage.setItem("proxmenux-auth-declined", "true")
       localStorage.removeItem("proxmenux-auth-token") // Remove any old token
       setOpen(false)
@@ -109,7 +105,6 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
     setLoading(true)
 
     try {
-      console.log("[v0] Setting up authentication...")
       const response = await fetch(getApiUrl("/api/auth/setup"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -120,7 +115,6 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
       })
 
       const data = await response.json()
-      console.log("[v0] Auth setup response:", data)
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to setup authentication")
@@ -129,7 +123,6 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
       if (data.token) {
         localStorage.setItem("proxmenux-auth-token", data.token)
         localStorage.removeItem("proxmenux-auth-declined")
-        console.log("[v0] Authentication setup successful")
       }
 
       setOpen(false)

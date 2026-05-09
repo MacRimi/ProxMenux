@@ -1,12 +1,19 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Post-Install Menu Dispatcher
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.2
-# Last Updated: 06/07/2025
+# ==========================================================
+# Description:
+# Dispatcher for the post-installation options: Automated
+# (zero-prompt baseline), Customizable (checklist per category)
+# and Uninstall Optimizations (reverse any previously applied
+# change). Also exposes two community post-install scripts
+# (Proxmox VE Post Install and Microcode) via wget | bash.
 # ==========================================================
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
@@ -85,6 +92,137 @@ declare -a PROXMENUX_SCRIPTS=(
     "Uninstall optimizations|ProxMenux|bash \"$LOCAL_SCRIPTS/post_install/uninstall-tools.sh\""
 )
 
+# ==========================================================
+# Sprint 12C: post-install function update detection.
+#
+# The Monitor's startup hook writes updates_available.json. We read it
+# here so the bash menu can show a conditional "Apply available updates"
+# entry above Uninstall when bumped versions are detected on disk vs the
+# user's installed_tools.json.
+# ==========================================================
+UPDATES_FILE="/usr/local/share/proxmenux/updates_available.json"
+UPDATE_WRAPPER="$LOCAL_SCRIPTS/post_install/update_post_install_function.sh"
+
+count_post_install_updates() {
+    [[ ! -f "$UPDATES_FILE" ]] && { echo 0; return; }
+    command -v jq >/dev/null 2>&1 || { echo 0; return; }
+    jq '.updates | length' "$UPDATES_FILE" 2>/dev/null || echo 0
+}
+
+# Build a dialog checklist with the available updates and run the
+# wrapper script for whichever the user picks. Entries flagged
+# `source_certain=false` (legacy bool entries) are listed but not
+# pre-checked; they need a source pick first via the Monitor or a
+# fresh re-run of the customizable post-install.
+run_updates_dialog() {
+    if ! command -v jq >/dev/null 2>&1; then
+        msg_error "$(translate "jq is required to apply updates from this menu.")"
+        sleep 2
+        return
+    fi
+
+    if [[ ! -f "$UPDATES_FILE" ]]; then
+        msg_warn "$(translate "No updates available — run a scan first or wait for the Monitor to refresh.")"
+        sleep 2
+        return
+    fi
+
+    local count
+    count=$(count_post_install_updates)
+    if [[ "$count" -eq 0 ]]; then
+        msg_ok "$(translate "All ProxMenux optimizations are up to date.")"
+        sleep 2
+        return
+    fi
+
+    # Build the dialog --checklist arguments. Format per row:
+    #   <tag> <description> <on|off>
+    # We use the tool key as the tag so the selection callback can map
+    # back to source/function via jq.
+    local checklist=()
+    while IFS=$'\t' read -r key current available; do
+        # Sprint 12C v2: every row is checked by default. Legacy bool
+        # entries default to the auto flow on the wrapper side so the
+        # user no longer needs to do a "source pick" first.
+        local label="${key} (v${current} → v${available})"
+        checklist+=("$key" "$label" "on")
+    done < <(jq -r '.updates[] | [.key, .current_version, .available_version] | @tsv' "$UPDATES_FILE" 2>/dev/null)
+
+    if [[ ${#checklist[@]} -eq 0 ]]; then
+        msg_warn "$(translate "Updates file is empty or unreadable.")"
+        sleep 2
+        return
+    fi
+
+    local selected
+    selected=$(dialog --clear --colors --separate-output \
+        --backtitle "ProxMenux" \
+        --title "$(translate "Apply Available Updates")" \
+        --checklist "\n$(translate "Select the optimizations to update. Each one re-runs its post-install function and registers the new version."):\n" \
+        22 78 12 \
+        "${checklist[@]}" 3>&1 1>&2 2>&3)
+
+    local rc=$?
+    clear
+    [[ $rc -ne 0 ]] && return     # cancelled
+    [[ -z "$selected" ]] && return
+
+    # Build FUNCTIONS_BATCH (newline-separated source:function:key) by
+    # looking up each picked key in the JSON. The detector already
+    # populates `.source` (defaulting to "auto" for legacy bool entries
+    # that didn't record one) and `.function`, so this is a straight
+    # passthrough. Sprint 12C v2 dropped the source-pick gate.
+    local batch=""
+    while IFS= read -r key; do
+        [[ -z "$key" ]] && continue
+        local entry
+        entry=$(jq -r --arg k "$key" '
+            .updates[] | select(.key == $k) |
+            select(.function != "") |
+            "\((.source // "auto")):\(.function):\(.key)"
+        ' "$UPDATES_FILE")
+        [[ -n "$entry" ]] && batch+="${entry}"$'\n'
+    done <<< "$selected"
+
+    if [[ -z "$batch" ]]; then
+        msg_warn "$(translate "Nothing to apply — none of the selected updates have a runnable function on disk.")"
+        sleep 3
+        return
+    fi
+
+    # Hand off to the same wrapper the Monitor uses. Running it directly
+    # (not through a dialog menu) so the user sees the post-install
+    # function output verbatim.
+    EXECUTION_MODE="cli" FUNCTIONS_BATCH="$batch" bash "$UPDATE_WRAPPER"
+
+    # Sprint 12C v2: force the Monitor to rewrite updates_available.json
+    # so the next loop iteration of show_menu sees the post-update state
+    # and the "Apply available updates (N)" entry hides/decrements
+    # correctly. The endpoint is exposed on localhost without auth (POST
+    # is idempotent — just re-runs the parser), so a plain curl works
+    # whether HTTPS is on or off. Falls back to direct file write via
+    # the Python module if the service isn't reachable (host where the
+    # Monitor isn't running yet).
+    local scheme="http"
+    [[ -f /etc/proxmenux/ssl_config.json ]] && \
+        jq -e '.enabled' /etc/proxmenux/ssl_config.json >/dev/null 2>&1 && \
+        scheme="https"
+    if ! curl -k -s --max-time 5 -X POST "${scheme}://127.0.0.1:8008/api/updates/post-install/scan" >/dev/null 2>&1; then
+        # Fallback: regenerate the JSON via the module directly. We
+        # can't import it from system Python because dependencies live
+        # inside the AppImage, so just rewrite the file by re-running
+        # the detector logic in-process via jq + the on-disk scripts.
+        # Simpler: leave the file stale — the next AppImage restart will
+        # rewrite it. The Monitor's _ensure_fresh_cache also auto-
+        # refreshes when installed_tools.json changes, so the API view
+        # is correct even if the bash menu sees a one-cycle-stale list.
+        :
+    fi
+
+    msg_success "$(translate 'Press ENTER to continue...')"
+    read -r _
+}
+
 
 declare -a COMMUNITY_SCRIPTS=(
     "Proxmox VE Post Install|Helper-Scripts|bash -c \"\$(wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pve-install.sh); msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
@@ -119,14 +257,35 @@ format_menu_item() {
 show_menu() {
     while true; do
         local menu_items=()
-        
+
 
         declare -A script_commands
         local counter=1
-        
+
+        # Sprint 12C: re-evaluate available updates on every loop so the
+        # entry vanishes after the user has applied everything (and the
+        # Monitor has rewritten updates_available.json on its next scan).
+        local update_count
+        update_count=$(count_post_install_updates)
 
         for script in "${PROXMENUX_SCRIPTS[@]}"; do
             IFS='|' read -r name source command <<< "$script"
+
+            # Insert the conditional "Apply available updates" item right
+            # above "Uninstall optimizations" so it sits next to the
+            # related rollback action and not buried in the middle.
+            if [[ "$name" == "Uninstall optimizations" && "$update_count" -gt 0 ]]; then
+                local update_label
+                update_label="Apply available updates ($update_count)"
+                local translated_update
+                translated_update="$(translate "$update_label")"
+                local formatted_update
+                formatted_update=$(format_menu_item "$translated_update" "ProxMenux")
+                menu_items+=("$counter" "$formatted_update")
+                script_commands["$counter"]="run_updates_dialog"
+                ((counter++))
+            fi
+
             local translated_name="$(translate "$name")"
             local formatted_item
             formatted_item=$(format_menu_item "$translated_name" "$source")

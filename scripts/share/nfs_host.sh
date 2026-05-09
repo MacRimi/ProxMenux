@@ -4,11 +4,21 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : MIT
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version     : 1.0
 # ==========================================================
 # Description:
-# Adds external NFS shares as Proxmox storage (pvesm).
-# Proxmox manages the mount natively — no fstab entries needed.
+# Registers external NFS exports as Proxmox storage via
+# pvesm add nfs. Proxmox manages the mount natively — no
+# fstab entries needed on the host.
+#
+# Features:
+# - Auto-discover NFS servers on the local subnet (nmap).
+# - Reachability validation chain (ping + nc + showmount).
+# - Content-type checklist (import/backup/iso/vztmpl/images/
+#   rootdir/snippets).
+# - View, remove and connectivity-test for existing storages.
 # ==========================================================
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"

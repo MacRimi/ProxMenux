@@ -1,12 +1,28 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenuX - Upgrade PVE 8 → 9 (Simplified, per official guide)
+# ProxMenux - PVE 8 to 9 Pre-upgrade Check
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 14/08/2025
+# ==========================================================
+# Description:
+# Runs Proxmox's official 'pve8to9 --full' pre-upgrade check and
+# offers guided remediation for the common blocking issues. Stops
+# before the actual upgrade -- invoke upgrade_pve8_to_pve9.sh to
+# proceed once the check passes cleanly.
+#
+# Features:
+#   - Captures full pve8to9 output to /var/log/pve8-a-pve9-<timestamp>.log
+#   - Counts FAIL / WARN entries and surfaces a summary banner.
+#   - Detects common failure patterns (systemd-boot meta-package,
+#     Ceph version, repository conflicts, missing packages, low
+#     disk space, network restart needed) and proposes the matching
+#     repair command.
+#   - Three-way prompt: auto-repair, show manual commands, abort.
+#   - Re-runs the check after auto-repair to confirm resolution.
 # ==========================================================
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
@@ -20,6 +36,15 @@ fi
 
 load_language
 initialize_cache
+
+# Load shared global functions: cleanup_duplicate_repos and ensure_repositories
+# are referenced by the auto-repair flow below and live in these files.
+if [[ -f "$LOCAL_SCRIPTS/global/common-functions.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/common-functions.sh"
+fi
+if [[ -f "$LOCAL_SCRIPTS/global/utils-install-functions.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/utils-install-functions.sh"
+fi
 
 
 # ==========================================================
@@ -39,6 +64,19 @@ fi
 
 
 run_pve8to9_check2() {
+  # Bound the auto-repair → re-check recursion. If repairs keep producing
+  # FAILs (e.g. a missing repo can't be auto-fixed by `ensure_repositories`)
+  # the user could keep picking "auto-repair" indefinitely and we'd grow
+  # the bash call stack until it overflows. Cap at 3 attempts. Audit
+  # Tier 6 — `pve8to9_check.sh` recursión sin guard.
+  : "${_PVE8TO9_DEPTH:=0}"
+  _PVE8TO9_DEPTH=$((_PVE8TO9_DEPTH + 1))
+  if (( _PVE8TO9_DEPTH > 3 )); then
+    msg_error "$(translate "Maximum auto-repair attempts reached (3). Please review the log and run any remaining commands manually.")"
+    _PVE8TO9_DEPTH=0
+    return 1
+  fi
+
   local tmp
   tmp="$(mktemp)"
   echo -e
@@ -76,9 +114,9 @@ run_pve8to9_check2() {
       
       # Error 3: Repository configuration issues
       if grep -q -E '(repository.*issue|repo.*problem|sources.*error)' "$tmp"; then
-        repair_commands+=("cleanup_duplicate_repos && configure_repositories")
+        repair_commands+=("cleanup_duplicate_repos && ensure_repositories")
         repair_descriptions+=("$(translate "Fix repository configuration")")
-        echo -e "${YW}$(translate "Fix repositories:") ${CL}cleanup_duplicate_repos && configure_repositories"
+        echo -e "${YW}$(translate "Fix repositories:") ${CL}cleanup_duplicate_repos && ensure_repositories"
       fi
       
       # Error 4: Package conflicts

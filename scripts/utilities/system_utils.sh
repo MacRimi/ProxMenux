@@ -1,36 +1,32 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - System Utilities Installer
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.2
-# Last Updated: 03/04/2026
 # ==========================================================
 # Description:
-# This script provides an interactive system utilities installer with a
-# comprehensive dialog-based interface for Proxmox VE and Linux systems.
-# It simplifies the installation and management of essential command-line
-# tools and utilities commonly used in server environments.
+# Interactive installer for 26 curated CLI utilities packaged in
+# the canonical PROXMENUX_UTILS list (defined in
+# global/utils-install-functions.sh). Uses the shared
+# ensure_repositories() + install_single_package() pair to keep the
+# repo configuration and feedback consistent with the rest of the
+# project.
 #
-# The script offers both individual utility selection and predefined groups
-# for different use cases, ensuring administrators can quickly set up their
-# preferred toolset without manual package management.
-#
-# Supported utility categories:
-# - Basic utilities: grc, htop, tree, curl, wget
-# - Development tools: git, vim, nano, dos2unix
-# - Compression tools: zip, unzip, rsync, cabextract
-# - Network tools: iperf3, nmap, tcpdump, nethogs, iptraf-ng, sshpass
-# - Analysis tools: jq, ncdu, iotop, btop, iftop
-# - System tools: plocate, net-tools, ipset, msr-tools
-# - Virtualization tools: libguestfs-tools, wimtools, genisoimage, chntpw
-# - Download tools: axel, aria2
-#
-# The script automatically handles package name differences across distributions
-# and provides detailed feedback on installation success, warnings, and failures.
-#
+# Features:
+#   - Custom selection: dialog checklist of all 26 packages.
+#   - Install ALL utilities: one-click for all of PROXMENUX_UTILS.
+#   - Predefined groups (basic / dev / compression / multiplexers /
+#     analysis / network) for quick targeted installs.
+#   - Verify installations: checks every PROXMENUX_UTILS command for
+#     availability and shows an Available / Missing summary.
+#   - Per-package feedback (install_single_package returns 0 ok / 1
+#     failed / 2 installed-but-command-not-found-yet).
+#   - Hash refresh after each install to surface new commands.
+# ==========================================================
 
 # Configuration ============================================
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"

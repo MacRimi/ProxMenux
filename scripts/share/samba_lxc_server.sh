@@ -1,15 +1,24 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux CT - Samba Manager for Proxmox LXC
+# ProxMenux - Samba Server Manager for LXC
 # ==========================================================
-# Based on ProxMenux by MacRimi
+# Author      : MacRimi
+# Copyright   : (c) 2024 MacRimi
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version     : 1.0
 # ==========================================================
 # Description:
-# This script allows you to manage Samba shares inside Proxmox CTs:
-# - Create shared folders
-# - View configured shares
-# - Delete existing shares
-# - Check Samba service status
+# Manages Samba (SMB / CIFS) shares from inside a Proxmox LXC
+# container. Requires a privileged container.
+#
+# Features:
+# - Install and configure samba inside the CT.
+# - Expose folders under /mnt as Samba shares.
+# - Set up a universal "sharedfiles" group (GID 101000) on the
+#   CT as a convention for cross-CT file sharing.
+# - List configured shares and check service status.
+# - Remove shares cleanly.
 # ==========================================================
 
 # Configuration
@@ -146,7 +155,11 @@ create_share() {
         if ! pct exec "$CTID" -- id "$USERNAME" &>/dev/null; then
             pct exec "$CTID" -- adduser --disabled-password --gecos "" "$USERNAME"
         fi
-        pct exec "$CTID" -- bash -c "echo -e '$PASSWORD\n$PASSWORD' | smbpasswd -a '$USERNAME'"
+        # Pipe the password via stdin instead of interpolating into a `bash -c`
+        # shell string. The previous form broke (and was injectable) when the
+        # password contained a single quote. `-s` makes smbpasswd read silently
+        # from stdin and `printf` keeps the bytes literal — no shell expansion.
+        printf '%s\n%s\n' "$PASSWORD" "$PASSWORD" | pct exec "$CTID" -- smbpasswd -s -a "$USERNAME"
         
         msg_ok "$(translate "Samba server installed successfully.")"
     else
@@ -160,7 +173,12 @@ create_share() {
     if [[ -n "$IS_MOUNTED" ]]; then
         msg_info "$(translate "Detected a mounted directory from host. Setting up shared group...")"
         
-        SHARE_GID=999
+        # Match the GID `nfs_lxc_server.sh` uses (101000) so the same
+        # `sharedfiles` group bridges Samba- and NFS-served paths. The
+        # previous `999` was inconsistent — files written via Samba were
+        # owned by GID 999 and not visible to NFS clients accessing the
+        # same dataset. Audit Tier 6 — GID inconsistente.
+        SHARE_GID=101000
         GROUP_EXISTS=$(pct exec "$CTID" -- getent group sharedfiles || true)
         GID_IN_USE=$(pct exec "$CTID" -- getent group "$SHARE_GID" | cut -d: -f1 || true)
         

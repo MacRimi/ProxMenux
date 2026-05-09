@@ -1,13 +1,29 @@
 #!/bin/bash
-
 # ==========================================================
-# ProxMenux - Manual Proxmox VE 8 to 9 Upgrade Guide
+# ProxMenux - Manual PVE 8 to 9 Upgrade Guide
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 13/08/2025
+# ==========================================================
+# Description:
+# Read-only display of a 17-step manual upgrade procedure from
+# Proxmox VE 8 to 9. Modifies nothing on the host -- exposes the
+# exact commands the automated upgrade runs so an operator can
+# perform the upgrade by hand for full visibility, or use it as a
+# reference / runbook.
+#
+# Features:
+#   - Numbered steps with description + command + recommended
+#     answers for the dpkg prompts encountered during dist-upgrade.
+#   - Prerequisite checklist (PVE 8.4+, console access, backups,
+#     free disk space, ...).
+#   - Covers Debian bookworm -> trixie sed migration, repository
+#     deb822 conversion, Ceph 19.x (Squid) requirement and
+#     cluster-upgrade caveats.
+#   - Recommends running the upgrade inside tmux / screen.
 # ==========================================================
 
 # Configuration ============================================

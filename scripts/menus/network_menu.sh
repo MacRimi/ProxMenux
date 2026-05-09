@@ -4,17 +4,32 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.1
-# Last Updated: 08/07/2025
 # ==========================================================
-
 # Description:
-# Advanced network management and troubleshooting tool for Proxmox VE.
-# Features include interface detection, bridge management, connectivity testing,
-# network diagnostics, configuration backup/restore, and automated repairs.
-# Special thanks to @Andres_Eduardo_Rojas_Moya for contributing the persistent
-# network naming function and for the original idea.
+# Network management and troubleshooting tool for Proxmox VE.
+# Operates exclusively on the classic Debian/Proxmox network stack
+# (/etc/network/interfaces). Aborts safely on netplan / systemd-networkd
+# / NetworkManager hosts to avoid corrupting unsupported configurations.
+#
+# Features:
+#   - Read-only diagnostics: routing table, connectivity tests, advanced
+#     network statistics, bridge and interface configuration analysis.
+#   - Real-time monitoring launchers (iftop, iptraf-ng).
+#   - Guided repair flows for invalid bridge ports and orphaned interface
+#     configurations, with mandatory backup and step-by-step preview.
+#   - Persistent network interface naming via systemd .link files
+#     (MAC-based, survives hardware changes and PCI re-enumeration).
+#   - Manual backup / restore of /etc/network/interfaces under
+#     /var/backups/proxmenux/.
+#   - Network service restart with confirmation.
+#   - Curated community scripts (e.g., NIC offloading fix for Intel e1000e).
+#
+# Acknowledgements:
+# Persistent network naming function originally contributed by
+# @Andres_Eduardo_Rojas_Moya.
 # Configuration ============================================
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
 BASE_DIR="/usr/local/share/proxmenux"
@@ -112,17 +127,9 @@ get_interface_info() {
 
 # ==========================================================
 
-show_routing_table_() {
-    local route_info=""
-    route_info+="$(translate "Routing Table")\n"
-    route_info+="$(printf '=%.0s' {1..30})\n\n"
-    route_info+="$(ip route show)\n\n"
-    route_info+="$(translate "Default Gateway"): $(ip route | grep default | awk '{print $3}' | head -1)\n"
-    
-    dialog --backtitle "ProxMenux" --title "$(translate "Routing Information")" \
-           --msgbox "$route_info" 20 80
-}
-
+# Note: previous `show_routing_table_` (with trailing underscore) was
+# dead code — never referenced anywhere. Removed in Sprint 10T.7.
+# `show_routing_table` below is the active implementation.
 
 show_routing_table() {
     local route_info=""
@@ -929,9 +936,21 @@ restore_network_backup() {
 
             if dialog --backtitle "ProxMenux" --title "$(translate "Restart Network")" \
                       --yesno "\n$(translate "Do you want to restart the network service now to apply changes?")" 8 60; then
-                if systemctl restart networking; then
+                # Capture stdout+stderr and check the exit code directly
+                # via the assignment's success — `$?` after a command-
+                # substitution assignment is the substitution's exit code,
+                # which is fragile (non-zero shell options affect it).
+                local _restart_err
+                if _restart_err=$(systemctl restart networking 2>&1); then
                     dialog --backtitle "ProxMenux" --title "$(translate "Network Restarted")" \
                            --msgbox "\n$(translate "Network service restarted successfully.")" 8 50
+                else
+                    # Surface the failure — silent failure left the user
+                    # thinking the restart worked while they're actually
+                    # locked out of network. Audit Tier 7 — restore_network_backup
+                    # no reporta fallo del restart de networking.
+                    dialog --backtitle "ProxMenux" --title "$(translate "Network Restart Failed")" \
+                           --msgbox "\n$(translate "systemctl restart networking failed:")\n\n${_restart_err:-unknown error}\n\n$(translate "Restored config is on disk; reboot the host to apply.")" 14 70
                 fi
             fi
         fi
@@ -939,10 +958,68 @@ restore_network_backup() {
 }
 
 
-launch_iftop() {
-    if ! command -v iftop &>/dev/null; then
-        apt-get update -qq && apt-get install -y iftop &>/dev/null
+# ---------------------------------------------------------------
+# Shared helper for the monitoring tool launchers.
+# Ensures a given network tool is installed using the canonical
+# repo + install pattern from global/utils-install-functions.sh.
+# Args: package_name  verify_command  description
+# Returns: 0 on success, 1 on failure (with the user already
+# acknowledged via "Press Enter to return to menu").
+# ---------------------------------------------------------------
+_ensure_network_tool() {
+    local pkg="$1"
+    local cmd="${2:-$pkg}"
+    local desc="${3:-$pkg}"
+
+    if command -v "$cmd" &>/dev/null; then
+        return 0
     fi
+
+    if [[ -f "$LOCAL_SCRIPTS/global/utils-install-functions.sh" ]]; then
+        source "$LOCAL_SCRIPTS/global/utils-install-functions.sh"
+    fi
+
+    if ! type ensure_repositories &>/dev/null || ! type install_single_package &>/dev/null; then
+        clear
+        show_proxmenux_logo
+        msg_title "$(translate "Installing") $pkg"
+        msg_error "$(translate "Required install helpers not available.")"
+        msg_warn "$(translate "Cannot find") global/utils-install-functions.sh"
+        echo -e ""
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return 1
+    fi
+
+    clear
+    show_proxmenux_logo
+    msg_title "$(translate "Installing") $pkg"
+
+    if ! ensure_repositories; then
+        msg_error "$(translate "Failed to configure repositories. Installation aborted.")"
+        echo -e ""
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return 1
+    fi
+
+    install_single_package "$pkg" "$cmd" "$desc"
+    local rc=$?
+
+    if [[ $rc -eq 1 ]]; then
+        echo -e ""
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return 1
+    fi
+
+    # rc=0 (installed and available) or rc=2 (installed, hash refresh pending —
+    # invoking the binary by name through PATH lookup still works).
+    return 0
+}
+
+launch_iftop() {
+    _ensure_network_tool "iftop" "iftop" "Real-time network usage" || return
 
     dialog --backtitle "ProxMenux" --title "$(translate "iftop usage")" --msgbox "\n$(translate "To exit iftop, press q")" 8 50
     clear
@@ -950,13 +1027,89 @@ launch_iftop() {
 }
 
 launch_iptraf() {
-    if ! command -v iptraf-ng &>/dev/null; then
-        apt-get update -qq && apt-get install -y iptraf-ng &>/dev/null
-    fi
+    _ensure_network_tool "iptraf-ng" "iptraf-ng" "Network monitoring tool" || return
 
     dialog --backtitle "ProxMenux" --title "$(translate "iptraf-ng usage")" --msgbox "\n$(translate "To exit iptraf-ng, press x")" 8 50
     clear
     iptraf-ng
+}
+
+launch_iperf3() {
+    _ensure_network_tool "iperf3" "iperf3" "Network bandwidth testing" || return
+
+    # Mode selection
+    local mode
+    mode=$(dialog --backtitle "ProxMenux" \
+        --title "$(translate "iperf3 - Bandwidth test")" \
+        --menu "\n$(translate "Choose iperf3 mode:")" 12 70 2 \
+        "1" "$(translate "Server (listen for incoming tests on TCP 5201)")" \
+        "2" "$(translate "Client (run a bandwidth test to a server)")" \
+        3>&1 1>&2 2>&3) || return
+
+    case "$mode" in
+        1)
+            # Server mode
+            dialog --backtitle "ProxMenux" --title "$(translate "iperf3 server")" \
+                --msgbox "\n$(translate "Server will listen on TCP port 5201.")\n\n$(translate "Press Ctrl+C to stop the server and return to menu.")" 11 65
+
+            show_proxmenux_logo
+            msg_title "$(translate "iperf3 - Bandwidth test (Server mode)")"
+
+            echo -e "${TAB}${BGN}$(translate "Listening on:")${CL} ${BL}TCP 0.0.0.0:5201${CL}"
+            echo -e "${TAB}${BGN}$(translate "To stop:")${CL}       ${BL}Ctrl+C${CL}"
+            echo -e ""
+            echo -e "${BOLD}─────────── $(translate "iperf3 server output") ───────────${CL}"
+            echo -e ""
+
+            iperf3 -s
+
+            echo -e ""
+            msg_success "$(translate "Server stopped. Press Enter to return to menu...")"
+            read -r
+            ;;
+        2)
+            # Client mode
+            local target
+            target=$(dialog --backtitle "ProxMenux" --title "$(translate "iperf3 client")" \
+                --inputbox "\n$(translate "Enter the iperf3 server IP or hostname:")" 10 60 \
+                3>&1 1>&2 2>&3) || return
+
+            # Trim whitespace from input
+            target=$(echo "$target" | tr -d '[:space:]')
+
+            if [[ -z "$target" ]]; then
+                dialog --backtitle "ProxMenux" --title "$(translate "Invalid input")" \
+                    --msgbox "\n$(translate "No server IP or hostname provided.")" 8 55
+                return 1
+            fi
+
+            show_proxmenux_logo
+            msg_title "$(translate "iperf3 - Bandwidth test (Client mode)")"
+
+            echo -e "${TAB}${BGN}$(translate "Target server:")${CL} ${BL}$target${CL}"
+            echo -e "${TAB}${BGN}$(translate "Port:")${CL}          ${BL}TCP 5201${CL}"
+            echo -e "${TAB}${BGN}$(translate "Duration:")${CL}      ${BL}10 $(translate "seconds (default)")${CL}"
+            echo -e ""
+            echo -e "${BOLD}─────────── $(translate "iperf3 client output") ───────────${CL}"
+            echo -e ""
+
+            if iperf3 -c "$target"; then
+                echo -e ""
+                msg_ok "$(translate "Bandwidth test completed successfully")"
+            else
+                echo -e ""
+                msg_error "$(translate "iperf3 test failed")"
+                msg_warn "$(translate "Check that:")"
+                echo -e "${TAB}• $(translate "iperf3 server is running on") ${BL}$target${CL}"
+                echo -e "${TAB}• $(translate "TCP port 5201 is reachable (firewall on server)")"
+                echo -e "${TAB}• $(translate "Network connectivity to") ${BL}$target${CL}"
+            fi
+
+            echo -e ""
+            msg_success "$(translate "Press Enter to return to menu...")"
+            read -r
+            ;;
+    esac
 }
 
 
@@ -989,6 +1142,7 @@ confirm_and_run() {
 declare -a PROXMENUX_SCRIPTS=(
     "Real-time network usage (iftop)||launch_iftop"
     "Network monitoring tool (iptraf-ng)||launch_iptraf"
+    "Bandwidth test (iperf3)||launch_iperf3"
     "Show Routing Table||show_routing_table"
     "Test Connectivity||test_connectivity"
     "Advanced Diagnostics||advanced_network_diagnostics"
@@ -1075,7 +1229,7 @@ show_menu() {
                                  --backtitle "ProxMenux" \
                                  --title "$(translate "Network Management")" \
                                  --menu "\n$(translate "Select a network management option:"):\n" \
-                                 26 78 19 \
+                                 28 78 19 \
                                  "${menu_items[@]}" 2>&1 1>&3)
         exit_status=$?
         exec 3>&-

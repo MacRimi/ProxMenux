@@ -148,6 +148,30 @@ interface VMBackup {
   notes?: string
 }
 
+// Sprint 13.29: shape returned by /api/lxc/<vmid>/mount-points. Lives
+// next to VMBackup since both are LXC-modal data structures.
+interface LxcMountPoint {
+  mp_index: string  // "mp0", "mp1", "" for ad-hoc
+  source: string
+  target: string
+  type: "pve_volume" | "pve_storage_bind" | "host_bind" | "ad_hoc"
+  origin_storage: string
+  origin_storage_type: string
+  origin_label: string
+  config_options: Record<string, string>
+  config_flags: string[]
+  total_bytes: number | null
+  used_bytes: number | null
+  available_bytes: number | null
+  runtime_mounted?: boolean | null
+  runtime_source?: string
+  runtime_fstype?: string
+  runtime_options?: string
+  runtime_readonly?: boolean
+  runtime_reachable?: boolean
+  runtime_error?: string | null
+}
+
 const fetcher = async (url: string) => {
   return fetchApi(url)
 }
@@ -288,6 +312,241 @@ const getOSIcon = (osInfo: VMDetails["os_info"] | undefined, vmType: string): Re
   }
 }
 
+// Sprint 13.29: render a single LXC mount point row.
+// Lifted out of the main component so the Mount Points tab renders
+// uniformly for both configured mpX entries and ad-hoc inside-CT
+// remote mounts. Capacity displays whatever the backend resolved —
+// PVE storage stats, `df` of host path, or n/a for ad-hoc.
+function MountPointCard({ mp }: { mp: LxcMountPoint }) {
+  const isStale = mp.runtime_reachable === false
+  const isReadonly = !isStale && mp.runtime_readonly === true
+  const isDivergent = mp.runtime_mounted === false  // configured but not actually mounted
+  const cardClasses = isStale
+    ? "border-red-500/50 bg-red-500/5"
+    : isDivergent
+      ? "border-amber-500/40 bg-amber-500/5"
+      : isReadonly
+        ? "border-amber-500/30 bg-amber-500/5"
+        : "border border-white/10 sm:border-border bg-white/5 sm:bg-card"
+
+  const typeBadgeClass: Record<LxcMountPoint["type"], string> = {
+    pve_volume: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+    pve_storage_bind: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    host_bind: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    ad_hoc: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  }
+  const typeLabel: Record<LxcMountPoint["type"], string> = {
+    pve_volume: "PVE volume",
+    pve_storage_bind: "bind from PVE storage",
+    host_bind: "bind from host",
+    ad_hoc: "ad-hoc inside CT",
+  }
+
+  const fmtBytes = (b: number | null | undefined) => {
+    if (b == null) return "—"
+    const gb = b / 1024 ** 3
+    if (gb < 1) return `${(gb * 1024).toFixed(1)} MB`
+    if (gb >= 1000) return `${(gb / 1024).toFixed(2)} TB`
+    return `${gb.toFixed(2)} GB`
+  }
+  const usedPct =
+    mp.total_bytes && mp.used_bytes != null && mp.total_bytes > 0
+      ? Math.round((mp.used_bytes / mp.total_bytes) * 100)
+      : null
+
+  // Parse mount options (runtime if available, else config flags) into
+  // flag chips + key=value pairs. Same UX as the Remote Mounts modal.
+  const optsString = mp.runtime_options || (mp.config_flags || []).join(",")
+  const optsEntries = (optsString || "")
+    .split(",")
+    .filter(Boolean)
+    .map((o) => {
+      const eq = o.indexOf("=")
+      return eq === -1
+        ? { key: o, value: null as string | null }
+        : { key: o.slice(0, eq), value: o.slice(eq + 1) }
+    })
+  const flags = optsEntries.filter((o) => o.value === null).map((o) => o.key)
+  const keyValues = optsEntries.filter((o) => o.value !== null) as Array<{ key: string; value: string }>
+
+  return (
+    <div className={`rounded-lg p-4 ${cardClasses}`}>
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div
+            className={`w-2 h-2 rounded-full flex-shrink-0 ${
+              isStale ? "bg-red-500" : isDivergent ? "bg-amber-500" : "bg-green-500"
+            }`}
+          />
+          <h3 className="font-mono font-semibold truncate">{mp.target}</h3>
+          {mp.mp_index && (
+            <Badge variant="outline" className="font-mono text-xs">
+              {mp.mp_index}
+            </Badge>
+          )}
+          <Badge className={typeBadgeClass[mp.type]}>{typeLabel[mp.type]}</Badge>
+          {mp.runtime_fstype && (
+            <Badge variant="outline" className="font-mono text-xs">
+              {mp.runtime_fstype}
+            </Badge>
+          )}
+        </div>
+        <Badge
+          className={
+            isStale
+              ? "bg-red-500/10 text-red-500 border-red-500/20"
+              : isDivergent
+                ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                : isReadonly
+                  ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                  : mp.runtime_mounted === null
+                    ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                    : "bg-green-500/10 text-green-500 border-green-500/20"
+          }
+        >
+          {isStale
+            ? "stale"
+            : isDivergent
+              ? "not mounted"
+              : isReadonly
+                ? "read-only"
+                : mp.runtime_mounted === null
+                  ? "stopped"
+                  : "mounted"}
+        </Badge>
+      </div>
+
+      {/* Source / Mounted-at info — what host resource backs the
+          mount, and where it shows up inside the CT. The header
+          already shows the target but it's worth surfacing the
+          source/target relationship explicitly here so the user
+          gets the full host→container path at a glance. */}
+      <div className="text-sm space-y-1">
+        <div>
+          <span className="text-muted-foreground">Source (host):</span>{" "}
+          <span className="font-mono">{mp.origin_label || mp.source}</span>
+          {mp.origin_storage && mp.origin_storage_type && (
+            <span className="text-muted-foreground ml-2">
+              ({mp.origin_storage_type} storage)
+            </span>
+          )}
+        </div>
+        <div>
+          <span className="text-muted-foreground">Mounted at (CT):</span>{" "}
+          <span className="font-mono">{mp.target}</span>
+        </div>
+      </div>
+
+      {/* Capacity — total/used/available with progress bar. Available
+          even when CT is stopped because numbers come from the host. */}
+      {mp.total_bytes != null && (
+        <div className="mt-3 space-y-2">
+          <Progress
+            value={usedPct ?? 0}
+            className={`h-2 ${
+              (usedPct ?? 0) > 90
+                ? "[&>div]:bg-red-500"
+                : (usedPct ?? 0) > 75
+                  ? "[&>div]:bg-yellow-500"
+                  : "[&>div]:bg-blue-500"
+            }`}
+          />
+          <div className="grid grid-cols-3 gap-3 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="font-medium">{fmtBytes(mp.total_bytes)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Used</p>
+              <p className="font-medium">
+                {fmtBytes(mp.used_bytes)} {usedPct != null && `(${usedPct}%)`}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Available</p>
+              <p className="font-medium">{fmtBytes(mp.available_bytes)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mount attributes — config_options/flags from the mpX line in
+          the LXC config (backup=0, shared=1, ro, replicate, etc.).
+          Hidden when there's nothing to show. */}
+      {(() => {
+        const configEntries: Array<{ key: string; value: string | null }> = []
+        for (const k of Object.keys(mp.config_options || {})) {
+          configEntries.push({ key: k, value: mp.config_options[k] })
+        }
+        for (const f of mp.config_flags || []) {
+          configEntries.push({ key: f, value: null })
+        }
+        if (configEntries.length === 0) return null
+        return (
+          <div className="mt-3">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">
+              Mount attributes (LXC config)
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {configEntries.map((e) => (
+                <Badge key={e.key} variant="outline" className="font-mono text-xs">
+                  {e.key}{e.value !== null ? `=${e.value}` : ""}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Runtime mount options — what the kernel actually uses
+          (vers, rsize, hard, sec, ...). Only meaningful when the CT
+          is running; for stopped CTs we hide this section because
+          the values would just repeat the config flags above.
+
+          Sprint 13.29 detail: we already render the runtime fstype
+          as a badge in the header, so it's fine to leave this
+          unlabelled-for-state — only show "(declared)" suffix in
+          the rare case where there's no runtime data but flags do
+          exist. */}
+      {(mp.runtime_mounted === true) && (keyValues.length > 0 || flags.length > 0) && (
+        <div className="mt-3">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">
+            Runtime mount options
+          </p>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {flags.map((f) => (
+              <Badge key={f} variant="outline" className="font-mono text-xs">
+                {f}
+              </Badge>
+            ))}
+          </div>
+          {keyValues.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              {keyValues.map((kv) => (
+                <div key={kv.key} className="min-w-0">
+                  <span className="font-mono text-muted-foreground">{kv.key}</span>
+                  <span className="font-mono text-foreground"> = {kv.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Error / divergence note. */}
+      {mp.runtime_error && (
+        <p
+          className={`mt-3 text-sm ${
+            isStale ? "text-red-400" : "text-amber-400"
+          }`}
+        >
+          {mp.runtime_error}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function VirtualMachines() {
   const {
     data: vmData,
@@ -305,6 +564,15 @@ export function VirtualMachines() {
   const [selectedVM, setSelectedVM] = useState<VMData | null>(null)
   const [vmDetails, setVMDetails] = useState<VMDetails | null>(null)
   const [controlLoading, setControlLoading] = useState(false)
+  // Destructive control confirmation. `Force Stop` and `Reboot` skip the OS
+  // shutdown sequence and can corrupt running guests; gate them behind a
+  // typed-VMID match prompt to prevent misclicks. See audit Tier 2 #17.
+  const [confirmDestructive, setConfirmDestructive] = useState<{
+    action: "stop" | "reboot"
+    vmid: number
+    vmName: string
+  } | null>(null)
+  const [confirmDestructiveTyped, setConfirmDestructiveTyped] = useState("")
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [terminalVmid, setTerminalVmid] = useState<number | null>(null)
@@ -337,7 +605,14 @@ export function VirtualMachines() {
   const [backupPbsChangeMode, setBackupPbsChangeMode] = useState<string>("default")
   
   // Tab state for modal
-  const [activeModalTab, setActiveModalTab] = useState<"status" | "backups">("status")
+  const [activeModalTab, setActiveModalTab] = useState<"status" | "mounts" | "backups">("status")
+  // Sprint 13.29: per-LXC mount points lazy-loaded when the user opens
+  // the LXC modal. We fetch alongside backups (one-shot) so switching
+  // tabs is instantaneous; the cost is small (parses one config file
+  // + pvesm status which the kernel already caches).
+  const [mountPoints, setMountPoints] = useState<LxcMountPoint[]>([])
+  const [adHocMounts, setAdHocMounts] = useState<LxcMountPoint[]>([])
+  const [loadingMounts, setLoadingMounts] = useState(false)
   
   // Detect standalone mode (webapp vs browser)
   const [isStandalone, setIsStandalone] = useState(false)
@@ -356,14 +631,19 @@ export function VirtualMachines() {
   }, [])
 
   useEffect(() => {
+    // `cancelled` short-circuits setState calls if the component unmounts
+    // mid-fetch (user navigates away while we're still iterating LXCs in
+    // batches). Without it, React logs "state update on unmounted
+    // component" and we leak the closure that holds the configs map.
+    let cancelled = false
+
     const fetchLXCIPs = async () => {
-      // Only fetch if data exists, not already loaded, and not currently loading
       if (!vmData || ipsLoaded || loadingIPs) return
 
       const lxcs = vmData.filter((vm) => vm.type === "lxc")
 
       if (lxcs.length === 0) {
-        setIpsLoaded(true)
+        if (!cancelled) setIpsLoaded(true)
         return
       }
 
@@ -372,6 +652,7 @@ export function VirtualMachines() {
 
       const batchSize = 5
       for (let i = 0; i < lxcs.length; i += batchSize) {
+        if (cancelled) return
         const batch = lxcs.slice(i, i + batchSize)
 
         await Promise.all(
@@ -396,14 +677,19 @@ export function VirtualMachines() {
           }),
         )
 
+        if (cancelled) return
         setVmConfigs((prev) => ({ ...prev, ...configs }))
       }
 
+      if (cancelled) return
       setLoadingIPs(false)
       setIpsLoaded(true)
     }
 
     fetchLXCIPs()
+    return () => {
+      cancelled = true
+    }
   }, [vmData, ipsLoaded, loadingIPs])
 
   // Load initial network unit and listen for changes
@@ -441,11 +727,24 @@ export function VirtualMachines() {
     setIsEditingNotes(false)
     setEditedNotes("")
     setDetailsLoading(true)
-    
+    setActiveModalTab("status")
+    // Reset Sprint 13.29 mount-points state from any previous selection
+    // so the new modal doesn't briefly flash data from another LXC.
+    setMountPoints([])
+    setAdHocMounts([])
+
     // Load backups immediately (independent of config)
     fetchBackupStorages()
     fetchVmBackups(vm.vmid)
-    
+
+    // Sprint 13.29: load LXC mount points alongside backups so
+    // switching to that tab is instant. Only LXCs have mpX entries —
+    // qemu VMs use disks, not mount points, so we skip the request
+    // and simply hide the tab below.
+    if (vm.type === "lxc") {
+      fetchMountPoints(vm.vmid)
+    }
+
     try {
       const details = await fetchApi(`/api/vms/${vm.vmid}`)
       setVMDetails(details)
@@ -453,6 +752,31 @@ export function VirtualMachines() {
       console.error("Error fetching VM details:", error)
     } finally {
       setDetailsLoading(false)
+    }
+  }
+
+  const fetchMountPoints = async (vmid: number) => {
+    setLoadingMounts(true)
+    try {
+      const response = await fetchApi<{
+        ok: boolean
+        running: boolean
+        mount_points: LxcMountPoint[]
+        ad_hoc: LxcMountPoint[]
+      }>(`/api/lxc/${vmid}/mount-points`)
+      if (response?.ok) {
+        setMountPoints(response.mount_points || [])
+        setAdHocMounts(response.ad_hoc || [])
+      } else {
+        setMountPoints([])
+        setAdHocMounts([])
+      }
+    } catch (error) {
+      console.error("Error fetching LXC mount points:", error)
+      setMountPoints([])
+      setAdHocMounts([])
+    } finally {
+      setLoadingMounts(false)
     }
   }
 
@@ -517,7 +841,7 @@ export function VirtualMachines() {
     try {
       await fetchApi(`/api/vms/${selectedVM.vmid}/backup`, {
         method: "POST",
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           storage: selectedBackupStorage,
           mode: backupMode,
           compress: "zstd",
@@ -530,6 +854,11 @@ export function VirtualMachines() {
       setTimeout(() => fetchVmBackups(selectedVM.vmid), 2000)
     } catch (error) {
       console.error("Error creating backup:", error)
+      // Surface the failure to the user. Previous behaviour silently swallowed
+      // backend errors so the user thought the backup started fine; in reality
+      // the request had 4xx/5xx'd and nothing was scheduled.
+      const msg = error instanceof Error ? error.message : "Unknown error"
+      alert(`Failed to start backup: ${msg}`)
     } finally {
       setCreatingBackup(false)
     }
@@ -547,7 +876,11 @@ export function VirtualMachines() {
       setSelectedVM(null)
       setVMDetails(null)
     } catch (error) {
-      console.error("Failed to control VM")
+      console.error(`Failed to ${action} VM ${vmid}:`, error)
+      // Same UX issue as handleCreateBackup: a silent console.error left the
+      // user looking at a "Stop"/"Start" button that just never reacted.
+      const msg = error instanceof Error ? error.message : "Unknown error"
+      alert(`Failed to ${action} VM ${vmid}: ${msg}`)
     } finally {
       setControlLoading(false)
     }
@@ -700,87 +1033,19 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     )
   }
 
-  const isHTML = (str: string): boolean => {
-    const htmlRegex = /<\/?[a-z][\s\S]*>/i
-    return htmlRegex.test(str)
-  }
-
-  const decodeRecursively = (str: string, maxIterations = 5): string => {
-    let decoded = str
-    let iteration = 0
-
-    while (iteration < maxIterations) {
-      try {
-        const nextDecoded = decodeURIComponent(decoded.replace(/%0A/g, "\n"))
-
-        // If decoding didn't change anything, we're done
-        if (nextDecoded === decoded) {
-          break
-        }
-
-        decoded = nextDecoded
-
-        // If there are no more encoded characters, we're done
-        if (!/(%[0-9A-F]{2})/i.test(decoded)) {
-          break
-        }
-
-        iteration++
-      } catch (e) {
-        // If decoding fails, try manual decoding of common sequences
-        try {
-          decoded = decoded
-            .replace(/%0A/g, "\n")
-            .replace(/%20/g, " ")
-            .replace(/%3A/g, ":")
-            .replace(/%2F/g, "/")
-            .replace(/%3D/g, "=")
-            .replace(/%3C/g, "<")
-            .replace(/%3E/g, ">")
-            .replace(/%22/g, '"')
-            .replace(/%27/g, "'")
-            .replace(/%26/g, "&")
-            .replace(/%23/g, "#")
-            .replace(/%25/g, "%")
-            .replace(/%2B/g, "+")
-            .replace(/%2C/g, ",")
-            .replace(/%3B/g, ";")
-            .replace(/%3F/g, "?")
-            .replace(/%40/g, "@")
-            .replace(/%5B/g, "[")
-            .replace(/%5D/g, "]")
-            .replace(/%7B/g, "{")
-            .replace(/%7D/g, "}")
-            .replace(/%7C/g, "|")
-            .replace(/%5C/g, "\\")
-            .replace(/%5E/g, "^")
-            .replace(/%60/g, "`")
-          break
-        } catch (manualError) {
-          // If manual decoding also fails, return what we have
-          break
-        }
-      }
-    }
-
-    return decoded
-  }
-
-  const processDescription = (description: string): { html: string; isHtml: boolean; error: boolean } => {
+  // Single-pass decode. Proxmox URL-encodes notes exactly once when storing
+  // them in `config.description`, so a single `decodeURIComponent` is the
+  // correct round-trip. The previous loop decoded up to 5 times, which made
+  // it possible to ship a payload like `%253Cscript%253E` past one-pass
+  // filters (`%25` → `%` → second decode produces `<script>`). With the
+  // dangerouslySetInnerHTML render path already removed (Sprint 4.1) the
+  // immediate XSS is gone, but keeping the loop on the editor path keeps
+  // the same evasion vector available for future use sites.
+  const decodeRecursively = (str: string): string => {
     try {
-      const decoded = decodeRecursively(description)
-
-      // Check if it contains HTML
-      if (isHTML(decoded)) {
-        return { html: decoded, isHtml: true, error: false }
-      }
-
-      // If it's plain text, convert \n to <br>
-      return { html: decoded.replace(/\n/g, "<br>"), isHtml: false, error: false }
-    } catch (error) {
-      // If all decoding fails, return error
-      console.error("Error decoding description:", error)
-      return { html: "", isHtml: false, error: true }
+      return decodeURIComponent(str.replace(/%0A/g, "\n"))
+    } catch {
+      return str
     }
   }
 
@@ -799,7 +1064,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
     setSavingNotes(true)
     try {
-      await fetchApi(`/api/vms/${selectedVM.vmid}/config`, {
+      await fetchApi(`/api/vms/${selectedVM.vmid}/description`, {
         method: "PUT",
         body: JSON.stringify({
           description: editedNotes, // Send as-is, pvesh will handle encoding
@@ -1337,6 +1602,28 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   <Activity className="h-4 w-4" />
                   Status
                 </button>
+                {/* Sprint 13.29: Mount Points tab — LXC only, and only
+                    when at least one mp / ad-hoc remote mount exists.
+                    A CT without mounts gets no empty tab.
+                    Label is "Mounts" (single word) so the trigger
+                    fits in one line on mobile next to Status and
+                    Backups; "Mount Points" wrapped on narrow viewports. */}
+                {selectedVM?.type === "lxc" && (mountPoints.length > 0 || adHocMounts.length > 0) && (
+                  <button
+                    onClick={() => setActiveModalTab("mounts")}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+                      activeModalTab === "mounts"
+                        ? "border-blue-500 text-blue-500"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <HardDrive className="h-4 w-4" />
+                    Mounts
+                    <Badge variant="secondary" className="text-xs h-5 ml-1">
+                      {mountPoints.length + adHocMounts.length}
+                    </Badge>
+                  </button>
+                )}
                 <button
                   onClick={() => setActiveModalTab("backups")}
                   className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
@@ -1625,8 +1912,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     ) : vmDetails.config.description ? (
                                       <>
                                         {(() => {
-                                          const processed = processDescription(vmDetails.config.description)
-                                          if (processed.error) {
+                                          // VM/CT notes are operator-controlled but historically were
+                                          // rendered via `dangerouslySetInnerHTML` — a stored XSS sink
+                                          // for any user with write access to the VM config (a
+                                          // non-admin user with PVE permissions, or another admin in
+                                          // a multi-admin deployment). We now render the decoded
+                                          // notes as plain text inside a <pre> with `white-space:
+                                          // pre-wrap` so newlines and indentation are preserved
+                                          // without interpreting any HTML. See audit Tier 2 #13.
+                                          let decoded: string
+                                          try {
+                                            decoded = decodeRecursively(vmDetails.config.description)
+                                          } catch {
                                             return (
                                               <div className="text-sm text-red-500">
                                                 Error decoding notes. Please edit to fix.
@@ -1634,10 +1931,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             )
                                           }
                                           return (
-                                            <div
-                                              className={`text-sm text-foreground ${processed.isHtml ? "proxmenux-notes" : "proxmenux-notes-plaintext"}`}
-                                              dangerouslySetInnerHTML={{ __html: processed.html }}
-                                            />
+                                            <pre
+                                              className="text-sm text-foreground proxmenux-notes-plaintext font-sans whitespace-pre-wrap break-words m-0"
+                                            >
+                                              {decoded}
+                                            </pre>
                                           )
                                         })()}
                                       </>
@@ -2030,6 +2328,39 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 </div>
                 )}
 
+                {/* Sprint 13.29: Mount Points Tab — LXC only.
+                    Renders configured mpX entries first, then any
+                    ad-hoc NFS/CIFS/SMB mounts found inside the
+                    container. Capacity comes from the host-side
+                    source (PVE storage or `df`) so it's available
+                    even when the CT is stopped. */}
+                {activeModalTab === "mounts" && selectedVM?.type === "lxc" && (
+                  <div className="space-y-4">
+                    {loadingMounts ? (
+                      <div className="flex items-center justify-center py-12 text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        Loading mount points…
+                      </div>
+                    ) : (
+                      <>
+                        {mountPoints.map((mp) => (
+                          <MountPointCard key={mp.mp_index || mp.target} mp={mp} />
+                        ))}
+                        {adHocMounts.length > 0 && (
+                          <>
+                            <div className="text-sm font-semibold text-muted-foreground pt-2 border-t border-border">
+                              Mounted from inside the container
+                            </div>
+                            {adHocMounts.map((mp) => (
+                              <MountPointCard key={`adhoc-${mp.target}`} mp={mp} />
+                            ))}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
                 {/* Backups Tab */}
                 {activeModalTab === "backups" && (
                   <div className="space-y-4">
@@ -2141,7 +2472,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   <Button
                     className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 hover:bg-blue-600/30"
                     disabled={selectedVM?.status !== "running" || controlLoading}
-                    onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "reboot")}
+                    onClick={() => selectedVM && setConfirmDestructive({
+                      action: "reboot",
+                      vmid: selectedVM.vmid,
+                      vmName: selectedVM.name,
+                    })}
                   >
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Reboot
@@ -2149,7 +2484,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   <Button
                     className="w-full bg-red-600/20 border border-red-600/50 text-red-400 hover:bg-red-600/30"
                     disabled={selectedVM?.status !== "running" || controlLoading}
-                    onClick={() => selectedVM && handleVMControl(selectedVM.vmid, "stop")}
+                    onClick={() => selectedVM && setConfirmDestructive({
+                      action: "stop",
+                      vmid: selectedVM.vmid,
+                      vmName: selectedVM.name,
+                    })}
                   >
                     <StopCircle className="h-4 w-4 mr-2" />
                     Force Stop
@@ -2167,6 +2506,83 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               />
             )
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Destructive control confirmation (Force Stop / Reboot) */}
+      <Dialog
+        open={confirmDestructive !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmDestructive(null)
+            setConfirmDestructiveTyped("")
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-500">
+              <StopCircle className="h-5 w-5" />
+              {confirmDestructive?.action === "stop" ? "Force Stop" : "Reboot"}{" "}
+              VMID {confirmDestructive?.vmid}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmDestructive?.action === "stop"
+                ? "This skips the guest OS shutdown sequence and can corrupt running databases or filesystems. The guest is killed immediately."
+                : "This forces a reboot without waiting for the guest OS to flush pending writes. Use a graceful Shutdown when possible."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm">
+              Type <span className="font-mono font-bold">{confirmDestructive?.vmid}</span> to confirm:
+            </p>
+            <input
+              type="text"
+              autoFocus
+              autoComplete="off"
+              inputMode="numeric"
+              value={confirmDestructiveTyped}
+              onChange={(e) => setConfirmDestructiveTyped(e.target.value)}
+              placeholder={String(confirmDestructive?.vmid ?? "")}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+            <p className="text-xs text-muted-foreground">
+              Guest: <span className="font-medium">{confirmDestructive?.vmName}</span>
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmDestructive(null)
+                setConfirmDestructiveTyped("")
+              }}
+              disabled={controlLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={
+                controlLoading ||
+                !confirmDestructive ||
+                confirmDestructiveTyped.trim() !== String(confirmDestructive.vmid)
+              }
+              onClick={async () => {
+                if (!confirmDestructive) return
+                const { vmid, action } = confirmDestructive
+                setConfirmDestructive(null)
+                setConfirmDestructiveTyped("")
+                await handleVMControl(vmid, action)
+              }}
+            >
+              {controlLoading
+                ? "Working..."
+                : confirmDestructive?.action === "stop"
+                ? "Force Stop"
+                : "Reboot"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

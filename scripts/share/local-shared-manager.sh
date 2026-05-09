@@ -4,9 +4,24 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : MIT
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 08/04/2026
+# ==========================================================
+# Description:
+# Creates a host directory pre-configured for LXC bind mounts.
+# Applies a permission profile (1777 + ACLs) that works for
+# both privileged and unprivileged containers without UID/GID
+# alignment.
+#
+# Features:
+# - Auto-suggests a free name in /mnt (shared, shared2, …).
+# - Accepts custom absolute paths outside /mnt.
+# - chown root:root + chmod 1777 (sticky + world-rwx).
+# - setfacl with default-inheritance ACLs so new files keep
+#   the permissive profile.
+# - Registers the directory in the ProxMenux share map for
+#   later use by the LXC Mount Manager.
 # ==========================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1,22 +1,24 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Import Disk to LXC (Passthrough)
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.3
-# Last Updated: 07/04/2026
 # ==========================================================
 # Description:
-# This script allows users to assign physical disks to existing
-# Proxmox containers (CTs) through an interactive menu.
-# - Detects the system disk and excludes it from selection.
-# - Lists all available CTs for the user to choose from.
-# - Identifies and displays unassigned physical disks.
-# - Allows the user to select multiple disks and attach them to a CT.
-# - Configures the selected disks for the CT and verifies the assignment.
-# - Uses persistent device paths to avoid issues with device order changes.
+# Assigns physical disks to existing Proxmox LXC containers
+# via an interactive menu, using persistent device paths to
+# avoid issues with device order changes.
+#
+# Features:
+# - Detects and excludes the system disk.
+# - Lists all containers for selection.
+# - Identifies unassigned physical disks.
+# - Configures the selected disks for the CT and verifies
+#   the assignment.
 # ==========================================================
 
 # Configuration ============================================

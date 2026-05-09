@@ -1,22 +1,27 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux - Complete Uninstall Optimizations Script
+# ProxMenux - Uninstall Optimizations
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 06/07/2025
 # ==========================================================
 # Description:
-# This script provides a complete uninstallation and rollback system 
-# for all post-installation optimizations applied by ProxMenux.
+# Reverses post-install optimizations previously applied by
+# ProxMenux. Reads the installed_tools.json registry to detect
+# which tools were applied, exposes them in a checklist, and
+# runs their dedicated uninstall function — restoring original
+# configs from their .bak backups where applicable.
 #
-# It allows administrators to safely revert any changes made during the 
-# optimization process, restoring the system to its original state.
-#
-# This ensures full control over system configurations and gives users 
-# the confidence to apply, test, and undo ProxMenux enhancements as needed.
+# Features:
+# - Registry-driven: only shows tools currently applied.
+# - Per-tool reverse functions (one for each entry in the
+#   auto / customizable scripts).
+# - Restores /etc configs from .bak backups when they exist.
+# - Reboot prompt for changes that require it (VFIO, kernel
+#   cmdline, persistent NIC names, …).
 # ==========================================================
 
 
@@ -633,6 +638,8 @@ uninstall_vfio_iommu() {
             msg_ok "$(translate "IOMMU parameters removed from GRUB")"
         fi
     fi
+    
+    msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
 
     update-initramfs -u -k all >/dev/null 2>&1 || true
 
@@ -805,6 +812,122 @@ migrate_installed_tools() {
 }
 
 ################################################################
+# Sprint 10P — Uninstallers for items previously missing coverage.
+# Each `uninstall_*` mirrors its install function in
+# `customizable_post_install.sh` and flips `register_tool "X" false`
+# at the end so the entry is removed from the active set.
+################################################################
+
+uninstall_ceph() {
+    msg_info2 "$(translate 'Uninstalling Ceph...')"
+    if dpkg -l 2>/dev/null | grep -qE '^ii\s+ceph'; then
+        apt-get purge -y 'ceph-*' 'librados*' 'librbd*' 'libcephfs*' 'python3-ceph*' >/dev/null 2>&1 || true
+        apt-get autoremove -y >/dev/null 2>&1 || true
+    fi
+    rm -f /etc/apt/sources.list.d/ceph.list /etc/apt/sources.list.d/ceph.sources 2>/dev/null
+    rm -f /etc/apt/trusted.gpg.d/ceph.asc /etc/apt/trusted.gpg.d/ceph-release.gpg 2>/dev/null
+    apt-get update -qq >/dev/null 2>&1 || true
+    msg_ok "$(translate 'Ceph packages and repository removed')"
+    register_tool "ceph" false
+}
+
+uninstall_ha() {
+    msg_info2 "$(translate 'Disabling High Availability services...')"
+    systemctl disable --now pve-ha-lrm pve-ha-crm corosync >/dev/null 2>&1 || true
+    msg_ok "$(translate 'HA services disabled (configs preserved)')"
+    register_tool "ha" false
+}
+
+uninstall_openvswitch() {
+    msg_info2 "$(translate 'Removing OpenVSwitch...')"
+    apt-get purge -y openvswitch-switch openvswitch-common >/dev/null 2>&1 || true
+    apt-get autoremove -y >/dev/null 2>&1 || true
+    msg_ok "$(translate 'OpenVSwitch removed')"
+    register_tool "openvswitch" false
+}
+
+uninstall_tcp_optimizations() {
+    msg_info2 "$(translate 'Reverting TCP BBR + Fast Open...')"
+    rm -f /etc/sysctl.d/99-kernel-bbr.conf /etc/sysctl.d/99-tcp-fastopen.conf
+    sysctl --system >/dev/null 2>&1 || true
+    msg_ok "$(translate 'TCP optimizations reverted (defaults restored on next reboot)')"
+    register_tool "tcp_optimizations" false
+}
+
+uninstall_guest_agent() {
+    msg_info2 "$(translate 'Removing guest agent...')"
+    local pkg=""
+    if [[ -f /usr/local/share/proxmenux/guest_agent.pkg ]]; then
+        pkg=$(cat /usr/local/share/proxmenux/guest_agent.pkg 2>/dev/null)
+    fi
+    if [[ -n "$pkg" ]]; then
+        apt-get purge -y "$pkg" >/dev/null 2>&1 || true
+        rm -f /usr/local/share/proxmenux/guest_agent.pkg
+        msg_ok "$(translate 'Removed:') $pkg"
+    else
+        # Fallback: try the typical packages
+        for p in qemu-guest-agent open-vm-tools virtualbox-guest-utils; do
+            dpkg -s "$p" >/dev/null 2>&1 && apt-get purge -y "$p" >/dev/null 2>&1
+        done
+        msg_ok "$(translate 'Guest agent packages removed')"
+    fi
+    register_tool "guest_agent" false
+}
+
+uninstall_ovh_rtm() {
+    msg_info2 "$(translate 'Removing OVH RTM...')"
+    # OVH RTM installs `rtm` packages and a puppet config.
+    apt-get purge -y 'ovh-rtm*' 'rtm' 'rtm-*' >/dev/null 2>&1 || true
+    rm -rf /etc/rtm 2>/dev/null
+    msg_ok "$(translate 'OVH RTM removed (Puppet artefacts may need manual cleanup)')"
+    register_tool "ovh_rtm" false
+}
+
+uninstall_pigz() {
+    msg_info2 "$(translate 'Reverting pigz wrapper...')"
+    if [[ -f /bin/gzip.original ]]; then
+        mv -f /bin/gzip.original /bin/gzip
+        msg_ok "$(translate 'Restored original /bin/gzip')"
+    fi
+    rm -f /bin/pigzwrapper
+    sed -i 's/^pigz: 1/#pigz: 1/' /etc/vzdump.conf 2>/dev/null || true
+    apt-get purge -y pigz >/dev/null 2>&1 || true
+    msg_ok "$(translate 'pigz removed')"
+    register_tool "pigz" false
+}
+
+uninstall_zfs_arc() {
+    msg_info2 "$(translate 'Reverting ZFS ARC tuning...')"
+    if [[ -f /etc/modprobe.d/99-zfsarc.conf.bak ]]; then
+        mv -f /etc/modprobe.d/99-zfsarc.conf.bak /etc/modprobe.d/99-zfsarc.conf
+        msg_ok "$(translate 'Original ZFS ARC config restored from .bak')"
+    else
+        rm -f /etc/modprobe.d/99-zfsarc.conf
+        msg_ok "$(translate 'ZFS ARC config removed (kernel defaults will apply on reboot)')"
+    fi
+    register_tool "zfs_arc" false
+}
+
+uninstall_zfs_auto_snapshot() {
+    msg_info2 "$(translate 'Removing zfs-auto-snapshot...')"
+    apt-get purge -y zfs-auto-snapshot >/dev/null 2>&1 || true
+    msg_ok "$(translate 'zfs-auto-snapshot removed (existing snapshots preserved on the pool)')"
+    register_tool "zfs_auto_snapshot" false
+}
+
+uninstall_vzdump_speed() {
+    msg_info2 "$(translate 'Reverting vzdump speed tuning...')"
+    if [[ -f /etc/vzdump.conf.bak ]]; then
+        mv -f /etc/vzdump.conf.bak /etc/vzdump.conf
+        msg_ok "$(translate 'Restored original /etc/vzdump.conf from .bak')"
+    else
+        sed -i '/^bwlimit: 0$/d;/^ionice: 5$/d' /etc/vzdump.conf 2>/dev/null
+        msg_ok "$(translate 'Removed bwlimit/ionice tuning (no .bak found)')"
+    fi
+    register_tool "vzdump_speed" false
+}
+
+################################################################
 
 show_uninstall_menu() {
     ensure_tools_json
@@ -843,6 +966,16 @@ show_uninstall_menu() {
             amd_fixes) desc="AMD CPU (Ryzen/EPYC) fixes";;
             vfio_iommu) desc="IOMMU/VFIO PCI Passthrough";;
             persistent_network) desc="Setting persistent network interfaces";;
+            ceph) desc="Ceph (squid) packages + repo";;
+            ha) desc="High Availability services (corosync/HA)";;
+            openvswitch) desc="OpenVSwitch";;
+            tcp_optimizations) desc="TCP BBR + Fast Open";;
+            guest_agent) desc="Guest agent (qemu/vmware/virtualbox)";;
+            ovh_rtm) desc="OVH Real-Time Monitoring";;
+            pigz) desc="pigz (parallel gzip wrapper)";;
+            zfs_arc) desc="ZFS ARC size tuning";;
+            zfs_auto_snapshot) desc="zfs-auto-snapshot package";;
+            vzdump_speed) desc="vzdump bwlimit/ionice tuning";;
             *) desc="$tool";;
         esac
         menu_options+=("$tool" "$desc" "off")

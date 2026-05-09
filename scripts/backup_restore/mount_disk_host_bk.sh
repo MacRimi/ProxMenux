@@ -5,7 +5,7 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : MIT
+# License     : GPL-3.0
 # Version     : 1.3-dialog
 # Last Updated: 13/12/2024
 # ==========================================================

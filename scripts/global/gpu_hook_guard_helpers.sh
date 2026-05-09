@@ -5,8 +5,18 @@ if [[ -n "${__PROXMENUX_GPU_HOOK_GUARD_HELPERS__}" ]]; then
 fi
 __PROXMENUX_GPU_HOOK_GUARD_HELPERS__=1
 
-PROXMENUX_GPU_HOOK_STORAGE_REF="local:snippets/proxmenux-gpu-guard.sh"
-PROXMENUX_GPU_HOOK_ABS_PATH="/var/lib/vz/snippets/proxmenux-gpu-guard.sh"
+# Issue #195: snippets used to live at the hard-coded `local:snippets/`
+# path, which broke LXC/VM migration between cluster nodes — `local` is
+# node-specific, so the hookscript reference was dangling on the target
+# node. The path now resolves dynamically through
+# `_resolve_snippets_storage` and is cached per-process. Callers should
+# invoke `_compute_snippets_paths` (interactive flag optional) before
+# referencing the two PROXMENUX_GPU_HOOK_* variables.
+PROXMENUX_GPU_HOOK_FILENAME="proxmenux-gpu-guard.sh"
+PROXMENUX_GPU_HOOK_STORAGE_REF=""
+PROXMENUX_GPU_HOOK_ABS_PATH=""
+
+PROXMENUX_CONFIG_JSON="${PROXMENUX_CONFIG_JSON:-/usr/local/share/proxmenux/config.json}"
 
 _gpu_guard_msg_warn() {
   if declare -F msg_warn >/dev/null 2>&1; then
@@ -24,6 +34,164 @@ _gpu_guard_msg_ok() {
   fi
 }
 
+# ────────────────────────────────────────────────────────────────────
+# Snippets storage resolution (issue #195)
+# ────────────────────────────────────────────────────────────────────
+
+_save_snippets_storage_preference() {
+  local storage="$1"
+  command -v jq >/dev/null 2>&1 || return 0
+  mkdir -p "$(dirname "$PROXMENUX_CONFIG_JSON")" 2>/dev/null || true
+  [[ -f "$PROXMENUX_CONFIG_JSON" ]] || echo "{}" > "$PROXMENUX_CONFIG_JSON"
+  jq --arg s "$storage" '.snippets_storage = $s' "$PROXMENUX_CONFIG_JSON" \
+    > "${PROXMENUX_CONFIG_JSON}.tmp" 2>/dev/null \
+    && mv "${PROXMENUX_CONFIG_JSON}.tmp" "$PROXMENUX_CONFIG_JSON"
+}
+
+# Decide which PVE storage backs ProxMenux snippets (hookscripts).
+#
+# Outcomes (in order):
+#   1. Cached resolution in this shell  → reuse, no work.
+#   2. No active storage with content=snippets → fall back to "local".
+#   3. Single candidate (standalone host with only `local`) → use it silently.
+#   4. Multiple candidates + saved preference → use saved.
+#   5. Multiple candidates, no preference, $1 == "interactive" + whiptail
+#      available → prompt the user, save the choice, use it.
+#   6. Otherwise (non-interactive auto-call from sync_*, cron, etc.) →
+#      use the first listed candidate. Avoids blocking on a dialog from
+#      a non-tty context.
+_list_snippets_candidates() {
+  pvesm status -content snippets 2>/dev/null \
+    | awk 'NR>1 && $3=="active" {print $1}'
+}
+
+# PVE 9 ships `local` without `snippets` in its content list, so a fresh
+# install has zero candidates and ProxMenux can't write a hookscript
+# anywhere. This silently appends `snippets` to local's content set so
+# the GPU passthrough flow works out of the box. We only touch `local`
+# (the always-present default storage) and only when there's nothing
+# else to choose — never modifies a custom storage definition.
+_ensure_local_supports_snippets() {
+  local current
+  current=$(pvesh get /storage/local --output-format json 2>/dev/null | jq -r '.content // empty' 2>/dev/null)
+  [[ -z "$current" ]] && return 1
+  echo "$current" | tr ',' '\n' | grep -qx 'snippets' && return 0
+
+  local new_content="${current},snippets"
+  if pvesm set local --content "$new_content" >/dev/null 2>&1; then
+    _gpu_guard_msg_ok "Enabled 'snippets' on the 'local' storage so ProxMenux can install hookscripts."
+    return 0
+  fi
+  return 1
+}
+
+_resolve_snippets_storage() {
+  local interactive="${1:-}"
+
+  if [[ -n "${__PROXMENUX_RESOLVED_SNIPPETS_STORAGE:-}" ]]; then
+    echo "$__PROXMENUX_RESOLVED_SNIPPETS_STORAGE"
+    return 0
+  fi
+
+  local candidates
+  candidates=$(_list_snippets_candidates)
+
+  if [[ -z "$candidates" ]]; then
+    # Fresh PVE 9 host — `local` doesn't include `snippets` by default.
+    # Auto-enable it; if that succeeds, re-list and continue.
+    if _ensure_local_supports_snippets; then
+      candidates=$(_list_snippets_candidates)
+    fi
+  fi
+
+  if [[ -z "$candidates" ]]; then
+    # Still nothing usable — fall back to `local` and let the caller
+    # surface the error if writing actually fails.
+    __PROXMENUX_RESOLVED_SNIPPETS_STORAGE="local"
+    echo "local"
+    return 0
+  fi
+
+  local count
+  count=$(echo "$candidates" | wc -l)
+
+  if [[ "$count" -eq 1 ]]; then
+    __PROXMENUX_RESOLVED_SNIPPETS_STORAGE="$candidates"
+    echo "$candidates"
+    return 0
+  fi
+
+  if [[ -f "$PROXMENUX_CONFIG_JSON" ]] && command -v jq >/dev/null 2>&1; then
+    local pref
+    pref=$(jq -r '.snippets_storage // empty' "$PROXMENUX_CONFIG_JSON" 2>/dev/null)
+    if [[ -n "$pref" ]] && echo "$candidates" | grep -qFx "$pref"; then
+      __PROXMENUX_RESOLVED_SNIPPETS_STORAGE="$pref"
+      echo "$pref"
+      return 0
+    fi
+  fi
+
+  if [[ "$interactive" == "interactive" ]] && command -v whiptail >/dev/null 2>&1; then
+    local options=()
+    local first_pick=1
+    while IFS= read -r s; do
+      [[ -z "$s" ]] && continue
+      if [[ $first_pick -eq 1 ]]; then
+        options+=("$s" "" "ON")
+        first_pick=0
+      else
+        options+=("$s" "" "OFF")
+      fi
+    done <<< "$candidates"
+
+    local choice
+    choice=$(whiptail --backtitle "ProxMenux" \
+      --title "Snippets storage (used by hookscripts)" \
+      --radiolist \
+      "Pick the storage where ProxMenux installs snippets/hookscripts.\n\nFor cluster setups, choose a shared NFS/CIFS storage so VMs and LXCs migrate cleanly between nodes — \`local\` is node-specific and breaks migration." \
+      20 78 8 \
+      "${options[@]}" 3>&1 1>&2 2>&3) || choice=""
+
+    if [[ -n "$choice" ]] && echo "$candidates" | grep -qFx "$choice"; then
+      _save_snippets_storage_preference "$choice"
+      __PROXMENUX_RESOLVED_SNIPPETS_STORAGE="$choice"
+      echo "$choice"
+      return 0
+    fi
+  fi
+
+  local first
+  first=$(echo "$candidates" | head -n 1)
+  __PROXMENUX_RESOLVED_SNIPPETS_STORAGE="$first"
+  echo "$first"
+}
+
+# Populate the two PROXMENUX_GPU_HOOK_* variables from whichever storage
+# `_resolve_snippets_storage` returns. Idempotent — safe to call multiple
+# times, the resolver is cached per-process.
+_compute_snippets_paths() {
+  local interactive="${1:-}"
+  local storage
+  storage=$(_resolve_snippets_storage "$interactive")
+
+  PROXMENUX_GPU_HOOK_STORAGE_REF="${storage}:snippets/${PROXMENUX_GPU_HOOK_FILENAME}"
+
+  # `pvesm path` understands the storage:content/file syntax for any
+  # registered storage and returns the absolute filesystem path — works
+  # for `local`, NFS, CIFS, dir, etc. Falls back to the conventional
+  # mount point if pvesm doesn't resolve (very old PVE / mid-mount
+  # transitions).
+  local abs
+  abs=$(pvesm path "$PROXMENUX_GPU_HOOK_STORAGE_REF" 2>/dev/null)
+  if [[ -n "$abs" ]]; then
+    PROXMENUX_GPU_HOOK_ABS_PATH="$abs"
+  elif [[ "$storage" == "local" ]]; then
+    PROXMENUX_GPU_HOOK_ABS_PATH="/var/lib/vz/snippets/${PROXMENUX_GPU_HOOK_FILENAME}"
+  else
+    PROXMENUX_GPU_HOOK_ABS_PATH="/mnt/pve/${storage}/snippets/${PROXMENUX_GPU_HOOK_FILENAME}"
+  fi
+}
+
 _gpu_guard_has_vm_gpu() {
   local vmid="$1"
   qm config "$vmid" 2>/dev/null | grep -qE '^hostpci[0-9]+:'
@@ -37,7 +205,13 @@ _gpu_guard_has_lxc_gpu() {
 }
 
 ensure_proxmenux_gpu_guard_hookscript() {
-  mkdir -p /var/lib/vz/snippets 2>/dev/null || true
+  # Issue #195: resolve which snippets storage to write to (interactive
+  # — this function is called from the GPU passthrough flow which is
+  # always run from a tty). The resolver caches its answer for the rest
+  # of the bash session, so subsequent attach_* calls reuse it.
+  _compute_snippets_paths "interactive"
+
+  mkdir -p "$(dirname "$PROXMENUX_GPU_HOOK_ABS_PATH")" 2>/dev/null || true
 
   cat >"$PROXMENUX_GPU_HOOK_ABS_PATH" <<'HOOKEOF'
 #!/usr/bin/env bash
@@ -229,6 +403,12 @@ attach_proxmenux_gpu_guard_to_vm() {
   local vmid="$1"
   _gpu_guard_has_vm_gpu "$vmid" || return 0
 
+  # Resolver cache populated by ensure_* (or the first call here).
+  # Pass "interactive" so a sync done in isolation can still prompt;
+  # sync_proxmenux_gpu_guard_hooks pre-seeds the cache to suppress the
+  # dialog when running non-interactively.
+  _compute_snippets_paths "interactive"
+
   local current
   current=$(qm config "$vmid" 2>/dev/null | awk '/^hookscript:/ {print $2}')
   if [[ "$current" == "$PROXMENUX_GPU_HOOK_STORAGE_REF" ]]; then
@@ -236,15 +416,17 @@ attach_proxmenux_gpu_guard_to_vm() {
   fi
 
   if qm set "$vmid" --hookscript "$PROXMENUX_GPU_HOOK_STORAGE_REF" >/dev/null 2>&1; then
-    _gpu_guard_msg_ok "PCIe passthrough guard attached to VM ${vmid}"
+    _gpu_guard_msg_ok "PCIe passthrough guard attached to VM ${vmid} (${PROXMENUX_GPU_HOOK_STORAGE_REF})"
   else
-    _gpu_guard_msg_warn "Could not attach PCIe passthrough guard to VM ${vmid}. Ensure 'local' storage supports snippets."
+    _gpu_guard_msg_warn "Could not attach PCIe passthrough guard to VM ${vmid}. Verify ${__PROXMENUX_RESOLVED_SNIPPETS_STORAGE} storage supports snippets."
   fi
 }
 
 attach_proxmenux_gpu_guard_to_lxc() {
   local ctid="$1"
   _gpu_guard_has_lxc_gpu "$ctid" || return 0
+
+  _compute_snippets_paths "interactive"
 
   local current
   current=$(pct config "$ctid" 2>/dev/null | awk '/^hookscript:/ {print $2}')
@@ -253,13 +435,22 @@ attach_proxmenux_gpu_guard_to_lxc() {
   fi
 
   if pct set "$ctid" -hookscript "$PROXMENUX_GPU_HOOK_STORAGE_REF" >/dev/null 2>&1; then
-    _gpu_guard_msg_ok "PCIe passthrough guard attached to LXC ${ctid}"
+    _gpu_guard_msg_ok "PCIe passthrough guard attached to LXC ${ctid} (${PROXMENUX_GPU_HOOK_STORAGE_REF})"
   else
-    _gpu_guard_msg_warn "Could not attach PCIe passthrough guard to LXC ${ctid}. Ensure 'local' storage supports snippets."
+    _gpu_guard_msg_warn "Could not attach PCIe passthrough guard to LXC ${ctid}. Verify ${__PROXMENUX_RESOLVED_SNIPPETS_STORAGE} storage supports snippets."
   fi
 }
 
+# Iterate every VM/LXC and reattach the guard if it has GPU passthrough
+# but no current hookscript reference. Used for cluster-wide sync /
+# upgrades. Runs non-interactively: pre-seeds the resolver cache so the
+# inner attach_* calls don't pop a dialog from a possibly headless
+# context.
 sync_proxmenux_gpu_guard_hooks() {
+  if [[ -z "${__PROXMENUX_RESOLVED_SNIPPETS_STORAGE:-}" ]]; then
+    __PROXMENUX_RESOLVED_SNIPPETS_STORAGE=$(_resolve_snippets_storage "")
+  fi
+
   ensure_proxmenux_gpu_guard_hookscript
 
   local vmid ctid

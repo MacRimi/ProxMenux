@@ -1,28 +1,34 @@
 #!/bin/bash
-
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Proxmox System Update
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 04/07/2025
 # ==========================================================
 # Description:
-# This script safely updates your Proxmox VE system and underlying Debian packages
-# through an interactive and automated process.
+# Wrapper that detects the running Proxmox major version and
+# delegates to the matching worker script:
+#   - PVE 8 -> scripts/global/update-pve8.sh
+#   - PVE 9 -> scripts/global/update-pve9_2.sh
+# After the worker finishes, runs the post-update cleanup
+# (apt-get autoremove + autoclean) and prompts for an immediate
+# reboot if the kernel was updated or /var/run/reboot-required
+# was created.
 #
-# Main features:
-# - Repairs and optimizes APT repositories (Proxmox & Debian)
-# - Removes duplicate or conflicting sources
-# - Switches to the recommended 'no-subscription' Proxmox repository
-# - Updates all Proxmox and Debian system packages
-# - Installs essential packages if missing (e.g., zfsutils, chrony)
-# - Checks for LVM and storage issues and repairs headers if needed
-# - Removes conflicting time sync packages automatically
-# - Performs a system cleanup after updating (autoremove, autoclean)
-# - Provides a summary and prompts for reboot if necessary
+# Features (delegated to worker scripts):
+#   - APT repository hygiene (Proxmox + Debian)
+#   - Removal of duplicate / conflicting sources
+#   - Switch to the no-subscription Proxmox repository
+#   - Full apt update + dist-upgrade
+#   - Installs essential packages if missing (zfsutils, chrony, ...)
+#   - LVM / storage sanity checks and header repair
+#   - Removes conflicting time-sync packages
+#   - Post-update system cleanup
+#   - Reboot prompt when kernel changed
+# ==========================================================
 #
 # The goal of this script is to simplify and secure the update process for Proxmox,
 # reduce manual intervention, and prevent common repository and package errors.
@@ -46,11 +52,21 @@ export SCRIPT_TITLE="Proxmox system update"
 NECESSARY_REBOOT=1
 
 apt_upgrade() {
-    local pve_version
-    pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
+    local pve_version pve_raw
+    # Capture both stdout and the rc so a failure is visible in the
+    # error message — silent `2>/dev/null` previously hid the real cause
+    # (binary missing / output malformed). Audit Tier 6 — `proxmox_update.sh`
+    # detección de versión silenciosa.
+    pve_raw=$(pveversion 2>&1)
+    local pve_rc=$?
+    pve_version=$(echo "$pve_raw" | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
     if [[ -z "$pve_version" ]]; then
-        msg_error "Unable to detect Proxmox version."
+        if (( pve_rc != 0 )); then
+            msg_error "Unable to detect Proxmox version (pveversion exit $pve_rc): ${pve_raw:0:200}"
+        else
+            msg_error "Unable to parse Proxmox version from output: ${pve_raw:0:200}"
+        fi
         return 1
     fi
 

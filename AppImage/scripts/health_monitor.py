@@ -18,13 +18,22 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 import re
 
-from health_persistence import health_persistence
+from health_persistence import health_persistence, disk_base_name
 
 try:
     from proxmox_storage_monitor import proxmox_storage_monitor
     PROXMOX_STORAGE_AVAILABLE = True
 except ImportError:
     PROXMOX_STORAGE_AVAILABLE = False
+
+# Sprint 13: arbitrary remote mount monitoring (NFS/CIFS/SMB) for
+# mounts done outside PVE — complements proxmox_storage_monitor which
+# only sees PVE-registered storages.
+try:
+    import mount_monitor
+    MOUNT_MONITOR_AVAILABLE = True
+except ImportError:
+    MOUNT_MONITOR_AVAILABLE = False
 
 # ============================================================================
 # PERFORMANCE DEBUG FLAG - Set to True to log timing of each health check
@@ -91,7 +100,10 @@ class HealthMonitor:
     LOG_ERRORS_CRITICAL = 10
     LOG_WARNINGS_WARNING = 15
     LOG_WARNINGS_CRITICAL = 30
-    LOG_CHECK_INTERVAL = 3420  # 57 min - offset to avoid sync with other hourly processes
+    # Aligned with the rest of the health checks (5 min). Was 57 min, but the
+    # journalctl windows below are 5 min each, so the previous interval left a
+    # ~52 min gap per cycle in which 95% of the journal was never inspected.
+    LOG_CHECK_INTERVAL = 300
     
     # Updates Thresholds
     UPDATES_WARNING = 365   # Only warn after 1 year without updates (system_age)
@@ -257,6 +269,44 @@ class HealthMonitor:
             cls._WARNING_RE = re.compile("|".join(cls.WARNING_LOG_KEYWORDS), re.IGNORECASE)
         return cls._BENIGN_RE, cls._CRITICAL_RE, cls._WARNING_RE
     
+    def _refresh_thresholds(self):
+        """Pull user-configured thresholds from `health_thresholds` and
+        overlay them on the class defaults as instance attributes.
+
+        Called at the start of every check cycle so a save() in the UI
+        propagates within one tick (5 min worst case for the background
+        loop, instant for direct API hits). Sections that aren't
+        configured fall back to the class constants — that's why this
+        method only writes when the JSON has an override.
+
+        We deliberately overlay onto the *instance*, not the class, so
+        the original class constants stay as a safety net (and the
+        codebase keeps a readable list of recommended values up top).
+        """
+        try:
+            import health_thresholds as _ht
+        except Exception:
+            return
+        try:
+            mapping = (
+                # (section, key) -> instance attribute on self
+                (("cpu", "warning"), "CPU_WARNING"),
+                (("cpu", "critical"), "CPU_CRITICAL"),
+                (("memory", "warning"), "MEMORY_WARNING"),
+                (("memory", "critical"), "MEMORY_CRITICAL"),
+                (("memory", "swap_critical"), "SWAP_CRITICAL_PERCENT"),
+                (("host_storage", "warning"), "STORAGE_WARNING"),
+                (("host_storage", "critical"), "STORAGE_CRITICAL"),
+                (("cpu_temperature", "warning"), "TEMP_WARNING"),
+                (("cpu_temperature", "critical"), "TEMP_CRITICAL"),
+            )
+            for path, attr in mapping:
+                v = _ht.get(*path)
+                if v is not None:
+                    setattr(self, attr, v)
+        except Exception as e:
+            print(f"[HealthMonitor] threshold refresh failed: {e}")
+
     def __init__(self):
         """Initialize health monitor with state tracking"""
         self.state_history = defaultdict(list)
@@ -288,8 +338,15 @@ class HealthMonitor:
         self._journalctl_1hour_cache = {'output': '', 'time': 0}
         self._JOURNALCTL_1HOUR_CACHE_TTL = 300  # 5 min cache - disk events don't need real-time
         # Timestamp watermark: track last successfully processed journalctl entry
-        # to avoid re-processing old entries on subsequent checks
-        self._disk_journal_last_ts: Optional[str] = None
+        # to avoid re-processing old entries on subsequent checks. Persisted via
+        # health_persistence.set_setting('disk_journal_last_ts', ...) so that
+        # restarts don't re-read the last hour of journal and re-emit events
+        # that were already notified. Audit Tier 5 (Health stack).
+        try:
+            from health_persistence import health_persistence as _hp_init
+            self._disk_journal_last_ts: Optional[str] = _hp_init.get_setting('disk_journal_last_ts')
+        except Exception:
+            self._disk_journal_last_ts = None
         
         # System capabilities - derived from Proxmox storage types at runtime (Priority 1.5)
         # SMART detection still uses filesystem check on init (lightweight)
@@ -369,9 +426,17 @@ class HealthMonitor:
                 output = result.stdout
                 cache['output'] = output
                 cache['time'] = current_time
-                # Advance watermark to "now" so next check only gets new entries
+                # Advance watermark to "now" so next check only gets new
+                # entries, AND persist it so a restart resumes from this point
+                # instead of re-reading the last hour of journal.
                 from datetime import datetime as _dt
-                self._disk_journal_last_ts = _dt.now().strftime('%Y-%m-%d %H:%M:%S')
+                new_ts = _dt.now().strftime('%Y-%m-%d %H:%M:%S')
+                self._disk_journal_last_ts = new_ts
+                try:
+                    from health_persistence import health_persistence as _hp_save
+                    _hp_save.set_setting('disk_journal_last_ts', new_ts)
+                except Exception:
+                    pass  # Don't break the disk check if persistence fails
                 return output
         except subprocess.TimeoutExpired:
             print("[HealthMonitor] journalctl disk cache: timeout")
@@ -427,24 +492,30 @@ class HealthMonitor:
             pass  # Sampling must never crash the thread
 
     def _sample_cpu_temperature(self):
-        """Lightweight temperature sample: read sensor and append to history. ~50ms cost."""
+        """Lightweight temperature sample: read sensor and append to history.
+
+        Switched from `subprocess.run(['sensors', '-A', '-u'])` to
+        `psutil.sensors_temperatures()` for the vital-signs sampler
+        (called every 15s). The subprocess fork + lm-sensors binary
+        startup + parse loop takes ~6ms per call on AppImage hosts;
+        psutil reads the same /sys/class/hwmon entries directly in
+        ~3ms with no fork. Cumulatively at 4 calls/min × N hosts the
+        savings matter for the 60s collector duty cycle. Behaviour is
+        unchanged — we still aggregate every reported `*_input` value
+        and persist the max in `state_history`.
+        """
         try:
-            result = subprocess.run(
-                ['sensors', '-A', '-u'],
-                capture_output=True, text=True, timeout=2
-            )
-            if result.returncode != 0:
+            temps_dict = psutil.sensors_temperatures()
+            if not temps_dict:
                 return
-            
+
             temps = []
-            for line in result.stdout.split('\n'):
-                if 'temp' in line.lower() and '_input' in line:
-                    try:
-                        temp = float(line.split(':')[1].strip())
-                        temps.append(temp)
-                    except Exception:
-                        continue
-            
+            for entries in temps_dict.values():
+                for entry in entries:
+                    val = getattr(entry, 'current', None)
+                    if isinstance(val, (int, float)) and val > 0:
+                        temps.append(float(val))
+
             if temps:
                 max_temp = max(temps)
                 current_time = time.time()
@@ -574,6 +645,10 @@ class HealthMonitor:
         Returns JSON structure with ALL 10 categories always present.
         Now includes persistent error tracking.
         """
+        # Pick up any threshold changes the user saved in Settings since
+        # the last cycle. Cheap (cached read) — see health_thresholds.
+        self._refresh_thresholds()
+
         # Run cleanup with throttle (every 5 min) so stale errors are auto-resolved
         # using the user-configured Suppression Duration (single source of truth).
         current_time = time.time()
@@ -627,12 +702,77 @@ class HealthMonitor:
                 critical_issues.append(proxmox_storage_result.get('reason', 'Proxmox storage unavailable'))
             elif proxmox_storage_result.get('status') == 'WARNING':
                 warning_issues.append(proxmox_storage_result.get('reason', 'Proxmox storage issue'))
-            
+
             # Derive capabilities from Proxmox storage types (immediate, no extra checks)
             storage_checks = proxmox_storage_result.get('checks', {})
             storage_types = {v.get('detail', '').split(' ')[0].lower() for v in storage_checks.values() if isinstance(v, dict)}
             self.capabilities['has_zfs'] = any(t in ('zfspool', 'zfs') for t in storage_types)
             self.capabilities['has_lvm'] = any(t in ('lvm', 'lvmthin') for t in storage_types)
+
+        # Priority 1.6: Sprint 13 — remote-mount health (NFS/CIFS/SMB).
+        # Catches the case PVE storage monitor misses: ad-hoc mounts
+        # (fstab, manual mount commands) that go stale and silently
+        # redirect writes to the underlying directory, filling local
+        # disk. Stale mounts are CRITICAL, unexpected read-only is
+        # WARNING.
+        _t = time.time()
+        remote_mount_result = self._check_remote_mounts()
+        _perf_log("remote_mounts", (time.time() - _t) * 1000)
+        if remote_mount_result:
+            details['remote_mounts'] = remote_mount_result
+            if remote_mount_result.get('status') == 'CRITICAL':
+                critical_issues.append(remote_mount_result.get('reason', 'Remote mount stale'))
+            elif remote_mount_result.get('status') == 'WARNING':
+                warning_issues.append(remote_mount_result.get('reason', 'Remote mount issue'))
+
+        # Priority 1.7: Sprint 13.30 — per-LXC rootfs disk usage.
+        # Same WARN/CRIT thresholds as the host disk check (85/95).
+        # The classic failure mode: CT rootfs sized too small + log
+        # accumulation = CT goes 100% and stops booting.
+        _t = time.time()
+        lxc_disk_result = self._check_lxc_disk_usage()
+        _perf_log("lxc_disk_usage", (time.time() - _t) * 1000)
+        if lxc_disk_result:
+            details['lxc_disk'] = lxc_disk_result
+            if lxc_disk_result.get('status') == 'CRITICAL':
+                critical_issues.append(lxc_disk_result.get('reason', 'LXC rootfs near full'))
+            elif lxc_disk_result.get('status') == 'WARNING':
+                warning_issues.append(lxc_disk_result.get('reason', 'LXC rootfs filling up'))
+
+        # Phase 3 capacity checks added on top of the existing storage
+        # ones. Each is independently configurable via Settings →
+        # Health Thresholds; defaults are 85/95 to align with the host
+        # disk check. They sit on the same priority level because they
+        # all fail in the same way (storage filling up).
+        _t = time.time()
+        lxc_mount_result = self._check_lxc_mount_capacity()
+        _perf_log("lxc_mount_capacity", (time.time() - _t) * 1000)
+        if lxc_mount_result:
+            details['lxc_mounts'] = lxc_mount_result
+            if lxc_mount_result.get('status') == 'CRITICAL':
+                critical_issues.append(lxc_mount_result.get('reason', 'LXC mount near full'))
+            elif lxc_mount_result.get('status') == 'WARNING':
+                warning_issues.append(lxc_mount_result.get('reason', 'LXC mount filling up'))
+
+        _t = time.time()
+        pve_storage_cap_result = self._check_pve_storage_capacity()
+        _perf_log("pve_storage_capacity", (time.time() - _t) * 1000)
+        if pve_storage_cap_result:
+            details['pve_storage_capacity'] = pve_storage_cap_result
+            if pve_storage_cap_result.get('status') == 'CRITICAL':
+                critical_issues.append(pve_storage_cap_result.get('reason', 'PVE storage near full'))
+            elif pve_storage_cap_result.get('status') == 'WARNING':
+                warning_issues.append(pve_storage_cap_result.get('reason', 'PVE storage filling up'))
+
+        _t = time.time()
+        zfs_pool_cap_result = self._check_zfs_pool_capacity()
+        _perf_log("zfs_pool_capacity", (time.time() - _t) * 1000)
+        if zfs_pool_cap_result:
+            details['zfs_pool_capacity'] = zfs_pool_cap_result
+            if zfs_pool_cap_result.get('status') == 'CRITICAL':
+                critical_issues.append(zfs_pool_cap_result.get('reason', 'ZFS pool near full'))
+            elif zfs_pool_cap_result.get('status') == 'WARNING':
+                warning_issues.append(zfs_pool_cap_result.get('reason', 'ZFS pool filling up'))
         
         # Priority 2: Disk/Filesystem Health (Internal checks: usage, ZFS, SMART, IO errors)
         _t = time.time()
@@ -1906,7 +2046,7 @@ class HealthMonitor:
             return ''
         try:
             candidates = [device]
-            base = re.sub(r'\d+$', '', device) if not ('nvme' in device or 'mmcblk' in device) else device
+            base = disk_base_name(device)
             if base != device:
                 candidates.append(base)
             
@@ -1954,16 +2094,44 @@ class HealthMonitor:
         except Exception:
             return ''
     
+    def _device_fingerprint(self, disk_name: str):
+        """Cheap stat-based fingerprint to detect hot-swap.
+
+        udev removes and recreates /dev/sdX when a disk is hot-swapped, so the
+        device node's ctime + size changes. Returns None if the device is gone.
+        """
+        try:
+            dev_path = f'/dev/{disk_name}' if not disk_name.startswith('/') else disk_name
+            st = os.stat(dev_path)
+            return (st.st_ctime_ns, st.st_rdev)
+        except OSError:
+            return None
+
     def _get_disk_identity(self, disk_name: str) -> Dict[str, str]:
         """Get disk serial/model with caching. Avoids repeated smartctl -i calls.
 
         Returns {'serial': '...', 'model': '...'} or empty values on failure.
-        Cache persists for the lifetime of the monitor (serial/model don't change).
+        Cache is invalidated if the underlying device node fingerprint changes
+        (hot-swap), and also drops the matching SMART cache entry so the new
+        drive isn't masked by the previous drive's status.
         """
-        if disk_name in self._disk_identity_cache:
-            return self._disk_identity_cache[disk_name]
+        fp = self._device_fingerprint(disk_name)
+        cached = self._disk_identity_cache.get(disk_name)
 
-        result = {'serial': '', 'model': ''}
+        if fp is None:
+            # Device removed - drop any stale entries so a re-added disk re-reads
+            self._disk_identity_cache.pop(disk_name, None)
+            self._smart_cache.pop(disk_name, None)
+            return {'serial': '', 'model': ''}
+
+        if cached and cached.get('_fp') == fp:
+            return {'serial': cached.get('serial', ''), 'model': cached.get('model', '')}
+
+        if cached:
+            # Hot-swap detected - drop SMART cache so we don't report old drive's health
+            self._smart_cache.pop(disk_name, None)
+
+        result = {'serial': '', 'model': '', '_fp': fp}
         try:
             dev_path = f'/dev/{disk_name}' if not disk_name.startswith('/') else disk_name
             proc = subprocess.run(
@@ -1979,7 +2147,7 @@ class HealthMonitor:
             pass
 
         self._disk_identity_cache[disk_name] = result
-        return result
+        return {'serial': result['serial'], 'model': result['model']}
 
     def _quick_smart_health(self, disk_name: str) -> str:
         """Quick SMART health check for a single disk. Returns 'PASSED', 'FAILED', or 'UNKNOWN'.
@@ -1992,8 +2160,11 @@ class HealthMonitor:
         # Check cache first (and evict stale entries periodically)
         current_time = time.time()
         cache_key = disk_name
+        # Hot-swap guard: if the device node was recreated, ignore the cached
+        # result so a new drive isn't shadowed by the previous one's status.
+        fp = self._device_fingerprint(disk_name)
         cached = self._smart_cache.get(cache_key)
-        if cached and current_time - cached['time'] < self._SMART_CACHE_TTL:
+        if cached and current_time - cached['time'] < self._SMART_CACHE_TTL and cached.get('fp') == fp:
             return cached['result']
         # Evict expired entries to prevent unbounded growth
         if len(self._smart_cache) > 50:
@@ -2018,8 +2189,8 @@ class HealthMonitor:
             else:
                 smart_result = 'UNKNOWN'
             
-            # Cache the result
-            self._smart_cache[cache_key] = {'result': smart_result, 'time': current_time}
+            # Cache the result with the device fingerprint for hot-swap invalidation
+            self._smart_cache[cache_key] = {'result': smart_result, 'time': current_time, 'fp': fp}
             return smart_result
         except Exception:
             return 'UNKNOWN'
@@ -2198,34 +2369,17 @@ class HealthMonitor:
                         # in both record_error details AND record_disk_observation.
                         resolved_block = disk
                         resolved_serial = None
+                        # Reuse the cached identity from `_get_disk_identity`
+                        # instead of calling `smartctl -i` inline twice. The
+                        # cache already holds serial+model and is invalidated
+                        # on hot-swap (Sprint 10A.9), so the inline subprocess
+                        # was a redundant 1 fork-per-disk-with-error per cycle.
                         if disk.startswith('ata'):
                             resolved_block = self._resolve_ata_to_disk(disk)
-                            # Get serial from the resolved device
-                            try:
-                                dev_path = f'/dev/{resolved_block}' if resolved_block != disk else None
-                                if dev_path:
-                                    sm = subprocess.run(
-                                        ['smartctl', '-i', dev_path],
-                                        capture_output=True, text=True, timeout=3)
-                                    if sm.returncode in (0, 4):
-                                        for sline in sm.stdout.split('\n'):
-                                            if 'Serial Number' in sline or 'Serial number' in sline:
-                                                resolved_serial = sline.split(':')[-1].strip()
-                                                break
-                            except Exception:
-                                pass
+                            if resolved_block and resolved_block != disk:
+                                resolved_serial = self._get_disk_identity(resolved_block).get('serial') or None
                         else:
-                            try:
-                                sm = subprocess.run(
-                                    ['smartctl', '-i', f'/dev/{disk}'],
-                                    capture_output=True, text=True, timeout=3)
-                                if sm.returncode in (0, 4):
-                                    for sline in sm.stdout.split('\n'):
-                                        if 'Serial Number' in sline or 'Serial number' in sline:
-                                            resolved_serial = sline.split(':')[-1].strip()
-                                            break
-                            except Exception:
-                                pass
+                            resolved_serial = self._get_disk_identity(disk).get('serial') or None
                         
                         # ── Record disk observation (always, even if transient) ──
                         # Signature must be stable across cycles: strip volatile
@@ -2379,9 +2533,9 @@ class HealthMonitor:
                     
                     # Also extract base disk from partition (e.g., sdb1 -> sdb)
                     if not base_disk and device:
-                        # Remove /dev/ prefix and partition number
+                        # Remove /dev/ prefix and partition number (NVMe-aware)
                         dev_name = device.replace('/dev/', '')
-                        base_disk = re.sub(r'\d+$', '', dev_name)  # sdb1 -> sdb
+                        base_disk = disk_base_name(dev_name)
                         if base_disk:
                             dev_path = f'/dev/{base_disk}'
                     
@@ -3174,7 +3328,7 @@ class HealthMonitor:
             
             failed_services = []
             service_details = {}
-            
+
             for service in services_to_check:
                 try:
                     result = subprocess.run(
@@ -3183,7 +3337,7 @@ class HealthMonitor:
                         text=True,
                         timeout=2
                     )
-                    
+
                     status = result.stdout.strip()
                     if result.returncode != 0 or status != 'active':
                         failed_services.append(service)
@@ -3191,6 +3345,18 @@ class HealthMonitor:
                 except Exception:
                     failed_services.append(service)
                     service_details[service] = 'error'
+
+            # Auto-clear errors for services that are healthy this cycle.
+            # Lifted out of the `if failed_services:` branch so it runs
+            # unconditionally — otherwise a service that recovered while
+            # ALL other failed services are user-dismissed kept its error
+            # active forever (the dismissed-only path returned before the
+            # cleanup loop). Audit Tier 5 — Health stack.
+            for svc in services_to_check:
+                if svc not in failed_services:
+                    error_key = f'pve_service_{svc}'
+                    if health_persistence.is_error_active(error_key):
+                        health_persistence.clear_error(error_key)
             
             # Build checks dict with status per service
             checks = {}
@@ -3237,14 +3403,10 @@ class HealthMonitor:
                             checks[svc]['dismissed'] = True
                     else:
                         active_failed.append(svc)
-                
-                # Auto-clear services that recovered
-                for svc in services_to_check:
-                    if svc not in failed_services:
-                        error_key = f'pve_service_{svc}'
-                        if health_persistence.is_error_active(error_key):
-                            health_persistence.clear_error(error_key)
-                
+
+                # (recovered-services cleanup happens earlier, before this
+                # branch — see the unconditional loop above.)
+
                 # If all failed services are dismissed, return OK
                 if not active_failed:
                     return {
@@ -3265,12 +3427,7 @@ class HealthMonitor:
                     'checks': checks
                 }
             
-            # All OK - clear any previously tracked service errors
-            for svc in services_to_check:
-                error_key = f'pve_service_{svc}'
-                if health_persistence.is_error_active(error_key):
-                    health_persistence.clear_error(error_key)
-            
+            # All OK — recovered-services cleanup already ran above.
             return {
                 'status': 'OK',
                 'is_cluster': is_cluster,
@@ -3444,20 +3601,19 @@ class HealthMonitor:
                 }}
         
         try:
-            # Fetch logs from the last 3 minutes for immediate issue detection
-            # Use -b 0 to only include logs from the CURRENT boot (not previous boots)
-            # This prevents OOM/crash errors from before a reboot from persisting
+            # Fetch logs from the last 5 minutes — matches LOG_CHECK_INTERVAL so
+            # adjacent cycles are contiguous (no blind gap). -b 0 limits to the
+            # current boot to avoid pre-reboot OOM/crash errors from persisting.
             result_recent = subprocess.run(
-                ['journalctl', '-b', '0', '--since', '3 minutes ago', '--no-pager', '-p', 'warning'],
+                ['journalctl', '-b', '0', '--since', '5 minutes ago', '--no-pager', '-p', 'warning'],
                 capture_output=True,
                 text=True,
                 timeout=20
             )
-            
-            # Fetch logs from the previous 3-minute interval to detect spikes/cascades
-            # Also limited to current boot only
+
+            # Previous 5-min window (5-10 min ago) for spike/cascade comparison.
             result_previous = subprocess.run(
-                ['journalctl', '-b', '0', '--since', '6 minutes ago', '--until', '3 minutes ago', '--no-pager', '-p', 'warning'],
+                ['journalctl', '-b', '0', '--since', '10 minutes ago', '--until', '5 minutes ago', '--no-pager', '-p', 'warning'],
                 capture_output=True,
                 text=True,
                 timeout=20
@@ -3506,7 +3662,7 @@ class HealthMonitor:
                         smart_status_for_log = None
                         if fs_dev_match:
                             fs_dev = fs_dev_match.group(1).rstrip(')')
-                            base_dev = re.sub(r'\d+$', '', fs_dev)
+                            base_dev = disk_base_name(fs_dev)
                             if not os.path.exists(f'/dev/{base_dev}'):
                                 # Device not present -- almost certainly a disconnected drive
                                 severity = 'WARNING'
@@ -3554,8 +3710,8 @@ class HealthMonitor:
                             fs_match = re.search(r'(?:ext4-fs|btrfs|xfs|zfs)\s+error.*?(?:device\s+(\S+?)\)?[:\s])', line, re.IGNORECASE)
                             if fs_match:
                                 fs_device = fs_match.group(1).rstrip(')') if fs_match.group(1) else 'unknown'
-                                # Strip partition number to get base disk (sdb1 -> sdb)
-                                base_device = re.sub(r'\d+$', '', fs_device) if not ('nvme' in fs_device or 'mmcblk' in fs_device) else fs_device.rsplit('p', 1)[0] if 'p' in fs_device else fs_device
+                                # Centralised NVMe-aware partition strip.
+                                base_device = disk_base_name(fs_device)
                                 disk_error_key = f'disk_fs_{fs_device}'
                                 
                                 # Use the SMART-aware severity we already determined above
@@ -3887,7 +4043,11 @@ class HealthMonitor:
         pattern = re.sub(r'\d{4}-\d{2}-\d{2}', '', pattern)  # Remove dates
         pattern = re.sub(r'\d{2}:\d{2}:\d{2}', '', pattern)  # Remove times
         pattern = re.sub(r'pid[:\s]+\d+', 'pid:XXX', pattern.lower())  # Normalize PIDs
-        pattern = re.sub(r'\b\d{3,6}\b', 'ID', pattern)  # Normalize IDs (common for container/VM IDs)
+        # Up to 9 digits — modern Linux PIDs go up to 4 194 304 (7 digits)
+        # under default kernel.pid_max, and namespaced PIDs in cgroups can
+        # be even wider. The previous `\d{3,6}` left those un-normalised so
+        # the same recurring error appeared as N distinct patterns.
+        pattern = re.sub(r'\b\d{3,9}\b', 'ID', pattern)
         pattern = re.sub(r'/dev/\S+', '/dev/XXX', pattern)  # Normalize device paths
         pattern = re.sub(r'/\S+/\S+', '/PATH/', pattern)  # Normalize general paths
         pattern = re.sub(r'0x[0-9a-f]+', '0xXXX', pattern)  # Normalize hex values
@@ -4625,8 +4785,8 @@ class HealthMonitor:
                 
                 # Skip if disk no longer exists (stale journal entries)
                 if not os.path.exists(dev_path):
-                    # Also check base device for partitions (e.g., /dev/sda1 -> /dev/sda)
-                    base_disk = re.sub(r'\d+$', '', disk_name)
+                    # Also check base device for partitions — NVMe-aware.
+                    base_disk = disk_base_name(disk_name)
                     base_path = f'/dev/{base_disk}'
                     if not os.path.exists(base_path):
                         continue  # Disk was removed, skip this error
@@ -4747,14 +4907,45 @@ class HealthMonitor:
                 # ZFS is not installed or 'zpool' command not in PATH, so no ZFS issues to report.
                 return zfs_issues
             
-            # Get list of all pools and their health status
+            # Get list of all pools and their health status.
             result = subprocess.run(
                 ['zpool', 'list', '-H', '-o', 'name,health'], # -H for no header
                 capture_output=True,
                 text=True,
                 timeout=5
             )
-            
+
+            # Fallback: when a pool is SUSPENDED `zpool list` can return non-zero
+            # (the suspended pool is unreadable through `list`). Falling back to
+            # `zpool status -x` reports faulted/suspended pools regardless. Audit
+            # Tier 5 (Health stack — `_check_zfs_pool_health` no detecta SUSPENDED).
+            if result.returncode != 0:
+                try:
+                    status = subprocess.run(
+                        ['zpool', 'status', '-x'],
+                        capture_output=True, text=True, timeout=5,
+                    )
+                    text = (status.stdout or '') + '\n' + (status.stderr or '')
+                    # `zpool status -x` outputs "all pools are healthy" when fine.
+                    if status.returncode == 0 and 'all pools are healthy' in text.lower():
+                        return zfs_issues
+                    # Otherwise scan for "pool: <name>" + "state: <STATE>" pairs.
+                    import re as _re
+                    for m in _re.finditer(r'pool:\s*(\S+).*?state:\s*(\S+)', text, _re.DOTALL):
+                        pool_name = m.group(1)
+                        pool_health = m.group(2).upper()
+                        if pool_health == 'ONLINE':
+                            continue
+                        zfs_issues[f'zpool_{pool_name}'] = {
+                            'status': 'CRITICAL',
+                            'reason': f'ZFS pool {pool_health.lower()} (detected via zpool status)',
+                            'pool_name': pool_name,
+                            'health': pool_health,
+                        }
+                    return zfs_issues
+                except Exception:
+                    return zfs_issues
+
             if result.returncode == 0:
                 lines = result.stdout.strip().split('\n')
                 for line in lines:
@@ -4843,10 +5034,19 @@ class HealthMonitor:
                 for st in available_storages:
                     st_name = st.get('name', 'unknown')
                     st_type = st.get('type', 'unknown')
-                    checks[st_name] = {
-                        'status': 'OK',
-                        'detail': f'{st_type} storage available'
-                    }
+                    # Sprint 11.6: PBS namespace-restricted storages are reachable
+                    # but the API hides the datastore size — surface as INFO so
+                    # the operator understands why size columns read 0.
+                    if st.get('status') == 'namespace_restricted':
+                        checks[st_name] = {
+                            'status': 'INFO',
+                            'detail': f'{st_type} storage reachable (namespace-restricted: datastore size hidden by ACL)'
+                        }
+                    else:
+                        checks[st_name] = {
+                            'status': 'OK',
+                            'detail': f'{st_type} storage available'
+                        }
                 
                 # Add excluded unavailable storages as INFO (not CRITICAL)
                 for st in excluded_unavailable:
@@ -4969,7 +5169,640 @@ class HealthMonitor:
             print(f"[HealthMonitor] Error checking Proxmox storage: {e}")
             # Return None on exception to indicate the check could not be performed, not necessarily a failure.
             return None
-    
+
+    def _check_remote_mounts(self) -> Optional[Dict[str, Any]]:
+        """Sprint 13: per-mount NFS/CIFS/SMB health.
+
+        Stale mounts get a CRITICAL — they're the failure mode that
+        actually breaks user workflows (writes silently redirect to the
+        local FS and fill the disk). Read-only that wasn't requested
+        gets a WARNING. The persistence/clear logic mirrors the
+        Proxmox-storage check so the same Health → details panel can
+        render the result, and so notifications go through the same
+        pipeline (events.py / templates.py) with the standard 1h
+        cooldown.
+
+        Returns ``None`` (not OK) when the module isn't importable, so
+        the orchestrator skips the section entirely on hosts where the
+        helper failed to load.
+        """
+        if not MOUNT_MONITOR_AVAILABLE:
+            return None
+
+        try:
+            host_mounts = mount_monitor.scan_remote_mounts(force=True)
+        except Exception as e:
+            print(f"[HealthMonitor] mount_monitor.scan failed: {e}")
+            host_mounts = []
+
+        # Sprint 13.27: also pick up mounts inside running LXCs. Wrapped
+        # separately so a stuck `pct exec` doesn't blank the host result.
+        try:
+            lxc_mounts_list = mount_monitor.scan_lxc_mounts(force=True)
+        except Exception as e:
+            print(f"[HealthMonitor] mount_monitor.scan_lxc_mounts failed: {e}")
+            lxc_mounts_list = []
+
+        mounts = list(host_mounts) + list(lxc_mounts_list)
+
+        if not mounts:
+            # No remote mounts on this host — nothing to monitor and
+            # nothing to clear. Skip the section so it doesn't render
+            # as an empty card on the dashboard.
+            return None
+
+        checks: Dict[str, Dict[str, Any]] = {}
+        critical_targets: list[str] = []
+        warning_targets: list[str] = []
+
+        for m in mounts:
+            target = m.get('target', '?')
+            status = m.get('status', 'ok')
+            fstype = m.get('fstype', '?')
+            error = m.get('error') or ''
+            lxc_id = m.get('lxc_id', '') or ''
+            lxc_name = m.get('lxc_name', '') or ''
+
+            # Disambiguate same-target across host vs LXCs (e.g. /mnt/nas
+            # could exist both on host and inside CT 101). Without the
+            # CT prefix, both would share an error_key and one entry's
+            # recovery would clear the other's alert.
+            if lxc_id:
+                key_target = f'ct{lxc_id}:{target}'
+                ct_label = f'CT {lxc_id}' + (f" ({lxc_name})" if lxc_name else '')
+                check_label = f'{ct_label} {target}'
+                # Pre-formatted suffix the notification body inserts as
+                # `{lxc_scope}` — leading space included so the rendered
+                # sentence reads "...is stale inside CT 101 (nginx)."
+                lxc_scope = f' inside {ct_label}'
+            else:
+                key_target = target
+                ct_label = ''
+                check_label = target
+                lxc_scope = ''
+            error_key = f'mount_{status}_{key_target}'
+
+            if status == 'stale':
+                checks[check_label] = {
+                    'status': 'CRITICAL',
+                    'detail': f'{fstype} mount stale: {error or "unreachable"}',
+                    'fstype': fstype,
+                    'source': m.get('source', ''),
+                    'lxc_id': lxc_id,
+                    'lxc_name': lxc_name,
+                }
+                critical_targets.append(check_label)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='CRITICAL',
+                    reason=(
+                        f'Remote mount {target} inside {ct_label} is stale ({fstype})'
+                        if lxc_id else
+                        f'Remote mount {target} is stale ({fstype})'
+                    ),
+                    details={
+                        'mount_target': target,
+                        'mount_source': m.get('source', ''),
+                        'fstype': fstype,
+                        'error': error,
+                        'lxc_id': lxc_id,
+                        'lxc_name': lxc_name,
+                        'lxc_scope': lxc_scope,
+                    },
+                )
+            elif status == 'readonly':
+                checks[check_label] = {
+                    'status': 'WARNING',
+                    'detail': f'{fstype} mount unexpectedly read-only',
+                    'fstype': fstype,
+                    'source': m.get('source', ''),
+                    'lxc_id': lxc_id,
+                    'lxc_name': lxc_name,
+                }
+                warning_targets.append(check_label)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='WARNING',
+                    reason=(
+                        f'Remote mount {target} inside {ct_label} is read-only'
+                        if lxc_id else
+                        f'Remote mount {target} is read-only'
+                    ),
+                    details={
+                        'mount_target': target,
+                        'mount_source': m.get('source', ''),
+                        'fstype': fstype,
+                        'lxc_id': lxc_id,
+                        'lxc_name': lxc_name,
+                        'lxc_scope': lxc_scope,
+                    },
+                )
+            else:
+                checks[check_label] = {
+                    'status': 'OK',
+                    'detail': f'{fstype} mount reachable',
+                    'fstype': fstype,
+                    'source': m.get('source', ''),
+                    'lxc_id': lxc_id,
+                    'lxc_name': lxc_name,
+                }
+
+        # Clear errors for mounts that recovered. error_key shape is
+        # "mount_<status>_<key_target>" where key_target is either the
+        # plain path (host mount) or "ct<id>:<path>" (LXC mount).
+        # Build the set of currently-active "bad" keys this round so
+        # any previously-recorded mount_* error not in that set means
+        # the mount is now OK and can be cleared.
+        active_errors = health_persistence.get_active_errors() or []
+        emitted_keys: set[str] = set()
+        for m in mounts:
+            status = m.get('status', 'ok')
+            if status not in ('stale', 'readonly'):
+                continue
+            target = m.get('target', '?')
+            lxc_id = m.get('lxc_id', '') or ''
+            key_target = f'ct{lxc_id}:{target}' if lxc_id else target
+            emitted_keys.add(f'mount_{status}_{key_target}')
+
+        for err in active_errors:
+            ek = err.get('error_key', '')
+            if not ek.startswith('mount_'):
+                continue
+            if ek not in emitted_keys:
+                health_persistence.clear_error(ek)
+
+        if critical_targets:
+            return {
+                'status': 'CRITICAL',
+                'reason': f'{len(critical_targets)} remote mount(s) stale: {", ".join(critical_targets[:3])}',
+                'checks': checks,
+            }
+        if warning_targets:
+            return {
+                'status': 'WARNING',
+                'reason': f'{len(warning_targets)} remote mount(s) read-only: {", ".join(warning_targets[:3])}',
+                'checks': checks,
+            }
+        return {
+            'status': 'OK',
+            'reason': f'{len(mounts)} remote mount(s) healthy',
+            'checks': checks,
+        }
+
+    def _check_lxc_disk_usage(self) -> Optional[Dict[str, Any]]:
+        """Sprint 13.30: rootfs disk usage per LXC.
+
+        The classic failure mode this catches: a CT's rootfs is sized
+        at 2 GB, the app inside writes logs continuously, and one day
+        the CT runs out of space and stops booting. We pull
+        per-resource ``disk`` / ``maxdisk`` from
+        ``pvesh /cluster/resources --type vm`` (cheap, already cached
+        upstream by Proxmox) and emit a WARNING at 85% / CRITICAL at
+        95% — the same thresholds the host disk check uses, so the
+        operator's mental model is consistent.
+
+        Notification cooldown is the standard 1h via the storage
+        category, so a CT teetering at 96% won't spam the channel.
+        """
+        # Cheap pre-check: bail out when there are no running LXCs. On
+        # nodes without CTs, the previous version still paid ~860ms per
+        # cycle for a `pvesh /cluster/resources` call that produced no
+        # actionable data. We reuse the `lxc-start` /proc walk that
+        # `mount_monitor` already exposes — costs ~1-5ms regardless of
+        # process count.
+        if MOUNT_MONITOR_AVAILABLE and not mount_monitor._has_any_running_lxc():
+            return None
+
+        # Reuse the flask_server-level pvesh cache instead of running our
+        # own subprocess. The shared helper holds the result for 2s and
+        # is also consumed by `_check_vms_cts_optimized` and the VMs/LXCs
+        # API route, so within a single health-collector cycle we get
+        # this for free instead of paying ~860ms per pvesh invocation.
+        try:
+            import flask_server  # deferred — avoids circular import at module load
+            resources = flask_server.get_cached_pvesh_cluster_resources_vm() or []
+        except Exception as e:
+            print(f"[HealthMonitor] LXC disk check failed: {e}")
+            return None
+
+        # User-configurable LXC rootfs thresholds (defaults 85 / 95).
+        try:
+            import health_thresholds as _ht
+            WARN_PCT = _ht.get("lxc_rootfs", "warning", default=85)
+            CRIT_PCT = _ht.get("lxc_rootfs", "critical", default=95)
+        except Exception:
+            WARN_PCT = 85
+            CRIT_PCT = 95
+
+        checks: Dict[str, Dict[str, Any]] = {}
+        critical_cts: list[str] = []
+        warning_cts: list[str] = []
+        emitted_keys: set[str] = set()
+
+        for r in resources:
+            if r.get('type') != 'lxc':
+                continue
+            if r.get('status') != 'running':
+                # Stopped CTs — `disk` reads as 0 from pvesh because the
+                # rootfs isn't mounted. Skip rather than report a
+                # misleading 0%.
+                continue
+            try:
+                disk = int(r.get('disk') or 0)
+                maxdisk = int(r.get('maxdisk') or 0)
+            except (TypeError, ValueError):
+                continue
+            if maxdisk <= 0:
+                continue
+            pct = (disk / maxdisk) * 100
+            vmid = str(r.get('vmid', ''))
+            name = r.get('name', '') or ''
+            label = f'CT {vmid}' + (f' ({name})' if name else '')
+
+            entry: Dict[str, Any] = {
+                'detail': f'rootfs {pct:.1f}% used ({disk // (1024**2)} MB / {maxdisk // (1024**2)} MB)',
+                'usage_percent': round(pct, 1),
+                'disk_bytes': disk,
+                'maxdisk_bytes': maxdisk,
+                'vmid': vmid,
+                'name': name,
+            }
+            error_key = f'lxc_disk_{vmid}'
+
+            if pct >= CRIT_PCT:
+                entry['status'] = 'CRITICAL'
+                checks[label] = entry
+                critical_cts.append(label)
+                emitted_keys.add(error_key)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='CRITICAL',
+                    reason=f'{label} rootfs at {pct:.1f}% ({disk // (1024**2)} MB / {maxdisk // (1024**2)} MB)',
+                    details=entry,
+                )
+            elif pct >= WARN_PCT:
+                entry['status'] = 'WARNING'
+                checks[label] = entry
+                warning_cts.append(label)
+                emitted_keys.add(error_key)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='WARNING',
+                    reason=f'{label} rootfs at {pct:.1f}% ({disk // (1024**2)} MB / {maxdisk // (1024**2)} MB)',
+                    details=entry,
+                )
+            else:
+                entry['status'] = 'OK'
+                checks[label] = entry
+
+        # Clear errors for CTs that recovered (disk freed up below
+        # warning threshold, or CT stopped).
+        for err in (health_persistence.get_active_errors() or []):
+            ek = err.get('error_key', '')
+            if not ek.startswith('lxc_disk_'):
+                continue
+            if ek not in emitted_keys:
+                health_persistence.clear_error(ek)
+
+        if not checks:
+            return None
+        if critical_cts:
+            return {
+                'status': 'CRITICAL',
+                'reason': f'{len(critical_cts)} CT(s) at >{CRIT_PCT}% rootfs: {", ".join(critical_cts[:3])}',
+                'checks': checks,
+            }
+        if warning_cts:
+            return {
+                'status': 'WARNING',
+                'reason': f'{len(warning_cts)} CT(s) at >{WARN_PCT}% rootfs: {", ".join(warning_cts[:3])}',
+                'checks': checks,
+            }
+        return {
+            'status': 'OK',
+            'reason': f'{len(checks)} running CT(s) within safe rootfs usage',
+            'checks': checks,
+        }
+
+    # ─── Phase 3 capacity checks ─────────────────────────────────────────────
+    #
+    # Three sibling methods that all share the same shape:
+    #   - Bail fast when the dependency isn't available (no CTs running,
+    #     no PVE storage module, no `zpool` binary).
+    #   - Read user-configured thresholds (or fall back to defaults).
+    #   - Iterate the relevant entities, classify each, persist any
+    #     critical/warning errors via health_persistence so the
+    #     notification stack picks them up, clear stale ones.
+    #   - Return None when there's literally nothing to monitor — that
+    #     keeps the dashboard from rendering an empty card.
+
+    def _read_capacity_thresholds(self, section: str, fb_warn: float = 85, fb_crit: float = 95) -> tuple[float, float]:
+        """Resolve (warning, critical) for a capacity section, falling
+        back to the safe 85/95 default. Tiny helper to avoid copy-paste
+        across the three checks below."""
+        try:
+            import health_thresholds as _ht
+            warn = _ht.get(section, "warning", default=fb_warn)
+            crit = _ht.get(section, "critical", default=fb_crit)
+            return float(warn), float(crit)
+        except Exception:
+            return float(fb_warn), float(fb_crit)
+
+    def _check_lxc_mount_capacity(self) -> Optional[Dict[str, Any]]:
+        """Capacity of mountpoints inside running LXCs.
+
+        Catches the failure mode of "CT had a 50G NFS mount full of
+        photos and now the app can't write" — distinct from the rootfs
+        check (already covered) because those are usually large data
+        mounts whose fill rate is driven by user content, not log spam.
+        """
+        if not MOUNT_MONITOR_AVAILABLE:
+            return None
+        try:
+            mounts = mount_monitor.scan_lxc_mount_capacity()
+        except Exception as e:
+            print(f"[HealthMonitor] LXC mount capacity scan failed: {e}")
+            return None
+        if not mounts:
+            return None
+
+        warn_pct, crit_pct = self._read_capacity_thresholds("lxc_mount")
+        checks: Dict[str, Dict[str, Any]] = {}
+        critical_labels: list[str] = []
+        warning_labels: list[str] = []
+        emitted_keys: set[str] = set()
+
+        for m in mounts:
+            pct = float(m.get('usage_percent', 0))
+            vmid = str(m.get('vmid', ''))
+            mount = m.get('mount', '')
+            label = f"CT {vmid}:{mount}"
+            entry = {
+                'usage_percent': pct,
+                'mount': mount,
+                'vmid': vmid,
+                'name': m.get('name', ''),
+                'fstype': m.get('fstype', ''),
+                'total_bytes': m.get('total_bytes', 0),
+                'used_bytes': m.get('used_bytes', 0),
+                'available_bytes': m.get('available_bytes', 0),
+            }
+            error_key = f'lxc_mount_{vmid}_{mount}'
+            if pct >= crit_pct:
+                entry['status'] = 'CRITICAL'
+                checks[label] = entry
+                critical_labels.append(label)
+                emitted_keys.add(error_key)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='CRITICAL',
+                    reason=f'{label} at {pct:.1f}% used',
+                    details=entry,
+                )
+            elif pct >= warn_pct:
+                entry['status'] = 'WARNING'
+                checks[label] = entry
+                warning_labels.append(label)
+                emitted_keys.add(error_key)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='WARNING',
+                    reason=f'{label} at {pct:.1f}% used',
+                    details=entry,
+                )
+            else:
+                entry['status'] = 'OK'
+                checks[label] = entry
+
+        # Clear any previously-flagged mounts that are now under threshold
+        # (e.g. user freed up space). Without this the alert sticks
+        # forever in the persistence DB.
+        for active in health_persistence.get_active_errors('storage'):
+            ek = active.get('error_key', '')
+            if ek.startswith('lxc_mount_') and ek not in emitted_keys:
+                health_persistence.clear_error(ek)
+
+        if critical_labels:
+            return {
+                'status': 'CRITICAL',
+                'reason': f'{len(critical_labels)} CT mount(s) ≥{crit_pct:.0f}%: {", ".join(critical_labels[:3])}',
+                'checks': checks,
+            }
+        if warning_labels:
+            return {
+                'status': 'WARNING',
+                'reason': f'{len(warning_labels)} CT mount(s) ≥{warn_pct:.0f}%: {", ".join(warning_labels[:3])}',
+                'checks': checks,
+            }
+        return {
+            'status': 'OK',
+            'reason': f'{len(checks)} CT mount(s) within safe usage',
+            'checks': checks,
+        }
+
+    def _check_pve_storage_capacity(self) -> Optional[Dict[str, Any]]:
+        """Capacity of PVE-registered storages that are NOT surfaced as
+        a host filesystem (LVM, LVM-thin, RBD, ZFS-pool, PBS).
+
+        Why filter: filesystem-style storages (dir / nfs / cifs) appear
+        under /mnt/pve/* and are already covered by the host disk
+        check via _check_filesystem. Re-alerting on the same condition
+        through two channels just clutters the inbox.
+        """
+        if not PROXMOX_STORAGE_AVAILABLE:
+            return None
+        try:
+            from proxmox_storage_monitor import proxmox_storage_monitor as psm
+            storage_status = psm.get_storage_status()
+        except Exception as e:
+            print(f"[HealthMonitor] PVE storage capacity fetch failed: {e}")
+            return None
+
+        # Storage types that don't surface as a host mount → these are
+        # the ones we want to monitor here.
+        BLOCK_TYPES = {'lvm', 'lvmthin', 'rbd', 'zfspool', 'cephfs', 'pbs'}
+
+        warn_pct, crit_pct = self._read_capacity_thresholds("pve_storage")
+        available_storages = storage_status.get('available', []) or []
+        checks: Dict[str, Dict[str, Any]] = {}
+        critical_labels: list[str] = []
+        warning_labels: list[str] = []
+        emitted_keys: set[str] = set()
+
+        for st in available_storages:
+            stype = (st.get('type') or '').lower()
+            if stype not in BLOCK_TYPES:
+                continue
+            total = int(st.get('total', 0) or 0)
+            used = int(st.get('used', 0) or 0)
+            if total <= 0:
+                continue
+            pct = (used / total) * 100
+            name = st.get('name', 'unknown')
+            label = f'{name} ({stype})'
+            entry = {
+                'usage_percent': round(pct, 1),
+                'storage_name': name,
+                'storage_type': stype,
+                'total_bytes': total,
+                'used_bytes': used,
+            }
+            error_key = f'pve_storage_full_{name}'
+            if pct >= crit_pct:
+                entry['status'] = 'CRITICAL'
+                checks[label] = entry
+                critical_labels.append(label)
+                emitted_keys.add(error_key)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='CRITICAL',
+                    reason=f'PVE storage {label} at {pct:.1f}% used',
+                    details=entry,
+                )
+            elif pct >= warn_pct:
+                entry['status'] = 'WARNING'
+                checks[label] = entry
+                warning_labels.append(label)
+                emitted_keys.add(error_key)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='WARNING',
+                    reason=f'PVE storage {label} at {pct:.1f}% used',
+                    details=entry,
+                )
+            else:
+                entry['status'] = 'OK'
+                checks[label] = entry
+
+        for active in health_persistence.get_active_errors('storage'):
+            ek = active.get('error_key', '')
+            if ek.startswith('pve_storage_full_') and ek not in emitted_keys:
+                health_persistence.clear_error(ek)
+
+        if not checks:
+            return None  # No block storages on this host
+        if critical_labels:
+            return {
+                'status': 'CRITICAL',
+                'reason': f'{len(critical_labels)} PVE storage(s) ≥{crit_pct:.0f}%: {", ".join(critical_labels[:3])}',
+                'checks': checks,
+            }
+        if warning_labels:
+            return {
+                'status': 'WARNING',
+                'reason': f'{len(warning_labels)} PVE storage(s) ≥{warn_pct:.0f}%: {", ".join(warning_labels[:3])}',
+                'checks': checks,
+            }
+        return {
+            'status': 'OK',
+            'reason': f'{len(checks)} PVE block storage(s) within safe usage',
+            'checks': checks,
+        }
+
+    def _check_zfs_pool_capacity(self) -> Optional[Dict[str, Any]]:
+        """ZFS pool fill level.
+
+        Independent from `_check_pve_storage_capacity` so pools that
+        aren't registered as PVE storage (rpool, dedicated backup
+        pools, etc.) still raise alerts. `zpool list -H -p -o
+        name,capacity` is one cheap subprocess call regardless of
+        pool count — capacity is an integer percent already, no math
+        needed.
+        """
+        try:
+            proc = subprocess.run(
+                ['zpool', 'list', '-H', '-p', '-o', 'name,capacity'],
+                capture_output=True, text=True, timeout=5,
+            )
+        except FileNotFoundError:
+            return None  # ZFS not installed
+        except Exception as e:
+            print(f"[HealthMonitor] zpool list failed: {e}")
+            return None
+        if proc.returncode != 0:
+            return None
+        rows = [ln.split() for ln in proc.stdout.strip().splitlines() if ln.strip()]
+        if not rows:
+            return None
+
+        warn_pct, crit_pct = self._read_capacity_thresholds("zfs_pool")
+        checks: Dict[str, Dict[str, Any]] = {}
+        critical_labels: list[str] = []
+        warning_labels: list[str] = []
+        emitted_keys: set[str] = set()
+
+        for row in rows:
+            if len(row) < 2:
+                continue
+            name = row[0]
+            try:
+                pct = float(row[1])
+            except ValueError:
+                continue
+            entry = {
+                'usage_percent': pct,
+                'pool_name': name,
+            }
+            error_key = f'zfs_pool_full_{name}'
+            if pct >= crit_pct:
+                entry['status'] = 'CRITICAL'
+                checks[name] = entry
+                critical_labels.append(name)
+                emitted_keys.add(error_key)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='CRITICAL',
+                    reason=f'ZFS pool {name} at {pct:.1f}% used',
+                    details=entry,
+                )
+            elif pct >= warn_pct:
+                entry['status'] = 'WARNING'
+                checks[name] = entry
+                warning_labels.append(name)
+                emitted_keys.add(error_key)
+                health_persistence.record_error(
+                    error_key=error_key,
+                    category='storage',
+                    severity='WARNING',
+                    reason=f'ZFS pool {name} at {pct:.1f}% used',
+                    details=entry,
+                )
+            else:
+                entry['status'] = 'OK'
+                checks[name] = entry
+
+        for active in health_persistence.get_active_errors('storage'):
+            ek = active.get('error_key', '')
+            if ek.startswith('zfs_pool_full_') and ek not in emitted_keys:
+                health_persistence.clear_error(ek)
+
+        if critical_labels:
+            return {
+                'status': 'CRITICAL',
+                'reason': f'{len(critical_labels)} ZFS pool(s) ≥{crit_pct:.0f}%: {", ".join(critical_labels[:3])}',
+                'checks': checks,
+            }
+        if warning_labels:
+            return {
+                'status': 'WARNING',
+                'reason': f'{len(warning_labels)} ZFS pool(s) ≥{warn_pct:.0f}%: {", ".join(warning_labels[:3])}',
+                'checks': checks,
+            }
+        return {
+            'status': 'OK',
+            'reason': f'{len(checks)} ZFS pool(s) within safe usage',
+            'checks': checks,
+        }
+
     def get_health_status(self) -> Dict[str, Any]:
         """
         Main function to get the comprehensive health status.

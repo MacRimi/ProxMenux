@@ -1,23 +1,26 @@
 #!/usr/bin/env bash
 
 # ==========================================================
-# ProxMenuX - ZimaOS VM Creator Script
+# ProxMenux - ZimaOS VM Creator
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 21/08/2025
 # ==========================================================
 # Description:
-# This script automates the creation and configuration of a ZimaOS 
-# Virtual machine (VM) in Proxmox VE. It simplifies the
-# setup process by allowing both default and advanced configuration options.
+# Creates and configures a ZimaOS virtual machine on Proxmox VE.
+# Downloads the ZimaOS pre-built image, wires it into a new VM
+# using either the ProxMenux default profile or the advanced
+# wizard, and hands storage and optional GPU passthrough to the
+# shared helpers.
 #
-# The script automates the complete VM creation process, including loader 
-# download, disk configuration, and VM boot setup.
-#
-#
+# Features:
+# - Default and Advanced configuration modes.
+# - Unified storage plan (virtual / import / PCI passthrough).
+# - Optional GPU passthrough via the shared VM wizard.
+# - Auto-generates a styled HTML description attached to the VM.
 # ==========================================================
 
 

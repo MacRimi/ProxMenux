@@ -1,13 +1,33 @@
 #!/bin/bash
-
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Utilities Menu
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 02/07/2025
+# ==========================================================
+# Description:
+# Dispatcher for the Utilities & Tools section. Six options that
+# cover ISO creation, system utility installation, Proxmox updates,
+# major-version upgrade (PVE 8 → 9) and VM portability (OVA / OVF).
+#
+# Features:
+#   - UUP Dump ISO creator: build official Windows ISOs from UUP
+#     Dump using a shared link.
+#   - System Utilities Installer: 26 curated CLI tools (htop, btop,
+#     iperf3, jq, tmux, ...) in custom-pick or predefined groups.
+#   - Proxmox System Update: repos hygiene + apt update + apt
+#     dist-upgrade with reboot prompt (delegates to per-version
+#     worker scripts in global/).
+#   - Upgrade PVE 8 to PVE 9: automated or interactive major-version
+#     upgrade with pre-checks, repo migration and post-upgrade
+#     validation. Manual guide alternative also exposed.
+#   - Export VM to OVA / OVF: convert a Proxmox VM to a portable
+#     OVA archive or OVF directory (VMware / VirtualBox / etc).
+#   - Import VM from OVA / OVF: import a VMware / VirtualBox /
+#     ProxMenux export back into Proxmox.
 # ==========================================================
 
 

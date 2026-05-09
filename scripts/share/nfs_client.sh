@@ -1,15 +1,23 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux CT - NFS Client Manager for Proxmox LXC
+# ProxMenux - NFS Client Manager for LXC
 # ==========================================================
-# Based on ProxMenux by MacRimi
+# Author      : MacRimi
+# Copyright   : (c) 2024 MacRimi
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version     : 1.0
 # ==========================================================
 # Description:
-# This script allows you to manage NFS client mounts inside Proxmox CTs:
-# - Mount NFS shares (temporary and permanent)
-# - View current mounts
-# - Unmount and remove NFS shares
-# - Auto-discover NFS servers
+# Manages NFS client mounts from inside a Proxmox LXC container.
+# Requires a privileged container (kernel NFS client needs
+# capabilities that unprivileged CTs do not expose).
+#
+# Features:
+# - Mount NFS shares (temporary and permanent via /etc/fstab).
+# - List current NFS mounts inside the CT.
+# - Unmount and remove NFS shares cleanly.
+# - Auto-discover NFS servers on the local network.
 # ==========================================================
 
 # Configuration
@@ -44,6 +52,17 @@ install_nfs_client() {
 
     show_proxmenux_logo
     msg_title "$(translate "Installing NFS Client in LXC")"
+
+    # Pre-flight: refuse non-Debian-family CTs. The script targets
+    # `apt-get` only — Alpine / Rocky / AlmaLinux fail with cryptic
+    # errors mid-flow. Audit Tier 6 — `nfs_client.sh`/`samba_client.sh`
+    # asume distro Debian-family sin detección.
+    if ! pct exec "$CTID" -- bash -c 'command -v apt-get' &>/dev/null; then
+        msg_error "$(translate "This container does not have apt-get. NFS client installation only supports Debian/Ubuntu containers.")"
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return 1
+    fi
 
     msg_info "$(translate "Installing NFS client packages...")"
     if ! pct exec "$CTID" -- apt-get update >/dev/null 2>&1; then
@@ -551,9 +570,23 @@ unmount_nfs_share() {
         # Remove from fstab
         pct exec "$CTID" -- sed -i "\|[[:space:]]$SELECTED_MOUNT[[:space:]]|d" /etc/fstab
         msg_ok "$(translate "Removed from /etc/fstab.")"
-        
+
+        # Actually unmount it now (the previous version only edited fstab,
+        # so the share remained mounted until the CT rebooted). Try a
+        # graceful umount first, fall back to lazy umount if busy. Audit
+        # Tier 7 — `unmount_nfs_share` only borra fstab.
+        if pct exec "$CTID" -- mountpoint -q "$SELECTED_MOUNT" 2>/dev/null; then
+            if pct exec "$CTID" -- umount "$SELECTED_MOUNT" 2>/dev/null; then
+                msg_ok "$(translate "Unmounted") $SELECTED_MOUNT"
+            elif pct exec "$CTID" -- umount -l "$SELECTED_MOUNT" 2>/dev/null; then
+                msg_warn "$(translate "Mount was busy — performed lazy unmount") $SELECTED_MOUNT"
+            else
+                msg_warn "$(translate "Could not unmount") $SELECTED_MOUNT $(translate "automatically. Reboot LXC to fully release.")"
+            fi
+        fi
+
         echo -e ""
-        msg_ok "$(translate "NFS share unmount successfully. Reboot LXC required to take effect.")"
+        msg_ok "$(translate "NFS share unmount completed.")"
     fi
     
     echo -e ""

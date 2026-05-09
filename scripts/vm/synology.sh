@@ -1,30 +1,33 @@
 #!/usr/bin/env bash
 
 # ==========================================================
-# ProxMenuX - Synology DSM VM Creator Script
+# ProxMenux - Synology DSM VM Creator
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
 # Version     : 1.0
-# Last Updated: 13/03/2025
 # ==========================================================
 # Description:
-# This script automates the creation and configuration of a Synology DSM 
-# (DiskStation Manager) virtual machine (VM) in Proxmox VE. It simplifies the
-# setup process by allowing both default and advanced configuration options.
+# Creates and configures a Synology DSM (DiskStation Manager)
+# virtual machine on Proxmox VE. Downloads one of the supported
+# loaders (Arc, RR, TinyCore M-shell, or a custom one), imports
+# it as the VM boot disk, and prepares CPU/RAM/network/storage
+# through the ProxMenux default or advanced wizard.
 #
-# The script automates the complete VM creation process, including loader 
-# download, disk configuration, and VM boot setup.
+# Features:
+# - Supports Arc, RR, TinyCore M-shell and Custom loaders.
+# - Default and Advanced configuration modes.
+# - Virtual disks (SATA, up to 6) or physical disk passthrough.
+# - Imports the loader as IDE for maximum compatibility.
+# - Generates a styled HTML description attached to the VM.
 #
-# **Credits**
-# This script is an original idea but incorporates ideas and elements from 
-# a similar script by user **tim104979** from the ProxmoxVE branch:
-# (https://raw.githubusercontent.com/tim104979/ProxmoxVE/refs/heads/main/vm/synology-vm.sh)
-#
-# Copyright (c) Proxmox VE Helper-Scripts Community
-# License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
-#
+# Credits:
+# Original work by MacRimi. Incorporates ideas and snippets from
+# tim104979's synology-vm.sh in the ProxmoxVE Helper-Scripts
+# Community project (MIT):
+# https://raw.githubusercontent.com/tim104979/ProxmoxVE/refs/heads/main/vm/synology-vm.sh
 # ==========================================================
 
 

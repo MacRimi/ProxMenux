@@ -1112,7 +1112,7 @@ analyze_iommu_group() {
         # Skip PCI bridges and host bridges (class 0x0604 / 0x0600)
         local dev_class
         dev_class=$(cat "/sys/bus/pci/devices/${dev}/class" 2>/dev/null)
-        if [[ "$dev_class" == "0x0604" || "$dev_class" == "0x0600" ]]; then
+        if [[ "$dev_class" == 0x0604* || "$dev_class" == 0x0600* ]]; then
             continue
         fi
 

@@ -4,12 +4,24 @@
 # ==========================================================
 # Author      : MacRimi
 # Copyright   : (c) 2024 MacRimi
-# License     : MIT
+# License     : GPL-3.0
+#               https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version     : 1.0
 # ==========================================================
 # Description:
-# Adds local SCSI/SATA/NVMe disks as Proxmox directory storage
-# (pvesm add dir) or ZFS pool storage (pvesm add zfspool).
-# The disk can be formatted (ext4/xfs/zfs) and registered in Proxmox.
+# Prepares a local SCSI / SATA / NVMe disk on the Proxmox host
+# and registers it as Proxmox storage — either as a directory
+# (pvesm add dir) or as a ZFS pool (pvesm add zfspool).
+#
+# Features:
+# - Safety filter hides root / swap / mounted / in-use disks
+#   and disks already referenced by any VM/CT config.
+# - Format path: wipe + GPT + mkfs (ext4 / xfs / btrfs / zfs).
+# - Reuse path: mount an existing filesystem without touching
+#   the data.
+# - UUID-based /etc/fstab entries with defaults,nofail.
+# - Content-type presets (VM Storage / Standard NAS / All / Custom).
+# - View, remove (with fstab cleanup) and list-disks helpers.
 # ==========================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

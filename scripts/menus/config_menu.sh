@@ -1,13 +1,39 @@
 #!/bin/bash
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Settings (Configuration Menu)
 # ==========================================================
-# Author      : MacRimi
-# Copyright   : (c) 2024 MacRimi
+# Author       : MacRimi
 # Contributors : cod378
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
-# Version     : 1.1
-# Last Updated: 04/07/2025
+# Copyright    : (c) 2024 MacRimi
+# License      : GPL-3.0
+#                https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
+# Version      : 1.1
+# ==========================================================
+# Description:
+# ProxMenux configuration / settings menu. Options are shown
+# conditionally based on the install type and current state:
+#
+#   - ProxMenux Monitor (Activate / Deactivate + Show Status)
+#       Only if proxmenux-monitor.service is registered with
+#       systemd. Toggles between active / inactive states.
+#
+#   - Deactivate Beta Program
+#       Only if config.json has beta_program.status = "active".
+#       Stops beta update prompts; stable updates continue.
+#
+#   - Change Language
+#       Only on the Translation install type (venv +
+#       config.json.language present). Languages: en / es / fr /
+#       de / it / pt.
+#
+#   - Show Version Information
+#       Always shown. Reports installed components, files,
+#       virtual environment state and current language.
+#
+#   - Uninstall ProxMenux
+#       Always shown. Interactive uninstall with optional
+#       dependency removal (jq, dialog, python3-*, ...) and
+#       restoration of /root/.bashrc + /etc/motd backups.
 # ==========================================================
 
 # Configuration ============================================

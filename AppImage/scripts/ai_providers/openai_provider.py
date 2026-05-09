@@ -75,10 +75,15 @@ class OpenAIProvider(AIProvider):
         Returns:
             List of model IDs suitable for chat completions.
         """
-        if not self.api_key:
-            return []
-
         is_custom_endpoint = bool(self.base_url)
+
+        # Custom endpoints (LiteLLM, opencode.ai, vLLM, LocalAI, …) often
+        # don't require auth at the /models endpoint — opencode.ai/zen
+        # for instance returns the catalogue with no Authorization
+        # header. Returning early on empty api_key broke those flows.
+        # Issue #11.5 — OpenCode provider Custom Base URL fetch.
+        if not self.api_key and not is_custom_endpoint:
+            return []
 
         try:
             # Determine models URL from base_url if set
@@ -90,9 +95,15 @@ class OpenAIProvider(AIProvider):
             else:
                 models_url = self.DEFAULT_MODELS_URL
 
+            # Only send Authorization when we actually have a key —
+            # sending `Bearer ` (empty) causes some endpoints to 401.
+            headers = {}
+            if self.api_key:
+                headers['Authorization'] = f'Bearer {self.api_key}'
+
             req = urllib.request.Request(
                 models_url,
-                headers={'Authorization': f'Bearer {self.api_key}'},
+                headers=headers,
                 method='GET'
             )
 

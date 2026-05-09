@@ -1,39 +1,41 @@
 #!/bin/bash
-
 # ==========================================================
-# ProxMenux - A menu-driven script for Proxmox VE management
+# ProxMenux - Coral TPU Passthrough to LXC
 # ==========================================================
 # Author      : MacRimi
-# Revision    : @Blaspt (USB passthrough via udev rule with persistent /dev/coral)
+# Revision    : @Blaspt (USB passthrough via udev rule)
 # Copyright   : (c) 2024 MacRimi
-# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)
-# Version     : 1.4 (unprivileged container support, PVE dev API for apex/iGPU)
+# License     : GPL-3.0
+# Version     : 1.4
 # Last Updated: 01/04/2026
 # ==========================================================
 # Description:
-# This script automates the configuration and installation of
-# Coral TPU and iGPU support in Proxmox VE containers. It:
-# - Configures a selected LXC container for hardware acceleration
-# - Installs and sets up Coral TPU drivers on the Proxmox host
-# - Installs necessary drivers inside the container
-# - Manages required system and container restarts
+# Configures and installs Coral TPU passthrough (USB and
+# M.2 / PCIe) in a Proxmox LXC container. Writes the needed
+# dev / cgroup / mount entries into the LXC config, then
+# boots the container and installs the Edge TPU runtime
+# inside it so apps like Frigate can actually use the TPU.
+# iGPU (DRI) device nodes are added alongside when present,
+# which is the typical Frigate + Quick Sync combo.
 #
-# Supports Coral USB and Coral M.2 (PCIe) devices.
-# Includes USB passthrough enhancement using persistent udev alias (/dev/coral).
-#
-# Changelog v1.3:
-# - Fixed Coral USB passthrough: mount /dev/bus/usb instead of /dev/coral symlink
-#   The udev symlink /dev/coral is not passthrough-safe in LXC; mounting the full
-#   USB bus tree ensures the real device node is accessible inside the container
-#   regardless of which port the Coral USB is connected to.
-#
-# Changelog v1.2:
-# - Fixed symlink detection for /dev/coral (create=dir for symlinks)
-# - Fixed /dev/apex_0 not being mounted in PVE 9 (device existence not required)
-# - Fixed grep patterns to avoid matching commented lines
-# - Improved device type inference for non-existent devices
-# - Added duplicate entry cleanup
-# - Better error handling and logging
+# Features:
+#  - Supports Coral USB Accelerator and Coral M.2 / PCIe
+#  - Auto-detects M.2 via lspci (Global Unichip), USB via
+#    a persistent udev rule that creates /dev/coral
+#  - USB passthrough mounts /dev/bus/usb (not /dev/coral)
+#    so the container sees the real node even if the user
+#    replugs the device to a different port
+#  - PCIe/M.2 uses the PVE dev API (dev<N>: ... ,gid=apex)
+#    which handles cgroup2 permissions automatically
+#    in both privileged and unprivileged containers
+#  - Fallback cgroup2 + mount if /dev/apex_0 not yet present
+#    (module not loaded on host — reboot still pending)
+#  - Inside container: adds Google Coral APT repo and
+#    installs libedgetpu1-std (default) or -max (optional)
+#  - Also installs iGPU user-space drivers when DRI nodes
+#    are passed, so Quick Sync works out of the box
+#  - Idempotent: duplicate entries in the LXC config are
+#    cleaned up on every run
 # ==========================================================
 
 LOCAL_SCRIPTS="/usr/local/share/proxmenux/scripts"
@@ -99,10 +101,16 @@ SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", MODE="0666"
 # Coral Dev Board / Mini PCIe
 SUBSYSTEM=="usb", ATTRS{idVendor}=="1a6e", ATTRS{idProduct}=="089a", MODE="0666", TAG+="uaccess", SYMLINK+="coral"'
 
-    if [[ ! -f "$RULE_FILE" ]] || ! grep -q "18d1.*9302\|1a6e.*089a" "$RULE_FILE"; then
+    if [[ ! -f "$RULE_FILE" ]]; then
         echo "$RULE_CONTENT" > "$RULE_FILE"
         udevadm control --reload-rules && udevadm trigger
         msg_ok "$(translate 'Udev rules for Coral USB devices added and rules reloaded.')"
+    elif ! grep -q "18d1.*9302\|1a6e.*089a" "$RULE_FILE"; then
+        # Append (>>) instead of overwriting (>) so any user-authored
+        # rules in this file survive. Audit Tier 7 — udev rule sobreescribe.
+        printf '\n%s\n' "$RULE_CONTENT" >> "$RULE_FILE"
+        udevadm control --reload-rules && udevadm trigger
+        msg_ok "$(translate 'Udev rules for Coral USB devices appended and rules reloaded.')"
     else
         msg_ok "$(translate 'Udev rules for Coral USB devices already exist.')"
     fi
@@ -276,6 +284,15 @@ configure_lxc_hardware() {
     if lspci | grep -iq "Global Unichip"; then
         msg_info "$(translate 'Coral M.2 Apex detected, configuring...')"
 
+        # Pre-flight: warn if the host driver isn't loaded. Without `apex`
+        # the container will see the device file but the TPU won't actually
+        # be usable, and Frigate / coral-libs error out at runtime — much
+        # later than expected. Audit Tier 6 — `install_coral_lxc.sh` no
+        # verifica apex driver cargado.
+        if ! lsmod 2>/dev/null | grep -q '^apex'; then
+            msg_warn "$(translate 'apex kernel module not loaded on host. Run "Install Coral on Host" first or the container will not see /dev/apex_0.')"
+        fi
+
         local APEX_GID apex_dev_idx
         APEX_GID=$(getent group apex 2>/dev/null | cut -d: -f3 || echo "0")
         apex_dev_idx=$(get_next_dev_index "$CONFIG_FILE")
@@ -293,9 +310,18 @@ configure_lxc_hardware() {
             # dynamically from /proc/devices to avoid hardcoding it.
             local APEX_MAJOR
             APEX_MAJOR=$(awk '/\bapex\b/{print $1}' /proc/devices 2>/dev/null | head -1)
-            [[ -z "$APEX_MAJOR" ]] && APEX_MAJOR="245"
-            if ! grep -q "lxc.cgroup2.devices.allow: c ${APEX_MAJOR}:0 rwm" "$CONFIG_FILE"; then
-                echo "lxc.cgroup2.devices.allow: c ${APEX_MAJOR}:0 rwm # Coral M2 Apex" >> "$CONFIG_FILE"
+            if [[ -z "$APEX_MAJOR" ]]; then
+                # Hardcoded `245` was wrong on kernels that load drivers in
+                # different order — dynamic majors vary. Surface the failure
+                # so the user knows the cgroup rule won't match and they need
+                # to load the apex module first. Audit Tier 6.
+                msg_warn "$(translate 'Could not detect apex major number from /proc/devices. Load the apex module first: modprobe apex')"
+                APEX_MAJOR=""
+            fi
+            if [[ -n "$APEX_MAJOR" ]]; then
+                if ! grep -q "lxc.cgroup2.devices.allow: c ${APEX_MAJOR}:0 rwm" "$CONFIG_FILE"; then
+                    echo "lxc.cgroup2.devices.allow: c ${APEX_MAJOR}:0 rwm # Coral M2 Apex" >> "$CONFIG_FILE"
+                fi
             fi
             add_mount_if_needed "/dev/apex_0" "dev/apex_0" "$CONFIG_FILE"
             msg_ok "$(translate 'Coral M.2 Apex configuration added - device will be available after reboot')"
@@ -331,6 +357,15 @@ install_coral_in_container() {
 
 
     stop_spinner
+
+    # Pre-flight: refuse to run on non-Debian-family containers. The
+    # apt-get block below would crash with cryptic errors and leave the
+    # container half-configured. Audit Tier 6 — `install_coral_lxc.sh`
+    # asume Debian/Ubuntu sin distro detection.
+    if ! pct exec "$CONTAINER_ID" -- bash -c 'command -v apt-get' &>/dev/null; then
+        msg_error "$(translate 'Container does not have apt-get available. Coral driver installation only supports Debian/Ubuntu containers.')"
+        return 1
+    fi
 
     # Determine driver package for Coral M.2
     CORAL_M2=$(lspci | grep -i "Global Unichip")
