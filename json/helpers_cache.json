@@ -3853,10 +3853,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00023"
+      "scriptcat00000"
     ],
     "category_names": [
-      "Finance & Budgeting"
+      "Miscellaneous"
     ],
     "notes": [
       "Admin credentials are saved in `/root/discourse.creds` inside the container.",
@@ -4583,7 +4583,7 @@
     ],
     "warnings": [],
     "port": 8080,
-    "website": "https://github.com/joaovitoriasilva/endurain",
+    "website": "https://codeberg.org/endurain- project/endurain",
     "documentation": "https://docs.endurain.com/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/endurain.webp",
     "updateable": true,
