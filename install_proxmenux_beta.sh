@@ -339,7 +339,7 @@ extract_appimage_to_runtime_dir() {
     local tmp_extract_dir
     tmp_extract_dir=$(mktemp -d /tmp/proxmenux-extract.XXXXXX) || return 1
 
-    msg_info "Extracting AppImage runtime to ${target_runtime_dir}..."
+    #msg_info "Extracting AppImage runtime to ${target_runtime_dir}..."
 
     if ! ( cd "$tmp_extract_dir" && "$appimage_path" --appimage-extract >/dev/null 2>&1 ); then
         msg_error "Failed to extract AppImage."
