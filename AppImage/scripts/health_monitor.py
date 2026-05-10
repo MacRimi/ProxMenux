@@ -773,7 +773,85 @@ class HealthMonitor:
                 critical_issues.append(zfs_pool_cap_result.get('reason', 'ZFS pool near full'))
             elif zfs_pool_cap_result.get('status') == 'WARNING':
                 warning_issues.append(zfs_pool_cap_result.get('reason', 'ZFS pool filling up'))
-        
+
+        # Roll the storage-related sub-checks (pve_storage_capacity,
+        # zfs_pool_capacity, lxc_disk, lxc_mounts, remote_mounts) up
+        # into details['storage'] so the front-end Health Status modal
+        # can render the worst severity in the storage category badge
+        # AND surface the offending storage entry inside the expanded
+        # category list. Without this, a PVE storage at 86% used would
+        # raise the global "Warning" badge while the storage category
+        # itself appeared all-OK and the offending storage was nowhere
+        # to be found in the per-category list — only as a stray reason
+        # line above the categories.
+        if 'storage' in details:
+            _SEV_RANK = {'OK': 0, 'INFO': 1, 'WARNING': 2, 'CRITICAL': 3}
+            storage_block = details['storage']
+            cur_status = storage_block.get('status', 'OK')
+            cur_rank = _SEV_RANK.get(cur_status, 0)
+            extra_reasons = []
+            for sub_key in ('pve_storage_capacity', 'zfs_pool_capacity',
+                            'lxc_disk', 'lxc_mounts', 'remote_mounts'):
+                sub = details.get(sub_key)
+                if not isinstance(sub, dict):
+                    continue
+                sub_status = sub.get('status', 'OK')
+                sub_rank = _SEV_RANK.get(sub_status, 0)
+                if sub_rank > cur_rank:
+                    cur_status = sub_status
+                    cur_rank = sub_rank
+                if sub_status in ('WARNING', 'CRITICAL'):
+                    sub_reason = sub.get('reason')
+                    if sub_reason:
+                        extra_reasons.append(sub_reason)
+                # Merge sub-checks (storage names) so each entry
+                # carries its real severity in the expanded list.
+                # Sub-results sometimes name the same storage with a
+                # type suffix (e.g. proxmox_storage uses "PBS-Cloud"
+                # while pve_storage_capacity uses "PBS-Cloud (pbs)") —
+                # normalising on the bare-name part lets the worst
+                # severity win without splitting one storage into two
+                # rows in the UI. Defensive `dict()` to avoid mutating
+                # the source.
+                sub_checks = sub.get('checks') or {}
+                if not isinstance(sub_checks, dict):
+                    continue
+                target_checks = storage_block.setdefault('checks', {})
+
+                def _bare_name(name):
+                    # "PBS-Cloud (pbs)" → "PBS-Cloud"
+                    if ' (' in name and name.endswith(')'):
+                        return name.rsplit(' (', 1)[0]
+                    return name
+
+                target_lookup = {_bare_name(k): k for k in target_checks}
+                for ck_name, ck_data in sub_checks.items():
+                    if not isinstance(ck_data, dict):
+                        continue
+                    canonical = _bare_name(ck_name)
+                    target_key = target_lookup.get(canonical)
+                    if target_key is None:
+                        target_checks[canonical] = dict(ck_data)
+                        target_lookup[canonical] = canonical
+                        continue
+                    existing = target_checks.get(target_key) or {}
+                    existing_rank = _SEV_RANK.get(
+                        existing.get('status', 'OK'), 0)
+                    new_rank = _SEV_RANK.get(
+                        ck_data.get('status', 'OK'), 0)
+                    if new_rank > existing_rank:
+                        merged = dict(existing)
+                        merged.update(ck_data)
+                        target_checks[target_key] = merged
+            if cur_status != storage_block.get('status', 'OK'):
+                storage_block['status'] = cur_status
+                base_reason = storage_block.get('reason', '').strip()
+                combined = '; '.join(
+                    [r for r in [base_reason] + extra_reasons if r]
+                )
+                if combined:
+                    storage_block['reason'] = combined
+
         # Priority 2: Disk/Filesystem Health (Internal checks: usage, ZFS, SMART, IO errors)
         _t = time.time()
         storage_status = self._check_storage_optimized()
@@ -5433,6 +5511,8 @@ class HealthMonitor:
 
             if pct >= CRIT_PCT:
                 entry['status'] = 'CRITICAL'
+                entry['error_key'] = error_key
+                entry['dismissable'] = True
                 checks[label] = entry
                 critical_cts.append(label)
                 emitted_keys.add(error_key)
@@ -5445,6 +5525,8 @@ class HealthMonitor:
                 )
             elif pct >= WARN_PCT:
                 entry['status'] = 'WARNING'
+                entry['error_key'] = error_key
+                entry['dismissable'] = True
                 checks[label] = entry
                 warning_cts.append(label)
                 emitted_keys.add(error_key)
@@ -5554,6 +5636,8 @@ class HealthMonitor:
             error_key = f'lxc_mount_{vmid}_{mount}'
             if pct >= crit_pct:
                 entry['status'] = 'CRITICAL'
+                entry['error_key'] = error_key
+                entry['dismissable'] = True
                 checks[label] = entry
                 critical_labels.append(label)
                 emitted_keys.add(error_key)
@@ -5566,6 +5650,8 @@ class HealthMonitor:
                 )
             elif pct >= warn_pct:
                 entry['status'] = 'WARNING'
+                entry['error_key'] = error_key
+                entry['dismissable'] = True
                 checks[label] = entry
                 warning_labels.append(label)
                 emitted_keys.add(error_key)
@@ -5656,6 +5742,8 @@ class HealthMonitor:
             error_key = f'pve_storage_full_{name}'
             if pct >= crit_pct:
                 entry['status'] = 'CRITICAL'
+                entry['error_key'] = error_key
+                entry['dismissable'] = True
                 checks[label] = entry
                 critical_labels.append(label)
                 emitted_keys.add(error_key)
@@ -5668,6 +5756,8 @@ class HealthMonitor:
                 )
             elif pct >= warn_pct:
                 entry['status'] = 'WARNING'
+                entry['error_key'] = error_key
+                entry['dismissable'] = True
                 checks[label] = entry
                 warning_labels.append(label)
                 emitted_keys.add(error_key)
@@ -5754,6 +5844,8 @@ class HealthMonitor:
             error_key = f'zfs_pool_full_{name}'
             if pct >= crit_pct:
                 entry['status'] = 'CRITICAL'
+                entry['error_key'] = error_key
+                entry['dismissable'] = True
                 checks[name] = entry
                 critical_labels.append(name)
                 emitted_keys.add(error_key)
@@ -5766,6 +5858,8 @@ class HealthMonitor:
                 )
             elif pct >= warn_pct:
                 entry['status'] = 'WARNING'
+                entry['error_key'] = error_key
+                entry['dismissable'] = True
                 checks[name] = entry
                 warning_labels.append(name)
                 emitted_keys.add(error_key)
