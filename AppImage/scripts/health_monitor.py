@@ -779,17 +779,36 @@ class HealthMonitor:
         # into details['storage'] so the front-end Health Status modal
         # can render the worst severity in the storage category badge
         # AND surface the offending storage entry inside the expanded
-        # category list. Without this, a PVE storage at 86% used would
-        # raise the global "Warning" badge while the storage category
-        # itself appeared all-OK and the offending storage was nowhere
-        # to be found in the per-category list — only as a stray reason
-        # line above the categories.
+        # category list. Sub-checks whose error_key has been
+        # acknowledged by the user are tagged `dismissed=True` and
+        # excluded from the aggregate status calculation — otherwise
+        # the category would stay WARNING after the user clicked
+        # Dismiss, defeating the dismiss flow.
         if 'storage' in details:
             _SEV_RANK = {'OK': 0, 'INFO': 1, 'WARNING': 2, 'CRITICAL': 3}
             storage_block = details['storage']
             cur_status = storage_block.get('status', 'OK')
             cur_rank = _SEV_RANK.get(cur_status, 0)
             extra_reasons = []
+
+            def _annotate_dismissed(check_dict):
+                """Mutate check_dict in place to add `dismissed=True` if
+                its error_key is currently acknowledged in the DB.
+                Returns True when the check should NOT contribute to the
+                aggregate status."""
+                if not isinstance(check_dict, dict):
+                    return False
+                ek = check_dict.get('error_key')
+                if not ek:
+                    return False
+                try:
+                    if health_persistence.is_error_acknowledged(ek):
+                        check_dict['dismissed'] = True
+                        return True
+                except Exception:
+                    pass
+                return False
+
             for sub_key in ('pve_storage_capacity', 'zfs_pool_capacity',
                             'lxc_disk', 'lxc_mounts', 'remote_mounts'):
                 sub = details.get(sub_key)
@@ -797,10 +816,26 @@ class HealthMonitor:
                     continue
                 sub_status = sub.get('status', 'OK')
                 sub_rank = _SEV_RANK.get(sub_status, 0)
-                if sub_rank > cur_rank:
+                # When the sub-block's headline status is non-OK, look
+                # at its individual checks: if every offending one is
+                # acknowledged, the block doesn't push the aggregate
+                # up — the user already told us they know about it.
+                sub_contributes = sub_status not in ('WARNING', 'CRITICAL')
+                if sub_status in ('WARNING', 'CRITICAL'):
+                    inner_checks = sub.get('checks') or {}
+                    if isinstance(inner_checks, dict):
+                        for inner in inner_checks.values():
+                            if not isinstance(inner, dict):
+                                continue
+                            inner_status = inner.get('status', 'OK')
+                            if inner_status not in ('WARNING', 'CRITICAL'):
+                                continue
+                            if not _annotate_dismissed(inner):
+                                sub_contributes = True
+                if sub_contributes and sub_rank > cur_rank:
                     cur_status = sub_status
                     cur_rank = sub_rank
-                if sub_status in ('WARNING', 'CRITICAL'):
+                if sub_contributes and sub_status in ('WARNING', 'CRITICAL'):
                     sub_reason = sub.get('reason')
                     if sub_reason:
                         extra_reasons.append(sub_reason)
