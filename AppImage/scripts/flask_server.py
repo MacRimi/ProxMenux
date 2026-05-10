@@ -1204,23 +1204,37 @@ def _health_collector_loop():
                     severity = max_sev
                 
                 try:
-                    notification_manager.send_notification(
+                    # Use emit_event (not send_notification) so the
+                    # 24h fingerprint cooldown applies. send_notification
+                    # was bypassing the cooldown — every 5-min run of
+                    # this loop fired a fresh notification, producing a
+                    # cascade like "PVE storage ≥85%" every 6-10 min for
+                    # the same condition. The fingerprint includes the
+                    # set of degraded categories, so a *different*
+                    # category degrading later still notifies.
+                    cat_signature = ','.join(sorted(
+                        d.get('cat_key', d.get('category', '').lower())
+                        for d in degraded
+                    ))
+                    notification_manager.emit_event(
                         event_type='health_degraded',
                         severity=severity,
-                        title=title,
-                        message=body,
                         data={
                             'hostname': hostname,
                             'count': str(len(degraded)),
-                            '_journal_context': journal_context,  # For AI enrichment
+                            'title': title,
+                            'reason': body,
+                            '_journal_context': journal_context,
                         },
                         source='health_monitor',
+                        entity='node',
+                        entity_id=f'health_{cat_signature}',
                     )
                 except Exception as e:
                     print(f"[ProxMenux] Health notification error: {e}")
         except Exception as e:
             print(f"[ProxMenux] Health collector error: {e}")
-        
+
         time.sleep(300)  # Every 5 minutes
 
 
