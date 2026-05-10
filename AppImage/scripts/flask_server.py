@@ -11250,6 +11250,81 @@ if __name__ == '__main__':
             print("[ProxMenux] Managed-installs registry initialised")
         except Exception as e:
             print(f"[ProxMenux] managed_installs init failed: {e}")
+
+        # Self-healing maintenance run on every startup. Two passes, both
+        # idempotent and safe to run repeatedly. They exist because issues
+        # observed in the field (see comments below) silently corrupt user
+        # data and were until now only fixable by manual SQL surgery.
+        try:
+            import sqlite3
+            from pathlib import Path
+            MONITOR_VERSION = '1.2.1.1-beta'
+            db_path = Path('/usr/local/share/proxmenux/health_monitor.db')
+            if db_path.exists():
+                conn = sqlite3.connect(str(db_path), timeout=10)
+                conn.execute('PRAGMA journal_mode=WAL')
+
+                # Pass 1 — backfill resolution_type on orphan errors.
+                # Some legacy code paths set `resolved_at` without setting
+                # `resolution_type`, which leaves the rows in a half-resolved
+                # state. The Monitor's overall-status badge counts them as
+                # ACTIVE while the per-error list endpoint hides them
+                # (resolved_at is non-NULL), producing a "Warning badge with
+                # an empty modal" that the user has no way to clear from
+                # the UI. We backfill `resolution_type='auto_cleanup'` so
+                # both queries agree.
+                orphans = conn.execute(
+                    "UPDATE errors SET resolution_type = 'auto_cleanup', "
+                    "resolution_reason = COALESCE(resolution_reason, "
+                    "'Backfilled at startup — resolved_at present without "
+                    "resolution_type') "
+                    "WHERE resolved_at IS NOT NULL AND "
+                    "(resolution_type IS NULL OR resolution_type = '')"
+                ).rowcount
+
+                # Pass 2 — version-bump cooldown reset.
+                # When the AppImage is updated, drop the per-fingerprint
+                # cooldowns for the "updates available" family so the first
+                # poll cycle of the new build emits its initial summary
+                # again. Without this, the global 24h cooldown (added in
+                # 1.2.1.1-beta) silently swallows that ping — users who
+                # relied on it as a "Monitor restarted OK" signal stopped
+                # seeing anything after a redeploy. Only fires when the
+                # version actually changed.
+                row = conn.execute(
+                    "SELECT setting_value FROM user_settings "
+                    "WHERE setting_key = 'last_known_monitor_version'"
+                ).fetchone()
+                last_version = row[0] if row else ''
+                cleared = 0
+                if last_version != MONITOR_VERSION:
+                    cleared = conn.execute(
+                        "DELETE FROM notification_last_sent WHERE "
+                        "fingerprint LIKE '%update_summary%' OR "
+                        "fingerprint LIKE '%nvidia_driver_update_available%' OR "
+                        "fingerprint LIKE '%post_install_update%' OR "
+                        "fingerprint LIKE '%secure_gateway_update_available%'"
+                    ).rowcount
+                    conn.execute(
+                        "INSERT OR REPLACE INTO user_settings "
+                        "(setting_key, setting_value, updated_at) VALUES (?, ?, ?)",
+                        ('last_known_monitor_version', MONITOR_VERSION,
+                         datetime.now().isoformat())
+                    )
+
+                conn.commit()
+                conn.close()
+
+                if orphans:
+                    print(f"[ProxMenux] startup: backfilled "
+                          f"{orphans} orphan error(s) (resolved_at set "
+                          f"without resolution_type)")
+                if cleared:
+                    print(f"[ProxMenux] startup: Monitor version bumped "
+                          f"({last_version or '<none>'} → {MONITOR_VERSION}); "
+                          f"cleared {cleared} update-related cooldown(s)")
+        except Exception as e:
+            print(f"[ProxMenux] startup self-heal failed: {e}")
         # Start background collector thread (handles both temp and latency)
         temp_thread = threading.Thread(target=_temperature_collector_loop, daemon=True)
         temp_thread.start()
