@@ -432,11 +432,8 @@ install_proxmenux_monitor() {
     if [ "$service_exists" = false ]; then
         return 0
     else
-        # Check if service needs to be updated (missing ExecStop or outdated config)
-        if ! grep -q "ExecStop=" "$MONITOR_SERVICE_FILE" 2>/dev/null; then
-            msg_info "Updating service configuration (adding shutdown notification)..."
-            update_monitor_service
-        fi
+        msg_info "Updating service configuration..."
+        update_monitor_service
         
         systemctl start proxmenux-monitor.service
         sleep 2
@@ -465,7 +462,7 @@ Conflicts=shutdown.target reboot.target halt.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=$MONITOR_INSTALL_DIR
+WorkingDirectory=$MONITOR_RUNTIME_DIR
 ExecStart=$exec_path
 ExecStop=/bin/bash $MONITOR_INSTALL_DIR/scripts/shutdown-notify.sh
 Restart=on-failure
@@ -488,7 +485,9 @@ create_monitor_service() {
     local exec_path="$MONITOR_RUNTIME_DIR/AppRun"
 
     if [ -f "$TEMP_DIR/systemd/proxmenux-monitor.service" ]; then
-        sed "s|ExecStart=.*|ExecStart=$exec_path|g" \
+        sed -e "s|^ExecStart=.*|ExecStart=$exec_path|g" \
+            -e "s|^WorkingDirectory=.*|WorkingDirectory=$MONITOR_RUNTIME_DIR|g" \
+            -e "s|^Environment=.*PORT=.*|Environment=\"PORT=$MONITOR_PORT\"|g" \
             "$TEMP_DIR/systemd/proxmenux-monitor.service" > "$MONITOR_SERVICE_FILE"
         msg_ok "Service file loaded from repository."
     else
@@ -502,7 +501,7 @@ Conflicts=shutdown.target reboot.target halt.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=$MONITOR_INSTALL_DIR
+WorkingDirectory=$MONITOR_RUNTIME_DIR
 ExecStart=$exec_path
 ExecStop=/bin/bash $MONITOR_INSTALL_DIR/scripts/shutdown-notify.sh
 Restart=on-failure
