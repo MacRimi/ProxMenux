@@ -19642,9 +19642,7 @@
     "category_names": [
       "Network & Firewall"
     ],
-    "notes": [
-      "This script uses a fork located here: `https://github.com/CrazyWolf13/web-check/` as the original Repository does not provide tagged Github Releases, an issues is open for this: `https://github.com/Lissy93/web-check/issues/248`"
-    ],
+    "notes": [],
     "warnings": [],
     "port": 3000,
     "website": "https://github.com/lissy93/web-check",
@@ -20035,6 +20033,44 @@
       "lxc"
     ],
     "config_path": "/opt/writefreely/config.ini",
+    "os": "debian"
+  },
+  {
+    "name": "xyOps",
+    "slug": "xyops",
+    "desc": "A complete task scheduler and server monitoring system with workflow automation, multi-server management, real-time monitoring, and a built-in satellite agent (xySat) for running jobs on remote servers.",
+    "script": "ct/xyops.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/xyops.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/xyops.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019"
+    ],
+    "category_names": [
+      "Automation & Scheduling"
+    ],
+    "notes": [
+      "A local xySat satellite is started automatically alongside the conductor, allowing jobs to run on this server right away.",
+      "The WebSocket port 5523 is used for secure wss:// connections. Port 5522 serves the web interface and ws:// connections."
+    ],
+    "warnings": [],
+    "port": 5522,
+    "website": "https://github.com/pixlcore/xyops",
+    "documentation": "https://github.com/pixlcore/xyops/tree/main/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/xyops.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin"
+    },
     "os": "debian"
   },
   {
