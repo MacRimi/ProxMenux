@@ -15228,7 +15228,7 @@
     "execute_in": [
       "pve"
     ],
-    "config_path": "/opt/reitti/.env",
+    "config_path": "/opt/reitti/application.properties",
     "default_credentials": {
       "username": "admin",
       "password": "admin"
