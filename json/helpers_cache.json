@@ -17976,6 +17976,10 @@
       "pve"
     ],
     "config_path": "Debian `/etc/transmission-daemon/settings.json` | Alpine `/var/lib/transmission/config/settings.json`",
+    "default_credentials": {
+      "username": "transmission",
+      "password": "transmission"
+    },
     "os": "debian"
   },
   {
@@ -18010,6 +18014,10 @@
       "pve"
     ],
     "config_path": "Debian `/etc/transmission-daemon/settings.json` | Alpine `/var/lib/transmission/config/settings.json`",
+    "default_credentials": {
+      "username": "transmission",
+      "password": "transmission"
+    },
     "os": "alpine"
   },
   {
@@ -20143,44 +20151,6 @@
       "pve"
     ],
     "config_path": "/opt/yamtrack/src/.env",
-    "os": "debian"
-  },
-  {
-    "name": "YOURLS",
-    "slug": "yourls",
-    "desc": "YOURLS (Your Own URL Shortener) is a set of PHP scripts that allows you to run your own URL shortener with full control over data, detailed stats, analytics, and plugin support.",
-    "script": "ct/yourls.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/yourls.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/yourls.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00000"
-    ],
-    "category_names": [
-      "Miscellaneous"
-    ],
-    "notes": [
-      "After installation, visit /admin/install.php once to initialize the database and complete setup.",
-      "The admin password is shown at the end of the installation log."
-    ],
-    "warnings": [],
-    "port": 80,
-    "website": "https://yourls.org/",
-    "documentation": "https://yourls.org/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/yourls.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "/opt/yourls/user/config.php",
-    "default_credentials": {
-      "username": "admin",
-      "password": "Generated during install"
-    },
     "os": "debian"
   },
   {
