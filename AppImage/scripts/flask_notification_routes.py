@@ -191,6 +191,24 @@ def _bad_request(msg: str):
     return jsonify({'error': msg}), 400
 
 
+def _is_loopback_addr(value: str) -> bool:
+    """Return True for IPv4, IPv6 and IPv4-mapped loopback addresses.
+
+    When Flask is bound to ``::`` for dual-stack support, an HTTP request
+    sent to ``127.0.0.1`` can be reported as ``::ffff:127.0.0.1``. Treat it
+    as local so the PVE webhook keeps the intended localhost trust path.
+    """
+    try:
+        import ipaddress
+        addr = ipaddress.ip_address(value)
+        if addr.is_loopback:
+            return True
+        ipv4_mapped = getattr(addr, 'ipv4_mapped', None)
+        return bool(ipv4_mapped and ipv4_mapped.is_loopback)
+    except ValueError:
+        return value == 'localhost'
+
+
 def _validate_event_type(value: str) -> bool:
     return isinstance(value, str) and bool(_EVENT_TYPE_RE.match(value))
 
@@ -1225,7 +1243,7 @@ def proxmox_webhook():
     _reject = lambda code, error, status: (jsonify({'accepted': False, 'error': error}), status)
 
     client_ip = request.remote_addr or ''
-    is_localhost = client_ip in ('127.0.0.1', '::1')
+    is_localhost = _is_loopback_addr(client_ip)
 
     # CSRF defence-in-depth: reject `application/x-www-form-urlencoded`
     # bodies. PVE always sends `application/json`; form-encoded bodies
