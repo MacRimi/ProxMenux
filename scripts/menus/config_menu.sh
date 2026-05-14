@@ -7,7 +7,7 @@
 # Copyright    : (c) 2024 MacRimi
 # License      : GPL-3.0
 #                https://github.com/MacRimi/ProxMenux/blob/main/LICENSE
-# Version      : 1.1
+# Version      : 1.2
 # ==========================================================
 # Description:
 # ProxMenux configuration / settings menu. Options are shown
@@ -17,9 +17,9 @@
 #       Only if proxmenux-monitor.service is registered with
 #       systemd. Toggles between active / inactive states.
 #
-#   - Deactivate Beta Program
-#       Only if config.json has beta_program.status = "active".
-#       Stops beta update prompts; stable updates continue.
+#   - Change Release Channel
+#       Switches between Stable (main branch) and Beta (develop
+#       branch) by running the official installer for each channel.
 #
 #   - Change Language
 #       Only on the Translation install type (venv +
@@ -43,13 +43,22 @@ CONFIG_FILE="$BASE_DIR/config.json"
 CACHE_FILE="$BASE_DIR/cache.json"
 UTILS_FILE="$BASE_DIR/utils.sh"
 LOCAL_VERSION_FILE="$BASE_DIR/version.txt"
+BETA_VERSION_FILE="$BASE_DIR/beta_version.txt"
 INSTALL_DIR="/usr/local/bin"
 MENU_SCRIPT="menu"
 VENV_PATH="/opt/googletrans-env"
+BACKTITLE="ProxMenux Configuration"
+
+REPO_MAIN="https://raw.githubusercontent.com/MacRimi/ProxMenux/main"
+REPO_DEVELOP="https://raw.githubusercontent.com/MacRimi/ProxMenux/develop"
+STABLE_INSTALLER_URL="$REPO_MAIN/install_proxmenux.sh"
+BETA_INSTALLER_URL="$REPO_DEVELOP/install_proxmenux_beta.sh"
 
 MONITOR_SERVICE="proxmenux-monitor.service"
 MONITOR_UNIT_FILE="/etc/systemd/system/${MONITOR_SERVICE}"
 MONITOR_CONFIG_DIR="/root/.config/proxmenux-monitor"
+MONITOR_RUNTIME_DIR="$BASE_DIR/monitor-app"
+MONITOR_PORT=8008
 
 if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
@@ -147,23 +156,218 @@ is_beta_program_active() {
     [[ "$flag" == "active" ]]
 }
 
-deactivate_beta_program() {
-    if dialog --clear --backtitle "ProxMenux Configuration" \
-              --title "$(translate "Deactivate Beta Program")" \
-              --yesno "\n$(translate "You will stop receiving beta update prompts. Stable updates continue normally.\n\nTo rejoin the beta program later, run the beta installer again.\n\nDeactivate now?")" 14 64; then
-        local tmp
-        tmp=$(mktemp)
-        if jq '.beta_program.status = "inactive"' "$CONFIG_FILE" > "$tmp" 2>/dev/null; then
-            mv "$tmp" "$CONFIG_FILE"
-            dialog --clear --backtitle "ProxMenux Configuration" \
-                   --title "$(translate "Beta Program Deactivated")" \
-                   --msgbox "\n\n$(translate "Beta program deactivated. You will now receive stable updates only.")" 10 60
-        else
-            rm -f "$tmp"
-            dialog --clear --backtitle "ProxMenux Configuration" \
-                   --title "$(translate "Error")" \
-                   --msgbox "\n\n$(translate "Could not update config file.")" 10 50
+get_release_channel() {
+    if is_beta_program_active; then
+        echo "beta"
+    else
+        echo "stable"
+    fi
+}
+
+release_channel_label() {
+    case "$1" in
+        "beta")
+            echo "$(translate "Beta (develop branch)")"
+            ;;
+        *)
+            echo "$(translate "Stable (main branch)")"
+            ;;
+    esac
+}
+
+download_release_installer() {
+    local channel="$1"
+    local output_file="$2"
+    local installer_url
+
+    case "$channel" in
+        "beta")
+            installer_url="$BETA_INSTALLER_URL"
+            ;;
+        "stable")
+            installer_url="$STABLE_INSTALLER_URL"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$installer_url" -o "$output_file"
+    else
+        wget -qO "$output_file" "$installer_url"
+    fi
+}
+
+set_stable_release_config() {
+    local tmp
+
+    mkdir -p "$BASE_DIR"
+    if [ ! -f "$CONFIG_FILE" ] || ! jq empty "$CONFIG_FILE" >/dev/null 2>&1; then
+        echo '{}' > "$CONFIG_FILE"
+    fi
+
+    tmp=$(mktemp)
+    if jq 'del(.beta_program, .beta_version, .install_branch)
+         | del(.update_available.beta, .update_available.beta_version)
+         | if .proxmenux_monitor.status == "beta_updated" then .proxmenux_monitor.status = "updated" else . end
+         | if (.update_available // {}) == {} then del(.update_available) else . end' \
+        "$CONFIG_FILE" > "$tmp" 2>/dev/null; then
+        mv "$tmp" "$CONFIG_FILE"
+        rm -f "$BETA_VERSION_FILE" "$BASE_DIR/install_proxmenux_beta.sh"
+        return 0
+    fi
+
+    rm -f "$tmp"
+    return 1
+}
+
+normalize_stable_monitor_service() {
+    local exec_path="$MONITOR_RUNTIME_DIR/AppRun"
+    local was_active=false
+
+    [ -x "$exec_path" ] || return 0
+    [ -f "$MONITOR_UNIT_FILE" ] || return 0
+
+    systemctl is-active --quiet "$MONITOR_SERVICE" && was_active=true
+
+    msg_info "$(translate "Normalizing stable monitor service...")"
+    cat > "$MONITOR_UNIT_FILE" << EOF
+[Unit]
+Description=ProxMenux Monitor - Web Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=$MONITOR_RUNTIME_DIR
+ExecStart=$exec_path
+Restart=on-failure
+RestartSec=10
+Environment="PORT=$MONITOR_PORT"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    systemctl daemon-reload
+    systemctl enable "$MONITOR_SERVICE" >/dev/null 2>&1
+
+    if [ "$was_active" = true ]; then
+        if systemctl restart "$MONITOR_SERVICE" >/dev/null 2>&1; then
+            msg_ok "$(translate "Stable monitor service normalized.")"
+            return 0
         fi
+
+        msg_error "$(translate "Could not restart ProxMenux Monitor service.")"
+        return 1
+    fi
+
+    msg_ok "$(translate "Stable monitor service normalized.")"
+    return 0
+}
+
+apply_release_channel() {
+    local target_channel="$1"
+    local current_channel installer_file installer_status
+
+    current_channel=$(get_release_channel)
+    installer_file=$(mktemp /tmp/proxmenux-${target_channel}-installer.XXXXXX) || return 1
+
+    show_proxmenux_logo
+    msg_title "$(translate "Changing Release Channel")"
+    msg_ok "$(translate "Current channel:") $(release_channel_label "$current_channel")"
+    msg_ok "$(translate "Target channel:") $(release_channel_label "$target_channel")"
+
+    msg_info "$(translate "Downloading official installer...")"
+    if download_release_installer "$target_channel" "$installer_file" >/dev/null 2>&1; then
+        chmod +x "$installer_file"
+        msg_ok "$(translate "Installer downloaded.")"
+    else
+        msg_error "$(translate "Could not download the installer.")"
+        rm -f "$installer_file"
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return 1
+    fi
+
+    msg_info "$(translate "Starting installer...")"
+    stop_spinner
+    bash "$installer_file"
+    installer_status=$?
+    rm -f "$installer_file"
+
+    if [ "$installer_status" -ne 0 ]; then
+        msg_error "$(translate "Installer finished with errors.")"
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return 1
+    fi
+
+    if [ "$target_channel" = "stable" ]; then
+        msg_info "$(translate "Updating release channel configuration...")"
+        if set_stable_release_config; then
+            msg_ok "$(translate "Release channel set to Stable.")"
+            if ! normalize_stable_monitor_service; then
+                msg_success "$(translate "Press Enter to return to menu...")"
+                read -r
+                return 1
+            fi
+        else
+            msg_error "$(translate "Could not update config file.")"
+            msg_success "$(translate "Press Enter to return to menu...")"
+            read -r
+            return 1
+        fi
+    else
+        msg_ok "$(translate "Release channel set to Beta.")"
+    fi
+
+    msg_success "$(translate "Press Enter to return to menu...")"
+    read -r
+    exec bash "$LOCAL_SCRIPTS/menus/config_menu.sh"
+}
+
+change_release_channel() {
+    local current_channel current_label selected_channel selected_label confirm_message
+
+    current_channel=$(get_release_channel)
+    current_label=$(release_channel_label "$current_channel")
+
+    selected_channel=$(dialog --clear --backtitle "$BACKTITLE" \
+                              --title "$(translate "Release Channel")" \
+                              --default-item "$current_channel" \
+                              --menu "$(translate "Current channel:") $current_label\n\n$(translate "Choose the release channel to use:")" 16 74 2 \
+                              "stable" "$(translate "Stable (main branch)")" \
+                              "beta" "$(translate "Beta (develop branch)")" 3>&1 1>&2 2>&3)
+
+    [ -z "$selected_channel" ] && return
+
+    if [ "$selected_channel" = "$current_channel" ]; then
+        dialog --clear --backtitle "$BACKTITLE" \
+               --title "$(translate "Release Channel")" \
+               --msgbox "\n\n$(translate "This release channel is already active.")" 9 56
+        return
+    fi
+
+    selected_label=$(release_channel_label "$selected_channel")
+
+    case "$selected_channel" in
+        "beta")
+            confirm_message="$(translate "This will install the Beta version from the develop branch and enable beta update checks.\n\nBeta builds may contain bugs or incomplete features.\n\nContinue?")"
+            ;;
+        "stable")
+            confirm_message="$(translate "This will reinstall the Stable version from the main branch and disable beta update checks.\n\nContinue?")"
+            ;;
+        *)
+            return
+            ;;
+    esac
+
+    if dialog --clear --backtitle "$BACKTITLE" \
+              --title "$selected_label" \
+              --yesno "\n$confirm_message" 14 72; then
+        apply_release_channel "$selected_channel"
     fi
 }
 
@@ -265,11 +469,9 @@ show_config_menu() {
             ((option_num++))
         fi
 
-        if is_beta_program_active; then
-            menu_options+=("$option_num" "$(translate "Deactivate Beta Program")")
-            option_actions[$option_num]="deactivate_beta"
-            ((option_num++))
-        fi
+        menu_options+=("$option_num" "$(translate "Change Release Channel")")
+        option_actions[$option_num]="change_release_channel"
+        ((option_num++))
 
         # Build menu based on installation type
         if [ "$install_type" = "translation" ]; then
@@ -315,8 +517,8 @@ show_config_menu() {
             "show_monitor_status")
                 show_monitor_status
                 ;;
-            "deactivate_beta")
-                deactivate_beta_program
+            "change_release_channel")
+                change_release_channel
                 ;;
             "change_language")
                 change_language
@@ -372,8 +574,9 @@ change_language() {
 
 # ==========================================================
 show_version_info() {
-    local version info_message install_type
+    local version info_message install_type release_channel beta_version
     install_type=$(detect_installation_type)
+    release_channel=$(get_release_channel)
     
     if [ -f "$LOCAL_VERSION_FILE" ]; then
         version=$(<"$LOCAL_VERSION_FILE")
@@ -381,7 +584,13 @@ show_version_info() {
         version="Unknown"
     fi
     
-    info_message+="$(translate "Current ProxMenux version:") $version\n\n"
+    info_message+="$(translate "Current ProxMenux version:") $version\n"
+    info_message+="$(translate "Release channel:") $(release_channel_label "$release_channel")\n"
+    if [ "$release_channel" = "beta" ] && [ -f "$BETA_VERSION_FILE" ]; then
+        beta_version=$(head -n 1 "$BETA_VERSION_FILE" 2>/dev/null)
+        [ -n "$beta_version" ] && info_message+="$(translate "Beta version:") $beta_version\n"
+    fi
+    info_message+="\n"
     
     # Show installation type
     info_message+="$(translate "Installation type:")\n"
@@ -395,7 +604,11 @@ show_version_info() {
     info_message+="$(translate "Installed components:")\n"
     if [ -f "$CONFIG_FILE" ]; then
         while IFS=': ' read -r component value; do
-            [ "$component" = "language" ] && continue
+            case "$component" in
+                "language"|"beta_program"|"beta_version"|"install_branch"|"update_available")
+                    continue
+                    ;;
+            esac
             local status
             if echo "$value" | jq -e '.status' >/dev/null 2>&1; then
                 status=$(echo "$value" | jq -r '.status')
