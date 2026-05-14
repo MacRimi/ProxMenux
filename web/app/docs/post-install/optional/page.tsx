@@ -30,6 +30,7 @@ export const metadata: Metadata = {
   },
 }
 
+
 function StepNumber({ number }: { number: number }) {
   return (
     <div className="inline-flex items-center justify-center w-8 h-8 mr-3 text-white bg-blue-500 rounded-full">
@@ -315,7 +316,7 @@ echo "clear && fastfetch" >> ~/.bashrc
         <strong>What it does:</strong>
       </p>
       <ul className="list-disc pl-5 mb-4">
-        <li>Downloads and installs Figurine v1.3.0 from GitHub</li>
+        <li>Downloads and installs Figurine v2.0.0 from GitHub</li>
         <li>Creates a welcome message that displays your hostname in 3D ASCII art when you log in</li>
         <li>Automatically removes any previous Figurine installation if present</li>
         <li>Sets up the welcome message to run automatically at login</li>
@@ -352,7 +353,7 @@ if command -v figurine &> /dev/null; then
 fi
 
 # Download and install Figurine
-version="1.3.0"
+version="2.0.0"
 file="figurine_linux_amd64_v\${version}.tar.gz"
 url="https://github.com/arsham/figurine/releases/download/v\${version}/\${file}"
 wget -qO "/tmp/\${file}" "\${url}"
@@ -384,4 +385,3 @@ chmod +x "/etc/profile.d/figurine.sh"
     </div>
   )
 }
-

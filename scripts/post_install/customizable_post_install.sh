@@ -2214,13 +2214,13 @@ register_tool "fastfetch" true "$FUNC_VERSION"
 
 
 configure_figurine() {
-    local FUNC_VERSION="1.0"
+    local FUNC_VERSION="1.1"
     # description: Install Figurine (ASCII-art hostname banner) and wire it into the SSH login flow.
     msg_info2 "$(translate "Installing and configuring Figurine...")"
     # `FIGURINE_VERSION` env var allows pinning to a specific release;
     # default tracks the last tested upstream tag. Audit Tier 6 —
     # recursos remotos sin pinning de versión.
-    local version="${FIGURINE_VERSION:-1.3.0}"
+    local version="${FIGURINE_VERSION:-2.0.0}"
     local file="figurine_linux_amd64_v${version}.tar.gz"
     local url="https://github.com/arsham/figurine/releases/download/v${version}/${file}"
     local temp_dir; temp_dir=$(mktemp -d)
