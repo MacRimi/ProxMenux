@@ -60,6 +60,7 @@ confirm_automated_script() {
     script_info+="• $(translate "Optionally remove") \Z4subscription banner\Z0 $(translate "from Proxmox web interface (you will be asked)")\n"
     script_info+="• $(translate "Optimize") \Z4memory\Z0, \Z4kernel\Z0, $(translate "and") \Z4network\Z0 $(translate "for better performance and stability")\n"
     script_info+="• $(translate "Install and configure") \Z4Log2RAM\Z0 $(translate "(only on SSD/NVMe) to protect your disk")\n"
+    script_info+="• $(translate "Enable") \Z4ZFS autotrim\Z0 $(translate "on SSD/NVMe pools that support discard")\n"
     script_info+="• $(translate "Improve log rotation and limit log size to save space and extend disk life")\n"
     script_info+="• $(translate "Increase file and process limits for advanced workloads")\n"
     script_info+="• $(translate "Set up time synchronization and entropy generation")\n"

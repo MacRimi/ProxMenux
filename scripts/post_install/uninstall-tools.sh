@@ -915,6 +915,43 @@ uninstall_zfs_auto_snapshot() {
     register_tool "zfs_auto_snapshot" false
 }
 
+uninstall_zfs_autotrim() {
+    local state_file="$BASE_DIR/zfs_autotrim_pools"
+    local pools=()
+    local pool
+
+    msg_info2 "$(translate 'Disabling ZFS autotrim applied by ProxMenux...')"
+
+    if ! command -v zpool >/dev/null 2>&1; then
+        msg_warn "$(translate 'ZFS not detected. Nothing to disable.')"
+        rm -f "$state_file"
+        register_tool "zfs_autotrim" false
+        return 0
+    fi
+
+    if [[ ! -s "$state_file" ]]; then
+        msg_warn "$(translate 'No ProxMenux ZFS autotrim state file found.')"
+        register_tool "zfs_autotrim" false
+        return 0
+    fi
+
+    mapfile -t pools < <(sort -u "$state_file")
+    for pool in "${pools[@]}"; do
+        if zpool list -H "$pool" >/dev/null 2>&1; then
+            if zpool set autotrim=off "$pool" >/dev/null 2>&1; then
+                msg_ok "$(translate 'ZFS autotrim disabled for pool:') $pool"
+            else
+                msg_warn "$(translate 'Failed to disable ZFS autotrim for pool:') $pool"
+            fi
+        else
+            msg_warn "$(translate 'ZFS pool not found:') $pool"
+        fi
+    done
+
+    rm -f "$state_file"
+    register_tool "zfs_autotrim" false
+}
+
 uninstall_vzdump_speed() {
     msg_info2 "$(translate 'Reverting vzdump speed tuning...')"
     if [[ -f /etc/vzdump.conf.bak ]]; then
@@ -933,7 +970,7 @@ show_uninstall_menu() {
     ensure_tools_json
     migrate_installed_tools
     
-    mapfile -t tools_installed < <(jq -r 'to_entries | map(select(.value==true)) | .[].key' "$TOOLS_JSON")
+    mapfile -t tools_installed < <(jq -r 'to_entries | map(select(.value==true or .value.installed==true)) | .[].key' "$TOOLS_JSON")
     
     if [[ ${#tools_installed[@]} -eq 0 ]]; then
         dialog --backtitle "ProxMenux" --title "ProxMenux" \
@@ -975,6 +1012,7 @@ show_uninstall_menu() {
             pigz) desc="pigz (parallel gzip wrapper)";;
             zfs_arc) desc="ZFS ARC size tuning";;
             zfs_auto_snapshot) desc="zfs-auto-snapshot package";;
+            zfs_autotrim) desc="ZFS autotrim";;
             vzdump_speed) desc="vzdump bwlimit/ionice tuning";;
             *) desc="$tool";;
         esac
