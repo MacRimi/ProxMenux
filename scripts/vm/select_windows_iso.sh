@@ -17,7 +17,7 @@
 #
 # Features:
 # - Build an up-to-date Windows ISO via the UUP Dump creator.
-# - Pick a Windows ISO already present in /var/lib/vz/template/iso.
+# - Pick a Windows ISO already present in any Proxmox ISO storage.
 # - Auto-detects the latest ISO created by UUP Dump.
 # - Exports ISO metadata (name, path, OS_TYPE) for the wizard.
 # ==========================================================
@@ -30,6 +30,9 @@ VENV_PATH="/opt/googletrans-env"
 ISO_DIR="/var/lib/vz/template/iso"
 
 [[ -f "$UTILS_FILE" ]] && source "$UTILS_FILE"
+if [[ -f "$LOCAL_SCRIPTS/global/iso_storage_helpers.sh" ]]; then
+  source "$LOCAL_SCRIPTS/global/iso_storage_helpers.sh"
+fi
 load_language
 initialize_cache
 mkdir -p "$ISO_DIR"
@@ -51,7 +54,7 @@ function select_windows_iso() {
         --menu "\nSeleccione el tipo de instalación de Windows:\n\n$header" \
         20 70 10 \
         1 "$(printf '%-34s│ %s' 'Instalar con ISO UUP Dump' 'UUP Dump ISO creator')" \
-        2 "$(printf '%-34s│ %s' 'Instalar con ISO personal' 'Almacenamiento local')" \
+        2 "$(printf '%-34s│ %s' 'Instalar con ISO personal' 'Almacenamiento ISO')" \
         3 "Volver al menú principal" \
         3>&1 1>&2 2>&3)
     else
@@ -65,13 +68,13 @@ function select_windows_iso() {
         --menu "\n$(translate "Select the type of Windows installation:")\n\n$header" \
         18 70 10 \
         1 "$(printf '%-35s│ %s' "$desc1" "UUP Dump creator")" \
-        2 "$(printf '%-35s│ %s' "$desc2" "Local Storage")" \
+        2 "$(printf '%-35s│ %s' "$desc2" "ISO Storage")" \
         3 "$back" \
         3>&1 1>&2 2>&3)
     fi
 
     if [[ $? -ne 0 || "$CHOICE" == "3" ]]; then
-      unset ISO_NAME ISO_TYPE ISO_URL ISO_FILE ISO_PATH HN
+      unset ISO_NAME ISO_TYPE ISO_URL ISO_FILE ISO_PATH ISO_VOLID HN
       return 1
     fi
 
@@ -96,30 +99,31 @@ function select_windows_iso() {
 
 
 function select_existing_iso() {
+  local volid
   ISO_LIST=()
-  while read -r line; do
-    FILENAME=$(basename "$line")
-    SIZE=$(du -h "$line" | cut -f1)
-    ISO_LIST+=("$FILENAME" "$SIZE")
-  done < <(find "$ISO_DIR" -type f -iname "*.iso" ! -iname "virtio*" | sort)
+  while read -r volid; do
+    [[ -z "$volid" ]] && continue
+    ISO_LIST+=("$volid" "$(iso_dialog_description "$volid")")
+  done < <(iso_list_volids "windows")
 
   if [[ ${#ISO_LIST[@]} -eq 0 ]]; then
     header_info
-    msg_error "$(translate "No ISO images found in") $ISO_DIR."
+    msg_error "$(translate "No ISO images found in Proxmox ISO storages.")"
     sleep 2
     return 1
   fi
 
-  ISO_FILE=$(dialog --backtitle "ProxMenux" --title "$(translate "Available ISO Images")" \
-    --menu "$(translate "Choose a Windows ISO to use:")" 20 70 10 \
+  ISO_VOLID=$(dialog --backtitle "ProxMenux" --title "$(translate "Available ISO Images")" \
+    --menu "$(translate "Choose a Windows ISO to use:")\n\n$(printf '%-42s │ %-14s │ %s' "$(translate "ISO")" "$(translate "Storage")" "$(translate "Size")")" 22 86 12 \
     "${ISO_LIST[@]}" 3>&1 1>&2 2>&3)
 
-  [[ -z "$ISO_FILE" ]] && msg_warn "$(translate "No ISO selected.")" && return 1
+  [[ -z "$ISO_VOLID" ]] && msg_warn "$(translate "No ISO selected.")" && return 1
 
-  ISO_PATH="$ISO_DIR/$ISO_FILE"
+  ISO_FILE=$(iso_name_from_volid "$ISO_VOLID")
+  ISO_PATH=$(iso_volid_to_path "$ISO_VOLID")
   ISO_NAME="$ISO_FILE"
 
-  export ISO_PATH ISO_FILE ISO_NAME
+  export ISO_PATH ISO_FILE ISO_NAME ISO_VOLID
   export OS_TYPE="2"
   
   return 0
@@ -136,8 +140,9 @@ function detect_latest_iso_created() {
 
   ISO_NAME=$(basename "$ISO_FILE")
   ISO_PATH="$ISO_FILE"
+  ISO_VOLID="local:iso/$ISO_NAME"
 
-  export ISO_PATH ISO_FILE ISO_NAME
+  export ISO_PATH ISO_FILE ISO_NAME ISO_VOLID
   export OS_TYPE="2"
 
   return 0
