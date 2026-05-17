@@ -376,6 +376,46 @@
     "os": "debian"
   },
   {
+    "name": "AliasVault",
+    "slug": "aliasvault",
+    "desc": "AliasVault is an open-source, end-to-end encrypted password manager and email alias service. It features a zero-knowledge architecture where your master password never leaves your device, a built-in SMTP server for alias email addresses, browser extensions with autofill, and native iOS/Android apps.",
+    "script": "ct/aliasvault.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/aliasvault.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/aliasvault.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006"
+    ],
+    "category_names": [
+      "Authentication & Security"
+    ],
+    "notes": [
+      "To receive alias emails, configure your domain's MX record to point to this server and update PRIVATE_EMAIL_DOMAINS in /opt/aliasvault/.env."
+    ],
+    "warnings": [
+      "The initial installation builds AliasVault from source and takes 15–30 minutes. Do not interrupt the process.",
+      "The admin password is auto-generated during installation and displayed in the installation output. Save it immediately."
+    ],
+    "port": 443,
+    "website": "https://aliasvault.net/",
+    "documentation": "https://docs.aliasvault.net/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/aliasvault.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "All Templates",
     "slug": "all-templates",
     "desc": "A script designed to allow for the creation of one of the many free LXC templates. Great for creating system LXCs.\r\nThe script creates a `*.creds` file in the Proxmox root directory with the password of the newly created LXC.\r\nPlease take note that if you plan to use this script for creating TurnKey LXCs, you'll need to modify the hostname after creation.",
