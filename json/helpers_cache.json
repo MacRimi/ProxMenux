@@ -13196,37 +13196,6 @@
     "os": "debian"
   },
   {
-    "name": "Pf2eTools",
-    "slug": "pf2etools",
-    "desc": "Pf2eTools is an open-source website aiming to provide tools and information for Pathfinder 2nd Edition players and gamemasters. It's built using basic web technologies to ensure wide compatibility, and utilises client-side caching for speed, efficiency, and offline access.",
-    "script": "ct/pf2etools.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/pf2etools.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/pf2etools.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00024"
-    ],
-    "category_names": [
-      "Gaming & Leisure"
-    ],
-    "notes": [],
-    "warnings": [],
-    "port": 80,
-    "website": "https://pf2etools.com/",
-    "documentation": "https://github.com/Pf2eToolsOrg/Pf2eTools/wiki",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/pf2etools.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": false,
-    "execute_in": [
-      "pve"
-    ],
-    "config_path": "",
-    "os": "debian"
-  },
-  {
     "name": "PhotoPrism",
     "slug": "photoprism",
     "desc": "PhotoPrism is an AI-Powered Photos App for the Decentralized Web. It makes use of the latest technologies to tag and find pictures automatically without getting in your way.",
