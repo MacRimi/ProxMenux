@@ -6786,6 +6786,44 @@
     "os": "debian"
   },
   {
+    "name": "Hermes Agent",
+    "slug": "hermesagent",
+    "desc": "Self-improving AI agent by Nous Research. Connects to 15+ LLM providers, executes terminal commands, browses the web, and learns from experience. Supports 16 messaging platforms (Telegram, Discord, Slack, WhatsApp, Signal, Matrix, and more) with persistent memory and autonomous skill creation.",
+    "script": "ct/hermesagent.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/hermesagent.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/hermesagent.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [
+      "After container startup, login, switch to the hermes user (su - hermes) and run 'hermes setup' to configure your model provider and gateway server.",
+      "OpenAI-compatible API server available at http://<container-ip>:8642/v1. API key is stored in /home/hermes/.hermes/.env.",
+      "Access the web dashboard via SSH tunnel: ssh -fNL 9119:localhost:9119 root@<container-ip>, then open http://localhost:9119"
+    ],
+    "warnings": [
+      "Installation sources scripts outside of Community Scripts repo. Please check the source before installing.",
+      "Hermes can execute terminal commands. The agent runs as a dedicated 'hermes' service user for isolation."
+    ],
+    "port": 0,
+    "website": "https://hermes-agent.nousresearch.com",
+    "documentation": "https://hermes-agent.nousresearch.com/docs",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/hermes.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "hev-socks5-server",
     "slug": "hev-socks5-server",
     "desc": "HevSocks5Server is a simple, lightweight socks5 server.",
@@ -16720,6 +16758,39 @@
     ],
     "config_path": "",
     "os": "ubuntu"
+  },
+  {
+    "name": "Squid",
+    "slug": "squid",
+    "desc": "Squid is a mature caching and forwarding proxy server that can operate as an authenticated HTTP forward proxy for outbound web traffic. This container deploys Squid with basic authentication, generated initial credentials, and a guided MOTD for simple user management.",
+    "script": "ct/squid.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/squid.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/squid.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00004"
+    ],
+    "category_names": [
+      "Network & Firewall"
+    ],
+    "notes": [
+      "Create a proxy user after installation with `htpasswd /etc/squid/passwords <username>`."
+    ],
+    "warnings": [],
+    "port": 3128,
+    "website": "https://www.squid-cache.org/",
+    "documentation": "https://wiki.squid-cache.org/SquidFaq",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/squid.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
   },
   {
     "name": "step-ca",
