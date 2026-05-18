@@ -4197,22 +4197,37 @@ class HealthMonitor:
         """
         cache_key = 'updates_check'
         current_time = time.time()
-        
-        # Cache for 10 minutes
-        if cache_key in self.last_check_times:
-            if current_time - self.last_check_times[cache_key] < 600:
-                return self.cached_results.get(cache_key)
-        
+        apt_history_path = '/var/log/apt/history.log'
+
+        # Detect a manual `apt install/upgrade` since the last check by
+        # comparing /var/log/apt/history.log's mtime against the cache
+        # timestamp. apt appends to this file on every transaction, so a
+        # newer mtime means the local package state changed and the cached
+        # pending-updates list is stale. Reported by Alberto (14/5): the
+        # dashboard tile kept showing pending updates ~hours after he ran
+        # `apt upgrade` manually. Cheap stat call; runs at most once per
+        # /api/health/full request.
+        history_mtime = None
         try:
-            apt_history_path = '/var/log/apt/history.log'
+            if os.path.exists(apt_history_path):
+                history_mtime = os.path.getmtime(apt_history_path)
+        except Exception:
+            history_mtime = None
+
+        if cache_key in self.last_check_times:
+            cache_ts = self.last_check_times[cache_key]
+            history_changed = (history_mtime is not None and history_mtime > cache_ts)
+            if not history_changed and current_time - cache_ts < 600:
+                return self.cached_results.get(cache_key)
+
+        try:
             last_update_days = None
             sec_result = None
             age_result = None
-            
-            if os.path.exists(apt_history_path):
+
+            if history_mtime is not None:
                 try:
-                    mtime = os.path.getmtime(apt_history_path)
-                    days_since_update = (current_time - mtime) / 86400
+                    days_since_update = (current_time - history_mtime) / 86400
                     last_update_days = int(days_since_update)
                 except Exception:
                     pass
@@ -5775,12 +5790,24 @@ class HealthMonitor:
                 'used_bytes': used,
             }
             error_key = f'pve_storage_full_{name}'
+            # If the user already dismissed this exact error (within the
+            # suppression window), don't count it toward the category
+            # severity badge. Without this guard the storage section stayed
+            # WARNING/CRITICAL forever even after dismiss because the
+            # underlying % is unchanged — `record_error` correctly returned
+            # `skipped_acknowledged` to silence the notification side, but
+            # the dashboard counter ignored that signal and the user saw
+            # "Storage: 1 Warning" with no way to clear it. Reported on
+            # the community channel re: PBS-lleno (17-18/05).
+            is_dismissed = health_persistence.is_error_acknowledged(error_key)
             if pct >= crit_pct:
-                entry['status'] = 'CRITICAL'
+                entry['status'] = 'CRITICAL' if not is_dismissed else 'INFO'
                 entry['error_key'] = error_key
                 entry['dismissable'] = True
+                entry['dismissed'] = is_dismissed
                 checks[label] = entry
-                critical_labels.append(label)
+                if not is_dismissed:
+                    critical_labels.append(label)
                 emitted_keys.add(error_key)
                 health_persistence.record_error(
                     error_key=error_key,
@@ -5790,11 +5817,13 @@ class HealthMonitor:
                     details=entry,
                 )
             elif pct >= warn_pct:
-                entry['status'] = 'WARNING'
+                entry['status'] = 'WARNING' if not is_dismissed else 'INFO'
                 entry['error_key'] = error_key
                 entry['dismissable'] = True
+                entry['dismissed'] = is_dismissed
                 checks[label] = entry
-                warning_labels.append(label)
+                if not is_dismissed:
+                    warning_labels.append(label)
                 emitted_keys.add(error_key)
                 health_persistence.record_error(
                     error_key=error_key,
@@ -5877,12 +5906,18 @@ class HealthMonitor:
                 'pool_name': name,
             }
             error_key = f'zfs_pool_full_{name}'
+            # Same dismiss-respect as `_check_pve_storage_capacity`. A pool
+            # that the user dismissed keeps its underlying % but should no
+            # longer flip the category badge to WARNING/CRITICAL.
+            is_dismissed = health_persistence.is_error_acknowledged(error_key)
             if pct >= crit_pct:
-                entry['status'] = 'CRITICAL'
+                entry['status'] = 'CRITICAL' if not is_dismissed else 'INFO'
                 entry['error_key'] = error_key
                 entry['dismissable'] = True
+                entry['dismissed'] = is_dismissed
                 checks[name] = entry
-                critical_labels.append(name)
+                if not is_dismissed:
+                    critical_labels.append(name)
                 emitted_keys.add(error_key)
                 health_persistence.record_error(
                     error_key=error_key,
@@ -5892,11 +5927,13 @@ class HealthMonitor:
                     details=entry,
                 )
             elif pct >= warn_pct:
-                entry['status'] = 'WARNING'
+                entry['status'] = 'WARNING' if not is_dismissed else 'INFO'
                 entry['error_key'] = error_key
                 entry['dismissable'] = True
+                entry['dismissed'] = is_dismissed
                 checks[name] = entry
-                warning_labels.append(name)
+                if not is_dismissed:
+                    warning_labels.append(name)
                 emitted_keys.add(error_key)
                 health_persistence.record_error(
                     error_key=error_key,

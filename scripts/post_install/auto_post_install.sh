@@ -601,7 +601,7 @@ EOF
 
 
 install_log2ram_auto() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.2"
     # description: Install Log2RAM with size auto-tuned to host RAM (128M/256M/512M); SSD/M.2 detection skips on rotational disks.
     # ── Reinstall detection ─────────────────────────────────────────────────
     # If log2ram was previously installed by ProxMenux, skip hardware detection
@@ -732,6 +732,13 @@ EOF
 
     cat > /usr/local/bin/log2ram-check.sh <<'EOF'
 #!/usr/bin/env bash
+# v1.2 — `log2ram write` only copies tmpfs→disk; it does NOT shrink
+# the tmpfs. When journald or pveproxy/access.log grow past their
+# limits the tmpfs hit 100% and PVE crashed with "No space left on
+# device" on Shell open (community-reported: JC Miñarro, Nicolás P.
+# de A., 17-18/05). We now vacuum the journal and truncate the
+# non-rotating logs that actually consume the tmpfs before calling
+# `log2ram write`.
 PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 CONF_FILE="/etc/log2ram.conf"
@@ -742,7 +749,8 @@ L2R_BIN="$(command -v log2ram || true)"
 SIZE_MiB="$(grep -E '^SIZE=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2 | tr -dc '0-9')"
 [[ -z "$SIZE_MiB" ]] && SIZE_MiB=128
 LIMIT_BYTES=$(( SIZE_MiB * 1024 * 1024 ))
-THRESHOLD_BYTES=$(( LIMIT_BYTES * 95 / 100 ))
+WARN_BYTES=$(( LIMIT_BYTES * 80 / 100 ))
+EMERGENCY_BYTES=$(( LIMIT_BYTES * 92 / 100 ))
 
 USED_BYTES="$(df -B1 --output=used /var/log 2>/dev/null | tail -1 | tr -dc '0-9')"
 [[ -z "$USED_BYTES" ]] && exit 0
@@ -751,8 +759,24 @@ LOCK="/run/log2ram-check.lock"
 exec 9>"$LOCK" 2>/dev/null || exit 0
 flock -n 9 || exit 0
 
-if (( USED_BYTES > THRESHOLD_BYTES )); then
-  "$L2R_BIN" write 2>/dev/null || true
+# `log2ram write` alone leaves the tmpfs full. Real recovery requires:
+# (a) journal vacuum — journald respects --vacuum-size unconditionally,
+#     unlike SystemMaxUse which only enforces on rotation boundaries;
+# (b) truncating logs that aren't rotated by logrotate (pveproxy, pveam);
+# (c) THEN syncing to disk so the persistent copy reflects reality.
+if (( USED_BYTES > EMERGENCY_BYTES )); then
+    SAFE_JOURNAL_MB=$(( SIZE_MiB * 5 / 100 ))
+    [[ "$SAFE_JOURNAL_MB" -lt 16 ]] && SAFE_JOURNAL_MB=16
+    journalctl --vacuum-size="${SAFE_JOURNAL_MB}M" >/dev/null 2>&1 || true
+    : > /var/log/pveproxy/access.log 2>/dev/null || true
+    : > /var/log/pveproxy/error.log 2>/dev/null || true
+    : > /var/log/pveam.log 2>/dev/null || true
+    "$L2R_BIN" write 2>/dev/null || true
+elif (( USED_BYTES > WARN_BYTES )); then
+    SOFT_JOURNAL_MB=$(( SIZE_MiB * 30 / 100 ))
+    [[ "$SOFT_JOURNAL_MB" -lt 32 ]] && SOFT_JOURNAL_MB=32
+    journalctl --vacuum-size="${SOFT_JOURNAL_MB}M" >/dev/null 2>&1 || true
+    "$L2R_BIN" write 2>/dev/null || true
 fi
 EOF
     chmod +x /usr/local/bin/log2ram-check.sh
@@ -770,7 +794,7 @@ EOF
     chown root:root /etc/cron.d/log2ram-auto-sync
 
     systemctl restart cron >/dev/null 2>&1 || true
-    msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 95% of") $LOG2RAM_SIZE"
+    msg_ok "$(translate "Auto-sync enabled when /var/log exceeds 80% of") $LOG2RAM_SIZE"
 
 
     msg_info "$(translate "Adjusting systemd-journald limits to match Log2RAM size...")"
@@ -801,6 +825,11 @@ Storage=persistent
 SplitMode=none
 RateLimitIntervalSec=30s
 RateLimitBurst=1000
+ForwardToSyslog=no
+ForwardToWall=no
+Seal=no
+Compress=yes
+SystemMaxUse=${USE_MB}M
 SystemKeepFree=${KEEP_MB}M
 RuntimeMaxUse=${RUNTIME_MB}M
 # MaxLevelStore=info: required for ProxMenux Monitor log display and Fail2Ban detection.

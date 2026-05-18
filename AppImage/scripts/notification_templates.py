@@ -223,14 +223,28 @@ def _parse_vzdump_message(message: str) -> Optional[Dict[str, Any]]:
             else:
                 total_time = f"{secs}s"
     
+    # ── Extract the storage target name (PBS, PBS-Cloud, local, …) ──
+    # PVE logs the full command on the first line:
+    #   "INFO: starting new backup job: vzdump 104 105 --storage PBS-Cloud --mode stop"
+    # We surface it so the notification body can say "PBS-Cloud: vm/104/…"
+    # instead of the generic "PBS:" prefix when multiple PBS endpoints
+    # are configured. Reported by JC Miñarro 18/05.
+    storage_name = ''
+    for line in lines:
+        m_storage = re.search(r'--storage\s+(\S+)', line)
+        if m_storage:
+            storage_name = m_storage.group(1).strip()
+            break
+
     if not vms and not total_size:
         return None
-    
+
     return {
         'vms': vms,
         'total_time': total_time,
         'total_size': total_size,
         'vm_count': len(vms),
+        'storage_name': storage_name,
     }
 
 
@@ -277,13 +291,19 @@ def _format_vzdump_body(parsed: Dict[str, Any], is_success: bool) -> str:
         if detail_line:
             parts.append(' | '.join(detail_line))
         
-        # PBS/File on separate line with icon
+        # PBS/File on separate line with icon. When we know the
+        # storage name (e.g. "PBS-Cloud", "PBS-Office") prefix it so
+        # the user can tell which destination this archive lives in \u2014
+        # critical when there are multiple PBS endpoints configured.
         if vm.get('filename'):
             fname = vm['filename']
+            storage_name = parsed.get('storage_name', '') or ''
             if re.match(r'^(?:ct|vm)/\d+/', fname):
-                parts.append(f"\U0001F5C4\uFE0F PBS: {fname}")
+                label = storage_name if storage_name else 'PBS'
+                parts.append(f"\U0001F5C4\uFE0F {label}: {fname}")
             else:
-                parts.append(f"\U0001F4C1 File: {fname}")
+                label = storage_name if storage_name else 'File'
+                parts.append(f"\U0001F4C1 {label}: {fname}")
         
         # Error reason if failed
         if status != 'ok' and vm.get('error'):

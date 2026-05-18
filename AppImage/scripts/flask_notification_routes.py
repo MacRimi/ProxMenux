@@ -191,6 +191,24 @@ def _bad_request(msg: str):
     return jsonify({'error': msg}), 400
 
 
+def _is_loopback_addr(value: str) -> bool:
+    """Return True for IPv4, IPv6 and IPv4-mapped loopback addresses.
+
+    When Flask is bound to ``::`` for dual-stack support, an HTTP request
+    sent to ``127.0.0.1`` can be reported as ``::ffff:127.0.0.1``. Treat it
+    as local so the PVE webhook keeps the intended localhost trust path.
+    """
+    try:
+        import ipaddress
+        addr = ipaddress.ip_address(value)
+        if addr.is_loopback:
+            return True
+        ipv4_mapped = getattr(addr, 'ipv4_mapped', None)
+        return bool(ipv4_mapped and ipv4_mapped.is_loopback)
+    except ValueError:
+        return value == 'localhost'
+
+
 def _validate_event_type(value: str) -> bool:
     return isinstance(value, str) and bool(_EVENT_TYPE_RE.match(value))
 
@@ -983,9 +1001,15 @@ def setup_pve_webhook_core() -> dict:
         # endpoint depends entirely on the localhost-bypass and any move
         # to a non-loopback bind silently breaks auth. Audit Tier 3.1 —
         # `setup_pve_webhook_core` no escribe secret en priv cfg.
+        #
+        # PVE stores `secret value=` in STANDARD base64 and decodes it
+        # before emitting the header. Writing the raw token here triggered
+        # `could not decode UTF8 string from base64, key 'X-Webhook-Secret' (500)`
+        # whenever `token_urlsafe` produced `-` or `_` chars (GH #198).
+        secret_b64 = base64.b64encode(secret.encode()).decode()
         priv_block = (
             f"webhook: {_PVE_ENDPOINT_ID}\n"
-            f"        secret name=X-Webhook-Secret,value={secret}\n"
+            f"        secret name=X-Webhook-Secret,value={secret_b64}\n"
         )
         
         if priv_text is not None:
@@ -1225,7 +1249,7 @@ def proxmox_webhook():
     _reject = lambda code, error, status: (jsonify({'accepted': False, 'error': error}), status)
 
     client_ip = request.remote_addr or ''
-    is_localhost = client_ip in ('127.0.0.1', '::1')
+    is_localhost = _is_loopback_addr(client_ip)
 
     # CSRF defence-in-depth: reject `application/x-www-form-urlencoded`
     # bodies. PVE always sends `application/json`; form-encoded bodies

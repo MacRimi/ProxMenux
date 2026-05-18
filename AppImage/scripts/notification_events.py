@@ -292,6 +292,61 @@ def _record_smartd_observation_impl(title: str, message: str):
         print(f"[smartd_observation] Error recording smartd observation: {e}")
 
 
+# ─── Vzdump activity detector (shared, restart-tolerant) ─────────
+#
+# A single source of truth for "is a vzdump backup job running on this
+# host RIGHT NOW", consultable from any watcher and surviving Monitor
+# restarts. Reads `/var/log/pve/tasks/active` directly — PVE writes the
+# active UPID there at backup start and removes it on completion, so
+# it persists across our process restarts.
+#
+# Without this, JournalWatcher's in-memory `_last_backup_job_ts` got
+# reset by every Monitor restart, and any `Starting Backup of VM X`
+# log lines arriving after that point were treated as standalone
+# backups — emitting one `backup_start` per guest with `storage=local`
+# (the fallback path that doesn't see the parent job's --storage flag).
+# Reported by JC Miñarro 18/05 after a Monitor redeploy mid-job.
+_VZDUMP_ACTIVE_FILE = '/var/log/pve/tasks/active'
+_vzdump_active_cache_ts: float = 0
+_vzdump_active_cache_value: bool = False
+_VZDUMP_ACTIVE_CACHE_TTL = 5  # seconds
+
+
+def is_vzdump_active_on_host() -> bool:
+    """Return True if `/var/log/pve/tasks/active` contains an active
+    vzdump UPID (i.e. backup currently running). Cached 5s to avoid
+    hammering the file on every notification.
+
+    Caller-safe: returns False on any I/O / parse error.
+    """
+    global _vzdump_active_cache_ts, _vzdump_active_cache_value
+    now = time.time()
+    if now - _vzdump_active_cache_ts < _VZDUMP_ACTIVE_CACHE_TTL:
+        return _vzdump_active_cache_value
+    found = False
+    try:
+        with open(_VZDUMP_ACTIVE_FILE, 'r') as f:
+            for line in f:
+                # UPID format: UPID:node:pid:pstart:starttime:type:id:user:
+                if ':vzdump:' not in line:
+                    continue
+                parts = line.strip().split(':')
+                if len(parts) < 3:
+                    continue
+                try:
+                    pid = int(parts[2], 16)  # PID in UPID is hex
+                    os.kill(pid, 0)
+                    found = True
+                    break
+                except (ValueError, ProcessLookupError, PermissionError):
+                    continue
+    except (OSError, IOError):
+        pass
+    _vzdump_active_cache_ts = now
+    _vzdump_active_cache_value = found
+    return found
+
+
 # ─── Journal Watcher (Real-time) ─────────────────────────────────
 
 class JournalWatcher:
@@ -1238,6 +1293,14 @@ class JournalWatcher:
                 now = time.time()
                 if now - self._last_backup_job_ts < self._BACKUP_JOB_SUPPRESS_WINDOW:
                     return  # Part of an active job -- already notified
+                # Restart-tolerant fallback: if the in-memory timestamp was
+                # cleared (Monitor restarted mid-job) but PVE still has an
+                # active vzdump UPID, this per-guest line is part of that
+                # job — drop it instead of emitting a wrong "Backup started
+                # on local" with storage default. Reported by JC Miñarro 18/05
+                # after a Monitor redeploy during an active PBS backup.
+                if is_vzdump_active_on_host():
+                    return
                 fallback_guest = fb.group(1)
             else:
                 return
@@ -1893,10 +1956,15 @@ class TaskWatcher:
         # Suppress VM/CT start/stop/shutdown while a vzdump is active.
         # These are backup-induced operations (mode=stop), not user actions.
         # Exception: if a VM/CT FAILS or has WARNINGS, that IS important.
+        # We check BOTH our in-memory tracking (`_is_vzdump_active`) AND
+        # `tasks/active` on disk (`is_vzdump_active_on_host`). The disk
+        # check survives Monitor restarts mid-backup, which otherwise
+        # cleared `_vzdump_running_since` and exposed the post-restart
+        # shutdown notifications to the user (JC Miñarro 18/05).
         _BACKUP_NOISE = {'vm_start', 'vm_stop', 'vm_shutdown', 'vm_restart',
                          'ct_start', 'ct_stop', 'ct_shutdown', 'ct_restart'}
         if event_type in _BACKUP_NOISE and not is_error and not is_warning:
-            if self._is_vzdump_active():
+            if self._is_vzdump_active() or is_vzdump_active_on_host():
                 return
         
         # Suppress VM/CT stop/shutdown during host shutdown/reboot.

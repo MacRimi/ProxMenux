@@ -231,17 +231,134 @@ def _df_path(path: str) -> dict[str, Optional[int]]:
         return empty
 
 
+_SIZE_UNIT_TO_BYTES = {
+    "": 1, "B": 1,
+    "K": 1024, "KB": 1024, "KIB": 1024,
+    "M": 1024 ** 2, "MB": 1024 ** 2, "MIB": 1024 ** 2,
+    "G": 1024 ** 3, "GB": 1024 ** 3, "GIB": 1024 ** 3,
+    "T": 1024 ** 4, "TB": 1024 ** 4, "TIB": 1024 ** 4,
+}
+
+
+def _parse_pve_size(value: str) -> Optional[int]:
+    """Convert PVE-style sizes (``150G``, ``32M``, ``2T``) to bytes.
+
+    PVE stores volume sizes in lxc.conf as ``size=<num><unit>`` where
+    unit is a single letter from {K,M,G,T} (powers of 1024). Returns
+    None for empty/unparseable input — callers fall through to
+    pvesm-based totals.
+    """
+    if value is None:
+        return None
+    s = str(value).strip().upper()
+    if not s:
+        return None
+    m = re.match(r"^(\d+(?:\.\d+)?)\s*([KMGT]?I?B?)$", s)
+    if not m:
+        return None
+    try:
+        magnitude = float(m.group(1))
+    except ValueError:
+        return None
+    unit = m.group(2) or ""
+    multiplier = _SIZE_UNIT_TO_BYTES.get(unit)
+    if multiplier is None:
+        return None
+    return int(magnitude * multiplier)
+
+
+def _df_via_host_pid(host_pid: str, ct_target: str) -> dict[str, Optional[int]]:
+    """``df`` the CT-internal path via ``/proc/<pid>/root`` so we get
+    the filesystem as the container sees it, including ZFS dataset
+    quotas. Used for ``pve_volume`` mounts whose ``pvesm status``
+    numbers reflect the whole storage pool instead of the per-subvol
+    quota — without this the UI showed 851 GB total for a 150 GB ZFS
+    subvol because pvesm reports the rpool's free space.
+    """
+    empty = {"total_bytes": None, "used_bytes": None, "available_bytes": None}
+    if not host_pid or not ct_target:
+        return empty
+    full = f"/proc/{host_pid}/root{ct_target}"
+    try:
+        proc = subprocess.run(
+            ["df", "-B1", "--output=size,used,avail", full],
+            capture_output=True, text=True, timeout=_STAT_TIMEOUT,
+        )
+        if proc.returncode != 0:
+            return empty
+        lines = [ln for ln in proc.stdout.strip().splitlines() if ln.strip()]
+        if len(lines) < 2:
+            return empty
+        parts = lines[-1].split()
+        if len(parts) < 3:
+            return empty
+        return {
+            "total_bytes": int(parts[0]),
+            "used_bytes": int(parts[1]),
+            "available_bytes": int(parts[2]),
+        }
+    except (subprocess.TimeoutExpired, OSError, ValueError):
+        return empty
+
+
 def _capacity_for(source: str, classification: dict[str, Any],
-                  pve_storages: dict[str, dict[str, Any]]) -> dict[str, Optional[int]]:
+                  pve_storages: dict[str, dict[str, Any]],
+                  config_options: Optional[dict[str, Any]] = None,
+                  host_pid: str = "",
+                  target: str = "") -> dict[str, Optional[int]]:
     """Return total/used/available bytes for the *source* of a mount.
 
-    ``pve_volume`` and ``pve_storage_bind`` reuse the numbers from
-    ``pvesm status`` (already loaded once). ``host_bind`` falls back to
-    ``df`` of the host path. None values mean the lookup didn't
-    succeed and the UI will render n/a.
+    ``pve_volume`` quota handling (Sprint 14.x — Ignacio Seijo 10/05):
+      A ``mp6: local-zfs:subvol-310-disk-1,size=150G,...`` line carved
+      out a 150 GB subvol from a 1 TB pool. The previous code read
+      ``pvesm status local-zfs`` and reported 851 GB total / 19% used —
+      reflecting the whole pool, not the subvol. We now prefer, in
+      order:
+        1) ``df`` of ``/proc/<host_pid>/root/<target>`` when the CT is
+           up — gives the correct view-from-inside numbers including
+           the quota.
+        2) ``size=<N>`` from lxc.conf as the total; usage is unknown
+           when the CT isn't running, so the UI shows total only.
+        3) Fallback to ``pvesm status`` (pool numbers) when the entry
+           has no declared size — that's the legacy behaviour for
+           sizeless block volumes (lvm raw, rbd).
+
+    ``pve_storage_bind`` mounts (NFS, CIFS at ``/mnt/pve/...``) keep
+    the pvesm-based numbers because the storage IS the source of truth
+    for those.
+
+    ``host_bind`` falls back to ``df`` of the host path. None values
+    mean the lookup didn't succeed and the UI will render n/a.
     """
     ctype = classification.get("type")
-    if ctype in ("pve_volume", "pve_storage_bind"):
+    config_options = config_options or {}
+    declared_size_bytes = _parse_pve_size(config_options.get("size"))
+
+    if ctype == "pve_volume":
+        # 1) Live numbers from inside the CT (respects quota).
+        if host_pid and target:
+            live = _df_via_host_pid(host_pid, target)
+            if live.get("total_bytes") is not None:
+                return live
+        # 2) CT down (or df failed): expose declared quota as total.
+        if declared_size_bytes is not None:
+            return {
+                "total_bytes": declared_size_bytes,
+                "used_bytes": None,
+                "available_bytes": None,
+            }
+        # 3) No quota declared: legacy pool-level numbers.
+        sid = classification.get("origin_storage", "")
+        st = pve_storages.get(sid)
+        if not st:
+            return {"total_bytes": None, "used_bytes": None, "available_bytes": None}
+        return {
+            "total_bytes": st["total_kib"] * 1024 if st.get("total_kib") is not None else None,
+            "used_bytes": st["used_kib"] * 1024 if st.get("used_kib") is not None else None,
+            "available_bytes": st["avail_kib"] * 1024 if st.get("avail_kib") is not None else None,
+        }
+
+    if ctype == "pve_storage_bind":
         sid = classification.get("origin_storage", "")
         st = pve_storages.get(sid)
         if not st:
@@ -312,6 +429,45 @@ def _read_ct_proc_mounts(host_pid: str) -> list[dict[str, Any]]:
     return out
 
 
+def _host_source_state(source: str) -> dict[str, Any]:
+    """Inspect a host-side bind source to detect 'zombie' binds.
+
+    Reported by Ignacio Seijo (11/05): when the host unmounted
+    ``/mnt/nas1_con_backup`` the CT kept reporting it as ``mounted``
+    because the bind into the CT's mount namespace was still live —
+    the kernel doesn't propagate the host-side umount to the child
+    namespace. The CT's view becomes a frozen snapshot of whatever
+    was under the path at bind time (usually an empty dir).
+
+    Returns ``{exists, is_mountpoint, error}``. ``exists=False`` means
+    the source path is gone entirely (e.g. a USB drive that was
+    physically removed). ``is_mountpoint=False`` while ``exists=True``
+    is the zombie-bind case the UI flags.
+
+    Only meaningful for absolute host paths. Storage-id sources
+    (``local-zfs:subvol-...``) return ``{None, None, None}`` since
+    there is no host path to inspect.
+    """
+    empty = {"exists": None, "is_mountpoint": None, "error": None}
+    if not source or not source.startswith("/"):
+        return empty
+    try:
+        st_exists = os.path.exists(source)
+    except OSError as e:
+        return {"exists": None, "is_mountpoint": None, "error": str(e)}
+    if not st_exists:
+        return {"exists": False, "is_mountpoint": False, "error": "path missing"}
+    try:
+        proc = subprocess.run(
+            ["mountpoint", "-q", source],
+            capture_output=True, text=True, timeout=_STAT_TIMEOUT,
+        )
+        is_mp = (proc.returncode == 0)
+        return {"exists": True, "is_mountpoint": is_mp, "error": None}
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return {"exists": True, "is_mountpoint": None, "error": str(e)}
+
+
 def _stat_via_host(host_pid: str, ct_target: str,
                    timeout: int = _STAT_TIMEOUT) -> dict[str, Any]:
     """Stat the container-internal target through /proc/<pid>/root —
@@ -366,11 +522,37 @@ def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
     out: list[dict[str, Any]] = []
     matched_targets: set[str] = set()
 
-    for entry in config_entries:
+    # Pre-compute per-entry subprocess work in parallel so a CT with
+    # many mountpoints doesn't pay N×(_STAT_TIMEOUT + _STAT_TIMEOUT)
+    # serialised cost. The previous serial path tripped Caddy's 3s
+    # reverse-proxy timeout (Ignacio Seijo 11/05: "/api/lxc/210/
+    # mount-points → 502 (3.00s)") on hosts with 5+ binds. ThreadPool
+    # is the right primitive — these are all I/O-bound `df`/`stat`
+    # calls hitting independent paths.
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _gather_one(entry):
+        src = entry.get("source", "")
+        tgt = entry.get("target", "")
+        classification = _classify(src, pve_storages)
+        capacity = _capacity_for(
+            src, classification, pve_storages,
+            config_options=entry.get("config_options", {}),
+            host_pid=host_pid if running else "",
+            target=tgt,
+        )
+        host_src = _host_source_state(src)
+        live_target = bool(running and tgt and tgt in rt_by_target)
+        health = _stat_via_host(host_pid, tgt) if live_target else None
+        return entry, classification, capacity, host_src, live_target, health
+
+    max_workers = max(2, min(8, len(config_entries) or 1))
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        gathered = list(pool.map(_gather_one, config_entries))
+
+    for entry, cls, cap, host_src, live_target, health in gathered:
         source = entry.get("source", "")
         target = entry.get("target", "")
-        cls = _classify(source, pve_storages)
-        cap = _capacity_for(source, cls, pve_storages)
 
         item: dict[str, Any] = {
             "mp_index": entry.get("mp_index", ""),
@@ -382,13 +564,14 @@ def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
             "origin_label": cls.get("origin_label", source),
             "config_options": entry.get("config_options", {}),
             "config_flags": entry.get("config_flags", []),
+            "host_source_exists": host_src["exists"],
+            "host_source_is_mountpoint": host_src["is_mountpoint"],
             **cap,
         }
 
         # Runtime enrichment when CT is up.
-        if running and target and target in rt_by_target:
+        if live_target:
             rt = rt_by_target[target]
-            health = _stat_via_host(host_pid, target)
             item.update({
                 "runtime_mounted": True,
                 "runtime_source": rt["rt_source"],
@@ -416,34 +599,42 @@ def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
     # original Sprint 13.24 issue revolves around catching them.
     ad_hoc: list[dict[str, Any]] = []
     if running:
-        for rt in rt_mounts:
-            target = rt["rt_target"]
-            if target in matched_targets:
-                continue
-            if not _REMOTE_FS_RE.match(rt["rt_fstype"]):
-                continue
-            health = _stat_via_host(host_pid, target)
-            ad_hoc.append({
-                "mp_index": "",
-                "source": rt["rt_source"],
-                "target": target,
-                "type": "ad_hoc",
-                "origin_storage": "",
-                "origin_storage_type": "",
-                "origin_label": rt["rt_source"],
-                "config_options": {},
-                "config_flags": [],
-                "total_bytes": None,
-                "used_bytes": None,
-                "available_bytes": None,
-                "runtime_mounted": True,
-                "runtime_source": rt["rt_source"],
-                "runtime_fstype": rt["rt_fstype"],
-                "runtime_options": rt["rt_options"],
-                "runtime_readonly": rt["rt_readonly"],
-                "runtime_reachable": health["reachable"],
-                "runtime_error": health["error"],
-            })
+        ad_hoc_candidates = [
+            rt for rt in rt_mounts
+            if rt["rt_target"] not in matched_targets
+            and _REMOTE_FS_RE.match(rt["rt_fstype"])
+        ]
+        # Same parallelisation as the configured-mp loop: stat'ing
+        # stale NFS exports serially can dominate the request and
+        # push it past the proxy timeout.
+        if ad_hoc_candidates:
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                healths = list(pool.map(
+                    lambda rt: _stat_via_host(host_pid, rt["rt_target"]),
+                    ad_hoc_candidates,
+                ))
+            for rt, health in zip(ad_hoc_candidates, healths):
+                ad_hoc.append({
+                    "mp_index": "",
+                    "source": rt["rt_source"],
+                    "target": rt["rt_target"],
+                    "type": "ad_hoc",
+                    "origin_storage": "",
+                    "origin_storage_type": "",
+                    "origin_label": rt["rt_source"],
+                    "config_options": {},
+                    "config_flags": [],
+                    "total_bytes": None,
+                    "used_bytes": None,
+                    "available_bytes": None,
+                    "runtime_mounted": True,
+                    "runtime_source": rt["rt_source"],
+                    "runtime_fstype": rt["rt_fstype"],
+                    "runtime_options": rt["rt_options"],
+                    "runtime_readonly": rt["rt_readonly"],
+                    "runtime_reachable": health["reachable"],
+                    "runtime_error": health["error"],
+                })
 
     return {
         "ok": True,

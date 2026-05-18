@@ -170,6 +170,12 @@ interface LxcMountPoint {
   runtime_readonly?: boolean
   runtime_reachable?: boolean
   runtime_error?: string | null
+  // Sprint 14.x: host-side bind source state. Detects the case where the
+  // CT still reports a bind as mounted even though the host already
+  // umounted the source (Ignacio Seijo 11/05). Null = N/A (PVE volume,
+  // not a host path).
+  host_source_exists?: boolean | null
+  host_source_is_mountpoint?: boolean | null
 }
 
 const fetcher = async (url: string) => {
@@ -321,9 +327,18 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
   const isStale = mp.runtime_reachable === false
   const isReadonly = !isStale && mp.runtime_readonly === true
   const isDivergent = mp.runtime_mounted === false  // configured but not actually mounted
+  // "Zombie bind": the host removed the source (e.g. USB pulled, manual
+  // umount) but the CT mount namespace still shows the bind as mounted.
+  // Reported by Ignacio Seijo (11/05). Only flag host_bind /
+  // pve_storage_bind sources — PVE volume sources have no host path
+  // and `host_source_exists` comes back null for them.
+  const isHostDetached =
+    mp.runtime_mounted === true &&
+    (mp.type === "host_bind" || mp.type === "pve_storage_bind") &&
+    mp.host_source_exists === false
   const cardClasses = isStale
     ? "border-red-500/50 bg-red-500/5"
-    : isDivergent
+    : isDivergent || isHostDetached
       ? "border-amber-500/40 bg-amber-500/5"
       : isReadonly
         ? "border-amber-500/30 bg-amber-500/5"
@@ -395,7 +410,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
           className={
             isStale
               ? "bg-red-500/10 text-red-500 border-red-500/20"
-              : isDivergent
+              : isDivergent || isHostDetached
                 ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
                 : isReadonly
                   ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
@@ -408,11 +423,13 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
             ? "stale"
             : isDivergent
               ? "not mounted"
-              : isReadonly
-                ? "read-only"
-                : mp.runtime_mounted === null
-                  ? "stopped"
-                  : "mounted"}
+              : isHostDetached
+                ? "host detached"
+                : isReadonly
+                  ? "read-only"
+                  : mp.runtime_mounted === null
+                    ? "stopped"
+                    : "mounted"}
         </Badge>
       </div>
 

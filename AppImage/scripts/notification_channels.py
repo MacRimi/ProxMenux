@@ -508,14 +508,22 @@ class EmailChannel(NotificationChannel):
     
     def __init__(self, config: Dict[str, str]):
         super().__init__()
-        self.host = config.get('host', '')
+        self.host = (config.get('host', '') or '').strip()
         self.port = int(config.get('port', 587) or 587)
-        self.username = config.get('username', '')
-        self.password = config.get('password', '')
-        self.tls_mode = config.get('tls_mode', 'starttls')  # none | starttls | ssl
-        self.from_address = config.get('from_address', '')
+        self.username = config.get('username', '') or ''
+        self.password = config.get('password', '') or ''
+        # `dict.get(k, default)` only returns default when the key is MISSING;
+        # if the user previously saved an empty string or null, we'd end up
+        # with `tls_mode=''` and silently skip STARTTLS — which causes
+        # `SMTPNotSupportedError: SMTP AUTH extension not supported by server`
+        # on Gmail/Outlook because they only advertise AUTH post-STARTTLS.
+        tls_raw = (config.get('tls_mode') or 'starttls').strip().lower()
+        if tls_raw not in ('none', 'starttls', 'ssl'):
+            tls_raw = 'starttls'
+        self.tls_mode = tls_raw
+        self.from_address = config.get('from_address', '') or ''
         self.to_addresses = self._parse_recipients(config.get('to_addresses', ''))
-        self.subject_prefix = config.get('subject_prefix', '[ProxMenux]')
+        self.subject_prefix = config.get('subject_prefix', '[ProxMenux]') or '[ProxMenux]'
         self.timeout = int(config.get('timeout', 10) or 10)
     
     @staticmethod
@@ -529,6 +537,17 @@ class EmailChannel(NotificationChannel):
             return False, 'No recipients configured'
         if not self.from_address:
             return False, 'No from address configured'
+        # Credentials without an explicit SMTP host would silently fall back to
+        # `/usr/sbin/sendmail`, which ignores username/password entirely — the
+        # test returns OK because Postfix queued the message, but the relay is
+        # never authenticated and the mail rots in the local mailq. Reported by
+        # Ignacio Seijo: "dejando host/puerto en blanco el test pasa pero el
+        # correo nunca llega".
+        if (self.username or self.password) and not self.host:
+            return False, ('SMTP credentials provided but no host configured. '
+                           'Set host (e.g. smtp.gmail.com) and port (587) — '
+                           'without a host the message goes to the local MTA '
+                           'and your username/password are ignored.')
         # Must have SMTP host OR local sendmail available
         if not self.host:
             import os
@@ -591,8 +610,33 @@ class EmailChannel(NotificationChannel):
                     server.ehlo()  # Re-identify after TLS -- server re-announces AUTH
             
             if self.username and self.password:
+                # If the server doesn't advertise AUTH after our EHLO sequence,
+                # smtplib's `login()` raises `SMTPNotSupportedError` with the
+                # opaque message "SMTP AUTH extension not supported by server".
+                # That fired for users who left tls_mode blank or pointed at
+                # port 587 without STARTTLS — Gmail only advertises AUTH after
+                # the TLS handshake. Surface the real reason here.
+                if not server.has_extn('auth'):
+                    hint = (
+                        f"server={self.host}:{self.port} tls_mode={self.tls_mode}"
+                    )
+                    if self.tls_mode == 'none':
+                        return 0, (
+                            'SMTP server did not advertise AUTH after EHLO. '
+                            'TLS is disabled — most providers (Gmail, Outlook, '
+                            'Office365) only allow login after STARTTLS or SSL. '
+                            f'Switch TLS Mode to STARTTLS (port 587) or SSL/TLS '
+                            f'(port 465). [{hint}]'
+                        )
+                    return 0, (
+                        'SMTP server did not advertise AUTH after EHLO. '
+                        'Verify the host/port/TLS combination. For Gmail use '
+                        'smtp.gmail.com:587 with STARTTLS and an App Password '
+                        '(https://myaccount.google.com/apppasswords); for '
+                        f'Outlook use smtp.office365.com:587 with STARTTLS. [{hint}]'
+                    )
                 server.login(self.username, self.password)
-            
+
             server.send_message(msg)
             server.quit()
             server = None
@@ -601,8 +645,10 @@ class EmailChannel(NotificationChannel):
             return 0, f'SMTP authentication failed (check username/password or app-specific password): {e}'
         except smtplib.SMTPNotSupportedError as e:
             return 0, (f'SMTP AUTH not supported by server. '
-                       f'This may mean the server requires OAuth2 or an App Password '
-                       f'instead of regular credentials: {e}')
+                       f'TLS mode: {self.tls_mode}, port: {self.port}. '
+                       f'Gmail/Outlook require STARTTLS on 587 or SSL/TLS on 465. '
+                       f'For Gmail, generate an App Password at '
+                       f'https://myaccount.google.com/apppasswords. Detail: {e}')
         except smtplib.SMTPConnectError as e:
             return 0, f'SMTP connection failed: {e}'
         except smtplib.SMTPException as e:
