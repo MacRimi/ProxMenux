@@ -911,7 +911,18 @@ class NotificationManager:
         
         self._running = True
         self._stats['started_at'] = datetime.now().isoformat()
-        
+
+        # Reset cooldowns for update-summary event types so the operator
+        # gets a fresh "what's available now" report after every Monitor
+        # deploy/restart. The 24h anti-spam cooldown serves the
+        # steady-state use case (don't pester the user with the same
+        # "177 packages pending" reminder every poll cycle); the
+        # explicit service restart is the signal that "I want to see
+        # the current state, not yesterday's silence". Non-update
+        # cooldowns (auth_fail, log_critical, disk errors, …) are kept
+        # so a restart doesn't unleash an inbox flood for the user.
+        self._reset_update_cooldowns_on_start()
+
         # Ensure PVE webhook is configured (repairs priv config if missing)
         try:
             from flask_notification_routes import setup_pve_webhook_core
@@ -1616,6 +1627,61 @@ class NotificationManager:
         self._cooldowns[fingerprint] = now
         self._persist_cooldown(fingerprint, now)
     
+    # Event types whose cooldown should be cleared at every service start,
+    # so the user sees a fresh "what's available right now" report after
+    # any deploy. Anything not in this list keeps its 24h cooldown across
+    # restarts (auth_fail, log_critical_*, disk errors, …) — preserving
+    # the anti-flood guarantee for high-volume sources.
+    _UPDATE_EVENT_TYPES_RESET_ON_START = (
+        'update_summary',
+        'proxmenux_update',
+        'post_install_update',
+        'pve_update',
+        'update_available',
+        'nvidia_driver_update_available',
+        'secure_gateway_update_available',
+    )
+
+    def _reset_update_cooldowns_on_start(self):
+        """Clear DB rows in notification_last_sent for update-type events.
+
+        Fingerprint format used by `_passes_cooldown` is
+        `<host>:<entity>:<event_type>[:<entity_id>]`. We match by the
+        event_type segment with LIKE patterns covering both the
+        trailing-colon case (`…:update_summary:`) and the no-suffix case
+        (`…:nvidia_driver_update_available`) for managed-install events.
+        Also clear the in-memory cache so the running dispatcher
+        immediately sees the reset, without waiting for the next
+        `_load_cooldowns_from_db()`.
+        """
+        try:
+            if not DB_PATH.exists():
+                return
+            patterns = []
+            for et in self._UPDATE_EVENT_TYPES_RESET_ON_START:
+                patterns.append(f'%:{et}:%')  # entity_id non-empty form
+                patterns.append(f'%:{et}')    # entity_id empty / managed-install form
+            where = ' OR '.join('fingerprint LIKE ?' for _ in patterns)
+            conn = sqlite3.connect(str(DB_PATH), timeout=10)
+            conn.execute('PRAGMA journal_mode=WAL')
+            cursor = conn.cursor()
+            cursor.execute(f'DELETE FROM notification_last_sent WHERE {where}', patterns)
+            deleted = cursor.rowcount
+            conn.commit()
+            conn.close()
+            # Mirror the DB delete in the in-memory cache so the
+            # dispatch thread doesn't keep ghost cooldowns until the
+            # next reload.
+            for fp in list(self._cooldowns.keys()):
+                for et in self._UPDATE_EVENT_TYPES_RESET_ON_START:
+                    if f':{et}:' in fp or fp.endswith(f':{et}'):
+                        self._cooldowns.pop(fp, None)
+                        break
+            if deleted > 0:
+                print(f"[NotificationManager] Reset {deleted} update-type cooldowns on startup")
+        except Exception as e:
+            print(f"[NotificationManager] Failed to reset update cooldowns on start: {e}")
+
     def _load_cooldowns_from_db(self):
         """Load persistent cooldown state from SQLite (up to 48h).
 
