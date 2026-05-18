@@ -3474,6 +3474,39 @@
     "os": "debian"
   },
   {
+    "name": "CyberChef",
+    "slug": "cyberchef",
+    "desc": "The Cyber Swiss Army Knife - a web app for encryption, encoding, compression and data analysis",
+    "script": "ct/cyberchef.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/cyberchef.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/cyberchef.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00006",
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "Authentication & Security",
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 80,
+    "website": "https://gchq.github.io/CyberChef",
+    "documentation": "https://github.com/gchq/CyberChef",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cyberchef.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Dagu",
     "slug": "dagu",
     "desc": "Dagu is a powerful, developer-friendly workflow engine that allows you to define DAGs (Directed Acyclic Graphs) in a simple YAML format for scheduling and running complex job dependencies.",
@@ -3809,7 +3842,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -4810,7 +4843,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -7117,7 +7150,7 @@
       "Change the default password after first login!"
     ],
     "port": 3000,
-    "website": "https://github.com/Pouzor/homelable",
+    "website": "https://homelable.net/",
     "documentation": "https://github.com/Pouzor/homelable/blob/main/INSTALLATION.md",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/homelable.webp",
     "updateable": true,
@@ -16619,6 +16652,39 @@
     "os": "debian"
   },
   {
+    "name": "Spliit",
+    "slug": "spliit",
+    "desc": "Spliit is a free and open-source alternative to Splitwise for sharing expenses with friends and groups, built with Next.js and PostgreSQL.",
+    "script": "ct/spliit.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/spliit.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/spliit.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00023"
+    ],
+    "category_names": [
+      "Finance & Budgeting"
+    ],
+    "notes": [
+      "Database credentials are written to /opt/spliit/.env. To configure a default currency, set NEXT_PUBLIC_DEFAULT_CURRENCY_CODE in /opt/spliit/.env and rebuild: cd /opt/spliit && npm run build && systemctl restart spliit"
+    ],
+    "warnings": [],
+    "port": 3000,
+    "website": "https://spliit.app/",
+    "documentation": "https://github.com/spliit-app/spliit#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/spliit.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Split Pro",
     "slug": "split-pro",
     "desc": "SplitPro is a self-hosted, open source way to share expenses with friends. It is designed as a replacement for Splitwise.",
@@ -19914,7 +19980,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
