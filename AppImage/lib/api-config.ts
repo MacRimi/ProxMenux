@@ -95,12 +95,27 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
         // (rotated per-install). Drop the stale token and force a single
         // reload so the page-level auth gate (`app/page.tsx`) can render
         // <Login> instead of cascading 401s from every authenticated
-        // component on mount. The sessionStorage flag is essential: a
-        // page like Hardware/Storage fires 10-20 SWR fetches in parallel,
-        // and without dedup each of them would race to reload the tab —
-        // observed in the wild as ~180 "Invalid token" log lines per
-        // second from a single browser running an upgraded Monitor.
+        // component on mount.
+        //
+        // Only react when we actually had a token to invalidate. A 401
+        // without any token in localStorage means the caller is the
+        // Login screen itself, or a leftover fetch from a recently
+        // unmounted Dashboard — reloading there does nothing but waste
+        // the user's keystrokes and can leave the cascade flag set
+        // forever, swallowing the very 401 that we'd want to recover
+        // from after a successful re-login. The fix: bail out early
+        // if we have no token to invalidate.
         if (typeof window !== "undefined") {
+          let hadToken = false
+          try {
+            hadToken = !!localStorage.getItem("proxmenux-auth-token")
+          } catch {
+            // private browsing — assume yes so we attempt recovery.
+            hadToken = true
+          }
+          if (!hadToken) {
+            throw new Error(`Unauthorized: ${endpoint}`)
+          }
           try {
             localStorage.removeItem("proxmenux-auth-token")
           } catch {

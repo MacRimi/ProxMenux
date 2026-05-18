@@ -65,6 +65,21 @@ export default function Home() {
 
       const authenticated = data.auth_enabled ? data.authenticated : true
 
+      // Clear the 401 cascade-prevention flag when we successfully end
+      // up in the authenticated state. The flag is meant to dedupe a
+      // burst of 401s during a single page load; once we've confirmed
+      // the user is in, a future 401 (token rotation, restart, etc.)
+      // should be allowed to reload again. Without this, a stale flag
+      // can prevent the post-2FA dashboard from recovering from any
+      // transient 401 and leaves the UI blocked.
+      if (authenticated) {
+        try {
+          sessionStorage.removeItem("proxmenux-auth-401-handled")
+        } catch {
+          // private browsing — best-effort
+        }
+      }
+
       setAuthStatus({
         loading: false,
         authEnabled: data.auth_enabled,
