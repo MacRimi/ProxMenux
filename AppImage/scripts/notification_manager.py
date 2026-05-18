@@ -1167,7 +1167,14 @@ class NotificationManager:
             # exploded". CRITICAL always wins. The window is configured
             # per-channel; same channel can have different rules from
             # another. See _in_quiet_hours() for boundary semantics.
-            if event.severity != 'CRITICAL' and self._in_quiet_hours(ch_name):
+            # `_dispatch_to_channels` does NOT receive the NotificationEvent
+            # object — only the rendered primitives. Using `event.X` here
+            # raised `NameError: name 'event' is not defined` for every
+            # event passing through (silenced by the dispatch loop's broad
+            # except → no notifications EVER delivered after Quiet Hours +
+            # Daily Digest were merged). All community-reported "stopped
+            # receiving notifications after update" cases trace back here.
+            if severity != 'CRITICAL' and self._in_quiet_hours(ch_name):
                 continue
 
             # ── Per-channel daily digest ──
@@ -1178,8 +1185,9 @@ class NotificationManager:
             # and WARNING never wait — they always pass through. Events
             # the user explicitly wants to see live (vm_start, etc.) are
             # excluded from the digest by `_DIGEST_EXEMPT_EVENTS`.
-            if self._should_buffer_for_digest(ch_name, event):
-                self._buffer_digest_event(ch_name, event, title, body, event_group)
+            if self._should_buffer_for_digest(ch_name, severity, event_type):
+                self._buffer_digest_event(ch_name, event_type, event_group,
+                                          severity, title, body)
                 continue
             
             try:
@@ -1358,23 +1366,31 @@ class NotificationManager:
         'system_shutdown', 'system_reboot',
     })
 
-    def _should_buffer_for_digest(self, ch_name: str,
-                                  event: NotificationEvent) -> bool:
+    def _should_buffer_for_digest(self, ch_name: str, severity: str,
+                                  event_type: str) -> bool:
         """Decide if this event should go to the channel's digest buffer
         instead of firing immediately. Only applies to generic INFO
         events; CRITICAL and WARNING always pass through.
+
+        Takes primitives (severity, event_type) rather than a
+        NotificationEvent — the caller in `_dispatch_to_channels` only
+        has the rendered fields, not the event object.
         """
-        if event.severity != 'INFO':
+        if severity != 'INFO':
             return False
-        if event.event_type in self._DIGEST_EXEMPT_EVENTS:
+        if event_type in self._DIGEST_EXEMPT_EVENTS:
             return False
         if self._config.get(f'{ch_name}.digest_enabled', 'false') != 'true':
             return False
         return True
 
-    def _buffer_digest_event(self, ch_name: str, event: NotificationEvent,
-                             title: str, body: str, event_group: str) -> None:
-        """Append an event to the channel's digest buffer in SQLite."""
+    def _buffer_digest_event(self, ch_name: str, event_type: str,
+                             event_group: str, severity: str,
+                             title: str, body: str) -> None:
+        """Append an event to the channel's digest buffer in SQLite.
+
+        Primitives only — same reason as `_should_buffer_for_digest`.
+        """
         try:
             conn = sqlite3.connect(str(DB_PATH), timeout=10)
             conn.execute('PRAGMA journal_mode=WAL')
@@ -1383,7 +1399,7 @@ class NotificationManager:
                 'INSERT INTO digest_pending '
                 '(channel, event_type, event_group, severity, ts, title, body) '
                 'VALUES (?, ?, ?, ?, ?, ?, ?)',
-                (ch_name, event.event_type, event_group, event.severity,
+                (ch_name, event_type, event_group, severity,
                  int(time.time()), title, body),
             )
             conn.commit()
