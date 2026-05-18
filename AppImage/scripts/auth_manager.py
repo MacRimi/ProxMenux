@@ -805,13 +805,21 @@ def verify_totp(username, token, use_backup=False):
         return False, "Invalid 2FA code"
 
     # Find which counter the OTP corresponds to (one of current ± 1).
+    # CRITICAL: `pyotp.TOTP.at(t)` takes a UNIX timestamp (seconds), NOT
+    # a counter — passing the counter makes `at()` interpret it as a
+    # tiny timestamp near the epoch and the same OTP comes back for
+    # every step, so this loop never matched and verify_totp always
+    # fell into the "fail closed" branch below, locking every 2FA user
+    # out. We pass timestamps spaced by `interval` seconds and derive
+    # the counter from the matched timestamp.
     interval = getattr(totp, 'interval', 30)
-    current_counter = int(_time.time() // interval)
+    now_ts = _time.time()
     matched_counter = None
-    for c in (current_counter - 1, current_counter, current_counter + 1):
+    for delta_steps in (-1, 0, 1):
+        probe_ts = now_ts + delta_steps * interval
         try:
-            if totp.at(c) == token:
-                matched_counter = c
+            if totp.at(int(probe_ts)) == token:
+                matched_counter = int(probe_ts) // interval
                 break
         except Exception:
             continue
@@ -819,7 +827,15 @@ def verify_totp(username, token, use_backup=False):
         # `verify()` succeeded but we couldn't map to a counter — fail closed.
         return False, "Invalid 2FA code"
 
-    last_counter = config.get("last_totp_counter", -1)
+    # `last_counter` may be stored as `null` in auth.json for accounts
+    # that haven't authenticated since the anti-replay tracking was
+    # introduced. `dict.get(k, default)` only returns the default when
+    # the key is MISSING, not when it's present-but-None — so `null`
+    # would slip through as Python None and crash the `<=` comparison
+    # below. Normalise to -1 (meaning "no previous counter").
+    last_counter = config.get("last_totp_counter")
+    if last_counter is None:
+        last_counter = -1
     if matched_counter <= last_counter:
         return False, "2FA code already used; wait for the next one"
 
