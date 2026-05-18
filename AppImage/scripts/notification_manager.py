@@ -912,16 +912,15 @@ class NotificationManager:
         self._running = True
         self._stats['started_at'] = datetime.now().isoformat()
 
-        # Reset cooldowns for update-summary event types so the operator
-        # gets a fresh "what's available now" report after every Monitor
-        # deploy/restart. The 24h anti-spam cooldown serves the
-        # steady-state use case (don't pester the user with the same
-        # "177 packages pending" reminder every poll cycle); the
-        # explicit service restart is the signal that "I want to see
-        # the current state, not yesterday's silence". Non-update
-        # cooldowns (auth_fail, log_critical, disk errors, …) are kept
-        # so a restart doesn't unleash an inbox flood for the user.
-        self._reset_update_cooldowns_on_start()
+        # Reset cooldowns for the curated event-type set so the user gets
+        # a fresh status report (update_summary, …) and a fresh security
+        # signal (auth_fail) after every Monitor deploy/restart. The 24h
+        # anti-spam cooldown serves the steady-state use case; the
+        # explicit service restart is the signal that "I want to see the
+        # current state, not yesterday's silence". High-frequency
+        # sources (log_critical_*, disk errors, smart_*) keep their
+        # cooldown across restarts to prevent inbox floods.
+        self._reset_cooldowns_on_start()
 
         # Ensure PVE webhook is configured (repairs priv config if missing)
         try:
@@ -1627,12 +1626,21 @@ class NotificationManager:
         self._cooldowns[fingerprint] = now
         self._persist_cooldown(fingerprint, now)
     
-    # Event types whose cooldown should be cleared at every service start,
-    # so the user sees a fresh "what's available right now" report after
-    # any deploy. Anything not in this list keeps its 24h cooldown across
-    # restarts (auth_fail, log_critical_*, disk errors, …) — preserving
-    # the anti-flood guarantee for high-volume sources.
-    _UPDATE_EVENT_TYPES_RESET_ON_START = (
+    # Event types whose cooldown should be cleared at every service start.
+    # Two reasons to be on this list:
+    #   (a) "Status report" events — user expects a fresh report after a
+    #       deploy/restart even if 24h hasn't passed. update_summary &
+    #       friends fall here.
+    #   (b) "User-actionable security events" where the cooldown surviving
+    #       a Monitor reinstall would silence a real attack. auth_fail —
+    #       if a login failure happens right after an upgrade we want it
+    #       delivered, not swallowed by yesterday's cooldown for the same
+    #       source IP.
+    # Anything NOT on this list keeps its 24h cooldown across restarts
+    # (log_critical_*, disk errors, smart_*, …) — preserves the
+    # anti-flood guarantee for sources that can burst.
+    _EVENT_TYPES_RESET_ON_START = (
+        # Update-status reports
         'update_summary',
         'proxmenux_update',
         'post_install_update',
@@ -1640,10 +1648,14 @@ class NotificationManager:
         'update_available',
         'nvidia_driver_update_available',
         'secure_gateway_update_available',
+        # Security events that must not be silenced by stale cooldowns
+        # following a Monitor reinstall (Pedro Rico, 19/05).
+        'auth_fail',
     )
 
-    def _reset_update_cooldowns_on_start(self):
-        """Clear DB rows in notification_last_sent for update-type events.
+    def _reset_cooldowns_on_start(self):
+        """Clear DB rows in notification_last_sent for the curated set of
+        event types listed in `_EVENT_TYPES_RESET_ON_START`.
 
         Fingerprint format used by `_passes_cooldown` is
         `<host>:<entity>:<event_type>[:<entity_id>]`. We match by the
@@ -1658,7 +1670,7 @@ class NotificationManager:
             if not DB_PATH.exists():
                 return
             patterns = []
-            for et in self._UPDATE_EVENT_TYPES_RESET_ON_START:
+            for et in self._EVENT_TYPES_RESET_ON_START:
                 patterns.append(f'%:{et}:%')  # entity_id non-empty form
                 patterns.append(f'%:{et}')    # entity_id empty / managed-install form
             where = ' OR '.join('fingerprint LIKE ?' for _ in patterns)
@@ -1673,14 +1685,14 @@ class NotificationManager:
             # dispatch thread doesn't keep ghost cooldowns until the
             # next reload.
             for fp in list(self._cooldowns.keys()):
-                for et in self._UPDATE_EVENT_TYPES_RESET_ON_START:
+                for et in self._EVENT_TYPES_RESET_ON_START:
                     if f':{et}:' in fp or fp.endswith(f':{et}'):
                         self._cooldowns.pop(fp, None)
                         break
             if deleted > 0:
-                print(f"[NotificationManager] Reset {deleted} update-type cooldowns on startup")
+                print(f"[NotificationManager] Reset {deleted} cooldowns on startup")
         except Exception as e:
-            print(f"[NotificationManager] Failed to reset update cooldowns on start: {e}")
+            print(f"[NotificationManager] Failed to reset cooldowns on start: {e}")
 
     def _load_cooldowns_from_db(self):
         """Load persistent cooldown state from SQLite (up to 48h).
