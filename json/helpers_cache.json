@@ -19966,10 +19966,10 @@
     "type": "lxc",
     "type_id": "nm9bra8mzye2scg",
     "categories": [
-      "scriptcat00001"
+      "scriptcat00000"
     ],
     "category_names": [
-      "Proxmox & Virtualization"
+      "Miscellaneous"
     ],
     "notes": [
       "Setup is fully automated. Login credentials are stored in '/root/webtrees.creds' inside the container."
