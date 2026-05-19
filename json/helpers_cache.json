@@ -9460,7 +9460,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -12984,7 +12984,9 @@
       "AI / Coding & Dev-Tools"
     ],
     "notes": [],
-    "warnings": [],
+    "warnings": [
+      "This repo is currently not maintained. The Maintainer working on a full rewriting of the entire codebase with a more stable, up-to-date architecture."
+    ],
     "port": 3000,
     "website": "https://github.com/clusterzx/paperless-ai",
     "documentation": "https://github.com/clusterzx/paperless-ai/wiki/1.-Home",
