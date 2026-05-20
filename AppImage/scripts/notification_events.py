@@ -382,9 +382,40 @@ class JournalWatcher:
         self._recent_events: Dict[str, float] = {}
         self._dedup_window = 30  # seconds
 
-        # 24h anti-cascade for disk I/O + filesystem errors (keyed by device name)
+        # 24h anti-cascade for disk I/O + filesystem errors. The dict
+        # key includes a tier suffix (`sdh:warning`, `sdh:critical`)
+        # so a disk in WARNING cooldown can still escalate to CRITICAL
+        # within the same 24h if the rate accelerates.
         self._disk_io_notified: Dict[str, float] = {}
         self._DISK_IO_COOLDOWN = 86400  # 24 hours
+
+        # Sliding 24h window of ATA error timestamps per disk, used to
+        # decide notification severity tier. Don't blindly trust the
+        # SMART firmware self-report — the Google "Failure Trends"
+        # paper showed ~36% of failed drives gave no SMART warning.
+        # Rate-based escalation catches the dying drives that SMART
+        # would never flag until they were already bricked.
+        from collections import deque as _deque
+        self._disk_error_window: Dict[str, "_deque[float]"] = {}
+        self._DISK_ERROR_WINDOW_SECS = 86400  # 24h
+        # Tiers calibrated for homelab/SMB Proxmox usage:
+        #  * 0-10/24h  → transient noise (cable rattle, sleep/wake,
+        #    PHY retrain). Silent observation only.
+        #  * 11-100/24h → WARNING. Notify once per 24h.
+        #  * 100+/24h   → CRITICAL. Active failure.
+        # Hard errors (Buffer I/O, UNC, medium error, unrecovered read)
+        # are CRITICAL on the FIRST occurrence regardless of count —
+        # those are uncorrectable data losses, not transient noise.
+        self._DISK_TIER_WARNING = 10
+        self._DISK_TIER_CRITICAL = 100
+        # Hard-error pattern: matches any of the kernel-reported
+        # signals that mean data was lost or could not be recovered.
+        self._DISK_HARD_ERR_RE = re.compile(
+            r'(Buffer I/O error|UNC\b|Medium Error|medium error'
+            r'|Unrecovered read error|unrecovered read error'
+            r'|Sense Key.*Hardware Error)',
+            re.IGNORECASE,
+        )
         
         # Track when the last full backup job notification was sent
         # so we can suppress per-guest "Starting Backup of VM ..." noise
@@ -1046,73 +1077,107 @@ class JournalWatcher:
             else:
                 resolved = re.sub(r'\d+$', '', raw_device) if raw_device.startswith('sd') else raw_device
             
-            # ── ALWAYS persist the observation, regardless of SMART ──
+            # ── ALWAYS persist the observation, regardless of severity ──
             # The disk_observation_contract is explicit (memory note
             # disk-observation-contract): every kernel-surfaced disk
-            # error must be recorded in disk_observations *even when
-            # SMART reports PASSED*. Silent errors on a "healthy" disk
-            # are exactly the early-warning signal the modal histogram
-            # exists to surface ("324 connection errors on this disk").
-            # Previously this line lived AFTER a `return` gate keyed on
-            # smart_health != 'FAILED', so the 3162 ata8 errors on
-            # .1.10 (PASSED SMART) all dropped on the floor instead of
-            # accumulating in the per-disk audit history.
+            # error must be recorded in disk_observations. The modal
+            # histogram is the per-disk audit trail; it must reflect
+            # everything the kernel saw, even noise.
             self._record_disk_io_observation(resolved, msg)
 
-            # ── Gate 1: only NOTIFY when SMART reports FAILED ──
-            # Observation is already saved above. We avoid spamming a
-            # CRITICAL notification for transient ATA/SCSI noise on
-            # otherwise-healthy disks — the modal histogram surfaces
-            # those without paging the user at 3 AM.
+            # ── Update sliding 24h rate window for this disk ──
+            now = time.time()
+            from collections import deque as _deque
+            window = self._disk_error_window.setdefault(resolved, _deque())
+            window.append(now)
+            cutoff = now - self._DISK_ERROR_WINDOW_SECS
+            while window and window[0] < cutoff:
+                window.popleft()
+            rate_24h = len(window)
+
+            # ── Decide severity tier ──
+            #   * hard error (UNC, Buffer I/O, medium, unrecovered read)
+            #       → CRITICAL on first occurrence, no count threshold.
+            #       These are uncorrectable: data is gone.
+            #   * SMART self-report FAILED → CRITICAL (firmware admits it).
+            #   * rate_24h > _DISK_TIER_CRITICAL → CRITICAL (active failure
+            #       even if SMART still says PASSED).
+            #   * rate_24h > _DISK_TIER_WARNING → WARNING (suspicious,
+            #       worth a heads-up).
+            #   * Otherwise → silent observation only (transient noise).
+            is_hard_error = bool(self._DISK_HARD_ERR_RE.search(msg))
             smart_health = self._quick_smart_health(resolved)
-            if smart_health != 'FAILED':
+            if is_hard_error or smart_health == 'FAILED' or rate_24h > self._DISK_TIER_CRITICAL:
+                tier = 'critical'
+            elif rate_24h > self._DISK_TIER_WARNING:
+                tier = 'warning'
+            else:
+                # Silent — observation already saved, that's enough.
                 return
 
-            # ── Gate 2: 24-hour dedup per device ──
-            # Check both in-memory cache AND the DB (user dismiss clears DB cooldowns).
-            # If user dismissed the error, _clear_disk_io_cooldown() removed the DB
-            # entry, so we should refresh from DB to get the real state.
-            now = time.time()
-            
-            # First check in-memory cache
-            last_notified = self._disk_io_notified.get(resolved, 0)
-            
+            # ── 24h anti-cascade per (device, tier) ──
+            # Independent cooldown per tier so a disk that fires WARNING
+            # at noon can still escalate to CRITICAL the same day when
+            # the rate jumps past _DISK_TIER_CRITICAL — they're
+            # different keys.
+            cooldown_key = f'{resolved}:{tier}'
+            last_notified = self._disk_io_notified.get(cooldown_key, 0)
             if now - last_notified < self._DISK_IO_COOLDOWN:
-                # In-memory says we already notified. But user might have dismissed
-                # the error, which clears the DB. Re-check DB to be sure.
-                db_ts = self._get_disk_io_cooldown_from_db(resolved)
+                # In-memory says cooldown active. Re-verify in DB in
+                # case the user dismissed (which clears the DB entry).
+                db_ts = self._get_disk_io_cooldown_from_db(cooldown_key)
                 if db_ts is not None and now - db_ts < self._DISK_IO_COOLDOWN:
-                    return  # DB confirms cooldown is still active
-                # DB says cooldown was cleared (user dismissed) - proceed to notify
-                # Update in-memory cache
-                del self._disk_io_notified[resolved]
-            
-            self._disk_io_notified[resolved] = now
-            self._save_disk_io_notified(resolved, now)
-            
+                    return
+                # Dismissed → DB cleared → proceed to notify and refresh state.
+                del self._disk_io_notified[cooldown_key]
+
+            self._disk_io_notified[cooldown_key] = now
+            self._save_disk_io_notified(cooldown_key, now)
+
             # ── Build enriched notification ──
             device_info = self._identify_block_device(resolved)
-            
+
             parts = []
-            parts.append(f'Disk /dev/{resolved}: I/O errors detected')
-            parts.append('SMART status: FAILED -- disk is failing')
-            
+            if tier == 'critical':
+                if is_hard_error:
+                    parts.append(f'Disk /dev/{resolved}: UNRECOVERABLE error detected')
+                elif smart_health == 'FAILED':
+                    parts.append(f'Disk /dev/{resolved}: SMART reports FAILED')
+                else:
+                    parts.append(
+                        f'Disk /dev/{resolved}: high I/O error rate '
+                        f'({rate_24h} errors in last 24h)'
+                    )
+            else:  # warning
+                parts.append(
+                    f'Disk /dev/{resolved}: elevated I/O error rate '
+                    f'({rate_24h} errors in last 24h)'
+                )
+
+            parts.append(f'SMART status: {smart_health}')
+
             if device_info:
                 parts.append(f'Device: {device_info}')
             else:
                 parts.append(f'Device: /dev/{resolved}')
-            
+
             # Translate the raw kernel error code
             detail = self._translate_ata_error(msg)
             if detail:
                 parts.append(f'Error detail: {detail}')
-            
-            parts.append(f'Action: Replace disk /dev/{resolved} as soon as possible.')
+
+            if tier == 'critical':
+                parts.append(f'Action: Replace disk /dev/{resolved} as soon as possible.')
+            else:
+                parts.append(
+                    f'Action: Monitor /dev/{resolved} closely. '
+                    f'Plan a backup verification and replacement if rate grows.'
+                )
             parts.append(f'  Check details: smartctl -a /dev/{resolved}')
-            
+
             enriched = '\n'.join(parts)
             dev_display = f'/dev/{resolved}'
-            
+
             # Capture journal context for AI enrichment.
             # `raw_device` is the original ATA-port literal extracted by the regex
             # (e.g. "ata8"). The previous code used a name `ata_port` that was
@@ -1123,12 +1188,15 @@ class JournalWatcher:
                 keywords=[resolved, raw_device, 'I/O error', 'exception', 'SMART'],
                 lines=30
             )
-            
-            self._emit('disk_io_error', 'CRITICAL', {
+
+            severity = 'CRITICAL' if tier == 'critical' else 'WARNING'
+            self._emit('disk_io_error', severity, {
                 'device': dev_display,
                 'reason': enriched,
                 'hostname': self._hostname,
-                'smart_status': 'FAILED',
+                'smart_status': smart_health,
+                'rate_24h': rate_24h,
+                'tier': tier,
                 '_journal_context': journal_ctx,
             }, entity='disk', entity_id=resolved)
             return
@@ -2229,6 +2297,17 @@ class PollingCollector:
         self._notified_proxmenux_beta_version: str | None = None
         # In-memory cache: error_key -> last notification timestamp
         self._last_notified: Dict[str, float] = {}
+        # In-memory cache: error_key -> severity actually sent in the last
+        # notification. Decoupled from `_known_errors[k].severity` (which
+        # always reflects the most-recent DB row) so a recovery message
+        # quotes the same severity the user saw. Without this, an error
+        # that fired WARNING, silently escalated to CRITICAL during its
+        # 24h same-key cooldown, then resolved, would be reported as
+        # "previous severity: CRITICAL" — confusing the operator who only
+        # ever saw the WARNING. Not persisted across restarts: the
+        # post-restart first-poll guard (`_first_poll_done`) already
+        # suppresses spurious recoveries.
+        self._notified_severity: Dict[str, str] = {}
         # Track known error keys + metadata so we can detect new ones AND emit recovery
         # Dict[error_key, dict(category, severity, reason, first_seen, error_key)]
         self._known_errors: Dict[str, dict] = {}
@@ -2572,6 +2651,11 @@ class PollingCollector:
             # Track that we notified
             self._last_notified[error_key] = now
             self._persist_last_notified(error_key, now)
+            # Snapshot the severity we actually delivered, so a future
+            # recovery message quotes the same value the user saw — not
+            # whatever silently-escalated severity ended up in the DB
+            # during the same-key 24h cooldown window.
+            self._notified_severity[error_key] = emit_severity
         
         # ── Emit recovery notifications for errors that resolved ──
         resolved_keys = set(self._known_errors.keys()) - set(current_keys.keys())
@@ -2674,24 +2758,32 @@ class PollingCollector:
             else:
                 clean_reason = 'Condition resolved'
             
+            # `original_severity` must match what the user actually saw
+            # in the most-recent notification for this error, not the
+            # latest DB severity. See `_notified_severity` docstring at
+            # __init__ for the failure mode this avoids.
+            original_severity = self._notified_severity.get(
+                key, old_meta.get('severity', 'WARNING'),
+            )
             data = {
                 'hostname': self._hostname,
                 'category': category,
                 'reason': clean_reason,
                 'error_key': key,
                 'severity': 'OK',
-                'original_severity': old_meta.get('severity', 'WARNING'),
+                'original_severity': original_severity,
                 'first_seen': first_seen,
                 'duration': duration,
                 'is_recovery': True,
             }
-            
+
             self._queue.put(NotificationEvent(
                 'error_resolved', 'OK', data, source='health',
                 entity=entity, entity_id=eid or key,
             ))
-            
+
             self._last_notified.pop(key, None)
+            self._notified_severity.pop(key, None)
         
         self._known_errors = current_keys
         self._first_poll_done = True
@@ -3355,6 +3447,41 @@ class PollingCollector:
                 'upgrade_reason': upgrade_reason,
             }
             return 'nvidia_driver_update_available', data
+
+        if item_type == 'coral_host':
+            variant = update.get('_coral_variant') or item.get('_coral_variant') or ''
+            if variant == 'pcie':
+                variant_label = 'gasket-dkms (PCIe / M.2) driver'
+                upgrade_reason = (
+                    'feranick/gasket-driver has published a newer release. '
+                    'The installer rebuilds the gasket + apex kernel modules '
+                    'via DKMS against the running kernel.'
+                )
+                reboot_note = (
+                    'Reinstalling rebuilds the DKMS module and requires a '
+                    'reboot to load the new driver.'
+                )
+            elif variant == 'usb':
+                pkg = update.get('_coral_pkg') or item.get('_coral_pkg') or 'libedgetpu1'
+                variant_label = f'{pkg} runtime (USB Accelerator)'
+                upgrade_reason = (
+                    'A newer Edge TPU runtime is available from the Google '
+                    'Coral apt repository.'
+                )
+                reboot_note = (
+                    'The USB runtime upgrade does not require a reboot.'
+                )
+            else:
+                variant_label = 'Coral TPU driver'
+                upgrade_reason = 'A newer Coral driver is available.'
+                reboot_note = ''
+            data = {
+                **common,
+                'variant_label': variant_label,
+                'upgrade_reason': upgrade_reason,
+                'reboot_note': reboot_note,
+            }
+            return 'coral_driver_update_available', data
 
         # Unknown type — don't notify (keeps the queue clean if a
         # future detector lands without a corresponding event mapping).

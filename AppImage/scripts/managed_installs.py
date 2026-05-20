@@ -156,6 +156,90 @@ def _detect_nvidia_xfree86() -> Optional[dict]:
     }
 
 
+# ── Coral TPU host driver (PCIe gasket-dkms + USB libedgetpu1) ──
+#
+# Two install paths share the same registry entry because the user
+# thinks of them as one "Coral driver" install. The detector returns
+# one entry per path that is actually present on the host, so a system
+# with both M.2 and USB Coral devices gets two entries — independent
+# update streams (gasket-dkms from feranick/gasket-driver on GitHub,
+# libedgetpu1-std from Google's apt repo).
+
+
+def _detect_coral_host() -> list[dict]:
+    out: list[dict] = []
+
+    # PCIe / M.2 — gasket-dkms package version, falling back to the
+    # registered DKMS version if the package was force-removed but the
+    # built modules still exist.
+    pcie_version: Optional[str] = None
+    try:
+        r = subprocess.run(
+            ["dpkg-query", "-W", "-f=${Status}|${Version}", "gasket-dkms"],
+            capture_output=True, text=True, timeout=3,
+        )
+        if r.returncode == 0 and "ok installed" in r.stdout:
+            pcie_version = r.stdout.split("|", 1)[1].strip()
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        pass
+    if not pcie_version:
+        try:
+            r = subprocess.run(
+                ["dkms", "status"], capture_output=True, text=True, timeout=3,
+            )
+            if r.returncode == 0:
+                for line in r.stdout.splitlines():
+                    if line.startswith("gasket"):
+                        # "gasket, 1.0, ..." or "gasket/1.0, ..."
+                        m = re.match(r"^gasket[, /]([^,\s]+)", line)
+                        if m:
+                            pcie_version = m.group(1)
+                            break
+        except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+            pass
+    if pcie_version:
+        out.append({
+            "id": "coral-host-pcie",
+            "type": "coral_host",
+            "name": "Coral TPU Driver (gasket-dkms)",
+            "current_version": pcie_version,
+            "menu_label": "GPU & TPU → Coral TPU",
+            "menu_script": "scripts/gpu_tpu/install_coral.sh",
+            "_coral_variant": "pcie",
+        })
+
+    # USB — libedgetpu1-std (default) or libedgetpu1-max if the user
+    # opted into the overclocked runtime. Either one means the USB
+    # path is installed.
+    usb_version: Optional[str] = None
+    usb_pkg: Optional[str] = None
+    for pkg in ("libedgetpu1-std", "libedgetpu1-max"):
+        try:
+            r = subprocess.run(
+                ["dpkg-query", "-W", "-f=${Status}|${Version}", pkg],
+                capture_output=True, text=True, timeout=3,
+            )
+        except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+            continue
+        if r.returncode == 0 and "ok installed" in r.stdout:
+            usb_version = r.stdout.split("|", 1)[1].strip()
+            usb_pkg = pkg
+            break
+    if usb_version and usb_pkg:
+        out.append({
+            "id": "coral-host-usb",
+            "type": "coral_host",
+            "name": f"Coral TPU Runtime ({usb_pkg})",
+            "current_version": usb_version,
+            "menu_label": "GPU & TPU → Coral TPU",
+            "menu_script": "scripts/gpu_tpu/install_coral.sh",
+            "_coral_variant": "usb",
+            "_coral_pkg": usb_pkg,
+        })
+
+    return out
+
+
 def _detect_oci_apps() -> list[dict]:
     """Bridge to the OCI manager so every OCI-installed app shows up
     in the registry without a per-app detector here. The OCI manager
@@ -350,6 +434,7 @@ def _detect_lxc_containers() -> list[dict]:
 # framework normalises both shapes.
 _DETECTORS: list[Callable[[], Any]] = [
     _detect_nvidia_xfree86,
+    _detect_coral_host,
     _detect_oci_apps,
     _detect_lxc_containers,
 ]
@@ -834,9 +919,171 @@ def _check_lxc_updates(entry: dict) -> dict:
     }
 
 
+# ── Coral driver checker ──
+#
+# Two upstreams to track:
+#
+#   PCIe (gasket-dkms) → feranick/gasket-driver on GitHub. The fork is
+#       actively maintained; releases are tagged like "v1.0-22". We pull
+#       the latest tag from the GitHub API and compare against the
+#       installed gasket-dkms Debian version. Because the Debian version
+#       string ("1.0-18") doesn't perfectly match the upstream tag
+#       ("v1.0-22"), we normalise both sides to the trailing "-N" build
+#       number for the comparison. Strict semver isn't workable here.
+#
+#   USB (libedgetpu1-std/-max) → Google's apt repo. `apt-cache policy`
+#       reports installed + candidate versions in one shot, no internet
+#       round-trip required (apt's own cache is the canonical answer).
+#
+# Cache TTL for the GitHub call is 7 days — feranick's release cadence
+# is roughly monthly, matching NVIDIA's pattern. The cache lives in
+# memory so AppImage restarts refresh it for free.
+
+_CORAL_GASKET_REPO = "feranick/gasket-driver"
+_CORAL_CACHE_TTL = 7 * 86400
+_coral_gasket_cache: dict[str, Any] = {"latest_tag": None, "fetched_at": 0}
+
+
+def _coral_build_number(s: str) -> int:
+    """Extract the trailing build number from a Coral version string.
+
+    Handles both upstream tag form (``v1.0-22``, ``1.0-22``) and the
+    Debian package form (``1.0-22``, ``1.0-18+pmx1``). Returns 0 if no
+    trailing ``-N`` segment exists — that pushes "no build number"
+    versions to the lowest rank so any tagged release shows as newer.
+    """
+    if not s:
+        return 0
+    m = re.search(r"-(\d+)", s)
+    if not m:
+        return 0
+    try:
+        return int(m.group(1))
+    except (ValueError, TypeError):
+        return 0
+
+
+def _fetch_gasket_latest_tag(force: bool = False) -> Optional[str]:
+    now = time.time()
+    if not force and _coral_gasket_cache["latest_tag"] and \
+       now - _coral_gasket_cache["fetched_at"] < _CORAL_CACHE_TTL:
+        return _coral_gasket_cache["latest_tag"]
+    url = f"https://api.github.com/repos/{_CORAL_GASKET_REPO}/tags?per_page=5"
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "ProxMenux-Monitor/1.0",
+                "Accept": "application/vnd.github+json",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            tags = json.loads(resp.read().decode("utf-8", errors="replace"))
+    except Exception as e:
+        print(f"[ProxMenux] gasket-driver tag fetch failed: {e}")
+        return _coral_gasket_cache.get("latest_tag")
+    if not isinstance(tags, list) or not tags:
+        return _coral_gasket_cache.get("latest_tag")
+    # Pick the tag with the highest trailing build number — feranick's
+    # tags are not strictly chronological, occasionally rebuilt.
+    best: Optional[str] = None
+    best_n = -1
+    for t in tags:
+        if not isinstance(t, dict):
+            continue
+        name = t.get("name") or ""
+        n = _coral_build_number(name)
+        if n > best_n:
+            best_n = n
+            best = name
+    if best:
+        _coral_gasket_cache["latest_tag"] = best
+        _coral_gasket_cache["fetched_at"] = now
+    return best
+
+
+def _apt_cache_candidate(pkg: str) -> Optional[str]:
+    """Return the candidate (newest available) version for ``pkg`` from
+    the local apt cache. Caller is responsible for the package existing —
+    a missing package returns None silently.
+    """
+    try:
+        r = subprocess.run(
+            ["apt-cache", "policy", pkg],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        return None
+    if r.returncode != 0:
+        return None
+    for line in r.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("Candidate:"):
+            cand = line.split(":", 1)[1].strip()
+            if cand and cand != "(none)":
+                return cand
+    return None
+
+
+def _check_coral_host(entry: dict) -> dict:
+    variant = entry.get("_coral_variant") or ""
+    current = entry.get("current_version") or ""
+
+    if variant == "pcie":
+        latest_tag = _fetch_gasket_latest_tag()
+        if not latest_tag:
+            return {"available": False, "latest": None,
+                    "last_check": _now_iso(),
+                    "error": "could not fetch gasket-driver tags"}
+        cur_n = _coral_build_number(current)
+        new_n = _coral_build_number(latest_tag)
+        available = new_n > cur_n
+        return {
+            "available": available,
+            "latest": latest_tag if available else None,
+            "last_check": _now_iso(),
+            "error": None,
+            "_coral_variant": "pcie",
+        }
+
+    if variant == "usb":
+        pkg = entry.get("_coral_pkg") or "libedgetpu1-std"
+        candidate = _apt_cache_candidate(pkg)
+        if not candidate:
+            return {"available": False, "latest": None,
+                    "last_check": _now_iso(),
+                    "error": f"apt-cache policy returned no candidate for {pkg}"}
+        # Use plain string compare via the same build-number heuristic
+        # apt uses dpkg version compare upstream, but for the libedgetpu
+        # packages a trailing "-N" build number is the only thing that
+        # ever moves, so the build-number compare is enough here too.
+        # If it ever isn't, dpkg --compare-versions is the right call.
+        try:
+            cmp = subprocess.run(
+                ["dpkg", "--compare-versions", current, "lt", candidate],
+                capture_output=True, timeout=3,
+            )
+            available = cmp.returncode == 0
+        except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+            available = candidate != current
+        return {
+            "available": available,
+            "latest": candidate if available else None,
+            "last_check": _now_iso(),
+            "error": None,
+            "_coral_variant": "usb",
+            "_coral_pkg": pkg,
+        }
+
+    return {"available": False, "latest": None,
+            "last_check": _now_iso(),
+            "error": f"unknown coral variant: {variant}"}
+
+
 _CHECKERS: dict[str, Callable[[dict], dict]] = {
     "oci_app": _check_oci_app,
     "nvidia_xfree86": _check_nvidia_xfree86,
+    "coral_host": _check_coral_host,
     "lxc": _check_lxc_updates,
 }
 
@@ -890,7 +1137,8 @@ def check_for_updates(force: bool = False) -> list[dict]:
             # the LXC checker's counts dropped on the floor and the
             # frontend badge couldn't render.
             for extra_key in ("_packages", "_upgrade_kind", "_kernel",
-                              "_kernel_note", "_count", "_security_count"):
+                              "_kernel_note", "_count", "_security_count",
+                              "_coral_variant", "_coral_pkg"):
                 if extra_key in result:
                     it["update_check"][extra_key] = result[extra_key]
 

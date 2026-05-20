@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
-const APP_VERSION = "1.2.1.1-beta" // Sync with AppImage/package.json
+const APP_VERSION = "1.2.1.2-beta" // Sync with AppImage/package.json
 
 interface ReleaseNote {
   date: string
@@ -18,6 +18,30 @@ interface ReleaseNote {
 }
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
+  "1.2.1.2-beta": {
+    date: "May 20, 2026",
+    changes: {
+      added: [
+        "Coral TPU installer - Uninstall path mirroring the NVIDIA flow, and registry-driven update notifications for both the PCIe gasket-dkms driver (tracked against feranick/gasket-driver) and the USB libedgetpu1 runtime (tracked via apt)",
+        "Disk I/O severity tiers - Sliding 24h window classifies dmesg ATA/SCSI errors into silent (0-10), WARNING (11-100) and CRITICAL (100+ or any hard error like UNC / Buffer I/O / Sense Key Hardware Error), so quiet days stay quiet and a single Buffer I/O event still pages immediately",
+        "Quiet Hours buffering - Events suppressed during a channel's quiet window are now persisted to SQLite and released as a grouped summary when the window closes, instead of being silently dropped",
+      ],
+      changed: [
+        "Burst aggregation wording - Burst summaries now report only the additional events that arrived after the initial individual alert, so the operator no longer sees the first event counted twice (\"+N more X in window\" instead of the old \"N X in window\" overlap)",
+        "Known-error classifier - Word-boundary regex on ATA/UNC patterns so kernel messages like nvidia_uvm:FatalError are no longer misclassified as ATA cable issues",
+        "Health journal context - Excludes proxmenux-monitor.service systemd lines so internal watchdog SIGKILLs no longer leak into the body of unrelated kernel events",
+        "Resolved notifications severity - The \"previous severity\" now matches the severity the user actually saw in the notification, not whatever escalated value silently landed in the DB during the 24h same-key cooldown",
+        "log2ram apply path - The auto/update flow now restarts log2ram after writing the new size, so a configured 512M actually takes effect on the running tmpfs (previously left at 128M until a manual restart)",
+        "VM/CT control errors - Failed start/stop/restart now surfaces the real pvesh stderr (e.g. \"no space left on device\") in the UI toast and fires a vm_fail / ct_fail notification, instead of a bare 500 INTERNAL SERVER ERROR",
+        "Mobile design of Quiet Hours / Daily Digest - Time inputs are now full-height with inline labels instead of the cramped grid layout that overflowed on narrow screens",
+      ],
+      fixed: [
+        "ATA disk error not recorded - disk_observations is now written before the SMART gate, so transient errors that don't yet trip SMART still build the per-disk history",
+        "Quiet Hours toggle not persisting - get_settings now returns the per-channel quiet_*/digest_* fields so the toggle's state reloads correctly after a refresh",
+        "Frontend 401 cascade - Login screen no longer swallows the 401 forever after a brief stale-token state; the dedup flag is cleared on mount and on successful login",
+      ],
+    },
+  },
   "1.2.1.1-beta": {
     date: "May 9, 2026",
     changes: {

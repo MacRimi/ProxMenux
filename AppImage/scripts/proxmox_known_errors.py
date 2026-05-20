@@ -83,7 +83,7 @@ PROXMOX_KNOWN_ERRORS: List[Dict[str, Any]] = [
         "category": "disks"
     },
     {
-        "pattern": r"ata.*error|ATA.*bus.*error|Emask.*0x|DRDY.*ERR|UNC.*error",
+        "pattern": r"\bata\d.*\berror\b|\bATA\b.*bus.*error|Emask.*0x|DRDY.*ERR|\bUNC\b.*error",
         "cause": "ATA communication error with disk",
         "cause_detailed": "The SATA/ATA controller encountered communication errors with the disk. This can indicate cable issues, controller problems, or disk failure.",
         "severity": "warning",

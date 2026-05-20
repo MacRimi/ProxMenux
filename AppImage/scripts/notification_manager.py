@@ -627,9 +627,19 @@ class BurstAggregator:
             else:
                 details = '\n'.join(detail_lines)
         
+        # The first event in the bucket was already sent individually on
+        # ingest (see line 547 — "fast alert" path). The burst summary
+        # must therefore describe the *additional* events that arrived
+        # after that initial alert, otherwise the user receives both a
+        # "1 system problem" individual notification AND a "2 system
+        # problems" burst summary that double-counts the first event.
+        # `count` reports the additional count; `total_count` is exposed
+        # for templates that want to show "N more (X total in window)".
+        additional_count = max(len(events) - 1, 1)
         data = {
             'hostname': first.data.get('hostname') or _resolve_display_hostname(self._config),
-            'count': str(len(events)),
+            'count': str(additional_count),
+            'total_count': str(len(events)),
             'window': window_str,
             'entity_list': entity_list,
             'event_type': first.event_type,

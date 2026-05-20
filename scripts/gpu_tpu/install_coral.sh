@@ -430,6 +430,181 @@ EOF
 # ============================================================
 # Final prompt
 # ============================================================
+# ============================================================
+# Install-state detection (Coral PCIe gasket DKMS / USB libedgetpu)
+# ============================================================
+# Sets the following globals so main() can branch into install vs
+# uninstall like nvidia_installer.sh does. We treat "installed" as
+# loosely as possible — even a half-installed DKMS or a stale
+# libedgetpu1-std package counts, because the uninstall path needs
+# to clean those up too.
+
+CORAL_PCIE_INSTALLED=false
+CORAL_USB_INSTALLED=false
+CORAL_PCIE_DKMS_VERSION=""
+CORAL_USB_RUNTIME_VERSION=""
+
+detect_coral_install_state() {
+  CORAL_PCIE_INSTALLED=false
+  CORAL_USB_INSTALLED=false
+  CORAL_PCIE_DKMS_VERSION=""
+  CORAL_USB_RUNTIME_VERSION=""
+
+  # PCIe / M.2 path: any of these means gasket is installed.
+  #   * `dkms status` lists a gasket entry
+  #   * `dpkg -s gasket-dkms` reports installed
+  #   * /dev/apex_* nodes exist (modules loaded right now)
+  if command -v dkms >/dev/null 2>&1; then
+    local dkms_line
+    dkms_line=$(dkms status 2>/dev/null | grep -E '^gasket' | head -n1)
+    if [[ -n "$dkms_line" ]]; then
+      CORAL_PCIE_INSTALLED=true
+      # `dkms status` formats vary across releases:
+      #   "gasket, 1.0, 6.8.12-1-pve, x86_64: installed"
+      #   "gasket/1.0, ..."
+      CORAL_PCIE_DKMS_VERSION=$(echo "$dkms_line" \
+        | sed -E 's|^gasket[, /]([^,]+).*|\1|' | tr -d ' ')
+    fi
+  fi
+  if ! $CORAL_PCIE_INSTALLED \
+     && dpkg-query -W -f='${Status}' gasket-dkms 2>/dev/null \
+        | grep -q 'ok installed'; then
+    CORAL_PCIE_INSTALLED=true
+  fi
+  if ! $CORAL_PCIE_INSTALLED && ls /dev/apex_* >/dev/null 2>&1; then
+    CORAL_PCIE_INSTALLED=true
+  fi
+
+  # USB path: `libedgetpu1-std` (or the -max variant) installed.
+  if dpkg-query -W -f='${Status}' libedgetpu1-std 2>/dev/null \
+       | grep -q 'ok installed'; then
+    CORAL_USB_INSTALLED=true
+    CORAL_USB_RUNTIME_VERSION=$(dpkg-query -W -f='${Version}' \
+        libedgetpu1-std 2>/dev/null)
+  elif dpkg-query -W -f='${Status}' libedgetpu1-max 2>/dev/null \
+         | grep -q 'ok installed'; then
+    CORAL_USB_INSTALLED=true
+    CORAL_USB_RUNTIME_VERSION=$(dpkg-query -W -f='${Version}' \
+        libedgetpu1-max 2>/dev/null)
+  fi
+}
+
+
+# ============================================================
+# Action menu (install vs uninstall) — only shown when something
+# is already installed. Mirrors nvidia_installer.sh::
+# show_action_menu_if_installed so the UX is consistent across
+# host driver scripts.
+# ============================================================
+show_coral_action_menu_if_installed() {
+  if ! $CORAL_PCIE_INSTALLED && ! $CORAL_USB_INSTALLED; then
+    ACTION="install"
+    return 0
+  fi
+
+  local hint=""
+  if $CORAL_PCIE_INSTALLED; then
+    hint+="  • $(translate 'PCIe/M.2 gasket-dkms')${CORAL_PCIE_DKMS_VERSION:+ ($CORAL_PCIE_DKMS_VERSION)}\n"
+  fi
+  if $CORAL_USB_INSTALLED; then
+    hint+="  • $(translate 'USB libedgetpu1')${CORAL_USB_RUNTIME_VERSION:+ ($CORAL_USB_RUNTIME_VERSION)}\n"
+  fi
+
+  local menu_choices=(
+    "install" "$(translate 'Reinstall / update Coral drivers')"
+    "remove"  "$(translate 'Uninstall Coral drivers and configuration')"
+  )
+
+  if command -v hybrid_menu >/dev/null 2>&1; then
+    ACTION=$(hybrid_menu "ProxMenux" \
+      "$(translate 'Coral TPU is already installed on this host:')\n\n${hint}\n$(translate 'Choose an action:')" \
+      18 80 8 "${menu_choices[@]}") || ACTION="cancel"
+  else
+    ACTION=$(dialog --backtitle "ProxMenux" \
+      --title "$(translate 'Coral Actions')" \
+      --menu "\n$(translate 'Coral TPU is already installed:')\n${hint}\n$(translate 'Choose an action:')" \
+      18 80 8 \
+      "install" "$(translate 'Reinstall / update Coral drivers')" \
+      "remove"  "$(translate 'Uninstall Coral drivers and configuration')" \
+      3>&1 1>&2 2>&3) || ACTION="cancel"
+  fi
+}
+
+
+# ============================================================
+# complete_coral_uninstall — full removal of everything the
+# installer puts on the host. Mirrors complete_nvidia_uninstall.
+# Idempotent: missing pieces are no-ops, never errors.
+# ============================================================
+complete_coral_uninstall() {
+  msg_info "$(translate 'Stopping Coral kernel modules...')"
+  modprobe -r apex 2>>"$LOG_FILE" || true
+  modprobe -r gasket 2>>"$LOG_FILE" || true
+  msg_ok "$(translate 'Coral kernel modules unloaded.')"
+
+  # DKMS removal for every registered gasket version.
+  if command -v dkms >/dev/null 2>&1; then
+    local versions
+    versions=$(dkms status 2>/dev/null \
+      | awk -F'[,/ ]+' '/^gasket/ {print $2}' | sort -u)
+    if [[ -n "$versions" ]]; then
+      msg_info "$(translate 'Removing gasket DKMS modules...')"
+      local v
+      while IFS= read -r v; do
+        [[ -z "$v" ]] && continue
+        dkms remove -m gasket -v "$v" --all >>"$LOG_FILE" 2>&1 || true
+      done <<<"$versions"
+      msg_ok "$(translate 'gasket DKMS entries removed.')"
+    fi
+  fi
+
+  msg_info "$(translate 'Removing Coral packages...')"
+  apt-get -y purge gasket-dkms libedgetpu1-std libedgetpu1-max \
+      >>"$LOG_FILE" 2>&1 || true
+  apt-get -y autoremove --purge >>"$LOG_FILE" 2>&1 || true
+  msg_ok "$(translate 'Coral packages purged.')"
+
+  # udev rules created by our installer.
+  rm -f /etc/udev/rules.d/99-coral-apex.rules
+  # Restore the upstream udev rule group (set it back to its default
+  # GROUP="plugdev") in case dkms-postinstall reinstalls gasket-dkms
+  # later — apex group may not exist next time.
+  if [[ -f /usr/lib/udev/rules.d/60-gasket-dkms.rules ]]; then
+    sed -i 's/GROUP="apex"/GROUP="plugdev"/g' \
+      /usr/lib/udev/rules.d/60-gasket-dkms.rules || true
+  fi
+  udevadm control --reload-rules
+  udevadm trigger --subsystem-match=apex >/dev/null 2>&1 || true
+
+  # Apex system group: only remove if no one else is using it.
+  if getent group apex >/dev/null 2>&1; then
+    local apex_members
+    apex_members=$(getent group apex | cut -d: -f4)
+    if [[ -z "$apex_members" ]]; then
+      groupdel apex >>"$LOG_FILE" 2>&1 || true
+      msg_ok "$(translate 'apex group removed.')"
+    else
+      msg_warn "$(translate 'apex group still has members; left in place:') $apex_members"
+    fi
+  fi
+
+  # Google Coral APT repo + keyring (only added during USB install).
+  rm -f /etc/apt/sources.list.d/coral-edgetpu.list \
+        /etc/apt/sources.list.d/coral-cloud.list \
+        /usr/share/keyrings/coral-edgetpu-archive-keyring.gpg \
+        /etc/apt/trusted.gpg.d/coral-edgetpu-archive-keyring.gpg \
+        2>/dev/null || true
+
+  # Update component status if utils.sh exposes the helper (older
+  # ProxMenux releases didn't have it; uninstall must still work).
+  if declare -f update_component_status >/dev/null 2>&1; then
+    update_component_status "coral_driver" "removed" "" "gpu" '{}'
+  fi
+
+  msg_ok "$(translate 'Coral uninstallation completed.')"
+}
+
+
 restart_prompt() {
   if whiptail --title "$(translate 'Coral TPU Installation')" --yesno \
       "$(translate 'The installation requires a server restart to apply changes. Do you want to restart now?')" 10 70; then
@@ -449,46 +624,95 @@ main() {
   : >"$LOG_FILE"
 
   detect_coral_hardware
+  detect_coral_install_state
 
-  # Nothing plugged in — nothing to do.
-  if [[ "$CORAL_PCIE_COUNT" -eq 0 && "$CORAL_USB_COUNT" -eq 0 ]]; then
+  # No hardware AND no leftover install → nothing to do.
+  if [[ "$CORAL_PCIE_COUNT" -eq 0 && "$CORAL_USB_COUNT" -eq 0 ]] \
+      && ! $CORAL_PCIE_INSTALLED && ! $CORAL_USB_INSTALLED; then
     no_hardware_dialog
     exit 0
   fi
 
-  pre_install_prompt
+  # If something is already installed, offer reinstall/uninstall choice.
+  # Same UX as nvidia_installer.sh. When nothing is installed yet,
+  # ACTION="install" automatically.
+  show_coral_action_menu_if_installed
 
-  show_proxmenux_logo
-  msg_title "$(translate 'Coral TPU Installation')"
+  case "$ACTION" in
+    install)
+      # No hardware but user picked install → bail out, can't install
+      # for nothing. (The earlier "no hardware AND no install" exit
+      # already handles the fully-empty case.)
+      if [[ "$CORAL_PCIE_COUNT" -eq 0 && "$CORAL_USB_COUNT" -eq 0 ]]; then
+        no_hardware_dialog
+        exit 0
+      fi
 
-  # Force non-interactive apt/dpkg for the whole run so cleanup_broken_gasket_dkms
-  # and the two install paths never get blocked by package-maintainer prompts.
-  export DEBIAN_FRONTEND=noninteractive
+      pre_install_prompt
 
-  # Branch 1 — PCIe / M.2 (kernel modules). Runs first so the reboot reminder
-  # at the end only appears when we actually touched kernel modules.
-  if [[ "$CORAL_PCIE_COUNT" -gt 0 ]]; then
-    msg_info2 "$(translate 'Coral M.2 / PCIe detected — installing gasket and apex kernel modules...')"
-    install_gasket_apex_dkms
-  fi
+      show_proxmenux_logo
+      msg_title "$(translate 'Coral TPU Installation')"
 
-  # Branch 2 — USB (user-space runtime).
-  if [[ "$CORAL_USB_COUNT" -gt 0 ]]; then
-    msg_info2 "$(translate 'Coral USB Accelerator detected — installing Edge TPU runtime...')"
-    install_libedgetpu_runtime
-  fi
+      # Force non-interactive apt/dpkg for the whole run so cleanup_broken_gasket_dkms
+      # and the two install paths never get blocked by package-maintainer prompts.
+      export DEBIAN_FRONTEND=noninteractive
 
-  echo
-  if [[ "$CORAL_PCIE_COUNT" -gt 0 ]]; then
-    msg_success "$(translate 'Coral TPU drivers installed and loaded successfully.')"
-    restart_prompt
-  else
-    # USB-only install. No reboot required; the udev rules and runtime are
-    # already active. Ready to passthrough the device to an LXC/VM.
-    msg_success "$(translate 'Coral USB runtime installed. No reboot required.')"
-    msg_success "$(translate 'Completed. Press Enter to return to menu...')"
-    read -r
-  fi
+      # Branch 1 — PCIe / M.2 (kernel modules). Runs first so the reboot reminder
+      # at the end only appears when we actually touched kernel modules.
+      if [[ "$CORAL_PCIE_COUNT" -gt 0 ]]; then
+        msg_info2 "$(translate 'Coral M.2 / PCIe detected — installing gasket and apex kernel modules...')"
+        install_gasket_apex_dkms
+      fi
+
+      # Branch 2 — USB (user-space runtime).
+      if [[ "$CORAL_USB_COUNT" -gt 0 ]]; then
+        msg_info2 "$(translate 'Coral USB Accelerator detected — installing Edge TPU runtime...')"
+        install_libedgetpu_runtime
+      fi
+
+      echo
+      if [[ "$CORAL_PCIE_COUNT" -gt 0 ]]; then
+        msg_success "$(translate 'Coral TPU drivers installed and loaded successfully.')"
+        restart_prompt
+      else
+        # USB-only install. No reboot required; the udev rules and runtime are
+        # already active. Ready to passthrough the device to an LXC/VM.
+        msg_success "$(translate 'Coral USB runtime installed. No reboot required.')"
+        msg_success "$(translate 'Completed. Press Enter to return to menu...')"
+        read -r
+      fi
+      ;;
+
+    remove)
+      # Confirm before purging — gasket-dkms uninstall is destructive
+      # to LXC containers that have apex passthrough; warn the user.
+      if ! dialog --backtitle "ProxMenux" \
+          --title "$(translate 'Coral TPU Uninstall')" \
+          --yesno "\n$(translate 'This will remove the Coral TPU drivers (gasket DKMS + libedgetpu) and related configuration. Any LXC container with apex passthrough will lose access to /dev/apex_* after reboot. Continue?')" \
+          14 78; then
+        exit 0
+      fi
+
+      show_proxmenux_logo
+      msg_title "$(translate 'Coral TPU Uninstall')"
+
+      export DEBIAN_FRONTEND=noninteractive
+      complete_coral_uninstall
+
+      # PCIe path created kernel modules → a reboot is the cleanest
+      # way to flush them. USB-only uninstall doesn't need one.
+      if $CORAL_PCIE_INSTALLED; then
+        restart_prompt
+      else
+        msg_success "$(translate 'Completed. Press Enter to return to menu...')"
+        read -r
+      fi
+      ;;
+
+    cancel|*)
+      exit 0
+      ;;
+  esac
 }
 
 main

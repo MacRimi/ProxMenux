@@ -1026,9 +1026,16 @@ def _capture_health_journal_context(categories: list, reason: str = '') -> str:
         # line like "[HealthPersistence] Database initialized with 13 tables"
         # leaks into the AI context because grep -iE 'ata' matches the
         # substring "ata" in "dATAbase". Self-logs are never system evidence.
+        #
+        # Also exclude systemd actions on the proxmenux-monitor unit itself
+        # (e.g. "proxmenux-monitor.service: Killed process 2010621 with
+        # signal SIGKILL"). When a kernel event fires within the same
+        # 10-min window as one of our own watchdog kills, the SIGKILL
+        # line would otherwise leak into the journal_context and the AI
+        # would paste it under the unrelated event as "📝 Log: …".
         cmd = (
             f"journalctl -b 0 --since='10 minutes ago' --no-pager -n 500 2>/dev/null | "
-            f"grep -vE 'AppRun\\[|proxmenux-auth|\\[HealthPersistence\\]|\\[ProxMenux\\]|\\[NotificationManager\\]|\\[AIEnhancer\\]' | "
+            f"grep -vE 'AppRun\\[|proxmenux-auth|\\[HealthPersistence\\]|\\[ProxMenux\\]|\\[NotificationManager\\]|\\[AIEnhancer\\]|proxmenux-monitor\\.service' | "
             f"grep -iE '{pattern}' | tail -n 30"
         )
         
@@ -10344,7 +10351,7 @@ def api_health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'version': '1.2.1.1-beta'
+        'version': '1.2.1.2-beta'
     })
 
 # ─── User-configurable health thresholds ─────────────────────────────────────
@@ -10737,7 +10744,7 @@ def api_info():
     """Root endpoint with API information"""
     return jsonify({
         'name': 'ProxMenux Monitor API',
-        'version': '1.2.1.1-beta',
+        'version': '1.2.1.2-beta',
         'endpoints': [
             '/api/system',
             '/api/system-info',
@@ -11387,7 +11394,7 @@ if __name__ == '__main__':
         try:
             import sqlite3
             from pathlib import Path
-            MONITOR_VERSION = '1.2.1.1-beta'
+            MONITOR_VERSION = '1.2.1.2-beta'
             db_path = Path('/usr/local/share/proxmenux/health_monitor.db')
             if db_path.exists():
                 conn = sqlite3.connect(str(db_path), timeout=10)
