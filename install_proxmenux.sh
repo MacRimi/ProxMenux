@@ -577,9 +577,13 @@ detect_latest_appimage() {
 get_appimage_version() {
     local appimage_path="$1"
     local filename=$(basename "$appimage_path")
-    
-    local version=$(echo "$filename" | grep -oP 'ProxMenux-\K[0-9]+\.[0-9]+\.[0-9]+')
-    
+
+    # Match any dotted number sequence + optional pre-release suffix
+    # (e.g. "-beta"). The previous `[0-9]+\.[0-9]+\.[0-9]+` was hardcoded
+    # to three segments and dropped both the fourth segment AND the
+    # `-beta` suffix on a name like `ProxMenux-1.2.1.2-beta.AppImage`.
+    local version=$(echo "$filename" | grep -oP 'ProxMenux-\K[0-9]+(?:\.[0-9]+)+(?:-[A-Za-z0-9]+)?')
+
     echo "$version"
 }
 
