@@ -10,8 +10,10 @@ current codebase.
 
 ## 🖼️ Source infographics
 
-The two infographics that seeded this roadmap are a community
-contribution and summarise the two main areas of work visually:
+The two infographics that seeded this roadmap are the work of
+**[@pitiriguisvi](https://github.com/pitiriguisvi)** and summarise
+the two main areas of work visually — thank you for the time and
+for giving us such a clear starting point:
 
 | ProxMenux Monitor (Dashboard) | ProxMenux (Scripts) |
 |---|---|
@@ -153,8 +155,8 @@ environments and customers**:
 | Item | Status | Notes |
 |---|---|---|
 | Clear, multilingual "this happened" output | 🟡 | `translate()` + `msg_*` work; final summary missing |
-| Quorum / storage visibility | 🟢 | In the Monitor |
-| Proxmox Backup Server post-install | 🟢 | PBS script already in place |
+| Quorum / storage visibility | 🔴 | The Monitor shows it, but the **scripts** don't inspect or report quorum/storage state before acting |
+| Proxmox Backup Server post-install | 🔴 | No PBS install/configuration script (the `Proxmox_Backup_Client.AppImage` is the client, not the server) |
 | Fast failure detector for scenarios | 🟡 | Health Monitor; no "preflight" before each change |
 
 ---
@@ -245,6 +247,13 @@ model and UX changes.
 | Date | Version | Item | Notes |
 |---|---|---|---|
 | — | — | — | No items closed yet from this roadmap |
+
+---
+
+## 🙏 Acknowledgements
+
+* **[@pitiriguisvi](https://github.com/pitiriguisvi)** — author of the
+  two original infographics this roadmap is built on.
 
 ---
 
