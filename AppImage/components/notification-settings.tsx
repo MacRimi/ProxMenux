@@ -492,11 +492,11 @@ export function NotificationSettings() {
       <div className="space-y-2 pt-2 border-t border-border/50">
         <div className="flex items-center justify-between py-1">
           <div>
-            <Label className="text-xs font-medium flex items-center gap-1.5">
-              <Moon className="h-3.5 w-3.5 text-blue-400" />
+            <Label className="text-xs sm:text-sm text-foreground/80 flex items-center gap-2">
+              <Moon className="h-4 w-4 text-blue-400" />
               Quiet hours
             </Label>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-1">
               During this window only CRITICAL events reach this channel.
             </p>
           </div>
@@ -517,29 +517,35 @@ export function NotificationSettings() {
         </div>
         {enabled && (
           <>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px] text-muted-foreground">From</Label>
+            {/* Inline label + intrinsic-width inputs. The previous
+                `grid-cols-2 + full-width inputs` rendered weirdly on
+                iOS Safari (the native time picker centered "22:00"
+                inside a 200-px box with huge empty margins). flex +
+                w-24/w-28 keeps the input tight to the HH:MM text on
+                every viewport and the touch target stays comfortable. */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground">From</Label>
                 <Input
                   type="time"
                   value={start}
                   onChange={(e) => updateChannel(chName, "quiet_start", e.target.value)}
                   disabled={!editMode}
-                  className="h-7 text-xs font-mono"
+                  className="h-9 w-28 text-sm font-mono"
                 />
               </div>
-              <div>
-                <Label className="text-[10px] text-muted-foreground">Until</Label>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground">Until</Label>
                 <Input
                   type="time"
                   value={end}
                   onChange={(e) => updateChannel(chName, "quiet_end", e.target.value)}
                   disabled={!editMode}
-                  className="h-7 text-xs font-mono"
+                  className="h-9 w-28 text-sm font-mono"
                 />
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {sameTime
                 ? "Set a different start and end time to activate."
                 : live
@@ -571,11 +577,11 @@ export function NotificationSettings() {
       <div className="space-y-2 pt-2 border-t border-border/50">
         <div className="flex items-center justify-between py-1">
           <div>
-            <Label className="text-xs font-medium flex items-center gap-1.5">
-              <Newspaper className="h-3.5 w-3.5 text-violet-400" />
+            <Label className="text-xs sm:text-sm text-foreground/80 flex items-center gap-2">
+              <Newspaper className="h-4 w-4 text-violet-400" />
               Daily digest of INFO events
             </Label>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-1">
               All INFO events (backups OK, updates available, etc.) accumulate during the day and arrive once at this time as a single summary. CRITICAL and WARNING are never delayed.
             </p>
           </div>
@@ -596,17 +602,17 @@ export function NotificationSettings() {
         </div>
         {enabled && (
           <>
-            <div>
-              <Label className="text-[10px] text-muted-foreground">Send at</Label>
+            <div className="flex items-center gap-2 pt-1">
+              <Label className="text-xs text-muted-foreground">Send at</Label>
               <Input
                 type="time"
                 value={time}
                 onChange={(e) => updateChannel(chName, "digest_time", e.target.value)}
                 disabled={!editMode}
-                className="h-7 text-xs font-mono"
+                className="h-9 w-28 text-sm font-mono"
               />
             </div>
-            <p className="text-[10px] text-muted-foreground">{nextLabel}</p>
+            <p className="text-xs text-muted-foreground">{nextLabel}</p>
           </>
         )}
       </div>

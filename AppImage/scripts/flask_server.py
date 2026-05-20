@@ -1019,10 +1019,16 @@ def _capture_health_journal_context(categories: list, reason: str = '') -> str:
         if not pattern:
             return ""
         
-        # Capture recent journal entries matching keywords
-        # Use -b 0 to only include logs from the current boot
+        # Capture recent journal entries matching keywords.
+        # Use -b 0 to only include logs from the current boot.
+        # Filter out the Monitor's own stdout (AppRun, [HealthPersistence],
+        # proxmenux-auth, etc.) BEFORE keyword matching — otherwise a startup
+        # line like "[HealthPersistence] Database initialized with 13 tables"
+        # leaks into the AI context because grep -iE 'ata' matches the
+        # substring "ata" in "dATAbase". Self-logs are never system evidence.
         cmd = (
             f"journalctl -b 0 --since='10 minutes ago' --no-pager -n 500 2>/dev/null | "
+            f"grep -vE 'AppRun\\[|proxmenux-auth|\\[HealthPersistence\\]|\\[ProxMenux\\]|\\[NotificationManager\\]|\\[AIEnhancer\\]' | "
             f"grep -iE '{pattern}' | tail -n 30"
         )
         
@@ -1131,11 +1137,27 @@ def _health_collector_loop():
                 'updates': 'update_summary',
             }
 
+            # Sub-categories already rolled up into details['storage']
+            # by _check_proxmox_storage_status. Emitting them as their
+            # own health_degraded entries duplicates the same warning
+            # (e.g. "Storage Mounts & Space" + "PVE Storage Capacity"
+            # both saying "PBS-Cloud (pbs) usage ≥70%"). Skip them at
+            # the notification layer — they still update _prev_statuses
+            # so a future degradation transition is detected normally.
+            _STORAGE_SUBCATEGORIES = {
+                'pve_storage_capacity', 'zfs_pool_capacity',
+                'lxc_disk', 'lxc_mounts', 'remote_mounts',
+            }
+
             for cat_key, cat_data in details.items():
                 cur_status = cat_data.get('status', 'OK')
                 prev_status = _prev_statuses.get(cat_key, 'OK')
                 cur_rank = _SEV_RANK.get(cur_status, 0)
                 prev_rank = _SEV_RANK.get(prev_status, 0)
+
+                if cat_key in _STORAGE_SUBCATEGORIES:
+                    _prev_statuses[cat_key] = cur_status
+                    continue
 
                 if cur_rank > prev_rank and cur_rank >= 2:  # WARNING or CRITICAL
                     reason = cat_data.get('reason', f'{cat_key} status changed to {cur_status}')
@@ -4676,16 +4698,56 @@ def get_network_info():
             'vm_lxc_total_count': 0
         }
 
+def _get_lxc_update_status_map() -> dict:
+    """Read the managed_installs registry and project the LXC update
+    state into a quick lookup ``{vmid: {available, count, security_count,
+    last_check, packages[]}}``. Used to decorate ``/api/vms`` output
+    without forcing the frontend to fetch a second endpoint.
+
+    Returns an empty dict if the registry module isn't available or
+    nothing is registered — callers must treat absence as "no info".
+    """
+    try:
+        import managed_installs
+    except Exception:
+        return {}
+    try:
+        active = managed_installs.get_active_items() or []
+    except Exception:
+        return {}
+
+    out: dict = {}
+    for it in active:
+        if it.get('type') != 'lxc':
+            continue
+        vmid = it.get('_vmid') or it.get('id', '').removeprefix('lxc:')
+        if not vmid:
+            continue
+        update = it.get('update_check') or {}
+        out[str(vmid)] = {
+            'available': bool(update.get('available')),
+            'count': int(update.get('_count') or 0),
+            'security_count': int(update.get('_security_count') or 0),
+            'last_check': update.get('last_check'),
+            'latest': update.get('latest'),
+            'error': update.get('error'),
+            # Cap packages list shipped to UI — modal uses first 30 max
+            'packages': (update.get('_packages') or [])[:30],
+        }
+    return out
+
+
 def get_proxmox_vms():
     """Get Proxmox VM and LXC information (requires pvesh command) - only from local node"""
     try:
         all_vms = []
-        
+        lxc_updates_map = _get_lxc_update_status_map()
+
         try:
             # local_node = socket.gethostname()
             local_node = get_proxmox_node_name()
             # print(f"[v0] Local node detected: {local_node}")
-        
+
             resources = get_cached_pvesh_cluster_resources_vm()
             if resources:
                 for resource in resources:
@@ -4693,12 +4755,13 @@ def get_proxmox_vms():
                     if node != local_node:
                         # print(f"[v0] Skipping VM {resource.get('vmid')} from remote node: {node}")
                         continue
-                    
+
+                    vm_type = 'lxc' if resource.get('type') == 'lxc' else 'qemu'
                     vm_data = {
                         'vmid': resource.get('vmid'),
                         'name': resource.get('name', f"VM-{resource.get('vmid')}"),
                         'status': resource.get('status', 'unknown'),
-                        'type': 'lxc' if resource.get('type') == 'lxc' else 'qemu',
+                        'type': vm_type,
                         'cpu': resource.get('cpu', 0),
                         'mem': resource.get('mem', 0),
                         'maxmem': resource.get('maxmem', 0),
@@ -4710,6 +4773,14 @@ def get_proxmox_vms():
                         'diskread': resource.get('diskread', 0),
                         'diskwrite': resource.get('diskwrite', 0)
                     }
+                    # Decorate LXC rows with the apt update status if the
+                    # managed_installs registry has it. Absent key means
+                    # either the user hasn't enabled the feature or the
+                    # CT isn't running / isn't Debian/Ubuntu.
+                    if vm_type == 'lxc':
+                        upd = lxc_updates_map.get(str(resource.get('vmid')))
+                        if upd is not None:
+                            vm_data['update_check'] = upd
                     all_vms.append(vm_data)
 
                 return all_vms
@@ -11035,9 +11106,53 @@ def api_vm_control(vmid):
                     'message': f'Successfully executed {action} on {vm_info.get("name")}'
                 })
             else:
+                # `pvesh` failed → fire the matching vm_fail / ct_fail
+                # notification so the user gets paged on their channels
+                # too, not just an in-dashboard alert. Previously this
+                # path silently returned a 500 to the browser and lost
+                # the event entirely (reported on .1.10: tried to start
+                # VM 106 while log2ram tmpfs was full → 500 in the UI
+                # but no Telegram message). The stderr is the most
+                # useful single line we have — `pvesh` reliably prints
+                # the underlying daemon failure there (e.g.
+                # "start failed: command '/usr/bin/kvm …' failed with
+                # exit code 1: no space left on device").
+                err_text = (control_result.stderr or '').strip() \
+                    or (control_result.stdout or '').strip() \
+                    or f'{action} returned exit code {control_result.returncode}'
+                # Truncate runaway stderr (some pvesh failures dump
+                # multi-KB tracebacks) — keep the notification readable.
+                if len(err_text) > 500:
+                    err_text = err_text[:500] + ' …'
+
+                try:
+                    from notification_manager import notification_manager as _nm
+                    import socket as _sock
+                    _host = _sock.gethostname()
+                    event_type = 'ct_fail' if vm_type == 'lxc' else 'vm_fail'
+                    _nm.emit_event(
+                        event_type=event_type,
+                        severity='CRITICAL',
+                        data={
+                            'hostname': _host,
+                            'vmid': str(vmid),
+                            'vmname': vm_info.get('name') or f'{vm_type}-{vmid}',
+                            'reason': f'{action} failed: {err_text}',
+                            'action': action,
+                        },
+                        source='dashboard',
+                        entity='vm',
+                        entity_id=str(vmid),
+                    )
+                except Exception as _emit_err:
+                    print(f"[api_vm_control] failed to emit {vm_type}_fail "
+                          f"notification: {type(_emit_err).__name__}: {_emit_err}")
+
                 return jsonify({
                     'success': False,
-                    'error': control_result.stderr
+                    'vmid': vmid,
+                    'action': action,
+                    'error': err_text,
                 }), 500
         else:
             return jsonify({'error': 'Failed to get VM details'}), 500

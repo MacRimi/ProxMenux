@@ -602,12 +602,9 @@ EOF
 
 install_log2ram_auto() {
     local FUNC_VERSION="1.2"
+
     # description: Install Log2RAM with size auto-tuned to host RAM (128M/256M/512M); SSD/M.2 detection skips on rotational disks.
-    # ── Reinstall detection ─────────────────────────────────────────────────
-    # If log2ram was previously installed by ProxMenux, skip hardware detection
-    # and reinstall directly — no prompts, transparent to user. Sprint 12A:
-    # also matches the new structured form `{"installed": true, ...}` written by
-    # the updated register_tool, in addition to the legacy boolean true entry.
+
     if [[ -f "$TOOLS_JSON" ]] && jq -e '.log2ram == true or .log2ram.installed == true' "$TOOLS_JSON" >/dev/null 2>&1; then
         msg_ok "$(translate "Log2RAM already registered — updating to latest configuration")"
     else
@@ -854,6 +851,11 @@ EOF
     #msg_ok "$(translate "Backup created:") /etc/systemd/journald.conf.bak.$(date +%Y%m%d-%H%M%S)"
     msg_ok "$(translate "Journald configuration adjusted to") ${USE_MB}M (Log2RAM ${LOG2RAM_SIZE})"
 
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    systemctl restart log2ram >/dev/null 2>&1 || true
+    log2ram clean >/dev/null 2>&1 || true
+    log2ram write >/dev/null 2>&1 || true
+    systemctl restart rsyslog >/dev/null 2>&1 || true
 
     register_tool "log2ram" true "$FUNC_VERSION"
 }
@@ -933,6 +935,7 @@ enable_zfs_autotrim() {
         fi
 
         if ! pool_supports_autotrim "$pool"; then
+            stop_spinner
             msg_info2 "$(translate "Pool does not appear to use SSD/NVMe devices with discard support. Skipping ZFS autotrim for pool:") $pool"
             continue
         fi

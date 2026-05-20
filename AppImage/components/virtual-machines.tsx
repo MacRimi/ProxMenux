@@ -8,7 +8,7 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Textarea } from "./ui/textarea"
@@ -19,6 +19,28 @@ import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
+import DOMPurify from "dompurify"
+import { marked } from "marked"
+
+// Sent by /api/vms only for LXC rows, only when the user has enabled
+// `lxc_updates_available` notifications. The Monitor populates this
+// from managed_installs registry → frontend uses it to render the
+// inline update badge + the modal's "Pending updates" section.
+interface LxcPackageUpdate {
+  name: string
+  current: string
+  latest: string
+  security: boolean
+}
+interface LxcUpdateCheck {
+  available: boolean
+  count: number
+  security_count: number
+  last_check: string | null
+  latest: string | null
+  error: string | null
+  packages: LxcPackageUpdate[]
+}
 
 interface VMData {
   vmid: number
@@ -36,6 +58,7 @@ interface VMData {
   diskread?: number
   diskwrite?: number
   ip?: string
+  update_check?: LxcUpdateCheck
 }
 
 interface VMConfig {
@@ -622,7 +645,7 @@ export function VirtualMachines() {
   const [backupPbsChangeMode, setBackupPbsChangeMode] = useState<string>("default")
   
   // Tab state for modal
-  const [activeModalTab, setActiveModalTab] = useState<"status" | "mounts" | "backups">("status")
+  const [activeModalTab, setActiveModalTab] = useState<"status" | "mounts" | "backups" | "updates">("status")
   // Sprint 13.29: per-LXC mount points lazy-loaded when the user opens
   // the LXC modal. We fetch alongside backups (one-shot) so switching
   // tabs is instantaneous; the cost is small (parses one config file
@@ -984,6 +1007,74 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // Ensure vmData is always an array (backend may return object on error)
   const safeVMData = Array.isArray(vmData) ? vmData : []
 
+  // Render the "📦 N updates / 🛡 N security" badge next to an LXC in
+  // the dashboard list. Used ONLY in the card row alongside Uptime —
+  // the modal surfaces the same info via a dedicated tab instead of
+  // duplicating a badge in its header.
+  //
+  // Sizing matches the sibling "Uptime: …" text (text-sm + h-4 icon)
+  // so the row reads as a single visual unit. Colour is violet, the
+  // shared accent for "managed updates" across notifications and UI
+  // (mirrors the Secure Gateway visual treatment). Security count
+  // stays red because it's still an urgency cue independent of the
+  // update theme.
+  const renderLxcUpdateBadge = (
+    uc?: LxcUpdateCheck,
+    compact = false,
+    onClick?: () => void,
+  ) => {
+    if (!uc?.available || !uc.count || uc.count <= 0) return null
+    const last = uc.last_check
+      ? new Date(uc.last_check).toLocaleString()
+      : "—"
+    const topNames = (uc.packages || [])
+      .slice(0, 5)
+      .map((p) => p.name)
+      .join(", ")
+    const secHint =
+      uc.security_count > 0 ? ` · ${uc.security_count} security` : ""
+    // Tooltip leads with the action when the badge is clickable so the
+    // affordance is explicit on hover — the chevron at the end of the
+    // badge reinforces the same signal visually for users who don't
+    // hover (mobile).
+    const tooltipPrefix = onClick ? "Click to view pending packages · " : ""
+    const tooltip = `${tooltipPrefix}Last checked: ${last}${secHint}${topNames ? ` · ${topNames}` : ""}`
+    // Compact = mobile card; matches the surrounding 10-12px chrome
+    // (ID line, type badge) so the count doesn't visually dominate.
+    // Non-compact = desktop card row, sized to match "Uptime: ..." text.
+    const sizing = compact
+      ? "text-[11px] gap-1 px-1.5 py-0"
+      : "text-sm gap-1.5 px-2 py-0.5"
+    const iconSize = compact ? "h-3 w-3" : "h-4 w-4"
+    // Only soften the bg on hover — no border change, no focus ring.
+    // The chevron at the end of the badge carries the "open this"
+    // affordance on its own. The Badge component's CVA base adds a
+    // `focus:ring-2 focus:ring-ring focus:ring-offset-2` (the white
+    // double border we kept seeing on tap/click) — explicitly cancel
+    // every piece of it here.
+    const clickable = onClick
+      ? "cursor-pointer hover:bg-violet-500/20 transition-colors focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+      : ""
+    return (
+      <Badge
+        variant="outline"
+        className={`bg-violet-500/10 text-violet-400 border-violet-500/30 flex items-center flex-shrink-0 ${sizing} ${clickable}`}
+        title={tooltip}
+        onClick={onClick}
+        role={onClick ? "button" : undefined}
+        tabIndex={onClick ? 0 : undefined}
+      >
+        <Package className={iconSize} />
+        {uc.count} {compact ? "" : (uc.count === 1 ? "update" : "updates")}
+        {/* Chevron only when the badge is wired up as a clickable
+            shortcut — its absence on the dashboard card avoids
+            implying interactivity where there isn't any (the whole
+            row is the click target there). */}
+        {onClick && <ChevronRight className={`${iconSize} -mr-0.5 opacity-80`} />}
+      </Badge>
+    )
+  }
+
   // Total allocated RAM for ALL VMs/LXCs (running + stopped)
   const totalAllocatedMemoryGB = useMemo(() => {
     return (safeVMData.reduce((sum, vm) => sum + (vm.maxmem || 0), 0) / 1024 ** 3).toFixed(1)
@@ -1111,67 +1202,57 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
   return (
     <div className="space-y-6">
+      {/*
+        styled-jsx is scoped by default — it adds a hash class to
+        selectors so they only match elements rendered by this
+        component. Content injected via `dangerouslySetInnerHTML`
+        does NOT get the hash, so descendant selectors like
+        `div[align="center"]` never matched the helper-script HTML
+        and notes rendered left-aligned. Wrapping the descendant
+        selectors in `:global(...)` keeps the parent class scoped
+        but lets the inner rules apply to the injected HTML.
+      */}
       <style jsx>{`
         .proxmenux-notes {
-          /* Reset any inherited styles */
           all: revert;
-          
-          /* Ensure links display inline */
-          a {
-            display: inline-block;
-            margin-right: 4px;
-            text-decoration: none;
-          }
-          
-          /* Ensure images display inline */
-          img {
-            display: inline-block;
-            vertical-align: middle;
-          }
-          
-          /* Ensure paragraphs with links display inline */
-          p {
-            margin: 0.5rem 0;
-          }
-          
-          /* Override inline width and center the table */
-          table {
-            width: auto !important;
-            margin: 0 auto;
-          }
-          
-          /* Ensure divs respect centering */
-          div[align="center"] {
-            text-align: center;
-          }
-          
-          /* Remove border-left since logo already has the line, keep text left-aligned */
-          table td:nth-child(2) {
-            text-align: left;
-            padding-left: 16px;
-          }
-          
-          /* Increase h1 font size for VM name */
-          table td:nth-child(2) h1 {
-            text-align: left;
-            font-size: 2rem;
-            font-weight: bold;
-            line-height: 1.2;
-          }
-          
-          /* Ensure p in the second cell is left-aligned */
-          table td:nth-child(2) p {
-            text-align: left;
-          }
-          
-          /* Add separator after tables */
-          table + p {
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-          }
         }
-        
+        .proxmenux-notes :global(a) {
+          display: inline-block;
+          margin-right: 4px;
+          text-decoration: none;
+        }
+        .proxmenux-notes :global(img) {
+          display: inline-block;
+          vertical-align: middle;
+        }
+        .proxmenux-notes :global(p) {
+          margin: 0.5rem 0;
+        }
+        .proxmenux-notes :global(table) {
+          width: auto !important;
+          margin: 0 auto;
+        }
+        .proxmenux-notes :global(div[align="center"]) {
+          text-align: center;
+        }
+        .proxmenux-notes :global(table td:nth-child(2)) {
+          text-align: left;
+          padding-left: 16px;
+        }
+        .proxmenux-notes :global(table td:nth-child(2) h1) {
+          text-align: left;
+          font-size: 2rem;
+          font-weight: bold;
+          line-height: 1.2;
+        }
+        .proxmenux-notes :global(table td:nth-child(2) p) {
+          text-align: left;
+        }
+        .proxmenux-notes :global(table + p) {
+          margin-top: 1rem;
+          padding-top: 1rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
         .proxmenux-notes-plaintext {
           white-space: pre-wrap;
           font-family: monospace;
@@ -1364,6 +1445,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           </span>
                         )}
                         <span className="text-sm text-muted-foreground ml-auto">Uptime: {formatUptime(vm.uptime)}</span>
+                        {vm.type === "lxc" && renderLxcUpdateBadge(vm.update_check)}
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -1474,7 +1556,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
                         {/* Name and ID */}
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-foreground truncate">{vm.name}</div>
+                          <div className="font-semibold text-foreground truncate flex items-center gap-1.5">
+                            <span className="truncate">{vm.name}</span>
+                            {vm.type === "lxc" && renderLxcUpdateBadge(vm.update_check, true)}
+                          </div>
                           <div className="text-[10px] text-muted-foreground">ID: {vm.vmid}</div>
                         </div>
 
@@ -1575,6 +1660,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               Uptime: {formatUptime(selectedVM.uptime)}
                             </span>
                           )}
+                          {/* Clickable badge — the sole entry point to
+                              the Updates panel now that the tab is no
+                              longer in the nav. Full-size so it reads
+                              at the same weight as the surrounding
+                              Uptime / Type / Status chips. */}
+                          {selectedVM.type === "lxc" &&
+                            renderLxcUpdateBadge(
+                              selectedVM.update_check,
+                              false,
+                              () => setActiveModalTab("updates"),
+                            )}
                         </div>
                       </>
                     )}
@@ -1600,6 +1696,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             Uptime: {formatUptime(selectedVM.uptime)}
                           </span>
                         )}
+                        {selectedVM.type === "lxc" &&
+                          renderLxcUpdateBadge(
+                            selectedVM.update_check,
+                            false,
+                            () => setActiveModalTab("updates"),
+                          )}
                       </div>
                     )}
                   </div>
@@ -1610,7 +1712,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               <div className="flex border-b border-border px-6 shrink-0">
                 <button
                   onClick={() => setActiveModalTab("status")}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
                     activeModalTab === "status"
                       ? "border-cyan-500 text-cyan-500"
                       : "border-transparent text-muted-foreground hover:text-foreground"
@@ -1643,7 +1745,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 )}
                 <button
                   onClick={() => setActiveModalTab("backups")}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
                     activeModalTab === "backups"
                       ? "border-amber-500 text-amber-500"
                       : "border-transparent text-muted-foreground hover:text-foreground"
@@ -1655,6 +1757,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     <Badge variant="secondary" className="text-xs h-5 ml-1">{vmBackups.length}</Badge>
                   )}
                 </button>
+                {/* Updates is intentionally NOT a tab in the nav — the
+                    extra tab created a scrolling tab strip on mobile
+                    (especially once Mounts + Backups + Updates piled
+                    up) and the swipe affordance was missed. The
+                    clickable violet badge in the modal header is now
+                    the sole entry point; the Updates content panel
+                    below still mounts when activeModalTab === 'updates'. */}
               </div>
 
               <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
@@ -1929,14 +2038,20 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     ) : vmDetails.config.description ? (
                                       <>
                                         {(() => {
-                                          // VM/CT notes are operator-controlled but historically were
-                                          // rendered via `dangerouslySetInnerHTML` — a stored XSS sink
-                                          // for any user with write access to the VM config (a
-                                          // non-admin user with PVE permissions, or another admin in
-                                          // a multi-admin deployment). We now render the decoded
-                                          // notes as plain text inside a <pre> with `white-space:
-                                          // pre-wrap` so newlines and indentation are preserved
-                                          // without interpreting any HTML. See audit Tier 2 #13.
+                                          // VM/CT notes come in two flavours and we mirror the way
+                                          // the PVE web UI handles each:
+                                          //   • HTML (ProxMenux/community-script helper output with
+                                          //     <div align='center'>, tables, logos) → render the
+                                          //     HTML verbatim. The stable `main` branch did exactly
+                                          //     this with dangerouslySetInnerHTML — we keep that
+                                          //     behaviour but pipe through DOMPurify so the audit
+                                          //     Tier 2 #13 XSS sink stays closed.
+                                          //   • Plain text / markdown (e.g. qBittorrent's
+                                          //     `## qBittorrent LXC`) → marked turns it into
+                                          //     headings + autolinks + line breaks, matching PVE.
+                                          // Mixing the two paths breaks the HTML one because marked
+                                          // collapses indentation / wraps inline runs and the
+                                          // browser then ignores `align="center"`.
                                           let decoded: string
                                           try {
                                             decoded = decodeRecursively(vmDetails.config.description)
@@ -1947,12 +2062,71 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                               </div>
                                             )
                                           }
+                                          const looksLikeHtml = /<\/?[a-z][\s\S]*?>/i.test(decoded)
+                                          let html: string
+                                          if (looksLikeHtml) {
+                                            html = decoded
+                                          } else {
+                                            try {
+                                              html = marked.parse(decoded, {
+                                                breaks: true,
+                                                gfm: true,
+                                                async: false,
+                                              }) as string
+                                            } catch {
+                                              html = decoded.replace(/\n/g, "<br>")
+                                            }
+                                          }
+                                          // Promote legacy `align` HTML attribute to a real inline
+                                          // `style="text-align: …"` rule. Tailwind / parent CSS,
+                                          // styled-jsx scoping quirks and Safari's UA stylesheet
+                                          // can all swallow the bare `align` attribute on `<div>`
+                                          // (it's HTML4 obsolete syntax). An inline style is
+                                          // bullet-proof: highest specificity, no scope hash needed.
+                                          DOMPurify.removeHook("afterSanitizeAttributes")
+                                          DOMPurify.addHook("afterSanitizeAttributes", (node: Element) => {
+                                            const a = node.getAttribute?.("align")
+                                            if (a && /^(center|left|right)$/i.test(a)) {
+                                              const cur = node.getAttribute("style") || ""
+                                              const sep = cur && !cur.trim().endsWith(";") ? "; " : ""
+                                              node.setAttribute(
+                                                "style",
+                                                `${cur}${sep}text-align: ${a.toLowerCase()}`,
+                                              )
+                                            }
+                                            // Force `target=_blank` links to open in a new tab
+                                            // safely (noopener prevents reverse-tabnabbing).
+                                            if (node.tagName === "A" && node.getAttribute("target") === "_blank") {
+                                              node.setAttribute("rel", "noopener noreferrer")
+                                            }
+                                          })
+                                          const cleanHtml = DOMPurify.sanitize(html, {
+                                            ALLOWED_TAGS: [
+                                              "a", "p", "br", "div", "span",
+                                              "h1", "h2", "h3", "h4", "h5", "h6",
+                                              "img",
+                                              "table", "thead", "tbody", "tr", "th", "td",
+                                              "ul", "ol", "li",
+                                              "strong", "em", "b", "i", "u", "code", "pre",
+                                              "blockquote", "hr",
+                                              "small", "sub", "sup",
+                                            ],
+                                            ALLOWED_ATTR: [
+                                              "href", "src", "alt", "title", "target",
+                                              "rel", "style", "class",
+                                              "align", "width", "height",
+                                              "colspan", "rowspan",
+                                            ],
+                                            ALLOWED_URI_REGEXP:
+                                              /^(?:(?:https?|mailto|data:image\/(?:png|jpeg|jpg|gif|svg\+xml|webp)):|\/|#)/i,
+                                            ADD_ATTR: ["target"],
+                                          })
                                           return (
-                                            <pre
-                                              className="text-sm text-foreground proxmenux-notes-plaintext font-sans whitespace-pre-wrap break-words m-0"
-                                            >
-                                              {decoded}
-                                            </pre>
+                                            <div
+                                              className="text-sm text-foreground proxmenux-notes break-words"
+                                              // eslint-disable-next-line react/no-danger
+                                              dangerouslySetInnerHTML={{ __html: cleanHtml }}
+                                            />
                                           )
                                         })()}
                                       </>
@@ -2344,6 +2518,118 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   )}
                 </div>
                 )}
+
+                {/* Updates Tab — LXC only, conditionally rendered.
+                    Lives in its own tab so the per-package list (up to
+                    30 rows) doesn't blow up the Status tab on mobile.
+                    Violet matches the shared "managed updates" theme. */}
+                {activeModalTab === "updates" &&
+                  selectedVM?.type === "lxc" &&
+                  selectedVM?.update_check?.available && (
+                    <div className="space-y-4" key={`updates-${selectedVM.vmid}`}>
+                      <Card className="border border-border bg-card/50">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-md bg-violet-500/10">
+                                <Package className="h-4 w-4 text-violet-400" />
+                              </div>
+                              <h3 className="text-sm font-semibold text-foreground">
+                                Pending package updates
+                              </h3>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-violet-500/10 text-violet-400 border-violet-500/30"
+                            >
+                              {selectedVM.update_check.count} total
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                            Last checked:{" "}
+                            {selectedVM.update_check.last_check
+                              ? new Date(selectedVM.update_check.last_check).toLocaleString()
+                              : "—"}
+                            {" · "}Apply with{" "}
+                            <code className="text-foreground/80">pct enter {selectedVM.vmid}</code>
+                            {" → "}
+                            <code className="text-foreground/80">apt update &amp;&amp; apt upgrade</code>
+                          </div>
+                          {/* Two render modes:
+                              • Full list when every pending package fits
+                                (registry cap is 30 packages per CT — so
+                                CTs with ≤30 updates show every row).
+                              • Summary when the CT has more pending than
+                                the registry stored. Showing 30 random
+                                rows out of 139 misleads the user — a
+                                count + security count + "inspect inside"
+                                hint is honester. */}
+                          {(() => {
+                            const stored = selectedVM.update_check.packages?.length || 0
+                            const total = selectedVM.update_check.count || 0
+                            const sec = selectedVM.update_check.security_count || 0
+                            const truncated = total > stored
+                            if (!truncated && stored > 0) {
+                              return (
+                                <div className="border-t border-border divide-y divide-border/50">
+                                  {selectedVM.update_check.packages.map((p) => (
+                                    <div
+                                      key={p.name}
+                                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 py-2 text-sm"
+                                    >
+                                      <span className="font-mono text-foreground/90 flex items-center gap-2 min-w-0">
+                                        {p.security && (
+                                          <Shield
+                                            className="h-4 w-4 text-green-500 flex-shrink-0"
+                                            aria-label="Security update"
+                                          />
+                                        )}
+                                        <span className="truncate">{p.name}</span>
+                                      </span>
+                                      <span className="flex items-center gap-1.5 text-muted-foreground flex-shrink-0 font-mono text-xs sm:text-sm">
+                                        <span>{p.current || "—"}</span>
+                                        <span>→</span>
+                                        <span className="text-foreground">{p.latest}</span>
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )
+                            }
+                            // Truncated OR no per-package detail — render a summary.
+                            return (
+                              <div className="border-t border-border pt-3 space-y-2 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <Package className="h-4 w-4 text-violet-400 flex-shrink-0" />
+                                  <span>
+                                    <span className="font-semibold">{total}</span> package
+                                    {total === 1 ? "" : "s"} pending
+                                  </span>
+                                </div>
+                                {sec > 0 && (
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                    <span>
+                                      <span className="font-semibold">{sec}</span> security update
+                                      {sec === 1 ? "" : "s"}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="text-xs text-muted-foreground pt-1 leading-relaxed">
+                                  Full list available inside the container:{" "}
+                                  <code className="text-foreground/80">
+                                    pct enter {selectedVM.vmid}
+                                  </code>{" "}
+                                  →{" "}
+                                  <code className="text-foreground/80">apt list --upgradable</code>
+                                </div>
+                              </div>
+                            )
+                          })()}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
 
                 {/* Sprint 13.29: Mount Points Tab — LXC only.
                     Renders configured mpX entries first, then any

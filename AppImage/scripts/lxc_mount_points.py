@@ -274,6 +274,12 @@ def _df_via_host_pid(host_pid: str, ct_target: str) -> dict[str, Optional[int]]:
     numbers reflect the whole storage pool instead of the per-subvol
     quota — without this the UI showed 851 GB total for a 150 GB ZFS
     subvol because pvesm reports the rpool's free space.
+
+    Note: this path does NOT measure NFS/CIFS mounts that were set up
+    from INSIDE the CT (`mount -t nfs` / `/etc/fstab` inside the
+    container). Those live in the CT's own mount namespace and aren't
+    visible to the host's `df` even through `/proc/<pid>/root`. Use
+    `_df_via_pct_exec` for ad-hoc mounts.
     """
     empty = {"total_bytes": None, "used_bytes": None, "available_bytes": None}
     if not host_pid or not ct_target:
@@ -283,6 +289,44 @@ def _df_via_host_pid(host_pid: str, ct_target: str) -> dict[str, Optional[int]]:
         proc = subprocess.run(
             ["df", "-B1", "--output=size,used,avail", full],
             capture_output=True, text=True, timeout=_STAT_TIMEOUT,
+        )
+        if proc.returncode != 0:
+            return empty
+        lines = [ln for ln in proc.stdout.strip().splitlines() if ln.strip()]
+        if len(lines) < 2:
+            return empty
+        parts = lines[-1].split()
+        if len(parts) < 3:
+            return empty
+        return {
+            "total_bytes": int(parts[0]),
+            "used_bytes": int(parts[1]),
+            "available_bytes": int(parts[2]),
+        }
+    except (subprocess.TimeoutExpired, OSError, ValueError):
+        return empty
+
+
+def _df_via_pct_exec(vmid: str, ct_target: str,
+                     timeout: int = 6) -> dict[str, Optional[int]]:
+    """``df`` a path from INSIDE the CT via ``pct exec``. Needed for
+    ad-hoc NFS/CIFS mounts that live in the CT's own mount namespace
+    and aren't visible from the host (so `_df_via_host_pid` returns
+    empty for them).
+
+    Heavier than the host-side df (full `pct exec` round-trip ~1-3s),
+    so we only use it for ad-hoc mounts. The 6s timeout is generous
+    enough for NFS over slow links but won't drag the request past
+    the proxy timeout.
+    """
+    empty = {"total_bytes": None, "used_bytes": None, "available_bytes": None}
+    if not vmid or not ct_target:
+        return empty
+    try:
+        proc = subprocess.run(
+            [_PCT, "exec", vmid, "--", "df", "-B1",
+             "--output=size,used,avail", ct_target],
+            capture_output=True, text=True, timeout=timeout,
         )
         if proc.returncode != 0:
             return empty
@@ -606,14 +650,29 @@ def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
         ]
         # Same parallelisation as the configured-mp loop: stat'ing
         # stale NFS exports serially can dominate the request and
-        # push it past the proxy timeout.
+        # push it past the proxy timeout. Capacity (`df`) is fetched
+        # in the SAME pool so the UI can render the usage bar for
+        # ad-hoc NFS/CIFS mounts too — null capacity was a regression
+        # spotted on CT 103 /mnt/Media. Skip df when stat already
+        # showed the mount as unreachable, otherwise the df subprocess
+        # blocks on the same broken export.
         if ad_hoc_candidates:
             with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                healths = list(pool.map(
-                    lambda rt: _stat_via_host(host_pid, rt["rt_target"]),
-                    ad_hoc_candidates,
-                ))
-            for rt, health in zip(ad_hoc_candidates, healths):
+                def _gather_adhoc(rt):
+                    h = _stat_via_host(host_pid, rt["rt_target"])
+                    if h.get("reachable"):
+                        # NFS/CIFS mounts done inside the CT live in the
+                        # container's own mount namespace and aren't
+                        # visible to `df` from the host even via
+                        # /proc/<pid>/root — use `pct exec df` instead.
+                        cap = _df_via_pct_exec(vmid, rt["rt_target"])
+                    else:
+                        cap = {"total_bytes": None, "used_bytes": None,
+                               "available_bytes": None}
+                    return rt, h, cap
+
+                results = list(pool.map(_gather_adhoc, ad_hoc_candidates))
+            for rt, health, cap in results:
                 ad_hoc.append({
                     "mp_index": "",
                     "source": rt["rt_source"],
@@ -624,9 +683,9 @@ def get_lxc_mount_points(vmid: str) -> dict[str, Any]:
                     "origin_label": rt["rt_source"],
                     "config_options": {},
                     "config_flags": [],
-                    "total_bytes": None,
-                    "used_bytes": None,
-                    "available_bytes": None,
+                    "total_bytes": cap["total_bytes"],
+                    "used_bytes": cap["used_bytes"],
+                    "available_bytes": cap["available_bytes"],
                     "runtime_mounted": True,
                     "runtime_source": rt["rt_source"],
                     "runtime_fstype": rt["rt_fstype"],

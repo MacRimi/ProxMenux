@@ -484,6 +484,23 @@ TEMPLATES = {
     },
     
     # ── VM / CT events ──
+    # Phase 1: apt-based update detection inside running Debian/Ubuntu
+    # LXCs. Grouped — one notification per cycle covers every CT with
+    # pending updates. Opt-in (default_enabled=False) because the check
+    # uses `pct exec` to inspect package state inside the user's CTs.
+    # Phase 2 (community-scripts metadata) will extend this without
+    # changing the event type.
+    'lxc_updates_available': {
+        'title': '{hostname}: {count} LXC(s) with package updates available',
+        'body': (
+            '📊 {count} LXC(s) with pending package updates '
+            '(📦 {total_packages} total, 🔒 {security_count} security):\n\n'
+            '{ct_list}'
+        ),
+        'label': 'LXC updates available (experimental)',
+        'group': 'vm_ct',
+        'default_enabled': False,
+    },
     'vm_start': {
         'title': '{hostname}: VM {vmname} ({vmid}) started',
         'body': 'Virtual machine {vmname} (ID: {vmid}) is now running.',
@@ -1109,8 +1126,8 @@ TEMPLATES = {
         'title': '{hostname}: {count} ProxMenux optimization update(s) available',
         'body': (
             '{count} optimization update(s) detected on this host.\n\n'
-            'Tools:\n{tool_list}\n\n'
-            'How to apply:\n'
+            '🛠️ Tools:\n{tool_list}\n\n'
+            '💡 How to apply:\n'
             '  • ProxMenux Monitor → Settings → ProxMenux Optimizations\n'
             '  • Or run the post-install menu (option 2) → "Apply available updates"'
         ),
@@ -1129,12 +1146,12 @@ TEMPLATES = {
     'secure_gateway_update_available': {
         'title': '{hostname}: {app_name} update available — v{latest_version}',
         'body': (
-            '{app_name} (managed by ProxMenux) has {package_count} package update(s) '
+            '{app_name} (managed by ProxMenux) has 📦 {package_count} package update(s) '
             'pending in its container.\n'
-            'Current Tailscale: v{current_version}  →  Latest: v{latest_version}\n\n'
-            'Open ProxMenux Monitor > Settings > Secure Gateway and click '
+            '🔹 Current Tailscale: v{current_version}  →  🟢 Latest: v{latest_version}\n\n'
+            '💡 Open ProxMenux Monitor > Settings > Secure Gateway and click '
             '"Update" to apply.\n\n'
-            'Packages:\n{package_list}'
+            '🗂️ Packages:\n{package_list}'
         ),
         'label': 'Secure Gateway update available',
         'group': 'updates',
@@ -1147,10 +1164,10 @@ TEMPLATES = {
         'title': '{hostname}: NVIDIA driver update available — v{latest_version}',
         'body': (
             'A newer NVIDIA driver compatible with kernel {kernel} is available.\n'
-            'Currently installed: v{current_version}\n'
-            'Latest available:    v{latest_version}\n\n'
+            '🔹 Currently installed: v{current_version}\n'
+            '🟢 Latest available:    v{latest_version}\n\n'
             '{upgrade_reason}\n\n'
-            'To reinstall:\n'
+            '💡 To reinstall:\n'
             '  • From the ProxMenux post-install menu: {menu_label}\n\n'
             'Reinstalling rebuilds the DKMS module against the running kernel and '
             'requires a reboot to load the new driver.'
@@ -1465,6 +1482,7 @@ CATEGORY_EMOJI = {
 # Event-specific title icons  (override category default when present)
 EVENT_EMOJI = {
     # VM / CT
+    'lxc_updates_available': '\U0001F4E6',     # \uD83D\uDCE6 package \u2014 pending CT updates
     'vm_start':             '\u25B6\uFE0F',    # play button
     'vm_start_warning':     '\u26A0\uFE0F',     # warning sign - started with warnings
     'vm_stop':              '\u23F9\uFE0F',     # stop button
@@ -1768,6 +1786,14 @@ Your job: translate alerts into {language} and enrich them with context when pro
 ═══ ABSOLUTE CONSTRAINTS (NO EXCEPTIONS) ═══
 - NO HALLUCINATIONS: Do not invent causes, solutions, or facts not present in the provided data
 - NO SPECULATION: If something is unclear, state what IS known, not what MIGHT be
+- NO FILLER LINES: Every output line must derive from the input message, the journal context,
+  or the known-error database. NEVER add generic statements like "Event detected during normal
+  operation", "No further issues", or padding lines just to fill space. If a field has no evidence,
+  OMIT it — a shorter output is always better than invented content.
+- 📝 Log lines: ONLY include when the journal context contains an actual relevant log line.
+  Convey its meaning faithfully, do not invent one. If no relevant log exists, OMIT the 📝 line.
+- ⏱️ Duration/timing lines: ONLY for backup/migration durations explicitly present in the input.
+  NEVER use ⏱️ for vague "event detected at X" filler.
 - NO CONVERSATIONAL TEXT: Never write "Here is...", "I've translated...", "Let me explain..."
 - ONLY use information from: the message, journal context, and known error database (if provided)
 
@@ -1884,7 +1910,12 @@ Your goal is to maintain the original structure of the message while using emoji
 ESPECIALLY when adding new context, formatting technical data, or writing tips.
 
 RULES:
-1. PRESERVE BASE STRUCTURE: Respect the original fields and layout provided in the input message.
+1. PRESERVE BASE STRUCTURE AND INPUT EMOJIS: Respect the original fields and layout provided in
+   the input message. **CRITICAL: every emoji already present in the input (📊, 🏷️, 📦, 🔒, 🛠️,
+   💡, ⚠️, ✨, 🌐, 🔥, 💧, 📝, ⏱️, etc.) MUST appear in the output, in the same position relative
+   to its label.** Translating the surrounding words is fine; deleting or relocating the emoji is
+   not. You may add additional context-appropriate emojis from BODY EMOJIS below, but never strip
+   the ones the template already provides.
 2. ENHANCE WITH ICONS: Place emojis at the START of a line to identify the data type.
 3. NEW CONTEXT: When adding journal info, SMART data, or known errors, use appropriate icons to make it readable.
 4. NO SPAM: Do not put emojis in the middle or end of sentences. Use 1-3 emojis at START of lines where they add clarity. Combine when meaningful (💾✅ backup ok).

@@ -133,6 +133,27 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
         }
         throw new Error(`Unauthorized: ${endpoint}`)
       }
+      // Try to surface the backend's JSON error payload instead of a
+      // bare `500 INTERNAL SERVER ERROR`. The Flask routes consistently
+      // return `{error: "..."}` on failure (e.g. /api/vms/<id>/control
+      // includes the pvesh stderr — telling the user "no space left on
+      // device" is infinitely more useful than the raw status text).
+      try {
+        const ct = response.headers.get("content-type") || ""
+        if (ct.includes("application/json")) {
+          const body = await response.json()
+          const detail =
+            (body && (body.error || body.message)) || ""
+          if (detail) {
+            throw new Error(detail)
+          }
+        }
+      } catch (parseErr) {
+        if (parseErr instanceof Error && parseErr.message.includes("API request failed")) {
+          throw parseErr
+        }
+        // JSON parse failed — fall through to the generic message.
+      }
       throw new Error(`API request failed: ${response.status} ${response.statusText}`)
     }
 

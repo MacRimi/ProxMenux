@@ -327,14 +327,27 @@ def is_vzdump_active_on_host() -> bool:
     try:
         with open(_VZDUMP_ACTIVE_FILE, 'r') as f:
             for line in f:
-                # UPID format: UPID:node:pid:pstart:starttime:type:id:user:
+                # tasks/active row layout (whitespace separated):
+                #   "<UPID> 1"                                ← running
+                #   "<UPID> 1 <endtime_hex> <STATUS>"         ← finished
+                # PVE leaves finished rows lingering for hours
+                # sometimes — without the field-count check below the
+                # PID-recycling case fires a false positive (an
+                # unrelated process inherited the old vzdump's PID
+                # and `os.kill(pid, 0)` succeeds).
                 if ':vzdump:' not in line:
                     continue
-                parts = line.strip().split(':')
-                if len(parts) < 3:
+                fields = line.split()
+                if not fields:
+                    continue
+                # >2 fields means endtime + status are written → terminated.
+                if len(fields) > 2:
+                    continue
+                upid_parts = fields[0].split(':')
+                if len(upid_parts) < 3:
                     continue
                 try:
-                    pid = int(parts[2], 16)  # PID in UPID is hex
+                    pid = int(upid_parts[2], 16)  # PID in UPID is hex
                     os.kill(pid, 0)
                     found = True
                     break
@@ -1033,20 +1046,27 @@ class JournalWatcher:
             else:
                 resolved = re.sub(r'\d+$', '', raw_device) if raw_device.startswith('sd') else raw_device
             
-            # ── Gate 1: SMART must confirm disk failure ──
-            # If the disk is healthy (PASSED) or we can't verify
-            # (UNKNOWN / unresolvable ATA port), do NOT notify.
+            # ── ALWAYS persist the observation, regardless of SMART ──
+            # The disk_observation_contract is explicit (memory note
+            # disk-observation-contract): every kernel-surfaced disk
+            # error must be recorded in disk_observations *even when
+            # SMART reports PASSED*. Silent errors on a "healthy" disk
+            # are exactly the early-warning signal the modal histogram
+            # exists to surface ("324 connection errors on this disk").
+            # Previously this line lived AFTER a `return` gate keyed on
+            # smart_health != 'FAILED', so the 3162 ata8 errors on
+            # .1.10 (PASSED SMART) all dropped on the floor instead of
+            # accumulating in the per-disk audit history.
+            self._record_disk_io_observation(resolved, msg)
+
+            # ── Gate 1: only NOTIFY when SMART reports FAILED ──
+            # Observation is already saved above. We avoid spamming a
+            # CRITICAL notification for transient ATA/SCSI noise on
+            # otherwise-healthy disks — the modal histogram surfaces
+            # those without paging the user at 3 AM.
             smart_health = self._quick_smart_health(resolved)
             if smart_health != 'FAILED':
                 return
-
-            # ── Persist observation (before the cooldown gate) ──
-            # The 24h cooldown below only suppresses RE-notification; the
-            # per-disk observations history must reflect every genuine
-            # detection. The DB UPSERT dedups same-signature events via
-            # occurrence_count, so calling this on every match is safe.
-            # Aligns with the parallel path in HealthMonitor._check_disks_optimized.
-            self._record_disk_io_observation(resolved, msg)
 
             # ── Gate 2: 24-hour dedup per device ──
             # Check both in-memory cache AND the DB (user dismiss clears DB cooldowns).
@@ -1814,12 +1834,31 @@ class TaskWatcher:
                     line = line.strip()
                     if not line:
                         continue
-                    upid = line.split()[0] if line.split() else line
+                    parts = line.split()
+                    if not parts:
+                        continue
+                    upid = parts[0]
                     current_upids.add(upid)
-                    
-                    if ':vzdump:' in upid:
+
+                    if ':vzdump:' not in upid:
+                        continue
+
+                    # PVE writes each line in tasks/active as:
+                    #   "<UPID> 1"                                    ← task still running
+                    #   "<UPID> 1 <endtime_hex> <STATUS>"             ← task already finished
+                    # PVE doesn't always prune finished rows from this
+                    # file (observed on RimegraVE 19/05: 25 OK/error
+                    # entries lingering for hours after job end). Just
+                    # matching ':vzdump:' kept `_vzdump_running_since`
+                    # permanently fresh, which then made
+                    # `_is_vzdump_active()` return True forever and
+                    # silenced every vm_start / vm_stop / vm_shutdown
+                    # via the _BACKUP_NOISE filter. Only treat the row
+                    # as a live vzdump when no end-time / status has
+                    # been written yet (≤ 2 fields: UPID + version).
+                    if len(parts) <= 2:
                         found_vzdump = True
-            
+
             # Keep _vzdump_running_since fresh as long as vzdump is in active
             if found_vzdump:
                 self._vzdump_running_since = time.time()
@@ -2175,6 +2214,16 @@ class PollingCollector:
         # has an update".
         self._last_managed_check = 0
         self._notified_managed_updates: dict[str, str] = {}
+        # LXC notifications are grouped — one event per polling cycle
+        # covering every running Debian/Ubuntu CT with pending apt
+        # updates. The fingerprint encodes the per-CT state so a stable
+        # batch doesn't re-notify while a meaningful change does.
+        self._notified_lxc_batch: str | None = None
+        # Track previous state of the LXC-updates notification toggle
+        # so a user enabling it post-startup bypasses the 24h gate
+        # ONCE — the next polling cycle runs a fresh detection without
+        # waiting up to a day. Cleared after the forced run completes.
+        self._lxc_was_enabled: bool = False
         # Track notified ProxMenux versions to avoid duplicates
         self._notified_proxmenux_version: str | None = None
         self._notified_proxmenux_beta_version: str | None = None
@@ -3101,7 +3150,24 @@ class PollingCollector:
         NVIDIA driver → ``nvidia_driver_update_available``, etc.).
         """
         now = time.time()
-        if now - self._last_managed_check < self.UPDATE_CHECK_INTERVAL:
+
+        # Detect OFF→ON transition of the LXC update toggle. Without
+        # this, the first polling cycle after service start always sets
+        # the 24h gate — so a user who enables the toggle later (which
+        # is the normal flow, since the toggle defaults to OFF) would
+        # have to wait up to 24h or restart the service before the
+        # detector ran. A one-shot bypass on the transition fixes that
+        # without weakening the 24h cadence in steady state.
+        try:
+            import managed_installs as _mi
+            lxc_enabled_now = _mi._lxc_updates_notification_enabled()
+        except Exception:
+            lxc_enabled_now = False
+        lxc_just_enabled = lxc_enabled_now and not self._lxc_was_enabled
+        self._lxc_was_enabled = lxc_enabled_now
+
+        if (not lxc_just_enabled
+                and now - self._last_managed_check < self.UPDATE_CHECK_INTERVAL):
             return
         self._last_managed_check = now
 
@@ -3117,8 +3183,15 @@ class PollingCollector:
             print(f"[PollingCollector] managed_installs update run failed: {e}")
             return
 
+        # Split LXC updates out of the per-item event stream — they get
+        # one grouped notification per cycle instead of one per CT, to
+        # avoid spamming the user when 15 CTs have pending updates the
+        # same day. Non-LXC types keep their existing per-item flow.
+        lxc_updates = [u for u in updates if u.get('type') == 'lxc']
+        other_updates = [u for u in updates if u.get('type') != 'lxc']
+
         seen_ids: set[str] = set()
-        for item in updates:
+        for item in other_updates:
             item_id = item.get('id', '')
             if not item_id:
                 continue
@@ -3143,6 +3216,17 @@ class PollingCollector:
                 entity_id=f'managed_{item_id}',
             ))
 
+        # LXC: emit one grouped event with all CTs that have pending
+        # updates. The batch fingerprint is recomputed every cycle and
+        # compared with the last notified one — if the set of CTs or
+        # their per-CT fingerprints changed, we notify again.
+        if lxc_updates:
+            self._emit_lxc_updates_batch(lxc_updates)
+        else:
+            # Empty batch — clear the dedup so a fresh batch later fires
+            # a new notification even with the same CTs/versions.
+            self._notified_lxc_batch = None
+
         # Forget items that no longer have an update available. If
         # the user installs the update and then a later release lands,
         # the dedup state is already cleared so the next notification
@@ -3158,6 +3242,67 @@ class PollingCollector:
         for stale_id in list(self._notified_managed_updates.keys()):
             if stale_id not in active_with_update:
                 self._notified_managed_updates.pop(stale_id, None)
+
+    def _emit_lxc_updates_batch(self, items: list[dict]) -> None:
+        """Build and queue a single ``lxc_updates_available`` event for
+        every running CT that currently has pending apt updates.
+
+        The batch fingerprint combines every CT's per-CT fingerprint
+        (count + security_count + top package names). A new CT entering
+        the set OR an existing CT changing its per-CT fingerprint
+        produces a new batch fingerprint, so the cooldown is broken and
+        the event fires. A truly stable batch is silenced via the
+        equality check below.
+        """
+        # Stable order so the fingerprint is deterministic
+        items_sorted = sorted(items, key=lambda x: x.get('id', ''))
+
+        ct_lines: list[str] = []
+        per_ct_fps: list[str] = []
+        total_packages = 0
+        total_security = 0
+
+        for idx, it in enumerate(items_sorted):
+            update = it.get('update_check', {}) or {}
+            count = int(update.get('_count') or 0)
+            sec_count = int(update.get('_security_count') or 0)
+            total_packages += count
+            total_security += sec_count
+
+            vmid = it.get('_vmid') or it.get('id', '').removeprefix('lxc:') or '?'
+            name = it.get('name') or f'CT {vmid}'
+            # Each CT renders across two/three lines so the count and the
+            # security count don't compete with the CT label on the same
+            # row — much easier to read in Telegram/Discord at a glance.
+            # A blank line before every CT except the first separates
+            # entries cleanly without a trailing blank at the end.
+            if idx > 0:
+                ct_lines.append("")
+            ct_lines.append(f"🏷️ CT {vmid} ({name}):")
+            ct_lines.append(f"    📦 {count} update(s)")
+            if sec_count:
+                ct_lines.append(f"    🔒 {sec_count} security")
+            per_ct_fps.append(f"{it.get('id', '')}={update.get('latest', '')}")
+
+        batch_fingerprint = '|'.join(per_ct_fps)
+        if self._notified_lxc_batch == batch_fingerprint:
+            return  # same batch as last time — silent
+        self._notified_lxc_batch = batch_fingerprint
+
+        data = {
+            'hostname': self._hostname,
+            'count': len(items_sorted),
+            'total_packages': total_packages,
+            'security_count': total_security,
+            'ct_list': '\n'.join(ct_lines),
+        }
+        self._queue.put(NotificationEvent(
+            'lxc_updates_available', 'INFO', data,
+            source='polling',
+            entity='node',
+            # Hash so different batches get distinct cooldown keys
+            entity_id=f'lxc_batch_{abs(hash(batch_fingerprint)) % 10**10}',
+        ))
 
     def _build_managed_install_event(self, item: dict) -> tuple[str, dict]:
         """Translate a registry item into a (event_type, template_data)

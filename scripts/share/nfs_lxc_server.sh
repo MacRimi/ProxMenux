@@ -280,9 +280,13 @@ create_nfs_export() {
 
 
     msg_info "$(translate "Setting directory ownership and permissions...")"
-    pct exec "$CTID" -- chown root:sharedfiles "$MOUNT_POINT"
-    pct exec "$CTID" -- chmod 2775 "$MOUNT_POINT"  
-    msg_ok "$(translate "Directory configured with sharedfiles group ownership")"
+    # Hand off ownership/perm setup to the shared helper. It detects the
+    # underlying filesystem (ext4/xfs/zfs/exfat/ntfs-fuse/…), picks the
+    # right strategy (chown+chmod, ACLs, or just inform the user when
+    # the FS can't carry POSIX permissions), and verifies the result
+    # with `runuser`. Empty username — NFS doesn't authenticate per-user
+    # the way Samba does; the `sharedfiles` group is all we need.
+    pmx_setup_share_permissions "$CTID" "$MOUNT_POINT" ""
 
 
 

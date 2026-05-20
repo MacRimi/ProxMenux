@@ -398,31 +398,30 @@ export function HealthThresholds() {
     if (!leaf) return null
     const key = pathKey(path)
     const editingValue = pending[key] ?? String(leaf.value)
-    // Pick the badge palette from the leaf name so warning rows render
-    // amber and critical rows render red. `swap_critical` and any other
-    // *_critical key fall into the red bucket via the substring check.
+    // The input border carries the severity colour so the editable field
+    // itself shows what kind of threshold this is — no separate badge
+    // duplicating the number, which users mistook for the "real" value.
+    // `swap_critical` and any other `*_critical` leaf falls into the red
+    // bucket via the substring check. A blue ring on top of the colour
+    // border signals "customised vs recommended" — two independent
+    // signals on the same widget.
     const last = path[path.length - 1] || ""
     const isCritical = last.toLowerCase().includes("critical")
     const isWarning = last.toLowerCase().includes("warning")
-    const badgeClasses = isCritical
-      ? "bg-red-500/10 text-red-500 border-red-500/30"
+    const severityBorder = isCritical
+      ? "border-red-500/40 bg-red-500/5 focus-visible:border-red-500"
       : isWarning
-        ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
-        : "bg-muted text-muted-foreground border-border"
+        ? "border-amber-500/40 bg-amber-500/5 focus-visible:border-amber-500"
+        : ""
+    const isCustomised = leaf.customised && !(key in pending)
+    const customisedRing = isCustomised ? "ring-2 ring-blue-500/40" : ""
+    const recommendedTooltip = `Recommended: ${leaf.recommended}${leaf.unit}`
     return (
       <div key={key} className="flex items-center justify-between gap-2 py-1.5 px-1">
-        <span className="text-xs sm:text-sm text-foreground/90 min-w-0 flex items-center gap-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-blue-500 flex-shrink-0" aria-hidden="true" />
+        <span className="text-xs sm:text-sm text-foreground/90 min-w-0">
           {label}
         </span>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span
-            className={`inline-flex items-center justify-center h-6 px-2 rounded-md border text-[11px] font-mono tabular-nums ${badgeClasses}`}
-            title="Recommended default value"
-          >
-            {leaf.recommended}
-            {leaf.unit}
-          </span>
           <Input
             type="number"
             min={leaf.min}
@@ -430,14 +429,13 @@ export function HealthThresholds() {
             step={leaf.step}
             disabled={!editMode}
             value={editingValue}
+            title={recommendedTooltip}
             onChange={(e) =>
               setPending((p) => ({ ...p, [key]: e.target.value }))
             }
             className={`w-20 h-7 text-xs text-right tabular-nums ${
               !editMode ? "opacity-70" : ""
-            } ${
-              leaf.customised && !(key in pending) ? "border-blue-500/40" : ""
-            }`}
+            } ${severityBorder} ${customisedRing}`}
           />
           <span className="text-[11px] text-muted-foreground w-6">{leaf.unit}</span>
         </div>
@@ -507,9 +505,9 @@ export function HealthThresholds() {
         </div>
         <CardDescription>
           The Health Monitor and notifications fire when these thresholds are crossed.
-          Recommended values are shown with their reference color (amber for warning,
-          red for critical); your edits override them. Leave a value unchanged to keep
-          the recommended.
+          Amber inputs are warning levels, red inputs are critical levels. A blue ring
+          marks a value you've customised away from the recommended default — hover the
+          field to see the recommendation, or use Reset to restore it.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -520,14 +518,22 @@ export function HealthThresholds() {
         ) : !tree ? (
           <div className="text-sm text-muted-foreground">Failed to load thresholds.</div>
         ) : (
-          <div className="space-y-4">
+          <div>
             {error && (
-              <div className="flex items-start gap-2 p-2.5 rounded-md bg-red-500/10 border border-red-500/30 text-red-500 text-xs">
+              <div className="mb-4 flex items-start gap-2 p-2.5 rounded-md bg-red-500/10 border border-red-500/30 text-red-500 text-xs">
                 <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">{error}</div>
               </div>
             )}
 
+            {/*
+              Masonry-style flow via CSS columns: cards keep their natural
+              height (CPU = 2 rows, Disk temperature = 8 rows) and the
+              browser packs them top-to-bottom into 1/2/3 columns based on
+              viewport. `break-inside-avoid` keeps each card whole.
+              Mobile (<md) stays single-column as today.
+            */}
+            <div className="columns-1 md:columns-2 2xl:columns-3 gap-4 space-y-4 [&>*]:break-inside-avoid">
             {SECTIONS.map((section) => {
               const Icon = section.icon
               return (
@@ -568,6 +574,7 @@ export function HealthThresholds() {
                 </div>
               )
             })}
+            </div>
           </div>
         )}
       </CardContent>

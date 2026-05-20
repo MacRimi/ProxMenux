@@ -973,7 +973,9 @@ class NotificationManager:
         cleanup_interval = 3600  # Cleanup cooldowns every hour
         flush_interval = 5       # Flush aggregation buckets every 5s
         digest_check_interval = 60  # Re-evaluate digest schedule every minute
-        
+        last_quiet_check = 0.0
+        quiet_check_interval = 60   # Re-evaluate per-channel quiet window every minute
+
         while self._running:
             try:
                 event = self._event_queue.get(timeout=2)
@@ -990,17 +992,36 @@ class NotificationManager:
                 if now_mono - last_digest_check > digest_check_interval:
                     self._maybe_flush_digests()
                     last_digest_check = now_mono
+                # Quiet Hours close → flush buffered sub-CRITICAL events
+                # as a single grouped summary. Has to run even when the
+                # queue is idle, otherwise users who don't generate any
+                # events post-window would never see their summary.
+                if now_mono - last_quiet_check > quiet_check_interval:
+                    self._maybe_flush_quiet_hours()
+                    last_quiet_check = now_mono
                 continue
             
             try:
                 self._process_event(event)
             except Exception as e:
                 print(f"[NotificationManager] Dispatch error: {e}")
-            
+
             # Also flush aggregation after each event
-            if time.monotonic() - last_flush > flush_interval:
+            now_mono = time.monotonic()
+            if now_mono - last_flush > flush_interval:
                 self._flush_aggregation()
-                last_flush = time.monotonic()
+                last_flush = now_mono
+            # Re-check digest schedule after each event too. The idle-only
+            # check above misses the daily flush window when the queue stays
+            # busy through the digest_time minute (rare but real: a burst of
+            # journal events arriving at the same minute as the target). The
+            # 23h guard inside _maybe_flush_digests keeps it idempotent.
+            if now_mono - last_digest_check > digest_check_interval:
+                self._maybe_flush_digests()
+                last_digest_check = now_mono
+            if now_mono - last_quiet_check > quiet_check_interval:
+                self._maybe_flush_quiet_hours()
+                last_quiet_check = now_mono
     
     def _flush_aggregation(self):
         """Flush expired aggregation buckets and dispatch summaries."""
@@ -1171,20 +1192,20 @@ class NotificationManager:
 
             # ── Per-channel quiet hours ──
             # The user marks a window (e.g. 22:00 → 06:00) during which only
-            # CRITICAL events reach this channel. Anything below CRITICAL is
-            # dropped silently — not buffered, not retried — because the
-            # whole point is "don't wake me up at 3 AM unless the disk
-            # exploded". CRITICAL always wins. The window is configured
-            # per-channel; same channel can have different rules from
-            # another. See _in_quiet_hours() for boundary semantics.
+            # CRITICAL events reach this channel. Sub-CRITICAL events are
+            # **buffered** to `quiet_pending` and flushed as a SINGLE grouped
+            # summary when the window closes — so the user doesn't get
+            # paged at 3 AM but also doesn't lose 8h of activity overnight.
+            # CRITICAL always wins. The window is configured per-channel.
+            # See _in_quiet_hours() for boundary semantics.
             # `_dispatch_to_channels` does NOT receive the NotificationEvent
             # object — only the rendered primitives. Using `event.X` here
-            # raised `NameError: name 'event' is not defined` for every
-            # event passing through (silenced by the dispatch loop's broad
-            # except → no notifications EVER delivered after Quiet Hours +
-            # Daily Digest were merged). All community-reported "stopped
-            # receiving notifications after update" cases trace back here.
+            # raised `NameError` for every event passing through, silenced
+            # by the dispatch loop's broad except → no notifications EVER
+            # delivered after Quiet Hours + Daily Digest were merged.
             if severity != 'CRITICAL' and self._in_quiet_hours(ch_name):
+                self._buffer_quiet_event(ch_name, event_type, event_group,
+                                          severity, title, body)
                 continue
 
             # ── Per-channel daily digest ──
@@ -1536,6 +1557,126 @@ class NotificationManager:
             'not in this digest.)'
         )
         return '\n'.join(lines).rstrip() + '\n'
+
+    # ─── Quiet Hours buffer + flush ────────────────────────────
+    # Reused infrastructure: `quiet_pending` table (created in
+    # health_persistence) has the same shape as `digest_pending`, so
+    # `_compose_digest_body` renders the summary unchanged. What
+    # differs is the lifecycle — quiet_pending flushes when each
+    # channel's window CLOSES, not at a fixed daily time. We track
+    # that transition via `self._was_in_quiet_hours[ch_name]`.
+
+    def _buffer_quiet_event(self, ch_name: str, event_type: str,
+                            event_group: str, severity: str,
+                            title: str, body: str) -> None:
+        """Append a sub-CRITICAL event to the channel's quiet-hours
+        buffer in SQLite. Mirrors `_buffer_digest_event` — same shape,
+        different table.
+        """
+        try:
+            conn = sqlite3.connect(str(DB_PATH), timeout=10)
+            conn.execute('PRAGMA journal_mode=WAL')
+            conn.execute('PRAGMA busy_timeout=5000')
+            conn.execute(
+                'INSERT INTO quiet_pending '
+                '(channel, event_type, event_group, severity, ts, title, body) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?)',
+                (ch_name, event_type, event_group, severity,
+                 int(time.time()), title, body),
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"[NotificationManager] quiet_pending write failed: {e}")
+
+    def _maybe_flush_quiet_hours(self) -> None:
+        """Detect per-channel quiet-hours close (in→out transition) and
+        emit one summary notification with everything buffered during
+        the window. Called every ~60s from the dispatch loop.
+
+        State held in-memory: `self._was_in_quiet_hours[ch_name]`. On
+        first run after restart all channels start as "unknown" — we
+        seed with the current window status WITHOUT firing a summary,
+        so a Monitor restart in the middle of someone's quiet window
+        doesn't trigger a fake close-of-window flush.
+        """
+        if not hasattr(self, '_was_in_quiet_hours'):
+            self._was_in_quiet_hours = {}
+
+        for ch_name, channel in list(self._channels.items()):
+            currently_in = self._in_quiet_hours(ch_name)
+            previously_in = self._was_in_quiet_hours.get(ch_name)
+            self._was_in_quiet_hours[ch_name] = currently_in
+
+            # Seed run (no prior state) — don't fire anything.
+            if previously_in is None:
+                continue
+            # Still in the window → just buffer.
+            if currently_in:
+                continue
+            # Was in window, now out → close transition → flush.
+            if previously_in and not currently_in:
+                try:
+                    self._flush_quiet_for_channel(ch_name, channel)
+                except Exception as e:
+                    print(f"[NotificationManager] quiet flush failed for "
+                          f"{ch_name}: {e}")
+
+    def _flush_quiet_for_channel(self, ch_name: str, channel: Any) -> None:
+        """Send a single grouped summary of everything buffered for
+        `ch_name` during the just-closed quiet window, then drop the
+        buffer rows. Reuses `_compose_digest_body` for rendering since
+        the row shape is identical.
+        """
+        try:
+            conn = sqlite3.connect(str(DB_PATH), timeout=10)
+            conn.execute('PRAGMA journal_mode=WAL')
+            cursor = conn.cursor()
+            cursor.execute(
+                'SELECT id, event_type, event_group, ts, title, body '
+                'FROM quiet_pending WHERE channel = ? ORDER BY ts ASC',
+                (ch_name,),
+            )
+            rows = cursor.fetchall()
+            conn.close()
+        except Exception as e:
+            print(f"[NotificationManager] quiet read failed for {ch_name}: {e}")
+            return
+
+        if not rows:
+            return
+
+        host = _hostname(self._config)
+        summary_title = (
+            f"{host}: {len(rows)} events buffered during Quiet Hours"
+        )
+        summary_body = self._compose_digest_body(rows)
+
+        try:
+            channel.send(summary_title, summary_body, severity='INFO',
+                         data={'_quiet_hours_summary': True, '_count': len(rows)})
+        except Exception as e:
+            print(f"[NotificationManager] quiet send failed for "
+                  f"{ch_name}: {e}")
+            return
+
+        # Only drop the rows after a successful send so a transient
+        # transport failure (Telegram timeout, SMTP outage) doesn't
+        # lose the user's overnight context.
+        try:
+            ids = [r[0] for r in rows]
+            conn = sqlite3.connect(str(DB_PATH), timeout=10)
+            conn.execute('PRAGMA journal_mode=WAL')
+            placeholders = ','.join('?' * len(ids))
+            conn.execute(
+                f'DELETE FROM quiet_pending WHERE id IN ({placeholders})',
+                ids,
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"[NotificationManager] quiet cleanup failed for "
+                  f"{ch_name}: {e}")
 
     def _passes_cooldown(self, event: NotificationEvent) -> bool:
         """Check if the event passes cooldown rules WITHOUT stamping.
@@ -2315,6 +2456,18 @@ class NotificationManager:
             ch_cfg: Dict[str, Any] = {
                 'enabled': self._config.get(f'{ch_type}.enabled', 'false') == 'true',
                 'rich_format': self._config.get(f'{ch_type}.rich_format', 'false') == 'true',
+                # Quiet Hours + Daily Digest live in the same per-channel
+                # namespace but weren't being projected back to the UI —
+                # the toggles round-tripped through POST but the GET only
+                # returned `enabled`/`rich_format` plus channel-specific
+                # config_keys, so after a reload the user saw the toggle
+                # off even though the DB had it on. Reported on .1.10
+                # along with the post-window delivery bug.
+                'quiet_enabled': self._config.get(f'{ch_type}.quiet_enabled', 'false') == 'true',
+                'quiet_start': self._config.get(f'{ch_type}.quiet_start', '22:00'),
+                'quiet_end': self._config.get(f'{ch_type}.quiet_end', '06:00'),
+                'digest_enabled': self._config.get(f'{ch_type}.digest_enabled', 'false') == 'true',
+                'digest_time': self._config.get(f'{ch_type}.digest_time', '09:00'),
             }
             for config_key in info['config_keys']:
                 full_key = f'{ch_type}.{config_key}'

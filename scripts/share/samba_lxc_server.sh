@@ -172,16 +172,15 @@ create_share() {
     IS_MOUNTED=$(pct exec "$CTID" -- mount | grep "$MOUNT_POINT" || true)
     if [[ -n "$IS_MOUNTED" ]]; then
         msg_info "$(translate "Detected a mounted directory from host. Setting up shared group...")"
-        
-        # Match the GID `nfs_lxc_server.sh` uses (101000) so the same
-        # `sharedfiles` group bridges Samba- and NFS-served paths. The
-        # previous `999` was inconsistent — files written via Samba were
-        # owned by GID 999 and not visible to NFS clients accessing the
-        # same dataset. Audit Tier 6 — GID inconsistente.
+
+        # The `sharedfiles` group bridges Samba- and NFS-served paths so a
+        # file written by one protocol is writable by the other. Fixed GID
+        # 101000 keeps the group ID consistent across CTs / hosts that
+        # share the same mount.
         SHARE_GID=101000
         GROUP_EXISTS=$(pct exec "$CTID" -- getent group sharedfiles || true)
         GID_IN_USE=$(pct exec "$CTID" -- getent group "$SHARE_GID" | cut -d: -f1 || true)
-        
+
         if [[ -z "$GROUP_EXISTS" ]]; then
             if [[ -z "$GID_IN_USE" ]]; then
                 pct exec "$CTID" -- groupadd -g "$SHARE_GID" sharedfiles
@@ -193,65 +192,23 @@ create_share() {
         else
             msg_ok "$(translate "Group 'sharedfiles' already exists inside the CT")"
         fi
-        
-        if pct exec "$CTID" -- getent group sharedfiles >/dev/null; then
-            pct exec "$CTID" -- usermod -aG sharedfiles "$USERNAME"
-            # chown/chmod on a host bind-mount FAIL with "Operation not
-            # permitted" inside an unprivileged CT — the kernel won't let
-            # an unprivileged user namespace change ownership of files
-            # that belong to a different (real-host) UID. The host owns
-            # the directory; we only need write access for $USERNAME and
-            # the `sharedfiles` group, which the ACL block below handles.
-            # Silence the failure so it doesn't look alarming in the log.
-            pct exec "$CTID" -- chown root:sharedfiles "$MOUNT_POINT" 2>/dev/null || true
-            pct exec "$CTID" -- chmod 2775 "$MOUNT_POINT" 2>/dev/null || true
-        else
-            msg_error "$(translate "Group 'sharedfiles' was not created successfully. Skipping chown/usermod.")"
-        fi
 
-        # Apply BOTH access and default POSIX ACLs unconditionally.
-        # Previously this ran only when `test -w` failed for $USERNAME —
-        # but a local `test -w` says nothing about whether Samba can
-        # write through the share. Once Windows creates a *new* file or
-        # subfolder, it inherits the parent's effective ACL; without a
-        # `default:` entry the new entry has no ACL at all and falls
-        # back to the host bind-mount's restrictive 755 → Windows shows
-        # "permission denied" even though the same user can write from
-        # inside the CT shell. The `-d` flag is what fixes that.
-        # `m::rwx` keeps the ACL mask from clipping rwx grants.
-        if pct exec "$CTID" -- bash -c "command -v setfacl >/dev/null"; then
-            pct exec "$CTID" -- setfacl -R \
-                -m "u:$USERNAME:rwx,g:sharedfiles:rwx,m::rwx" \
-                "$MOUNT_POINT" 2>/dev/null || true
-            pct exec "$CTID" -- setfacl -R -d \
-                -m "u:$USERNAME:rwx,g:sharedfiles:rwx,m::rwx" \
-                "$MOUNT_POINT" 2>/dev/null || true
-        else
-            pct exec "$CTID" -- apt-get install -y -qq acl >/dev/null 2>&1 || true
-            pct exec "$CTID" -- setfacl -R \
-                -m "u:$USERNAME:rwx,g:sharedfiles:rwx,m::rwx" \
-                "$MOUNT_POINT" 2>/dev/null || true
-            pct exec "$CTID" -- setfacl -R -d \
-                -m "u:$USERNAME:rwx,g:sharedfiles:rwx,m::rwx" \
-                "$MOUNT_POINT" 2>/dev/null || true
-        fi
-
-        HAS_ACCESS=$(pct exec "$CTID" -- su -s /bin/bash -c "test -w '$MOUNT_POINT' && echo yes || echo no" "$USERNAME" 2>/dev/null)
-        if [ "$HAS_ACCESS" = "no" ]; then
-            msg_warn "$(translate "ACL applied but write test still failed — check host-side permissions of:") $MOUNT_POINT"
-        else
-            msg_ok "$(translate "Write access (incl. default ACL for new files) confirmed for user:") $USERNAME"
-        fi
+        # Hand off ownership/perm setup to the shared helper. It detects
+        # the underlying filesystem (ext4/xfs/zfs/exfat/ntfs-fuse/…), picks
+        # the right strategy (chown+chmod, ACLs, or just inform the user
+        # if the FS can't carry POSIX permissions), and verifies write
+        # access with `runuser` (avoids the `su: cannot set groups`
+        # PAM quirk that hits `pct exec`).
+        pmx_setup_share_permissions "$CTID" "$MOUNT_POINT" "$USERNAME"
     else
         msg_ok "$(translate "No shared mount detected. Applying standard local access.")"
-        # Local (CT-internal) path — chown/chmod should normally succeed,
-        # but on rare bind setups (e.g. zfs with acltype=off) they can
-        # still trip. Suppress stderr to keep the log clean; the
-        # write-access probe below is the source of truth.
-        pct exec "$CTID" -- chown -R "$USERNAME:$USERNAME" "$MOUNT_POINT" 2>/dev/null || true
-        pct exec "$CTID" -- chmod -R 755 "$MOUNT_POINT" 2>/dev/null || true
+        # Local (CT-internal) path: rootfs is always POSIX-friendly, so
+        # chown/chmod always succeed. Keep the previous behaviour.
+        pct exec "$CTID" -- chown -R "$USERNAME:$USERNAME" "$MOUNT_POINT"
+        pct exec "$CTID" -- chmod -R 755 "$MOUNT_POINT"
 
-        HAS_ACCESS=$(pct exec "$CTID" -- su -s /bin/bash -c "test -w '$MOUNT_POINT' && echo yes || echo no" "$USERNAME" 2>/dev/null)
+        HAS_ACCESS=$(pct exec "$CTID" -- runuser -u "$USERNAME" -- \
+            bash -c "test -w '$MOUNT_POINT' && echo yes || echo no" 2>/dev/null)
         if [ "$HAS_ACCESS" = "no" ]; then
             pct exec "$CTID" -- setfacl -R -m "u:$USERNAME:rwx" "$MOUNT_POINT" 2>/dev/null || true
             msg_warn "$(translate "ACL permissions applied for local access for user:") $USERNAME"
@@ -268,6 +225,14 @@ create_share() {
     
     SHARE_NAME=$(basename "$MOUNT_POINT")
     
+    # `force user = $USERNAME` makes every Samba file operation happen
+    # under that unix UID regardless of the connecting Windows account.
+    # Combined with `force group = sharedfiles` and the matching
+    # ownership / ACLs applied earlier, this is what keeps writes
+    # consistent on host bind-mounts where the kernel sees Samba's
+    # impersonated UID — without it Windows can authenticate fine but
+    # writes silently fail because Samba ends up writing as some other
+    # mapped UID with no permission on the target.
     case "$SHARE_OPTIONS" in
         rw)
             CONFIG=$(cat <<EOF
@@ -279,6 +244,7 @@ create_share() {
     browseable = yes
     guest ok = no
     valid users = $USERNAME
+    force user = $USERNAME
     force group = sharedfiles
     create mask = 0664
     directory mask = 2775
@@ -298,6 +264,7 @@ EOF
     browseable = yes
     guest ok = no
     valid users = $USERNAME
+    force user = $USERNAME
     force group = sharedfiles
     veto files = /lost+found/
 EOF
@@ -310,6 +277,7 @@ EOF
     comment = Custom shared folder for $USERNAME
     path = $MOUNT_POINT
     valid users = $USERNAME
+    force user = $USERNAME
     force group = sharedfiles
     $CUSTOM_CONFIG
     veto files = /lost+found/
@@ -326,6 +294,7 @@ EOF
     browseable = yes
     guest ok = no
     valid users = $USERNAME
+    force user = $USERNAME
     force group = sharedfiles
     create mask = 0664
     directory mask = 2775

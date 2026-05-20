@@ -791,7 +791,8 @@ install_normal_version() {
     fi
 
     for pkg in "${BASIC_DEPS[@]}"; do
-        if ! dpkg -l | grep -qw "$pkg"; then
+        # Strict per-package check — see comment in install_translation_version().
+        if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
                 update_config "$pkg" "installed"
             else
@@ -939,7 +940,12 @@ install_translation_version() {
     
     DEPS=("dialog" "curl" "git" "python3" "python3-venv" "python3-pip")
     for pkg in "${DEPS[@]}"; do
-        if ! dpkg -l | grep -qw "$pkg"; then
+        # `dpkg -l | grep -qw "$pkg"` treats `-` as a word boundary, so a
+        # query for `python3` would falsely match `python3-pip` and skip
+        # the real `python3` install. `dpkg-query -W -f='${Status}'` asks
+        # for the EXACT package and reports "install ok installed" only
+        # when truly present. Issue #205 traced back here.
+        if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
                 update_config "$pkg" "installed"
             else

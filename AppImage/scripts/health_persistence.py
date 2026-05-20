@@ -92,7 +92,15 @@ class HealthPersistence:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         
         self.db_path = self.data_dir / 'health_monitor.db'
-        self._db_lock = threading.Lock()
+        # Reentrant lock: `record_disk_observation` acquires this and then
+        # calls `register_disk` which acquires it again on the same thread.
+        # With a plain `threading.Lock` that second acquire deadlocks and the
+        # caller hangs forever — visible symptom on RimegraVE (Pedro Rico
+        # 19/05): no disk_observation update since the day a thread first
+        # walked that path. `RLock` allows re-entry from the same thread
+        # while still serialising cross-thread writes, which is what the
+        # serialisation rationale (race-free UPSERT dedup) actually wants.
+        self._db_lock = threading.RLock()
         self._init_database()
     
     def _get_conn(self) -> sqlite3.Connection:
@@ -227,6 +235,29 @@ class HealthPersistence:
         cursor.execute(
             'CREATE INDEX IF NOT EXISTS idx_digest_pending_channel '
             'ON digest_pending(channel, ts)'
+        )
+
+        # Sibling table for events buffered DURING Quiet Hours. Same
+        # shape as digest_pending so the existing summary renderer can
+        # be reused. Kept separate because the lifecycle is different:
+        # digest_pending flushes once per day at digest_time, while
+        # quiet_pending flushes once per Quiet Hours close (an arbitrary
+        # time that depends on the user's window settings).
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS quiet_pending (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                channel TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                event_group TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                ts INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                body TEXT NOT NULL
+            )
+        ''')
+        cursor.execute(
+            'CREATE INDEX IF NOT EXISTS idx_quiet_pending_channel '
+            'ON quiet_pending(channel, ts)'
         )
         
         # Migration: add missing columns to errors table for existing DBs
@@ -2289,11 +2320,15 @@ class HealthPersistence:
 
                 # Upsert observation: if same (disk, type, signature), bump count + update last timestamp.
                 # IMPORTANT: Do NOT reset dismissed — if the user dismissed this observation,
-                # re-detecting the same journal entry must not un-dismiss it. Also do not
-                # increment the occurrence_count on dismissed rows (audit Tier 5 — once
-                # the user has dismissed, we don't want the counter to keep growing for
-                # journal events that no longer interest them; this also stops the badge
-                # from drifting upward for dismissed conditions).
+                # re-detecting the same journal entry must not un-dismiss it. BUT we DO
+                # keep counting + updating last_occurrence even when dismissed, because the
+                # responsible-monitoring contract is: every error counts toward the
+                # accumulated total shown in the disk modal ("324 connection errors"),
+                # even errors of the same signature the user already saw once. Dismissed
+                # only mutes notifications, NOT the per-disk error history surfaced in the
+                # UI. Reverting the earlier "WHERE dismissed=0" gate that froze the
+                # counter and last_occurrence for /dev/sdh on 2026-05-09, leaving 10
+                # silent days of unreported ATA errors (Pedro Rico, 19/05).
                 cursor.execute(f'''
                     INSERT INTO disk_observations
                         (disk_registry_id, {type_col}, error_signature, {first_col},
@@ -2303,7 +2338,6 @@ class HealthPersistence:
                         {last_col} = excluded.{last_col},
                         occurrence_count = occurrence_count + 1,
                         severity = CASE WHEN excluded.severity = 'critical' THEN 'critical' ELSE severity END
-                    WHERE dismissed = 0
                 ''', (disk_id, error_type, error_signature, now, now, raw_message, severity))
 
                 conn.commit()

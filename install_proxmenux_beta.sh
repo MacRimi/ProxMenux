@@ -569,7 +569,11 @@ install_beta() {
     fi
 
     for pkg in "${BASIC_DEPS[@]}"; do
-        if ! dpkg -l | grep -qw "$pkg"; then
+        # Strict per-package check — `dpkg -l | grep -qw python3` falsely
+        # matches `python3-pip` (the `-` is a word boundary), so dpkg-query
+        # for the EXACT package name is the only reliable test.
+        # Issue #205.
+        if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "ok installed"; then
             if apt-get install -y "$pkg" > /dev/null 2>&1; then
                 update_config "$pkg" "installed"
             else

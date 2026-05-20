@@ -997,3 +997,207 @@ pmx_ask_permanent_mount() {
         echo "false"
     fi
 }
+
+
+# ==========================================================
+# Inspect the filesystem behind a path inside a CT and report
+# which POSIX features it supports. Used by `samba_lxc_server.sh`
+# and `nfs_lxc_server.sh` to decide whether traditional
+# chown/chmod is enough, ACLs are needed, or the filesystem
+# (exFAT, FAT32, NTFS via fuseblk) supports neither — in which
+# case the only viable path is configuring the HOST mount with
+# `uid=`/`gid=`/`fmask=`/`dmask=` options.
+#
+# Args:
+#   $1 = CTID
+#   $2 = path inside the CT (e.g. /mnt/media)
+#
+# Echoes a single line with 4 tab-separated fields:
+#   <fstype>\t<can_chown>\t<can_acl>\t<unprivileged>
+# where can_chown / can_acl / unprivileged are "yes" / "no".
+#
+# Sample outputs:
+#   "ext4    yes    yes    no"   → ext4 on privileged CT, full POSIX
+#   "zfs     yes    no     no"   → ZFS without acltype=posixacl
+#   "exfat   no     no     no"   → exFAT, no POSIX semantics at all
+#   "ext4    yes    yes    yes"  → ext4 on unprivileged CT (caller
+#                                  must keep in mind chown from
+#                                  inside is likely to fail anyway)
+# ==========================================================
+pmx_detect_share_target_caps() {
+    local ctid="$1"
+    local path="$2"
+
+    # Filesystem reported by the kernel (NOT what fstab claims —
+    # the actual mounted FS as seen from inside the CT).
+    local fstype
+    fstype=$(pct exec "$ctid" -- stat -f -c '%T' "$path" 2>/dev/null)
+    fstype="${fstype:-unknown}"
+
+    local can_chown="yes"
+    local can_acl="yes"
+
+    case "$fstype" in
+        ext2*|ext3*|ext4*|xfs|btrfs|tmpfs|nfs*|cifs*|smb*)
+            # Native POSIX. ACL is the kernel default for these.
+            ;;
+        zfs)
+            # ZFS supports chown natively, but POSIX ACL only when
+            # acltype=posixacl. Probe with a no-op setfacl. We
+            # ensure setfacl exists first; if not, install it.
+            if ! pct exec "$ctid" -- bash -c "command -v setfacl >/dev/null" 2>/dev/null; then
+                pct exec "$ctid" -- bash -c "apt-get install -y -qq acl >/dev/null 2>&1" || true
+            fi
+            if ! pct exec "$ctid" -- setfacl -m "u::rwx" "$path" >/dev/null 2>&1; then
+                can_acl="no"
+            fi
+            ;;
+        msdos|vfat|exfat|ntfs|fuseblk)
+            # These filesystems do not carry POSIX ownership / mode
+            # / ACL at all. Permissions come exclusively from the
+            # mount-time options (uid=, gid=, fmask=, dmask=).
+            can_chown="no"
+            can_acl="no"
+            ;;
+        *)
+            # Unknown FS — probe both. We try chown to ourselves
+            # (no-op when it succeeds) and a no-op setfacl. Both
+            # are cheap and tell us what works.
+            local cur_owner
+            cur_owner=$(pct exec "$ctid" -- stat -c '%U:%G' "$path" 2>/dev/null)
+            if [[ -z "$cur_owner" ]] || ! pct exec "$ctid" -- chown "$cur_owner" "$path" >/dev/null 2>&1; then
+                can_chown="no"
+            fi
+            if ! pct exec "$ctid" -- bash -c "command -v setfacl >/dev/null" 2>/dev/null; then
+                pct exec "$ctid" -- bash -c "apt-get install -y -qq acl >/dev/null 2>&1" || true
+            fi
+            if ! pct exec "$ctid" -- setfacl -m "u::rwx" "$path" >/dev/null 2>&1; then
+                can_acl="no"
+            fi
+            ;;
+    esac
+
+    # CT type — privileged (unprivileged: 0) lets chown / chmod
+    # run as effective host root. Unprivileged CTs have a user
+    # namespace mapping and chown from inside the CT typically
+    # fails on host-side bind mounts.
+    local unprivileged
+    unprivileged=$(pct config "$ctid" 2>/dev/null | awk -F': ' '/^unprivileged:/ {print $2; exit}')
+    local unpriv_flag="no"
+    [[ "$unprivileged" == "1" ]] && unpriv_flag="yes"
+
+    printf '%s\t%s\t%s\t%s\n' "$fstype" "$can_chown" "$can_acl" "$unpriv_flag"
+}
+
+
+# ==========================================================
+# Configure ownership / permissions on a shared mountpoint so
+# the given Samba/NFS user can write to it. Branches by the
+# filesystem capabilities reported by pmx_detect_share_target_caps.
+#
+# Args:
+#   $1 = CTID
+#   $2 = mount point inside the CT
+#   $3 = username inside the CT (must already exist)
+#
+# Returns:
+#   0 on success or partial success (warnings shown).
+#   1 only on hard failures the caller should refuse to proceed on.
+#
+# Expects the global helper `sharedfiles` group to already exist
+# in the CT (caller is responsible for that — see
+# setup_universal_sharedfiles_group).
+# ==========================================================
+pmx_setup_share_permissions() {
+    local ctid="$1"
+    local mp="$2"
+    local username="$3"
+
+    # Probe filesystem capabilities.
+    local caps fstype can_chown can_acl unpriv
+    caps=$(pmx_detect_share_target_caps "$ctid" "$mp")
+    IFS=$'\t' read -r fstype can_chown can_acl unpriv <<<"$caps"
+
+    msg_info "$(translate "Detected filesystem at $mp:") $fstype  (chown=$can_chown, acl=$can_acl, unprivileged_ct=$unpriv)"
+
+    # Always ensure the user is in the sharedfiles group — this
+    # is harmless regardless of FS capabilities. Skip when no user
+    # was passed (NFS path: only the group matters, no per-user ACL).
+    if [[ -n "$username" ]]; then
+        pct exec "$ctid" -- usermod -aG sharedfiles "$username" 2>/dev/null || true
+    fi
+
+    # ACL spec — include the user only when one is provided.
+    local acl_spec="g:sharedfiles:rwx,m::rwx"
+    if [[ -n "$username" ]]; then
+        acl_spec="u:$username:rwx,$acl_spec"
+    fi
+
+    if [[ "$can_chown" == "yes" ]]; then
+        # POSIX-friendly filesystem. Set group ownership +
+        # setgid bit so new files inherit the group.
+        if pct exec "$ctid" -- chown root:sharedfiles "$mp" 2>/dev/null \
+            && pct exec "$ctid" -- chmod 2775 "$mp" 2>/dev/null; then
+            msg_ok "$(translate "Ownership set to root:sharedfiles with 2775 on:") $mp"
+        else
+            msg_warn "$(translate "chown/chmod failed — likely unprivileged CT against host bind mount. Falling back to ACL.")"
+        fi
+
+        if [[ "$can_acl" == "yes" ]]; then
+            # Access + default ACL so new files clients create
+            # inherit write permission for the sharedfiles group
+            # (and the Samba user, when one is provided). Without
+            # `-d` (default ACL) the parent's ACL doesn't propagate
+            # to children → new files end up with restrictive 755
+            # and clients get "permission denied" on the next write.
+            # `m::rwx` keeps the ACL mask from clipping rwx grants.
+            pct exec "$ctid" -- setfacl -R    -m "$acl_spec" "$mp" 2>/dev/null || true
+            pct exec "$ctid" -- setfacl -R -d -m "$acl_spec" "$mp" 2>/dev/null || true
+            msg_ok "$(translate "POSIX ACLs applied (access + default for inheritance).")"
+        else
+            msg_warn "$(translate "Filesystem $fstype does not support POSIX ACLs — relying on group ownership only.")"
+            if [[ "$fstype" == "zfs" ]]; then
+                msg_warn "$(translate "Tip: zfs set acltype=posixacl xattr=sa <pool>/<dataset> enables full ACL support.")"
+            fi
+        fi
+    else
+        # exFAT / FAT32 / NTFS-fuse / similar — permissions live
+        # entirely in the host mount options. Don't waste cycles
+        # trying chown/chmod/setfacl; tell the user what to do
+        # and refuse to silently produce a broken share.
+        local uid_in_ct gid_in_ct
+        uid_in_ct=$(pct exec "$ctid" -- id -u "$username" 2>/dev/null)
+        gid_in_ct=$(pct exec "$ctid" -- getent group sharedfiles 2>/dev/null | cut -d: -f3)
+        msg_warn "$(translate "Filesystem $fstype does NOT support chown/chmod/ACL.")"
+        msg_warn "$(translate "On a privileged CT the mount options carry the only permissions.")"
+        msg_warn "$(translate "Stop the CT, unmount the disk on the HOST, and remount with:")"
+        echo
+        echo "  mount -o uid=${uid_in_ct:-1000},gid=${gid_in_ct:-100},fmask=0002,dmask=0002 <device> <hostpath>"
+        echo
+        msg_warn "$(translate "Then update /etc/fstab on the host with the same options.")"
+        msg_warn "$(translate "Recommendation: reformat the disk to ext4 for a robust setup — see docs.")"
+    fi
+
+    # Verify the user can actually write. `runuser` instead of
+    # `su` — `pct exec ... su -` raises 'cannot set groups:
+    # Operation not permitted' due to a PAM/cap quirk with the
+    # exec entry path; runuser doesn't have that issue.
+    # Skipped for the NFS path (no specific user to test as — the
+    # NFS server itself decides UID mapping at export time).
+    if [[ -z "$username" ]]; then
+        msg_ok "$(translate "Directory configured for sharedfiles group access on:") $mp"
+        return 0
+    fi
+
+    local has_access
+    has_access=$(pct exec "$ctid" -- runuser -u "$username" -- \
+        bash -c "test -w '$mp' && echo yes || echo no" 2>/dev/null)
+    if [[ "$has_access" == "yes" ]]; then
+        msg_ok "$(translate "Write access verified for user:") $username"
+        return 0
+    else
+        msg_error "$(translate "Write access test FAILED for user:") $username"
+        msg_warn "$(translate "Samba/NFS clients will likely receive 'permission denied'. Review the steps above.")"
+        return 1
+    fi
+}
