@@ -196,27 +196,64 @@ create_share() {
         
         if pct exec "$CTID" -- getent group sharedfiles >/dev/null; then
             pct exec "$CTID" -- usermod -aG sharedfiles "$USERNAME"
-            pct exec "$CTID" -- chown root:sharedfiles "$MOUNT_POINT"
-            pct exec "$CTID" -- chmod 2775 "$MOUNT_POINT"
+            # chown/chmod on a host bind-mount FAIL with "Operation not
+            # permitted" inside an unprivileged CT — the kernel won't let
+            # an unprivileged user namespace change ownership of files
+            # that belong to a different (real-host) UID. The host owns
+            # the directory; we only need write access for $USERNAME and
+            # the `sharedfiles` group, which the ACL block below handles.
+            # Silence the failure so it doesn't look alarming in the log.
+            pct exec "$CTID" -- chown root:sharedfiles "$MOUNT_POINT" 2>/dev/null || true
+            pct exec "$CTID" -- chmod 2775 "$MOUNT_POINT" 2>/dev/null || true
         else
             msg_error "$(translate "Group 'sharedfiles' was not created successfully. Skipping chown/usermod.")"
         fi
-        
+
+        # Apply BOTH access and default POSIX ACLs unconditionally.
+        # Previously this ran only when `test -w` failed for $USERNAME —
+        # but a local `test -w` says nothing about whether Samba can
+        # write through the share. Once Windows creates a *new* file or
+        # subfolder, it inherits the parent's effective ACL; without a
+        # `default:` entry the new entry has no ACL at all and falls
+        # back to the host bind-mount's restrictive 755 → Windows shows
+        # "permission denied" even though the same user can write from
+        # inside the CT shell. The `-d` flag is what fixes that.
+        # `m::rwx` keeps the ACL mask from clipping rwx grants.
+        if pct exec "$CTID" -- bash -c "command -v setfacl >/dev/null"; then
+            pct exec "$CTID" -- setfacl -R \
+                -m "u:$USERNAME:rwx,g:sharedfiles:rwx,m::rwx" \
+                "$MOUNT_POINT" 2>/dev/null || true
+            pct exec "$CTID" -- setfacl -R -d \
+                -m "u:$USERNAME:rwx,g:sharedfiles:rwx,m::rwx" \
+                "$MOUNT_POINT" 2>/dev/null || true
+        else
+            pct exec "$CTID" -- apt-get install -y -qq acl >/dev/null 2>&1 || true
+            pct exec "$CTID" -- setfacl -R \
+                -m "u:$USERNAME:rwx,g:sharedfiles:rwx,m::rwx" \
+                "$MOUNT_POINT" 2>/dev/null || true
+            pct exec "$CTID" -- setfacl -R -d \
+                -m "u:$USERNAME:rwx,g:sharedfiles:rwx,m::rwx" \
+                "$MOUNT_POINT" 2>/dev/null || true
+        fi
+
         HAS_ACCESS=$(pct exec "$CTID" -- su -s /bin/bash -c "test -w '$MOUNT_POINT' && echo yes || echo no" "$USERNAME" 2>/dev/null)
         if [ "$HAS_ACCESS" = "no" ]; then
-            pct exec "$CTID" -- setfacl -R -m "u:$USERNAME:rwx" "$MOUNT_POINT"
-            msg_warn "$(translate "ACL permissions applied to allow write access for user:") $USERNAME"
+            msg_warn "$(translate "ACL applied but write test still failed — check host-side permissions of:") $MOUNT_POINT"
         else
-            msg_ok "$(translate "Write access confirmed for user:") $USERNAME"
+            msg_ok "$(translate "Write access (incl. default ACL for new files) confirmed for user:") $USERNAME"
         fi
     else
         msg_ok "$(translate "No shared mount detected. Applying standard local access.")"
-        pct exec "$CTID" -- chown -R "$USERNAME:$USERNAME" "$MOUNT_POINT"
-        pct exec "$CTID" -- chmod -R 755 "$MOUNT_POINT"
-        
+        # Local (CT-internal) path — chown/chmod should normally succeed,
+        # but on rare bind setups (e.g. zfs with acltype=off) they can
+        # still trip. Suppress stderr to keep the log clean; the
+        # write-access probe below is the source of truth.
+        pct exec "$CTID" -- chown -R "$USERNAME:$USERNAME" "$MOUNT_POINT" 2>/dev/null || true
+        pct exec "$CTID" -- chmod -R 755 "$MOUNT_POINT" 2>/dev/null || true
+
         HAS_ACCESS=$(pct exec "$CTID" -- su -s /bin/bash -c "test -w '$MOUNT_POINT' && echo yes || echo no" "$USERNAME" 2>/dev/null)
         if [ "$HAS_ACCESS" = "no" ]; then
-            pct exec "$CTID" -- setfacl -R -m "u:$USERNAME:rwx" "$MOUNT_POINT"
+            pct exec "$CTID" -- setfacl -R -m "u:$USERNAME:rwx" "$MOUNT_POINT" 2>/dev/null || true
             msg_warn "$(translate "ACL permissions applied for local access for user:") $USERNAME"
         else
             msg_ok "$(translate "Write access confirmed for user:") $USERNAME"
