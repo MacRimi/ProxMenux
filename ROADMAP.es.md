@@ -103,10 +103,10 @@ herramienta **apta para entornos de producción y para clientes**:
 #### 6️⃣ PBS y cluster
 | Item | Estado | Notas |
 |---|---|---|
-| Último backup por VM/LXC | 🟢 | Visible en el modal de cada VM/CT |
-| VMs sin backup y jobs fallidos | 🟡 | `vzdump_failed` se notifica; falta una vista agregada |
-| Quorum, nodos, estado global | 🟢 | Health tab + eventos de cluster |
-| Dashboard de salud del entorno | 🟢 | Health tab |
+| Último backup por VM/LXC | 🔴 | No se muestra en ningún sitio; tampoco hay integración con PBS para listar/consultar backups |
+| VMs sin backup y jobs fallidos | 🟡 | Detección **pasiva** de líneas `vzdump .* finished` en syslog (notificación), pero **no hay vista** de "VMs sin job de backup" ni integración con la API de jobs de PVE |
+| Quorum, nodos, estado global | 🟡 | Detección **pasiva** de `quorum lost` / `split brain` en syslog. **No hay** panel de cluster ni consulta activa a la API (`pvecm status`, `/cluster/status`) |
+| Dashboard de salud del entorno | 🔴 | El Health tab es del **nodo local**. No existe vista multi-nodo del cluster |
 
 ---
 
