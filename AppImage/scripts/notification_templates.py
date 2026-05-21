@@ -899,11 +899,36 @@ TEMPLATES = {
         'default_enabled': True,
         'hidden': True,
     },
+    'cron_output': {
+        'title': '{hostname}: {pve_title}',
+        'body': '{reason}',
+        # Output of operator-defined cron jobs forwarded via PVE's
+        # system-mail bucket. Default OFF because the typical pattern is
+        # a periodic job that prints a status line every N minutes (one
+        # user reported 288 messages/day from a `*/5 * * * *` agent). The
+        # smartd / mail-bounce signal that lives in the same PVE bucket
+        # is kept on a separate `system_mail` event so smartd warnings
+        # stay default-on while cron noise is opt-in.
+        'label': 'Cron job output (per-cron stdout via mail)',
+        'group': 'services',
+        'default_enabled': False,
+    },
     'system_mail': {
         'title': '{hostname}: {pve_title}',
         'body': '{reason}',
-        'label': 'PVE system mail (cron output, smartd, mail bounces)',
-        'group': 'other',
+        # Label phrased starting with the word the user actually sees on
+        # smartd-driven notifications. Cron output has been split into a
+        # separate `cron_output` event; this one now covers only smartd
+        # warnings, mail bouncebacks, and other non-cron PVE system mail.
+        'label': 'Smartd / mail bounces (PVE system mail)',
+        # Placed in 'services' (not 'other') because the 'other' category
+        # is intentionally hidden from the channel UI: it historically
+        # only contained internal events (webhook_test, burst_generic)
+        # that the operator shouldn't toggle. system_mail is a real
+        # operator-facing toggle, and smartd / mail bounces are
+        # conceptually system services, so 'services' is the right
+        # bucket for surfacing this in Settings → Notifications.
+        'group': 'services',
         'default_enabled': True,
         # NOT hidden — operators need to be able to mute this when PVE is
         # configured to forward root@<host> mail via the notification webhook.

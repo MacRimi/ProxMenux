@@ -3925,11 +3925,23 @@ class ProxmoxHookWatcher:
             return 'update_available', 'node', ''
         
         if pve_type == 'system-mail':
-            # Parse smartd messages to extract useful info and filter noise.
-            # smartd sends system-mail when it detects SMART issues.
+            # PVE forwards every local mail to root over its notification
+            # framework. That bucket is genuinely heterogeneous: smartd
+            # alerts (useful, want them), mail bouncebacks (sometimes),
+            # AND routine output from operator-defined cron jobs (almost
+            # always noise — reported by user Heriberto whose periodic
+            # historical-data agent printed one line of stdout every 5 min
+            # and produced 288 Telegram messages a day).
+            #
+            # Split the firehose into two distinct event types so each can
+            # have its own default and toggle:
+            #   - cron_output : `Cron <user@host> <cmd>` subject → OFF by default.
+            #   - system_mail : everything else (smartd, mail bounces) → ON.
+            # The operator can independently enable/disable each in
+            # Settings → Notifications.
             msg_lower = (message or '').lower()
             title_lower_sm = (title or '').lower()
-            
+
             # ── Record disk observation regardless of noise filter ──
             # Even "noise" events are recorded as observations so the user
             # can see them in the Storage UI.  We just don't send notifications.
@@ -3937,7 +3949,7 @@ class ProxmoxHookWatcher:
             # JournalWatcher; calling it via `self` here raised AttributeError
             # on every PVE webhook with a smartd payload. See audit Tier 6 #2.
             _record_smartd_observation_impl(title or '', message or '')
-            
+
             # ── Filter smartd noise (suppress notification, not observation) ──
             smartd_noise = [
                 'failedreadsmarterrorlog',
@@ -3947,7 +3959,16 @@ class ProxmoxHookWatcher:
             for noise in smartd_noise:
                 if noise in title_lower_sm or noise in msg_lower:
                     return '_skip', '', ''
-            
+
+            # ── Detect cron-generated mail by the canonical subject ──
+            # cron(8) prefixes every mail it sends with "Cron <user@host>
+            # <command>". This is the format every Unix cron has used for
+            # ~30 years, regardless of distro, so matching the literal
+            # prefix is robust and won't accidentally catch smartd or
+            # other system mail.
+            if title_lower_sm.startswith('cron <'):
+                return 'cron_output', 'node', ''
+
             return 'system_mail', 'node', ''
         
         # ── Fallback for unknown/empty pve_type ──
