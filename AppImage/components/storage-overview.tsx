@@ -153,6 +153,42 @@ const formatStorage = (sizeInGB: number): string => {
   }
 }
 
+// Translate the short ATA/SCSI error codes that appear inside `{ ... }`
+// in a raw kernel observation (e.g. `error: { IDNF }`) into a one-line
+// human description. Mirrors `_translate_ata_error` in
+// notification_events.py — kept here so both the dialog and the printable
+// SMART report can render a friendlier line under the raw message
+// without round-tripping to the backend. Returns null when no recognised
+// code is present, so the caller hides the extra line for non-ATA rows.
+function translateAtaError(raw: string): string | null {
+  if (!raw) return null
+  const ATA_CODES: Record<string, string> = {
+    IDNF: 'Sector address not found — possible bad sector or cable issue',
+    UNC: 'Uncorrectable read error — bad sector',
+    ABRT: 'Command aborted by drive',
+    AMNF: 'Address mark not found — surface damage',
+    TK0NF: 'Track 0 not found — drive hardware failure',
+    BBK: 'Bad block detected',
+    ICRC: 'Interface CRC error — cable or connector issue',
+    MC: 'Media changed',
+    MCR: 'Media change requested',
+    WP: 'Write protected',
+  }
+  const m = raw.match(/\{\s*([A-Z0-9 ]+)\s*\}/)
+  if (!m) return null
+  const codes = m[1].split(/\s+/).filter(Boolean)
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const c of codes) {
+    const desc = ATA_CODES[c]
+    if (desc && !seen.has(c)) {
+      seen.add(c)
+      out.push(desc)
+    }
+  }
+  return out.length ? out.join('; ') : null
+}
+
 export function StorageOverview() {
   // User-configurable disk temperature thresholds (Settings → Health
   // Monitor Thresholds). Until the API responds the hook returns
@@ -372,42 +408,6 @@ export function StorageOverview() {
 
   const obsTypeLabel = (t: string) =>
     ({ smart_error: 'SMART Error', io_error: 'I/O Error', filesystem_error: 'Filesystem Error', zfs_pool_error: 'ZFS Pool Error', connection_error: 'Connection Error' }[t] || t)
-
-  // Translate the short ATA/SCSI error codes that appear inside `{ ... }`
-  // in a raw kernel observation (e.g. `error: { IDNF }`) into a one-line
-  // human description. Mirrors `_translate_ata_error` in
-  // notification_events.py — kept here so the UI does not have to round-trip
-  // to the backend just to render a friendlier line under the raw message.
-  // Returns null when no recognised code is present, so the caller can hide
-  // the extra line for non-ATA observations.
-  const translateAtaError = (raw: string): string | null => {
-    if (!raw) return null
-    const ATA_CODES: Record<string, string> = {
-      IDNF: 'Sector address not found — possible bad sector or cable issue',
-      UNC: 'Uncorrectable read error — bad sector',
-      ABRT: 'Command aborted by drive',
-      AMNF: 'Address mark not found — surface damage',
-      TK0NF: 'Track 0 not found — drive hardware failure',
-      BBK: 'Bad block detected',
-      ICRC: 'Interface CRC error — cable or connector issue',
-      MC: 'Media changed',
-      MCR: 'Media change requested',
-      WP: 'Write protected',
-    }
-    const m = raw.match(/\{\s*([A-Z0-9 ]+)\s*\}/)
-    if (!m) return null
-    const codes = m[1].split(/\s+/).filter(Boolean)
-    const seen = new Set<string>()
-    const out: string[] = []
-    for (const c of codes) {
-      const desc = ATA_CODES[c]
-      if (desc && !seen.has(c)) {
-        seen.add(c)
-        out.push(desc)
-      }
-    }
-    return out.length ? out.join('; ') : null
-  }
 
   const getStorageTypeBadge = (type: string) => {
     const typeColors: Record<string, string> = {
@@ -2753,6 +2753,7 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
           <div style="margin-bottom:12px;">
             <div style="font-size:10px;color:#475569;margin-bottom:4px;">Raw Message:</div>
             <div style="font-family:monospace;font-size:11px;color:#1e293b;background:#f8fafc;padding:10px;border-radius:4px;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto;">${obs.raw_message || 'N/A'}</div>
+            ${translateAtaError(obs.raw_message || '') ? `<div style="font-size:11px;color:#475569;font-style:italic;margin-top:6px;padding-left:4px;">↳ ${translateAtaError(obs.raw_message || '')}</div>` : ''}
           </div>
           
           <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;font-size:11px;padding-top:10px;border-top:1px solid ${infoColor}20;">
