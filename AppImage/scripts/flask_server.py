@@ -1372,7 +1372,15 @@ _pvesh_cache = {
     'storage_list': None,
     'storage_list_time': 0,
 }
-_PVESH_CACHE_TTL = 2  # 2 seconds - near real-time, single consistent data source for list + modal
+_PVESH_CACHE_TTL = 5  # 5 seconds — Sprint 14.7: bumped from 2s.
+# At 2 s the cache routinely thrashed when two parallel callers raced
+# the first `pvesh` (~1 s under gevent without monkey-patch on PVE 9):
+# both saw an empty cache, both spawned a `pvesh`, and the dashboard
+# served stale data interleaved with 502s. 5 s comfortably covers the
+# longest pvesh response while still feeling real-time for the UI
+# (which refreshes its widgets every 10–30 s). Coupled with the
+# in-flight lock below this also prevents thundering-herd against PVE.
+_pvesh_cluster_resources_lock = threading.Lock()
 
 # Cache for sensors output (temperature readings)
 _sensors_cache = {
@@ -1414,7 +1422,14 @@ _HARDWARE_CACHE_TTL = 300  # 5 minutes - hardware doesn't change
 
 
 def get_cached_pvesh_cluster_resources_vm():
-    """Get cluster VM resources with 30s cache."""
+    """Get cluster VM resources with a per-process cache.
+
+    `_PVESH_CACHE_TTL` controls cache freshness; `_pvesh_cluster_resources_lock`
+    serialises in-flight calls so a thundering herd of dashboard fetches
+    after a TTL expiry results in ONE `pvesh` instead of N. After the
+    holder of the lock finishes, every other caller picks up the freshly
+    populated cache and returns immediately.
+    """
     global _pvesh_cache
     now = time.time()
 
@@ -1422,19 +1437,29 @@ def get_cached_pvesh_cluster_resources_vm():
        now - _pvesh_cache['cluster_resources_vm_time'] < _PVESH_CACHE_TTL:
         return _pvesh_cache['cluster_resources_vm']
 
-    try:
-        result = subprocess.run(
-            ['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'],
-            capture_output=True, text=True, timeout=10
-        )
-        if result.returncode == 0:
-            data = json.loads(result.stdout)
-            _pvesh_cache['cluster_resources_vm'] = data
-            _pvesh_cache['cluster_resources_vm_time'] = now
-            return data
-    except Exception:
-        pass
-    return _pvesh_cache['cluster_resources_vm'] or []
+    with _pvesh_cluster_resources_lock:
+        # Re-check inside the lock — another thread may have refreshed
+        # while we were waiting for our turn. This is the single-flight
+        # pattern: only the first thread runs `pvesh`, everyone else
+        # benefits from the same result without spawning duplicates.
+        now = time.time()
+        if _pvesh_cache['cluster_resources_vm'] is not None and \
+           now - _pvesh_cache['cluster_resources_vm_time'] < _PVESH_CACHE_TTL:
+            return _pvesh_cache['cluster_resources_vm']
+
+        try:
+            result = subprocess.run(
+                ['pvesh', 'get', '/cluster/resources', '--type', 'vm', '--output-format', 'json'],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                data = json.loads(result.stdout)
+                _pvesh_cache['cluster_resources_vm'] = data
+                _pvesh_cache['cluster_resources_vm_time'] = now
+                return data
+        except Exception:
+            pass
+        return _pvesh_cache['cluster_resources_vm'] or []
 
 
 # Sprint 14 perf pass: three backup endpoints (`/api/backups`,
@@ -9468,21 +9493,53 @@ def api_vm_metrics(vmid):
 
         return jsonify({'error': str(e)}), 500
 
+# Per-process cache for the RRD payload of /api/node/metrics. Two unrelated
+# dashboard components (`network-traffic-chart` for the network panel and
+# `node-metrics-charts` for the CPU/memory panel) mount in parallel on the
+# Overview page and each fires this endpoint independently with the same
+# `?timeframe=` argument. The underlying `pvesh get rrddata` call takes
+# ~1 second; without a cache, the second fetch blocks behind the first
+# (especially under gevent), occasionally surfacing as a transient 502
+# while gevent is single-threaded for blocking calls. RRD data is updated
+# on a per-minute cadence by PVE, so a 10-second cache is safe and the
+# UI experience is materially better.
+_NODE_METRICS_CACHE = {}
+_NODE_METRICS_TTL = 10.0  # seconds
+
+
+def _node_metrics_cache_get(timeframe):
+    entry = _NODE_METRICS_CACHE.get(timeframe)
+    if not entry:
+        return None
+    if time.monotonic() - entry['ts'] > _NODE_METRICS_TTL:
+        return None
+    return entry['payload']
+
+
+def _node_metrics_cache_set(timeframe, payload):
+    _NODE_METRICS_CACHE[timeframe] = {'payload': payload, 'ts': time.monotonic()}
+
+
 @app.route('/api/node/metrics', methods=['GET'])
 @require_auth
 def api_node_metrics():
-    """Get historical metrics (RRD data) for the node"""
+    """Get historical metrics (RRD data) for the node.
+
+    Per-timeframe cached for ~10 s so the two dashboard panels that mount
+    together don't hit `pvesh` twice; see `_NODE_METRICS_CACHE` comment.
+    """
     try:
         timeframe = request.args.get('timeframe', 'week')  # hour, day, week, month, year
-        
 
-        
         # Validate timeframe
         valid_timeframes = ['hour', 'day', 'week', 'month', 'year']
         if timeframe not in valid_timeframes:
-            # print(f"[v0] ERROR: Invalid timeframe: {timeframe}")
-            pass
             return jsonify({'error': f'Invalid timeframe. Must be one of: {", ".join(valid_timeframes)}'}), 400
+
+        # Serve from cache when fresh — completely skips the pvesh call.
+        cached = _node_metrics_cache_get(timeframe)
+        if cached is not None:
+            return jsonify(cached)
         
         # Get local node name
         # local_node = socket.gethostname()
@@ -9513,18 +9570,20 @@ def api_node_metrics():
         
         if rrd_result.returncode == 0:
             rrd_data = json.loads(rrd_result.stdout)
-            
+
             if zfs_arc_size > 0:
                 for item in rrd_data:
                     # If zfsarc field is missing or 0, add current value
                     if 'zfsarc' not in item or item.get('zfsarc', 0) == 0:
                         item['zfsarc'] = zfs_arc_size
-            
-            return jsonify({
+
+            payload = {
                 'node': local_node,
                 'timeframe': timeframe,
                 'data': rrd_data
-            })
+            }
+            _node_metrics_cache_set(timeframe, payload)
+            return jsonify(payload)
         else:
             # Check if RRD file is empty or corrupted
             stderr_lower = rrd_result.stderr.lower() if rrd_result.stderr else ''
