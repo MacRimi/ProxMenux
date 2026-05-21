@@ -373,6 +373,42 @@ export function StorageOverview() {
   const obsTypeLabel = (t: string) =>
     ({ smart_error: 'SMART Error', io_error: 'I/O Error', filesystem_error: 'Filesystem Error', zfs_pool_error: 'ZFS Pool Error', connection_error: 'Connection Error' }[t] || t)
 
+  // Translate the short ATA/SCSI error codes that appear inside `{ ... }`
+  // in a raw kernel observation (e.g. `error: { IDNF }`) into a one-line
+  // human description. Mirrors `_translate_ata_error` in
+  // notification_events.py — kept here so the UI does not have to round-trip
+  // to the backend just to render a friendlier line under the raw message.
+  // Returns null when no recognised code is present, so the caller can hide
+  // the extra line for non-ATA observations.
+  const translateAtaError = (raw: string): string | null => {
+    if (!raw) return null
+    const ATA_CODES: Record<string, string> = {
+      IDNF: 'Sector address not found — possible bad sector or cable issue',
+      UNC: 'Uncorrectable read error — bad sector',
+      ABRT: 'Command aborted by drive',
+      AMNF: 'Address mark not found — surface damage',
+      TK0NF: 'Track 0 not found — drive hardware failure',
+      BBK: 'Bad block detected',
+      ICRC: 'Interface CRC error — cable or connector issue',
+      MC: 'Media changed',
+      MCR: 'Media change requested',
+      WP: 'Write protected',
+    }
+    const m = raw.match(/\{\s*([A-Z0-9 ]+)\s*\}/)
+    if (!m) return null
+    const codes = m[1].split(/\s+/).filter(Boolean)
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const c of codes) {
+      const desc = ATA_CODES[c]
+      if (desc && !seen.has(c)) {
+        seen.add(c)
+        out.push(desc)
+      }
+    }
+    return out.length ? out.join('; ') : null
+  }
+
   const getStorageTypeBadge = (type: string) => {
     const typeColors: Record<string, string> = {
       pbs: "bg-purple-500/10 text-purple-500 border-purple-500/20",
@@ -2128,27 +2164,30 @@ export function StorageOverview() {
                       {diskObservations.map((obs) => (
                         <div
                           key={obs.id}
-                          className={`rounded-lg border p-3 text-sm ${
-                            obs.severity === 'critical'
-                              ? 'bg-red-500/5 border-red-500/20'
-                              : 'bg-blue-500/5 border-blue-500/20'
-                          }`}
+                          className="rounded-lg border p-3 text-sm bg-blue-500/5 border-blue-500/20"
                         >
-                          {/* Header with type badge */}
+                          {/* Header with type badge — always blue.
+                              The earlier red/blue split-by-severity was
+                              confusing here because the Observations
+                              panel is a *history* view, not a live
+                              alert; the severity already reaches the
+                              user through the notification channels.
+                              The card just records what happened. */}
                           <div className="flex items-center gap-2 flex-wrap mb-2">
-                            <Badge className={`text-[10px] px-1.5 py-0 ${
-                              obs.severity === 'critical'
-                                ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                            }`}>
+                            <Badge className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-400 border-blue-500/20">
                               {obsTypeLabel(obs.error_type)}
                             </Badge>
                           </div>
                           
                           {/* Error message - responsive text wrap */}
-                          <p className="text-xs whitespace-pre-wrap break-words opacity-90 font-mono leading-relaxed mb-3">
+                          <p className="text-xs whitespace-pre-wrap break-words opacity-90 font-mono leading-relaxed mb-1">
                             {obs.raw_message}
                           </p>
+                          {translateAtaError(obs.raw_message) && (
+                            <p className="text-xs italic opacity-75 mb-3 break-words">
+                              ↳ {translateAtaError(obs.raw_message)}
+                            </p>
+                          )}
                           
                           {/* Dates - stacked on mobile, inline on desktop */}
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[10px] text-muted-foreground border-t border-white/5 pt-2">

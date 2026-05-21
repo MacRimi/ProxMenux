@@ -317,25 +317,34 @@ def get_error_context(text: str, category: Optional[str] = None, detail_level: s
     if not error:
         return None
     
+    # NOTE: we intentionally do NOT emit a "Severity:" line here.
+    # The catalogue's severity is the *typical* severity of a class
+    # of error, not the *actual* severity of the event the user is
+    # looking at. A SATA cable warning (rate 11–100 errors/24h, SMART
+    # PASSED) used to render "Severity: CRITICAL" in the body because
+    # the catalogue says SMART_FAILED is critical generically — that
+    # contradicted the WARNING badge on the notification header and
+    # frightened operators unnecessarily. The event-level severity
+    # (computed by `_check_disk_io` with the tiered model) is already
+    # carried by the notification's own severity field; repeating a
+    # different value here is noise at best, misinformation at worst.
     if detail_level == "minimal":
         return f"Known issue: {error['cause']}"
-    
+
     elif detail_level == "standard":
         lines = [
             f"KNOWN PROXMOX ERROR DETECTED:",
             f"  Cause: {error['cause']}",
-            f"  Severity: {error['severity'].upper()}",
             f"  Solution: {error['solution']}"
         ]
         if error.get("url"):
             lines.append(f"  Docs: {error['url']}")
         return "\n".join(lines)
-    
+
     else:  # detailed
         lines = [
             f"KNOWN PROXMOX ERROR DETECTED:",
             f"  Cause: {error.get('cause_detailed', error['cause'])}",
-            f"  Severity: {error['severity'].upper()}",
             f"  Solution: {error.get('solution_detailed', error['solution'])}"
         ]
         if error.get("url"):

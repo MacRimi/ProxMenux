@@ -1606,9 +1606,17 @@ class NotificationManager:
 
         State held in-memory: `self._was_in_quiet_hours[ch_name]`. On
         first run after restart all channels start as "unknown" — we
-        seed with the current window status WITHOUT firing a summary,
-        so a Monitor restart in the middle of someone's quiet window
-        doesn't trigger a fake close-of-window flush.
+        seed with the current window status WITHOUT firing a summary
+        when the channel is currently IN its quiet window (a Monitor
+        restart mid-window must not look like a "close" transition).
+
+        Recovery seed: if the channel is currently OUT of the quiet
+        window AND there are leftover rows in `quiet_pending`, those
+        rows belong to a window that closed during a restart — they
+        would otherwise stay buffered forever because the seed marks
+        the channel as "out" without ever seeing the in→out edge.
+        Flush them now so the user gets their overnight summary even
+        when an update lands right as the window closes.
         """
         if not hasattr(self, '_was_in_quiet_hours'):
             self._was_in_quiet_hours = {}
@@ -1618,8 +1626,16 @@ class NotificationManager:
             previously_in = self._was_in_quiet_hours.get(ch_name)
             self._was_in_quiet_hours[ch_name] = currently_in
 
-            # Seed run (no prior state) — don't fire anything.
+            # Seed run (no prior state).
             if previously_in is None:
+                # Recovery: leftover buffer from a window that closed
+                # during a restart must still reach the user.
+                if not currently_in and self._has_pending_quiet_rows(ch_name):
+                    try:
+                        self._flush_quiet_for_channel(ch_name, channel)
+                    except Exception as e:
+                        print(f"[NotificationManager] quiet recovery flush "
+                              f"failed for {ch_name}: {e}")
                 continue
             # Still in the window → just buffer.
             if currently_in:
@@ -1631,6 +1647,28 @@ class NotificationManager:
                 except Exception as e:
                     print(f"[NotificationManager] quiet flush failed for "
                           f"{ch_name}: {e}")
+
+    def _has_pending_quiet_rows(self, ch_name: str) -> bool:
+        """Cheap existence check used by the recovery branch of
+        `_maybe_flush_quiet_hours`. We don't reuse `_flush_*` for this
+        because a no-op flush call would still open a connection and
+        do the SELECT — a single COUNT keeps the seed pass O(1) per
+        channel when nothing is pending."""
+        try:
+            conn = sqlite3.connect(str(DB_PATH), timeout=10)
+            conn.execute('PRAGMA journal_mode=WAL')
+            cursor = conn.cursor()
+            cursor.execute(
+                'SELECT 1 FROM quiet_pending WHERE channel = ? LIMIT 1',
+                (ch_name,),
+            )
+            row = cursor.fetchone()
+            conn.close()
+            return row is not None
+        except Exception as e:
+            print(f"[NotificationManager] quiet pending probe failed for "
+                  f"{ch_name}: {e}")
+            return False
 
     def _flush_quiet_for_channel(self, ch_name: str, channel: Any) -> None:
         """Send a single grouped summary of everything buffered for
