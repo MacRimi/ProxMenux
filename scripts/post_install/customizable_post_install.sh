@@ -1213,6 +1213,110 @@ EOF
 
 
 
+enable_zfs_autotrim() {
+    local FUNC_VERSION="1.0"
+    # description: Enable ZFS autotrim on detected pools and record only pools changed by ProxMenux.
+    local state_file="$BASE_DIR/zfs_autotrim_pools"
+    local tmp_file="${state_file}.tmp"
+    local pools=()
+    local pool current
+    local changed=false
+
+    pool_supports_autotrim() {
+        local pool_name="$1"
+        local vdev dev_path block_device rotational discard_granularity
+        local found_device=false
+
+        while read -r vdev; do
+            [[ -z "$vdev" ]] && continue
+            found_device=true
+
+            dev_path=$(readlink -f "$vdev" 2>/dev/null || true)
+            if [[ -z "$dev_path" || ! -b "$dev_path" ]]; then
+                return 1
+            fi
+
+            block_device=$(lsblk -no PKNAME "$dev_path" 2>/dev/null | head -n1)
+            [[ -z "$block_device" ]] && block_device=$(basename "$dev_path")
+
+            rotational=$(cat "/sys/block/$block_device/queue/rotational" 2>/dev/null || true)
+            discard_granularity=$(cat "/sys/block/$block_device/queue/discard_granularity" 2>/dev/null || true)
+
+            if [[ "$rotational" != "0" || -z "$discard_granularity" || "$discard_granularity" == "0" ]]; then
+                return 1
+            fi
+        done < <(
+            zpool status -P "$pool_name" 2>/dev/null |
+                awk '
+                    $1 == "NAME" { in_config=1; next }
+                    in_config && $1 == "errors:" { exit }
+                    in_config && $1 ~ /^\// && $2 ~ /^(ONLINE|DEGRADED|FAULTED|OFFLINE|UNAVAIL|REMOVED)$/ { print $1 }
+                '
+        )
+
+        [[ "$found_device" == true ]]
+    }
+
+    if ! command -v zpool >/dev/null 2>&1; then
+        msg_info2 "$(translate "ZFS not detected. Skipping ZFS autotrim.")"
+        return 0
+    fi
+
+    mapfile -t pools < <(zpool list -H -o name 2>/dev/null)
+    if [[ ${#pools[@]} -eq 0 ]]; then
+        msg_info2 "$(translate "No ZFS pools detected. Skipping ZFS autotrim.")"
+        return 0
+    fi
+
+    msg_info "$(translate "Checking ZFS autotrim configuration...")"
+    mkdir -p "$BASE_DIR"
+    : > "$tmp_file"
+
+    for pool in "${pools[@]}"; do
+        current=$(zpool get -H -o value autotrim "$pool" 2>/dev/null || true)
+
+        if [[ "$current" == "on" ]]; then
+            msg_ok "$(translate "ZFS autotrim already enabled for pool:") $pool"
+            continue
+        fi
+
+        if [[ "$current" != "off" ]]; then
+            msg_warn "$(translate "ZFS autotrim is not supported for pool:") $pool"
+            continue
+        fi
+
+        if ! pool_supports_autotrim "$pool"; then
+            stop_spinner
+            msg_info2 "$(translate "Pool does not appear to use SSD/NVMe devices with discard support. Skipping ZFS autotrim for pool:") $pool"
+            continue
+        fi
+
+        if zpool set autotrim=on "$pool" >/dev/null 2>&1; then
+            printf '%s\n' "$pool" >> "$tmp_file"
+            changed=true
+            msg_ok "$(translate "ZFS autotrim enabled for pool:") $pool"
+        else
+            msg_warn "$(translate "Failed to enable ZFS autotrim for pool:") $pool"
+        fi
+    done
+
+    if [[ "$changed" == true ]]; then
+        if [[ -s "$state_file" ]]; then
+            sort -u "$state_file" "$tmp_file" > "${tmp_file}.merged"
+            mv "${tmp_file}.merged" "$state_file"
+            rm -f "$tmp_file"
+        else
+            mv "$tmp_file" "$state_file"
+        fi
+        register_tool "zfs_autotrim" true "$FUNC_VERSION"
+    else
+        rm -f "$tmp_file"
+    fi
+
+    msg_success "$(translate "ZFS autotrim setup completed")"
+}
+
+
 install_zfs_auto_snapshot() {
     local FUNC_VERSION="1.0"
     # description: Install zfs-auto-snapshot with cron schedules for hourly/daily/weekly/monthly snapshots.
@@ -2843,6 +2947,7 @@ main_menu() {
     "Network|Interface Names (persistent)|PERSISNET"
     "Storage|Optimize ZFS ARC size|ZFSARC"
     "Storage|Install ZFS auto-snapshot|ZFSAUTOSNAPSHOT"
+    "Storage|Enable ZFS autotrim (SSD/NVMe pools)|ZFSAUTOTRIM"
     "Storage|Increase vzdump backup speed|VZDUMP"
     "Security|Disable portmapper/rpcbind|DISABLERPC"
     "Customization|Customize bashrc|BASHRC"
@@ -2991,6 +3096,7 @@ done
         TCPFASTOPEN) enable_tcp_fast_open ;;
         ZFSARC) optimize_zfs_arc ;;
         ZFSAUTOSNAPSHOT) install_zfs_auto_snapshot ;;
+        ZFSAUTOTRIM) enable_zfs_autotrim ;;
         VZDUMP) optimize_vzdump ;;
         DISABLERPC) disable_rpc ;;
         BASHRC) customize_bashrc ;;
