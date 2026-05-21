@@ -902,10 +902,18 @@ TEMPLATES = {
     'system_mail': {
         'title': '{hostname}: {pve_title}',
         'body': '{reason}',
-        'label': 'PVE system mail',
+        'label': 'PVE system mail (cron output, smartd, mail bounces)',
         'group': 'other',
         'default_enabled': True,
-        'hidden': True,
+        # NOT hidden — operators need to be able to mute this when PVE is
+        # configured to forward root@<host> mail via the notification webhook.
+        # The classic case is a cron job that prints to stdout every N
+        # minutes: cron mails the output to root, PVE re-emits it as a
+        # `system-mail` event, and the Monitor forwards it to every enabled
+        # channel. Most operators want smartd alerts but NOT noisy cron
+        # output — without a visible toggle the only fix is editing
+        # /etc/aliases or removing MAILTO from the cron job. Audit Tier 6
+        # — `system_mail` toggle no visible en UI / reportado por usuario.
     },
     'webhook_test': {
         'title': '{hostname}: Webhook test received',
