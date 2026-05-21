@@ -7,6 +7,31 @@ ProxMenux Flask Server
 - Integrates a web terminal powered by xterm.js
 """
 
+# ─── gevent monkey-patch — MUST be the first executable code ─────────────
+#
+# When SSL is enabled we serve the dashboard with `gevent.pywsgi.WSGIServer`.
+# Without `monkey.patch_all()` gevent runs as a single-threaded cooperative
+# event loop: a request that calls `subprocess.run(pvesh ...)` blocks the
+# whole event loop, so every other request lined up in parallel returns 502
+# until that subprocess finishes. The frontend's `/api/vms` page fires 3-4
+# parallel requests on mount, which is exactly the symptom that surfaced as
+# "first load 502, second load fine" under HTTPS.
+#
+# `patch_all()` replaces stdlib blocking primitives (socket, subprocess,
+# select, threading, ssl, time.sleep, ...) with gevent-friendly equivalents
+# that yield to the event loop instead of blocking it. This must run BEFORE
+# any other import touches those primitives — otherwise the unpatched
+# versions get bound in the module and the patch is silently ineffective.
+#
+# Wrapped in a try/except so a host without gevent installed (HTTP-only
+# mode) still imports cleanly: the patch is only meaningful when gevent is
+# actually being used as the WSGI server.
+try:
+    from gevent import monkey
+    monkey.patch_all()
+except ImportError:
+    pass
+
 import glob
 import json
 import logging

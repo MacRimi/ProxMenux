@@ -24,6 +24,13 @@ interface ApiTokenEntry {
   created_at: string
   expires_at: string
   revoked: boolean
+  /** Backend flag: `true` when JWT verifies under the current jwt_secret,
+   *  `false` when the secret has been rotated since this token was minted
+   *  (token returns 401 even though it looks stored), `null` for legacy
+   *  rows that pre-date the tracking field. */
+  valid?: boolean | null
+  /** Human reason populated when `valid === false`. */
+  invalidation_reason?: string
 }
 
 // Replaces the previous `password.length < 6` check. Bumped the minimum
@@ -2368,18 +2375,39 @@ ${(report.sections && report.sections.length > 0) ? `
                 </div>
 
                 <div className="space-y-2">
-                  {existingTokens.map((token) => (
-                    <div
-                      key={token.id}
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border"
-                    >
+                  {existingTokens.map((token) => {
+                    // `valid === false` → JWT signature broken by a
+                    // jwt_secret rotation, every request returns 401
+                    // even though the entry still appears here. The
+                    // operator needs to revoke and regenerate.
+                    const isInvalid = token.valid === false
+                    const isLegacy = token.valid === null || token.valid === undefined
+                    const containerClass = isInvalid
+                      ? "flex items-center justify-between p-3 bg-red-500/5 rounded-lg border border-red-500/30"
+                      : "flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border"
+                    return (
+                    <div key={token.id} className={containerClass}>
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                          <Key className="h-4 w-4 text-blue-500" />
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isInvalid ? "bg-red-500/10" : "bg-blue-500/10"
+                        }`}>
+                          <Key className={`h-4 w-4 ${isInvalid ? "text-red-500" : "text-blue-500"}`} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{token.name}</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium truncate">{token.name}</p>
+                            {isInvalid && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/15 text-red-500 border border-red-500/30 whitespace-nowrap">
+                                Invalid — regenerate
+                              </span>
+                            )}
+                            {isLegacy && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-500 border border-amber-500/30 whitespace-nowrap">
+                                Legacy
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                             <code className="font-mono">{token.token_prefix}</code>
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
@@ -2388,6 +2416,11 @@ ${(report.sections && report.sections.length > 0) ? `
                                 : "Unknown"}
                             </span>
                           </div>
+                          {isInvalid && token.invalidation_reason && (
+                            <p className="text-[11px] text-red-500/90 mt-1 leading-snug">
+                              {token.invalidation_reason}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <Button
@@ -2405,7 +2438,8 @@ ${(report.sections && report.sections.length > 0) ? `
                         <span className="ml-1 text-xs hidden sm:inline">Revoke</span>
                       </Button>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}

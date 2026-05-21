@@ -136,12 +136,30 @@ class NotificationEvent:
         return f"NotificationEvent({self.event_type}, {self.severity}, fp={self.fingerprint[:40]})"
 
 
+_HOSTNAME_CACHE: Dict[str, Any] = {'value': None, 'ts': 0.0}
+_HOSTNAME_CACHE_TTL = 5.0  # seconds
+
+
 def _hostname() -> str:
     """Get display hostname for notifications.
-    
+
     Returns the custom display name from notification settings if configured,
-    otherwise falls back to the system hostname.
+    otherwise falls back to the system FQDN (NOT truncated at the first dot —
+    a host called ``px.seeindustry.com`` is rendered in full so multi-host
+    deployments stay distinguishable).
+
+    Reads are cached for ~5 s so a burst of events (~tens per cycle) doesn't
+    hit the SQLite settings table on every call. The TTL is short enough that
+    a freshly-saved alias takes effect within seconds without restarting the
+    service — fixes the original behaviour where `self._hostname = _hostname()`
+    was cached in `__init__` and never refreshed.
     """
+    now = time.time()
+    cached = _HOSTNAME_CACHE.get('value')
+    if cached is not None and (now - _HOSTNAME_CACHE['ts']) < _HOSTNAME_CACHE_TTL:
+        return cached
+
+    resolved = ''
     # Try to read custom display name from notification settings
     try:
         db_path = Path('/usr/local/share/proxmenux/health_monitor.db')
@@ -156,15 +174,24 @@ def _hostname() -> str:
             row = cursor.fetchone()
             conn.close()
             if row and row[0] and row[0].strip():
-                return row[0].strip()
+                resolved = row[0].strip()
     except Exception:
         pass  # Fall back to system hostname
-    
-    # Fall back to system hostname
-    try:
-        return socket.gethostname().split('.')[0]
-    except Exception:
-        return 'proxmox'
+
+    if not resolved:
+        # Use FULL FQDN — never truncate at the first dot. The previous
+        # `.split('.')[0]` produced misleading bare labels like "px" when the
+        # alias was missing or unreadable, with no way for the operator to
+        # tell which of their `px.*.example.com` nodes the notification came
+        # from. The Display Name (alias) remains the recommended override.
+        try:
+            resolved = socket.gethostname()
+        except Exception:
+            resolved = 'proxmox'
+
+    _HOSTNAME_CACHE['value'] = resolved
+    _HOSTNAME_CACHE['ts'] = now
+    return resolved
 
 
 def capture_journal_context(keywords: list, lines: int = 30,
@@ -376,7 +403,10 @@ class JournalWatcher:
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._process: Optional[subprocess.Popen] = None
-        self._hostname = _hostname()
+        # `_hostname` is exposed as a @property below so every read returns
+        # the *current* alias from the settings DB (TTL-cached for 5 s in
+        # _hostname()). The old `__init__`-time cache made a fresh Display
+        # Name require a service restart to take effect.
         
         # Dedup: track recent events to avoid duplicates
         self._recent_events: Dict[str, float] = {}
@@ -421,10 +451,14 @@ class JournalWatcher:
         # so we can suppress per-guest "Starting Backup of VM ..." noise
         self._last_backup_job_ts: float = 0
         self._BACKUP_JOB_SUPPRESS_WINDOW = 7200  # 2h: suppress per-guest during active job
-        
+
         # NOTE: Service failure batching is handled universally by
         # BurstAggregator in NotificationManager (AGGREGATION_RULES).
-    
+
+    @property
+    def _hostname(self) -> str:
+        return _hostname()
+
     def start(self):
         """Start the journal watcher thread."""
         if self._running:
@@ -1752,7 +1786,10 @@ class TaskWatcher:
         self._queue = event_queue
         self._running = False
         self._thread: Optional[threading.Thread] = None
-        self._hostname = _hostname()
+        # `_hostname` is exposed as a @property below so every read returns
+        # the *current* alias from the settings DB (TTL-cached for 5 s in
+        # _hostname()). The old `__init__`-time cache made a fresh Display
+        # Name require a service restart to take effect.
         self._last_position = 0
         # Cache for active vzdump detection
         self._vzdump_active_cache: float = 0  # timestamp of last positive check
@@ -1765,12 +1802,16 @@ class TaskWatcher:
         self._vzdump_grace_period = 120  # seconds after vzdump ends to still suppress
         # Track active-file UPIDs we've already seen, to avoid duplicate backup_start
         self._seen_active_upids: set = set()
-    
+
+    @property
+    def _hostname(self) -> str:
+        return _hostname()
+
     def start(self):
         if self._running:
             return
         self._running = True
-        
+
         # Start at end of file
         if os.path.exists(self.TASK_LOG):
             try:
@@ -2263,7 +2304,10 @@ class PollingCollector:
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._poll_interval = poll_interval
-        self._hostname = _hostname()
+        # `_hostname` is exposed as a @property below so every read returns
+        # the *current* alias from the settings DB (TTL-cached for 5 s in
+        # _hostname()). The old `__init__`-time cache made a fresh Display
+        # Name require a service restart to take effect.
         self._last_update_check = 0
         self._last_proxmenux_check = 0
         self._last_ai_model_check = 0
@@ -2312,7 +2356,11 @@ class PollingCollector:
         # subprocess per disk-with-error per poll cycle. Key: bare device
         # name (no /dev/). Value: bool (True = USB).
         self._is_usb_cache: Dict[str, bool] = {}
-    
+
+    @property
+    def _hostname(self) -> str:
+        return _hostname()
+
     def start(self):
         if self._running:
             return
@@ -3703,8 +3751,15 @@ class ProxmoxHookWatcher:
     
     def __init__(self, event_queue: Queue):
         self._queue = event_queue
-        self._hostname = _hostname()
-    
+        # `_hostname` is exposed as a @property below so every read returns
+        # the *current* alias from the settings DB (TTL-cached for 5 s in
+        # _hostname()). The old `__init__`-time cache made a fresh Display
+        # Name require a service restart to take effect.
+
+    @property
+    def _hostname(self) -> str:
+        return _hostname()
+
     def process_webhook(self, payload: dict) -> dict:
         """Process an incoming Proxmox webhook payload.
         

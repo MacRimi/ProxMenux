@@ -404,6 +404,109 @@ toggle_monitor_service() {
     fi
 }
 
+reset_monitor_password() {
+    # Recovery path for operators who lost the Monitor login credentials.
+    # Wipes only the identity claims from auth.json (username / password /
+    # 2FA secret / backup codes) so the next visit to the dashboard
+    # triggers the setup wizard with no password needed. Intentionally
+    # KEEPS `jwt_secret`, `api_tokens` and `revoked_tokens` — that means
+    # already-issued API tokens continue to work (Home Assistant /
+    # custom scripts don't need to be reconfigured) and only the
+    # interactive web login is reset. The operator chooses a new
+    # username + password on the next visit.
+
+    local auth_file="$MONITOR_CONFIG_DIR/auth.json"
+
+    if [ ! -f "$auth_file" ]; then
+        dialog --clear --backtitle "$BACKTITLE" \
+               --title "$(translate "Reset Monitor Password")" \
+               --msgbox "\n\n$(translate "ProxMenux Monitor authentication is not configured on this host — there is no password to reset.")" 11 70
+        return
+    fi
+
+    if ! dialog --clear --backtitle "$BACKTITLE" \
+                --title "$(translate "Reset Monitor Password")" \
+                --yesno "\n$(translate "This will RESET the ProxMenux Monitor login credentials on this host:")\n\n  • $(translate "Username and password will be cleared.")\n  • $(translate "Two-factor authentication and backup codes will be removed.")\n  • $(translate "API tokens (Home Assistant, scripts) will keep working.")\n  • $(translate "The next visit to the dashboard will show the initial setup wizard.")\n\n$(translate "Continue?")" 16 78; then
+        return
+    fi
+
+    if ! command -v jq >/dev/null 2>&1; then
+        dialog --clear --backtitle "$BACKTITLE" \
+               --title "$(translate "Reset Monitor Password")" \
+               --msgbox "\n\n$(translate "jq is required for this operation but is not installed.")" 10 60
+        return
+    fi
+
+    show_proxmenux_logo
+    msg_title "$(translate "Reset Monitor Password")"
+
+    # Timestamped backup so the operator can recover the previous state
+    # if the reset was a mistake. Includes the secret material — keep
+    # this file out of any shared location.
+    local backup_file
+    backup_file="${auth_file}.bak-$(date -u +%Y%m%d%H%M%S)"
+    if ! cp -a "$auth_file" "$backup_file" 2>/dev/null; then
+        msg_error "$(translate "Could not back up the existing auth.json")"
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return
+    fi
+    chmod 0600 "$backup_file" 2>/dev/null || true
+    msg_ok "$(translate "Backup saved to:") $backup_file"
+
+    msg_info "$(translate "Stopping ProxMenux Monitor service...")"
+    systemctl stop "$MONITOR_SERVICE" >/dev/null 2>&1 || true
+    msg_ok "$(translate "Service stopped.")"
+
+    msg_info "$(translate "Clearing login credentials...")"
+    local tmp
+    tmp=$(mktemp)
+    if jq '
+            .enabled       = false
+          | .configured    = false
+          | .username      = ""
+          | .password_hash = ""
+          | .declined      = false
+          | .totp_enabled  = false
+          | .totp_secret   = null
+          | .backup_codes  = []
+        ' "$auth_file" > "$tmp" 2>/dev/null; then
+        chmod 0600 "$tmp" 2>/dev/null || true
+        mv "$tmp" "$auth_file"
+        msg_ok "$(translate "Credentials cleared. jwt_secret and API tokens preserved.")"
+    else
+        rm -f "$tmp"
+        msg_error "$(translate "Failed to update auth.json — restoring backup.")"
+        cp -a "$backup_file" "$auth_file"
+        systemctl start "$MONITOR_SERVICE" >/dev/null 2>&1 || true
+        msg_success "$(translate "Press Enter to return to menu...")"
+        read -r
+        return
+    fi
+
+    msg_info "$(translate "Restarting ProxMenux Monitor service...")"
+    if systemctl start "$MONITOR_SERVICE" >/dev/null 2>&1; then
+        msg_ok "$(translate "Service restarted.")"
+    else
+        msg_warn "$(translate "Could not restart the service — start it manually with systemctl start") $MONITOR_SERVICE"
+    fi
+
+    local server_ip
+    server_ip=$(hostname -I | awk '{print $1}')
+    echo ""
+    msg_success "$(translate "Password reset completed.")"
+    echo ""
+    if [ -n "$server_ip" ]; then
+        msg_info2 "$(translate "Open the dashboard to create a new admin account:")"
+        echo -e "${TAB}${BL}http://${server_ip}:8008${CL}"
+    else
+        msg_info2 "$(translate "Open the dashboard from this host on port 8008 to create a new admin account.")"
+    fi
+    echo ""
+    msg_success "$(translate "Press Enter to return to menu...")"
+    read -r
+}
+
 show_monitor_status() {
     clear
     show_proxmenux_logo
@@ -467,6 +570,10 @@ show_config_menu() {
             menu_options+=("$option_num" "$(translate "Show Monitor Service Status")")
             option_actions[$option_num]="show_monitor_status"
             ((option_num++))
+
+            menu_options+=("$option_num" "$(translate "Reset ProxMenux Monitor Password")")
+            option_actions[$option_num]="reset_monitor_password"
+            ((option_num++))
         fi
 
         menu_options+=("$option_num" "$(translate "Change Release Channel")")
@@ -516,6 +623,9 @@ show_config_menu() {
                 ;;
             "show_monitor_status")
                 show_monitor_status
+                ;;
+            "reset_monitor_password")
+                reset_monitor_password
                 ;;
             "change_release_channel")
                 change_release_channel

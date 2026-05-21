@@ -152,11 +152,63 @@ def _get_jwt_secret():
     config = load_auth_config()
     sec = config.get("jwt_secret")
     if isinstance(sec, str) and len(sec) >= 32:
+        _audit_api_tokens_against_jwt_secret(sec)
         return sec
     new_secret = secrets.token_urlsafe(48)
     config["jwt_secret"] = new_secret
     save_auth_config(config)
+    _audit_api_tokens_against_jwt_secret(new_secret)
     return new_secret
+
+
+# One-shot startup audit: warn the operator (in journal) when stored
+# api_tokens were minted under a previous jwt_secret. Those tokens
+# remain in `api_tokens` metadata but their JWTs no longer verify, so
+# the user's HTTP client (Home Assistant, custom script, …) gets a 401
+# while the token "looks valid" in the UI. We log once per process to
+# make the failure mode searchable in journalctl without spamming.
+_TOKEN_AUDIT_DONE = False
+_TOKEN_AUDIT_LOCK = threading.Lock()
+
+
+def _audit_api_tokens_against_jwt_secret(current_secret: str) -> None:
+    """One-time warning when stored api_tokens were signed under a
+    previous jwt_secret. Cheap: returns immediately after the first
+    successful run. Logs to stdout/stderr so the message lands in the
+    Monitor's journalctl output.
+    """
+    global _TOKEN_AUDIT_DONE
+    with _TOKEN_AUDIT_LOCK:
+        if _TOKEN_AUDIT_DONE:
+            return
+        _TOKEN_AUDIT_DONE = True
+
+    try:
+        config = load_auth_config()
+        tokens = config.get("api_tokens", [])
+        if not tokens:
+            return
+        current_fp = hashlib.sha256(current_secret.encode()).hexdigest()[:16]
+        stale = [t for t in tokens
+                 if t.get("signed_with") is not None
+                 and t.get("signed_with") != current_fp]
+        legacy = [t for t in tokens if t.get("signed_with") is None]
+        if stale:
+            ids = ", ".join(t.get("id", "?") for t in stale)
+            print(f"[ProxMenux][auth] WARNING: {len(stale)} API token(s) "
+                  f"signed with a previous jwt_secret — they will return "
+                  f"401 'Invalid or expired token'. Revoke and regenerate "
+                  f"from Settings → API Tokens. Affected IDs: {ids}")
+        if legacy:
+            ids = ", ".join(t.get("id", "?") for t in legacy)
+            print(f"[ProxMenux][auth] NOTE: {len(legacy)} API token(s) "
+                  f"have no signing-secret fingerprint (created before "
+                  f"the tracking field was added). Their validity can "
+                  f"only be confirmed by an actual auth attempt. "
+                  f"Legacy IDs: {ids}")
+    except Exception as e:
+        # Audit is best-effort — failure must never break startup.
+        print(f"[ProxMenux][auth] token audit skipped: {e}")
 
 
 # Server-side mirror of the frontend's `validatePasswordStrength`. Defense
@@ -419,24 +471,45 @@ def verify_token(token):
         return None
 
 
+def _jwt_secret_fingerprint(secret: str = None) -> str:
+    """Stable fingerprint of the active jwt_secret.
+
+    First 16 hex chars of SHA256(secret). Used to detect whether a stored
+    api-token was minted under the *current* jwt_secret or under a
+    previous one (in which case the JWT can no longer be verified).
+    Never returns the secret itself.
+    """
+    sec = secret if secret is not None else _get_jwt_secret()
+    if not sec:
+        return ""
+    return hashlib.sha256(sec.encode()).hexdigest()[:16]
+
+
 def store_api_token_metadata(token, token_name="API Token"):
     """
     Store API token metadata (hash, name, creation date) for listing and revocation.
     The actual token is never stored - only a hash for identification.
+
+    Also records the fingerprint of the jwt_secret that minted this token
+    (`signed_with`). At list time we compare this against the current
+    fingerprint so the UI can flag tokens whose signing secret has been
+    rotated since — those JWTs no longer verify and the operator needs
+    to regenerate them (see `list_api_tokens`).
     """
     config = load_auth_config()
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     token_id = token_hash[:16]
-    
+
     token_entry = {
         "id": token_id,
         "name": token_name,
         "token_hash": token_hash,
         "token_prefix": token[:12] + "...",
         "created_at": datetime.utcnow().isoformat() + "Z",
-        "expires_at": (datetime.utcnow() + timedelta(days=365)).isoformat() + "Z"
+        "expires_at": (datetime.utcnow() + timedelta(days=365)).isoformat() + "Z",
+        "signed_with": _jwt_secret_fingerprint(),
     }
-    
+
     config.setdefault("api_tokens", [])
     config["api_tokens"].append(token_entry)
     save_auth_config(config)
@@ -444,24 +517,56 @@ def store_api_token_metadata(token, token_name="API Token"):
 
 
 def list_api_tokens():
-    """
-    List all stored API token metadata (no actual tokens are returned).
-    Returns list of token entries with id, name, prefix, creation and expiration dates.
+    """List stored API token metadata (no actual tokens are returned).
+
+    Each entry carries:
+      * `revoked`  — token hash is in the revocation list.
+      * `valid`    — JWT can still be verified with the current secret.
+                     `True` when `signed_with` matches the current
+                     fingerprint, `False` when it doesn't (jwt_secret
+                     rotated → JWT signature broken), `None` for legacy
+                     entries created before this field existed (status
+                     can only be confirmed by attempting a verify with
+                     the real token, which we never see at list time).
+      * `invalidation_reason` — human-readable explanation when
+                                `valid is False`, otherwise absent.
+
+    The UI uses these flags to flag tokens that look stored but no
+    longer authenticate — preventing the "I have the token but it
+    returns 401" rabbit hole.
     """
     config = load_auth_config()
     tokens = config.get("api_tokens", [])
     revoked = set(config.get("revoked_tokens", []))
-    
+    current_fp = _jwt_secret_fingerprint()
+
     result = []
     for t in tokens:
+        signed_with = t.get("signed_with")
+        if signed_with is None:
+            valid = None  # legacy entry — unknown
+            reason = None
+        elif signed_with == current_fp:
+            valid = True
+            reason = None
+        else:
+            valid = False
+            reason = ("Signed with a previous jwt_secret. The signing "
+                      "secret has been rotated since this token was "
+                      "issued — its JWT can no longer be verified. "
+                      "Revoke this token and generate a new one.")
+
         entry = {
             "id": t.get("id"),
             "name": t.get("name", "API Token"),
             "token_prefix": t.get("token_prefix", "***"),
             "created_at": t.get("created_at"),
             "expires_at": t.get("expires_at"),
-            "revoked": t.get("token_hash") in revoked
+            "revoked": t.get("token_hash") in revoked,
+            "valid": valid,
         }
+        if reason:
+            entry["invalidation_reason"] = reason
         result.append(entry)
     return result
 
