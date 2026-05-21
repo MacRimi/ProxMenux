@@ -11463,6 +11463,45 @@
     "os": "debian"
   },
   {
+    "name": "Nezha",
+    "slug": "nezha",
+    "desc": "Nezha is a lightweight server and website monitoring dashboard with real-time status, alerts, and remote operation features.",
+    "script": "ct/nezha.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nezha.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/nezha.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00009"
+    ],
+    "category_names": [
+      "Monitoring & Analytics"
+    ],
+    "notes": [
+      "Dashboard is exposed on port 8008 by default."
+    ],
+    "warnings": [
+      "Change the default admin password immediately after first login."
+    ],
+    "port": 8008,
+    "website": "https://nezha.wiki/en_US/",
+    "documentation": "https://nezha.wiki/en_US/guide/dashboard.html",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nezha.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin"
+    },
+    "os": "debian"
+  },
+  {
     "name": "Nginx UI",
     "slug": "nginx-ui",
     "desc": "Nginx UI is a comprehensive web-based interface designed to simplify the management and configuration of Nginx servers. It provides features like online statistics, ChatGPT-powered config assistant, automatic Let's Encrypt certificates, and config file editing with syntax highlighting.",
@@ -18142,6 +18181,41 @@
     ],
     "config_path": "/opt/tinyauth/.env",
     "os": "alpine"
+  },
+  {
+    "name": "Tolgee",
+    "slug": "tolgee",
+    "desc": "Tolgee is an open-source localization platform that helps teams manage translations with in-context editing and collaboration features.",
+    "script": "ct/tolgee.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/tolgee.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/tolgee.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00020"
+    ],
+    "category_names": [
+      "AI / Coding & Dev-Tools"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://tolgee.io/",
+    "documentation": "https://docs.tolgee.io/platform/self_hosting",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tolgee.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "cat /opt/tolgee_data/initial.pwd"
+    },
+    "os": "debian"
   },
   {
     "name": "Tor Snowflake",
