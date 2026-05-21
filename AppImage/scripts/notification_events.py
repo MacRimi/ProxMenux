@@ -2287,11 +2287,6 @@ class PollingCollector:
         # updates. The fingerprint encodes the per-CT state so a stable
         # batch doesn't re-notify while a meaningful change does.
         self._notified_lxc_batch: str | None = None
-        # Track previous state of the LXC-updates notification toggle
-        # so a user enabling it post-startup bypasses the 24h gate
-        # ONCE — the next polling cycle runs a fresh detection without
-        # waiting up to a day. Cleared after the forced run completes.
-        self._lxc_was_enabled: bool = False
         # Track notified ProxMenux versions to avoid duplicates
         self._notified_proxmenux_version: str | None = None
         self._notified_proxmenux_beta_version: str | None = None
@@ -2664,15 +2659,29 @@ class PollingCollector:
             category = old_meta.get('category', '')
             reason = old_meta.get('reason', '')
             first_seen = old_meta.get('first_seen', '')
-            
+
             # Skip recovery for INFO/OK - they never triggered an alert
             if old_meta.get('severity', '') in ('INFO', 'OK'):
                 self._last_notified.pop(key, None)
                 continue
-            
+
             # Skip recovery on first poll (we don't know what was before)
             if not self._first_poll_done:
                 self._last_notified.pop(key, None)
+                continue
+
+            # Skip recovery when the persisted snapshot lost the context
+            # for this error (reason / category both empty). Emitting a
+            # blank "Resuelto -" message with "Condition resolved" body
+            # adds no value — the user can't tell which error went away.
+            # Happens after a long Monitor downtime when the snapshot was
+            # serialized between polls without reason/category populated,
+            # or when a future code path slips a key into _known_errors
+            # without the full metadata. Drop the tracking entry silently
+            # so we never re-fire on the same incomplete record.
+            if not reason and not category:
+                self._last_notified.pop(key, None)
+                self._notified_severity.pop(key, None)
                 continue
             
             # Skip recovery if the error was manually acknowledged (dismissed)
@@ -2765,15 +2774,25 @@ class PollingCollector:
             original_severity = self._notified_severity.get(
                 key, old_meta.get('severity', 'WARNING'),
             )
+            # Defensive defaults — the template uses `{category}` and
+            # `{duration}` in both the title and the body; an empty
+            # `category` produced the cosmetic "Resolved - " with a
+            # trailing dash (and "The  issue has been resolved" with
+            # a double space) on 2026-05-21. The Fix A filter above
+            # already drops the worst case (reason AND category empty);
+            # this layer fills the remaining edge cases when only one
+            # of the two is missing.
+            category_label = category or 'health'
+            duration_label = duration or 'unknown'
             data = {
                 'hostname': self._hostname,
-                'category': category,
+                'category': category_label,
                 'reason': clean_reason,
                 'error_key': key,
                 'severity': 'OK',
                 'original_severity': original_severity,
                 'first_seen': first_seen,
-                'duration': duration,
+                'duration': duration_label,
                 'is_recovery': True,
             }
 
@@ -3243,23 +3262,7 @@ class PollingCollector:
         """
         now = time.time()
 
-        # Detect OFF→ON transition of the LXC update toggle. Without
-        # this, the first polling cycle after service start always sets
-        # the 24h gate — so a user who enables the toggle later (which
-        # is the normal flow, since the toggle defaults to OFF) would
-        # have to wait up to 24h or restart the service before the
-        # detector ran. A one-shot bypass on the transition fixes that
-        # without weakening the 24h cadence in steady state.
-        try:
-            import managed_installs as _mi
-            lxc_enabled_now = _mi._lxc_updates_notification_enabled()
-        except Exception:
-            lxc_enabled_now = False
-        lxc_just_enabled = lxc_enabled_now and not self._lxc_was_enabled
-        self._lxc_was_enabled = lxc_enabled_now
-
-        if (not lxc_just_enabled
-                and now - self._last_managed_check < self.UPDATE_CHECK_INTERVAL):
+        if now - self._last_managed_check < self.UPDATE_CHECK_INTERVAL:
             return
         self._last_managed_check = now
 
@@ -3312,9 +3315,21 @@ class PollingCollector:
         # updates. The batch fingerprint is recomputed every cycle and
         # compared with the last notified one — if the set of CTs or
         # their per-CT fingerprints changed, we notify again.
-        if lxc_updates:
+        #
+        # Detection itself runs unconditionally so the dashboard always
+        # shows pending updates; the `lxc_updates_available` toggle only
+        # controls whether a notification is *emitted*. If it's off we
+        # skip the emit (and the dedup stamp) so re-enabling the toggle
+        # later fires the next pending batch immediately.
+        try:
+            import managed_installs as _mi
+            lxc_notif_enabled = _mi._lxc_updates_notification_enabled()
+        except Exception:
+            lxc_notif_enabled = False
+
+        if lxc_updates and lxc_notif_enabled:
             self._emit_lxc_updates_batch(lxc_updates)
-        else:
+        elif not lxc_updates:
             # Empty batch — clear the dedup so a fresh batch later fires
             # a new notification even with the same CTs/versions.
             self._notified_lxc_batch = None
@@ -3579,7 +3594,27 @@ class PollingCollector:
             print(f"[PollingCollector] Failed to save known_errors meta: {e}")
 
     def _load_last_notified(self):
-        """Load per-error notification timestamps from DB on startup."""
+        """Load per-error notification timestamps from DB on startup.
+
+        Reads only the per-key cooldown timestamps so the same-key
+        24h gate survives a restart. **Does NOT touch `_known_errors`**
+        — that snapshot is rebuilt exclusively by `_load_known_errors_meta`
+        (which carries the full reason / category / severity payload
+        needed to emit a meaningful recovery later).
+
+        The original implementation also injected synthetic rows into
+        `_known_errors` from this table, with `{'error_key': ek,
+        'first_seen': <epoch int>}` and nothing else. That made the
+        startup path believe the host had a populated baseline of
+        active errors, so the first post-restart poll computed
+        `resolved_keys = synthetic_dummies − current_keys` and emitted
+        recovery notifications with empty `reason` / `category` /
+        `severity` fields — the &ldquo;Resuelto -&rdquo; / &ldquo;Condición
+        resuelta&rdquo; ghosts the user saw on 2026-05-21. Stale rows
+        in this table never expire on their own (the bug was eternal:
+        every restart re-triggered the ghost), so the fix is to never
+        treat this table as a source of `_known_errors` content.
+        """
         try:
             db_path = Path('/usr/local/share/proxmenux/health_monitor.db')
             if not db_path.exists():
@@ -3594,8 +3629,6 @@ class PollingCollector:
             for fp, ts in cursor.fetchall():
                 error_key = fp.replace('health_', '', 1)
                 self._last_notified[error_key] = ts
-                # _known_errors is a dict (not a set), store minimal metadata
-                self._known_errors[error_key] = {'error_key': error_key, 'first_seen': ts}
             conn.close()
         except Exception as e:
             print(f"[PollingCollector] Failed to load last_notified: {e}")

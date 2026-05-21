@@ -484,6 +484,24 @@ AGGREGATION_RULES = {
 # burst, avoiding notification floods from any source.
 _DEFAULT_AGGREGATION = {'window': 60, 'min_count': 2, 'burst_type': 'burst_generic'}
 
+# Event types the burst aggregator must never group. The default
+# catch-all (`_DEFAULT_AGGREGATION`) treats anything unlisted as
+# group-able, which is the right default for *negative* signals
+# (failures, errors, intrusion attempts) but produces noise when
+# applied to positive / informational events the user wants to see
+# individually.
+#
+# Concrete failure mode that motivated this list: on 2026-05-21 a
+# post-restart resolved-detection batch emitted two `error_resolved`
+# events for two stale keys at the same time. The aggregator paired
+# them and the user received a useless "+1 error_resolved en 0s
+# (2 en total) — Eventos adicionales: Condición resuelta" burst on
+# top of the original recovery message. The signal value of a
+# recovery is per-event; collapsing them adds zero information.
+_AGGREGATION_EXEMPT_EVENTS = frozenset({
+    'error_resolved',
+})
+
 
 class BurstAggregator:
     """Accumulates similar events in a time window, then sends a single summary.
@@ -517,7 +535,16 @@ class BurstAggregator:
         ALL event types are aggregated: specific rules from AGGREGATION_RULES
         take priority, otherwise the _DEFAULT_AGGREGATION catch-all applies.
         This prevents notification floods from any source.
+
+        Exception: event types listed in `_AGGREGATION_EXEMPT_EVENTS`
+        bypass aggregation entirely and are returned to the dispatcher
+        as-is. Used for positive/informational events (recoveries,
+        scheduled-task completions) where collapsing into a burst
+        summary destroys signal value.
         """
+        if event.event_type in _AGGREGATION_EXEMPT_EVENTS:
+            return event
+
         rule = AGGREGATION_RULES.get(event.event_type, _DEFAULT_AGGREGATION)
 
         bucket_key = f"{event.event_type}:{event.data.get('hostname', '')}"

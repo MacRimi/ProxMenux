@@ -381,10 +381,14 @@ def _detect_lxc_containers() -> list[dict]:
     a CT is seen. CT reinstalls with a different OS will keep the old
     family cached until the user resets the registry — acceptable
     trade-off vs paying the probe cost every 24h cycle.
-    """
-    if not _lxc_updates_notification_enabled():
-        return []
 
+    Detection runs unconditionally so the dashboard always reflects
+    pending updates on running CTs. The `lxc_updates_available`
+    notification toggle only gates the *delivery* of the notification
+    (see _check_managed_installs_updates in notification_events.py),
+    not the detection — that keeps the toggle semantics consistent with
+    every other update stream (NVIDIA, Coral, post-install).
+    """
     # Read existing registry so we can preserve cached `_os_family`.
     # No lock needed here — we only inspect; the framework holds the
     # write lock when it merges back our results in detect_and_register.
