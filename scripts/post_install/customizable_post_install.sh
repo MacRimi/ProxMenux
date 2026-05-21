@@ -1980,7 +1980,7 @@ enable_ha() {
 
 
 configure_fastfetch() {
-    local FUNC_VERSION="1.0"
+    local FUNC_VERSION="1.1"
     # description: Install Fastfetch system summary tool with the ProxMenux logo + status block as the SSH login banner.
     msg_info2 "$(translate "Installing and configuring Fastfetch...")"
 
@@ -2049,16 +2049,17 @@ configure_fastfetch() {
 
     while true; do
         # Define logo options
-        local logo_options=("ProxMenux" "Proxmox (default)" "Comunidad Helper-Scripts" "Home-Labs-Club" "Proxmology" "Custom")
+        local logo_options=("ProxMenux" "Proxmox (default)" "JC Channel" "Comunidad Helper-Scripts" "Home-Labs-Club" "Proxmology" "Custom")
         local choice
 
-        choice=$(whiptail --title "$(translate "Fastfetch Logo Selection")" --menu "$(translate "Choose a logo for Fastfetch:")" 20 78 6 \
+        choice=$(whiptail --title "$(translate "Fastfetch Logo Selection")" --menu "$(translate "Choose a logo for Fastfetch:")" 20 78 7 \
             "1" "${logo_options[0]}" \
             "2" "${logo_options[1]}" \
             "3" "${logo_options[2]}" \
             "4" "${logo_options[3]}" \
             "5" "${logo_options[4]}" \
             "6" "${logo_options[5]}" \
+            "7" "${logo_options[6]}" \
             3>&1 1>&2 2>&3)
 
         case $choice in
@@ -2080,6 +2081,17 @@ configure_fastfetch() {
                 break
                 ;;
             3)
+                msg_info "$(translate "Downloading JC Channel logo...")"
+                local jc_channel_logo_path="$logos_dir/jc_channel.txt"
+                if wget -qO "$jc_channel_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/jc_channel.txt"; then
+                    jq --arg path "$jc_channel_logo_path" '. + {logo: $path}' "$fastfetch_config" > "${fastfetch_config}.tmp" && mv "${fastfetch_config}.tmp" "$fastfetch_config"
+                    msg_ok "$(translate "JC Channel logo applied")"
+                else
+                    msg_error "$(translate "Failed to download JC Channel logo")"
+                fi
+                break
+                ;;
+            4)
                 msg_info "$(translate "Downloading Helper-Scripts logo...")"
                 local helper_scripts_logo_path="$logos_dir/Helper_Scripts.txt"
                 if wget -qO "$helper_scripts_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/Helper_Scripts.txt"; then
@@ -2090,7 +2102,7 @@ configure_fastfetch() {
                 fi
                 break
                 ;;
-            4)
+            5)
                 msg_info "$(translate "Downloading Home-Labs-Club logo...")"
                 local home_lab_club_logo_path="$logos_dir/home_labsclub.txt"
                 if wget -qO "$home_lab_club_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/home_labsclub.txt"; then
@@ -2101,7 +2113,7 @@ configure_fastfetch() {
                 fi
                 break
                 ;;
-            5)
+            6)
                 msg_info "$(translate "Downloading Proxmology logo...")"
                 local proxmology_logo_path="$logos_dir/proxmology.txt"
                 if wget -qO "$proxmology_logo_path" "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logos_txt/proxmology.txt"; then
@@ -2112,7 +2124,7 @@ configure_fastfetch() {
                 fi
                 break
                 ;;
-            6)
+            7)
                 whiptail --title "$(translate "Custom Logo Instructions")" --msgbox "$(translate "To use a custom Fastfetch logo, place your ASCII logo file in:\n\n/usr/local/share/fastfetch/logos/\n\nThe file should not exceed 35 lines to fit properly in the terminal.\n\nPress OK to continue and select your logo.")" 15 70
 
                 local logo_files=($(ls "$logos_dir"/*.txt 2>/dev/null))
