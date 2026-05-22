@@ -40,6 +40,7 @@ import datetime
 import json
 import os
 import re
+import sqlite3
 import subprocess
 import threading
 import time
@@ -276,9 +277,14 @@ def _detect_oci_apps() -> list[dict]:
 # ── LXC containers (Phase 1: apt-based update detection) ────────────
 #
 # Each running Debian/Ubuntu CT becomes a registry entry of type "lxc".
-# Detection is opt-in: gated on the `lxc_updates_available` notification
-# being enabled somewhere, so the heavy `pct exec` work doesn't run on
-# hosts where the user hasn't asked for this.
+# Detection is gated on a dedicated user setting (`lxc_updates.detection_enabled`,
+# default ON) configured from Settings → LXC Update Detection. When the
+# user flips it OFF, this detector returns [] and any existing type="lxc"
+# entries in the registry are purged so the dashboard / API immediately
+# stop reporting LXC update state. The notification toggle
+# (`lxc_updates_available`) keeps its independent semantics — it only
+# decides whether to deliver the notification when detection has actually
+# produced new results.
 #
 # Phase 2 hook: once helper-scripts metadata is integrated, entries can
 # carry `_helper_script_app` so the checker swaps generic apt counting
@@ -288,6 +294,96 @@ def _detect_oci_apps() -> list[dict]:
 _PCT_BIN = "/usr/sbin/pct"
 _LXC_EXEC_TIMEOUT_SEC = 10
 _LXC_OS_PROBE_TIMEOUT_SEC = 5
+
+# User-toggle storage. The setting lives in the same SQLite DB that
+# notification_manager uses for user_settings, so we get atomic writes
+# and the table is already created at startup by health_persistence.
+_USER_SETTINGS_DB = "/usr/local/share/proxmenux/health_monitor.db"
+_LXC_DETECTION_SETTING_KEY = "lxc_updates.detection_enabled"
+
+
+def _lxc_updates_detection_enabled() -> bool:
+    """Read the dedicated detection toggle. Default True — existing
+    installs predating this setting keep their previous behaviour.
+
+    Read failures (DB missing, locked, corrupt) also default True so a
+    transient DB problem never silently disables the feature.
+    """
+    try:
+        if not os.path.exists(_USER_SETTINGS_DB):
+            return True
+        conn = sqlite3.connect(_USER_SETTINGS_DB, timeout=5)
+        try:
+            conn.execute("PRAGMA busy_timeout=2000")
+            row = conn.execute(
+                "SELECT setting_value FROM user_settings WHERE setting_key = ?",
+                (_LXC_DETECTION_SETTING_KEY,),
+            ).fetchone()
+        finally:
+            conn.close()
+        if row is None or row[0] is None:
+            return True
+        return str(row[0]).strip().lower() in ("1", "true", "yes", "on")
+    except Exception:
+        return True
+
+
+def set_lxc_updates_detection_enabled(enabled: bool) -> dict:
+    """Persist the toggle. Returns ``{ok: bool, purged: int, error?: str}``.
+
+    On OFF, also strip every ``type=lxc`` entry from the registry so the
+    dashboard and ``/api/managed-installs`` stop returning stale results
+    instantly — without waiting for the next 24h detection cycle.
+    """
+    val = "true" if enabled else "false"
+    try:
+        conn = sqlite3.connect(_USER_SETTINGS_DB, timeout=10)
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=5000")
+            conn.execute(
+                "INSERT OR REPLACE INTO user_settings (setting_key, setting_value, updated_at) "
+                "VALUES (?, ?, ?)",
+                (_LXC_DETECTION_SETTING_KEY, val, _now_iso()),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        return {"ok": False, "purged": 0, "error": str(e)}
+
+    purged = 0
+    if not enabled:
+        purged = _purge_lxc_entries_from_registry()
+    return {"ok": True, "purged": purged}
+
+
+def _purge_lxc_entries_from_registry() -> int:
+    """Remove every type="lxc" entry from the registry. Returns the
+    count of entries removed.
+
+    Used when the user disables LXC update detection — keeps the
+    on-disk state consistent with the toggle (zero stale LXC rows in
+    ``managed_installs.json``).
+    """
+    try:
+        with _lock:
+            reg = _read_registry()
+            items = reg.get("items", [])
+            if not items:
+                return 0
+            kept = [
+                it for it in items
+                if not (isinstance(it, dict) and it.get("type") == "lxc")
+            ]
+            removed = len(items) - len(kept)
+            if removed > 0:
+                reg["items"] = kept
+                _write_registry(reg)
+            return removed
+    except Exception as e:
+        print(f"[managed_installs] failed to purge LXC entries: {e}")
+        return 0
 
 
 def _lxc_updates_notification_enabled() -> bool:
@@ -382,13 +478,19 @@ def _detect_lxc_containers() -> list[dict]:
     family cached until the user resets the registry — acceptable
     trade-off vs paying the probe cost every 24h cycle.
 
-    Detection runs unconditionally so the dashboard always reflects
-    pending updates on running CTs. The `lxc_updates_available`
-    notification toggle only gates the *delivery* of the notification
-    (see _check_managed_installs_updates in notification_events.py),
-    not the detection — that keeps the toggle semantics consistent with
-    every other update stream (NVIDIA, Coral, post-install).
+    Detection respects the dedicated `lxc_updates.detection_enabled`
+    toggle (Settings → LXC Update Detection). When OFF, this returns []
+    and the framework's removed_at logic clears any pre-existing CT
+    rows from the registry on the next run — the explicit purge in
+    ``set_lxc_updates_detection_enabled`` handles the immediate case.
+
+    The notification toggle (`lxc_updates_available`) only gates the
+    *delivery* of the notification (see _check_managed_installs_updates
+    in notification_events.py), independently of this detection toggle.
     """
+    if not _lxc_updates_detection_enabled():
+        return []
+
     # Read existing registry so we can preserve cached `_os_family`.
     # No lock needed here — we only inspect; the framework holds the
     # write lock when it merges back our results in detect_and_register.
@@ -860,13 +962,116 @@ def _run_pct_pkg_listing(vmid: str, cmd: str) -> tuple[bool, str, str]:
     return True, r.stdout, ""
 
 
+# Refresh thresholds for the package-manager metadata cache. Threshold is
+# 24h to match the rest of the check cycle: if a CT was last refreshed
+# longer ago than that, we assume `apt list --upgradable` cannot reflect
+# the upstream state and proactively refresh once before listing.
+_LXC_CACHE_STALE_THRESHOLD_SEC = 24 * 3600
+_LXC_CACHE_REFRESH_TIMEOUT_SEC = 60
+
+
+def _refresh_lxc_pkg_cache_if_stale(vmid: str, family: str) -> dict:
+    """Best-effort refresh of the CT's package-manager metadata cache.
+
+    If the local cache is older than ``_LXC_CACHE_STALE_THRESHOLD_SEC``,
+    run ``apt-get update`` / ``apk update`` from outside the CT once
+    before the upgradable listing. Any failure (no network, broken
+    repo, timeout) is swallowed silently — the listing below still
+    runs against whatever cache exists, so the detector can never make
+    the situation worse than the pre-existing CT state.
+
+    Returns a small diagnostics dict consumed by ``_check_lxc_updates``
+    to populate ``_cache_age_seconds`` / ``_cache_refreshed`` on the
+    registry entry (visible in the dashboard / managed-installs API).
+    """
+    if family in ("debian", "ubuntu"):
+        # apt's authoritative timestamp is the mtime of pkgcache.bin,
+        # which `apt-get update` rewrites on every successful run.
+        # We `printf %Y` to get the mtime as a unix timestamp and `||
+        # echo 0` so a missing file (fresh CT, broken state) is treated
+        # as infinitely old and triggers the refresh.
+        cmd_age = "stat -c '%Y' /var/cache/apt/pkgcache.bin 2>/dev/null || echo 0"
+        cmd_refresh = "apt-get update -qq"
+    elif family == "alpine":
+        # apk writes index files under /var/lib/apk/. The
+        # `installed` file timestamp moves on package installs, but
+        # `apk update` rewrites the cached APKINDEX bundles under
+        # /var/cache/apk/*.tar.gz — take the newest mtime there as
+        # the authoritative "last update" marker. If the cache dir
+        # doesn't exist (apk default with caching disabled), fall
+        # back to the index files in /etc/apk/.
+        cmd_age = (
+            "ls -t /var/cache/apk/*.tar.gz 2>/dev/null | head -1 "
+            "| xargs -r stat -c '%Y' 2>/dev/null "
+            "|| stat -c '%Y' /etc/apk/world 2>/dev/null || echo 0"
+        )
+        cmd_refresh = "apk update"
+    else:
+        return {"refreshed": False, "was_stale": False, "cache_age_seconds": None, "error": None}
+
+    ok, stdout, _ = _run_pct_pkg_listing(vmid, cmd_age)
+    if not ok:
+        return {"refreshed": False, "was_stale": False, "cache_age_seconds": None, "error": "stat failed"}
+    try:
+        # Use the last numeric line in case the command emitted stderr
+        # noise that snuck into stdout (e.g. some shells route warnings).
+        cache_mtime = 0
+        for ln in stdout.strip().splitlines():
+            try:
+                cache_mtime = int(ln.strip())
+                break
+            except ValueError:
+                continue
+    except Exception:
+        cache_mtime = 0
+
+    now = int(time.time())
+    cache_age = (now - cache_mtime) if cache_mtime > 0 else None
+    was_stale = cache_age is None or cache_age > _LXC_CACHE_STALE_THRESHOLD_SEC
+
+    if not was_stale:
+        return {
+            "refreshed": False, "was_stale": False,
+            "cache_age_seconds": cache_age, "error": None,
+        }
+
+    try:
+        r = subprocess.run(
+            [_PCT_BIN, "exec", vmid, "--", "sh", "-c", cmd_refresh],
+            capture_output=True, text=True,
+            timeout=_LXC_CACHE_REFRESH_TIMEOUT_SEC,
+        )
+        if r.returncode == 0:
+            return {
+                "refreshed": True, "was_stale": True,
+                "cache_age_seconds": cache_age, "error": None,
+            }
+        return {
+            "refreshed": False, "was_stale": True,
+            "cache_age_seconds": cache_age,
+            "error": (r.stderr or "refresh failed").strip()[:200],
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            "refreshed": False, "was_stale": True,
+            "cache_age_seconds": cache_age, "error": "refresh timed out",
+        }
+    except (FileNotFoundError, OSError) as e:
+        return {
+            "refreshed": False, "was_stale": True,
+            "cache_age_seconds": cache_age, "error": str(e),
+        }
+
+
 def _check_lxc_updates(entry: dict) -> dict:
     """Inspect pending package updates inside the LXC and report them.
 
     Dispatches to the right package-manager parser based on the cached
-    ``_os_family``. Uses the CT's existing metadata cache — never runs
-    ``apt update`` / ``apk update`` from outside, so the user's own
-    update cadence (unattended-upgrades, cron) is preserved.
+    ``_os_family``. If the CT's local apt/apk metadata cache is older
+    than 24h, runs a best-effort refresh first via
+    ``_refresh_lxc_pkg_cache_if_stale`` — without this, CTs that no
+    one ever runs ``apt update`` in (long-running appliances) report
+    0 pending updates even when upstream has hundreds queued.
 
     The dedup fingerprint (``latest``) combines count, security count
     and the sorted top package names so a stable set of pending
@@ -880,6 +1085,8 @@ def _check_lxc_updates(entry: dict) -> dict:
             "available": False, "latest": None,
             "last_check": _now_iso(), "error": "no vmid in entry",
         }
+
+    refresh_diag = _refresh_lxc_pkg_cache_if_stale(vmid, family)
 
     if family in ("debian", "ubuntu"):
         ok, stdout, err = _run_pct_pkg_listing(
@@ -920,6 +1127,9 @@ def _check_lxc_updates(entry: dict) -> dict:
         "_count": count,
         "_security_count": sec_count,
         "_packages": packages[:30],  # cap to keep the registry compact
+        "_cache_age_seconds": refresh_diag.get("cache_age_seconds"),
+        "_cache_refreshed": refresh_diag.get("refreshed"),
+        "_cache_refresh_error": refresh_diag.get("error"),
     }
 
 

@@ -10492,6 +10492,50 @@ def api_managed_installs_refresh():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+# ─── LXC Update Detection toggle ────────────────────────────────────────────
+# Dedicated toggle so the operator can opt out of the per-CT `pct exec apt
+# list --upgradable` scan entirely. The Notifications section keeps its own
+# `lxc_updates_available` toggle (delivery only), but the UI hides it while
+# detection is OFF — the underlying preference is preserved in the DB and
+# re-appears when detection is flipped back ON.
+
+@app.route('/api/lxc-updates/detection', methods=['GET'])
+@require_auth
+def api_lxc_updates_detection_get():
+    try:
+        import managed_installs
+        return jsonify({
+            'success': True,
+            'enabled': managed_installs._lxc_updates_detection_enabled(),
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/lxc-updates/detection', methods=['POST'])
+@require_auth
+def api_lxc_updates_detection_set():
+    try:
+        import managed_installs
+        data = request.get_json(silent=True) or {}
+        if 'enabled' not in data:
+            return jsonify({'success': False, 'message': 'Missing "enabled" field'}), 400
+        enabled = bool(data['enabled'])
+        result = managed_installs.set_lxc_updates_detection_enabled(enabled)
+        if not result.get('ok'):
+            return jsonify({
+                'success': False,
+                'message': result.get('error') or 'Failed to persist setting',
+            }), 500
+        return jsonify({
+            'success': True,
+            'enabled': enabled,
+            'purged': result.get('purged', 0),
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/api/health/thresholds', methods=['GET'])
 @require_auth
 def api_health_thresholds_get():
@@ -11624,20 +11668,31 @@ if __name__ == '__main__':
             # Try gevent with SSL for proper WebSocket (WSS) support
             try:
                 from gevent import pywsgi
-                from geventwebsocket.handler import WebSocketHandler
                 import ssl
-                
+
                 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
                 ssl_context.load_cert_chain(ssl_cert, ssl_key)
-                
+
                 print("[ProxMenux] Starting gevent server with SSL/WSS support...")
+                # IMPORTANT: do NOT pass `handler_class=WebSocketHandler`
+                # from geventwebsocket. flask-sock (the library wiring our
+                # /ws/terminal and /ws/script/<id> routes) already implements
+                # the WebSocket protocol on top of any standard WSGI server
+                # via `simple-websocket`. Stacking the geventwebsocket
+                # handler on top causes both layers to respond to the
+                # client's upgrade request — the server emits two
+                # `HTTP/1.1 101 Switching Protocols` headers back-to-back,
+                # which the browser interprets as a corrupt frame and
+                # closes with "WebSocket connection error" the moment the
+                # terminal modal opens. Using the default WSGIHandler lets
+                # flask-sock own the upgrade end-to-end.
+                #
                 # `::` binds IPv6 + IPv4 (v4-mapped) on Linux when
                 # net.ipv6.bindv6only=0 (the default). Issue #192 — IPv4-only
                 # listening broke ProxMenux on dual-stack / v6-only hosts.
                 server = pywsgi.WSGIServer(
                     ('::', 8008),
                     app,
-                    handler_class=WebSocketHandler,
                     ssl_context=ssl_context
                 )
                 gevent_available = True

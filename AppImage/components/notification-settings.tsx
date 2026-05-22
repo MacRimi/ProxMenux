@@ -351,6 +351,12 @@ export function NotificationSettings() {
     error: string
   }>({ status: "idle", fallback_commands: [], error: "" })
   const [systemHostname, setSystemHostname] = useState<string>("")
+  // Mirrors the dedicated toggle from Settings → LXC Update Detection.
+  // When false, the per-event toggle for `lxc_updates_available` is hidden
+  // from every channel's category list (its DB preference is preserved).
+  // Updated on mount via fetch and on the fly via a CustomEvent dispatched
+  // by <LxcUpdateDetection /> when the user flips the switch.
+  const [lxcDetectionEnabled, setLxcDetectionEnabled] = useState<boolean>(true)
 
   // Load system hostname for display name placeholder
   const loadSystemHostname = useCallback(async () => {
@@ -432,6 +438,43 @@ export function NotificationSettings() {
     loadStatus()
     loadSystemHostname()
   }, [loadConfig, loadStatus, loadSystemHostname])
+
+  // Track the LXC update-detection toggle so we can conditionally hide
+  // the `lxc_updates_available` per-event toggle inside every channel's
+  // category list. Fetched once on mount; live updates ride on a custom
+  // event dispatched by <LxcUpdateDetection /> whenever the user flips
+  // the switch upstream.
+  useEffect(() => {
+    let cancelled = false
+    fetchApi<{ success: boolean; enabled?: boolean }>("/api/lxc-updates/detection")
+      .then(data => {
+        if (cancelled) return
+        if (data.success && typeof data.enabled === "boolean") {
+          setLxcDetectionEnabled(data.enabled)
+        }
+      })
+      .catch(() => {
+        // Default-true on fetch failure — matches the backend default and
+        // avoids hiding a notification toggle the user might rely on if
+        // the settings endpoint is transiently unreachable.
+      })
+
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail && typeof detail.enabled === "boolean") {
+        setLxcDetectionEnabled(detail.enabled)
+      }
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("proxmenux:lxc-detection-changed", handler)
+    }
+    return () => {
+      cancelled = true
+      if (typeof window !== "undefined") {
+        window.removeEventListener("proxmenux:lxc-detection-changed", handler)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (showHistory) loadHistory()
@@ -634,7 +677,16 @@ export function NotificationSettings() {
           {EVENT_CATEGORIES.filter(cat => cat.key !== "other").map(cat => {
             const isEnabled = overrides.categories[cat.key] ?? true
             const isExpanded = expandedCategories.has(`${chName}.${cat.key}`)
-            const eventsForGroup = evtByGroup[cat.key] || []
+            // Hide the LXC update toggle when the user has disabled the
+            // dedicated detection setting upstream. The backend still
+            // returns the event type in the catalog (so its stored
+            // preference survives), but we filter it out of every
+            // channel's UI list so the operator never sees a notification
+            // toggle whose underlying scan is paused.
+            const rawEventsForGroup = evtByGroup[cat.key] || []
+            const eventsForGroup = lxcDetectionEnabled
+              ? rawEventsForGroup
+              : rawEventsForGroup.filter(e => e.type !== "lxc_updates_available")
             const enabledCount = eventsForGroup.filter(
               e => (overrides.events?.[e.type] ?? e.default_enabled)
             ).length
@@ -1779,14 +1831,23 @@ export function NotificationSettings() {
             <div>
               <div className="flex items-center justify-between py-1">
                 <button
-                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-2 text-sm text-foreground hover:bg-muted/60 rounded-md px-2 py-1.5 -mx-2 transition-colors"
                   onClick={() => setShowAdvanced(!showAdvanced)}
                 >
-                  {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                  <span className="font-medium uppercase tracking-wider">Advanced: AI Enhancement</span>
-                  {config.ai_enabled && (
-                    <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-400 ml-1">
-                      ON
+                  {showAdvanced ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <Sparkles className="h-4 w-4 text-purple-400" />
+                  <span className="font-medium">AI Enhancement</span>
+                  {config.ai_enabled ? (
+                    <Badge variant="outline" className="text-[10px] border-purple-500/40 text-purple-400 ml-1">
+                      Active
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] border-border text-muted-foreground ml-1">
+                      Optional
                     </Badge>
                   )}
                 </button>

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Wrench, Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy, Sparkles, ArrowUpCircle } from "lucide-react"
 import { NotificationSettings } from "./notification-settings"
 import { HealthThresholds } from "./health-thresholds"
+import { LxcUpdateDetection } from "./lxc-update-detection"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Switch } from "./ui/switch"
@@ -1193,6 +1194,12 @@ export function Settings() {
       {/* Health Monitor Thresholds — placed above Notifications because the
           values configured here drive what triggers the notifications below. */}
       <HealthThresholds />
+
+      {/* LXC Update Detection — gates the per-CT apt/apk scan. When OFF,
+          the matching toggle in NotificationSettings is hidden (the
+          preference is preserved in the DB and reappears when detection
+          is re-enabled). */}
+      <LxcUpdateDetection />
 
       {/* Notification Settings */}
       <NotificationSettings />
