@@ -4177,7 +4177,21 @@ class HealthMonitor:
         'pve-', 'proxmox-', 'qemu-server', 'lxc-pve', 'ceph',
         'corosync', 'libpve', 'pbs-', 'pmg-',
     )
-    _KERNEL_PREFIXES = ('linux-image', 'pve-kernel', 'pve-firmware')
+    # Kernel-package prefixes for categorisation. Order matters: the matcher
+    # in update parsing checks KERNEL first and PVE second, so `proxmox-kernel`
+    # must appear here before the generic `proxmox-` falls through to
+    # _PVE_PREFIXES. Bug #208 — PVE 9.x ships kernels as `proxmox-kernel-*`
+    # (Debian 13 base), not `pve-kernel-*` as in older Proxmox; without the
+    # `proxmox-kernel` prefix every kernel update was mis-categorised as a
+    # generic PVE update and the dashboard reported "Kernel/PVE up to date"
+    # even with a kernel patch waiting for the running CT.
+    _KERNEL_PREFIXES = (
+        'linux-image',
+        'pve-kernel',
+        'proxmox-kernel',
+        'pve-firmware',
+        'proxmox-firmware',
+    )
     _IMPORTANT_PKGS = {
         'pve-manager', 'proxmox-ve', 'qemu-server', 'pve-container',
         'pve-ha-manager', 'pve-firewall', 'ceph-common',
@@ -4232,10 +4246,18 @@ class HealthMonitor:
                 except Exception:
                     pass
             
-            # Perform a dry run of apt-get upgrade to see pending packages
+            # Perform a dry run of apt-get dist-upgrade to see pending
+            # packages. `dist-upgrade` (a.k.a. `full-upgrade`) is what the
+            # Proxmox VE web UI's Updates tab runs internally, and unlike
+            # plain `apt-get upgrade` it surfaces kernel updates packaged
+            # as NEW installs (e.g. `proxmox-kernel-6.14.11-9-pve-signed`
+            # showing up as `Inst` when the running CT is on -4). Bug #208
+            # — without dist-upgrade these updates never appeared in the
+            # `Inst` list at all, so the Kernel/PVE sub-check stayed
+            # green even when the running kernel had a patch waiting.
             try:
                 result = subprocess.run(
-                    ['apt-get', 'upgrade', '--dry-run'],
+                    ['apt-get', 'dist-upgrade', '--dry-run'],
                     capture_output=True, text=True, timeout=30
                 )
             except subprocess.TimeoutExpired:
@@ -4252,18 +4274,42 @@ class HealthMonitor:
             security_pkgs: list = []
             kernel_pkgs: list = []
             pve_pkgs: list = []
+            running_kernel_pkgs: list = []  # {name, cur, new} — kernel(s) matching `uname -r`
             important_pkgs: list = []   # {name, cur, new}
             pve_manager_info = None     # {cur, new} or None
             sec_result = None
             sec_severity = 'INFO'
             sec_days_unpatched = 0
-            
+
+            # Read the running kernel release (e.g. `7.0.2-5-pve`) so we can
+            # distinguish a kernel update that REPLACES the kernel the host
+            # is currently booted from (urgent, requires reboot) from one
+            # that only touches an older kernel still present in the
+            # bootloader or the meta-package pointers. Bug #208.
+            #
+            # `running_kernel_branch` extracts the major.minor branch from
+            # the running release — e.g. `7.0.2-5-pve` → `7.0`. We use it
+            # to detect updates to the branch META package
+            # (`proxmox-kernel-7.0` / `pve-kernel-7.0`), which when
+            # upgraded pull in the latest kernel of that branch and so
+            # also replace the running kernel on the next boot.
+            running_kernel = ''
+            running_kernel_branch = ''
+            try:
+                running_kernel = os.uname().release
+                rk_low = running_kernel.lower()
+                m = re.match(r'^(\d+\.\d+)', rk_low)
+                if m:
+                    running_kernel_branch = m.group(1)
+            except Exception:
+                pass
+
             if result.returncode == 0:
                 for line in result.stdout.strip().split('\n'):
                     if not line.startswith('Inst '):
                         continue
                     update_count += 1
-                    
+
                     # Parse package name, current and new versions
                     m = self._RE_INST.match(line)
                     if m:
@@ -4276,18 +4322,56 @@ class HealthMonitor:
                             parts = line.split()
                             pkg_name = parts[1] if len(parts) > 1 else 'unknown'
                             cur_ver, new_ver = '', ''
-                    
+
                     # Strip arch suffix (e.g. package:amd64)
                     pkg_name = pkg_name.split(':')[0]
                     name_lower = pkg_name.lower()
                     line_lower = line.lower()
-                    
+
                     # Categorise
                     if 'security' in line_lower or 'debian-security' in line_lower:
                         security_pkgs.append(pkg_name)
-                    
+
                     if any(name_lower.startswith(p) for p in self._KERNEL_PREFIXES):
                         kernel_pkgs.append(pkg_name)
+                        # Does this package match the currently running
+                        # kernel? Proxmox kernels are named
+                        # `proxmox-kernel-<release>` and `pve-kernel-<release>`,
+                        # plus their `-signed` variant. Compare against
+                        # `uname -r` to flag updates the operator should
+                        # reboot for. Bug #208.
+                        if running_kernel:
+                            stripped = name_lower
+                            if stripped.endswith('-signed'):
+                                stripped = stripped[:-len('-signed')]
+                            for k_prefix in ('proxmox-kernel-', 'pve-kernel-', 'linux-image-'):
+                                if stripped.startswith(k_prefix):
+                                    suffix = stripped[len(k_prefix):]
+                                    # Two cases both count as "this update
+                                    # will replace the running kernel":
+                                    #   a) exact match — the in-place
+                                    #      package of the running release
+                                    #      (e.g. `proxmox-kernel-7.0.2-5-pve`
+                                    #      upgrading from 7.0.2-5 to -6).
+                                    #   b) branch meta — the meta package
+                                    #      pointing at the latest of the
+                                    #      running branch (e.g. running
+                                    #      `6.14.11-4-pve`, upgradable
+                                    #      `proxmox-kernel-6.14` pulls a
+                                    #      newer 6.14.x on next boot).
+                                    is_exact = (suffix == running_kernel.lower())
+                                    is_branch_meta = (
+                                        running_kernel_branch
+                                        and suffix == running_kernel_branch
+                                    )
+                                    if is_exact or is_branch_meta:
+                                        running_kernel_pkgs.append({
+                                            'name': pkg_name,
+                                            'cur': cur_ver,
+                                            'new': new_ver,
+                                            'match': 'exact' if is_exact else 'branch',
+                                        })
+                                    break
                     elif any(name_lower.startswith(p) for p in self._PVE_PREFIXES):
                         pve_pkgs.append(pkg_name)
                     
@@ -4354,6 +4438,15 @@ class HealthMonitor:
                     if age_result and age_result.get('type') == 'skipped_acknowledged':
                         status = 'INFO'
                         reason = None
+                elif running_kernel_pkgs:
+                    # Running kernel has an update available. Bug #208.
+                    # Reported as INFO — the Updates section never
+                    # escalates to WARNING for pending updates; WARNING /
+                    # CRITICAL on this section are reserved for time-based
+                    # gates (system_age >= 365d / 548d, security_updates
+                    # unpatched >= SECURITY_WARN_DAYS).
+                    status = 'INFO'
+                    reason = f'Kernel update available for running {running_kernel}'
                 elif kernel_pkgs or pve_pkgs:
                     status = 'INFO'
                     reason = f'{len(kernel_pkgs)} kernel + {len(pve_pkgs)} Proxmox update(s) available'
@@ -4382,11 +4475,57 @@ class HealthMonitor:
             if security_pkgs and sec_days_unpatched >= self.SECURITY_WARN_DAYS:
                 sec_detail += f' ({sec_days_unpatched} days unpatched)'
             
+            # Kernel/PVE sub-check. Bug #208: distinguish three cases.
+            # All non-OK results stay at INFO — the Updates section never
+            # raises WARNING for pending updates; WARNING / CRITICAL on
+            # this section is reserved for time-based gates (system_age,
+            # security_updates unpatched too long).
+            #
+            #   1) Update for the running kernel → INFO with explicit
+            #      "Running kernel update available, reboot required to
+            #      apply" wording. Bug #208 — without this, the row read
+            #      "Kernel/PVE up to date" even when the running kernel
+            #      had a patch pending.
+            #   2) Kernel updates exist but only for non-running kernels
+            #      (older kernels still present in the bootloader, meta-
+            #      packages like `proxmox-kernel-7.0` pointing to the
+            #      latest 7.0.x, signed variants of already-installed
+            #      kernels) → INFO with explicit wording.
+            #   3) No kernel updates → OK.
+            if running_kernel_pkgs:
+                rk_count = len(running_kernel_pkgs)
+                # Keep the row text tight — on mobile the System Updates
+                # modal renders this string in a single line and longer
+                # wording wrapped awkwardly. Just `<pkg> <cur> -> <new>`
+                # is enough to convey "your running kernel has an update";
+                # the row's INFO icon already signals that no action is
+                # forced.
+                first = running_kernel_pkgs[0]
+                if first.get('cur') and first.get('new'):
+                    rk_detail = f"{first['name']} {first['cur']} -> {first['new']}"
+                else:
+                    rk_detail = first['name']
+                if rk_count > 1:
+                    rk_detail += f" (+{rk_count - 1} more)"
+                kernel_status = 'INFO'
+                kernel_detail = rk_detail
+            elif kernel_pkgs:
+                kernel_status = 'INFO'
+                kernel_detail = (
+                    f"{len(kernel_pkgs)} kernel update(s) available "
+                    f"(none for running kernel"
+                    + (f" {running_kernel}" if running_kernel else "")
+                    + ")"
+                )
+            else:
+                kernel_status = 'OK'
+                kernel_detail = 'Kernel/PVE up to date'
+
             checks = {
                 'kernel_pve': {
-                    'status': 'INFO' if kernel_pkgs else 'OK',
-                    'detail': f'{len(kernel_pkgs)} kernel/PVE update(s)' if kernel_pkgs else 'Kernel/PVE up to date',
-                    'error_key': 'kernel_pve'
+                    'status': kernel_status,
+                    'detail': kernel_detail,
+                    'error_key': 'kernel_pve',
                 },
                 'pending_updates': {
                     'status': 'INFO' if update_count > 0 else 'OK',
@@ -4437,6 +4576,9 @@ class HealthMonitor:
             update_result['security_count'] = len(security_pkgs)
             update_result['pve_count'] = len(pve_pkgs)
             update_result['kernel_count'] = len(kernel_pkgs)
+            update_result['running_kernel'] = running_kernel
+            update_result['running_kernel_update_count'] = len(running_kernel_pkgs)
+            update_result['running_kernel_packages'] = running_kernel_pkgs[:5]
             update_result['important_packages'] = important_pkgs[:8]
             
             self.cached_results[cache_key] = update_result

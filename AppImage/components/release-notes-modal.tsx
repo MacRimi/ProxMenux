@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
-const APP_VERSION = "1.2.1.2-beta" // Sync with AppImage/package.json
+const APP_VERSION = "1.2.1.3-beta" // Sync with AppImage/package.json
 
 interface ReleaseNote {
   date: string
@@ -18,6 +18,22 @@ interface ReleaseNote {
 }
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
+  "1.2.1.3-beta": {
+    date: "May 22, 2026",
+    changes: {
+      added: [
+        "LXC Update Detection - A new dedicated section in Settings (between Health Monitor Thresholds and Notifications) with a single toggle that gates the per-CT apt list --upgradable / apk list -u scan end-to-end. Default ON. When OFF the scan stops entirely (no pct exec calls), every type=lxc entry is purged from the managed-installs registry immediately, and the matching notification toggle in Notifications -> Services disappears from the UI while preserving its stored preference",
+        "LXC update checker auto-refresh - The checker now reads the mtime of the CT's package-manager metadata cache and runs apt-get update / apk update from outside via pct exec if it is older than 24h, with a 60s timeout and silent failure. Long-running appliance CTs whose caches were months stale now surface their real upstream backlog (a Debian 12 CT with a 524-day-old cache went from \"0 updates\" to \"117 (12 security)\" on lab hardware)",
+      ],
+      changed: [
+        "AI Enhancement section in Notifications - Rewritten from a muted uppercase row that testers consistently scrolled past, to a normal-case foreground label with a leading Sparkles icon and a persistent badge (green Active when AI is enabled, neutral Optional when it isn't) so the feature is visible regardless of state",
+      ],
+      fixed: [
+        "Terminal modals on HTTPS hosts - Every terminal modal (dashboard terminal, LXC terminal, script terminal) used to fail with WebSocket connection error on hosts with HTTPS enabled. Root cause: the gevent+SSL path stacked geventwebsocket's WebSocketHandler on top of flask-sock's protocol implementation, so the server emitted two consecutive HTTP/1.1 101 Switching Protocols headers and the browser closed the connection as a corrupt frame. Dropping handler_class=WebSocketHandler restores a single 101 response and lets the handshake complete normally",
+        "Health Monitor kernel updates on PVE 9.x (#208) - The System Updates -> Kernel/PVE row reported \"Kernel/PVE up to date\" on PVE 9.x hosts even when an update for the running kernel was waiting upstream. Three combined fixes: (a) the kernel-package prefix list now includes proxmox-kernel-* and proxmox-firmware-* (PVE 9.x ships kernels under proxmox-kernel-, not pve-kernel- as in 7.x/8.x), (b) the dry-run switched from apt-get upgrade --dry-run to apt-get dist-upgrade --dry-run so kernel updates packaged as new installs are visible at all, (c) the categoriser now reads uname -r and flags an update as a running-kernel update when the package matches the running release exactly or its branch meta-package (e.g. proxmox-kernel-6.14 for a host on 6.14.11-4-pve). The row text now distinguishes \"Running kernel update available (reboot required)\" from \"N kernel update(s) available (none for running kernel)\"",
+      ],
+    },
+  },
   "1.2.1.2-beta": {
     date: "May 20, 2026",
     changes: {
