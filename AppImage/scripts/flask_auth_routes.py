@@ -670,3 +670,128 @@ def revoke_api_token_route(token_id):
             return jsonify({"success": False, "message": message}), 400
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# User profile endpoints (Fase 2, v1.2.2)
+# ---------------------------------------------------------------------------
+#
+# GET    /api/auth/profile          → username + display_name + has_avatar
+# PUT    /api/auth/profile          → update display_name (body: {display_name})
+# GET    /api/auth/profile/avatar   → serve the avatar bytes (image/*)
+# POST   /api/auth/profile/avatar   → upload new avatar (multipart 'file')
+# DELETE /api/auth/profile/avatar   → remove the stored avatar
+#
+# All four require auth via @require_auth. The avatar GET also requires
+# auth because the file lives next to the auth state on disk and we
+# don't want it leaked to arbitrary callers — the avatar URL is meant
+# to be fetched by an already-authenticated session.
+
+
+@auth_bp.route('/api/auth/profile', methods=['GET'])
+@require_auth
+def get_profile():
+    """Return the active user's profile (username + display name + avatar
+    metadata). Falls back to None values when auth isn't configured."""
+    try:
+        profile = auth_manager.get_user_profile()
+        return jsonify({
+            "success": True,
+            **profile,
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/auth/profile', methods=['PUT'])
+@require_auth
+def update_profile():
+    """Update display_name. Body: {"display_name": "..."}. Empty string
+    clears it (the dropdown then renders the raw username)."""
+    try:
+        data = request.get_json(silent=True) or {}
+        if "display_name" not in data:
+            return jsonify({
+                "success": False,
+                "message": "Missing 'display_name' field",
+            }), 400
+        ok, message = auth_manager.set_display_name(data.get("display_name") or "")
+        if not ok:
+            return jsonify({"success": False, "message": message}), 400
+        # Return the fresh profile so the frontend can update without a
+        # second roundtrip.
+        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile()})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/auth/profile/avatar', methods=['GET'])
+@require_auth
+def get_avatar():
+    """Serve the stored avatar bytes. Returns 404 if no avatar set."""
+    try:
+        from flask import Response
+        data, content_type = auth_manager.get_avatar_bytes()
+        if data is None:
+            return jsonify({"success": False, "message": "No avatar set"}), 404
+        return Response(
+            data,
+            mimetype=content_type,
+            headers={
+                # Allow short-window caching keyed by the URL — the
+                # frontend appends `?v=<mtime>` so any update busts the
+                # cache automatically.
+                "Cache-Control": "private, max-age=60",
+            },
+        )
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/auth/profile/avatar', methods=['POST'])
+@require_auth
+def upload_avatar():
+    """Upload a new avatar image. Accepts either:
+      • multipart/form-data with a `file` field (preferred), or
+      • a raw image body with Content-Type set to image/png|jpeg|webp|gif.
+    The size cap (2 MB) and the magic-number sniff happen in
+    auth_manager.save_avatar — failures come back as 400 with a
+    human-readable message."""
+    try:
+        content_bytes = None
+        content_type = None
+
+        # Multipart path
+        if request.files:
+            file_storage = request.files.get("file")
+            if file_storage is not None:
+                content_bytes = file_storage.read()
+                content_type = (file_storage.mimetype or "").lower()
+
+        # Raw body fallback
+        if content_bytes is None:
+            content_bytes = request.get_data(cache=False)
+            content_type = (request.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+
+        if not content_bytes:
+            return jsonify({"success": False, "message": "No image data received"}), 400
+
+        ok, message = auth_manager.save_avatar(content_bytes, content_type)
+        if not ok:
+            return jsonify({"success": False, "message": message}), 400
+        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile()})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@auth_bp.route('/api/auth/profile/avatar', methods=['DELETE'])
+@require_auth
+def remove_avatar():
+    """Remove the stored avatar (no-op if none set)."""
+    try:
+        ok, message = auth_manager.delete_avatar()
+        if not ok:
+            return jsonify({"success": False, "message": message}), 400
+        return jsonify({"success": True, "message": message, **auth_manager.get_user_profile()})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500

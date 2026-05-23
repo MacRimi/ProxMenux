@@ -1021,6 +1021,120 @@ class EmailChannel(NotificationChannel):
         return result.get('success', False), result.get('error', '')
 
 
+# ─── Apprise ─────────────────────────────────────────────────────
+
+class AppriseChannel(NotificationChannel):
+    """Apprise meta-channel — a single URL talks to ~80 services.
+
+    Apprise (https://github.com/caronc/apprise) is a Python library that
+    normalises a wide catalogue of notification destinations behind a
+    single URL scheme: `tgram://`, `discord://`, `slack://`, `gotify://`,
+    `ntfy://`, `matrix://`, `mailto://`, `pushover://`, `signal://`, etc.
+    The operator pastes one URL and ProxMenux delegates the transport.
+
+    Requested in issue #207 by @0berkampf. Implemented as a *separate
+    channel type* (not a replacement for the native Telegram / Gotify /
+    Discord / Email channels), so installs that already have a working
+    native channel don't need to migrate — Apprise is opt-in for users
+    who want to reach a service we don't support natively.
+
+    The library is loaded lazily on first send. Older deployments that
+    haven't installed it yet surface a clean validation error instead
+    of crashing the notification manager at import time.
+    """
+
+    def __init__(self, url: str):
+        super().__init__()
+        self.url = (url or '').strip()
+
+    # Lazy import so installs that haven't picked up the new dep yet
+    # don't crash on module load. Each call re-imports cheaply — Python
+    # caches the module reference after the first hit.
+    def _load_apprise(self):
+        try:
+            import apprise  # type: ignore
+            return apprise
+        except ImportError:
+            return None
+
+    def validate_config(self) -> Tuple[bool, str]:
+        if not self.url:
+            return False, 'Apprise URL is required'
+        apprise = self._load_apprise()
+        if apprise is None:
+            return False, (
+                'apprise library not installed in this deployment. '
+                'Reinstall ProxMenux Monitor or run `pip install apprise` '
+                'inside the AppImage environment.'
+            )
+        # `add(url)` returns True only if Apprise recognised the scheme
+        # — useful as a syntactic validation without sending anything.
+        try:
+            apobj = apprise.Apprise()
+            ok = apobj.add(self.url)
+            if not ok:
+                return False, 'Apprise rejected the URL (unrecognised scheme or bad format)'
+        except Exception as e:
+            return False, f'Apprise rejected the URL: {e}'
+        return True, ''
+
+    def _severity_to_notify_type(self, apprise_mod, severity: str):
+        """Map ProxMenux severities to Apprise NotifyType constants so
+        services that render severity (e.g. Pushover priority, ntfy
+        priority headers) get the right indicator."""
+        sev = (severity or '').upper()
+        if sev == 'CRITICAL':
+            return apprise_mod.NotifyType.FAILURE
+        if sev == 'WARNING':
+            return apprise_mod.NotifyType.WARNING
+        if sev == 'SUCCESS':
+            return apprise_mod.NotifyType.SUCCESS
+        return apprise_mod.NotifyType.INFO
+
+    def send(self, title: str, message: str, severity: str = 'INFO',
+             data: Optional[Dict] = None) -> Dict[str, Any]:
+        ok, err = self.validate_config()
+        if not ok:
+            return {'success': False, 'error': err, 'channel': 'apprise'}
+
+        # Rate limit (shared with the other channels) before dispatch.
+        def _send_via_apprise() -> Tuple[int, str]:
+            apprise = self._load_apprise()
+            if apprise is None:
+                # Shouldn't happen — validate_config caught it above —
+                # but defend in depth so the retry loop reports cleanly.
+                return 0, 'apprise library not available'
+            try:
+                apobj = apprise.Apprise()
+                apobj.add(self.url)
+                sent = apobj.notify(
+                    body=message or '',
+                    title=title or '',
+                    notify_type=self._severity_to_notify_type(apprise, severity),
+                )
+                # `notify` returns True iff at least one target accepted
+                # the message. False means every URL endpoint rejected
+                # — we don't get a per-URL status code back, hence the
+                # opaque "Apprise rejected the notification".
+                if sent:
+                    return 200, ''
+                return 500, 'Apprise rejected the notification (transport failure)'
+            except Exception as e:
+                return 0, str(e)
+
+        result = self._send_with_retry(_send_via_apprise)
+        result['channel'] = 'apprise'
+        return result
+
+    def test(self) -> Tuple[bool, str]:
+        result = self.send(
+            title='ProxMenux Monitor — Test',
+            message='Apprise channel is configured correctly. If you can read this, the URL is valid and the service accepted the notification.',
+            severity='INFO',
+        )
+        return bool(result.get('success')), result.get('error') or ''
+
+
 # ─── Channel Factory ─────────────────────────────────────────────
 
 CHANNEL_TYPES = {
@@ -1045,16 +1159,21 @@ CHANNEL_TYPES = {
                         'from_address', 'to_addresses', 'subject_prefix'],
         'class': EmailChannel,
     },
+    'apprise': {
+        'name': 'Apprise',
+        'config_keys': ['url'],
+        'class': AppriseChannel,
+    },
 }
 
 
 def create_channel(channel_type: str, config: Dict[str, str]) -> Optional[NotificationChannel]:
     """Create a channel instance from type name and config dict.
-    
+
     Args:
-        channel_type: 'telegram', 'gotify', or 'discord'
+        channel_type: 'telegram', 'gotify', 'discord', 'email', or 'apprise'
         config: Dict with channel-specific keys (see CHANNEL_TYPES)
-    
+
     Returns:
         Channel instance or None if creation fails
     """
@@ -1076,6 +1195,8 @@ def create_channel(channel_type: str, config: Dict[str, str]) -> Optional[Notifi
             )
         elif channel_type == 'email':
             return EmailChannel(config)
+        elif channel_type == 'apprise':
+            return AppriseChannel(url=config.get('url', ''))
     except Exception as e:
         print(f"[NotificationChannels] Failed to create {channel_type}: {e}")
     return None

@@ -8,7 +8,7 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Textarea } from "./ui/textarea"
@@ -645,7 +645,16 @@ export function VirtualMachines() {
   const [backupPbsChangeMode, setBackupPbsChangeMode] = useState<string>("default")
   
   // Tab state for modal
-  const [activeModalTab, setActiveModalTab] = useState<"status" | "mounts" | "backups" | "updates">("status")
+  const [activeModalTab, setActiveModalTab] = useState<"status" | "mounts" | "backups" | "updates" | "firewall">("status")
+
+  // Firewall log state — fetched only when the operator opens that tab
+  // so a CT/VM without firewall use doesn't pay the pvesh cost on every
+  // modal open. Issue #14554 from the helper-scripts discussions.
+  interface FirewallLogEntry { n: number; t: string }
+  const [firewallLogs, setFirewallLogs] = useState<FirewallLogEntry[]>([])
+  const [loadingFirewallLog, setLoadingFirewallLog] = useState(false)
+  const [firewallEnabled, setFirewallEnabled] = useState<boolean>(true)
+  const [firewallLogError, setFirewallLogError] = useState<string | null>(null)
   // Sprint 13.29: per-LXC mount points lazy-loaded when the user opens
   // the LXC modal. We fetch alongside backups (one-shot) so switching
   // tabs is instantaneous; the cost is small (parses one config file
@@ -772,6 +781,11 @@ export function VirtualMachines() {
     // so the new modal doesn't briefly flash data from another LXC.
     setMountPoints([])
     setAdHocMounts([])
+    // Reset firewall log state — fetched lazily when the user opens
+    // that tab, since most operators won't visit it on every modal open.
+    setFirewallLogs([])
+    setFirewallLogError(null)
+    setFirewallEnabled(true)
 
     // Load backups immediately (independent of config)
     fetchBackupStorages()
@@ -855,6 +869,33 @@ export function VirtualMachines() {
       setVmBackups([])
     } finally {
       setLoadingBackups(false)
+    }
+  }
+
+  // Firewall log fetcher — proxies the PVE per-VM/CT firewall log
+  // endpoint. The backend returns `firewall_enabled: false` when PVE
+  // says the firewall is OFF for that guest; in that case we render
+  // a callout instead of an empty viewer.
+  const fetchFirewallLog = async (vmid: number) => {
+    setLoadingFirewallLog(true)
+    setFirewallLogError(null)
+    try {
+      const response = await fetchApi<{
+        logs?: FirewallLogEntry[]
+        firewall_enabled?: boolean
+        error?: string
+      }>(`/api/vms/${vmid}/firewall/log?limit=500`)
+      setFirewallEnabled(response.firewall_enabled !== false)
+      setFirewallLogs(Array.isArray(response.logs) ? response.logs : [])
+      if (response.error && response.firewall_enabled !== false) {
+        setFirewallLogError(response.error)
+      }
+    } catch (error) {
+      setFirewallEnabled(true)
+      setFirewallLogs([])
+      setFirewallLogError(error instanceof Error ? error.message : String(error))
+    } finally {
+      setLoadingFirewallLog(false)
     }
   }
 
@@ -1708,62 +1749,127 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 </DialogTitle>
               </DialogHeader>
 
-              {/* Tab Navigation */}
-              <div className="flex border-b border-border px-6 shrink-0">
+              {/* Tab Navigation.
+                  Mobile UX:
+                   • Only the active tab shows its label; the rest
+                     collapse to icon-only so 4-5 tabs fit on a phone.
+                   • Per-tab padding + gap shrink on narrow viewports
+                     (`px-2.5 sm:px-4`, `gap-1.5 sm:gap-2`) so even with
+                     two badges showing counts the row doesn't overflow.
+                   • Container has `overflow-x-auto` as a safety net —
+                     a CT with all tabs active (Mounts + Backups +
+                     Updates + Firewall) on a very narrow phone can
+                     still horizontally scroll the row instead of
+                     clipping the last tab off-screen.
+                   • Badges stay visible in both states so the user
+                     still sees "9 backups" at a glance even when that
+                     tab isn't active. */}
+              <div className="flex border-b border-border px-3 sm:px-6 shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 <button
                   onClick={() => setActiveModalTab("status")}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                     activeModalTab === "status"
                       ? "border-cyan-500 text-cyan-500"
                       : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Activity className="h-4 w-4" />
-                  Status
+                  <span className={activeModalTab === "status" ? "" : "hidden sm:inline"}>
+                    Status
+                  </span>
                 </button>
                 {/* Sprint 13.29: Mount Points tab — LXC only, and only
                     when at least one mp / ad-hoc remote mount exists.
-                    A CT without mounts gets no empty tab.
-                    Label is "Mounts" (single word) so the trigger
-                    fits in one line on mobile next to Status and
-                    Backups; "Mount Points" wrapped on narrow viewports. */}
+                    A CT without mounts gets no empty tab. */}
                 {selectedVM?.type === "lxc" && (mountPoints.length > 0 || adHocMounts.length > 0) && (
                   <button
                     onClick={() => setActiveModalTab("mounts")}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                       activeModalTab === "mounts"
                         ? "border-blue-500 text-blue-500"
                         : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <HardDrive className="h-4 w-4" />
-                    Mounts
-                    <Badge variant="secondary" className="text-xs h-5 ml-1">
+                    <span className={activeModalTab === "mounts" ? "" : "hidden sm:inline"}>
+                      Mounts
+                    </span>
+                    <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">
                       {mountPoints.length + adHocMounts.length}
                     </Badge>
                   </button>
                 )}
                 <button
                   onClick={() => setActiveModalTab("backups")}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                     activeModalTab === "backups"
                       ? "border-amber-500 text-amber-500"
                       : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Archive className="h-4 w-4" />
-                  Backups
+                  <span className={activeModalTab === "backups" ? "" : "hidden sm:inline"}>
+                    Backups
+                  </span>
                   {vmBackups.length > 0 && (
-                    <Badge variant="secondary" className="text-xs h-5 ml-1">{vmBackups.length}</Badge>
+                    <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">{vmBackups.length}</Badge>
                   )}
                 </button>
-                {/* Updates is intentionally NOT a tab in the nav — the
-                    extra tab created a scrolling tab strip on mobile
-                    (especially once Mounts + Backups + Updates piled
-                    up) and the swipe affordance was missed. The
-                    clickable violet badge in the modal header is now
-                    the sole entry point; the Updates content panel
-                    below still mounts when activeModalTab === 'updates'. */}
+                {/* Updates tab — re-added as a first-class nav entry now
+                    that the mobile UX collapses inactive tabs to
+                    icon-only (so the row no longer overflows on narrow
+                    viewports the way it did before v1.2.1.3). LXC only,
+                    rendered only when the managed-installs registry has
+                    flagged pending updates for this CT, so a CT with
+                    nothing pending doesn't get an empty tab. The violet
+                    badge in the header stays as a complementary entry
+                    point — both routes lead to the same `updates` panel
+                    below. */}
+                {selectedVM?.type === "lxc" && selectedVM?.update_check?.available && (
+                  <button
+                    onClick={() => setActiveModalTab("updates")}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
+                      activeModalTab === "updates"
+                        ? "border-purple-500 text-purple-500"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span className={activeModalTab === "updates" ? "" : "hidden sm:inline"}>
+                      Updates
+                    </span>
+                    {typeof selectedVM.update_check?.count === "number" && selectedVM.update_check.count > 0 && (
+                      <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">
+                        {selectedVM.update_check.count}
+                      </Badge>
+                    )}
+                  </button>
+                )}
+                {/* Firewall tab — issue #14554 from the helper-scripts
+                    discussions ("view individual VM/CT firewall logs").
+                    Always rendered for VMs and CTs; if the guest doesn't
+                    have firewall enabled in PVE, the panel shows a
+                    callout explaining how to turn it on. Log fetched
+                    lazily on first click to avoid hitting pvesh on
+                    every modal open. */}
+                {selectedVM && (
+                  <button
+                    onClick={() => {
+                      setActiveModalTab("firewall")
+                      fetchFirewallLog(selectedVM.vmid)
+                    }}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
+                      activeModalTab === "firewall"
+                        ? "border-orange-500 text-orange-500"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Shield className="h-4 w-4" />
+                    <span className={activeModalTab === "firewall" ? "" : "hidden sm:inline"}>
+                      Firewall
+                    </span>
+                  </button>
+                )}
               </div>
 
               <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
@@ -2734,6 +2840,112 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 </Badge>
                               </div>
                             ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Firewall Logs Tab — issue #14554. Reads the per-VM/CT
+                    log filtered by PVE directly (no host-wide log
+                    grep). Loading is lazy and triggered by the tab
+                    button's onClick. */}
+                {activeModalTab === "firewall" && (
+                  <div className="space-y-4">
+                    <Card className="border border-border bg-card/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 rounded-md bg-orange-500/10">
+                              <Shield className="h-4 w-4 text-orange-500" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-foreground">Firewall Logs</h3>
+                            {firewallEnabled && firewallLogs.length > 0 && (
+                              <Badge variant="secondary" className="text-xs h-5 ml-1">
+                                {firewallLogs.length}
+                              </Badge>
+                            )}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => selectedVM && fetchFirewallLog(selectedVM.vmid)}
+                            disabled={loadingFirewallLog}
+                          >
+                            {loadingFirewallLog ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-3 w-3" />
+                            )}
+                            <span>Refresh</span>
+                          </Button>
+                        </div>
+
+                        <div className="border-t border-border/50 mb-4" />
+
+                        {loadingFirewallLog ? (
+                          <div className="flex items-center justify-center py-6 text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            <span className="text-sm">Loading firewall log…</span>
+                          </div>
+                        ) : !firewallEnabled ? (
+                          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
+                            <div className="flex items-start gap-2">
+                              <Shield className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                              <div className="space-y-2">
+                                <p className="font-medium text-amber-500">
+                                  Firewall is not enabled for this {selectedVM?.type === "lxc" ? "container" : "VM"}
+                                </p>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                  Enable it in the Proxmox UI under{" "}
+                                  <strong>
+                                    {selectedVM?.type === "lxc" ? "Container" : "VM"} → Firewall → Options
+                                  </strong>{" "}
+                                  and add at least one rule with <code>log: info</code> (or higher) so packets start
+                                  being recorded. New entries will appear here automatically on the next refresh.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : firewallLogError ? (
+                          <div className="rounded-md border border-red-500/30 bg-red-500/5 p-4 text-sm">
+                            <div className="flex items-start gap-2">
+                              <Shield className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                              <div>
+                                <p className="font-medium text-red-500 mb-1">Failed to read firewall log</p>
+                                <p className="text-xs text-muted-foreground break-all">{firewallLogError}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : firewallLogs.length === 0 ? (
+                          <div className="text-center py-6 text-sm text-muted-foreground">
+                            No firewall events recorded yet.
+                            <div className="text-xs mt-1">
+                              Rules with <code>log: info</code> (or higher) will populate this view as packets arrive.
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-md border border-border bg-background/50 max-h-[480px] overflow-y-auto">
+                            <pre className="text-[11px] font-mono leading-snug whitespace-pre-wrap break-all p-3">
+                              {firewallLogs.map((entry, idx) => {
+                                const text = entry.t || ""
+                                // Light colour-coding by the action keyword
+                                // PVE emits in the line itself — purely
+                                // visual, parsing stays line-by-line so
+                                // a malformed entry still renders fine.
+                                let actionClass = "text-foreground/90"
+                                if (/\bDROP\b/i.test(text)) actionClass = "text-red-400"
+                                else if (/\bREJECT\b/i.test(text)) actionClass = "text-orange-400"
+                                else if (/\bACCEPT\b/i.test(text)) actionClass = "text-green-400"
+                                return (
+                                  <div key={`${entry.n}-${idx}`} className={actionClass}>
+                                    {text}
+                                  </div>
+                                )
+                              })}
+                            </pre>
                           </div>
                         )}
                       </CardContent>

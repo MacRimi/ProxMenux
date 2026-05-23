@@ -12,12 +12,14 @@ import Hardware from "./hardware"
 import { SystemLogs } from "./system-logs"
 import { Settings } from "./settings"
 import { Security } from "./security"
+import { Profile } from "./profile"
 import { About } from "./about"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
 import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TerminalPanel } from "./terminal-panel"
+import { AvatarMenu } from "./avatar-menu"
 import {
   RefreshCw,
   AlertTriangle,
@@ -368,6 +370,8 @@ export function ProxmoxDashboard() {
   return "Security"
   case "settings":
   return "Settings"
+  case "profile":
+  return "Profile"
       default:
         return "Navigation Menu"
     }
@@ -480,44 +484,74 @@ export function ProxmoxDashboard() {
               <div onClick={(e) => e.stopPropagation()}>
                 <ThemeToggle />
               </div>
+
+              {/* User account dropdown — Fase 1 (v1.2.2). Self-hides
+                  when auth isn't enabled on this install. */}
+              <div onClick={(e) => e.stopPropagation()}>
+                <AvatarMenu
+                  size="lg"
+                  onOpenProfile={() => setActiveTab("profile")}
+                  onOpenSecurity={() => setActiveTab("security")}
+                />
+              </div>
             </div>
 
-            {/* Mobile Actions */}
-            <div className="flex lg:hidden items-start gap-2 pt-2">
-              <div className="flex flex-col items-end gap-1">
-                <Badge variant="outline" className={`${statusColor} text-xs px-2`}>
-                  {statusIcon}
-                </Badge>
-                {systemStatus.status === "healthy" && infoCount > 0 && (
-                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs px-2">
-                    <Info className="h-4 w-4" />
-                    <span className="ml-1">{infoCount}</span>
-                  </Badge>
-                )}
-              </div>
-
+            {/* Mobile Actions — variant D approved in demo:
+                 • Top-right: Refresh + Theme + Avatar (all with border)
+                 • Bottom row (under Node line): badges left-aligned with
+                   the Node text column, Uptime right-aligned in the same
+                   horizontal line. No extra row for Uptime so the
+                   header doesn't grow vertically. */}
+            <div className="flex lg:hidden items-center gap-1.5 shrink-0">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation()
                   refreshData()
                 }}
                 disabled={isRefreshing}
-                className="h-8 w-8 p-0 -mt-1"
+                className="h-8 w-8 p-0 border-border/50 bg-transparent hover:bg-secondary"
+                aria-label="Refresh"
               >
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               </Button>
 
-              <div onClick={(e) => e.stopPropagation()} className="-mt-1">
+              <div onClick={(e) => e.stopPropagation()}>
                 <ThemeToggle />
+              </div>
+
+              <div onClick={(e) => e.stopPropagation()}>
+                <AvatarMenu
+                  size="lg"
+                  onOpenProfile={() => setActiveTab("profile")}
+                  onOpenSecurity={() => setActiveTab("security")}
+                />
               </div>
             </div>
           </div>
 
-          {/* Mobile Server Info */}
-          <div className="lg:hidden mt-2 flex items-center justify-end text-xs text-muted-foreground">
-            <span className="whitespace-nowrap">Uptime: {systemStatus.uptime || "N/A"}</span>
+          {/* Mobile bottom row — badges (left, aligned with the title
+              column via pl-[3.25rem] = w-16 logo + space-x-2 gap-ish)
+              and Uptime (right). The pl matches the mobile logo width
+              + the parent flex gap so the badges sit visually under
+              "Node: amd", not flush against the screen edge. */}
+          <div className="lg:hidden mt-2 flex items-center justify-between gap-2 pl-[4.5rem]">
+            <div className="flex items-center gap-1.5">
+              <Badge variant="outline" className={`${statusColor} text-xs px-2`}>
+                {statusIcon}
+                <span className="ml-1 capitalize">{systemStatus.status}</span>
+              </Badge>
+              {systemStatus.status === "healthy" && infoCount > 0 && (
+                <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs px-2">
+                  <Info className="h-3 w-3" />
+                  <span className="ml-1">{infoCount}</span>
+                </Badge>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              Uptime: {systemStatus.uptime || "N/A"}
+            </span>
           </div>
         </div>
       </header>
@@ -802,6 +836,16 @@ export function ProxmoxDashboard() {
 
           <TabsContent value="security" className="space-y-4 md:space-y-6 mt-0">
             <Security key={`security-${componentKey}`} />
+          </TabsContent>
+
+          {/* Profile tab — not surfaced in the top tabs nav. The only
+              entry point is the avatar dropdown in the header (View
+              profile). v1.2.2 Fase 2. */}
+          <TabsContent value="profile" className="space-y-4 md:space-y-6 mt-0">
+            <Profile
+              key={`profile-${componentKey}`}
+              onOpenSecurity={() => setActiveTab("security")}
+            />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4 md:space-y-6 mt-0">

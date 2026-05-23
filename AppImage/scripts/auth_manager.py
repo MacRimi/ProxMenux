@@ -39,6 +39,20 @@ except ImportError:
 # Configuration
 CONFIG_DIR = Path.home() / ".config" / "proxmenux-monitor"
 AUTH_CONFIG_FILE = CONFIG_DIR / "auth.json"
+
+# User profile — Fase 2 (v1.2.2). Avatar stored as a binary file next
+# to auth.json so the JSON stays small and the image can be served
+# unmodified. Display name is kept inside auth.json as an optional
+# string; empty/missing falls back to the username at render time.
+AVATAR_FILE = CONFIG_DIR / "avatar.bin"
+AVATAR_CONTENT_TYPE_FILE = CONFIG_DIR / "avatar.type"
+AVATAR_MAX_BYTES = 2 * 1024 * 1024  # 2 MB hard cap on uploads
+AVATAR_ALLOWED_CONTENT_TYPES = {
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif",
+}
 # Sentinel for legacy installs that started under the hardcoded JWT_SECRET.
 # The audit (Tier 4 #22) flagged that constant — anyone with access to the
 # public repo could forge JWTs against any deployment. We now generate a
@@ -97,7 +111,8 @@ def load_auth_config():
             "totp_secret": None,
             "backup_codes": [],
             "api_tokens": [],
-            "revoked_tokens": []
+            "revoked_tokens": [],
+            "display_name": None,
         }
     
     try:
@@ -111,6 +126,7 @@ def load_auth_config():
             config.setdefault("backup_codes", [])
             config.setdefault("api_tokens", [])
             config.setdefault("revoked_tokens", [])
+            config.setdefault("display_name", None)
             return config
     except Exception as e:
         print(f"Error loading auth config: {e}")
@@ -124,7 +140,8 @@ def load_auth_config():
             "totp_secret": None,
             "backup_codes": [],
             "api_tokens": [],
-            "revoked_tokens": []
+            "revoked_tokens": [],
+            "display_name": None,
         }
 
 
@@ -1280,3 +1297,168 @@ def authenticate(username, password, totp_token=None):
         return True, token, False, "Authentication successful"
     else:
         return False, None, False, "Failed to generate authentication token"
+
+
+# ---------------------------------------------------------------------------
+# User profile (Fase 2, v1.2.2)
+# ---------------------------------------------------------------------------
+#
+# Display name + avatar. Both are optional decorations on top of the
+# existing username + password. The display name lives inside auth.json
+# (one extra string field). The avatar is stored as a binary file next
+# to auth.json so the JSON stays small and the image can be served
+# without re-encoding.
+#
+# No email field — the Monitor doesn't send mail (no password reset, no
+# confirmation), and the operator-of-PVE-as-root use case never benefits
+# from one. If OIDC lands in v1.3.0 we'll surface whatever the issuer
+# claims, but we don't ask the operator for an email manually.
+
+
+def get_user_profile():
+    """Return the active user's profile decorations.
+
+    Returns a dict with:
+      {
+        "username":        str | None,
+        "display_name":    str | None,  # may equal username
+        "has_avatar":      bool,
+        "avatar_mtime":    float | None,  # for cache-busting URLs
+        "avatar_content_type": str | None,
+      }
+    Username falls back to None when auth isn't configured/enabled.
+    """
+    config = load_auth_config()
+    username = config.get("username") if config.get("enabled") else None
+    display_name = config.get("display_name") or None
+
+    has_avatar = AVATAR_FILE.exists() and AVATAR_FILE.stat().st_size > 0
+    avatar_mtime = None
+    avatar_content_type = None
+    if has_avatar:
+        try:
+            avatar_mtime = AVATAR_FILE.stat().st_mtime
+        except OSError:
+            avatar_mtime = None
+        try:
+            if AVATAR_CONTENT_TYPE_FILE.exists():
+                avatar_content_type = AVATAR_CONTENT_TYPE_FILE.read_text().strip() or None
+        except OSError:
+            avatar_content_type = None
+
+    return {
+        "username": username,
+        "display_name": display_name,
+        "has_avatar": has_avatar,
+        "avatar_mtime": avatar_mtime,
+        "avatar_content_type": avatar_content_type,
+    }
+
+
+def set_display_name(display_name):
+    """Persist (or clear) the user's display name.
+
+    Accepts any string up to 64 chars. An empty / whitespace-only value
+    clears the field — the dropdown then falls back to the raw username
+    when rendering. Returns (success: bool, message: str).
+    """
+    cleaned = (display_name or "").strip()
+    if len(cleaned) > 64:
+        return False, "Display name must be 64 characters or less"
+    # Disallow control characters — a display name with embedded \n
+    # would break the avatar dropdown layout.
+    if any(ord(ch) < 0x20 for ch in cleaned):
+        return False, "Display name contains control characters"
+
+    config = load_auth_config()
+    config["display_name"] = cleaned or None
+    if not save_auth_config(config):
+        return False, "Failed to save profile"
+    return True, "Display name updated"
+
+
+def save_avatar(content_bytes, content_type):
+    """Persist a new avatar image. Best-effort validation:
+
+      • Content-Type must be one of `AVATAR_ALLOWED_CONTENT_TYPES`.
+      • Size must be <= `AVATAR_MAX_BYTES` (2 MB).
+      • Magic-number check — first few bytes must match a supported image
+        format. This blocks a `.png`-renamed `.exe` from being served as
+        an image to other browsers.
+
+    Returns (success: bool, message: str). Does not resize — the
+    frontend always renders the avatar inside a `rounded-full` with
+    `object-cover`, so any aspect ratio displays correctly. Operators
+    who want a smaller file can compress before upload.
+    """
+    if not isinstance(content_bytes, (bytes, bytearray)) or not content_bytes:
+        return False, "No image data"
+    if len(content_bytes) > AVATAR_MAX_BYTES:
+        return False, f"Image exceeds {AVATAR_MAX_BYTES // (1024 * 1024)} MB limit"
+    if content_type not in AVATAR_ALLOWED_CONTENT_TYPES:
+        return False, f"Unsupported image type: {content_type}"
+
+    # Magic-number sniffing: trust the Content-Type but verify.
+    head = bytes(content_bytes[:12])
+    looks_valid = (
+        head.startswith(b"\x89PNG\r\n\x1a\n") or          # PNG
+        head.startswith(b"\xff\xd8\xff") or               # JPEG
+        (head[:4] == b"RIFF" and head[8:12] == b"WEBP") or  # WebP
+        head.startswith(b"GIF87a") or head.startswith(b"GIF89a")  # GIF
+    )
+    if not looks_valid:
+        return False, "Image bytes don't match a supported format"
+
+    try:
+        ensure_config_dir()
+        # Write atomically — tmp + rename so a crashed write never leaves
+        # a half-written avatar file that the GET endpoint would serve as
+        # corrupt bytes.
+        tmp_avatar = AVATAR_FILE.with_suffix(AVATAR_FILE.suffix + ".tmp")
+        with open(tmp_avatar, "wb") as f:
+            f.write(content_bytes)
+        os.replace(tmp_avatar, AVATAR_FILE)
+        AVATAR_CONTENT_TYPE_FILE.write_text(content_type)
+        try:
+            os.chmod(AVATAR_FILE, 0o600)
+        except OSError:
+            # Best-effort permission tighten; not fatal if the FS doesn't
+            # support it (e.g. some bind-mounted scenarios).
+            pass
+        return True, "Avatar saved"
+    except Exception as e:
+        return False, f"Failed to save avatar: {e}"
+
+
+def delete_avatar():
+    """Remove the stored avatar file. Returns (success, message). No-op
+    when there's nothing to delete (still returns success)."""
+    try:
+        if AVATAR_FILE.exists():
+            AVATAR_FILE.unlink()
+        if AVATAR_CONTENT_TYPE_FILE.exists():
+            AVATAR_CONTENT_TYPE_FILE.unlink()
+        return True, "Avatar removed"
+    except Exception as e:
+        return False, f"Failed to remove avatar: {e}"
+
+
+def get_avatar_bytes():
+    """Return (bytes, content_type) for the stored avatar, or (None, None)
+    if no avatar is set or the file is unreadable. The caller is
+    responsible for the HTTP response; this only handles the I/O."""
+    if not AVATAR_FILE.exists():
+        return None, None
+    try:
+        data = AVATAR_FILE.read_bytes()
+    except OSError:
+        return None, None
+    content_type = "application/octet-stream"
+    try:
+        if AVATAR_CONTENT_TYPE_FILE.exists():
+            ct = AVATAR_CONTENT_TYPE_FILE.read_text().strip()
+            if ct in AVATAR_ALLOWED_CONTENT_TYPES:
+                content_type = ct
+    except OSError:
+        pass
+    return data, content_type

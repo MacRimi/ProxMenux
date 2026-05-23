@@ -383,6 +383,14 @@ pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
     gevent-websocket>=0.10.1 \
     greenlet>=3.0.0
 
+# Phase 3c: Apprise notification hub (issue #207). One library handles
+# ~80 notification services behind a single URL scheme (`tgram://`,
+# `discord://`, `ntfy://`, `matrix://`, etc.). Used by the optional
+# `apprise` channel in notification_channels.py for operators who want
+# to reach a service we don't support natively.
+pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
+    apprise>=1.7.0
+
 cat > "$APP_DIR/usr/lib/python3/dist-packages/cgi.py" << 'PYEOF'
 from typing import Tuple, Dict
 try:

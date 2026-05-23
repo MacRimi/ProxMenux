@@ -11198,6 +11198,105 @@ def api_vm_logs(vmid):
         pass
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/vms/<int:vmid>/firewall/log', methods=['GET'])
+@require_auth
+def api_vm_firewall_log(vmid):
+    """Per-VM/CT firewall log entries — proxies the official PVE API:
+    `/nodes/<node>/{lxc,qemu}/<vmid>/firewall/log`. Returns the matching
+    lines from `/var/log/pve-firewall.log` already filtered by VMID so
+    the frontend doesn't have to parse the host-wide log itself.
+
+    Implements issue #14554 from the helper-scripts discussions —
+    "view individual VM/CT firewall logs" — without writing any custom
+    log parsing: PVE's API does it natively.
+
+    Query string:
+      * `start` — 0-based offset into the log (default 0).
+      * `limit` — number of lines to return (default 500, cap 5000).
+
+    Response shape mirrors the `/api/vms/<vmid>/logs` endpoint so the
+    frontend log viewer can reuse the same renderer.
+    """
+    try:
+        start = max(int(request.args.get('start', 0)), 0)
+        limit = min(max(int(request.args.get('limit', 500)), 1), 5000)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'start/limit must be integers'}), 400
+
+    try:
+        resources = get_cached_pvesh_cluster_resources_vm()
+        if not resources:
+            return jsonify({'error': 'Failed to enumerate cluster VMs'}), 500
+
+        vm_info = next((r for r in resources if r.get('vmid') == vmid), None)
+        if not vm_info:
+            return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
+
+        vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
+        node = vm_info.get('node', 'pve')
+
+        log_result = subprocess.run(
+            [
+                'pvesh', 'get',
+                f'/nodes/{node}/{vm_type}/{vmid}/firewall/log',
+                '--start', str(start),
+                '--limit', str(limit),
+                '--output-format', 'json',
+            ],
+            capture_output=True, text=True, timeout=10,
+        )
+
+        if log_result.returncode != 0:
+            stderr = (log_result.stderr or '').strip()
+            # PVE returns this exact wording when the firewall is OFF
+            # for the guest — surface it as a structured flag so the
+            # frontend can render a "firewall disabled" callout instead
+            # of a generic error toast.
+            firewall_disabled = (
+                'firewall' in stderr.lower() and 'disable' in stderr.lower()
+            ) or '404' in stderr
+            return jsonify({
+                'vmid': vmid,
+                'name': vm_info.get('name'),
+                'type': vm_type,
+                'node': node,
+                'firewall_enabled': not firewall_disabled,
+                'logs': [],
+                'error': stderr[:300] if stderr else 'pvesh returned non-zero',
+            }), 200 if firewall_disabled else 500
+
+        entries = []
+        try:
+            data = json.loads(log_result.stdout or '[]')
+            if isinstance(data, list):
+                for row in data:
+                    if isinstance(row, dict):
+                        entries.append({
+                            'n': row.get('n'),
+                            't': row.get('t', ''),
+                        })
+        except (json.JSONDecodeError, ValueError):
+            # Older PVE versions or oddly-shaped output: fall back to
+            # plain text parsing, one entry per line.
+            for i, line in enumerate(log_result.stdout.split('\n')):
+                if line.strip():
+                    entries.append({'n': start + i, 't': line})
+
+        return jsonify({
+            'vmid': vmid,
+            'name': vm_info.get('name'),
+            'type': vm_type,
+            'node': node,
+            'firewall_enabled': True,
+            'log_lines': len(entries),
+            'logs': entries,
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'pvesh timed out reading firewall log'}), 504
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/vms/<int:vmid>/control', methods=['POST'])
 @require_auth
 def api_vm_control(vmid):

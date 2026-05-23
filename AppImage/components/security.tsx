@@ -6,7 +6,7 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import {
-  Shield, Lock, User, AlertCircle, CheckCircle, Info, LogOut, Key, Copy, Eye, EyeOff,
+  Shield, Lock, User, AlertCircle, CheckCircle, Info, Key, Copy, Eye, EyeOff,
   Trash2, RefreshCw, Clock, ShieldCheck, Globe, FileKey, AlertTriangle,
   Flame, Bug, Search, Download, Power, PowerOff, Plus, Minus, Activity, Settings, Ban,
   FileText, Printer, Play, BarChart3, TriangleAlert, ChevronDown, ArrowDownLeft, ArrowUpRight,
@@ -925,11 +925,8 @@ export function Security() {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("proxmenux-auth-token")
-    localStorage.removeItem("proxmenux-auth-setup-complete")
-    window.location.reload()
-  }
+  // handleLogout removed: the session-end action lives in the header's
+  // AvatarMenu now (Fase 1, v1.2.2). See `components/avatar-menu.tsx`.
 
   const loadApiTokens = async () => {
     try {
@@ -1740,10 +1737,11 @@ ${(report.sections && report.sections.length > 0) ? `
 
           {authEnabled && (
             <div className="space-y-3">
-              <Button onClick={handleLogout} variant="outline" className="bg-transparent">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
+              {/* Logout moved to the header AvatarMenu (Fase 1, v1.2.2)
+                  so the session-end action lives in one consistent place
+                  on every page. The Security panel keeps the actions
+                  that affect the *account* itself (password, 2FA, disable
+                  auth), not the session. */}
 
               {!showChangePassword && (
                 <Button onClick={() => setShowChangePassword(true)} variant="outline">

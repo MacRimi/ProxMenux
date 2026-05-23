@@ -157,7 +157,7 @@ const EVENT_CATEGORIES = [
   { key: "other", label: "Other", desc: "Uncategorized notifications" },
 ]
 
-const CHANNEL_TYPES = ["telegram", "gotify", "discord", "email"] as const
+const CHANNEL_TYPES = ["telegram", "gotify", "discord", "email", "apprise"] as const
 
 const AI_PROVIDERS = [
   { 
@@ -262,6 +262,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
     gotify: { enabled: false },
     discord: { enabled: false },
     email: { enabled: false },
+    apprise: { enabled: false },
   },
   event_categories: {
     vm_ct: true, backup: true, resources: true, storage: true,
@@ -275,6 +276,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
     gotify: { categories: {}, events: {} },
     discord: { categories: {}, events: {} },
     email: { categories: {}, events: {} },
+    apprise: { categories: {}, events: {} },
   },
   ai_enabled: false,
   ai_provider: "groq",
@@ -305,6 +307,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
     gotify: "brief",
     discord: "brief",
     email: "detailed",
+    apprise: "brief",
   },
   hostname: "",
   webhook_secret: "",
@@ -1346,7 +1349,7 @@ export function NotificationSettings() {
 
               <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
               <Tabs defaultValue="telegram" className="w-full">
-                <TabsList className="w-full grid grid-cols-4 h-8">
+                <TabsList className="w-full grid grid-cols-5 h-8">
                   <TabsTrigger value="telegram" className="text-xs data-[state=active]:text-blue-500">
                     Telegram
                   </TabsTrigger>
@@ -1358,6 +1361,9 @@ export function NotificationSettings() {
                   </TabsTrigger>
                   <TabsTrigger value="email" className="text-xs data-[state=active]:text-amber-500">
                     Email
+                  </TabsTrigger>
+                  <TabsTrigger value="apprise" className="text-xs data-[state=active]:text-cyan-500">
+                    Apprise
                   </TabsTrigger>
                 </TabsList>
 
@@ -1782,6 +1788,96 @@ export function NotificationSettings() {
                           disabled={testing === "email" || !config.channels.email?.to_addresses}
                         >
                           {testing === "email" ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube2 className="h-3 w-3" />}
+                          Send Test
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </TabsContent>
+
+                {/* Apprise — issue #207. Single URL talks to ~80
+                    notification services. The operator pastes one
+                    `tgram://`, `discord://`, `ntfy://`, `matrix://`,
+                    `pushover://` etc. URL and the AppriseChannel
+                    backend handles the transport. Mirrors the same
+                    Enable toggle + Test button pattern as the other
+                    channels. */}
+                <TabsContent value="apprise" className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs font-medium">Enable Apprise</Label>
+                      <a
+                        href="https://github.com/caronc/apprise/wiki"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-cyan-500 hover:text-cyan-400 hover:underline"
+                      >
+                        +URL formats
+                      </a>
+                    </div>
+                    <button
+                      className={`relative w-9 h-[18px] rounded-full transition-colors ${
+                        config.channels.apprise?.enabled ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"
+                      } ${!editMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                      onClick={() => { if (editMode) updateChannel("apprise", "enabled", !config.channels.apprise?.enabled) }}
+                      disabled={!editMode}
+                      role="switch"
+                      aria-checked={config.channels.apprise?.enabled || false}
+                    >
+                      <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                        config.channels.apprise?.enabled ? "translate-x-[18px]" : "translate-x-0"
+                      }`} />
+                    </button>
+                  </div>
+                  {config.channels.apprise?.enabled && (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] text-muted-foreground">Apprise URL</Label>
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type={showSecrets["apprise_url"] ? "text" : "password"}
+                            className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
+                            placeholder="tgram://bottoken/ChatID  ·  ntfy://server/topic  ·  discord://webhook_id/token  ·  matrix://..."
+                            value={config.channels.apprise?.url || ""}
+                            onChange={e => updateChannel("apprise", "url", e.target.value)}
+                            disabled={!editMode}
+                          />
+                          <button
+                            type="button"
+                            className="h-7 w-7 flex items-center justify-center rounded-md border border-border hover:bg-muted text-muted-foreground"
+                            onClick={() => setShowSecrets(s => ({ ...s, apprise_url: !s.apprise_url }))}
+                            title={showSecrets["apprise_url"] ? "Hide URL" : "Show URL"}
+                          >
+                            {showSecrets["apprise_url"] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground leading-relaxed">
+                          A single URL that Apprise routes to the right service. Examples:
+                          <code className="text-foreground/80 mx-0.5">tgram://</code>,
+                          <code className="text-foreground/80 mx-0.5">discord://</code>,
+                          <code className="text-foreground/80 mx-0.5">slack://</code>,
+                          <code className="text-foreground/80 mx-0.5">ntfy://</code>,
+                          <code className="text-foreground/80 mx-0.5">matrix://</code>,
+                          <code className="text-foreground/80 mx-0.5">pushover://</code>,
+                          <code className="text-foreground/80 mx-0.5">mailto://</code>… See the
+                          {" "}
+                          <a
+                            href="https://github.com/caronc/apprise/wiki"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyan-500 hover:underline"
+                          >
+                            full list
+                          </a>.
+                        </p>
+                      </div>
+                      <div className="flex justify-end pt-1">
+                        <button
+                          className="h-7 px-3 text-xs rounded-md bg-cyan-600 hover:bg-cyan-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                          onClick={() => handleTest("apprise")}
+                          disabled={testing === "apprise" || !config.channels.apprise?.url}
+                        >
+                          {testing === "apprise" ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube2 className="h-3 w-3" />}
                           Send Test
                         </button>
                       </div>

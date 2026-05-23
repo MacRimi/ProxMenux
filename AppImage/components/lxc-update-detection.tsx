@@ -104,10 +104,14 @@ export function LxcUpdateDetection() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Boxes className="h-5 w-5 text-purple-500" />
-            <CardTitle>LXC Update Detection</CardTitle>
+        <div className="flex items-start justify-between gap-3">
+          {/* Title row — flex-wrap so on narrow screens the badge can drop
+              under the title without dragging the icon along with it. The
+              icon stays on the same baseline as the title text on every
+              breakpoint thanks to `items-center` + leading-tight title. */}
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <Boxes className="h-5 w-5 text-purple-500 shrink-0" />
+            <CardTitle className="leading-tight">LXC Update Detection</CardTitle>
             {enabled ? (
               <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-500">
                 Active
@@ -118,7 +122,7 @@ export function LxcUpdateDetection() {
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {saved && (
               <span className="flex items-center gap-1 text-xs text-green-500">
                 <CheckCircle2 className="h-3.5 w-3.5" />
@@ -172,23 +176,19 @@ export function LxcUpdateDetection() {
       </CardHeader>
 
       <CardContent className="space-y-5">
-        {/* ── Enable/Disable ── */}
-        <div className="flex items-center justify-between py-2 px-1">
-          <div className="flex items-center gap-2">
+        {/* ── Enable/Disable ── single-line label + toggle. The description
+            paragraph was removed because the CardDescription above already
+            covers the behaviour; on mobile that second paragraph forced
+            the icon to top-align and made the toggle wrap awkwardly. */}
+        <div className="flex items-center justify-between gap-3 py-2 px-1">
+          <div className="flex items-center gap-2 min-w-0">
             <Boxes
-              className={`h-4 w-4 ${pending ? "text-purple-500" : "text-muted-foreground"}`}
+              className={`h-4 w-4 shrink-0 ${pending ? "text-purple-500" : "text-muted-foreground"}`}
             />
-            <div>
-              <span className="text-sm font-medium">Enable LXC update detection</span>
-              <p className="text-[11px] text-muted-foreground">
-                When OFF, ProxMenux stops scanning your CTs (no <code>pct exec</code> calls), removes existing LXC
-                entries from the managed-installs registry, and hides the related notification toggle. Default is
-                ON.
-              </p>
-            </div>
+            <span className="text-sm font-medium truncate">Enable LXC update detection</span>
           </div>
           <button
-            className={`relative w-10 h-5 rounded-full transition-colors ${
+            className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ${
               pending ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"
             } ${!editMode ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
             onClick={() => editMode && setPending(p => !p)}

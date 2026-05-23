@@ -34,6 +34,7 @@ TOOL_METADATA = {
     'figurine':             {'name': 'Figurine',                              'function': 'configure_figurine',           'version': '1.0'},
     'fastfetch':            {'name': 'Fastfetch',                             'function': 'configure_fastfetch',          'version': '1.0'},
     'log2ram':              {'name': 'Log2ram (SSD Protection)',               'function': 'configure_log2ram',            'version': '1.0'},
+    'zfs_autotrim':         {'name': 'ZFS Autotrim',                          'function': 'enable_zfs_autotrim',          'version': '1.0'},
     'amd_fixes':            {'name': 'AMD CPU (Ryzen/EPYC) fixes',            'function': 'apply_amd_fixes',              'version': '1.0'},
     'persistent_network':   {'name': 'Setting persistent network interfaces', 'function': 'setup_persistent_network',     'version': '1.0'},
     'vfio_iommu':           {'name': 'VFIO/IOMMU Passthrough',                'function': 'enable_vfio_iommu',            'version': '1.0'},

@@ -398,23 +398,36 @@ export function HealthThresholds() {
     if (!leaf) return null
     const key = pathKey(path)
     const editingValue = pending[key] ?? String(leaf.value)
-    // The input border carries the severity colour so the editable field
-    // itself shows what kind of threshold this is — no separate badge
-    // duplicating the number, which users mistook for the "real" value.
-    // `swap_critical` and any other `*_critical` leaf falls into the red
-    // bucket via the substring check. A blue ring on top of the colour
-    // border signals "customised vs recommended" — two independent
-    // signals on the same widget.
+    // Visual rules (rebuilt — the original used /40 opacity borders +
+    // a blue ring stacked on top of the colour border, both of which
+    // were nearly invisible in read-only mode and stacked weirdly when
+    // a value was customised):
+    //
+    //   • Read-only mode (editMode=false): keep severity colour on the
+    //     border at a higher opacity (/70 instead of /40) and on the
+    //     background (/10) so the field is clearly readable, and
+    //     restore foreground colour (no `opacity-70` washout). This is
+    //     the default state the user sees most of the time — it must
+    //     match the visual weight of the rest of the Settings page.
+    //   • Edit mode + value matches the recommended default: severity
+    //     border + soft severity bg, same as read-only.
+    //   • Edit mode + value customised: ONE border in blue, replacing
+    //     (not stacking on top of) the severity border. This is the
+    //     single signal that "this value differs from recommended".
+    //
+    // `swap_critical` and any other `*_critical` leaf falls into the
+    // red bucket via the substring check.
     const last = path[path.length - 1] || ""
     const isCritical = last.toLowerCase().includes("critical")
     const isWarning = last.toLowerCase().includes("warning")
-    const severityBorder = isCritical
-      ? "border-red-500/40 bg-red-500/5 focus-visible:border-red-500"
+    const severityClass = isCritical
+      ? "border-red-500/70 bg-red-500/10 focus-visible:border-red-500"
       : isWarning
-        ? "border-amber-500/40 bg-amber-500/5 focus-visible:border-amber-500"
-        : ""
+        ? "border-amber-500/70 bg-amber-500/10 focus-visible:border-amber-500"
+        : "border-input"
     const isCustomised = leaf.customised && !(key in pending)
-    const customisedRing = isCustomised ? "ring-2 ring-blue-500/40" : ""
+    const customisedClass = "border-blue-500 bg-blue-500/10 focus-visible:border-blue-500"
+    const fieldClass = isCustomised ? customisedClass : severityClass
     const recommendedTooltip = `Recommended: ${leaf.recommended}${leaf.unit}`
     return (
       <div key={key} className="flex items-center justify-between gap-2 py-1.5 px-1">
@@ -433,9 +446,9 @@ export function HealthThresholds() {
             onChange={(e) =>
               setPending((p) => ({ ...p, [key]: e.target.value }))
             }
-            className={`w-20 h-7 text-xs text-right tabular-nums ${
-              !editMode ? "opacity-70" : ""
-            } ${severityBorder} ${customisedRing}`}
+            className={`w-20 h-7 text-xs text-right tabular-nums border ${fieldClass} ${
+              !editMode ? "disabled:opacity-100 disabled:cursor-default" : ""
+            }`}
           />
           <span className="text-[11px] text-muted-foreground w-6">{leaf.unit}</span>
         </div>
