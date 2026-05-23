@@ -10848,6 +10848,42 @@
     "os": "debian"
   },
   {
+    "name": "MusicSeerr",
+    "slug": "musicseerr",
+    "desc": "MusicSeerr is a self-hosted music request and discovery app for Lidarr. Search MusicBrainz, request albums, stream from Jellyfin, Navidrome, Plex, or local files, and scrobble to ListenBrainz and Last.fm.",
+    "script": "ct/musicseerr.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/musicseerr.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/musicseerr.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00014"
+    ],
+    "category_names": [
+      "*Arr Suite"
+    ],
+    "notes": [
+      "Requires a running Lidarr instance. Configure Lidarr and other integrations in the web UI after installation.",
+      "For local file playback, mount your music library into the container and set the path in Settings > Local Files."
+    ],
+    "warnings": [
+      "Initial install includes a frontend build and may take several minutes."
+    ],
+    "port": 8688,
+    "website": "https://github.com/HabiRabbu/Musicseerr",
+    "documentation": "https://musicseerr.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/musicseerr.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "MyIP",
     "slug": "myip",
     "desc": "The best IP Toolbox. Easy to check what's your IPs, IP geolocation, check for DNS leaks, examine WebRTC connections, speed test, ping test, MTR test, check website availability, whois search and more!",
@@ -17206,7 +17242,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
