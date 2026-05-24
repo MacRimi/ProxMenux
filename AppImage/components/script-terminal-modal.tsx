@@ -29,8 +29,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import "xterm/css/xterm.css"
-import { API_PORT } from "@/lib/api-config"
-import { getTicketedWsUrl } from "@/lib/terminal-ws"
+import { getTicketedWsUrl, getWsUrl } from "@/lib/terminal-ws"
 
 interface WebInteraction {
   type: "yesno" | "menu" | "msgbox" | "input" | "inputbox"
@@ -530,21 +529,8 @@ const initMessage = {
     }
   }, [isOpen, isComplete, attemptReconnect])
 
-  const getScriptWebSocketUrl = (sid: string): string => {
-    if (typeof window === "undefined") {
-      return `ws://localhost:${API_PORT}/ws/script/${sid}`
-    }
-
-    const { protocol, hostname, port } = window.location
-    const isStandardPort = port === "" || port === "80" || port === "443"
-    const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
-
-    if (isStandardPort) {
-      return `${wsProtocol}//${hostname}/ws/script/${sid}`
-    } else {
-      return `${wsProtocol}//${hostname}:${API_PORT}/ws/script/${sid}`
-    }
-  }
+  const getScriptWebSocketUrl = (sid: string): string =>
+    getWsUrl(`/ws/script/${sid}`)
 
   const handleInteractionResponse = (value: string) => {
     if (!wsRef.current || !currentInteraction) {

@@ -411,9 +411,27 @@ export function Settings() {
   // available version, and updating doesn't need to ask which flavour
   // to install in. The user can always re-install via the
   // customizable post-install flow if they want different parameters.
+  // Resolve which flow (auto vs custom) actually has an implementation
+  // for this tool. Some tools live only in the customizable flow (e.g.
+  // fastfetch, which needs an interactive menu and has no auto
+  // variant). When the recorded source is "auto" but the auto flow has
+  // no function for this tool, the bash wrapper aborts with
+  // "Function '<x>' is not defined in the auto flow". This helper
+  // silently routes to the only available flow instead.
+  const resolveEffectiveSource = (tool: ProxMenuxTool): string => {
+    const recorded = tool.source || "auto"
+    if (recorded === "auto" && !tool.function_auto && tool.function_custom) {
+      return "custom"
+    }
+    if (recorded === "custom" && !tool.function_custom && tool.function_auto) {
+      return "auto"
+    }
+    return recorded
+  }
+
   const handleSingleToolUpdate = (tool: ProxMenuxTool) => {
     if (!tool.has_update) return
-    const source = tool.source || "auto"
+    const source = resolveEffectiveSource(tool)
     runPostInstallUpdates([{
       source,
       function: deriveFunctionName(tool, source),
@@ -1534,12 +1552,15 @@ export function Settings() {
                   onClick={() => {
                     const entries = proxmenuxTools
                       .filter(t => selectedUpdates.has(t.key))
-                      .map(t => ({
-                        source: t.source || 'auto',
-                        function: deriveFunctionName(t, t.source || 'auto'),
-                        key: t.key,
-                        name: t.name,
-                      }))
+                      .map(t => {
+                        const source = resolveEffectiveSource(t)
+                        return {
+                          source,
+                          function: deriveFunctionName(t, source),
+                          key: t.key,
+                          name: t.name,
+                        }
+                      })
                       .filter(e => !!e.function)
                     setUpdateModalOpen(false)
                     setSelectedUpdates(new Set())

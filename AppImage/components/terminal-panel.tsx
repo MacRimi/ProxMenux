@@ -3,7 +3,7 @@
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
 import { API_PORT, fetchApi } from "@/lib/api-config" // Unificando importaciones de api-config en una sola línea con alias @/
-import { getTicketedWsUrl } from "@/lib/terminal-ws"
+import { getTicketedWsUrl, getWsUrl } from "@/lib/terminal-ws"
 import {
   Activity,
   Trash2,
@@ -51,20 +51,7 @@ interface TerminalInstance {
 }
 
 function getWebSocketUrl(): string {
-  if (typeof window === "undefined") {
-    return "ws://localhost:8008/ws/terminal"
-  }
-
-  const { protocol, hostname, port } = window.location
-  const isStandardPort = port === "" || port === "80" || port === "443"
-
-  const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
-
-  if (isStandardPort) {
-    return `${wsProtocol}//${hostname}/ws/terminal`
-  } else {
-    return `${wsProtocol}//${hostname}:${API_PORT}/ws/terminal`
-  }
+  return getWsUrl("/ws/terminal")
 }
 
 function getApiUrl(endpoint?: string): string {

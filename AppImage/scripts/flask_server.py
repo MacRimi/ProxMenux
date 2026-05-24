@@ -11789,6 +11789,20 @@ if __name__ == '__main__':
                 # `::` binds IPv6 + IPv4 (v4-mapped) on Linux when
                 # net.ipv6.bindv6only=0 (the default). Issue #192 — IPv4-only
                 # listening broke ProxMenux on dual-stack / v6-only hosts.
+                #
+                # NOTE: a prior version subclassed WSGIServer here to
+                # silence SSL handshake errors (memory leak workaround
+                # for clients opening ws:// against this https endpoint).
+                # The subclass interfered with gevent's SSL flow-control
+                # exceptions (SSLWantReadError) and caused
+                # ConcurrentObjectUseError on the wss handshake of
+                # /ws/script/<id>, which manifested only on clients that
+                # close the WS connection mid-handshake (iPad Safari for
+                # the updates modal). Since the root cause of the memory
+                # leak was fixed client-side in lib/terminal-ws.ts
+                # (getWsUrl now opens wss:// instead of ws:// against
+                # the https endpoint), the original SSL handshake errors
+                # are rare and the default gevent behaviour is fine.
                 server = pywsgi.WSGIServer(
                     ('::', 8008),
                     app,
