@@ -5079,6 +5079,37 @@
     "os": ""
   },
   {
+    "name": "ezBookkeeping",
+    "slug": "ezbookkeeping",
+    "desc": "ezBookkeeping is a lightweight, self-hosted personal finance app with a user-friendly interface and powerful bookkeeping features. It helps you record daily transactions, import data from various sources, and quickly search and filter your bills. You can analyze historical data using built-in charts or perform custom queries with your own chart dimensions to better understand spending patterns and financial trends.",
+    "script": "ct/ezbookkeeping.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/ezbookkeeping.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/ezbookkeeping.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00023"
+    ],
+    "category_names": [
+      "Finance & Budgeting"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 443,
+    "website": "https://ezbookkeeping.mayswind.net",
+    "documentation": "https://ezbookkeeping.mayswind.net/installation/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ezbookkeeping.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "FHEM",
     "slug": "fhem",
     "desc": "FHEM stands for \"Freundliche Hausautomation und Energie-Messung,\" which translates to \"Friendly Home Automation and Energy Measurement\" in English. The software can interface with a wide range of devices, including lighting systems, thermostats, weather stations, and media devices, among others.",
