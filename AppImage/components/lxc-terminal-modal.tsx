@@ -35,8 +35,8 @@ import { DialogHeader, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Dialog as SearchDialog, DialogContent as SearchDialogContent, DialogTitle as SearchDialogTitle } from "@/components/ui/dialog"
 import "xterm/css/xterm.css"
-import { fetchApi } from "@/lib/api-config"
-import { getTicketedWsUrl, getWsUrl } from "@/lib/terminal-ws"
+import { API_PORT, fetchApi } from "@/lib/api-config"
+import { getTicketedWsUrl } from "@/lib/terminal-ws"
 
 interface LxcTerminalModalProps {
   open: boolean
@@ -80,7 +80,19 @@ const proxmoxCommands = [
 ]
 
 function getWebSocketUrl(): string {
-  return getWsUrl("/ws/terminal")
+  if (typeof window === "undefined") {
+    return "ws://localhost:8008/ws/terminal"
+  }
+
+  const { protocol, hostname, port } = window.location
+  const isStandardPort = port === "" || port === "80" || port === "443"
+  const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
+
+  if (isStandardPort) {
+    return `${wsProtocol}//${hostname}/ws/terminal`
+  } else {
+    return `${wsProtocol}//${hostname}:${API_PORT}/ws/terminal`
+  }
 }
 
 export function LxcTerminalModal({

@@ -39,20 +39,13 @@ _SAFE_ID_RE = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
 # atomically consumes the ticket — if the ticket is missing, expired, or
 # already used, the WS is closed immediately.
 #
-# Tickets live in an in-memory dict guarded by a lock. The TTL is the
-# window between POST /api/terminal/ticket and the WebSocket handshake
-# that consumes it. The original 5 s was too tight for slower devices:
-# on an iPad opening the post-install updates modal, xterm.js + the
-# Nerd Font load took >5 s, the ticket expired before the wss handshake
-# fired, and the modal hung at "Conectando" indefinitely — exactly the
-# bug pattern that pushed the gevent server into the 4.4 GB OOM spiral.
-# 60 s is wide enough to absorb mobile-rendering delays while still
-# being one-shot (each ticket can only be consumed once), so the
-# security model from audit Tier 1 #2 + #17d is unchanged.
+# Tickets live in an in-memory dict guarded by a lock. TTL is intentionally
+# short (5 s) — the client should issue and use the ticket immediately.
+# See audit Tier 1 #2 + #17d.
 
 _TERMINAL_TICKETS = {}     # ticket (str) -> created_at_ts (float)
 _TICKETS_LOCK = threading.Lock()
-_TICKET_TTL = 60           # seconds
+_TICKET_TTL = 5            # seconds
 _TICKET_MAX_INFLIGHT = 256 # sanity cap to keep memory bounded
 
 

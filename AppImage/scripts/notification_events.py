@@ -271,8 +271,17 @@ def _record_smartd_observation_impl(title: str, message: str):
         base_dev = _re.sub(r'\d+$', '', device)
 
         # Extract serial: "S/N:WD-WX72A30AA72R"
+        # The \S+ capture also matches a trailing comma/semicolon when the
+        # SMART message lists S/N as part of a comma-separated field
+        # (e.g. "Device: /dev/sdh (WDC WD20EFAX-68FB5N0) S/N:WD-WX72A30AA72R,").
+        # Strip trailing punctuation so the disk_registry never gets
+        # duplicate rows for the same physical drive — one with a clean
+        # serial from smartctl and another with a comma-suffixed serial
+        # parsed out of this raw_message. See bug observed on .1.10
+        # where /dev/sdh ended up with two registry IDs and the "obs."
+        # badge on the storage card disagreed with the modal count.
         sn_match = _re.search(r'S/N:\s*(\S+)', message)
-        serial = sn_match.group(1) if sn_match else ''
+        serial = sn_match.group(1).rstrip(',.;') if sn_match else ''
 
         # Extract model: appears before S/N on the "Device info:" line
         model = ''
