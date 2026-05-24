@@ -9606,40 +9606,120 @@ def api_node_metrics():
 
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/logs/counts', methods=['GET'])
+@require_auth
+def api_logs_counts():
+    """Return exact total / errors / warnings / info counts for a
+    date range, without loading the actual log entries.
+
+    Used by the dashboard so the "Total Entries / Errors / Warnings"
+    cards reflect the REAL counts on the host even when /api/logs
+    only loads the first 10 000 entries (cap-for-performance).
+
+    Implementation: three `journalctl --quiet ... | wc -l` calls, one
+    per priority bucket. Each runs in well under a second even on a
+    busy host because there's no JSON output and no per-entry parsing.
+    """
+    try:
+        since_days = request.args.get('since_days', '1')
+        try:
+            days = max(1, min(int(since_days), 90))
+        except (TypeError, ValueError):
+            days = 1
+
+        def _count(extra_args):
+            cmd = ['journalctl', '--quiet', '--no-pager',
+                   '--since', f'{days} days ago'] + extra_args
+            try:
+                out = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                if out.returncode != 0:
+                    return 0
+                # `journalctl --quiet` emits one line per entry; the
+                # trailing newline produces an extra empty split, so
+                # filter it.
+                return sum(1 for ln in out.stdout.split('\n') if ln)
+            except (subprocess.TimeoutExpired, OSError):
+                return 0
+
+        total = _count([])
+        errors = _count(['-p', '0..3'])      # emerg..err
+        warnings = _count(['-p', '4..4'])    # warning only
+        info = max(0, total - errors - warnings)
+
+        return jsonify({
+            'since_days': days,
+            'total': total,
+            'errors': errors,
+            'warnings': warnings,
+            'info': info,
+        })
+    except Exception as e:
+        return jsonify({
+            'error': f'Unable to compute log counts: {str(e)}',
+            'since_days': 1,
+            'total': 0,
+            'errors': 0,
+            'warnings': 0,
+            'info': 0,
+        })
+
+
 @app.route('/api/logs', methods=['GET'])
 @require_auth
 def api_logs():
-    """Get system logs"""
+    """Get system logs.
+
+    Hard-capped at MAX_ENTRIES results per request to keep the JSON
+    response under a few MB. Without this cap, a busy host (e.g. .55
+    with 438k entries in a single day driven by an SSL handshake
+    loop) returned ~50 MB of JSON, which took 15-20 s to fetch and
+    parse on the client. The cap returns the MOST RECENT entries
+    (journalctl -n) — the dashboard pairs this with /api/logs/counts
+    to show accurate Total/Errors/Warnings cards and a "Load more"
+    button when the user reaches the bottom of the loaded slice.
+    """
+    MAX_ENTRIES = 10000
     try:
         limit = request.args.get('limit', '200')
         priority = request.args.get('priority', None)  # 0-7 (0=emerg, 3=err, 4=warning, 6=info)
         service = request.args.get('service', None)
         since_days = request.args.get('since_days', None)
-        
+
         if since_days:
             try:
                 days = int(since_days)
                 # Cap at 90 days to prevent excessive queries
                 days = min(days, 90)
-                # No -n limit when using --since: the time range already bounds the query.
-                # A hard -n 10000 was masking differences between date ranges on busy servers.
-                cmd = ['journalctl', '--since', f'{days} days ago', '--output', 'json', '--no-pager']
+                # Both `--since` AND `-n MAX_ENTRIES`: the date range
+                # bounds the query, and -n caps how many of those are
+                # actually returned to the client. journalctl applies
+                # -n to the END of the matching range, so we get the
+                # most-recent entries within the window. Without -n a
+                # 438k-entry day produced a 50 MB JSON response.
+                cmd = ['journalctl', '--since', f'{days} days ago', '-n', str(MAX_ENTRIES),
+                       '--output', 'json', '--no-pager']
             except ValueError:
                 cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
         else:
+            # Cap the user-supplied limit too — a misbehaving client
+            # could ask for limit=1000000 otherwise.
+            try:
+                limit = str(min(int(limit), MAX_ENTRIES))
+            except (TypeError, ValueError):
+                limit = str(MAX_ENTRIES)
             cmd = ['journalctl', '-n', limit, '--output', 'json', '--no-pager']
-        
+
         # Add priority filter if specified
         if priority:
             cmd.extend(['-p', priority])
-        
+
         # Add service filter by SYSLOG_IDENTIFIER (not -u which filters by systemd unit)
         # We filter after fetching since journalctl doesn't have a direct SYSLOG_IDENTIFIER flag
         service_filter = service
-        
+
         # Longer timeout for date-range queries which may return many entries
         query_timeout = 120 if since_days else 30
-        
+
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=query_timeout)
 
         if result.returncode == 0:
@@ -9648,23 +9728,25 @@ def api_logs():
                 '0': 'emergency', '1': 'alert', '2': 'critical', '3': 'error',
                 '4': 'warning', '5': 'notice', '6': 'info', '7': 'debug'
             }
-            for line in result.stdout.strip().split('\n'):
+            raw_lines = result.stdout.strip().split('\n')
+            total_seen = sum(1 for ln in raw_lines if ln)
+            for line in raw_lines:
                 if line:
                     try:
                         log_entry = json.loads(line)
                         timestamp_us = int(log_entry.get('__REALTIME_TIMESTAMP', '0'))
                         timestamp = datetime.fromtimestamp(timestamp_us / 1000000).strftime('%Y-%m-%d %H:%M:%S')
-                        
+
                         priority_num = str(log_entry.get('PRIORITY', '6'))
                         level = priority_map.get(priority_num, 'info')
-                        
+
                         syslog_id = log_entry.get('SYSLOG_IDENTIFIER', '')
                         systemd_unit = log_entry.get('_SYSTEMD_UNIT', '')
                         service_name = syslog_id or systemd_unit or 'system'
-                        
+
                         if service_filter and service_name != service_filter:
                             continue
-                        
+
                         logs.append({
                             'timestamp': timestamp,
                             'level': level,
@@ -9677,8 +9759,16 @@ def api_logs():
                         })
                     except (json.JSONDecodeError, ValueError):
                         continue
-            
-            return jsonify({'logs': logs, 'total': len(logs)})
+
+            # `truncated` is true when journalctl hit the -n cap.
+            # `total_seen` is what we asked journalctl for; the real
+            # underlying count (post-filter on disk) may be larger.
+            return jsonify({
+                'logs': logs,
+                'total': len(logs),
+                'truncated': total_seen >= MAX_ENTRIES,
+                'max_entries': MAX_ENTRIES,
+            })
         else:
             return jsonify({
                 'error': 'journalctl not available or failed',
@@ -11771,6 +11861,46 @@ if __name__ == '__main__':
 
                 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
                 ssl_context.load_cert_chain(ssl_cert, ssl_key)
+
+                # Defensive: silence the ~30-line traceback that gevent
+                # prints whenever a client sends plain HTTP against this
+                # https endpoint. We observed Home-Assistant integrations
+                # with `http://host:8008/...` URLs and iPad Safari opening
+                # ws:// (instead of wss://) generating ~4 errors/sec on
+                # .55, which inflated journal volume and pushed RSS into
+                # the gigabytes — on one occasion to 4.4 GB before OOM.
+                # Earlier attempts to fix this by subclassing WSGIServer
+                # and catching SSLError in `wrap_socket_and_handle` broke
+                # the legitimate wss handshake path (SSLWantReadError
+                # propagation tangled with the script_runner read thread).
+                # This monkey-patch is the surgical alternative: it
+                # intercepts ONLY the traceback printer of `Greenlet`,
+                # filters by exception type + message text, and leaves
+                # everything else (sockets, gevent's event loop,
+                # SSLWantRead/Write flow-control) entirely untouched.
+                try:
+                    import gevent.hub as _gh
+                    _orig_handle_error = _gh.Hub.handle_error
+                    def _quiet_ssl_handle_error(self, context, type_, value, tb):
+                        try:
+                            if isinstance(value, ssl.SSLError):
+                                msg = str(value)
+                                # Drop only "hard" client-side errors —
+                                # NEVER touch SSLWantReadError /
+                                # SSLWantWriteError / SSLZeroReturnError
+                                # which are normal control flow.
+                                if ('HTTP_REQUEST' in msg or
+                                    'RECORD_LAYER_FAILURE' in msg or
+                                    'WRONG_VERSION_NUMBER' in msg or
+                                    'UNKNOWN_PROTOCOL' in msg):
+                                    return
+                        except Exception:
+                            pass
+                        return _orig_handle_error(self, context, type_, value, tb)
+                    _gh.Hub.handle_error = _quiet_ssl_handle_error
+                    print("[ProxMenux] SSL handshake-error traceback suppression installed", flush=True)
+                except Exception as _e:
+                    print(f"[ProxMenux] WARN: could not install SSL traceback filter ({_e}); journals may grow under misconfigured clients", flush=True)
 
                 print("[ProxMenux] Starting gevent server with SSL/WSS support...")
                 # IMPORTANT: do NOT pass `handler_class=WebSocketHandler`

@@ -117,6 +117,14 @@ export function SystemLogs() {
   const [customDays, setCustomDays] = useState("1")
   const [refreshCounter, setRefreshCounter] = useState(0)
 
+  // Real on-host counts for the selected date range. /api/logs caps
+  // the entries it returns at 10 000 for performance, but the Total
+  // / Errors / Warnings cards must show the actual counts in the
+  // selected window — otherwise on a busy host the user sees "10 000"
+  // when the host really has 438 000 entries. Fetched separately from
+  // /api/logs/counts which runs three lightweight `wc -l` queries.
+  const [logsCounts, setLogsCounts] = useState<{ total: number; errors: number; warnings: number; info: number } | null>(null)
+
   // Single unified useEffect for all data loading
   // Fires on mount, when filters change, or when refresh is triggered
   useEffect(() => {
@@ -125,17 +133,21 @@ export function SystemLogs() {
       setLoading(true)
       setError(null)
       try {
-        const [logsRes, backupsRes, eventsRes, notificationsRes] = await Promise.all([
+        const daysAgo = dateFilter === "custom" ? Number.parseInt(customDays) : Number.parseInt(dateFilter)
+        const clampedDays = Math.max(1, Math.min(daysAgo || 1, 90))
+        const [logsRes, backupsRes, eventsRes, notificationsRes, countsRes] = await Promise.all([
           fetchSystemLogs(dateFilter, customDays),
-          fetchApi("/api/backups"),
-          fetchApi("/api/events?limit=50"),
-          fetchApi("/api/notifications"),
+          fetchApi<{ backups?: Backup[] }>("/api/backups"),
+          fetchApi<{ events?: Event[] }>("/api/events?limit=50"),
+          fetchApi<{ notifications?: Notification[] }>("/api/notifications"),
+          fetchApi<{ total: number; errors: number; warnings: number; info: number }>(`/api/logs/counts?since_days=${clampedDays}`),
         ])
         if (cancelled) return
         setLogs(logsRes)
         setBackups(backupsRes.backups || [])
         setEvents(eventsRes.events || [])
         setNotifications(notificationsRes.notifications || [])
+        setLogsCounts(countsRes)
       } catch (err) {
         if (cancelled) return
         setError("Failed to connect to server")
@@ -162,9 +174,8 @@ export function SystemLogs() {
       const clampedDays = Math.max(1, Math.min(daysAgo || 1, 90))
       const apiUrl = `/api/logs?since_days=${clampedDays}`
 
-      const data = await fetchApi(apiUrl)
-      const logsArray = Array.isArray(data) ? data : data.logs || []
-      return logsArray
+      const data = await fetchApi<{ logs?: SystemLog[] } | SystemLog[]>(apiUrl)
+      return Array.isArray(data) ? data : data.logs || []
     } catch {
       setError("Failed to load logs. Please try again.")
       return []
@@ -588,9 +599,9 @@ export function SystemLogs() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {filteredCombinedLogs.length.toLocaleString("fr-FR")}
+              {(logsCounts?.total ?? 0).toLocaleString("fr-FR")}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Filtered</p>
+            <p className="text-xs text-muted-foreground mt-2">In selected range</p>
           </CardContent>
         </Card>
 
@@ -600,7 +611,7 @@ export function SystemLogs() {
             <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">{logCounts.error.toLocaleString("fr-FR")}</div>
+            <div className="text-2xl font-bold text-red-500">{(logsCounts?.errors ?? 0).toLocaleString("fr-FR")}</div>
             <p className="text-xs text-muted-foreground mt-2">Requires attention</p>
           </CardContent>
         </Card>
@@ -611,7 +622,7 @@ export function SystemLogs() {
             <AlertTriangle className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">{logCounts.warning.toLocaleString("fr-FR")}</div>
+            <div className="text-2xl font-bold text-yellow-500">{(logsCounts?.warnings ?? 0).toLocaleString("fr-FR")}</div>
             <p className="text-xs text-muted-foreground mt-2">Monitor closely</p>
           </CardContent>
         </Card>
