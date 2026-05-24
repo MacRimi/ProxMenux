@@ -7989,9 +7989,7 @@
       "No web UI; run `iSponsorBlockTV setup` inside the container to configure.",
       "SSDP auto-discovery requires multicast on your bridge; manual pairing works without it."
     ],
-    "warnings": [
-      "if your CPU does not support AVX instructions - install is not possible (required by iSponsorBlockTV/PyApp)"
-    ],
+    "warnings": [],
     "port": 0,
     "website": "https://github.com/dmunozv04/iSponsorBlockTV",
     "documentation": "https://github.com/dmunozv04/iSponsorBlockTV/wiki",
