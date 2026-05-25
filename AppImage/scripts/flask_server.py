@@ -1296,7 +1296,8 @@ def _vital_signs_sampler():
     """Dedicated thread for rapid CPU, memory & temperature sampling.
 
     Runs independently of the 5-min health collector loop.
-    - CPU usage:   sampled every 30s  (10 samples in 5 min for sustained detection)
+    - CPU usage:   sampled every 5s   (matches dashboard refresh; also feeds /api/system + /api/prometheus
+                                       through state_history cache to avoid gevent races with psutil.cpu_percent)
     - Memory:      sampled every 30s  (10 samples in 5 min for sustained detection)
     - Temperature: sampled every 15s  (12 samples in 3 min for temporal logic)
     Uses time.monotonic() to avoid drift.
@@ -1309,15 +1310,16 @@ def _vital_signs_sampler():
     time.sleep(15)
 
     TEMP_INTERVAL = 15   # seconds (was 10s - reduced frequency by 33%)
-    CPU_INTERVAL  = 30   # seconds
-    MEM_INTERVAL  = 30   # seconds (aligned with CPU for sustained-RAM detection)
+    CPU_INTERVAL  = 5    # seconds — exclusive owner of psutil.cpu_percent baseline;
+                         # API handlers read the cached value to avoid 0% reads under gevent.
+    MEM_INTERVAL  = 30   # seconds (aligned with original CPU cadence for sustained-RAM detection)
 
     # Stagger: CPU starts immediately, Temp after 7s, Mem after 15s
     next_cpu  = time.monotonic()
     next_temp = time.monotonic() + 7
     next_mem  = time.monotonic() + 15
 
-    print("[ProxMenux] Vital signs sampler started (CPU: 30s, Mem: 30s, Temp: 15s)")
+    print("[ProxMenux] Vital signs sampler started (CPU: 5s, Mem: 30s, Temp: 15s)")
 
     while True:
         try:
@@ -7601,10 +7603,19 @@ def _get_hardware_info_uncached():
 def api_system():
     """Get system information including CPU, memory, and temperature"""
     try:
-        # Non-blocking: returns %CPU since the last psutil call (sampler or prior API hit).
-        # The background vital-signs sampler keeps psutil's internal state primed.
-        cpu_usage = psutil.cpu_percent(interval=0)
-        
+        # Read from the vital-signs sampler cache. The sampler is the *only*
+        # consumer of psutil.cpu_percent under gevent, so the API handler never
+        # races against it (calling psutil.cpu_percent here under monkey-patched
+        # gevent would return 0% whenever a concurrent greenlet had primed the
+        # baseline less than one /proc/stat tick ago — typical for the dashboard's
+        # parallel system+vms+storage+network requests every 5s).
+        try:
+            from health_monitor import health_monitor
+            _hist = health_monitor.state_history.get('cpu_usage') or []
+            cpu_usage = _hist[-1]['value'] if _hist else psutil.cpu_percent(interval=0.1)
+        except Exception:
+            cpu_usage = psutil.cpu_percent(interval=0.1)
+
         memory = psutil.virtual_memory()
         memory_used_gb = memory.used / (1024 ** 3)
         memory_total_gb = memory.total / (1024 ** 3)
@@ -10707,9 +10718,15 @@ def api_prometheus():
         timestamp = int(datetime.now().timestamp() * 1000)
         node = socket.gethostname()
 
-        # Non-blocking: returns %CPU since the last psutil call (sampler keeps state primed).
-        # Avoids 500ms worker block on each Prometheus scrape.
-        cpu_usage = psutil.cpu_percent(interval=0)
+        # Read from the vital-signs sampler cache to avoid the gevent race
+        # that turns concurrent psutil.cpu_percent(interval=0) calls into 0%.
+        # Falls back to a 100ms sample only if the cache is empty (cold start).
+        try:
+            from health_monitor import health_monitor
+            _hist = health_monitor.state_history.get('cpu_usage') or []
+            cpu_usage = _hist[-1]['value'] if _hist else psutil.cpu_percent(interval=0.1)
+        except Exception:
+            cpu_usage = psutil.cpu_percent(interval=0.1)
         memory = psutil.virtual_memory()
         load_avg = os.getloadavg()
         uptime_seconds = time.time() - psutil.boot_time()
