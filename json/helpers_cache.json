@@ -17488,39 +17488,6 @@
     "os": "debian"
   },
   {
-    "name": "Suwayomi-Server",
-    "slug": "suwayomi-server",
-    "desc": "A free and open source manga reader server that runs extensions built for Mihon (Tachiyomi).",
-    "script": "ct/suwayomi-server.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/suwayomi-server.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/suwayomi-server.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00013"
-    ],
-    "category_names": [
-      "Media & Streaming"
-    ],
-    "notes": [
-      "This application can be conflicting with Kaspersky products. You maybe need to disable Kaspersky in order to use this application."
-    ],
-    "warnings": [],
-    "port": 4567,
-    "website": "https://github.com/Suwayomi/Suwayomi-Server",
-    "documentation": "https://github.com/Suwayomi/Suwayomi-Server/wiki",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/suwayomi.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": false,
-    "execute_in": [
-      "pve"
-    ],
-    "config_path": "",
-    "os": "debian"
-  },
-  {
     "name": "Swizzin",
     "slug": "swizzin",
     "desc": "Swizzin is a light-weight, modular, and user-friendly seedbox solution for Debian-based servers. It allows for the easy installation and management of a wide variety of applications commonly used for torrenting and media management, such as rTorrent, Sonarr, Radarr, and Plex, all accessible through a command-line utility or a web-based dashboard.",
@@ -18926,39 +18893,6 @@
     "os": "ubuntu"
   },
   {
-    "name": "TypeSense",
-    "slug": "typesense",
-    "desc": "Typesense is an open-source, fast, and lightweight search engine optimized for delivering instant, relevant, and typo-tolerant search results. Designed for ease of use and high performance, it offers features like real-time indexing, fuzzy matching, customizable relevance ranking, and a simple API for integration. Typesense is particularly well-suited for applications requiring instant search capabilities, such as e-commerce, documentation, or any content-rich websites. It is often compared to tools like Elasticsearch but is more developer-friendly and less resource-intensive.",
-    "script": "ct/typesense.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/typesense.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/typesense.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00020"
-    ],
-    "category_names": [
-      "AI / Coding & Dev-Tools"
-    ],
-    "notes": [
-      "This script requires some extra steps after the installation, Please checkout the 'documentation' Button"
-    ],
-    "warnings": [],
-    "port": 0,
-    "website": "https://typesense.org/",
-    "documentation": "https://typesense.org/docs/",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/typesense.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": false,
-    "execute_in": [
-      "pve"
-    ],
-    "config_path": "/etc/typesense/typesense-server.ini",
-    "os": "debian"
-  },
-  {
     "name": "Ubuntu",
     "slug": "ubuntu",
     "desc": "Ubuntu is a distribution based on Debian, designed to have regular releases and a consistent user experience.",
@@ -19700,39 +19634,6 @@
     ],
     "config_path": "/opt/vaultwarden/.env",
     "os": "alpine"
-  },
-  {
-    "name": "Verdaccio",
-    "slug": "verdaccio",
-    "desc": "Verdaccio is a lightweight private npm proxy registry built with Node.js. It allows you to host your own npm registry with minimal configuration, providing a private npm repository for your projects. Verdaccio supports npm, yarn, and pnpm, and can cache packages from the public npm registry, allowing for faster installs and protection against npm registry outages. It includes a web interface for browsing packages, authentication and authorization features, and can be easily integrated into your development workflow.",
-    "script": "ct/verdaccio.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/verdaccio.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/verdaccio.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00020"
-    ],
-    "category_names": [
-      "AI / Coding & Dev-Tools"
-    ],
-    "notes": [
-      "To create the first user, run: npm adduser --registry http://<container-ip>:4873"
-    ],
-    "warnings": [],
-    "port": 4873,
-    "website": "https://verdaccio.org/",
-    "documentation": "https://verdaccio.org/docs/what-is-verdaccio",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/verdaccio.webp",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": false,
-    "execute_in": [
-      "pve"
-    ],
-    "config_path": "/opt/verdaccio/config/config.yaml",
-    "os": "debian"
   },
   {
     "name": "VersityGW",
