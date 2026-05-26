@@ -9,9 +9,22 @@
 # Version     : 1.0
 # ==========================================================
 # Description:
-# Registers external Samba (SMB / CIFS) shares as Proxmox
-# storage via pvesm add cifs. Credentials are stored encrypted
-# in /etc/pve/priv/storage/<id>.pw — no fstab entries needed.
+# Mounts an external Samba (SMB / CIFS) share on the Proxmox
+# host. User picks one or both methods:
+#   1. As Proxmox storage (pvesm add cifs)  → /mnt/pve/<id>
+#   2. As host fstab mount                  → user-chosen path
+#
+# Method 2 is for users who want the host to mount the share
+# for LXC bind-mounts WITHOUT exposing it as a Proxmox storage
+# in the Datacenter UI. CIFS fstab mounts use
+# uid=0,gid=0,file_mode=0777,dir_mode=0777 so an unprivileged
+# LXC bind-mounting the path can read/write — no changes are
+# made INSIDE the container.
+#
+# Credentials for fstab mounts are stored in a root-only
+# credentials file (/etc/samba/credentials/<server>_<share>.cred)
+# and referenced via the credentials= mount option. Plain text
+# never lands in /etc/fstab.
 #
 # Features:
 # - Auto-discover Samba servers on the local subnet
@@ -326,7 +339,202 @@ add_proxmox_cifs_storage() {
 # MAIN OPERATIONS
 # ==========================================================
 
-add_cifs_to_proxmox() {
+# ==========================================================
+# FSTAB MOUNT (host-only, NOT as Proxmox storage)
+# ==========================================================
+
+# Pick a mount path on the host. Default is /mnt/<share-name>.
+# Validates the path is absolute and not already in use.
+select_host_cifs_mount_path() {
+    local default_name="$SAMBA_SHARE"
+    [[ -z "$default_name" ]] && default_name="cifs_share"
+
+    while true; do
+        HOST_MOUNT_PATH=$(whiptail --inputbox \
+            "$(translate "Enter the host mount path:")\n\n$(translate "Default location is /mnt/<name>. The share will be mounted here on the host with open permissions so an unprivileged LXC can bind-mount and write to it. For LXC access, bind-mount this path with the LXC Mount Manager.")" \
+            15 70 "/mnt/$default_name" \
+            --title "$(translate "Host Mount Path")" 3>&1 1>&2 2>&3)
+        [[ $? -ne 0 ]] && return 1
+        [[ -z "$HOST_MOUNT_PATH" ]] && HOST_MOUNT_PATH="/mnt/$default_name"
+
+        if [[ ! "$HOST_MOUNT_PATH" =~ ^/.+ ]]; then
+            whiptail --msgbox "$(translate "Mount path must be an absolute path starting with /")" 8 60
+            continue
+        fi
+
+        if mount | grep -q " on $HOST_MOUNT_PATH "; then
+            whiptail --msgbox "$(translate "Something is already mounted at:") $HOST_MOUNT_PATH\n\n$(translate "Choose a different path or unmount it first.")" 10 70
+            continue
+        fi
+
+        if grep -qE "[[:space:]]${HOST_MOUNT_PATH}[[:space:]]" /etc/fstab 2>/dev/null; then
+            if ! whiptail --yesno "$(translate "An fstab entry already exists for:") $HOST_MOUNT_PATH\n\n$(translate "Replace it?")" 10 70 \
+                --title "$(translate "fstab entry exists")"; then
+                continue
+            fi
+            FSTAB_REPLACE=1
+        else
+            FSTAB_REPLACE=0
+        fi
+        break
+    done
+    return 0
+}
+
+# Pick CIFS mount options for the fstab entry.
+# Open uid/gid/file_mode are always included so unprivileged LXC
+# bind-mounts can read/write without touching the container.
+select_cifs_mount_options() {
+    local base="uid=0,gid=0,file_mode=0777,dir_mode=0777,iocharset=utf8,nofail,_netdev"
+    local choice
+    choice=$(dialog --backtitle "ProxMenux" \
+        --title "$(translate "Mount Options")" \
+        --menu "$(translate "Select mount options. Open uid/gid/file_mode are always applied so unprivileged LXC bind-mounts can write:")" 15 78 4 \
+        "1" "$(translate "Read/Write (default)")" \
+        "2" "$(translate "Read-only")" \
+        "3" "$(translate "Custom")" \
+        3>&1 1>&2 2>&3)
+    [[ $? -ne 0 ]] && return 1
+
+    case "$choice" in
+        1) CIFS_MOUNT_OPTS="rw,${base}" ;;
+        2) CIFS_MOUNT_OPTS="ro,${base/file_mode=0777,dir_mode=0777/file_mode=0555,dir_mode=0555}" ;;
+        3)
+            CIFS_MOUNT_OPTS=$(whiptail --inputbox \
+                "$(translate "Enter custom CIFS mount options (open uid/gid/file_mode strongly recommended for LXC bind-mounts):")" \
+                12 78 "rw,${base}" \
+                --title "$(translate "Custom Options")" 3>&1 1>&2 2>&3)
+            [[ $? -ne 0 ]] && return 1
+            [[ -z "$CIFS_MOUNT_OPTS" ]] && CIFS_MOUNT_OPTS="rw,${base}"
+            ;;
+    esac
+    return 0
+}
+
+# Write a root-only credentials file for the fstab mount.
+# Sets HOST_CRED_FILE on success, or empty string for guest mode.
+write_host_credentials_file() {
+    if [[ "$USE_GUEST" == "true" ]]; then
+        HOST_CRED_FILE=""
+        return 0
+    fi
+    local creds_dir="/etc/samba/credentials"
+    mkdir -p "$creds_dir"
+    chmod 0700 "$creds_dir"
+    HOST_CRED_FILE="${creds_dir}/$(echo "${SAMBA_SERVER}_${SAMBA_SHARE}" | tr -c 'A-Za-z0-9._-' '_').cred"
+    cat > "$HOST_CRED_FILE" <<EOF
+username=${USERNAME}
+password=${PASSWORD}
+EOF
+    chmod 0600 "$HOST_CRED_FILE"
+    return 0
+}
+
+# Mount the CIFS share on the host and persist to /etc/fstab.
+# Permission tweaks happen on the host side ONLY — never inside any LXC.
+mount_cifs_via_fstab() {
+    local server="$1"
+    local share="$2"
+    local mount_path="$3"
+    local base_opts="$4"
+    local replace="$5"
+    local cred_file="$6"
+    local use_guest="$7"
+
+    msg_info "$(translate "Preparing host mount...")"
+
+    if [[ ! -d "$mount_path" ]]; then
+        if ! mkdir -p "$mount_path" 2>/dev/null; then
+            msg_error "$(translate "Failed to create mount point:") $mount_path"
+            return 1
+        fi
+    fi
+    msg_ok "$(translate "Mount point ready:") $mount_path"
+
+    local mount_opts="$base_opts"
+    if [[ "$use_guest" == "true" ]]; then
+        mount_opts="${mount_opts},guest"
+    else
+        mount_opts="${mount_opts},credentials=${cred_file}"
+    fi
+
+    msg_info "$(translate "Mounting CIFS share...")"
+    if ! mount -t cifs -o "$mount_opts" "//${server}/${share}" "$mount_path" >/dev/null 2>&1; then
+        msg_error "$(translate "Failed to mount CIFS share on host.")"
+        return 1
+    fi
+    msg_ok "$(translate "CIFS share mounted at:") $mount_path"
+
+    if touch "$mount_path/.proxmenux_write_test" 2>/dev/null; then
+        rm -f "$mount_path/.proxmenux_write_test" 2>/dev/null
+        msg_ok "$(translate "Host write access confirmed.")"
+    else
+        msg_warn "$(translate "No host write access — server-side ACL. Continuing anyway.")"
+    fi
+
+    # Persist in /etc/fstab.
+    if [[ "$replace" == "1" ]]; then
+        sed -i "\|[[:space:]]${mount_path}[[:space:]]|d" /etc/fstab
+    fi
+    echo "//${server}/${share} $mount_path cifs $mount_opts 0 0" >> /etc/fstab
+    msg_ok "$(translate "Added to /etc/fstab.")"
+
+    systemctl daemon-reload 2>/dev/null || true
+
+    echo -e ""
+    echo -e "${TAB}${BOLD}$(translate "Host fstab Mount:")${CL}"
+    echo -e "${TAB}${BGN}$(translate "Server:")${CL} ${BL}$server${CL}"
+    echo -e "${TAB}${BGN}$(translate "Share:")${CL} ${BL}$share${CL}"
+    echo -e "${TAB}${BGN}$(translate "Mount path:")${CL} ${BL}$mount_path${CL}"
+    echo -e "${TAB}${BGN}$(translate "Auth:")${CL} ${BL}$([ "$use_guest" == "true" ] && echo Guest || echo "User ($cred_file)")${CL}"
+    echo -e "${TAB}${BGN}$(translate "Persistent:")${CL} ${BL}$(translate "yes (survives reboot)")${CL}"
+    echo -e ""
+    msg_info2 "$(translate "To use this share from an LXC, bind-mount it via:")"
+    echo -e "${TAB}  pct set <ctid> -mpN $mount_path,mp=<container-path>,shared=1,backup=0"
+    echo -e "${TAB}  $(translate "or use the ProxMenux LXC Mount Manager.")"
+
+    return 0
+}
+
+# ==========================================================
+# MOUNT METHOD SELECTION
+# ==========================================================
+
+# Show a checklist with the two mount methods (pvesm / fstab).
+# User must mark at least one and press OK; if none is marked,
+# loop and show the dialog again. Cancel exits the flow.
+# Sets MODE_PVESM and MODE_FSTAB to 0 or 1 on success.
+select_cifs_mount_methods() {
+    MODE_PVESM=0
+    MODE_FSTAB=0
+
+    while true; do
+        local result
+        result=$(dialog --backtitle "ProxMenux" \
+            --title "$(translate "Mount Method")" \
+            --checklist "\n$(translate "Choose how to mount the Samba share on this host. Mark one or both options:")\n\n$(translate "• Proxmox storage (pvesm): visible in Datacenter > Storage, mount at /mnt/pve/<id>")\n$(translate "• Host fstab: mounted with open uid/gid/file_mode at a path you choose, ideal for LXC bind-mounts")\n$(translate "• Both: two independent CIFS mounts (one for Proxmox UI, one for LXC bind-mounts with open perms)")" 20 80 2 \
+            "pvesm" "$(translate "As Proxmox storage")"      off \
+            "fstab" "$(translate "As host fstab mount only")" off \
+            3>&1 1>&2 2>&3)
+        local rc=$?
+        [[ $rc -ne 0 ]] && return 1   # Cancel → abort the whole flow
+
+        if echo "$result" | grep -qw "pvesm"; then MODE_PVESM=1; fi
+        if echo "$result" | grep -qw "fstab"; then MODE_FSTAB=1; fi
+
+        if [[ "$MODE_PVESM" == "1" || "$MODE_FSTAB" == "1" ]]; then
+            return 0
+        fi
+
+        whiptail --msgbox "$(translate "Please mark at least one option, or press Cancel to exit.")" 8 70
+    done
+}
+
+# ==========================================================
+# MAIN OPERATIONS
+# ==========================================================
+
+mount_cifs_share() {
     if ! which smbclient >/dev/null 2>&1; then
         msg_info "$(translate "Installing Samba client tools...")"
         apt-get update &>/dev/null
@@ -343,28 +551,55 @@ add_cifs_to_proxmox() {
     # Step 3: Select share
     select_samba_share || return
 
+    # Step 4: Pick mount method(s) — pvesm, fstab, or both
+    select_cifs_mount_methods || return
+
+    # Step 5a: If pvesm selected, gather storage params
+    if [[ "$MODE_PVESM" == "1" ]]; then
+        configure_cifs_storage || return
+    fi
+
+    # Step 5b: If fstab selected, gather host mount params + write credentials file
+    if [[ "$MODE_FSTAB" == "1" ]]; then
+        select_host_cifs_mount_path || return
+        select_cifs_mount_options || return
+        write_host_credentials_file || return
+    fi
+
+    # Step 6: Apply
     show_proxmenux_logo
-    msg_title "$(translate "Add Samba Share as Proxmox Storage")"
+    msg_title "$(translate "Mount Samba Share on Host")"
     msg_ok "$(translate "Server:") $SAMBA_SERVER"
     msg_ok "$(translate "Share:") $SAMBA_SHARE"
     msg_ok "$(translate "Auth:") $([ "$USE_GUEST" == "true" ] && echo "Guest" || echo "User: $USERNAME")"
-
-    # Step 4: Configure storage
-    configure_cifs_storage || return
-
-    # Step 5: Add to Proxmox
-    show_proxmenux_logo
-    msg_title "$(translate "Add Samba Share as Proxmox Storage")"
-    msg_ok "$(translate "Server:") $SAMBA_SERVER"
-    msg_ok "$(translate "Share:") $SAMBA_SHARE"
-    msg_ok "$(translate "Storage ID:") $STORAGE_ID"
-    msg_ok "$(translate "Content:") $MOUNT_CONTENT"
+    if [[ "$MODE_PVESM" == "1" ]]; then
+        msg_ok "$(translate "Method:") pvesm  ($(translate "Storage ID:") $STORAGE_ID, $(translate "content:") $MOUNT_CONTENT)"
+    fi
+    if [[ "$MODE_FSTAB" == "1" ]]; then
+        msg_ok "$(translate "Method:") fstab  ($(translate "Mount path:") $HOST_MOUNT_PATH)"
+    fi
     echo -e ""
 
-    add_proxmox_cifs_storage "$STORAGE_ID" "$SAMBA_SERVER" "$SAMBA_SHARE" "$MOUNT_CONTENT"
+    local overall_rc=0
+    if [[ "$MODE_PVESM" == "1" ]]; then
+        if ! add_proxmox_cifs_storage "$STORAGE_ID" "$SAMBA_SERVER" "$SAMBA_SHARE" "$MOUNT_CONTENT"; then
+            overall_rc=1
+        fi
+        echo -e ""
+    fi
+    if [[ "$MODE_FSTAB" == "1" ]]; then
+        if ! mount_cifs_via_fstab "$SAMBA_SERVER" "$SAMBA_SHARE" "$HOST_MOUNT_PATH" \
+                "$CIFS_MOUNT_OPTS" "$FSTAB_REPLACE" "$HOST_CRED_FILE" "$USE_GUEST"; then
+            overall_rc=1
+        fi
+    fi
 
     echo -e ""
-    msg_success "$(translate "Press Enter to continue...")"
+    if [[ "$overall_rc" == "0" ]]; then
+        msg_success "$(translate "Press Enter to continue...")"
+    else
+        msg_warn "$(translate "Some operations failed — review messages above. Press Enter to continue...")"
+    fi
     read -r
 }
 
@@ -556,7 +791,7 @@ while true; do
     CHOICE=$(dialog --backtitle "ProxMenux" \
         --title "$(translate "Samba Host Manager - Proxmox Host")" \
         --menu "$(translate "Choose an option:")" 18 70 6 \
-        "1" "$(translate "Add Samba Share as Proxmox Storage")" \
+        "1" "$(translate "Mount Samba Share on Host")" \
         "2" "$(translate "View CIFS Storages")" \
         "3" "$(translate "Remove CIFS Storage")" \
         "4" "$(translate "Test Samba Connectivity")" \
@@ -569,7 +804,7 @@ while true; do
     fi
 
     case $CHOICE in
-        1) add_cifs_to_proxmox ;;
+        1) mount_cifs_share ;;
         2) view_cifs_storages ;;
         3) remove_cifs_storage ;;
         4) test_samba_connectivity ;;
