@@ -200,7 +200,7 @@ select_nfs_export() {
 validate_host_export_exists() {
     local server="$1"
     local export="$2"
-    VALIDATION_OUTPUT=$(showmount -e "$server" 2>/dev/null | grep "^$export[[:space:]]")
+    VALIDATION_OUTPUT=$(showmount -e "$server" 2>/dev/null | grep "^${export}[[:space:]]")
     if [[ -n "$VALIDATION_OUTPUT" ]]; then
         return 0
     else
@@ -551,39 +551,62 @@ mount_nfs_share() {
     read -r
 }
 
+# ==========================================================
+# FSTAB ENTRY DISCOVERY (host mounts NOT registered with pvesm)
+# ==========================================================
+
+# Print every NFS entry in /etc/fstab as: server|export|mount_path|opts
+# Skips comments and blank lines. Includes both currently-mounted and
+# inactive entries (the live state is reported by the caller).
+list_nfs_fstab_entries() {
+    awk '
+        /^[[:space:]]*#/  { next }
+        /^[[:space:]]*$/  { next }
+        $3 == "nfs" || $3 == "nfs4" {
+            # $1 = server:/export, $2 = mount path, $4 = opts
+            split($1, srv_exp, ":")
+            print srv_exp[1] "|" srv_exp[2] "|" $2 "|" $4
+        }
+    ' /etc/fstab 2>/dev/null
+}
+
+# Echo "active" if the given path is currently mounted, "inactive" otherwise.
+check_mount_state() {
+    local path="$1"
+    if mount | grep -q " on ${path} type "; then
+        echo "active"
+    else
+        echo "inactive"
+    fi
+}
+
 view_nfs_storages() {
     show_proxmenux_logo
-    msg_title "$(translate "NFS Storages in Proxmox")"
+    msg_title "$(translate "NFS Mounts on Host")"
 
     echo "=================================================="
     echo ""
 
-    if ! command -v pvesm >/dev/null 2>&1; then
-        msg_error "$(translate "pvesm not found.")"
-        echo ""
-        msg_success "$(translate "Press Enter to continue...")"
-        read -r
-        return
+    # ---- Proxmox storages (pvesm) ----
+    local NFS_STORAGES=""
+    if command -v pvesm >/dev/null 2>&1; then
+        NFS_STORAGES=$(pvesm status 2>/dev/null | awk '$2 == "nfs" {print $1, $3}')
     fi
 
-    NFS_STORAGES=$(pvesm status 2>/dev/null | awk '$2 == "nfs" {print $1, $3}')
     if [[ -z "$NFS_STORAGES" ]]; then
-        msg_warn "$(translate "No NFS storage configured in Proxmox.")"
-        echo ""
-        msg_info2 "$(translate "Use option 1 to add an NFS share as Proxmox storage.")"
+        msg_warn "$(translate "No NFS Proxmox storages configured.")"
     else
-        echo -e "${BOLD}$(translate "NFS Storages:")${CL}"
+        echo -e "${BOLD}$(translate "NFS Proxmox storages (pvesm):")${CL}"
         echo ""
         while IFS=" " read -r storage_id storage_status; do
             [[ -z "$storage_id" ]] && continue
-            local storage_info
+            local storage_info server export_path content
             storage_info=$(get_storage_config "$storage_id")
-            local server export_path content
             server=$(echo "$storage_info" | awk '$1 == "server" {print $2}')
             export_path=$(echo "$storage_info" | awk '$1 == "export" {print $2}')
             content=$(echo "$storage_info" | awk '$1 == "content" {print $2}')
 
-            echo -e "${TAB}${BOLD}$storage_id${CL}"
+            echo -e "${TAB}${BOLD}$storage_id${CL}  ${TAB}[pvesm]"
             echo -e "${TAB}  ${BGN}$(translate "Server:")${CL} ${BL}$server${CL}"
             echo -e "${TAB}  ${BGN}$(translate "Export:")${CL} ${BL}$export_path${CL}"
             echo -e "${TAB}  ${BGN}$(translate "Content:")${CL} ${BL}$content${CL}"
@@ -597,62 +620,161 @@ view_nfs_storages() {
         done <<< "$NFS_STORAGES"
     fi
 
+    # ---- Host fstab mounts (NOT pvesm) ----
+    local FSTAB_ENTRIES
+    FSTAB_ENTRIES=$(list_nfs_fstab_entries)
+
+    if [[ -z "$FSTAB_ENTRIES" ]]; then
+        echo -e "${BOLD}$(translate "Host fstab NFS mounts:")${CL} $(translate "(none)")"
+    else
+        echo -e "${BOLD}$(translate "Host fstab NFS mounts (not registered with pvesm):")${CL}"
+        echo ""
+        while IFS="|" read -r server export_path mount_path opts; do
+            [[ -z "$mount_path" ]] && continue
+            local mstate
+            mstate=$(check_mount_state "$mount_path")
+
+            echo -e "${TAB}${BOLD}$(basename "$mount_path")${CL}  ${TAB}[fstab]"
+            echo -e "${TAB}  ${BGN}$(translate "Server:")${CL} ${BL}$server${CL}"
+            echo -e "${TAB}  ${BGN}$(translate "Export:")${CL} ${BL}$export_path${CL}"
+            echo -e "${TAB}  ${BGN}$(translate "Mount Path:")${CL} ${BL}$mount_path${CL}"
+            echo -e "${TAB}  ${BGN}$(translate "Options:")${CL} ${BL}$opts${CL}"
+            if [[ "$mstate" == "active" ]]; then
+                echo -e "${TAB}  ${BGN}$(translate "Status:")${CL} ${GN}$(translate "Active")${CL}"
+            else
+                echo -e "${TAB}  ${BGN}$(translate "Status:")${CL} ${RD}$(translate "Inactive (entry in fstab, not currently mounted)")${CL}"
+            fi
+            echo ""
+        done <<< "$FSTAB_ENTRIES"
+    fi
+
     echo ""
     msg_success "$(translate "Press Enter to continue...")"
     read -r
 }
 
 remove_nfs_storage() {
-    if ! command -v pvesm >/dev/null 2>&1; then
-        dialog --backtitle "ProxMenux" --title "$(translate "Error")" \
-            --msgbox "\n$(translate "pvesm not found.")" 8 60
+    # Collect every removable NFS entry: pvesm storages and fstab-only mounts.
+    local OPTIONS=()
+    local has_pvesm=0
+    local has_fstab=0
+
+    # pvesm-registered NFS storages
+    if command -v pvesm >/dev/null 2>&1; then
+        local NFS_STORAGES
+        NFS_STORAGES=$(pvesm status 2>/dev/null | awk '$2 == "nfs" {print $1}')
+        if [[ -n "$NFS_STORAGES" ]]; then
+            has_pvesm=1
+            while IFS= read -r storage_id; do
+                [[ -z "$storage_id" ]] && continue
+                local storage_info server export_path
+                storage_info=$(get_storage_config "$storage_id")
+                server=$(echo "$storage_info" | awk '$1 == "server" {print $2}')
+                export_path=$(echo "$storage_info" | awk '$1 == "export" {print $2}')
+                # Encode key with a prefix so we know how to handle the selection.
+                OPTIONS+=("pvesm:$storage_id" "[pvesm] $storage_id  ($server:$export_path)")
+            done <<< "$NFS_STORAGES"
+        fi
+    fi
+
+    # fstab-only NFS mounts
+    local FSTAB_ENTRIES
+    FSTAB_ENTRIES=$(list_nfs_fstab_entries)
+    if [[ -n "$FSTAB_ENTRIES" ]]; then
+        has_fstab=1
+        while IFS="|" read -r server export_path mount_path opts; do
+            [[ -z "$mount_path" ]] && continue
+            OPTIONS+=("fstab:$mount_path" "[fstab] $mount_path  ($server:$export_path)")
+        done <<< "$FSTAB_ENTRIES"
+    fi
+
+    if [[ "$has_pvesm" == "0" && "$has_fstab" == "0" ]]; then
+        dialog --backtitle "ProxMenux" --title "$(translate "Nothing to remove")" \
+            --msgbox "\n$(translate "No NFS Proxmox storage and no NFS fstab mount found on this host.")" 9 70
         return
     fi
 
-    NFS_STORAGES=$(pvesm status 2>/dev/null | awk '$2 == "nfs" {print $1}')
-    if [[ -z "$NFS_STORAGES" ]]; then
-        dialog --backtitle "ProxMenux" --title "$(translate "No NFS Storage")" \
-            --msgbox "\n$(translate "No NFS storage found in Proxmox.")" 8 60
-        return
-    fi
-
-    OPTIONS=()
-    while IFS= read -r storage_id; do
-        [[ -z "$storage_id" ]] && continue
-        local storage_info server export_path
-        storage_info=$(get_storage_config "$storage_id")
-        server=$(echo "$storage_info" | awk '$1 == "server" {print $2}')
-        export_path=$(echo "$storage_info" | awk '$1 == "export" {print $2}')
-        OPTIONS+=("$storage_id" "$server:$export_path")
-    done <<< "$NFS_STORAGES"
-
-    SELECTED=$(dialog --backtitle "ProxMenux" --title "$(translate "Remove NFS Storage")" \
-        --menu "$(translate "Select storage to remove:")" 20 80 10 \
+    local SELECTED
+    SELECTED=$(dialog --backtitle "ProxMenux" --title "$(translate "Remove NFS Mount")" \
+        --menu "$(translate "Select the entry to remove. [pvesm] entries are removed from Proxmox storage; [fstab] entries are unmounted and removed from /etc/fstab.")" \
+        20 90 12 \
         "${OPTIONS[@]}" 3>&1 1>&2 2>&3)
     [[ -z "$SELECTED" ]] && return
 
-    local storage_info server export_path content
-    storage_info=$(get_storage_config "$SELECTED")
-    server=$(echo "$storage_info" | awk '$1 == "server" {print $2}')
-    export_path=$(echo "$storage_info" | awk '$1 == "export" {print $2}')
-    content=$(echo "$storage_info" | awk '$1 == "content" {print $2}')
+    local kind="${SELECTED%%:*}"
+    local target="${SELECTED#*:}"
 
-    if whiptail --yesno "$(translate "Remove Proxmox NFS storage:")\n\n$SELECTED\n\n$(translate "Server:"): $server\n$(translate "Export:"): $export_path\n$(translate "Content:"): $content\n\n$(translate "WARNING: This removes the storage from Proxmox. The NFS server is not affected.")" \
-        16 80 --title "$(translate "Confirm Remove")"; then
+    case "$kind" in
+        pvesm)
+            local storage_info server export_path content
+            storage_info=$(get_storage_config "$target")
+            server=$(echo "$storage_info" | awk '$1 == "server" {print $2}')
+            export_path=$(echo "$storage_info" | awk '$1 == "export" {print $2}')
+            content=$(echo "$storage_info" | awk '$1 == "content" {print $2}')
 
-        show_proxmenux_logo
-        msg_title "$(translate "Remove NFS Storage")"
+            if whiptail --yesno "$(translate "Remove Proxmox NFS storage:")\n\n$target\n\n$(translate "Server:"): $server\n$(translate "Export:"): $export_path\n$(translate "Content:"): $content\n\n$(translate "WARNING: This removes the storage from Proxmox. The NFS server is not affected.")" \
+                16 80 --title "$(translate "Confirm Remove")"; then
 
-        if pvesm remove "$SELECTED" 2>/dev/null; then
-            msg_ok "$(translate "Storage") $SELECTED $(translate "removed successfully from Proxmox.")"
-        else
-            msg_error "$(translate "Failed to remove storage.")"
-        fi
+                show_proxmenux_logo
+                msg_title "$(translate "Remove NFS Storage")"
 
-        echo -e ""
-        msg_success "$(translate "Press Enter to continue...")"
-        read -r
-    fi
+                if pvesm remove "$target" 2>/dev/null; then
+                    msg_ok "$(translate "Storage") $target $(translate "removed successfully from Proxmox.")"
+                else
+                    msg_error "$(translate "Failed to remove storage.")"
+                fi
+
+                echo -e ""
+                msg_success "$(translate "Press Enter to continue...")"
+                read -r
+            fi
+            ;;
+        fstab)
+            local mount_path="$target"
+            local fstab_line
+            fstab_line=$(awk -v mp="$mount_path" '$2 == mp && ($3 == "nfs" || $3 == "nfs4") {print; exit}' /etc/fstab)
+
+            if whiptail --yesno "$(translate "Remove NFS fstab mount:")\n\n$mount_path\n\n$(translate "fstab line:")\n$fstab_line\n\n$(translate "Steps that will run:")\n  1. $(translate "umount the path if currently mounted")\n  2. $(translate "delete the matching line from /etc/fstab")\n  3. $(translate "remove the (now-empty) directory if possible")\n\n$(translate "WARNING: The NFS server is not affected. The mount directory contents are NOT deleted (data stays on the server).")" \
+                20 90 --title "$(translate "Confirm Remove")"; then
+
+                show_proxmenux_logo
+                msg_title "$(translate "Remove NFS fstab Mount")"
+
+                # Try umount only if currently mounted; never force.
+                if mount | grep -q " on ${mount_path} type "; then
+                    if umount "$mount_path" 2>/dev/null; then
+                        msg_ok "$(translate "Unmounted:") $mount_path"
+                    else
+                        msg_warn "$(translate "Could not unmount") $mount_path. $(translate "The fstab entry will still be removed; reboot or manual umount needed.")"
+                    fi
+                else
+                    msg_info2 "$(translate "Not currently mounted — skipping umount.")"
+                fi
+
+                # Delete the matching line(s) from /etc/fstab using awk (exact $2 + $3 match).
+                cp /etc/fstab /etc/fstab.proxmenux.bak 2>/dev/null
+                if awk -v mp="$mount_path" '
+                    $2 == mp && ($3 == "nfs" || $3 == "nfs4") { next }
+                    { print }
+                ' /etc/fstab > /etc/fstab.tmp && mv /etc/fstab.tmp /etc/fstab; then
+                    msg_ok "$(translate "Removed entry from /etc/fstab")  ($(translate "backup at /etc/fstab.proxmenux.bak"))"
+                else
+                    msg_error "$(translate "Failed to edit /etc/fstab — remove the line manually.")"
+                fi
+
+                systemctl daemon-reload 2>/dev/null || true
+
+                # Try to remove the directory if empty; keep it otherwise.
+                if [[ -d "$mount_path" ]] && rmdir "$mount_path" 2>/dev/null; then
+                    msg_ok "$(translate "Removed empty mount directory:") $mount_path"
+                fi
+
+                echo -e ""
+                msg_success "$(translate "Press Enter to continue...")"
+                read -r
+            fi
+            ;;
+    esac
 }
 
 test_nfs_connectivity() {
@@ -687,7 +809,7 @@ test_nfs_connectivity() {
                 local server
                 server=$(get_storage_config "$storage_id" | awk '$1 == "server" {print $2}')
 
-                echo -n "  $storage_id ($server): "
+                echo -n "  [pvesm] $storage_id ($server): "
 
                 if ping -c 1 -W 2 "$server" >/dev/null 2>&1; then
                     echo -ne "${GN}$(translate "Reachable")${CL}"
@@ -715,10 +837,44 @@ test_nfs_connectivity() {
                 echo ""
             done <<< "$NFS_STORAGES"
         else
-            echo "  $(translate "No NFS storage configured.")"
+            echo "  $(translate "No NFS Proxmox storage configured.")"
         fi
     else
         msg_warn "$(translate "pvesm not available.")"
+    fi
+
+    # ---- fstab-only NFS mounts ----
+    local FSTAB_ENTRIES
+    FSTAB_ENTRIES=$(list_nfs_fstab_entries)
+    echo ""
+    echo -e "${BOLD}$(translate "Host fstab NFS Mounts:")${CL}"
+    if [[ -z "$FSTAB_ENTRIES" ]]; then
+        echo "  $(translate "(none)")"
+    else
+        while IFS="|" read -r server export_path mount_path opts; do
+            [[ -z "$mount_path" ]] && continue
+            echo -n "  [fstab] $mount_path ($server:$export_path): "
+
+            if ping -c 1 -W 2 "$server" >/dev/null 2>&1; then
+                echo -ne "${GN}$(translate "Reachable")${CL}"
+                if nc -z -w 2 "$server" 2049 2>/dev/null; then
+                    echo -e " | NFS port 2049: ${GN}$(translate "Open")${CL}"
+                else
+                    echo -e " | NFS port 2049: ${RD}$(translate "Closed")${CL}"
+                fi
+            else
+                echo -e "${RD}$(translate "Unreachable")${CL}"
+            fi
+
+            local mstate
+            mstate=$(check_mount_state "$mount_path")
+            if [[ "$mstate" == "active" ]]; then
+                echo -e "    $(translate "Mount status:") ${GN}$(translate "Active")${CL}"
+            else
+                echo -e "    $(translate "Mount status:") ${RD}$(translate "Not currently mounted")${CL}"
+            fi
+            echo ""
+        done <<< "$FSTAB_ENTRIES"
     fi
 
     echo ""
@@ -735,8 +891,8 @@ while true; do
         --title "$(translate "NFS Host Manager - Proxmox Host")" \
         --menu "$(translate "Choose an option:")" 18 70 6 \
         "1" "$(translate "Mount NFS Share on Host")" \
-        "2" "$(translate "View NFS Storages")" \
-        "3" "$(translate "Remove NFS Storage")" \
+        "2" "$(translate "View NFS Mounts (pvesm + fstab)")" \
+        "3" "$(translate "Remove NFS Mount (pvesm or fstab)")" \
         "4" "$(translate "Test NFS Connectivity")" \
         "5" "$(translate "Exit")" \
         3>&1 1>&2 2>&3)
