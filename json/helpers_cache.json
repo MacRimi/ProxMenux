@@ -4828,7 +4828,7 @@
     "notes": [
       "Admin password is stored in `/opt/frappe-bench/.env`.",
       "The default site name is `site1.local`. Configure your domain in Frappe settings.",
-      "Run `bench update` from `/opt/frappe-bench` to update ERPNext manually."
+      "Run `bench update` from `/opt/frappe-bench` as frappe User (su - frappe)to update ERPNext manually."
     ],
     "warnings": [],
     "port": 80,
