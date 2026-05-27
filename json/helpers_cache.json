@@ -411,6 +411,45 @@
     "os": "debian"
   },
   {
+    "name": "Apache Airflow",
+    "slug": "airflow",
+    "desc": "Apache Airflow is an open-source platform for developing, scheduling, and monitoring batch-oriented workflows. It uses Python to author DAGs (Directed Acyclic Graphs) that represent workflows, and provides a rich web UI for managing and observing pipelines.",
+    "script": "ct/airflow.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/airflow.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/airflow.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00019"
+    ],
+    "category_names": [
+      "Automation & Scheduling"
+    ],
+    "notes": [
+      "The initial admin password is randomly generated and stored in /opt/airflow/.env (AIRFLOW_ADMIN_PASSWORD).",
+      "Place your DAG files in /opt/airflow/dags/. The scheduler will pick them up automatically.",
+      "This installs Airflow with LocalExecutor. For distributed task execution, configure CeleryExecutor manually."
+    ],
+    "warnings": [],
+    "port": 8080,
+    "website": "https://airflow.apache.org/",
+    "documentation": "https://airflow.apache.org/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/apache.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "AliasVault",
     "slug": "aliasvault",
     "desc": "AliasVault is an open-source, end-to-end encrypted password manager and email alias service. It features a zero-knowledge architecture where your master password never leaves your device, a built-in SMTP server for alias email addresses, browser extensions with autofill, and native iOS/Android apps.",
@@ -7015,7 +7054,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -10938,7 +10977,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
