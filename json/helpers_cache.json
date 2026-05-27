@@ -2987,6 +2987,43 @@
     "os": "debian"
   },
   {
+    "name": "Colanode",
+    "slug": "colanode",
+    "desc": "Open-source, local-first collaboration workspace — a self-hosted Slack and Notion alternative with real-time chat, rich text pages, customizable databases, and file management.",
+    "script": "ct/colanode.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/colanode.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/colanode.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Access the web interface at https://YOUR_IP:4000. When adding a server in the desktop or mobile app, enter https://YOUR_IP:4000 as the server URL.",
+      "No default credentials — open the web UI and register a new account on first access."
+    ],
+    "warnings": [
+      "Before using the app: download and import the self-signed certificate into your browser. Navigate to https://YOUR_IP:4000/colanode.crt and install it as a trusted CA. This is required for Service Worker and OPFS storage to work.",
+      "Requires at least 4 GB RAM for the build process."
+    ],
+    "port": 4000,
+    "website": "https://colanode.com/",
+    "documentation": "https://github.com/colanode/colanode/blob/main/hosting/docker",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/colanode.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "ComfyUI",
     "slug": "comfyui",
     "desc": "ComfyUI is a node-based interface and inference engine for generative AI. Users can combine various AI models and operations through nodes to achieve highly customizable and controllable content generation.",
@@ -5084,6 +5121,41 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "ExcaliDash",
+    "slug": "excalidash",
+    "desc": "Self-hosted dashboard and organizer for Excalidraw with persistent storage, real-time collaboration, version history, multi-user authentication, and scoped sharing.",
+    "script": "ct/excalidash.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/excalidash.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/excalidash.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00012"
+    ],
+    "category_names": [
+      "Documents & Notes"
+    ],
+    "notes": [
+      "Create your admin account on first visit at the web UI."
+    ],
+    "warnings": [
+      "ExcaliDash is in BETA. Back up your data regularly."
+    ],
+    "port": 6767,
+    "website": "https://github.com/ZimengXiong/ExcaliDash",
+    "documentation": "https://github.com/ZimengXiong/ExcaliDash/blob/main/README.md",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/excalidraw.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -16465,7 +16537,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": false,
+    "is_dev": true,
     "execute_in": [
       "lxc"
     ],
