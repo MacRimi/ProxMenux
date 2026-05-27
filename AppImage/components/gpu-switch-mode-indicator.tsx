@@ -77,7 +77,11 @@ export function GpuSwitchModeIndicator({
   return (
     <div
       className={cn(
-        "flex items-center gap-6",
+        // On very narrow containers (mobile, narrow modal), stack the SVG
+        // above the status text so the 224px-wide SVG doesn't squeeze the
+        // text into a 2-character-wide column. At sm+ we go back to the
+        // original side-by-side layout.
+        "flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-6",
         isEditing && !isSriovActive && "cursor-pointer",
         className
       )}

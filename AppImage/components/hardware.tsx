@@ -924,7 +924,7 @@ export default function Hardware() {
             </Badge>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             {hardwareData.gpus.map((gpu, index) => {
               const pciDevice = findPCIDeviceForGPU(gpu)
               const fullSlot = pciDevice?.slot || gpu.slot
