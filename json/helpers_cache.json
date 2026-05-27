@@ -3713,6 +3713,39 @@
     "os": "debian"
   },
   {
+    "name": "DDNS-Updater",
+    "slug": "ddns-updater",
+    "desc": "Lightweight universal DDNS updater with web UI, supporting 60+ DNS providers including Cloudflare, Namecheap, GoDaddy, DuckDNS and more.",
+    "script": "ct/ddns-updater.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/ddns-updater.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/ddns-updater.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00004"
+    ],
+    "category_names": [
+      "Network & Firewall"
+    ],
+    "notes": [],
+    "warnings": [
+      "Edit /opt/ddns-updater/data/config.json with your DNS provider settings before use."
+    ],
+    "port": 8000,
+    "website": "https://github.com/qdm12/ddns-updater",
+    "documentation": "https://github.com/qdm12/ddns-updater/wiki",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/ddns-updater.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Debian",
     "slug": "debian",
     "desc": "Debian is a free operating system (OS) that comes with over 59000 packages. It's known for its stability, security, and extensive software repository.",
@@ -16564,6 +16597,45 @@
       "pve"
     ],
     "config_path": "/etc/smokeping/config.d/Targets",
+    "os": "debian"
+  },
+  {
+    "name": "SnapOtter",
+    "slug": "snapotter",
+    "desc": "SnapOtter is a self-hosted, privacy-first image processing toolbox with 50+ tools including background removal, upscaling, format conversion, OCR, face enhancement, and more — all running locally in your browser and on your server.",
+    "script": "ct/snapotter.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/snapotter.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/snapotter.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "AI features (background removal, upscaling, OCR, etc.) are installed on-demand via the settings page and require additional disk space and RAM."
+    ],
+    "warnings": [
+      "Change the default password after first login!"
+    ],
+    "port": 1349,
+    "website": "https://snapotter.com/",
+    "documentation": "https://docs.snapotter.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/snapotter.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": "admin"
+    },
     "os": "debian"
   },
   {
