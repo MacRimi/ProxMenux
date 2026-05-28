@@ -57,11 +57,6 @@ if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
     source "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh"
 fi
-if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh" ]]; then
-    source "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh"
-elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh" ]]; then
-    source "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh"
-fi
 load_language
 initialize_cache
 # ==========================================================
@@ -1334,7 +1329,6 @@ function create_vm() {
             msg_error "$(translate "Controller + NVMe passthrough requires machine type q35. Skipping controller assignment.")"
             ERROR_FLAG=true
         else
-            NEED_HOOK_SYNC=false
             HOSTPCI_INDEX=0
             if declare -F _pci_next_hostpci_index >/dev/null 2>&1; then
                 HOSTPCI_INDEX=$(_pci_next_hostpci_index "$VMID" 2>/dev/null || echo 0)
@@ -1384,7 +1378,6 @@ function create_vm() {
                                     fi
                                 fi
                             done
-                            NEED_HOOK_SYNC=true
                             ;;
                         move_remove_source)
                             SLOT_BASE=$(_pci_slot_base "$PCI_DEV")
@@ -1413,11 +1406,6 @@ function create_vm() {
                 fi
             done
 
-            if [[ "$NEED_HOOK_SYNC" == "true" ]] && declare -F sync_proxmenux_gpu_guard_hooks >/dev/null 2>&1; then
-                ensure_proxmenux_gpu_guard_hookscript
-                sync_proxmenux_gpu_guard_hooks
-                msg_ok "$(translate "VM hook guard synced for shared controller/NVMe protection")"
-            fi
         fi
     fi
 

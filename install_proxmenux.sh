@@ -1137,7 +1137,17 @@ install_proxmenux() {
     if [[ -f "$UTILS_FILE" ]]; then
     source "$UTILS_FILE"
     fi
-    
+
+    # ── Legacy gpu-guard hookscript auto-cleanup ──────────────
+    # Previous ProxMenux versions attached a hookscript to VMs/LXCs with GPU
+    # passthrough; that reference in the guest .conf broke backup/restore to
+    # hosts without the snippet. The hookscript system has been removed.
+    # This silently purges any leftover references and the snippet file.
+    # Idempotent: does nothing on hosts that never had the legacy hook.
+    if [ -x "$LOCAL_SCRIPTS/global/cleanup_gpu_hookscripts.sh" ]; then
+        bash "$LOCAL_SCRIPTS/global/cleanup_gpu_hookscripts.sh" || true
+    fi
+
     msg_title "ProxMenux has been installed successfully"
     
     if systemctl is-active --quiet proxmenux-monitor.service; then

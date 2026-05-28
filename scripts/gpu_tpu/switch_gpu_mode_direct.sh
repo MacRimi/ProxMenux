@@ -37,12 +37,6 @@ if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh"
 fi
-if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh" ]]; then
-  source "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh"
-elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh" ]]; then
-  source "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh"
-fi
-
 load_language
 initialize_cache
 
@@ -1042,10 +1036,6 @@ switch_to_vm_mode() {
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1
     msg_ok "$(translate 'initramfs updated')" | tee -a "$screen_capture"
   fi
-
-  if declare -F sync_proxmenux_gpu_guard_hooks >/dev/null 2>&1; then
-    sync_proxmenux_gpu_guard_hooks
-  fi
 }
 
 _type_has_remaining_vfio_ids() {
@@ -1116,10 +1106,6 @@ switch_to_lxc_mode() {
     msg_info "$(translate 'Updating initramfs (this may take a minute)...')"
     update-initramfs -u -k all >>"$LOG_FILE" 2>&1
     msg_ok "$(translate 'initramfs updated')" | tee -a "$screen_capture"
-  fi
-
-  if declare -F sync_proxmenux_gpu_guard_hooks >/dev/null 2>&1; then
-    sync_proxmenux_gpu_guard_hooks
   fi
 }
 

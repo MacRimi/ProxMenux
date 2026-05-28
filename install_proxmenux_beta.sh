@@ -713,6 +713,16 @@ install_beta
 # Load utils if available
 [ -f "$UTILS_FILE" ] && source "$UTILS_FILE"
 
+# ── Legacy gpu-guard hookscript auto-cleanup ──────────────
+# Previous ProxMenux versions attached a hookscript to VMs/LXCs with GPU
+# passthrough; that reference in the guest .conf broke backup/restore to
+# hosts without the snippet. The hookscript system has been removed.
+# This silently purges any leftover references and the snippet file.
+# Idempotent: does nothing on hosts that never had the legacy hook.
+if [ -x "$BASE_DIR/scripts/global/cleanup_gpu_hookscripts.sh" ]; then
+    bash "$BASE_DIR/scripts/global/cleanup_gpu_hookscripts.sh" || true
+fi
+
 msg_title "ProxMenux Beta installed successfully"
 
 if systemctl is-active --quiet proxmenux-monitor.service; then

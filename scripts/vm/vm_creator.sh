@@ -57,11 +57,6 @@ if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
   source "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh"
 fi
-if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh" ]]; then
-  source "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh"
-elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh" ]]; then
-  source "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh"
-fi
 
 load_language
 initialize_cache
@@ -555,7 +550,6 @@ fi
       msg_error "$(translate "Controller + NVMe passthrough requires machine type q35. Skipping controller assignment.")"
     else
       local hostpci_idx=0
-      local need_hook_sync=false
       if declare -F _pci_next_hostpci_index >/dev/null 2>&1; then
         hostpci_idx=$(_pci_next_hostpci_index "$VMID" 2>/dev/null || echo 0)
       else
@@ -603,7 +597,6 @@ fi
                   fi
                 fi
               done
-              need_hook_sync=true
               ;;
             move_remove_source)
               slot_base=$(_pci_slot_base "$pci")
@@ -630,11 +623,6 @@ fi
         fi
       done
 
-      if $need_hook_sync && declare -F sync_proxmenux_gpu_guard_hooks >/dev/null 2>&1; then
-        ensure_proxmenux_gpu_guard_hookscript
-        sync_proxmenux_gpu_guard_hooks
-        msg_ok "$(translate "VM hook guard synced for shared controller/NVMe protection")"
-      fi
     fi
   fi
 

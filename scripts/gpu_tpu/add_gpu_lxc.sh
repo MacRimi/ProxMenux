@@ -55,12 +55,6 @@ if [[ -f "$LOCAL_SCRIPTS/global/pci_passthrough_helpers.sh" ]]; then
 elif [[ -f "$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)/global/pci_passthrough_helpers.sh" ]]; then
   source "$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)/global/pci_passthrough_helpers.sh"
 fi
-if [[ -f "$LOCAL_SCRIPTS/global/gpu_hook_guard_helpers.sh" ]]; then
-  source "$LOCAL_SCRIPTS/global/gpu_hook_guard_helpers.sh"
-elif [[ -f "$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)/global/gpu_hook_guard_helpers.sh" ]]; then
-  source "$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)/global/gpu_hook_guard_helpers.sh"
-fi
-
 load_language
 initialize_cache
 
@@ -1029,11 +1023,6 @@ main() {
   msg_title "$(_get_lxc_run_title)"
 
   configure_passthrough "$CONTAINER_ID"
-  if declare -F attach_proxmenux_gpu_guard_to_lxc >/dev/null 2>&1; then
-    ensure_proxmenux_gpu_guard_hookscript
-    attach_proxmenux_gpu_guard_to_lxc "$CONTAINER_ID"
-    sync_proxmenux_gpu_guard_hooks
-  fi
 
   if start_container_and_wait "$CONTAINER_ID"; then
     install_drivers "$CONTAINER_ID"

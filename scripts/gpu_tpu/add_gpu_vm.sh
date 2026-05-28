@@ -47,12 +47,6 @@ if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/pci_passthrough_helpers.sh" ]]; then
 elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh" ]]; then
     source "$LOCAL_SCRIPTS_DEFAULT/global/pci_passthrough_helpers.sh"
 fi
-if [[ -f "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh" ]]; then
-    source "$LOCAL_SCRIPTS_LOCAL/global/gpu_hook_guard_helpers.sh"
-elif [[ -f "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh" ]]; then
-    source "$LOCAL_SCRIPTS_DEFAULT/global/gpu_hook_guard_helpers.sh"
-fi
-
 load_language
 initialize_cache
 
@@ -2212,11 +2206,6 @@ main() {
         [[ "$WIZARD_CALL" == "true" ]] && _set_wizard_result "failed"
         rm -f "$screen_capture"
         exit 1
-    fi
-    if declare -F attach_proxmenux_gpu_guard_to_vm >/dev/null 2>&1; then
-        ensure_proxmenux_gpu_guard_hookscript
-        attach_proxmenux_gpu_guard_to_vm "$SELECTED_VMID"
-        sync_proxmenux_gpu_guard_hooks
     fi
     [[ "$HOST_CONFIG_CHANGED" == "true" ]] && update_initramfs_host
 
