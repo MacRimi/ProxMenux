@@ -96,18 +96,9 @@ fi
 #    was placed by an older script via a hard-coded path).
 # ----------------------------------------------------------
 shopt -s nullglob
-for legacy in /var/lib/vz/snippets/${HOOK_FILENAME} /mnt/pve/*/snippets/${HOOK_FILENAME}; do
+for legacy in "/var/lib/vz/snippets/${HOOK_FILENAME}" /mnt/pve/*/snippets/"${HOOK_FILENAME}"; do
     [[ -f "$legacy" ]] && rm -f "$legacy" 2>/dev/null && removed_files=$((removed_files + 1))
 done
 shopt -u nullglob
-
-# ----------------------------------------------------------
-# 5. Quiet summary on stderr — visible in the install log
-#    and in interactive runs, but doesn't pollute STDOUT
-#    when invoked from another script's pipeline.
-# ----------------------------------------------------------
-if [[ "$cleaned_vms" -gt 0 || "$cleaned_cts" -gt 0 || "$removed_files" -gt 0 ]]; then
-    echo "[proxmenux-cleanup] Removed legacy gpu-guard hookscript from ${cleaned_vms} VM(s), ${cleaned_cts} LXC(s); deleted ${removed_files} snippet file(s)." >&2
-fi
 
 exit 0
