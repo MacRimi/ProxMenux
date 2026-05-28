@@ -346,6 +346,13 @@ _restore_nvidia_host_stack_for_lxc() {
   local disabled_file="/etc/modules-load.d/nvidia-vfio.conf.proxmenux-disabled-vfio"
   local active_file="/etc/modules-load.d/nvidia-vfio.conf"
 
+  # New per-BDF model: drop every NVIDIA BDF from the initramfs binder so
+  # the nvidia module reclaims the GPU after the next reboot. Idempotent:
+  # no-op if no NVIDIA BDFs are tracked. Vendor 10de = NVIDIA.
+  if declare -F _proxmenux_vfio_bind_purge_vendor >/dev/null 2>&1; then
+    _proxmenux_vfio_bind_purge_vendor "10de" && changed=true
+  fi
+
   # Remove hard blacklist that was preventing nvidia module loading
   local nvidia_blacklist="/etc/modprobe.d/nvidia-blacklist.conf"
   if [[ -f "$nvidia_blacklist" ]]; then
