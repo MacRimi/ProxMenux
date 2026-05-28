@@ -3,29 +3,29 @@
 > Última actualización: **2026-05-20** · Versión actual: **1.2.1.2-beta**
 > 🇬🇧 English version: [ROADMAP.md](ROADMAP.md)
 
-Este documento es nuestra hoja de ruta para llevar ProxMenux y
+Este documento es la hoja de ruta para llevar ProxMenux y
 ProxMenux Monitor a un estado **listo para producción**. Está basado
 en las dos infografías que un colaborador preparó y enriquecido con
 una auditoría real del código actual.
 
 ## 🖼️ Infografías de origen
 
-Las dos infografías que sirvieron de punto de partida son obra de
+Las dos infografías son obra de
 **[@pitiriguisvi](https://github.com/pitiriguisvi)** y resumen
 visualmente las dos grandes áreas de trabajo — gracias por dedicarle
-el tiempo y darnos un punto de partida tan claro:
+el tiempo:
 
 | ProxMenux Monitor (Dashboard) | ProxMenux (Scripts) |
 |---|---|
 | <img src="images/proxmenux_phases_1.png" alt="Fases ProxMenux Monitor" width="380"/> | <img src="images/proxmenux_phases_2.png" alt="Fases ProxMenux" width="380"/> |
 | *Mejoras recomendadas para hacerlo más seguro, útil y apto para producción* | *Mejoras recomendadas para hacerlo más seguro, auditable y apto para producción* |
 
-**Cómo lo usamos:**
+**¿Qué se muestra?:**
 
-* La tabla **Estado actual** refleja lo que YA tenemos hoy.
+* La tabla **Estado actual** refleja lo que YA existe hoy.
 * El **Plan por versión** marca qué entra en cada release.
 * La sección **Cambios publicados** se va rellenando a medida que
-  cerramos items, con la versión en la que se entregó.
+  se cierren items, con la versión en la que se entregó.
 
 Símbolos:
 
@@ -41,8 +41,7 @@ Símbolos:
 > seguridad, alertas, permisos, auditabilidad e integración real con
 > Proxmox."*
 
-ProxMenux ya es una herramienta potente para administradores que
-gestionan su propio nodo. El siguiente salto es convertirlo en una
+ProxMenux ya es una herramienta para gestionar los nodos. El siguiente salto es convertirlo en una
 herramienta **apta para entornos de producción y para clientes**:
 
 * El operador tiene que poder dar **acceso de solo lectura** a
@@ -162,89 +161,11 @@ herramienta **apta para entornos de producción y para clientes**:
 
 ---
 
-## 🗺️ Plan por versión
-
-> Los items se agrupan por relación **valor / esfuerzo**, no por
-> orden estricto. El plan se puede reordenar según feedback de
-> testers del grupo.
-
-### v1.2.2-beta — *Lo barato y de alto impacto*
-
-Objetivo: cerrar los huecos que ya tienen base en el código y dan
-mejora visible de seguridad sin tocar arquitectura.
-
-* [ ] **Modo solo lectura del usuario web.** Bindeo del scope
-      `read_only` ya existente del JWT a la sesión interactiva. La
-      UI esconde los botones de acción (start/stop, ejecutar
-      scripts, terminal) cuando el scope no es `full_admin`.
-* [ ] **Tabla de audit log + pestaña en el dashboard.** Nueva tabla
-      SQLite `audit_log(ts, user, ip, action, target, result, error)`.
-      Hookear desde `flask_security_routes` y `flask_script_runner`.
-      Render simple en una pestaña "Audit".
-* [ ] **Allowlist IP.** Campo nuevo en `Settings → Security →
-      "Limitar acceso a estas IPs"`. Decorator `@require_allowed_ip`
-      aplicado a todas las blueprints.
-* [ ] **Caducidad configurable de tokens API.** Campo `expires_at`
-      en la metadata del token; honrarlo en `verify_token`.
-
-### v1.2.3-beta — *Lo medio*
-
-Objetivo: dar herramientas serias de operación antes de aplicar
-cambios.
-
-* [ ] **Tokens con scope granular.** Mínimo cuatro: `read_only`,
-      `vm_control`, `script_runner`, `full_admin`. El frontend
-      enseña qué scopes tiene el token actual.
-* [ ] **Dry-run en scripts post-install.** Flag `--dry-run`
-      compatible con todos los scripts de `scripts/post_install/`.
-      La salida muestra exactamente qué cambiaría sin tocar el host.
-* [ ] **Bundle de diagnóstico (`proxmenux bug-report`).** Comprime
-      `/var/log/proxmenux/`, `journalctl -u proxmenux-monitor`,
-      `dmesg --since=24h`, `dpkg -l | grep -i proxmenux`,
-      `managed_installs.json` y los `errors`/`disk_observations` de
-      la base de datos en un único `.tar.gz`. Output ofuscado de
-      tokens y secrets.
-* [ ] **Vista agregada "VMs sin backup".** Una nueva tarjeta en el
-      tab de Backups que liste todas las VM/CT sin job de backup
-      reciente, con accesos directos al PBS.
-
-### v1.3.0 — *Lo grande*
-
-Objetivo: el salto a producción. Requiere release mayor por cambios
-de modelo de datos y de UX.
-
-* [ ] **RBAC con roles viewer / operator / admin.** Multi-usuario,
-      contraseña por usuario, role por sesión. Migración de
-      `auth.json` a tabla `users(id, username, password_hash, role,
-      created_at, last_login)`. Revisión de todas las blueprints para
-      mapear endpoints → role mínimo.
-* [ ] **Modo producción.** Flag global en `/etc/proxmenux/profile`
-      que conmuta:
-  * Confirmaciones reforzadas
-  * Anti-cascade más agresivo
-  * Acciones destructivas ocultas o deshabilitadas
-  * Allowlist IP forzada a no-vacía
-  * Tokens `full_admin` deshabilitados en favor de `vm_control` + ack
-* [ ] **Rollback granular por subsistema.** Sobre la infraestructura
-      `backup_restore` existente, permitir revertir solo "Red", solo
-      "Post-install", solo "Grupos y permisos", etc.
-* [ ] **Historial de cambios visible en el Monitor.** Pestaña
-      "Changes" que liste cada modificación que ProxMenux hizo sobre
-      el host (archivo, antes / después, script responsable).
-
-### Probablemente fuera de scope
-
-* **Firma criptográfica de scripts upstream.** Depende del
-  comportamiento de community-scripts (no controlamos su pipeline).
-  Mantener un mirror firmado propio sería mucho trabajo para poco
-  beneficio. Cerrado salvo decisión externa.
-
----
 
 ## 📦 Cambios publicados
 
-> Esta sección se actualiza con cada release. Sin tocar el plan de
-> arriba: aquí se anota qué pasó de pendiente (🔴 / 🟡) a hecho (🟢)
+> Esta sección se actualiza con cada release.
+> Aquí se anota qué pasó de pendiente (🔴 / 🟡) a hecho (🟢)
 > y en qué versión.
 
 | Fecha | Versión | Item | Notas |
@@ -262,7 +183,7 @@ de modelo de datos y de UX.
 
 ## 💬 Cómo aportar
 
-Cualquier persona del grupo puede:
+Cualquier persona puede:
 
 * Comentar en el item que considere prioritario o que falte.
 * Proponer un nuevo item con el formato de la tabla
