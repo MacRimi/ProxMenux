@@ -2018,7 +2018,7 @@
     "warnings": [],
     "port": 8000,
     "website": "https://bitfocus.io/companion",
-    "documentation": "https://user.bitfocus.io/docs",
+    "documentation": "https://companion.free/user-guide",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bitfocus-companion.webp",
     "updateable": true,
     "privileged": false,
@@ -4698,7 +4698,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -8522,7 +8522,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -14564,7 +14564,7 @@
     "warnings": [],
     "port": 6868,
     "website": "https://github.com/Dictionarry-Hub/profilarr",
-    "documentation": "https://github.com/Dictionarry-Hub/profilarr#readme",
+    "documentation": "https://v2.dictionarry.dev/",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/profilarr.webp",
     "updateable": true,
     "privileged": false,
