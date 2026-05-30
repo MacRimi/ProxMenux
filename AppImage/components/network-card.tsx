@@ -109,7 +109,7 @@ export function NetworkCard({ interface_, timeframe, onClick }: NetworkCardProps
           })
         }
       } catch (error) {
-        console.error("[v0] Failed to fetch traffic data for card:", error)
+        console.error("Failed to fetch traffic data for card:", error)
         setTrafficData({ received: 0, sent: 0 })
       }
     }

@@ -793,7 +793,10 @@ class HealthMonitor:
 
             def _annotate_dismissed(check_dict):
                 """Mutate check_dict in place to add `dismissed=True` if
-                its error_key is currently acknowledged in the DB.
+                its error_key is currently acknowledged in the DB. When the
+                dismiss was permanent (suppression_hours == -1) also tags
+                ``permanent=True`` so the UI can render a "🔒 Permanent"
+                badge distinct from the time-limited countdown.
                 Returns True when the check should NOT contribute to the
                 aggregate status."""
                 if not isinstance(check_dict, dict):
@@ -804,6 +807,8 @@ class HealthMonitor:
                 try:
                     if health_persistence.is_error_acknowledged(ek):
                         check_dict['dismissed'] = True
+                        if health_persistence.is_error_permanently_acknowledged(ek):
+                            check_dict['permanent'] = True
                         return True
                 except Exception:
                     pass

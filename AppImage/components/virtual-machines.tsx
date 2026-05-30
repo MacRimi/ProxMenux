@@ -720,7 +720,7 @@ export function VirtualMachines() {
                 configs[lxc.vmid] = extractIPFromConfig(details.config, details.lxc_ip_info)
               }
             } catch (error) {
-              console.log(`[v0] Could not fetch IP for LXC ${lxc.vmid}`)
+              console.log(`Could not fetch IP for LXC ${lxc.vmid}`)
               configs[lxc.vmid] = "N/A"
             }
           }),

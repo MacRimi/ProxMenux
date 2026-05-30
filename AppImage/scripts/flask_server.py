@@ -265,18 +265,35 @@ def _apply_security_headers(response):
 # is banned in the 'proxmenux' fail2ban jail and blocks at app level.
 import subprocess as _f2b_subprocess
 import time as _f2b_time
+import shutil as _f2b_shutil
 
 # Cache banned IPs for 30 seconds to avoid calling fail2ban-client on every request
 _f2b_banned_cache = {"ips": set(), "ts": 0, "ttl": 30}
+# One-time check at module import — when Fail2Ban isn't installed we want
+# the @app.before_request middleware to be a no-op. Without this guard
+# every HTTP request to the Monitor went through _f2b_get_banned_ips() →
+# execve fail2ban-client → ENOENT, and the negative result wasn't cached
+# (only the success branch updated `ts`), so a missing binary triggered
+# one failed execve per HTTP request. strace on a host without Fail2Ban
+# captured 250+ failed execve attempts in 10 min from this single path.
+# Fixed in v1.2.1.4 perf audit.
+_F2B_BINARY = _f2b_shutil.which("fail2ban-client")
+
 
 def _f2b_get_banned_ips():
     """Get currently banned IPs from the proxmenux jail, with caching."""
+    if _F2B_BINARY is None:
+        # Fail2Ban isn't installed on this host. Skip the subprocess
+        # entirely; the @app.before_request middleware will see an empty
+        # banned-IPs set and let every request through (which is the
+        # correct behaviour — there's no Fail2Ban to honour).
+        return _f2b_banned_cache["ips"]
     now = _f2b_time.time()
     if now - _f2b_banned_cache["ts"] < _f2b_banned_cache["ttl"]:
         return _f2b_banned_cache["ips"]
     try:
         result = _f2b_subprocess.run(
-            ["fail2ban-client", "status", "proxmenux"],
+            [_F2B_BINARY, "status", "proxmenux"],
             capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0:
@@ -285,10 +302,13 @@ def _f2b_get_banned_ips():
                     ip_str = line.split(":", 1)[1].strip()
                     banned = set(ip.strip() for ip in ip_str.split() if ip.strip())
                     _f2b_banned_cache["ips"] = banned
-                    _f2b_banned_cache["ts"] = now
-                    return banned
     except Exception:
         pass
+    # Always update the timestamp — even on exception / non-zero rc /
+    # missing jail. Caches the negative result for the same TTL so a
+    # transient Fail2Ban outage doesn't trigger one subprocess call per
+    # HTTP request until it recovers.
+    _f2b_banned_cache["ts"] = now
     return _f2b_banned_cache["ips"]
 
 # XFF / X-Real-IP are only honored when the operator opts in by setting
@@ -707,37 +727,45 @@ def _temperature_collector_loop():
     - Cleanup: every 60 min at offset 120s
     """
     import time as _time
-    
+
     RECORD_INTERVAL = 60
     TEMP_OFFSET = 40      # Record temp at :40 of each minute
     LATENCY_OFFSET = 25   # Record latency at :25 of each minute
+    # v1.2.1.4 perf audit: disk SMART polling used to fire on the exact
+    # same tick as CPU temp (offset :40). Keeping it on the same 60s
+    # cadence — operator wants per-minute disk temperature chart data —
+    # but shifted to offset :55 so the smartctl burst (one per disk)
+    # doesn't pile on top of the CPU temp read and the upcoming latency
+    # ping of the next cycle (:25 + 60). Net effect: load is now spread
+    # across :25 (latency), :40 (CPU temp), :55 (disk SMART burst)
+    # instead of stacking at :25 + :40.
+    DISK_TEMP_DELAY_AFTER_CPU = 15
     CLEANUP_INTERVAL = 3600  # 60 minutes
     CLEANUP_OFFSET = 120  # Cleanup at 2 min after the hour mark
-    
+
     # Initial delays to stagger from other collectors
     _time.sleep(LATENCY_OFFSET)  # Start latency first
-    
+
     last_temp = _time.monotonic()
     last_latency = _time.monotonic()
     last_cleanup = _time.monotonic() - CLEANUP_INTERVAL + CLEANUP_OFFSET  # First cleanup after offset
-    
+
     while True:
         now = _time.monotonic()
-        
+
         # Latency pings (offset 25s - runs first in each cycle)
         if now - last_latency >= RECORD_INTERVAL:
             _record_latency()
             last_latency = now
-        
-        # Temperature record (offset 40s - 15s after latency)
+
+        # CPU / sensors temperature record (offset 40s - 15s after latency)
         _time.sleep(15)
         _record_temperature()
-        # Sprint 14: piggy-back the per-disk temperature sampler on
-        # the same minute tick. The sampler enumerates non-USB
-        # disks and writes a row each via smartctl; total cost is
-        # well under a second on typical hosts. Wrapped in a
-        # try-block so a stuck smartctl call can't break the
-        # CPU/latency pipeline.
+        # Sprint 14: per-disk SMART temperature sampler — kept on every
+        # tick (operator-visible chart granularity) but offset further
+        # into the cycle so the smartctl subprocess burst (one per disk)
+        # doesn't collide with the cheap CPU/latency reads.
+        _time.sleep(DISK_TEMP_DELAY_AFTER_CPU)
         try:
             import disk_temperature_history
             disk_temperature_history.record_all_disk_temperatures()
@@ -10536,7 +10564,7 @@ def api_health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'version': '1.2.1.3-beta'
+        'version': '1.2.1.4-beta'
     })
 
 # ─── User-configurable health thresholds ─────────────────────────────────────
@@ -10697,17 +10725,59 @@ def api_health_thresholds_reset():
 @app.route('/api/health/acknowledge', methods=['POST'])
 @require_auth
 def api_health_acknowledge():
-    """Acknowledge/dismiss a health error by error_key."""
+    """Acknowledge/dismiss a health error by error_key.
+
+    Optional ``suppression_hours`` body field overrides the category default
+    (positive integer for hours; ``-1`` for permanent dismiss).
+    """
     try:
         data = request.get_json()
         error_key = data.get('error_key', '')
         if not error_key:
             return jsonify({'error': 'error_key is required'}), 400
-        
-        result = health_persistence.acknowledge_error(error_key)
+
+        sup_override = None
+        if 'suppression_hours' in data and data['suppression_hours'] is not None:
+            try:
+                sup_override = int(data['suppression_hours'])
+                if sup_override < -1 or sup_override == 0:
+                    return jsonify({'error': 'suppression_hours must be a positive integer or -1 (permanent)'}), 400
+            except (ValueError, TypeError):
+                return jsonify({'error': 'suppression_hours must be an integer'}), 400
+
+        result = health_persistence.acknowledge_error(error_key, suppression_hours=sup_override)
         return jsonify({'success': True, 'result': result})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/health/un-acknowledge', methods=['POST'])
+@require_auth
+def api_health_unacknowledge():
+    """Reverse a previous dismiss — re-enables the alert so it can fire again.
+
+    Used by the Settings → Active Suppressions panel.
+    """
+    try:
+        data = request.get_json()
+        error_key = data.get('error_key', '')
+        if not error_key:
+            return jsonify({'error': 'error_key is required'}), 400
+
+        result = health_persistence.unacknowledge_error(error_key)
+        # Invalidate caches so the next health fetch reflects the new state.
+        for ck in ['_bg_overall', '_bg_detailed', 'overall_health',
+                   'storage_check', 'vms_check', 'logs_analysis',
+                   'pve_services', 'updates_check', 'security_check',
+                   'cpu_check', 'network_check']:
+            health_monitor.last_check_times.pop(ck, None)
+            health_monitor.cached_results.pop(ck, None)
+
+        status = 200 if result.get('success') else 404
+        return jsonify(result), status
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/prometheus', methods=['GET'])
 @require_auth
@@ -10979,7 +11049,7 @@ def api_info():
     """Root endpoint with API information"""
     return jsonify({
         'name': 'ProxMenux Monitor API',
-        'version': '1.2.1.3-beta',
+        'version': '1.2.1.4-beta',
         'endpoints': [
             '/api/system',
             '/api/system-info',
@@ -11728,7 +11798,7 @@ if __name__ == '__main__':
         try:
             import sqlite3
             from pathlib import Path
-            MONITOR_VERSION = '1.2.1.3-beta'
+            MONITOR_VERSION = '1.2.1.4-beta'
             db_path = Path('/usr/local/share/proxmenux/health_monitor.db')
             if db_path.exists():
                 conn = sqlite3.connect(str(db_path), timeout=10)

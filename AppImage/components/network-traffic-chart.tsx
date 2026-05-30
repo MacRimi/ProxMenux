@@ -206,7 +206,7 @@ export function NetworkTrafficChart({
         setIsInitialLoad(false)
       }
     } catch (err: any) {
-      console.error("[v0] Error fetching network metrics:", err)
+      console.error("Error fetching network metrics:", err)
       setError(err.message || "Error loading metrics")
     } finally {
       setLoading(false)

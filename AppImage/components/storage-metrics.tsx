@@ -43,7 +43,7 @@ const fetchStorageData = async (): Promise<StorageData | null> => {
     const data = await response.json()
     return data
   } catch (error) {
-    console.error("[v0] Failed to fetch storage data from Flask server:", error)
+    console.error("Failed to fetch storage data from Flask server:", error)
     return null
   }
 }

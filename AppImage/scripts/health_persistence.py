@@ -794,17 +794,26 @@ class HealthPersistence:
 
             conn.commit()
     
-    def acknowledge_error(self, error_key: str) -> Dict[str, Any]:
+    def acknowledge_error(self, error_key: str, suppression_hours: Optional[int] = None) -> Dict[str, Any]:
         """
         Manually acknowledge an error (dismiss).
-        - Looks up the category's configured suppression duration from user settings
-        - Stores suppression_hours on the error record (snapshot at dismiss time)
+
+        Args:
+            error_key: the unique key of the error to dismiss.
+            suppression_hours: optional override for the dismiss duration.
+                - ``None`` (default): use the category's configured value (current behavior).
+                - positive integer: silence for that many hours.
+                - ``-1``: silence permanently — the user must re-enable from
+                  Settings → Active Suppressions to bring the alert back.
+
+        - Stores ``suppression_hours`` on the error record (snapshot at dismiss time).
         - Marks as acknowledged so it won't re-appear during the suppression period
+          (or ever, when ``suppression_hours == -1``).
         """
         with self._db_lock:
-            return self._acknowledge_error_impl(error_key)
-    
-    def _acknowledge_error_impl(self, error_key):
+            return self._acknowledge_error_impl(error_key, suppression_hours_override=suppression_hours)
+
+    def _acknowledge_error_impl(self, error_key, suppression_hours_override: Optional[int] = None):
         conn = self._get_conn()
         conn.row_factory = sqlite3.Row
         category = ''
@@ -852,6 +861,11 @@ class HealthPersistence:
                             sup_hours = int(stored)
                         except (ValueError, TypeError):
                             pass
+                # Caller-supplied override (e.g. per-error "permanent" dismiss
+                # picked by the user from the Health Monitor popover) trumps
+                # the category default. ``-1`` means silence permanently.
+                if suppression_hours_override is not None:
+                    sup_hours = suppression_hours_override
 
                 # Insert as acknowledged but NOT resolved - error remains active
                 cursor.execute('''
@@ -892,6 +906,11 @@ class HealthPersistence:
                             sup_hours = int(stored)
                         except (ValueError, TypeError):
                             pass
+                # Per-error override (e.g. user selected "Permanent" / "7 days"
+                # in the dismiss popover) takes precedence over the category
+                # default.
+                if suppression_hours_override is not None:
+                    sup_hours = suppression_hours_override
 
                 # Mark as acknowledged but DO NOT set resolved_at
                 cursor.execute('''
@@ -946,10 +965,65 @@ class HealthPersistence:
                 self._clear_notification_cooldown(error_key)
 
         return result
-    
+
+    def unacknowledge_error(self, error_key: str) -> Dict[str, Any]:
+        """
+        Reverse a previous dismiss (acknowledged → not acknowledged).
+
+        Used by the Settings → Active Suppressions panel: the user explicitly
+        re-enables an alert they had silenced (time-limited or permanent).
+        After this call the error becomes eligible to re-emit on the next
+        scan if the underlying condition is still present.
+        """
+        with self._db_lock:
+            conn = self._get_conn()
+            try:
+                cursor = conn.cursor()
+                cursor.execute(
+                    'SELECT category, severity, acknowledged FROM errors WHERE error_key = ?',
+                    (error_key,),
+                )
+                row = cursor.fetchone()
+                if not row:
+                    return {'success': False, 'error': 'not_found', 'error_key': error_key}
+                category = row[0] or ''
+                severity = row[1] or 'WARNING'
+                was_acknowledged = bool(row[2])
+                if not was_acknowledged:
+                    # Nothing to do — keep the call idempotent.
+                    return {
+                        'success': True,
+                        'error_key': error_key,
+                        'category': category,
+                        'changed': False,
+                    }
+                # Clear acknowledgment + stored suppression. The next health
+                # scan will decide whether to re-record the error based on the
+                # actual condition.
+                now = datetime.now().isoformat()
+                cursor.execute('''
+                    UPDATE errors
+                    SET acknowledged = 0, acknowledged_at = NULL, suppression_hours = NULL,
+                        last_seen = ?
+                    WHERE error_key = ?
+                ''', (now, error_key))
+                self._record_event(cursor, 'unacknowledged', error_key, {
+                    'category': category,
+                    'severity': severity,
+                })
+                conn.commit()
+                return {
+                    'success': True,
+                    'error_key': error_key,
+                    'category': category,
+                    'changed': True,
+                }
+            finally:
+                conn.close()
+
     def is_error_acknowledged(self, error_key: str) -> bool:
         """Check if an error_key has been acknowledged and is still within suppression window.
-        
+
         Uses acknowledged_at (not resolved_at) to calculate suppression expiration,
         since dismissed errors may have resolved_at = NULL.
         """
@@ -967,11 +1041,11 @@ class HealthPersistence:
                 # Check if still within suppression window using acknowledged_at
                 acknowledged_at = row['acknowledged_at']
                 sup_hours = row['suppression_hours'] or self.DEFAULT_SUPPRESSION_HOURS
-                
+
                 # -1 means permanently suppressed
                 if sup_hours < 0:
                     return True
-                
+
                 if acknowledged_at:
                     try:
                         acknowledged_dt = datetime.fromisoformat(acknowledged_at)
@@ -980,6 +1054,24 @@ class HealthPersistence:
                     except Exception:
                         pass
                 return True
+        except Exception:
+            return False
+
+    def is_error_permanently_acknowledged(self, error_key: str) -> bool:
+        """True only when the error is currently dismissed with
+        ``suppression_hours == -1``. Used by the health monitor to surface a
+        "🔒 Permanent" badge in the UI vs. the regular time-limited dismiss."""
+        try:
+            with self._db_connection(row_factory=True) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    'SELECT acknowledged, suppression_hours FROM errors WHERE error_key = ?',
+                    (error_key,),
+                )
+                row = cursor.fetchone()
+                if not row or not row['acknowledged']:
+                    return False
+                return (row['suppression_hours'] or 0) == -1
         except Exception:
             return False
     

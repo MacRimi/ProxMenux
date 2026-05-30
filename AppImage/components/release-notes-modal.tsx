@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
-import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server } from "lucide-react"
+import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 
-const APP_VERSION = "1.2.1.3-beta" // Sync with AppImage/package.json
+const APP_VERSION = "1.2.1.4-beta" // Sync with AppImage/package.json
 
 interface ReleaseNote {
   date: string
@@ -18,6 +18,23 @@ interface ReleaseNote {
 }
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
+  "1.2.1.4-beta": {
+    date: "May 30, 2026",
+    changes: {
+      added: [
+        "Per-error dismiss duration - The Dismiss button on each Health Monitor alert now opens a small dropdown with three options: 24 hours, 7 days, or Permanently. The 24h / 7d paths behave like the existing time-limited dismiss (the alert reappears after the window expires). Permanent dismisses persist with suppression_hours = -1 in the persistence DB, never re-emit, never re-notify, and are marked with a distinct amber Permanent badge in the Health Monitor so the operator knows the alert is intentionally silenced",
+        "Active Suppressions panel in Settings - New section inside Settings -> Health Monitor (below the per-category suppression durations) that lists every currently-dismissed alert, both time-limited (with countdown) and permanent. Each row carries the error_key, category, severity, when it was dismissed, and a Re-enable button that clears the acknowledgment so the alert can fire again on the next scan. The Re-enable button is gated by the Health Monitor Edit mode (same gating as the rest of the Health settings) — toggle Edit at the top of the page first, then the buttons become active. Permanent dismisses can only be reverted from here, time-limited ones can also be force-revived if you don't want to wait for the countdown",
+        "Apprise channel - per-event toggles, Quiet Hours and Daily Digest - The Apprise tab now exposes the same Notification Categories block, per-event sub-toggles, Quiet Hours and Daily Digest controls as Telegram / Gotify / Discord / Email. The backend already supported per-channel filtering for Apprise via the generic channel_overrides logic; the UI just wasn't surfacing it",
+      ],
+      changed: [
+        "POST /api/health/acknowledge accepts an optional suppression_hours body field - positive integer for the dismiss duration in hours, -1 for permanent. Omitting the field preserves the previous behaviour (uses the category's configured default). New endpoint POST /api/health/un-acknowledge {error_key} reverses a dismiss (used by Settings -> Active Suppressions and by future automations)",
+        "Health Monitor dismissed annotation - When an alert is currently acknowledged with suppression_hours = -1, the dashboard payload now tags the check with permanent: true alongside dismissed: true so the UI can render the Permanent badge separately from the standard time-limited Dismissed badge",
+      ],
+      fixed: [
+        "Apprise URL section - Mobile overflow - On narrow viewports the Apprise URL row used to break the design: the placeholder packed four full example URLs into one line and the inline <code> examples in the description had no break-all rule, so the section pushed past the right edge of the viewport. The placeholder is now a single concise example (tgram://bottoken/ChatID), the URL input wrapper enforces min-w-0 / flex-1 / shrink-0 on its children, and the examples paragraph uses break-all min-w-0 so it wraps cleanly on any width",
+      ],
+    },
+  },
   "1.2.1.3-beta": {
     date: "May 22, 2026",
     changes: {
@@ -146,36 +163,16 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 
 const CURRENT_VERSION_FEATURES = [
   {
-    icon: <RefreshCw className="h-5 w-5" />,
-    text: "Post-install function update detection - The Monitor tracks installed ProxMenux optimizations and notifies when a newer version of any of them is available, with one-click apply",
+    icon: <BellOff className="h-5 w-5" />,
+    text: "Per-error dismiss duration - The Dismiss button on each Health Monitor alert now opens a small dropdown so you choose 24 hours, 7 days, or Permanently for that specific alert. Permanent dismisses get a distinct Permanent badge and never re-notify",
   },
   {
     icon: <Sliders className="h-5 w-5" />,
-    text: "Health Monitor Thresholds - Per-category warning and critical levels for CPU, memory, temperature, storage and more, fully configurable from Settings",
+    text: "Active Suppressions section - New section inside Settings -> Health Monitor that lists every dismissed alert (time-limited and permanent) with a Re-enable button. Permanent dismisses can only be reverted from here. The Re-enable action is gated by Health Monitor Edit mode",
   },
   {
-    icon: <Cpu className="h-5 w-5" />,
-    text: "NVIDIA driver update notifications - Kernel-aware detection of new compatible driver versions, surfaced in the Hardware tab and as notifications when a newer build is published",
-  },
-  {
-    icon: <Globe className="h-5 w-5" />,
-    text: "Secure Gateway update flow - One-click Tailscale update from Settings, with version indicators and notification when a new release is available",
-  },
-  {
-    icon: <Wrench className="h-5 w-5" />,
-    text: "Helper-Scripts menu - Richer context and useful information for each entry, so you know what every script does before running it",
-  },
-  {
-    icon: <Thermometer className="h-5 w-5" />,
-    text: "Improved disk temperature monitoring - Better readings, smarter caching across SMART probes and a redesigned history modal that opens at 24h by default",
-  },
-  {
-    icon: <Server className="h-5 w-5" />,
-    text: "VM and LXC modal expanded - Additional information consolidated into a single panel so you don't have to look it up across multiple tabs",
-  },
-  {
-    icon: <Zap className="h-5 w-5" />,
-    text: "Faster page load and tighter security - Lighter network usage on the main tabs, plus stricter authentication checks across notification, scripts and terminal endpoints",
+    icon: <Bell className="h-5 w-5" />,
+    text: "Apprise channel parity - Apprise now exposes the same per-event toggles, Quiet Hours and Daily Digest controls as Telegram / Gotify / Discord / Email. Mobile overflow in the Apprise URL row is also fixed",
   },
 ]
 

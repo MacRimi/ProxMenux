@@ -337,20 +337,36 @@ def _list_running_lxcs() -> list[dict[str, str]]:
         if not vmid:
             continue
 
+        # v1.2.1.4 perf audit: previously this called `lxc-info -n <vmid> -p`
+        # for every running CT on every scan tick. With N CTs that's N
+        # subprocesses per cycle (lxc-info forks + execs + parses its own
+        # config to give us a single number we can read directly). The CT's
+        # init PID is the first child of the supervising lxc-start process
+        # we just identified — readable from /proc with zero subprocess
+        # cost.
         pid = ''
         try:
-            p2 = subprocess.run(
-                ['lxc-info', '-n', vmid, '-p'],
-                capture_output=True, text=True, timeout=2,
-            )
-            if p2.returncode == 0:
-                for ln in p2.stdout.splitlines():
-                    # lxc-info output: "PID: 12345"
-                    if ln.strip().lower().startswith('pid:'):
-                        pid = ln.split(':', 1)[1].strip()
-                        break
-        except (subprocess.TimeoutExpired, OSError):
-            pass
+            with open(f'/proc/{entry.name}/task/{entry.name}/children', 'r') as f:
+                children = f.read().split()
+            if children:
+                pid = children[0]
+        except (OSError, IOError):
+            # Fallback to lxc-info only if the /proc read failed — keeps
+            # behaviour identical for any edge case where the children
+                # file is unreadable (race with CT stop, kernel without
+                # CONFIG_PROC_CHILDREN, etc.).
+            try:
+                p2 = subprocess.run(
+                    ['lxc-info', '-n', vmid, '-p'],
+                    capture_output=True, text=True, timeout=2,
+                )
+                if p2.returncode == 0:
+                    for ln in p2.stdout.splitlines():
+                        if ln.strip().lower().startswith('pid:'):
+                            pid = ln.split(':', 1)[1].strip()
+                            break
+            except (subprocess.TimeoutExpired, OSError):
+                pass
 
         out.append({'vmid': vmid, 'name': _read_lxc_name(vmid), 'pid': pid})
 

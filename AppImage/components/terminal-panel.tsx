@@ -624,7 +624,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
     ws.onerror = (error) => {
       clearTimeout(timeoutId)
-      console.error("[v0] TerminalPanel: WebSocket error:", error)
+      console.error("TerminalPanel: WebSocket error:", error)
       setTerminals((prev) => prev.map((t) => {
         if (t.id === terminal.id) {
           if (t.pingInterval) {
@@ -924,6 +924,7 @@ const handleClose = () => {
                 <div
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
                   className="w-full h-full flex-1 bg-black overflow-hidden"
+                  translate="no"
                 />
               </TabsContent>
             ))}
@@ -956,6 +957,7 @@ const handleClose = () => {
                   ref={(el) => (containerRefs.current[terminal.id] = el)}
                   onClick={() => setActiveTerminalId(terminal.id)}
                   className="flex-1 w-full max-w-full bg-black overflow-hidden cursor-pointer"
+                  translate="no"
                   data-terminal-container
                 />
               </div>

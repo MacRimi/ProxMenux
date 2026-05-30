@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
-import { Wrench, Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy, Sparkles, ArrowUpCircle } from "lucide-react"
+import { Wrench, Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy, Sparkles, ArrowUpCircle, BellOff } from "lucide-react"
+import { Badge } from "./ui/badge"
+import { Button } from "./ui/button"
 import { NotificationSettings } from "./notification-settings"
 import { HealthThresholds } from "./health-thresholds"
 import { LxcUpdateDetection } from "./lxc-update-detection"
@@ -10,7 +12,6 @@ import { ScriptTerminalModal } from "./script-terminal-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Switch } from "./ui/switch"
 import { Input } from "./ui/input"
-import { Badge } from "./ui/badge"
 import { getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
 
@@ -188,6 +189,63 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   security: Shield,
 }
 
+// Acronyms that should stay uppercase in the normalized label.
+const ERROR_KEY_ACRONYMS = new Set([
+  "CPU", "GPU", "IO", "RAM", "SSD", "HDD", "NIC", "API",
+  "URL", "SSH", "TLS", "SSL", "DNS", "DHCP", "NTP",
+  "NFS", "SMB", "CIFS", "ISCSI",
+  "PBS", "PVE", "LXC", "VM", "SMART", "ZFS", "LVM", "RAID",
+  "ID", "UUID", "MAC", "IP",
+])
+
+// Convert an internal error_key (e.g. `pve_storage_full_PBS-Cloud`)
+// into a human-readable label (`PVE Storage Full: PBS-Cloud`).
+// Tokens are split by `_`; trailing tokens that look like a resource
+// identifier (contain a hyphen, uppercase letter or digit, or match
+// a known device/interface pattern) are grouped after `:` so the
+// title reads naturally. Known acronyms keep their uppercase form.
+function normalizeErrorKey(key: string): string {
+  if (!key) return ""
+
+  const parts = key.split("_")
+  if (parts.length === 0) return key
+
+  const looksLikeResource = (s: string): boolean => {
+    if (!s) return false
+    if (s.includes("-")) return true
+    if (/[A-Z]/.test(s)) return true
+    if (/\d/.test(s)) return true
+    // Linux block/network device patterns
+    if (/^(sd[a-z]+\d*|nvme\d+n\d+|vmbr\d+|eth\d+|ens\d+|enp\d+|wlp\d+|tap\d+|veth\w+|vtnet\d+|vnet\d+)$/.test(s)) {
+      return true
+    }
+    return false
+  }
+
+  let cut = parts.length
+  for (let i = parts.length - 1; i >= 1; i--) {
+    if (looksLikeResource(parts[i])) {
+      cut = i
+    } else {
+      break
+    }
+  }
+
+  const descParts = parts.slice(0, cut)
+  const resourceParts = parts.slice(cut)
+
+  const titleize = (w: string): string => {
+    if (!w) return w
+    const upper = w.toUpperCase()
+    if (ERROR_KEY_ACRONYMS.has(upper)) return upper
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  }
+
+  const desc = descParts.map(titleize).join(" ")
+  if (resourceParts.length === 0) return desc
+  return `${desc}: ${resourceParts.join("_")}`
+}
+
 interface ProxMenuxTool {
   key: string
   name: string
@@ -295,6 +353,23 @@ export function Settings() {
   const [loadingInterfaces, setLoadingInterfaces] = useState(true)
   const [savingInterface, setSavingInterface] = useState<string | null>(null)
 
+  // Active Suppressions panel — lists every error currently dismissed
+  // (time-limited or permanent) so the user can re-enable individual
+  // alerts. Mirrors what /api/health/full returns under `dismissed`.
+  type ActiveSuppression = {
+    error_key: string
+    category: string
+    severity?: string
+    reason?: string
+    acknowledged_at?: string
+    suppression_hours?: number
+    suppression_remaining_hours?: number
+    permanent?: boolean
+  }
+  const [activeSuppressions, setActiveSuppressions] = useState<ActiveSuppression[]>([])
+  const [loadingSuppressions, setLoadingSuppressions] = useState(true)
+  const [reEnablingKey, setReEnablingKey] = useState<string | null>(null)
+
   // Sprint 13 / issue #195: snippets storage selector. The bash helper
   // resolves it on first GPU passthrough and saves to config.json; this
   // card surfaces the same setting so the user can see/change it from
@@ -339,6 +414,7 @@ export function Settings() {
   getUnitsSettings()
   loadHealthSettings()
   loadRemoteStorages()
+  loadActiveSuppressions()
   loadNetworkInterfaces()
   loadSnippetsStorage()
   }, [])
@@ -558,6 +634,41 @@ export function Settings() {
       console.error("Failed to load remote storages:", err)
     } finally {
       setLoadingStorages(false)
+    }
+  }
+
+  const loadActiveSuppressions = async () => {
+    try {
+      const data = await fetchApi("/api/health/dismissed")
+      if (data && Array.isArray(data.dismissed)) {
+        setActiveSuppressions(data.dismissed as ActiveSuppression[])
+      }
+    } catch (err) {
+      console.error("Failed to load active suppressions:", err)
+    } finally {
+      setLoadingSuppressions(false)
+    }
+  }
+
+  // Click "Re-enable" on a suppression → POST /api/health/un-acknowledge.
+  // Remove the row optimistically, then re-fetch the list silently to stay
+  // in sync with the server (which may have re-recorded the error if the
+  // condition is still active — that surfaces in the Health Monitor, not
+  // this panel).
+  const handleReEnable = async (errorKey: string) => {
+    if (!healthEditMode) return
+    setReEnablingKey(errorKey)
+    try {
+      await fetchApi("/api/health/un-acknowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error_key: errorKey }),
+      })
+      setActiveSuppressions(prev => prev.filter(s => s.error_key !== errorKey))
+    } catch (err) {
+      console.error("Failed to re-enable alert:", err)
+    } finally {
+      setReEnablingKey(null)
     }
   }
 
@@ -953,9 +1064,96 @@ export function Settings() {
               <div className="flex items-start gap-2 mt-3 pt-3 border-t border-border">
                 <Info className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  These settings apply when you dismiss a warning from the Health Monitor. 
+                  These settings apply when you dismiss a warning from the Health Monitor.
                   Critical CPU temperature alerts always trigger regardless of settings to protect your hardware.
                 </p>
+              </div>
+
+              {/* Active Suppressions subsection.
+                  Lives inside the Health Monitor card (no separator).
+                  Surfaces every currently-dismissed alert (time-limited
+                  and permanent) with a Re-enable button gated by Edit
+                  mode. Permanent dismisses chosen from the dashboard
+                  "Dismiss → Permanently" dropdown can only be reverted
+                  here, so this is the audit log + un-dismiss UI for
+                  them. Time-limited dismisses (24h, 7d) are listed for
+                  visibility and can also be force-revived from here. */}
+              <div className="pt-8">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <BellOff className="h-4 w-4 text-amber-500" />
+                  <span className="text-sm font-medium">Active Suppressions</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                  Alerts you have silenced from the Health Monitor. Permanent dismisses can only be
+                  reverted here. Editing requires the Health Monitor <span className="font-mono text-xs">Edit</span> mode at the top of this card.
+                </p>
+                {loadingSuppressions ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin h-5 w-5 border-4 border-amber-500 border-t-transparent rounded-full" />
+                  </div>
+                ) : activeSuppressions.length === 0 ? (
+                  <div className="text-center py-4 text-sm text-muted-foreground">
+                    No active suppressions. Dismissed alerts from the Health Monitor will appear here.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {activeSuppressions.map((s) => {
+                      const remaining = s.suppression_remaining_hours
+                      const remainingLabel = s.permanent
+                        ? "Permanent"
+                        : remaining === undefined || remaining === null
+                          ? "Active"
+                          : remaining >= 24
+                            ? `${Math.round(remaining / 24)}d remaining`
+                            : `${Math.max(0, Math.round(remaining))}h remaining`
+                      const dismissedAtLabel = s.acknowledged_at
+                        ? new Date(s.acknowledged_at).toLocaleString()
+                        : ""
+                      return (
+                        <div
+                          key={s.error_key}
+                          className="flex items-start sm:items-center justify-between gap-3 px-3 py-2.5 rounded-md border border-border hover:bg-muted/30 transition-colors"
+                        >
+                          <div className="flex items-start gap-2 min-w-0 flex-1">
+                            {s.permanent ? (
+                              <Badge variant="outline" className="text-sm px-2 py-0.5 shrink-0 text-amber-400 border-amber-400/40 mt-0.5 font-normal">
+                                Permanent
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-sm px-2 py-0.5 shrink-0 text-blue-400 border-blue-400/30 mt-0.5 font-normal">
+                                {remainingLabel}
+                              </Badge>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs sm:text-sm font-medium text-foreground truncate" title={s.error_key}>
+                                {normalizeErrorKey(s.error_key)}
+                              </div>
+                              <div className="text-sm text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                                <span>category: <span className="font-medium text-foreground/80">{s.category || "—"}</span></span>
+                                {s.severity && <span>severity: <span className="font-medium text-foreground/80">{s.severity}</span></span>}
+                                {dismissedAtLabel && <span>dismissed: {dismissedAtLabel}</span>}
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2.5 text-xs shrink-0 hover:bg-green-500/10 hover:border-green-500/50 bg-transparent"
+                            disabled={!healthEditMode || reEnablingKey === s.error_key}
+                            onClick={() => handleReEnable(s.error_key)}
+                            title={!healthEditMode ? "Enable Health Monitor Edit mode to re-enable" : "Re-enable this alert"}
+                          >
+                            {reEnablingKey === s.error_key ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              "Re-enable"
+                            )}
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}

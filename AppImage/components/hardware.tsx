@@ -260,7 +260,7 @@ export default function Hardware() {
     if (hardwareData?.storage_devices) {
       hardwareData.storage_devices.forEach((device) => {
         if (device.name.startsWith("nvme")) {
-          console.log(`[v0] NVMe device ${device.name}:`, {
+          console.log(`NVMe device ${device.name}:`, {
             pcie_gen: device.pcie_gen,
             pcie_width: device.pcie_width,
             pcie_max_gen: device.pcie_max_gen,
@@ -452,7 +452,7 @@ export default function Hardware() {
         setDetailsLoading(false)
       } catch (error) {
         if (error instanceof Error && error.name !== "AbortError") {
-          console.error("[v0] Error fetching GPU realtime data:", error)
+          console.error("Error fetching GPU realtime data:", error)
         }
         setRealtimeGPUData({ has_monitoring_tool: false })
         setDetailsLoading(false)

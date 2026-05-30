@@ -1831,27 +1831,34 @@ export function NotificationSettings() {
                   </div>
                   {config.channels.apprise?.enabled && (
                     <>
-                      <div className="space-y-1.5">
+                      <div className="space-y-1.5 min-w-0">
                         <Label className="text-[11px] text-muted-foreground">Apprise URL</Label>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <Input
                             type={showSecrets["apprise_url"] ? "text" : "password"}
-                            className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
-                            placeholder="tgram://bottoken/ChatID  ·  ntfy://server/topic  ·  discord://webhook_id/token  ·  matrix://..."
+                            className={`h-7 text-xs font-mono min-w-0 flex-1 ${!editMode ? "opacity-50" : ""}`}
+                            placeholder="tgram://bottoken/ChatID"
                             value={config.channels.apprise?.url || ""}
                             onChange={e => updateChannel("apprise", "url", e.target.value)}
                             disabled={!editMode}
                           />
                           <button
                             type="button"
-                            className="h-7 w-7 flex items-center justify-center rounded-md border border-border hover:bg-muted text-muted-foreground"
+                            className="h-7 w-7 shrink-0 flex items-center justify-center rounded-md border border-border hover:bg-muted text-muted-foreground"
                             onClick={() => setShowSecrets(s => ({ ...s, apprise_url: !s.apprise_url }))}
                             title={showSecrets["apprise_url"] ? "Hide URL" : "Show URL"}
                           >
                             {showSecrets["apprise_url"] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                           </button>
                         </div>
-                        <p className="text-[10px] text-muted-foreground leading-relaxed">
+                        {/* The examples row was overflowing on mobile because
+                            every `<code>` token is atomic — the whole line
+                            would scroll horizontally on narrow viewports.
+                            `break-all` on the wrapper lets the layout break
+                            mid-token if the viewport is really tight; on
+                            wider screens the natural commas/spaces still
+                            control wrapping. */}
+                        <p className="text-[10px] text-muted-foreground leading-relaxed break-all min-w-0">
                           A single URL that Apprise routes to the right service. Examples:
                           <code className="text-foreground/80 mx-0.5">tgram://</code>,
                           <code className="text-foreground/80 mx-0.5">discord://</code>,
@@ -1871,7 +1878,10 @@ export function NotificationSettings() {
                           </a>.
                         </p>
                       </div>
-                      <div className="flex justify-end pt-1">
+                      {renderChannelCategories("apprise")}
+                      {renderQuietHours("apprise")}
+                      {renderDailyDigest("apprise")}
+                      <div className="flex justify-end pt-2 border-t border-border/50">
                         <button
                           className="h-7 px-3 text-xs rounded-md bg-cyan-600 hover:bg-cyan-700 text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
                           onClick={() => handleTest("apprise")}

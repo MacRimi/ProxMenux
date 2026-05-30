@@ -140,19 +140,30 @@ export function About() {
                   <Sparkles className="h-3 w-3" />
                   v{APP_VERSION}
                 </span>
-                {/* Changelog goes to the web — the in-app modal version
-                    duplicated content and lacked a close affordance on
-                    some viewports, forcing a page refresh. The web
-                    changelog is canonical and auto-syncs with releases. */}
-                <a
-                  href="https://proxmenux.com/changelog"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-md bg-muted hover:bg-muted/70 transition-colors text-foreground border border-border px-2.5 py-1 text-xs"
-                >
-                  Changelog
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                {/* Beta versions surface their pre-release notes on the
+                    GitHub Releases page (where each beta is tagged + signed);
+                    stable versions point at the canonical web changelog
+                    which only carries shipped releases. Detection: the
+                    APP_VERSION string carries a "-beta" / "-rc" /
+                    "-alpha" suffix for any non-stable build. */}
+                {(() => {
+                  const isPrerelease = /-(beta|rc|alpha)/i.test(APP_VERSION)
+                  const href = isPrerelease
+                    ? "https://github.com/MacRimi/ProxMenux/releases"
+                    : "https://proxmenux.com/en/changelog"
+                  const label = isPrerelease ? "Release notes" : "Changelog"
+                  return (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-md bg-muted hover:bg-muted/70 transition-colors text-foreground border border-border px-2.5 py-1 text-xs"
+                    >
+                      {label}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )
+                })()}
               </div>
             </div>
           </div>

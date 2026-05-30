@@ -85,7 +85,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
       setOpen(false)
       onComplete()
     } catch (err) {
-      console.error("[v0] Auth skip error:", err)
+      console.error("Auth skip error:", err)
       setError(err instanceof Error ? err.message : "Failed to save preference")
     } finally {
       setLoading(false)
@@ -203,7 +203,7 @@ export function AuthSetup({ onComplete }: AuthSetupProps) {
       setOpen(false)
       onComplete()
     } catch (err) {
-      console.error("[v0] Auth setup error:", err)
+      console.error("Auth setup error:", err)
       setError(err instanceof Error ? err.message : "Failed to setup authentication")
     } finally {
       setLoading(false)

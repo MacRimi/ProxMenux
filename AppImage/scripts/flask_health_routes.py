@@ -63,14 +63,32 @@ def acknowledge_error():
     Acknowledge/dismiss an error manually.
     Returns details about the acknowledged error including original severity
     and suppression period info.
+
+    Body accepts an optional ``suppression_hours`` field — if omitted the
+    server uses the user-configured value for the error's category (current
+    behavior). When provided, the value overrides the category default for
+    this specific dismiss:
+      - positive integer N → silence for N hours
+      - ``-1`` → silence permanently (only revertible from
+        Settings → Active Suppressions)
     """
     try:
         data = request.get_json()
         if not data or 'error_key' not in data:
             return jsonify({'error': 'error_key is required'}), 400
-        
+
         error_key = data['error_key']
-        result = health_persistence.acknowledge_error(error_key)
+        sup_override = None
+        if 'suppression_hours' in data and data['suppression_hours'] is not None:
+            try:
+                sup_override = int(data['suppression_hours'])
+                # Accept positive durations and the permanent sentinel (-1)
+                # only. Zero / other negatives would be nonsensical here.
+                if sup_override < -1 or sup_override == 0:
+                    return jsonify({'error': 'suppression_hours must be a positive integer or -1 (permanent)'}), 400
+            except (ValueError, TypeError):
+                return jsonify({'error': 'suppression_hours must be an integer'}), 400
+        result = health_persistence.acknowledge_error(error_key, suppression_hours=sup_override)
         
         if result.get('success'):
             # Invalidate cached health results so next fetch reflects the dismiss
@@ -129,6 +147,53 @@ def acknowledge_error():
             }), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@health_bp.route('/api/health/un-acknowledge', methods=['POST'])
+def unacknowledge_error():
+    """
+    Re-enable a previously dismissed error.
+
+    Used by Settings → Active Suppressions when the user explicitly removes
+    a suppression (time-limited or permanent). After this call the error
+    becomes eligible to re-emit and re-notify on the next health scan if
+    the underlying condition is still present.
+
+    Body: ``{"error_key": "<key>"}``
+    """
+    try:
+        data = request.get_json()
+        if not data or 'error_key' not in data:
+            return jsonify({'error': 'error_key is required'}), 400
+        error_key = data['error_key']
+        result = health_persistence.unacknowledge_error(error_key)
+
+        # Invalidate caches so the next health fetch reflects the new state
+        # (the alert may re-appear immediately if the condition still holds).
+        category = result.get('category', '')
+        cache_key_map = {
+            'logs': 'logs_analysis',
+            'pve_services': 'pve_services',
+            'updates': 'updates_check',
+            'security': 'security_check',
+            'temperature': 'cpu_check',
+            'network': 'network_check',
+            'disks': 'storage_check',
+            'vms': 'vms_check',
+        }
+        cache_key = cache_key_map.get(category)
+        if cache_key:
+            health_monitor.last_check_times.pop(cache_key, None)
+            health_monitor.cached_results.pop(cache_key, None)
+        for ck in ['_bg_overall', '_bg_detailed', 'overall_health']:
+            health_monitor.last_check_times.pop(ck, None)
+            health_monitor.cached_results.pop(ck, None)
+
+        if not result.get('success'):
+            return jsonify(result), 404
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @health_bp.route('/api/health/active-errors', methods=['GET'])
 def get_active_errors():

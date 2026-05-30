@@ -95,12 +95,12 @@ export function NodeMetricsCharts() {
 
 
       if (!result.data || !Array.isArray(result.data)) {
-        console.error("[v0] Invalid data format - data is not an array:", result)
+        console.error("Invalid data format - data is not an array:", result)
         throw new Error("Invalid data format received from server")
       }
 
       if (result.data.length === 0) {
-        console.warn("[v0] No data points received")
+        console.warn("No data points received")
         setData([])
         setLoading(false)
         return
@@ -159,9 +159,9 @@ export function NodeMetricsCharts() {
 
       setData(transformedData)
     } catch (err: any) {
-      console.error("[v0] Error fetching node metrics:", err)
-      console.error("[v0] Error message:", err.message)
-      console.error("[v0] Error stack:", err.stack)
+      console.error("Error fetching node metrics:", err)
+      console.error("Error message:", err.message)
+      console.error("Error stack:", err.stack)
       setError(err.message || "Error loading metrics")
     } finally {
       setLoading(false)

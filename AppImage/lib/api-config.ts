@@ -161,14 +161,14 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
     const contentType = response.headers.get("content-type")
     if (!contentType || !contentType.includes("application/json")) {
       const text = await response.text()
-      console.error("[v0] fetchApi: Expected JSON but got:", contentType, "- Body preview:", text.substring(0, 200))
+      console.error("fetchApi: Expected JSON but got:", contentType, "- Body preview:", text.substring(0, 200))
       throw new Error(`Expected JSON response but got ${contentType || "unknown content type"}`)
     }
 
     try {
       return await response.json()
     } catch (jsonError) {
-      console.error("[v0] fetchApi: JSON parse error for", endpoint, "-", jsonError)
+      console.error("fetchApi: JSON parse error for", endpoint, "-", jsonError)
       throw new Error(`Invalid JSON response from ${endpoint}`)
     }
 }
