@@ -422,6 +422,12 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
 
       // Fetch fresh data in background (non-blocking)
       fetchHealthDetails().catch(() => {})
+
+      // Notify other mounted views (e.g. Settings → Active Suppressions
+      // panel) that the suppression set has changed so they can refresh.
+      try {
+        window.dispatchEvent(new CustomEvent("health-suppression-changed"))
+      } catch {}
     } catch (err) {
       console.error("Error dismissing:", err)
     } finally {

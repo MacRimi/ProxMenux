@@ -368,7 +368,10 @@ export function Settings() {
   }
   const [activeSuppressions, setActiveSuppressions] = useState<ActiveSuppression[]>([])
   const [loadingSuppressions, setLoadingSuppressions] = useState(true)
-  const [reEnablingKey, setReEnablingKey] = useState<string | null>(null)
+  // Queue of error_keys the user has marked for re-enable while in Edit
+  // mode. The actual API calls fire on Save (alongside any dropdown
+  // changes); Cancel discards the queue.
+  const [pendingReEnables, setPendingReEnables] = useState<Set<string>>(new Set())
 
   // Sprint 13 / issue #195: snippets storage selector. The bash helper
   // resolves it on first GPU passthrough and saves to config.json; this
@@ -417,6 +420,28 @@ export function Settings() {
   loadActiveSuppressions()
   loadNetworkInterfaces()
   loadSnippetsStorage()
+  }, [])
+
+  // Refresh the Active Suppressions list whenever:
+  //  (a) another component dispatches `health-suppression-changed`
+  //      (e.g. the dashboard Health card after Dismiss / Re-enable), or
+  //  (b) the user returns focus to this tab.
+  // Without this, dismissing an alert from the Health Monitor while
+  // the Settings page is mounted leaves the panel stale until full
+  // reload.
+  useEffect(() => {
+    const onChange = () => { loadActiveSuppressions() }
+    const onVisible = () => {
+      if (document.visibilityState === "visible") loadActiveSuppressions()
+    }
+    window.addEventListener("health-suppression-changed", onChange)
+    window.addEventListener("focus", onChange)
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      window.removeEventListener("health-suppression-changed", onChange)
+      window.removeEventListener("focus", onChange)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
   }, [])
 
   const loadProxmenuxTools = async () => {
@@ -655,21 +680,21 @@ export function Settings() {
   // in sync with the server (which may have re-recorded the error if the
   // condition is still active — that surfaces in the Health Monitor, not
   // this panel).
-  const handleReEnable = async (errorKey: string) => {
+  // Toggles the error_key in the pending re-enable queue. The actual
+  // POST /api/health/un-acknowledge fires on Save (via
+  // handleSaveAllHealth), keeping the UX consistent with the
+  // per-category dropdowns which also defer to Save.
+  const handleReEnable = (errorKey: string) => {
     if (!healthEditMode) return
-    setReEnablingKey(errorKey)
-    try {
-      await fetchApi("/api/health/un-acknowledge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error_key: errorKey }),
-      })
-      setActiveSuppressions(prev => prev.filter(s => s.error_key !== errorKey))
-    } catch (err) {
-      console.error("Failed to re-enable alert:", err)
-    } finally {
-      setReEnablingKey(null)
-    }
+    setPendingReEnables(prev => {
+      const next = new Set(prev)
+      if (next.has(errorKey)) {
+        next.delete(errorKey)
+      } else {
+        next.add(errorKey)
+      }
+      return next
+    })
   }
 
   const handleStorageExclusionChange = async (storageName: string, storageType: string, excludeHealth: boolean, excludeNotifications: boolean) => {
@@ -797,6 +822,7 @@ export function Settings() {
     setHealthEditMode(false)
     setPendingChanges({})
     setCustomValues({})
+    setPendingReEnables(new Set())
   }
 
   const handleSaveAllHealth = async () => {
@@ -808,31 +834,57 @@ export function Settings() {
       }
     }
 
-    if (Object.keys(payload).length === 0) {
+    const reEnableKeys = Array.from(pendingReEnables)
+    const hasPayload = Object.keys(payload).length > 0
+    const hasReEnables = reEnableKeys.length > 0
+
+    if (!hasPayload && !hasReEnables) {
       setHealthEditMode(false)
       setPendingChanges({})
+      setPendingReEnables(new Set())
       return
     }
 
     setSavingAllHealth(true)
     try {
-      await fetchApi("/api/health/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      
-      // Update local state with saved values
-      setSuppressionCategories(prev =>
-        prev.map(c => {
-          if (c.key in pendingChanges && pendingChanges[c.key] !== -2) {
-            return { ...c, hours: pendingChanges[c.key] }
-          }
-          return c
+      // 1. Persist per-category suppression duration changes (if any)
+      if (hasPayload) {
+        await fetchApi("/api/health/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         })
-      )
+
+        setSuppressionCategories(prev =>
+          prev.map(c => {
+            if (c.key in pendingChanges && pendingChanges[c.key] !== -2) {
+              return { ...c, hours: pendingChanges[c.key] }
+            }
+            return c
+          })
+        )
+      }
+
+      // 2. Fire un-acknowledge for every queued re-enable (in parallel)
+      if (hasReEnables) {
+        await Promise.all(
+          reEnableKeys.map(errorKey =>
+            fetchApi("/api/health/un-acknowledge", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ error_key: errorKey }),
+            })
+          )
+        )
+        setActiveSuppressions(prev => prev.filter(s => !pendingReEnables.has(s.error_key)))
+        // Notify other components (dashboard health card) that the
+        // suppression set changed so they can refresh.
+        window.dispatchEvent(new CustomEvent("health-suppression-changed"))
+      }
+
       setPendingChanges({})
       setCustomValues({})
+      setPendingReEnables(new Set())
       setHealthEditMode(false)
       setSavedAllHealth(true)
       setTimeout(() => setSavedAllHealth(false), 3000)
@@ -843,7 +895,7 @@ export function Settings() {
     }
   }
 
-  const hasPendingChanges = Object.keys(pendingChanges).some(
+  const hasPendingChanges = pendingReEnables.size > 0 || Object.keys(pendingChanges).some(
     k => pendingChanges[k] !== -2
   )
 
@@ -1109,12 +1161,17 @@ export function Settings() {
                       const dismissedAtLabel = s.acknowledged_at
                         ? new Date(s.acknowledged_at).toLocaleString()
                         : ""
+                      const isQueued = pendingReEnables.has(s.error_key)
                       return (
                         <div
                           key={s.error_key}
-                          className="flex items-start sm:items-center justify-between gap-3 px-3 py-2.5 rounded-md border border-border hover:bg-muted/30 transition-colors"
+                          className={`flex items-start sm:items-center justify-between gap-3 px-3 py-2.5 rounded-md border transition-colors ${
+                            isQueued
+                              ? "border-green-500/40 bg-green-500/5"
+                              : "border-border hover:bg-muted/30"
+                          }`}
                         >
-                          <div className="flex items-start gap-2 min-w-0 flex-1">
+                          <div className={`flex items-start gap-2 min-w-0 flex-1 ${isQueued ? "opacity-60" : ""}`}>
                             {s.permanent ? (
                               <Badge variant="outline" className="text-sm px-2 py-0.5 shrink-0 text-amber-400 border-amber-400/40 mt-0.5 font-normal">
                                 Permanent
@@ -1125,7 +1182,7 @@ export function Settings() {
                               </Badge>
                             )}
                             <div className="min-w-0 flex-1">
-                              <div className="text-xs sm:text-sm font-medium text-foreground truncate" title={s.error_key}>
+                              <div className={`text-xs sm:text-sm font-medium text-foreground truncate ${isQueued ? "line-through" : ""}`} title={s.error_key}>
                                 {normalizeErrorKey(s.error_key)}
                               </div>
                               <div className="text-sm text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
@@ -1138,16 +1195,22 @@ export function Settings() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 px-2.5 text-xs shrink-0 hover:bg-green-500/10 hover:border-green-500/50 bg-transparent"
-                            disabled={!healthEditMode || reEnablingKey === s.error_key}
+                            className={`h-7 px-2.5 text-xs shrink-0 bg-transparent ${
+                              isQueued
+                                ? "border-green-500/50 text-green-400 hover:bg-green-500/10"
+                                : "hover:bg-green-500/10 hover:border-green-500/50"
+                            }`}
+                            disabled={!healthEditMode || savingAllHealth}
                             onClick={() => handleReEnable(s.error_key)}
-                            title={!healthEditMode ? "Enable Health Monitor Edit mode to re-enable" : "Re-enable this alert"}
+                            title={
+                              !healthEditMode
+                                ? "Enable Health Monitor Edit mode to re-enable"
+                                : isQueued
+                                  ? "Cancel re-enable (will not be applied on Save)"
+                                  : "Queue this alert for re-enable on Save"
+                            }
                           >
-                            {reEnablingKey === s.error_key ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              "Re-enable"
-                            )}
+                            {isQueued ? "Undo" : "Re-enable"}
                           </Button>
                         </div>
                       )
